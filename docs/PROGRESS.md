@@ -22,16 +22,16 @@
 
 ## 当前版本管理状态
 
-- GitHub Private Repository 迁移第一阶段已经完成本地安全审计、忽略规则、环境变量示例和长期维护文档。
-- 当前已初始化本地 `main` 分支，暂存 486 个确认安全的源码、测试、配置、文档和前端素材文件，总大小约 5.82 MiB。
-- 当前没有 commit、remote 或 push。只有用户明确确认后才进入第二阶段。
+- 2026-08-16 已在 GitHub 账号 `WinstonMo0807` 下创建 `social-theory-library` 私有仓库，并将安全源码快照推送到 `main`。
+- 本地 `main` 正在跟踪 `origin/main`。首次 commit 为 `2c0bcb8b2f568dcbc17ef86d3c3197e1198f6560`。
+- 首次快照包含 486 个源码、测试、配置、文档和前端素材文件，总大小约 5.82 MiB。馆藏与运行数据继续只保留在服务器或本地受控目录。
 - 七项产品问题的状态、证据和验收要求集中记录在 [ISSUES.md](ISSUES.md)。
 
 ## 本轮验证
 
-- 暂存区禁止路径检查为 0 项，高置信 Secret 与常见个人邮箱扫描均为 0 项。
-- 暂存区没有 PDF、数据库、日志、归档、wheel、模型、索引或大于 1 MiB 的文件。
-- `git diff --cached --check` 退出码为 0。
+- 首次提交前的主审计和独立复核均为 0 个阻断项，高置信 Secret 与常见个人邮箱扫描均为 0 项。
+- 提交树没有真实 `.env`、PDF、数据库、OCR 数据、日志、归档、wheel、模型、embedding、索引或大于 10 MiB 的 Blob。
+- `git diff --cached --check` 退出码为 0；首次 push 后本地 `HEAD` 与 `origin/main` 一致，GitHub API 返回 `PRIVATE`，默认分支为 `main`。
 - 后端定向测试 20 项通过，只有两条 pypinyin 第三方弃用警告。
 - 前端定向 Node 回归 18 项通过。
 - 四份 Compose YAML 均能由 PyYAML 解析。当前环境没有 Docker CLI，`docker compose config` 仍为 `待核实`。
@@ -48,7 +48,6 @@
 
 ## 下一阶段
 
-1. 用户确认第一阶段文件清单和风险后，重新执行 Secret 与大文件检查。
-2. 通过 GitHub CLI 浏览器认证创建 `social-theory-library` 私有仓库，不接收聊天中的 Token、密码或 2FA code。
-3. 首次 push 后检查 visibility、origin、默认分支和远程树，确认没有 `.env`、Secret、PDF、数据库、OCR、模型或索引数据。
-4. 后续产品开发优先处理 STL-004 和 STL-006，再进行书库 RAG 与双语观点检索的真实评估。
+1. 为 Codex 或 ChatGPT 连接该私有仓库时使用 GitHub 授权，并只授予所需仓库权限，不在聊天中发送 Token、密码或 2FA code。
+2. 后续提交继续执行 Secret、大文件和禁入路径检查，保持仓库为 Private。
+3. 产品开发优先处理 STL-004 和 STL-006，再进行书库 RAG 与双语观点检索的真实评估。
