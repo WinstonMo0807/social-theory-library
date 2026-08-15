@@ -1,0 +1,181 @@
+limit_req_zone $binary_remote_addr zone=general_api:10m rate=2r/s;
+limit_req_zone $binary_remote_addr zone=exact_search:10m rate=1r/s;
+limit_req_zone $binary_remote_addr zone=semantic_search:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=auth_login:10m rate=12r/m;
+limit_req_zone $binary_remote_addr zone=account_recovery:10m rate=1r/m;
+limit_conn_zone $binary_remote_addr zone=per_ip:10m;
+
+server_tokens off;
+
+# The public gateway uses a dedicated Docker network. Only that subnet may
+# supply the client address used by rate limits and Django audit logs.
+set_real_ip_from 172.31.253.0/24;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    '' $scheme;
+}
+
+# Only the configured NAS address is treated as the private HTTP management
+# entry.  Nginx overwrites the marker and signs it with an internal token, so a
+# public client cannot downgrade secure cookies by forging a header.
+map $host $library_lan_http {
+    default 0;
+    ${LAN_HOST} 1;
+}
+
+map $library_lan_http $library_forwarded_proto {
+    default $forwarded_proto;
+    1 https;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+    client_max_body_size 2m;
+    client_body_timeout 15m;
+    client_header_timeout 15s;
+    keepalive_timeout 30s;
+    send_timeout 15m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+
+    location = /api/auth/login/ {
+        limit_req zone=auth_login burst=4 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+    }
+
+    location ~ ^/api/auth/(register|password/request|password/confirm)/$ {
+        limit_req zone=account_recovery burst=4 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+    }
+
+    location ^~ /api/ingestion/ {
+        client_max_body_size 1024m;
+        client_body_timeout 15m;
+        # Public uploads use 8 MiB resumable chunks. Keep request buffering so
+        # slow clients do not occupy Gunicorn workers, while holding a normal
+        # chunk in memory instead of writing it to the container temp area.
+        client_body_buffer_size 10m;
+        limit_req zone=general_api burst=10 nodelay;
+        # Processing Center reads jobs, queue health and ingestion items in
+        # parallel. Keep the request-rate guard, but allow one administrator
+        # page to complete without rejecting its third request with 503.
+        limit_conn per_ip 8;
+        proxy_request_buffering on;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 15m;
+        proxy_read_timeout 15m;
+    }
+
+    location ^~ /api/distribution/assets/ {
+        limit_conn per_ip 12;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+        proxy_buffering off;
+        proxy_read_timeout 15m;
+    }
+
+    location ^~ /__protected_assets/ {
+        internal;
+        alias /data/public/;
+        sendfile on;
+        tcp_nopush on;
+        aio threads;
+        directio 8m;
+        open_file_cache max=500 inactive=60s;
+        open_file_cache_valid 120s;
+        add_header Accept-Ranges bytes always;
+        # Django sets a short revocation-aware cache policy on the internal
+        # response. Avoid overriding it here. Long-lived caching is reserved
+        # for versioned cloud objects behind a custom domain.
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location ^~ /api/catalog/semantic-search/ {
+        limit_req zone=semantic_search burst=8 nodelay;
+        limit_conn per_ip 2;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+        proxy_read_timeout 45s;
+    }
+
+    location = /api/catalog/search/ {
+        limit_req zone=exact_search burst=20 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+    }
+
+    location /api/ {
+        limit_req zone=general_api burst=40 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+        proxy_read_timeout 120s;
+    }
+
+    location / {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+}

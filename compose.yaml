@@ -1,0 +1,291 @@
+name: social-science-library
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-library}
+      POSTGRES_USER: ${POSTGRES_USER:-library}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-library}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.37
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-replace-with-at-least-16-characters}
+      MEILI_NO_ANALYTICS: "true"
+      HF_HOME: /meili_data/models
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      TRANSFORMERS_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+    volumes:
+      - meilisearch_data:/meili_data
+      - ${NAS_HOST_ROOT:-./data}/models:/meili_data/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.6.1}
+    build:
+      context: ./api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-lan-internal-service-token-change-before-public}
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_BACKUP_ROOT: /data/backups
+      CACHE_URL: redis://redis:6379/1
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+      X_ACCEL_REDIRECT_ENABLED: "true"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120"
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/archive:/data/archive
+      - ${NAS_HOST_ROOT:-./data}/public:/data/public
+      - ${NAS_HOST_ROOT:-./data}/incoming:/data/incoming
+      - ${NAS_HOST_ROOT:-./data}/backups:/data/backups
+      - ${NAS_HOST_ROOT:-./data}/models:/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/ready/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  worker:
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.6.1}
+    build:
+      context: ./api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_BACKUP_ROOT: /data/backups
+      CACHE_URL: redis://redis:6379/1
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --hostname=worker@%h
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/archive:/data/archive
+      - ${NAS_HOST_ROOT:-./data}/public:/data/public
+      - ${NAS_HOST_ROOT:-./data}/incoming:/data/incoming
+      - ${NAS_HOST_ROOT:-./data}/backups:/data/backups
+      - ${NAS_HOST_ROOT:-./data}/models:/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination worker@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  ingestion-worker:
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.6.1}
+    build:
+      context: ./api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_BACKUP_ROOT: /data/backups
+      CACHE_URL: redis://redis:6379/1
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=${INGESTION_TASK_QUEUE:-ingestion} --hostname=ingestion@%h
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/archive:/data/archive
+      - ${NAS_HOST_ROOT:-./data}/public:/data/public
+      - ${NAS_HOST_ROOT:-./data}/incoming:/data/incoming
+      - ${NAS_HOST_ROOT:-./data}/backups:/data/backups
+      - ${NAS_HOST_ROOT:-./data}/models:/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination ingestion@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  beat:
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.6.1}
+    build:
+      context: ./api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      CACHE_URL: redis://redis:6379/1
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  paddleocr:
+    build:
+      context: ./ocr_service
+    restart: unless-stopped
+    profiles: ["ocr"]
+    environment:
+      OCR_PRIMARY_LANGUAGE: ch
+      OCR_FALLBACK_LANGUAGE: chinese_cht
+      OCR_ENABLE_STRUCTURE: ${OCR_ENABLE_STRUCTURE:-false}
+      OCR_REQUIRE_PERSISTENT_MODELS: "true"
+      OCR_REQUIRE_FALLBACK: "false"
+      OCR_REQUIRE_STRUCTURE: "false"
+      OCR_RENDER_DPI: "180"
+      OCR_MAX_PAGES: "2000"
+      PADDLE_PDX_MODEL_SOURCE: modelscope
+      HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/ocr-models:/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health', timeout=3)"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  grobid:
+    image: grobid/grobid:0.9.0-crf
+    restart: unless-stopped
+    profiles: ["grobid"]
+    init: true
+    ulimits:
+      core: 0
+    ports:
+      - "8070:8070"
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+
+  web:
+    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:2.6.1}
+    build:
+      context: ./web
+    restart: unless-stopped
+    environment:
+      BROWSER_API_BASE_URL: ${BROWSER_API_BASE_URL:-}
+      NEXT_PUBLIC_API_URL: ""
+      INTERNAL_API_URL: http://api:8000/api
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-lan-internal-service-token-change-before-public}
+      ALLOW_DEMO_FALLBACK: "false"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  edge:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${EDGE_BIND_IP:-0.0.0.0}:${EDGE_PORT:-8080}:80"
+    volumes:
+      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${NAS_HOST_ROOT:-./data}/public:/data/public:ro
+    depends_on:
+      - api
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/api/ready/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:

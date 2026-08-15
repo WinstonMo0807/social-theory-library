@@ -1,0 +1,35 @@
+* text=auto
+
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.example text eol=lf
+*.dockerignore text eol=lf
+*.conf text eol=lf
+*.template text eol=lf
+*.ini text eol=lf
+Caddyfile text eol=lf
+*.ps1 text eol=crlf
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

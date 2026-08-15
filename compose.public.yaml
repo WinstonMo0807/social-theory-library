@@ -1,0 +1,387 @@
+name: social-science-library
+
+x-service-hardening: &service-hardening
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+x-api-volumes: &api-volumes
+  - ${NAS_HOST_ROOT:-./data}/archive:/data/archive
+  - ${NAS_HOST_ROOT:-./data}/public:/data/public
+  - ${NAS_HOST_ROOT:-./data}/incoming:/data/incoming
+  - ${NAS_HOST_ROOT:-./data}/backups:/data/backups
+  - ${NAS_HOST_ROOT:-./data}/models:/models
+
+services:
+  postgres:
+    <<: *service-hardening
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-library}
+      POSTGRES_USER: ${POSTGRES_USER:-library}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置 POSTGRES_PASSWORD}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    <<: *service-hardening
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?请设置 REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?请设置 REDIS_PASSWORD}
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  meilisearch:
+    <<: *service-hardening
+    image: getmeili/meilisearch:v1.37
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:?请设置 MEILISEARCH_MASTER_KEY}
+      MEILI_NO_ANALYTICS: "true"
+      HF_HOME: /meili_data/models
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      TRANSFORMERS_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+    expose:
+      - "7700"
+    volumes:
+      - meilisearch_data:/meili_data
+      - ${NAS_HOST_ROOT:-./data}/models:/meili_data/models
+    networks:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    <<: *service-hardening
+    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    build:
+      context: ./api
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?请设置 INTERNAL_API_TOKEN}
+      CACHE_URL: ${CACHE_URL:?请设置 CACHE_URL}
+      PUBLIC_DEPLOYMENT_MODE: "true"
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?请设置 DJANGO_ALLOWED_HOSTS}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:?请设置 DJANGO_CORS_ALLOWED_ORIGINS}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?请设置 DJANGO_CSRF_TRUSTED_ORIGINS}
+      LAN_HOST: ${LAN_HOST:-192.168.5.6}
+      LAN_PROXY_TOKEN: ${LAN_PROXY_TOKEN:?请设置至少 32 位的 LAN_PROXY_TOKEN}
+      LAN_HTTP_TRUSTED_ORIGINS: ${LAN_HTTP_TRUSTED_ORIGINS:-http://192.168.5.6:3000,http://192.168.5.6:18080,http://192.168.5.6:18082}
+      DJANGO_SECURE_SSL_REDIRECT: "true"
+      DJANGO_SECURE_COOKIES: "true"
+      DJANGO_X_FRAME_OPTIONS: "DENY"
+      DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-86400}
+      DJANGO_HSTS_INCLUDE_SUBDOMAINS: ${DJANGO_HSTS_INCLUDE_SUBDOMAINS:-false}
+      DJANGO_HSTS_PRELOAD: ${DJANGO_HSTS_PRELOAD:-false}
+      JWT_COOKIE_AUTH_ENABLED: "true"
+      JWT_RETURN_TOKENS_IN_BODY: "false"
+      LIBRARY_OWNER_EMAIL: ${LIBRARY_OWNER_EMAIL:-owner@example.com}
+      PUBLIC_WEB_URL: https://${LIBRARY_DOMAIN}
+      PUBLIC_API_URL: https://${LIBRARY_DOMAIN}
+      ALLOW_LOCAL_PUBLIC_ASSET_ACCESS: ${ALLOW_LOCAL_PUBLIC_ASSET_ACCESS:-true}
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_INCOMING_ROOT: /data/incoming
+      NAS_BACKUP_ROOT: /data/backups
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+      X_ACCEL_REDIRECT_ENABLED: "true"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout 120 --access-logfile - --error-logfile -"
+    expose:
+      - "8000"
+    volumes: *api-volumes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-H", "Host: ${LIBRARY_DOMAIN}", "-H", "X-Forwarded-Proto: https", "http://127.0.0.1:8000/api/ready/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  worker:
+    <<: *service-hardening
+    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    build:
+      context: ./api
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      CACHE_URL: ${CACHE_URL:?请设置 CACHE_URL}
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_INCOMING_ROOT: /data/incoming
+      NAS_BACKUP_ROOT: /data/backups
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --hostname=worker@%h
+    volumes: *api-volumes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination worker@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  ingestion-worker:
+    <<: *service-hardening
+    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    build:
+      context: ./api
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      CACHE_URL: ${CACHE_URL:?请设置 CACHE_URL}
+      NAS_LIBRARY_ROOT: /data
+      NAS_ORIGINAL_ROOT: /data/archive
+      NAS_PUBLIC_ROOT: /data/public
+      NAS_INCOMING_ROOT: /data/incoming
+      NAS_BACKUP_ROOT: /data/backups
+      SEMANTIC_SEARCH_MODEL_CACHE: /models
+      SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=${INGESTION_TASK_QUEUE:-ingestion} --hostname=ingestion@%h
+    volumes: *api-volumes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination ingestion@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  beat:
+    <<: *service-hardening
+    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    build:
+      context: ./api
+    env_file:
+      - .env
+    environment:
+      CELERY_RESULT_BACKEND: ""
+      CELERY_TASK_IGNORE_RESULT: "true"
+      CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+      CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+      PROCESS_INGESTION_INLINE: "false"
+      CACHE_URL: ${CACHE_URL:?请设置 CACHE_URL}
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  paddleocr:
+    <<: *service-hardening
+    build:
+      context: ./ocr_service
+    profiles: ["ocr"]
+    environment:
+      OCR_PRIMARY_LANGUAGE: ch
+      OCR_FALLBACK_LANGUAGE: chinese_cht
+      OCR_ENABLE_STRUCTURE: ${OCR_ENABLE_STRUCTURE:-false}
+      OCR_REQUIRE_PERSISTENT_MODELS: "true"
+      OCR_REQUIRE_FALLBACK: "false"
+      OCR_REQUIRE_STRUCTURE: "false"
+      OCR_RENDER_DPI: "180"
+      OCR_MAX_PAGES: "5000"
+      PADDLE_PDX_MODEL_SOURCE: modelscope
+      HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+    expose:
+      - "8010"
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/ocr-models:/models
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=3)"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  web:
+    <<: *service-hardening
+    image: ${LIBRARY_WEB_IMAGE:-social-science-library-web:2.6.1}
+    build:
+      context: ./web
+    environment:
+      BROWSER_API_BASE_URL: ${BROWSER_API_BASE_URL:-/api}
+      NEXT_PUBLIC_API_URL: ""
+      INTERNAL_API_URL: http://api:8000/api
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?请设置 INTERNAL_API_TOKEN}
+      ALLOW_DEMO_FALLBACK: "false"
+    expose:
+      - "3000"
+    networks:
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+
+  edge:
+    <<: *service-hardening
+    image: nginx:1.27-alpine
+    expose:
+      - "80"
+    environment:
+      LAN_HOST: ${LAN_HOST:-192.168.5.6}
+      LAN_PROXY_TOKEN: ${LAN_PROXY_TOKEN:?请设置至少 32 位的 LAN_PROXY_TOKEN}
+    volumes:
+      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${NAS_HOST_ROOT:-./data}/public:/data/public:ro
+    networks:
+      - backend
+      - public_front
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--header=X-Forwarded-Proto: https", "--spider", "-q", "http://127.0.0.1/api/ready/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  gateway:
+    <<: *service-hardening
+    image: caddy:2.10-alpine
+    environment:
+      LIBRARY_DOMAIN: ${LIBRARY_DOMAIN:?请设置 LIBRARY_DOMAIN}
+      PUBLIC_ROBOTS_HEADER: ${PUBLIC_ROBOTS_HEADER:-noindex, nofollow, noarchive}
+      PUBLIC_HSTS_HEADER: ${PUBLIC_HSTS_HEADER:-max-age=86400}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      edge:
+        condition: service_healthy
+    networks:
+      - public_front
+
+  grobid:
+    <<: *service-hardening
+    image: grobid/grobid:0.9.0-crf
+    profiles: ["grobid"]
+    ulimits:
+      core: 0
+    expose:
+      - "8070"
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
+
+networks:
+  backend:
+  public_front:
+    ipam:
+      config:
+        - subnet: 172.31.253.0/24

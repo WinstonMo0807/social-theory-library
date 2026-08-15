@@ -1,0 +1,37 @@
+services:
+  # Cloudflare Tunnel terminates public HTTPS. Keep the direct Caddy gateway
+  # disabled unless the explicit direct-caddy profile is selected later.
+  gateway:
+    profiles: ["direct-caddy"]
+
+  # LAN-only emergency entry point. Do not forward this port on the router.
+  edge:
+    ports:
+      - "${EDGE_BIND_IP:-192.168.5.6}:${LAN_ADMIN_PORT:-3000}:80"
+      - "${EDGE_BIND_IP:-192.168.5.6}:${LAN_LEGACY_PORT:-18080}:80"
+      - "${EDGE_BIND_IP:-192.168.5.6}:${EDGE_PORT:-18082}:80"
+    environment:
+      LAN_HOST: ${LAN_HOST:-192.168.5.6}
+      LAN_PROXY_TOKEN: ${LAN_PROXY_TOKEN:?请设置至少 32 位的 LAN_PROXY_TOKEN}
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    init: true
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --protocol
+      - ${CLOUDFLARE_TUNNEL_PROTOCOL:-auto}
+      - run
+      - --token
+      - ${CLOUDFLARE_TUNNEL_TOKEN:?请设置 CLOUDFLARE_TUNNEL_TOKEN}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      edge:
+        condition: service_healthy
+    networks:
+      - public_front

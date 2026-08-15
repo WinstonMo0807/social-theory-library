@@ -1,0 +1,93 @@
+[
+  {
+    "id": "exact_quote",
+    "type": "准确原句",
+    "query": "请填写馆藏中的准确原句",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "light_paraphrase",
+    "type": "原句轻微改写",
+    "query": "请用略有改写的方式填写一条已知原句",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "synonym",
+    "type": "同义表达",
+    "query": "社会组织如何影响个体行动",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "theory_concept",
+    "type": "理论概念",
+    "query": "规训权力与日常身体实践",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "causal_claim",
+    "type": "因果判断",
+    "query": "为什么农业现代化以后农民反而更依赖组织",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "comparison",
+    "type": "比较判断",
+    "query": "国家治理与市场机制对小农自主性的不同影响",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "imperfect_memory",
+    "type": "记忆不准确的原文",
+    "query": "权力不是只压制人也会生产某种主体",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "cross_language",
+    "type": "跨语言查询",
+    "query": "how organizations reshape peasant autonomy",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "hard_negative",
+    "type": "相似但实际不相关的干扰查询",
+    "query": "身份的形成是否必然来自国家规训",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "filters": {}
+  },
+  {
+    "id": "no_result",
+    "type": "无结果查询",
+    "query": "一个确认不应存在于当前馆藏的专用测试短语",
+    "relevant_passage_ids": [],
+    "relevant_work_ids": [],
+    "irrelevant_passage_ids": [],
+    "expect_no_results": true,
+    "filters": {}
+  }
+]

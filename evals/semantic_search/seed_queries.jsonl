@@ -1,0 +1,8 @@
+{"query":"福柯如何理解权力？","intent":"definition","annotation_focus":"区分权力定义或命题，与仅介绍福柯或权力研究背景的段落。","gold_status":"unjudged"}
+{"query":"为什么科层制会不断扩张？","intent":"cause","annotation_focus":"优先标注解释扩张原因的原文，制度描述但未解释原因的段落标为 1。","gold_status":"unjudged"}
+{"query":"文化资本如何导致教育再生产？","intent":"mechanism","annotation_focus":"优先标注说明作用机制的原文，概念并列或单纯定义标为 1。","gold_status":"unjudged"}
+{"query":"布迪厄与吉登斯如何理解行动与结构？","intent":"comparison","annotation_focus":"优先标注具有可比较命题的原文，只有单个人物介绍时不能直接标为 3。","gold_status":"unjudged"}
+{"query":"农业组织化的出路是什么？","intent":"path_solution","annotation_focus":"优先标注提出发展路径、制度安排或组织形式的原文，历史描述和概念列举标为 1。","gold_status":"unjudged"}
+{"query":"中国乡村治理结构是如何发生变化的？","intent":"historical_process","annotation_focus":"优先标注说明变化阶段、方向或过程的原文，静态结构描述标为 1。","gold_status":"unjudged"}
+{"query":"市场化是否削弱国家能力？","intent":"evaluation","annotation_focus":"优先标注提出判断并给出根据的原文，只有市场化或国家能力主题词的段落标为 1。","gold_status":"unjudged"}
+{"query":"合作社能否解决小农户的市场进入问题？","intent":"relationship","annotation_focus":"优先标注直接讨论合作社与市场进入关系的原文，合作社一般介绍标为 1。","gold_status":"unjudged"}

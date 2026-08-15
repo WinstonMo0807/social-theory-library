@@ -1,0 +1,104 @@
+from pathlib import Path
+from pathlib import PurePosixPath
+import hashlib
+import re
+import shutil
+import tempfile
+from typing import Callable
+import unicodedata
+
+import fitz
+
+
+INVALID_FILENAME_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+SPACE_RE = re.compile(r"\s+")
+
+
+def sha256_file(path: str | Path, chunk_size: int = 1024 * 1024) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    size = 0
+    with Path(path).open("rb") as handle:
+        while chunk := handle.read(chunk_size):
+            digest.update(chunk)
+            size += len(chunk)
+    return digest.hexdigest(), size
+
+
+def is_pdf(path: str | Path) -> bool:
+    with Path(path).open("rb") as handle:
+        return handle.read(5) == b"%PDF-"
+
+
+def materialize_field_file(field_file) -> tuple[Path, Callable[[], None] | None]:
+    """Return a local path for either filesystem or private object storage uploads."""
+    try:
+        return Path(field_file.path), None
+    except (AttributeError, NotImplementedError):
+        suffix = Path(field_file.name).suffix or ".pdf"
+        temporary = tempfile.NamedTemporaryFile(
+            prefix="library-intake-",
+            suffix=suffix,
+            delete=False,
+        )
+        temporary_path = Path(temporary.name)
+        try:
+            with temporary, field_file.open("rb") as source:
+                shutil.copyfileobj(source, temporary, length=1024 * 1024)
+        except Exception:
+            temporary_path.unlink(missing_ok=True)
+            raise
+        return temporary_path, lambda: temporary_path.unlink(missing_ok=True)
+
+
+def validate_pdf_structure(path: str | Path, max_pages: int) -> int:
+    try:
+        document = fitz.open(str(path))
+    except Exception as exc:
+        raise ValueError("PDF 结构损坏，无法打开。") from exc
+    try:
+        if document.needs_pass:
+            raise ValueError("PDF 受密码保护，必须先移除密码才能入库。")
+        if document.page_count < 1:
+            raise ValueError("PDF 不包含可阅读页面。")
+        if document.page_count > max_pages:
+            raise ValueError(f"PDF 页数超过当前上限 {max_pages} 页。")
+        return document.page_count
+    finally:
+        document.close()
+
+
+def safe_component(value: str, fallback: str = "未命名") -> str:
+    value = unicodedata.normalize("NFKC", value or "")
+    value = INVALID_FILENAME_RE.sub("_", value)
+    value = SPACE_RE.sub(" ", value).strip(" .")
+    return value[:180] or fallback
+
+
+def canonical_pdf_filename(title: str, authors: list[str], year: int | None) -> str:
+    author = safe_component("、".join(authors[:3]), "佚名")
+    year_text = str(year) if year else "出版年不详"
+    title_text = safe_component(title)
+    return f"{author}_{year_text}_{title_text}.pdf"
+
+
+def rename_normalized_asset(asset, filename: str) -> str:
+    """Rename the public NAS copy without changing the immutable original."""
+    current = PurePosixPath(asset.file.name)
+    filename = safe_component(Path(filename).stem) + ".pdf"
+    desired = str(current.with_name(filename))
+    if desired == asset.file.name:
+        return desired
+    storage = asset.file.storage
+    available = storage.get_available_name(desired, max_length=1000)
+    with asset.file.open("rb") as source:
+        saved_name = storage.save(available, source)
+    try:
+        storage.delete(asset.file.name)
+    except PermissionError:
+        # Windows does not allow deleting a PDF while an active preview response
+        # still holds the old file. The database can safely move to the new
+        # canonical copy; the unreferenced file is left for storage cleanup.
+        pass
+    asset.file.name = saved_name
+    asset.save(update_fields=["file", "updated_at"])
+    return saved_name
