@@ -88,6 +88,15 @@ def test_system_status_requires_ai_credential_when_provider_needs_one(api_client
     assert profiles["library_qa"]["status"] == "not_configured"
 
 
+def test_system_status_labels_disabled_ai_profiles_as_not_configured(api_client, settings):
+    user = _admin()
+    api_client.force_authenticate(user=user)
+    settings.AI_PROVIDER = "none"
+    response = api_client.get("/api/catalog/admin/system-status/")
+    assert response.status_code == 200
+    assert all(row["status"] == "not_configured" for row in response.data["ai"]["profiles"])
+
+
 def test_system_status_uses_semantic_runtime_setting_names(api_client, settings, tmp_path):
     user = _admin()
     api_client.force_authenticate(user=user)

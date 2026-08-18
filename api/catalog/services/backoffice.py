@@ -198,7 +198,7 @@ def _ai_status() -> dict[str, Any]:
                 "provider": profile.provider,
                 "model": profile.model,
                 "enabled": profile.enabled,
-                "status": "configured" if configured else ("disabled" if not profile.enabled else "not_configured"),
+                "status": "configured" if configured else "not_configured",
                 "health": "unknown" if configured else "not_configured",
                 "endpoint_configured": environment["endpoint_configured"],
                 "credential_configured": environment["credential_configured"],
