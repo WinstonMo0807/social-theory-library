@@ -306,3 +306,15 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 后端 `pytest -q --reuse-db --disable-warnings` 退出码 0，共收集 547 项，9 项因环境条件跳过。前端 `npm test` 通过 63 项通用回归和 17 项 Auth/Scoped Search 回归。`manage.py check`、`makemigrations --check --dry-run`、compileall、TypeScript、ESLint、Vinext build 和 `git diff --check` 均通过。
 - 公网只读检查仍为旧版本：`/api/ready/` 与 `/api/health/` 均为 HTTP 200，版本 `2.6.1`，`pending_migrations=0`。目标 SSH 端口可达，但服务器明确拒绝临时 RSA 公钥 `SHA256:IHJjqWWKNJBfSQk+LHcwxXPssKxrkC6Pi9M726TuOUg`，因此没有执行 fresh backup、production migration、统一镜像发布、QueryLexicon reconciliation 或 semantic cutover。
 - 当前判定保持 `PUBLIC CUTOVER = BLOCKED`，唯一阻塞为生产基础设施 SSH 认证未恢复。源码版本仍为 `2.7`，未把本地通过写成公网部署。
+
+### 2026-08-19 2.7 production cutover completed
+
+- SSH 与无交互 sudo 已恢复。统一 release commit 为 `7cd68d30776c0c652e080d147959a3183a92b71b`。API、Worker、Ingestion Worker、Beat 和 Web 均使用 2.7 image family；API digest 为 `sha256:01fd1936f981c297efc38c86e026a7b41d4b5d50b826a273c7f9807c8bb0a765`，Web digest 为 `sha256:2a2aff9ad9f427a78989bc3b79e546b9717d342e4dbbef43783f2be92b87611a`。
+- Fresh BackupJob `85384c9d-db1b-424b-8ff5-a1d61c7f77b5` completed。归档 9,988,531 bytes，SHA-256 `9a35ada044ae56c215f1f6bf63750a7d1842480c3e077152d67888ef712091b9`，database.dump SHA-256 `3d18d2b3766347ec34226ea33ef48d72a799b9673295423b6ed0b29b08d73d4e`，PostgreSQL server 16.14，pg_dump/pg_restore 16.15。
+- Production migration 已应用：catalog 0029/0030、ingestion 0012、reading 0005/0006。核心计数保持 5 Work、5 Edition、10 Asset、1,989 Page、3,881 SemanticChunk、6 Person、2 KnowledgeNode、1 Topic。
+- QueryLexicon dry-run 无 anomaly。正式 reconciliation 保持 revision 1、active generation `af302b64-1b3f-447d-88ca-5ed505bc87e9`、active 69 entries，public 23、admin 61；同内容候选 generation 被标为 discarded，pending/dead-letter event 为 0。
+- Clean semantic UID `semantic_passages_20260818210650_4cf87bc9` 已通过 consistency audit 并激活。DB ready chunks 与 Meilisearch 均为 3,005，missing、extra、mismatched document_id 和 schema drift 均为 0。旧 UID `semantic_passages_20260809143729_4cf87bc9` 保留为 retired 回退版本。
+- 3 个真实 Asset 的 candidate extraction jobs 成功，Candidate/Evidence 为 0，revision 未变化。UnknownEntityObservation 807 条、NewAuthorityCandidate 781 条均保持 pending，没有自动创建或发布 Person、KnowledgeNode、Topic。
+- 公网 smoke 通过：ready/health 版本 2.7，首页 200，V1 semantic `search_version=v1`、`fallback_used=false`，PDF Range 返回 206 和 `application/pdf`。Celery、Redis、Meilisearch、API、Worker、Ingestion Worker、Beat、Edge healthy；应用 RestartCount 为 0；日志无 schema/exception/secret pattern。
+- AI 状态为 `NOT_CONFIGURED`，general web 为 `NOT_CONFIGURED`，本地 embedding 为 available，Ask retrieval profile 为 stable，公开 V2 仍为 false。
+- 当前状态：`PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。登录后的 Admin、Reader Center、Candidate Review、Ask Library 和长期公网观察留给用户人工验证。

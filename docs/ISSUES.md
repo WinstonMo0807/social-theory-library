@@ -180,3 +180,9 @@ Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，�
 ### 2026-08-19 2.7 门槛刷新
 
 本地源码门槛已再次通过。后端收集 547 项、9 项按环境跳过，前端通用 63 项与 Auth/Scoped Search 17 项通过，Django check、migration drift、compileall、TypeScript、ESLint、Vinext build 和 diff check 通过。目标主机仍拒绝已授权 RSA 公钥，公网 readiness/health 仍报告 2.6.1；因此 FINAL INTEGRATED ACCEPTANCE 与 PUBLIC CUTOVER 继续保持 `BLOCKED`，未执行任何生产 migration、部署、active index 切换、公开 V2、authority publish 或 Candidate accept。
+
+### 2026-08-19 2.7 live deployment update
+
+上述 SSH 阻塞已解除。真实生产已部署 commit `7cd68d30776c0c652e080d147959a3183a92b71b`。catalog 0030、ingestion 0012、reading 0006 已 applied；fresh BackupJob、QueryLexicon reconciliation、clean semantic UID audit 和 active switch 均成功。生产保持 V2 false、Ask stable、AI/Web `NOT_CONFIGURED`，没有自动发布 authority 或 Accept Candidate。
+
+当前总状态为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。尚待用户进行登录后的 Admin、Reader Center、Ask、Candidate Review 人工测试，以及对真实 Provider 配置后的功能验证。

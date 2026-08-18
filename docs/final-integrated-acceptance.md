@@ -179,6 +179,6 @@ Post-cutover work is limited to the explicitly gated items: restore read-only SS
 
 ## Final status
 
-`FINAL INTEGRATED ACCEPTANCE: BLOCKED`
+`PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`
 
-The blocker is concrete and singular: the authorized production read-only identity is still rejected, and there is no local PostgreSQL 16 runtime to substitute for the required real-data rehearsal. No production migration, application deployment, active semantic UID switch, public V2 enable, authority publication or Candidate accept was performed during this final acceptance.
+The authorized NAS runtime was restored and the final production sequence completed. Fresh BackupJob, PostgreSQL 16 migration, QueryLexicon reconciliation, unified 2.7 image deployment, clean semantic index consistency audit and active UID switch all passed. Public V2 remains disabled, AI/Web providers remain explicitly not configured when credentials are absent, and no authority was published or Candidate accepted automatically. The remaining work is user-led authenticated Admin, Reader Center, Candidate Review and Ask Library manual validation.

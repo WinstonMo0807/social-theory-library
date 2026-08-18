@@ -154,4 +154,13 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py migrate --noinput
 ```
 
-2026-08-19 本地 2.7 门槛已通过：后端全量回归、Django check、migration drift、compileall、前端 Node 回归、TypeScript、ESLint、Vinext build 和 diff check 均退出成功。目标主机 `Winston@192.168.5.6:22` 的只读 SSH 仍返回公钥认证拒绝，本机也没有 Docker 或 PostgreSQL 16 runtime；因此本轮没有执行 fresh BackupJob、生产 migration、镜像切换、QueryLexicon reconciliation 或 semantic cutover。
+2026-08-19 本地 2.7 门槛已通过：后端全量回归、Django check、migration drift、compileall、前端 Node 回归、TypeScript、ESLint、Vinext build 和 diff check 均退出成功。早先 SSH 公钥拒绝已由用户修复，后续真实部署已完成。
+
+### 2026-08-19 实际 production cutover
+
+- release commit：`7cd68d30776c0c652e080d147959a3183a92b71b`
+- API、Worker、Ingestion Worker、Beat 和 Web 使用统一 2.7 image family。当前 Compose 的 API 启动命令不执行 migration。
+- fresh BackupJob、6 个 production migration、QueryLexicon dry-run/reconciliation 和 clean semantic projection audit 已完成。
+- active UID 已切换到 `semantic_passages_20260818210650_4cf87bc9`，旧 UID 保留为 retired rollback target。未启用 V2，未修改 ranking、authority 或 Candidate Accept。
+- 公网 ready、health、首页、V1 semantic、Range 206 和 Edge refresh 已通过。当前状态为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。
+- 回退副本保留在生产目录：`.env.pre-2.7-255cc30-20260819`、`.env.pre-2.7-7cd68d3-20260819` 和 `compose.*.pre-2.7-255cc30-20260819`。包含 migration 的回退仍只允许应用/镜像回退，不自动 down migration。

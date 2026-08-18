@@ -201,3 +201,7 @@ System Status Center 只读汇总 PostgreSQL、migration head、Redis、Celery b
 QueryLexicon 与 Semantic Index 页面对普通 Admin 提供只读状态。QueryLexicon reconciliation、语义索引构建、清理和激活由对应 manage capability 保护；有限的语义失败任务 retry 使用 `can_retry_jobs`。前端 capability 只控制展示，API 仍在服务端重新检查权限。
 
 Projection Refresh 复用 `ProcessingJob` 和现有 Celery recovery。它接收一个明确的 Work、Edition、Asset 或 authority 目标，按 source `updated_at` 生成幂等键，有限地协调 QueryLexicon event、semantic index job 和 PDF candidate job。任务失败只标记派生任务，不回滚 Work、Edition、Asset、Page 或 SemanticChunk source state，也不触发全馆扫描。
+
+### Live 2.7 deployment update, 2026-08-19
+
+The authorized NAS runtime has now been verified. Production heads are catalog `0030_knowledgenodealias_is_verified_and_more`, ingestion `0012_alter_processingjob_job_type`, and reading `0006_final_scope_normalization`. API, Worker, Ingestion Worker, Beat and Web use the same 2.7 release revision. QueryLexicon remains revision 1 with the prior active generation. A clean semantic UID was validated against 3,005 ready chunks and 3,005 Meilisearch documents before activation; the historical UID remains retired for rollback. Public V2 is still disabled, Ask uses stable retrieval, AI/Web providers report not configured when credentials are absent, and no authority or candidate decision was automated.
