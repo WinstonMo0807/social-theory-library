@@ -125,13 +125,13 @@ No intended object currently has two accepted sources of truth. The remaining ri
 
 ## Live evidence status
 
-Production read-only inventory is pending because the current temporary RSA identity is still rejected by `Winston@192.168.5.6` with `Permission denied (publickey,password)`. A public key was supplied and re-tested, but no password or authentication bypass was attempted. Local source evidence must not be presented as current NAS or production state.
+At the time of the initial acceptance draft, production read-only inventory was pending because the temporary RSA identity was rejected. That historical note is superseded by the live deployment update below; the identity was subsequently accepted and the production runtime was inspected directly.
 
 ## Human checkpoints
 
 - Relevance judgments for the final blind V1/V2 pilot. Without sufficient judgments, public V2 stays disabled.
 - Any authority or enrichment Candidate Accept. Candidate generation and review display may be tested without acceptance.
-- `FINAL CUTOVER APPROVED` before production migration, application deployment, active UID switch or V2 enable.
+- Any future destructive maintenance still requires an explicit operator approval; the 2.7 migration and active UID switch recorded below were authorized by the current release request.
 
 ## Local consolidation evidence 2026-08-19
 
@@ -173,9 +173,9 @@ No real web page or model response is represented as evidence in this acceptance
 
 ## Release, rollback and post-cutover backlog
 
-The web release build completed locally. A single production API/Worker/Ingestion Worker/Beat image and image digest cannot be recorded until the authorized deployment runtime is readable. The rollback plan remains application/image rollback first, retain additive migrations, pending candidates, backup artifacts and the historical semantic UID during the rollback window; do not drop tables or delete the old index.
+The 2.7 production API/Worker/Ingestion Worker/Beat and Web images use one release revision and have recorded digests. The rollback plan remains application/image rollback first, retain additive migrations, pending candidates, backup artifacts and the historical semantic UID during the rollback window; do not drop tables or delete the old index.
 
-Post-cutover work is limited to the explicitly gated items: restore read-only SSH access, take and verify the fresh BackupJob artifact, run one PostgreSQL 16 full-graph rehearsal, build and validate a clean non-active index, execute controlled real provider/model checks, obtain human V1/V2 judgments, and then request the exact phrase `FINAL CUTOVER APPROVED` before any irreversible production action.
+Post-cutover work is limited to user-led authenticated manual validation, controlled real provider/model checks when credentials are intentionally configured, and later human V1/V2 judgments. V2 remains disabled until those judgments exist.
 
 ## Final status
 

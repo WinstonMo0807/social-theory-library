@@ -174,7 +174,7 @@ QueryLexicon 也存放在 PostgreSQL，但属于可重建派生数据。删除�
 
 ## FINAL INTEGRATED ACCEPTANCE live-state boundary
 
-The deployment statements above are historical evidence, not a current production assertion. On 2026-08-19 the authorized read-only SSH identity for `Winston@192.168.5.6` was rejected, so current images, migration heads, database counts, NAS mounts, queues, provider/model health and active index state remain unverified. No production migration, deployment, authority mutation, active UID switch or public V2 enable was performed in this run because the target host could not be authenticated.
+The deployment statements above were historical evidence while the initial acceptance draft was being prepared. The live 2.7 deployment update below supersedes that temporary boundary with direct NAS observations.
 
 ## 不变量
 
