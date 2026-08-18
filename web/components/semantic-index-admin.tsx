@@ -115,6 +115,16 @@ const evaluationStatusLabels: Record<string, string> = {
   failed: "失败",
 };
 
+const operationLabels: Record<string, string> = {
+  build: "建立索引",
+  rebuild_asset: "重建单本",
+  rebuild_all: "批量重建",
+  stage_snapshot_version: "建立快照候选",
+  clean_orphans: "清理孤立索引",
+  retry_failed: "重试失败项目",
+  delete: "删除索引文档",
+};
+
 export function SemanticIndexAdmin() {
   const [data, setData] = useState<IndexPayload | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -412,11 +422,11 @@ export function SemanticIndexAdmin() {
           <dl>
             <div><dt>功能状态</dt><dd>{!data ? "加载中" : data.runtime.enabled ? "已启用" : "已关闭"}</dd></div>
             <div><dt>检索引擎</dt><dd>{data?.runtime.engine || "加载中"}</dd></div>
-            <div><dt>Embedding</dt><dd>{data?.runtime.model || "加载中"}</dd></div>
+            <div><dt>语义模型</dt><dd>{data?.runtime.model || "加载中"}</dd></div>
             <div><dt>模型状态</dt><dd>{!data ? "加载中" : data.model_health.available === true ? "本地文件已就绪" : data.model_health.available === false ? "语义模型不可用" : "尚未完成运行验证"}</dd></div>
             <div><dt>混合检索权重</dt><dd>{data ? `${Math.round(data.runtime.semantic_ratio * 100)}%` : "加载中"}</dd></div>
             <div><dt>离线模式</dt><dd>{!data ? "加载中" : data.runtime.offline_mode ? "禁止运行时联网下载" : "允许联网"}</dd></div>
-            <div><dt>Reranker</dt><dd>{data?.runtime.reranker || "规则回退"}</dd></div>
+            <div><dt>重排器</dt><dd>{data?.runtime.reranker || "规则回退"}</dd></div>
             <div><dt>反馈</dt><dd>{data ? `${data.feedback.relevant} 条相关，${data.feedback.not_relevant} 条不相关` : "加载中"}</dd></div>
           </dl>
           <p className="admin-help">混合检索权重只控制关键词与语义结果的融合，不是检索质量分数。模型状态不能单独证明关键词降级已经执行，请以下方测试查询结果为准。</p>
@@ -472,7 +482,7 @@ export function SemanticIndexAdmin() {
       </section>
       <section className="admin-panel semantic-job-list">
         <header><h2>索引版本</h2><span>新版本完整验证后才切换生产指针</span></header>
-        <div className="admin-table-scroll"><table><thead><tr><th>索引</th><th>模型</th><th>revision</th><th>维度</th><th>文档</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
+        <div className="admin-table-scroll"><table><thead><tr><th>索引</th><th>模型</th><th>模型版本</th><th>维度</th><th>文档</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
           {data?.index_versions.map((version) => <tr key={version.id}><td><strong>{version.uid}</strong>{version.error ? <small className="attempt-error">{version.error}</small> : null}</td><td>{version.model_repo_id}</td><td>{version.model_revision}</td><td>{version.dimensions ?? "模型默认"}</td><td>{version.document_count}{version.expected_document_count ? ` / ${version.expected_document_count}` : ""}</td><td>{indexStatusLabels[version.status] ?? version.status}</td><td>{new Date(version.created_at).toLocaleString("zh-CN")}</td><td>{version.status === "ready" && data.permissions.can_manage ? <button type="button" disabled={Boolean(busy)} onClick={() => setActivateTarget(version)}>验证并切换</button> : version.status === "active" ? "当前生产" : "—"}</td></tr>)}
           {!dataLoaded ? <tr><td colSpan={8}>正在读取索引版本……</td></tr> : !data ? <tr><td colSpan={8}>索引版本暂时无法读取。</td></tr> : !data.index_versions.length ? <tr><td colSpan={8}>尚未建立版本化索引。</td></tr> : null}
         </tbody></table></div>
@@ -639,8 +649,8 @@ export function SemanticIndexAdmin() {
       </section>
       <section className="admin-panel semantic-job-list">
         <header><h2>最近索引任务</h2><span>{data ? `${data.recent_jobs.length} 条` : "加载中"}</span></header>
-        <div className="admin-table-scroll"><table><thead><tr><th>文献</th><th>操作</th><th>状态</th><th>进度</th><th>尝试</th><th>时间</th><th>操作</th></tr></thead><tbody>
-          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id && data.permissions.can_manage ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
+        <div className="admin-table-scroll"><table><thead><tr><th>文献</th><th>任务类型</th><th>状态</th><th>进度</th><th>尝试次数</th><th>时间</th><th>操作</th></tr></thead><tbody>
+          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{operationLabels[job.operation] ?? job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id && data.permissions.can_manage ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
           {!dataLoaded ? <tr><td colSpan={7}>正在读取索引任务……</td></tr> : !data ? <tr><td colSpan={7}>索引任务暂时无法读取。</td></tr> : !data.recent_jobs.length ? <tr><td colSpan={7}>还没有语义索引任务。</td></tr> : null}
         </tbody></table></div>
       </section>

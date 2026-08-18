@@ -1674,8 +1674,8 @@ export function DistributionAdmin() {
           <header><h2>{draft.id ? "编辑对象存储" : "新增对象存储"}</h2><button type="button" onClick={() => setDraft(emptyCloud)}><RefreshCw size={14} />清空</button></header>
           <div className="form-grid">
             <label><span>服务商名称</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Cloudflare R2 / 阿里云 OSS / S3" /></label>
-            <label><span>S3 Endpoint</span><input value={draft.endpoint} onChange={(event) => setDraft({ ...draft, endpoint: event.target.value })} placeholder="https://…" /></label>
-            <label><span>Bucket</span><input value={draft.bucket} onChange={(event) => setDraft({ ...draft, bucket: event.target.value })} /></label>
+            <label><span>对象存储地址（S3 Endpoint）</span><input value={draft.endpoint} onChange={(event) => setDraft({ ...draft, endpoint: event.target.value })} placeholder="https://…" /></label>
+            <label><span>存储桶（Bucket）</span><input value={draft.bucket} onChange={(event) => setDraft({ ...draft, bucket: event.target.value })} /></label>
             <label><span>区域</span><input value={draft.region} onChange={(event) => setDraft({ ...draft, region: event.target.value })} /></label>
             <label><span>凭据环境变量前缀</span><input value={draft.credentialReference} onChange={(event) => setDraft({ ...draft, credentialReference: event.target.value.toUpperCase() })} /><small>例如 S3 对应 S3_ACCESS_KEY_ID 和 S3_SECRET_ACCESS_KEY</small></label>
             <label><span>预留 CDN 域名</span><input value={draft.publicBaseUrl} onChange={(event) => setDraft({ ...draft, publicBaseUrl: event.target.value })} /></label>
@@ -1829,7 +1829,7 @@ type AIRuntimeDocument = {
 
 const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
   metadata_extraction: "元数据提取",
-  library_qa: "Ask Library",
+  library_qa: "书库问答默认服务（可选）",
   field_enrichment_optional: "联网补全可选判断",
 };
 
@@ -2163,8 +2163,8 @@ export function SettingsAdmin() {
           <div className="admin-action-row"><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</button><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_remote")} disabled={!ocrRuntime.remote_fallback_available}>测试远程 OCR</button><button className="button" type="submit"><Save size={15} />保存 OCR 设置</button></div>
         </form>
         <form className="admin-panel ai-runtime-settings" onSubmit={saveAiRuntime}>
-          <header><h2>AI Runtime</h2></header>
-          <p>各项能力可以使用不同的 provider 与模型。密钥和实际 endpoint 只由服务器环境提供，页面不会读取或保存其原文。</p>
+          <header><h2>服务器 AI 能力（可选）</h2></header>
+          <p>注册读者可以在 Ask 页面使用自己的云端模型。这里仅维护元数据处理、联网补全和可选的服务器默认问答服务，不是读者配置入口；密钥和实际 endpoint 只由服务器环境提供。</p>
           {aiRuntime ? <>
             {aiRuntime.profiles.map((profile) => (
               <fieldset key={profile.key}>
@@ -2173,15 +2173,15 @@ export function SettingsAdmin() {
                   <input type="checkbox" checked={profile.enabled} onChange={(event) => updateAiProfile(profile.key, { enabled: event.target.checked })} />
                   <span>启用该 profile</span>
                 </label>
-                <label><span>Provider</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI-compatible</option></select></label>
+                <label><span>服务类型</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI 兼容接口</option></select></label>
                 <label><span>模型标识</span><input value={profile.model} onChange={(event) => updateAiProfile(profile.key, { model: event.target.value })} /></label>
-                <label><span>Temperature</span><input type="number" min="0" max="2" step="0.05" value={profile.temperature} onChange={(event) => updateAiProfile(profile.key, { temperature: Number(event.target.value) })} /></label>
+                <label><span>生成温度（Temperature）</span><input type="number" min="0" max="2" step="0.05" value={profile.temperature} onChange={(event) => updateAiProfile(profile.key, { temperature: Number(event.target.value) })} /></label>
                 <label><span>最大输出 tokens</span><input type="number" min="128" max="8192" value={profile.max_output_tokens} onChange={(event) => updateAiProfile(profile.key, { max_output_tokens: Number(event.target.value) })} /></label>
                 <label><span>超时，秒</span><input type="number" min="3" max="600" value={profile.timeout_seconds} onChange={(event) => updateAiProfile(profile.key, { timeout_seconds: Number(event.target.value) })} /></label>
                 {profile.capability === "library_qa" ? <label><span>馆藏检索配置</span><select value={profile.retrieval_profile} onChange={(event) => updateAiProfile(profile.key, { retrieval_profile: event.target.value as AIRuntimeProfile["retrieval_profile"] })}><option value="stable">Stable，公开认可路径</option><option value="experimental_v2">Experimental V2，仅管理员显式使用</option></select></label> : null}
                 <dl className="ocr-runtime-status">
-                  <div><dt>Endpoint</dt><dd>{profile.environment?.endpoint_configured ? "服务器已配置" : "服务器未配置"}</dd></div>
-                  <div><dt>Credential</dt><dd>{profile.environment?.credential_configured ? "服务器已配置或不需要" : "服务器未配置"}</dd></div>
+                  <div><dt>服务地址</dt><dd>{profile.environment?.endpoint_configured ? "服务器已配置" : "服务器未配置"}</dd></div>
+                  <div><dt>凭据</dt><dd>{profile.environment?.credential_configured ? "服务器已配置或不需要" : "服务器未配置"}</dd></div>
                   <div><dt>生效方式</dt><dd>模型参数热读取；密钥和 endpoint 需部署环境变更</dd></div>
                 </dl>
                 <button className="button secondary" type="button" onClick={() => void testAiRuntime(profile.key)}>测试配置</button>

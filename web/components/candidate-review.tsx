@@ -48,6 +48,8 @@ type Candidate = {
 type ReviewEnvelope = {
   results: Candidate[];
   counts: Record<string, number>;
+  returned_count?: number;
+  truncated?: boolean;
 };
 
 function valueText(value: unknown) {
@@ -60,10 +62,18 @@ function kindLabel(kind: Candidate["review_kind"]) {
   return ({
     query_lexicon: "PDF 词典候选",
     field_enrichment: "字段补全候选",
-    new_authority: "新 authority 候选",
-    metadata: "Metadata 候选",
+    new_authority: "新权威对象候选",
+    metadata: "元数据候选",
     theory: "理论 / 关系审核",
   } as Record<Candidate["review_kind"], string>)[kind];
+}
+
+function statusLabel(value: string) {
+  return ({ pending: "待审核", accepted: "已接受", rejected: "已拒绝", superseded: "已替代", draft_created: "已创建草稿", matched: "已匹配" } as Record<string, string>)[value] ?? value;
+}
+
+function entityLabel(value?: string) {
+  return ({ person: "学者", work: "作品", edition: "版本", discipline: "学科", subdiscipline: "子学科", knowledge_node: "理论节点", topic: "主题", reading_path: "阅读路径" } as Record<string, string>)[value || ""] ?? (value || "未解析");
 }
 
 export function CandidateReview() {
@@ -140,14 +150,15 @@ export function CandidateReview() {
   return (
     <section className="admin-section candidate-review" aria-label="统一候选审核">
       <header className="admin-section-heading">
-        <div><p className="eyebrow">REVIEW WORKFLOW</p><h1>候选审核</h1><span>不同业务模型共享证据展示和审核动作，接受时仍按各自 source-of-truth 路由。</span></div>
+        <div><p className="eyebrow">审核工作流</p><h1>候选审核中心</h1><span>这里管理待审核的字段补全、PDF 词典和新权威对象候选。它不是词典本身；接受动作仍写入各自的权威来源。</span></div>
         <div className="admin-section-actions"><button type="button" onClick={() => void load()} disabled={loading}><Filter size={15} />刷新</button></div>
       </header>
       <div className="admin-toolbar candidate-review-toolbar">
         <label><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
-        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新 authority</option><option value="metadata">Metadata</option><option value="theory">理论 / 关系</option></select></label>
-        {data ? <small>共 {data.counts.total ?? data.results.length} 条</small> : null}
+        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新权威对象</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
+        {data ? <small>待审核队列共 {data.counts.total ?? data.results.length} 条 · 字段补全 {data.counts.field_enrichment ?? 0} · PDF 词典 {data.counts.query_lexicon ?? 0} · 新权威对象 {data.counts.new_authority ?? 0}{data.truncated ? " · 当前只显示排序靠前的一页" : ""}</small> : null}
       </div>
+      <p className="admin-help candidate-review-explanation">“全部审核来源”只是把不同领域的待审记录集中展示，不是会自动更新的社会科学词典。QueryLexicon 是由已确认 authority 派生的检索词典；这里的接受、拒绝或匹配动作仍分别写回各自的来源对象。</p>
       {message ? <p className="form-message" role="status">{message}</p> : null}
       {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取候选……</p> : null}
       {!loading && !data?.results.length ? <p className="admin-list-state">当前筛选没有候选。0 也是有效状态。</p> : null}
@@ -155,11 +166,11 @@ export function CandidateReview() {
         {data?.results.map((candidate) => (
           <article className="panel candidate-review-card" key={`${candidate.review_kind}-${candidate.id}`}>
             <header>
-              <div><p className="eyebrow">{kindLabel(candidate.review_kind)}</p><h2>{candidate.field_name ?? candidate.candidate_type ?? "候选"}</h2><span>{candidate.target_label || `${candidate.target_entity_type ?? ""} ${candidate.target_entity_id ?? "未解析"}`}</span></div>
+              <div><p className="eyebrow">{kindLabel(candidate.review_kind)}</p><h2>{candidate.field_name ?? candidate.candidate_type ?? "候选"}</h2><span>{candidate.target_label || `${entityLabel(candidate.target_entity_type)} · ${candidate.target_entity_id ?? "未解析"}`}</span></div>
               <strong>{Math.round(candidate.confidence * 100)}%</strong>
             </header>
             <div className="candidate-review-comparison"><section><small>当前值</small><pre>{valueText(candidate.current_value)}</pre></section><section><small>候选值</small><pre>{valueText(candidate.proposed_value ?? candidate.proposed_term)}</pre></section></div>
-            <p className="candidate-review-meta">{candidate.language ? `语言 ${candidate.language} · ` : ""}状态 {candidate.status} · 证据 {candidate.evidence_count} 条 · 独立来源 {candidate.independent_source_count} 个</p>
+            <p className="candidate-review-meta">{candidate.language ? `语言 ${candidate.language} · ` : ""}状态 {statusLabel(candidate.status)} · 证据 {candidate.evidence_count} 条 · 独立来源 {candidate.independent_source_count} 个</p>
             {candidate.conflicts?.length ? <details><summary>来源冲突</summary><pre>{valueText(candidate.conflicts)}</pre></details> : null}
             {candidate.confidence_factors ? <details><summary>置信度因素</summary><pre>{valueText(candidate.confidence_factors)}</pre></details> : null}
             <div className="candidate-review-evidence">
@@ -169,7 +180,7 @@ export function CandidateReview() {
                 return <blockquote key={evidence.id}><header><span>{evidence.source_title || evidence.work_title || "馆藏证据"}</span>{evidence.canonical_url ? <a href={evidence.canonical_url} target="_blank" rel="noreferrer" aria-label="打开来源"><ExternalLink size={13} /></a> : null}</header><p>{quote}</p><footer>{evidence.page_number ? `第 ${evidence.printed_page_label || evidence.page_number} 页` : "页码待补充"}{readerHref ? <a href={readerHref} target="_blank" rel="noreferrer">回到阅读器</a> : null}</footer></blockquote>;
               })}
             </div>
-            {candidate.status === "pending" && candidate.review_kind === "new_authority" ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "match_existing")}><Check size={14} />Match Existing</button><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "create_draft")}><Check size={14} />Create Draft</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.status === "pending" && ["field_enrichment", "query_lexicon"].includes(candidate.review_kind) ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "accept")}><Check size={14} />接受</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.review_action === "open_intake_workspace" && candidate.upload_item_id ? <footer className="candidate-review-actions"><a href={`/admin/intake/${candidate.upload_item_id}`}>打开 Intake</a></footer> : null}
+            {candidate.status === "pending" && candidate.review_kind === "new_authority" ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "match_existing")}><Check size={14} />匹配已有对象</button><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "create_draft")}><Check size={14} />创建草稿</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.status === "pending" && ["field_enrichment", "query_lexicon"].includes(candidate.review_kind) ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "accept")}><Check size={14} />接受</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.review_action === "open_intake_workspace" && candidate.upload_item_id ? <footer className="candidate-review-actions"><a href={`/admin/intake/${candidate.upload_item_id}`}>打开上架工作台</a></footer> : null}
           </article>
         ))}
       </div>

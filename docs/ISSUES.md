@@ -186,3 +186,29 @@ Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，�
 上述 SSH 阻塞已解除。真实生产已部署 commit `7cd68d30776c0c652e080d147959a3183a92b71b`。catalog 0030、ingestion 0012、reading 0006 已 applied；fresh BackupJob、QueryLexicon reconciliation、clean semantic UID audit 和 active switch 均成功。生产保持 V2 false、Ask stable、AI/Web `NOT_CONFIGURED`，没有自动发布 authority 或 Accept Candidate。
 
 当前总状态为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。尚待用户进行登录后的 Admin、Reader Center、Ask、Candidate Review 人工测试，以及对真实 Provider 配置后的功能验证。
+
+## 2.7 post-cutover usability findings, 2026-08-19
+
+### Reader-owned Ask provider
+
+状态为源码已修复，生产 migration 待核实。读者可以在 Ask 页面配置自己的 OpenAI-compatible、Ollama 或 vLLM 服务。凭据加密保存，不进入浏览器存储、日志或 API response。没有个人连接时，若服务器默认 profile 可用则使用默认服务；两者都不可用时明确显示配置入口和证据边界。`reading.0007_reader_ai_connection` 只创建连接表和索引，不会联网或改馆藏。
+
+### Admin session and upload disappearance
+
+状态为源码已修复，公网人工流程待核实。可见性切换和 pageshow 只做有界后台探测；临时网络/5xx 和单次后台 401 不再把已认证上传工作区卸载。跨标签 logout、明确 403 和后续受保护请求仍会执行服务器权限判断。拖拽上传增加键盘入口、拖拽深度处理、类型提示和现有分片恢复反馈。
+
+### Reader layout
+
+状态为源码已修复。纸本页码是可选工具栏单元，已从隐式网格列中分离并在窄屏隐藏。OCR 状态通知回到文档流，不再覆盖 PDF 页面。尚需在真实生产浏览器以不同缩放、侧栏组合和长标题做人工观察。
+
+### Authority/web enrichment errors
+
+状态为源码已修复。结构化来源和网页来源现在返回部分结果、provider/error 分类和 request id；snippet 仍不被当作证据。没有达到 identity/evidence 门槛时，页面展示拒绝原因和统计，而不是只显示“没有候选”。真实 provider 可用性、条款和内容质量仍需单独核实，不应通过降低身份阈值解决。
+
+### Candidate Review semantics
+
+状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。
+
+### Remaining release gate
+
+生产当前仍需为本轮 `reading.0007` 做一次受控 backup、migration plan、migration、统一镜像发布和登录后 smoke。未完成之前不得把读者自助模型配置报告为公网可用，也不切换 semantic index、修改 ranking、发布 draft authority、Accept Candidate 或开启公开 V2。

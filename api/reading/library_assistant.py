@@ -17,6 +17,7 @@ from common.ai_runtime import AICapability, runtime_profile
 from common.concurrency import capacity_slot
 from ingestion.services.ai_client import (
     AIClient,
+    AIConfiguration,
     AIConfigurationError,
     AIProviderAuthError,
     AIProviderRateLimited,
@@ -37,6 +38,7 @@ from .models import LibraryConversation, LibraryMessage, LibraryMessageSource
 from .prompting import LIBRARY_PROMPT_VERSION, library_system_prompt
 from .runtime_profiles import active_library_runtime_summary
 from .services import decrypt_private_text, encrypt_private_text
+from .user_ai import ReaderAIConfigurationError, connection_payload, user_ai_configuration
 
 
 PROMPT_VERSION = LIBRARY_PROMPT_VERSION
@@ -65,14 +67,34 @@ def sse_event(event: str, payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}\n\n"
 
 
-def assistant_status() -> dict:
-    summary = active_library_runtime_summary()
+def assistant_status(user=None) -> dict:
+    personal = connection_payload(user) if user is not None else None
+    server_summary = active_library_runtime_summary()
+    if user is not None:
+        if personal and personal.get("configured"):
+            return {
+                **personal,
+                "available": personal.get("status") == "healthy",
+                "user_configured": True,
+                "effective_source": "reader",
+                "server_fallback_available": bool(server_summary.get("configured")),
+                "retrieval_profile": "stable",
+                "detail": (
+                    "个人模型服务可用。"
+                    if personal.get("status") == "healthy"
+                    else "请先测试个人模型服务；测试通过后即可向书库提问。"
+                ),
+            }
+    summary = server_summary
     if not summary.get("configured"):
         return {
             **summary,
             "available": False,
-            "status": "disabled" if not summary.get("enabled") else "not_configured",
-            "detail": "管理员尚未配置独立的 Library QA runtime profile。",
+            "status": "disabled",
+            "user_configured": False,
+            "effective_source": "reader_required",
+            "personal_connection": personal,
+            "detail": "尚未配置个人模型服务，请在本页保存并测试一个连接。",
         }
     try:
         config = current_ai_configuration(AICapability.LIBRARY_QA)
@@ -82,6 +104,9 @@ def assistant_status() -> dict:
             "configured": False,
             "available": False,
             "status": "invalid_profile",
+            "user_configured": False,
+            "effective_source": "reader_required",
+            "personal_connection": personal,
             "detail": str(exc),
         }
     if not config.enabled:
@@ -91,6 +116,9 @@ def assistant_status() -> dict:
             "status": "disabled",
             **summary,
             "provider": "none",
+            "user_configured": False,
+            "effective_source": "reader_required",
+            "personal_connection": personal,
             "detail": "管理员尚未启用问答模型服务。",
         }
     health = AIClient(config).health_check()
@@ -103,6 +131,9 @@ def assistant_status() -> dict:
             "provider": config.provider,
             "model": config.model,
             "retrieval_profile": config.retrieval_profile,
+            "user_configured": False,
+            "effective_source": "server",
+            "personal_connection": personal,
             "detail": "问答模型服务可用。",
         }
     logger.warning(
@@ -118,6 +149,9 @@ def assistant_status() -> dict:
         "provider": config.provider,
         "model": config.model,
         "retrieval_profile": config.retrieval_profile,
+        "user_configured": False,
+        "effective_source": "reader_optional",
+        "personal_connection": personal,
         "detail": "问答模型暂时不可用。已有会话和来源仍可查看。",
     }
 
@@ -515,13 +549,14 @@ def finalize_answer(
 
 
 class LibraryAnswerStream:
-    def __init__(self, messages: list[dict]):
+    def __init__(self, messages: list[dict], config: AIConfiguration | None = None):
         self.messages = messages
+        self.config = config
         self.runtime_info: dict = {}
 
     def __iter__(self):
         try:
-            primary = current_ai_configuration(AICapability.LIBRARY_QA)
+            primary = self.config or current_ai_configuration(AICapability.LIBRARY_QA)
         except AIConfigurationError as exc:
             raise LibraryAssistantUnavailable(str(exc)) from exc
         if not primary.enabled:
@@ -551,6 +586,8 @@ class LibraryAnswerStream:
             except AIServiceError:
                 if emitted or not primary.fallback_profile_key:
                     raise
+            if self.config is not None:
+                raise
             fallback = current_ai_configuration(
                 AICapability.LIBRARY_QA,
                 primary.fallback_profile_key,
@@ -569,10 +606,10 @@ class LibraryAnswerStream:
             self.runtime_info["usage"] = dict(fallback_client.last_usage)
 
 
-def stream_library_answer(messages: list[dict]) -> LibraryAnswerStream:
+def stream_library_answer(messages: list[dict], config: AIConfiguration | None = None) -> LibraryAnswerStream:
     """Stream a library answer through the capability-selected AI runtime."""
 
-    return LibraryAnswerStream(messages)
+    return LibraryAnswerStream(messages, config=config)
 
 
 def _safe_citation_deltas(chunks: Iterable[str], valid_keys: set[str]) -> Iterator[str]:
@@ -700,6 +737,20 @@ def _stream_conversation_answer(
         runtime = runtime_profile(AICapability.LIBRARY_QA)
     except ValueError:
         runtime = None
+    try:
+        personal_config = user_ai_configuration(conversation.user)
+    except ReaderAIConfigurationError as exc:
+        yield sse_event(
+            "error",
+            {"code": getattr(exc, "code", "reader_ai_configuration_error"), "detail": str(exc)},
+        )
+        return
+    provider_config = personal_config
+    if provider_config is None:
+        try:
+            provider_config = current_ai_configuration(AICapability.LIBRARY_QA)
+        except AIConfigurationError:
+            provider_config = None
     requested_profile = str(
         retrieval_profile_override
         or (runtime.retrieval_profile if runtime else "stable")
@@ -782,7 +833,7 @@ def _stream_conversation_answer(
         sources=sources,
         assist_mode=assist_mode,
         library_query=library_query,
-        max_input_chars=(runtime.max_input_chars if runtime else int(getattr(settings, "AI_MAX_INPUT_CHARS", 16000))),
+        max_input_chars=(provider_config.max_input_chars if provider_config else int(getattr(settings, "AI_MAX_INPUT_CHARS", 16000))),
     )
 
     plan_snapshot = {
@@ -820,9 +871,9 @@ def _stream_conversation_answer(
             status=LibraryMessage.Status.STREAMING,
             retrieval_used=False,
             prompt_version=PROMPT_VERSION,
-            model_provider=runtime.provider if runtime else "",
-            model_name=runtime.model if runtime else "",
-            runtime_profile_key=runtime.key if runtime else "",
+            model_provider=provider_config.provider if provider_config else "",
+            model_name=provider_config.model if provider_config else "",
+            runtime_profile_key=provider_config.profile_key if provider_config else "",
             query_type=library_query.query_type,
             retrieval_profile=requested_profile,
             usage={
@@ -862,9 +913,9 @@ def _stream_conversation_answer(
     valid_keys = {source.source_key for source in persisted_sources}
     output_limit = int(getattr(settings, "AI_LIBRARY_MAX_OUTPUT_CHARS", 12000))
     provider_runtime = {
-        "profile_key": runtime.key if runtime else "",
-        "provider": runtime.provider if runtime else "",
-        "model": runtime.model if runtime else "",
+        "profile_key": provider_config.profile_key if provider_config else "",
+        "provider": provider_config.provider if provider_config else "",
+        "model": provider_config.model if provider_config else "",
         "fallback_used": False,
         "usage": {},
     }
@@ -907,11 +958,19 @@ def _stream_conversation_answer(
                 _strict_no_evidence_answer(effective_insufficiency_reason)
             ]
         else:
-            if runtime is None or not runtime.enabled:
+            if provider_config is None or not provider_config.enabled:
                 raise LibraryAssistantUnavailable(
-                    "管理员尚未启用独立的 Library QA runtime profile。"
+                    "请先在 Ask 设置中保存并测试你的模型服务。"
                 )
-            deltas = stream_library_answer(model_messages)
+            try:
+                deltas = stream_library_answer(model_messages, config=provider_config)
+            except TypeError as exc:
+                # Keep test/extension adapters written against the pre-user
+                # connection signature working without hiding real provider
+                # TypeErrors.
+                if "unexpected keyword argument 'config'" not in str(exc):
+                    raise
+                deltas = stream_library_answer(model_messages)
         for delta in _safe_citation_deltas(deltas, valid_keys):
             if not delta:
                 continue
@@ -929,9 +988,9 @@ def _stream_conversation_answer(
             yield sse_event("delta", {"text": delta})
         if hasattr(deltas, "runtime_info"):
             provider_runtime = dict(getattr(deltas, "runtime_info") or provider_runtime)
-            answer.model_provider = str(provider_runtime.get("provider") or (runtime.provider if runtime else ""))
-            answer.model_name = str(provider_runtime.get("model") or (runtime.model if runtime else ""))
-            answer.runtime_profile_key = str(provider_runtime.get("profile_key") or (runtime.key if runtime else ""))
+            answer.model_provider = str(provider_runtime.get("provider") or (provider_config.provider if provider_config else ""))
+            answer.model_name = str(provider_runtime.get("model") or (provider_config.model if provider_config else ""))
+            answer.runtime_profile_key = str(provider_runtime.get("profile_key") or (provider_config.profile_key if provider_config else ""))
             answer.save(
                 update_fields=[
                     "model_provider",

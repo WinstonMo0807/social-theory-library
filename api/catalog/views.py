@@ -2,6 +2,8 @@ import httpx
 from datetime import timedelta
 import mimetypes
 import re
+import logging
+import uuid
 from uuid import UUID
 from django.conf import settings
 from django.db import transaction
@@ -109,6 +111,9 @@ from common.concurrency import capacity_slot
 from .services.authority_suggestions import authority_suggestions
 
 
+logger = logging.getLogger(__name__)
+
+
 def public_works():
     return public_work_queryset()
 
@@ -119,13 +124,20 @@ class AdminAuthoritySuggestionView(APIView):
     permission_classes = [IsCatalogEditor]
 
     def get(self, request):
+        request_id = str(uuid.uuid4())
         try:
             result = authority_suggestions(
                 request.query_params.get("entity_type", ""),
                 request.query_params.get("q", ""),
             )
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=400)
+            return Response({"detail": str(exc), "request_id": request_id}, status=400)
+        except (httpx.HTTPError, OSError, TimeoutError) as exc:
+            logger.warning("authority suggestion provider unavailable request_id=%s error=%s", request_id, exc.__class__.__name__)
+            return Response({"query": request.query_params.get("q", ""), "results": [], "warnings": [{"code": "provider_unavailable", "detail": "部分权威来源暂时不可用，已保留其他来源结果。"}], "request_id": request_id}, status=200)
+        except Exception:
+            logger.exception("authority suggestion unexpected failure request_id=%s", request_id)
+            return Response({"query": request.query_params.get("q", ""), "results": [], "warnings": [{"code": "provider_error", "detail": "权威来源暂时无法读取，请稍后重试。"}], "request_id": request_id}, status=200)
         return Response(result)
 
 

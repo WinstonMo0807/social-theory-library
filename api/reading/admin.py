@@ -7,6 +7,7 @@ from .models import (
     ReadingList,
     ReadingListItem,
     ReadingProgress,
+    ReaderAIConnection,
     SavedItem,
     SavedTopic,
 )
@@ -34,3 +35,31 @@ for model in (
     SavedTopic,
 ):
     admin.site.register(model)
+
+
+@admin.register(ReaderAIConnection)
+class ReaderAIConnectionAdmin(admin.ModelAdmin):
+    list_display = ("user", "provider", "model", "enabled", "status", "last_checked_at")
+    list_filter = ("provider", "enabled", "status")
+    search_fields = ("user__email", "user__username", "model")
+    readonly_fields = (
+        "user",
+        "provider",
+        "base_url",
+        "model",
+        "api_key_ciphertext",
+        "enabled",
+        "status",
+        "last_checked_at",
+        "last_error_code",
+        "last_error_message",
+        "created_at",
+        "updated_at",
+    )
+    exclude = ("api_key_ciphertext",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

@@ -50,7 +50,7 @@ test("Admin settings expose capability profiles but never a secret value input",
   assert.match(source, /\/reading\/admin\/ai-runtime-profiles\//);
   assert.match(source, /\/reading\/admin\/ai-runtime-profiles\/test\//);
   assert.match(source, /metadata_extraction: "元数据提取"/);
-  assert.match(source, /library_qa: "Ask Library"/);
+  assert.match(source, /library_qa: "书库问答默认服务（可选）"/);
   assert.match(source, /field_enrichment_optional: "联网补全可选判断"/);
   assert.match(source, /密钥和实际 endpoint 只由服务器环境提供/);
   const section = source.slice(
@@ -73,4 +73,16 @@ test("Ask UI keeps evidence metadata separate from streamed answer text", async 
   assert.match(source, /source\.reader_url \? <Link href=\{source\.reader_url\}>查看原文/);
   assert.match(source, /source\.passage_language/);
   assert.match(source, /馆藏证据不足，未使用模型常识补答/);
+});
+
+test("registered readers can configure a personal model connection without browser key persistence", async () => {
+  const source = await readFile(
+    new URL("../components/explore-ask-client.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /\/reading\/library-assistant\/connection\//);
+  assert.match(source, /保存并测试/);
+  assert.match(source, /name="reader-ai-key"/);
+  assert.match(source, /不会写入 Local Storage/);
+  assert.match(source, /个人模型服务/);
 });

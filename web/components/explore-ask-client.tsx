@@ -30,6 +30,24 @@ type AssistantStatus = {
   provider?: string;
   model?: string;
   detail?: string;
+  user_configured?: boolean;
+  api_key_configured?: boolean;
+  base_url?: string;
+  status?: string;
+  effective_source?: "reader" | "server" | "reader_required" | "reader_optional";
+  server_fallback_available?: boolean;
+  personal_connection?: {
+    configured?: boolean;
+    status?: string;
+    api_key_configured?: boolean;
+  };
+};
+
+type ReaderConnectionDraft = {
+  provider: string;
+  base_url: string;
+  model: string;
+  api_key: string;
 };
 
 type Conversation = {
@@ -168,6 +186,30 @@ function responseError(payload: unknown, fallback: string) {
   return fallback;
 }
 
+function ReaderConnectionForm({
+  draft,
+  busy,
+  onChange,
+  onSave,
+  onDelete,
+}: {
+  draft: ReaderConnectionDraft;
+  busy: string;
+  onChange: (field: keyof ReaderConnectionDraft, value: string) => void;
+  onSave: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="ask-reader-connection-form">
+      <label><span>服务类型</span><select value={draft.provider} onChange={(event) => onChange("provider", event.target.value)}><option value="openai_compatible">OpenAI 兼容接口</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option></select></label>
+      <label><span>服务地址</span><input type="url" name="reader-ai-base-url" autoComplete="url" placeholder="https://api.example.com" value={draft.base_url} onChange={(event) => onChange("base_url", event.target.value)} /></label>
+      <label><span>模型名称</span><input type="text" name="reader-ai-model" autoComplete="off" placeholder="例如 gpt-4o-mini" value={draft.model} onChange={(event) => onChange("model", event.target.value)} /></label>
+      <label><span>API Key（Ollama 可留空）</span><input type="password" name="reader-ai-key" autoComplete="new-password" placeholder="只在保存时提交，不会回显" value={draft.api_key} onChange={(event) => onChange("api_key", event.target.value)} /></label>
+      <div className="ask-reader-connection-actions"><button className="button" type="button" disabled={Boolean(busy) || !draft.base_url || !draft.model} onClick={onSave}>{busy === "save" ? "正在测试…" : "保存并测试"}</button><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={onDelete}>删除个人配置</button></div>
+    </div>
+  );
+}
+
 export function ExploreAskClient({
   initialQuestion = "",
   initialScope = GLOBAL_LIBRARY_SCOPE,
@@ -179,6 +221,7 @@ export function ExploreAskClient({
   const [state, setState] = useState<"checking" | "unauthenticated" | "forbidden" | "unconfigured" | "unavailable" | "ready" | "error">("checking");
   const [statusDetail, setStatusDetail] = useState("");
   const [modelLabel, setModelLabel] = useState("");
+  const [effectiveSource, setEffectiveSource] = useState<AssistantStatus["effective_source"]>("reader_required");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [messages, setMessages] = useState<LibraryMessage[]>([]);
@@ -189,6 +232,13 @@ export function ExploreAskClient({
   const [error, setError] = useState("");
   const [sources, setSources] = useState<{ messageId: string; loading: boolean; items: LibrarySource[] } | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState("");
+  const [connectionDraft, setConnectionDraft] = useState<ReaderConnectionDraft>({
+    provider: "openai_compatible",
+    base_url: "",
+    model: "",
+    api_key: "",
+  });
+  const [connectionBusy, setConnectionBusy] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
   async function loadMessages(conversationId: string, token: string) {
@@ -249,7 +299,16 @@ export function ExploreAskClient({
         if (cancelled) return;
         setStatusDetail(service.detail ?? "");
         setModelLabel([service.provider, service.model].filter(Boolean).join(" · "));
-        if (!service.configured) {
+        setEffectiveSource(service.effective_source ?? (service.user_configured ? "reader" : "server"));
+        if (service.user_configured || service.base_url || service.model) {
+          setConnectionDraft((current) => ({
+            ...current,
+            provider: service.provider || current.provider,
+            base_url: service.base_url || current.base_url,
+            model: service.model || current.model,
+          }));
+        }
+        if (!service.configured || service.status === "not_tested") {
           serviceState = "unconfigured";
         } else if (!service.available) {
           serviceState = "unavailable";
@@ -318,6 +377,59 @@ export function ExploreAskClient({
       abortRef.current?.abort();
     };
   }, [initialScope, retrySession, sessionState.message, sessionState.status, sessionState.user?.role]);
+
+  async function savePersonalConnection() {
+    const token = getServerSessionCredential();
+    if (!token) {
+      setState("unauthenticated");
+      return;
+    }
+    setConnectionBusy("save");
+    setError("");
+    try {
+      const saved = await apiRequest<AssistantStatus>(
+        "/reading/library-assistant/connection/",
+        { method: "PUT", body: JSON.stringify({ ...connectionDraft, enabled: true }) },
+        token,
+      );
+      setConnectionDraft((current) => ({ ...current, api_key: "" }));
+      const tested = await apiRequest<AssistantStatus>(
+        "/reading/library-assistant/connection/test/",
+        { method: "POST" },
+        token,
+      );
+      setStatusDetail(tested.detail || saved.detail || "已保存个人模型服务。");
+      setModelLabel([tested.provider, tested.model].filter(Boolean).join(" · "));
+      setEffectiveSource("reader");
+      setState(tested.available ? "ready" : "unavailable");
+    } catch (reason) {
+      if (reason instanceof ApiRequestError && reason.status === 401) {
+        retrySession();
+        setState("unauthenticated");
+      } else {
+        setError(reason instanceof Error ? reason.message : "个人模型服务保存失败。");
+      }
+    } finally {
+      setConnectionBusy("");
+    }
+  }
+
+  async function removePersonalConnection() {
+    const token = getServerSessionCredential();
+    if (!token) return;
+    setConnectionBusy("delete");
+    try {
+      await apiRequest("/reading/library-assistant/connection/", { method: "DELETE" }, token);
+      setConnectionDraft({ provider: "openai_compatible", base_url: "", model: "", api_key: "" });
+      setStatusDetail("个人模型服务已删除。");
+      setEffectiveSource("reader_required");
+      setState("unconfigured");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "个人模型服务删除失败。");
+    } finally {
+      setConnectionBusy("");
+    }
+  }
 
   async function chooseConversation(conversation: Conversation) {
     const token = getServerSessionCredential();
@@ -575,41 +687,37 @@ export function ExploreAskClient({
           <AskModeSwitch query={initialQuestion} />
           <h1 id="ask-configuration-heading">向书库提问</h1>
           <span aria-hidden="true" />
-          <p>首次使用前需要管理员启用模型服务。地址和密钥只在服务器端配置，读者页不会接收、显示或长期保存任何 API 密钥。</p>
+          <p>注册读者可以在本页配置自己的云端模型。密钥只会在本次请求中提交给书库服务器，并以加密形式保存，页面不会回显。</p>
           <p className="ask-configuration-step-label">启用步骤</p>
           <ol>
             <li><UserRound size={20} aria-hidden="true" /><p><strong>第 1 步　准备模型服务</strong><span>确认服务账户、使用范围与数据处理边界。</span></p></li>
             <li><Layers3 size={20} aria-hidden="true" /><p><strong>第 2 步　选择兼容接口</strong><span>可使用项目已支持的本地或兼容服务。</span></p></li>
-            <li><KeyRound size={20} aria-hidden="true" /><p><strong>第 3 步　写入部署环境</strong><span>密钥仅进入服务器环境，不经过读者浏览器。</span></p></li>
-            <li><Activity size={20} aria-hidden="true" /><p><strong>第 4 步　执行连接测试</strong><span>后台确认模型可用后才开放提问。</span></p></li>
+            <li><KeyRound size={20} aria-hidden="true" /><p><strong>第 3 步　保存个人连接</strong><span>密钥只写入你的加密连接记录，不进入共享后台配置。</span></p></li>
+            <li><Activity size={20} aria-hidden="true" /><p><strong>第 4 步　测试连接</strong><span>测试通过后即可直接询问已发布馆藏。</span></p></li>
             <li><CheckCircle2 size={20} aria-hidden="true" /><p><strong>第 5 步　开始馆藏问答</strong><span>回答保留馆藏来源，并允许返回原文。</span></p></li>
           </ol>
-          <div className="ask-configuration-policy"><ShieldCheck size={18} aria-hidden="true" /><p><strong>安全边界</strong><span>本页不提供 API Key 输入框，也不会把密钥写入 Local Storage。</span></p></div>
+          <div className="ask-configuration-policy"><ShieldCheck size={18} aria-hidden="true" /><p><strong>安全边界</strong><span>密钥不会写入 Local Storage、会话正文或公开 API。书库只保存加密凭据摘要。</span></p></div>
         </aside>
 
         <div className="ask-configuration-panel">
           <header>
-            <div><Cloud size={21} aria-hidden="true" /><p><strong>配置云端或本地模型服务</strong><span>管理员在后台完成有效配置后，读者可直接在此使用。</span></p></div>
+            <div><Cloud size={21} aria-hidden="true" /><p><strong>配置你的模型服务</strong><span>支持 OpenAI 兼容接口、Ollama 和 vLLM。书库只负责把馆藏证据交给你选择的模型。</span></p></div>
             <div className="ask-configuration-status" role="status"><span aria-hidden="true" /><p><strong>尚未配置</strong><small>{statusDetail || "服务端尚未提供可用的问答模型。"}</small></p></div>
           </header>
-          <dl className="ask-configuration-summary">
-            <div><dt>服务类型</dt><dd>由后台运行设置统一管理</dd></div>
-            <div><dt>Base URL</dt><dd>只保存在服务器有效配置中</dd></div>
-            <div><dt>API Key</dt><dd>仅从部署环境读取，读者端不可见</dd></div>
-            <div><dt>模型名称</dt><dd>连接测试通过后显示实际生效模型</dd></div>
-            <div><dt>馆藏检索</dt><dd>只检索当前读者有权访问的已发布文献</dd></div>
-          </dl>
+          <ReaderConnectionForm
+            draft={connectionDraft}
+            busy={connectionBusy}
+            onChange={(field, value) => setConnectionDraft((current) => ({ ...current, [field]: value }))}
+            onSave={() => void savePersonalConnection()}
+            onDelete={() => void removePersonalConnection()}
+          />
           <section className="ask-configuration-guidance">
             <Settings2 size={22} aria-hidden="true" />
-            <div><h3>需要管理员操作</h3><p>请在管理后台填写服务配置并发送测试请求。配置未通过前，书库不会假装生成回答。</p></div>
+            <div><h3>由你本人控制</h3><p>管理员不接收你的 API Key。保存并测试通过后，模型只会收到本次问题和已筛选的馆藏证据。</p></div>
           </section>
           <footer>
             <Link className="button secondary" href="/explore/opinions">暂用观点检索</Link>
-            {sessionState.user?.capabilities?.includes("can_manage_search_runtime") ? (
-              <Link className="button" href="/admin/settings">打开后台运行设置 <ArrowRight size={16} aria-hidden="true" /></Link>
-            ) : (
-              <p className="ask-configuration-contact">请联系书库管理员完成服务配置。</p>
-            )}
+            <p className="ask-configuration-contact">模型服务由你本人配置；管理员只负责书库权限和运行边界。</p>
           </footer>
           <small>已有会话与来源仍可在服务恢复后继续查看。管理员也可以随时更换服务器端配置。</small>
         </div>
@@ -629,6 +737,17 @@ export function ExploreAskClient({
   return (
     <>
       <AskLibraryIntro query={initialQuestion} />
+      <details className="ask-reader-connection-settings">
+        <summary><Settings2 size={16} />个人模型设置{modelLabel ? ` · ${modelLabel}` : ""}</summary>
+        <p>当前问答来源：{effectiveSource === "reader" ? "你的个人连接" : effectiveSource === "server" ? "书库默认服务" : "尚未配置个人连接"}。密钥只提交到书库服务器并加密保存，不写入浏览器存储。</p>
+        <ReaderConnectionForm
+          draft={connectionDraft}
+          busy={connectionBusy}
+          onChange={(field, value) => setConnectionDraft((current) => ({ ...current, [field]: value }))}
+          onSave={() => void savePersonalConnection()}
+          onDelete={() => void removePersonalConnection()}
+        />
+      </details>
       <div className="ask-library-workspace">
       <aside className="ask-conversation-list" aria-label="书库问答会话">
         <header>

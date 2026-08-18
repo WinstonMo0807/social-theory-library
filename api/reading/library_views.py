@@ -162,4 +162,4 @@ class LibraryAssistantStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(assistant_status())
+        return Response(assistant_status(request.user))

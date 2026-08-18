@@ -30,8 +30,9 @@ type RawAuthoritySuggestion = Record<string, unknown>;
 
 type AuthoritySuggestionResponse = {
   results?: RawAuthoritySuggestion[];
-  warnings?: string[];
+  warnings?: Array<string | { code?: string; detail?: string }>;
   ai_filter?: { status?: string };
+  request_id?: string;
 };
 
 function text(value: unknown) {
@@ -282,14 +283,14 @@ export function AuthoritySuggestions({ entityType, query }: AuthoritySuggestions
             .map(normalizeSuggestion)
             .filter((item): item is AuthoritySuggestion => item !== null)
             .slice(0, 3);
-          const warning = (payload.warnings ?? []).map(text).filter(Boolean)[0] ?? "";
+          const warning = (payload.warnings ?? []).map((item) => typeof item === "string" ? item : text(item.detail) || text(item.code)).filter(Boolean)[0] ?? "";
           setResults(normalized);
-          setMessage(warning || (normalized.length ? "" : "没有找到可核对的权威候选。可继续人工填写。 "));
+          setMessage(warning ? `来源提示：${warning}${payload.request_id ? `（请求编号 ${payload.request_id.slice(0, 12)}）` : ""}` : (normalized.length ? "" : "没有找到可核对的权威候选。可继续人工填写。"));
         })
         .catch((reason) => {
           if (!active || controller.signal.aborted) return;
           setResults([]);
-          setMessage(reason instanceof Error ? reason.message : "权威候选暂时不可用。 ");
+          setMessage(reason instanceof Error ? `来源服务暂时不可用：${reason.message}` : "来源服务暂时不可用，请稍后重试。");
         })
         .finally(() => {
           if (active) setLoading(false);

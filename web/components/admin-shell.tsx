@@ -34,37 +34,37 @@ import { Wordmark } from "./site-header";
 const navigation = [
   ["Dashboard", [["/admin", LayoutDashboard, "今日工作"]]],
   ["Library", [
-    ["/admin/uploads", Upload, "Upload"],
-    ["/admin/review", Boxes, "Intake / Review"],
-    ["/admin/library", BookOpen, "Works / Editions / Assets"],
-    ["/admin/publication", Send, "Publication"],
+    ["/admin/uploads", Upload, "上传文件"],
+    ["/admin/review", Boxes, "上架与复核"],
+    ["/admin/library", BookOpen, "馆藏 / 版本 / 文件"],
+    ["/admin/publication", Send, "发布确认"],
   ]],
   ["Knowledge", [
-    ["/admin/knowledge", CircleDot, "Knowledge Workspace"],
-    ["/admin/scholars", UserRound, "Scholars"],
-    ["/admin/disciplines", GraduationCap, "Disciplines"],
-    ["/admin/subdisciplines", GitBranch, "Subdisciplines"],
-    ["/admin/theory-nodes", CircleDot, "Theories"],
-    ["/admin/topics", Tags, "Topics"],
-    ["/admin/theory-relations", GitFork, "Relations / Timeline"],
-    ["/admin/reading-paths", BookOpen, "Reading Paths"],
+    ["/admin/knowledge", CircleDot, "知识工作台"],
+    ["/admin/scholars", UserRound, "学者"],
+    ["/admin/disciplines", GraduationCap, "学科"],
+    ["/admin/subdisciplines", GitBranch, "子学科"],
+    ["/admin/theory-nodes", CircleDot, "理论"],
+    ["/admin/topics", Tags, "主题"],
+    ["/admin/theory-relations", GitFork, "关系与时间轴"],
+    ["/admin/reading-paths", BookOpen, "阅读路径"],
   ]],
-  ["Review", [["/admin/candidates", Boxes, "All Candidates"]]],
-  ["Search & Intelligence", [
+  ["审核", [["/admin/candidates", Boxes, "候选审核中心"]]],
+  ["搜索与智能", [
     ["/admin/query-lexicon", Search, "QueryLexicon"],
-    ["/admin/semantic-index", ScanSearch, "Semantic Index"],
-    ["/admin/settings", Sparkles, "Ask Library / AI Runtime"],
+    ["/admin/semantic-index", ScanSearch, "语义索引"],
+    ["/admin/settings", Sparkles, "书库问答与模型"],
   ]],
-  ["Operations", [
-    ["/admin/processing", ChartNoAxesCombined, "Processing Jobs"],
-    ["/admin/status", Activity, "System Status"],
-    ["/admin/distribution", Cloud, "Backup / Storage"],
-    ["/admin/analytics", ChartNoAxesCombined, "Audit / Analytics"],
+  ["运营", [
+    ["/admin/processing", ChartNoAxesCombined, "处理任务"],
+    ["/admin/status", Activity, "系统状态"],
+    ["/admin/distribution", Cloud, "备份与存储"],
+    ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
   ]],
-  ["Administration", [
-    ["/admin/users", Users, "Users / Roles"],
-    ["/admin/about", Info, "Settings / Editorial"],
-    ["/admin/recommendations", Sparkles, "Recommendations"],
+  ["管理", [
+    ["/admin/users", Users, "用户与角色"],
+    ["/admin/about", Info, "设置与编辑"],
+    ["/admin/recommendations", Sparkles, "推荐"],
   ]],
 ] as const;
 

@@ -18,17 +18,17 @@ type HealthPayload = {
 };
 
 const labels: Record<string, string> = {
-  database: "Database",
-  storage: "NAS / Storage",
-  cache: "Redis Cache",
-  broker: "Celery Broker",
-  worker: "Worker Heartbeat",
+  database: "数据库",
+  storage: "NAS 存储",
+  cache: "Redis 缓存",
+  broker: "Celery 消息代理",
+  worker: "Worker 心跳",
   paddleocr: "PaddleOCR",
-  remote_ocr: "Remote OCR",
+  remote_ocr: "远程 OCR",
   meilisearch: "Meilisearch",
-  embedding_model: "Embedding Model",
-  metadata_providers: "Metadata Providers",
-  public_catalog_freshness: "Public Catalog Freshness",
+  embedding_model: "语义模型",
+  metadata_providers: "元数据来源",
+  public_catalog_freshness: "公开目录新鲜度",
 };
 
 export function AdminSystemHealth() {
@@ -78,7 +78,7 @@ export function AdminSystemHealth() {
   return (
     <div className="admin-page system-health-page">
       <header className="admin-page-title">
-        <div><p>概览</p><h1>System Health</h1><span>区分已配置、当前可用、最后成功和最近错误。检查不会改变馆藏。</span></div>
+        <div><p>概览</p><h1>系统健康检查</h1><span>区分已配置、当前可用、最后成功和最近错误。检查不会改变馆藏。</span></div>
         <div className="admin-title-actions">
           <button className="button secondary" type="button" onClick={() => void load()} disabled={pending}><RefreshCw size={15} />刷新</button>
           <button className="button" type="button" onClick={() => void runSelfTest()} disabled={pending}><Play size={15} />端到端自检</button>
@@ -90,9 +90,9 @@ export function AdminSystemHealth() {
           <article className={`admin-panel health-component ${component.available === true ? "available" : component.available === false ? "failed" : "unknown"}`} key={key}>
             <header>{component.available === true ? <CheckCircle2 size={18} /> : <CircleAlert size={18} />}<h2>{labels[key] ?? key}</h2></header>
             <dl>
-              <div><dt>Configured</dt><dd>{component.configured ? "是" : "否"}</dd></div>
-              <div><dt>Available</dt><dd>{component.available === null ? "待测试" : component.available ? "可用" : "不可用"}</dd></div>
-              <div><dt>Last successful check</dt><dd>{component.last_successful_check ? new Date(component.last_successful_check).toLocaleString("zh-CN") : "尚无"}</dd></div>
+              <div><dt>已配置</dt><dd>{component.configured ? "是" : "否"}</dd></div>
+              <div><dt>当前可用</dt><dd>{component.available === null ? "待测试" : component.available ? "可用" : "不可用"}</dd></div>
+              <div><dt>最近成功检查</dt><dd>{component.last_successful_check ? new Date(component.last_successful_check).toLocaleString("zh-CN") : "尚无"}</dd></div>
             </dl>
             {component.last_error ? <p className="health-error">{component.last_error}</p> : null}
             <details><summary>诊断详情</summary><pre>{JSON.stringify(component.detail, null, 2)}</pre></details>

@@ -131,6 +131,37 @@ class LibraryConversation(UUIDTimeStampedModel):
         indexes = [models.Index(fields=["user", "archived", "last_message_at"])]
 
 
+class ReaderAIConnection(UUIDTimeStampedModel):
+    class Provider(models.TextChoices):
+        OPENAI_COMPATIBLE = "openai_compatible", "OpenAI 兼容接口"
+        OLLAMA = "ollama", "Ollama"
+        VLLM = "vllm", "vLLM"
+
+    class Status(models.TextChoices):
+        NOT_TESTED = "not_tested", "尚未测试"
+        HEALTHY = "healthy", "可用"
+        UNAVAILABLE = "unavailable", "暂不可用"
+        INVALID = "invalid", "配置无效"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reader_ai_connection",
+    )
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    base_url = models.URLField(max_length=2000)
+    model = models.CharField(max_length=300)
+    api_key_ciphertext = models.BinaryField(blank=True, default=bytes)
+    enabled = models.BooleanField(default=True)
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.NOT_TESTED)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=80, blank=True)
+    last_error_message = models.TextField(blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "enabled", "status"], name="reader_ai_user_status_idx")]
+
+
 class LibraryMessage(UUIDTimeStampedModel):
     class Role(models.TextChoices):
         USER = "user", "读者"

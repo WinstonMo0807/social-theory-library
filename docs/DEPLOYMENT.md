@@ -164,3 +164,7 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 - active UID 已切换到 `semantic_passages_20260818210650_4cf87bc9`，旧 UID 保留为 retired rollback target。未启用 V2，未修改 ranking、authority 或 Candidate Accept。
 - 公网 ready、health、首页、V1 semantic、Range 206 和 Edge refresh 已通过。当前状态为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。
 - 回退副本保留在生产目录：`.env.pre-2.7-255cc30-20260819`、`.env.pre-2.7-7cd68d3-20260819` 和 `compose.*.pre-2.7-255cc30-20260819`。包含 migration 的回退仍只允许应用/镜像回退，不自动 down migration。
+
+### 2.7 reader-owned Ask connection follow-up
+
+`reading.0007_reader_ai_connection` is an additive migration for the authenticated reader-owned Ask connection. It creates only the encrypted connection record, status fields and lookup index. It does not call a provider, scan a PDF, create a Candidate, change authority, or touch a semantic index. Apply it only after a fresh BackupJob and a reviewed `migrate --plan`; deploy the same API, Worker, Ingestion Worker, Beat and Web revision afterward. A server-side AI profile remains optional. Do not put reader API keys in `.env`, manifests, logs, browser storage or screenshots.

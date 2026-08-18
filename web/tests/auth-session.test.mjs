@@ -283,3 +283,12 @@ test("Admin and Reader protected surfaces use the shared bootstrap", () => {
   assert.match(readerCenter, /isUnauthenticatedError\(result\.reason\)/);
   assert.match(readerNotes, /useSessionBootstrap\(\)/);
 });
+
+test("background session revalidation does not remount active workspaces", () => {
+  const source = readFileSync(new URL("../lib/use-session-bootstrap.ts", import.meta.url), "utf8");
+  assert.match(source, /scheduleValidation\(true\)/);
+  assert.match(source, /previous\.status === "authenticated"/);
+  assert.match(source, /nextState\.status === "temporary_error"/);
+  assert.doesNotMatch(source, /window\.addEventListener\("focus"/);
+  assert.match(source, /document\.addEventListener\("visibilitychange"/);
+});

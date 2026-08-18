@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
-import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
 import {
   formatUploadBytes,
@@ -307,6 +307,8 @@ export function AdminUpload() {
   const [externalEnrichmentEnabled, setExternalEnrichmentEnabled] = useState(true);
   const [aiSuggestionsEnabled, setAiSuggestionsEnabled] = useState(false);
   const [pending, setPending] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   const [result, setResult] = useState<UploadResponse | null>(null);
   const [error, setError] = useState("");
   const [ingestionItems, setIngestionItems] = useState<IngestionItem[]>([]);
@@ -375,6 +377,12 @@ export function AdminUpload() {
       });
     }
     const resumeSessions = loadResumeSessions();
+    const pdfCount = incoming.filter((file) => file.name.toLocaleLowerCase().endsWith(".pdf")).length;
+    if (!pdfCount && !incomingMetadata.length) {
+      setError("拖入的文件中没有可识别的 PDF 或配套元数据文件。");
+      return;
+    }
+    setError("");
     setFiles((current) => {
       const identities = new Set(current.map((item) => `${item.file.name}:${item.file.size}`));
       return current.concat(
@@ -890,12 +898,39 @@ export function AdminUpload() {
         ) : null}
       </section>
       <section
-        className="upload-dropzone"
-        onDragOver={(event) => event.preventDefault()}
+        className={`upload-dropzone${dragging ? " is-dragging" : ""}`}
+        tabIndex={0}
+        onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          input.current?.click();
+        }}
+        onDragEnter={(event: DragEvent) => {
+          event.preventDefault();
+          dragDepth.current += 1;
+          event.dataTransfer.dropEffect = "copy";
+          setDragging(true);
+        }}
+        onDragOver={(event: DragEvent) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(event: DragEvent) => {
+          event.preventDefault();
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0 || !event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
         onDrop={(event: DragEvent) => {
           event.preventDefault();
+          dragDepth.current = 0;
+          setDragging(false);
           addFiles(event.dataTransfer.files);
         }}
+        onDragEnd={() => {
+          dragDepth.current = 0;
+          setDragging(false);
+        }}
+        aria-label="拖入 PDF 和配套元数据"
       >
         <Upload size={31} />
         <h2>拖入 PDF 和配套元数据</h2>

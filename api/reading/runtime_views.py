@@ -13,7 +13,16 @@ from .runtime_profiles import (
 from .runtime_serializers import (
     AIRuntimeProfileDocumentSerializer,
     AIRuntimeProfileTestSerializer,
+    ReaderAIConnectionSerializer,
 )
+from .user_ai import (
+    ReaderAIConfigurationError,
+    connection_payload,
+    delete_connection,
+    save_connection,
+    test_connection,
+)
+from rest_framework.permissions import IsAuthenticated
 
 
 class AdminAIRuntimeProfilesView(APIView):
@@ -48,3 +57,37 @@ class AdminAIRuntimeProfileTestView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=400)
         return Response(result)
+
+
+class ReaderAIConnectionView(APIView):
+    """Per-reader provider connection; the encrypted key is never serialized."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "library_qa"
+
+    def get(self, request):
+        return Response(connection_payload(request.user))
+
+    def put(self, request):
+        serializer = ReaderAIConnectionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payload = save_connection(request.user, **serializer.validated_data)
+        except ReaderAIConfigurationError as exc:
+            return Response({"detail": str(exc), "code": getattr(exc, "code", "invalid_configuration")}, status=400)
+        return Response(payload)
+
+    def delete(self, request):
+        delete_connection(request.user)
+        return Response({"configured": False, "status": "not_configured"})
+
+
+class ReaderAIConnectionTestView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "library_qa"
+
+    def post(self, request):
+        try:
+            return Response(test_connection(request.user))
+        except ReaderAIConfigurationError as exc:
+            return Response({"detail": str(exc), "code": getattr(exc, "code", "invalid_configuration")}, status=400)

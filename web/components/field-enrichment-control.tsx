@@ -77,6 +77,10 @@ function displayValue(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
+function errorLabel(code: string) {
+  return ({ provider_unavailable: "来源服务暂不可用", provider_timeout: "来源服务超时", rate_limited: "来源服务触发频率限制", fetch_blocked: "来源地址被安全策略拦截", invalid_source: "来源格式无效", parse_failed: "页面内容无法解析", identity_ambiguous: "身份仍有歧义", identity_conflict: "身份信息冲突", identity_unresolved: "无法确认目标身份", identity_not_found: "来源没有匹配目标", enrichment_internal_error: "补全服务内部错误" } as Record<string, string>)[code] ?? code;
+}
+
 export function FieldEnrichmentControl({
   targetType,
   targetId,
@@ -87,6 +91,8 @@ export function FieldEnrichmentControl({
 }: Props) {
   const [results, setResults] = useState<Candidate[]>([]);
   const [errors, setErrors] = useState<EnrichmentResponse["errors"]>([]);
+  const [stats, setStats] = useState<Record<string, unknown>>({});
+  const [requestId, setRequestId] = useState("");
   const [loadingMode, setLoadingMode] = useState<"structured" | "web" | "full" | "">("");
   const [decisionId, setDecisionId] = useState("");
   const [message, setMessage] = useState("");
@@ -97,6 +103,8 @@ export function FieldEnrichmentControl({
     setLoadingMode(mode);
     setMessage("");
     setErrors([]);
+    setStats({});
+    setRequestId("");
     try {
       const payload = await apiRequest<EnrichmentResponse>(
         "/catalog/admin/field-enrichment/",
@@ -116,7 +124,14 @@ export function FieldEnrichmentControl({
       );
       setResults(payload.results);
       setErrors(payload.errors ?? []);
-      setMessage(payload.results.length ? "候选已保存，必须逐条核对证据后接受。" : "本次没有形成满足身份与证据门槛的候选。 ");
+      setStats(payload.stats ?? {});
+      setRequestId(payload.request_id ?? "");
+      setMessage(payload.results.length
+        ? "候选已保存，必须逐条核对证据后接受。"
+        : payload.errors?.length
+          ? "本次没有形成候选；来源或身份核验存在阻断，详见下方记录。"
+          : "本次没有形成满足身份与证据门槛的候选。"
+      );
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "字段核对暂时不可用。 ");
     } finally {
@@ -164,8 +179,9 @@ export function FieldEnrichmentControl({
         </div>
       </header>
       <p className="field-enrichment-fields">字段 {fields.map((field) => field.label).join("、")}</p>
-      {message ? <p className="field-enrichment-message" role="status">{message}</p> : null}
-      {errors.length ? <details className="field-enrichment-errors"><summary>部分来源未完成（{errors.length}）</summary><ul>{errors.map((error, index) => <li key={`${error.code}-${index}`}><strong>{error.code}</strong>{error.provider ? ` · ${error.provider}` : ""} · {error.detail}</li>)}</ul></details> : null}
+      {message ? <p className="field-enrichment-message" role="status">{message}{requestId ? `（请求编号 ${requestId.slice(0, 12)}）` : ""}</p> : null}
+      {errors.length ? <details className="field-enrichment-errors"><summary>部分来源未完成（{errors.length}）</summary><ul>{errors.map((error, index) => <li key={`${error.code}-${index}`}><strong>{errorLabel(error.code)}</strong>{error.provider ? ` · ${error.provider}` : ""} · {error.detail}</li>)}</ul></details> : null}
+      {Object.keys(stats).length ? <details className="field-enrichment-errors"><summary>本次核对统计</summary><p>{Object.entries(stats).filter(([key]) => key.endsWith("count") || key.startsWith("identity_") || key === "snippet_rejected" || key === "source_class_rejected").map(([key, value]) => `${key}：${String(value)}`).join(" · ")}</p></details> : null}
       <div className="field-enrichment-candidates">
         {results.map((candidate) => (
           <article key={candidate.id}>

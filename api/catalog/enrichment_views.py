@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from django.db import transaction
+import logging
+import uuid
+import httpx
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,6 +34,9 @@ from catalog.services.query_lexicon.candidates import (
 from catalog.services.field_enrichment.policies import FIELD_POLICIES
 from catalog.services.knowledge_growth import decide_new_authority_candidate, refresh_unknown_candidate
 from common.permissions import CanReviewCandidate, CanReviewCandidateOrCreateAuthority, CanViewEvidence, IsCatalogEditor
+
+
+logger = logging.getLogger(__name__)
 
 
 def _review_status(value: str) -> str:
@@ -103,10 +109,27 @@ class AdminFieldEnrichmentView(APIView):
             requested_mode=values["requested_mode"],
             visibility=values["visibility"],
         )
+        request_id = str(uuid.uuid4())
         try:
             result = FieldEnrichmentService().enrich(enrichment_request, actor=request.user)
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(exc), "request_id": request_id}, status=status.HTTP_400_BAD_REQUEST)
+        except (httpx.HTTPError, OSError, TimeoutError) as exc:
+            logger.warning("field enrichment provider unavailable request_id=%s error=%s", request_id, exc.__class__.__name__)
+            return Response({
+                "request_id": request_id,
+                "results": [],
+                "errors": [{"code": "provider_unavailable", "provider": "field_enrichment", "detail": "来源服务暂时不可用，其他字段和已有候选未受影响。"}],
+                "stats": {"partial": True},
+            })
+        except Exception as exc:
+            logger.exception("field enrichment unexpected failure request_id=%s", request_id)
+            return Response({
+                "request_id": request_id,
+                "results": [],
+                "errors": [{"code": "enrichment_internal_error", "provider": "field_enrichment", "detail": "字段核对服务暂时无法完成，请稍后重试。"}],
+                "stats": {"partial": True},
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(
             {
                 "request_id": str(result.request_id),
@@ -200,7 +223,12 @@ class AdminCandidateReviewView(APIView):
         entity_filter = str(request.query_params.get("entity") or "").strip()
         work_filter = str(request.query_params.get("work") or "").strip()
         source_filter = str(request.query_params.get("source") or "").strip()
+        try:
+            limit = max(1, min(int(request.query_params.get("limit") or 200), 500))
+        except (TypeError, ValueError):
+            limit = 200
         rows = []
+        kind_counts = {"field_enrichment": 0, "query_lexicon": 0, "new_authority": 0, "metadata": 0, "theory": 0}
         if kind in {"all", "field_enrichment"}:
             queryset = EnrichmentCandidate.objects.prefetch_related("evidence_records")
             if status_filter != "all":
@@ -209,7 +237,8 @@ class AdminCandidateReviewView(APIView):
                 queryset = queryset.filter(target_type=entity_filter)
             if source_filter:
                 queryset = queryset.filter(source_class=source_filter)
-            for row in queryset.order_by("-confidence", "created_at")[:200]:
+            kind_counts["field_enrichment"] = queryset.count()
+            for row in queryset.order_by("-confidence", "created_at")[:limit]:
                 payload = EnrichmentCandidateSerializer(row).data
                 payload["review_kind"] = "field_enrichment"
                 payload["target_label"] = f"{row.target_type}:{row.target_id}"
@@ -225,9 +254,10 @@ class AdminCandidateReviewView(APIView):
                 queryset = queryset.filter(target_entity_type=entity_filter)
             if source_filter:
                 queryset = queryset.filter(source_kind=source_filter)
+            kind_counts["query_lexicon"] = queryset.count()
             rows.extend(
                 QueryLexiconCandidateReviewSerializer(
-                    queryset.order_by("-confidence", "created_at")[:200],
+                    queryset.order_by("-confidence", "created_at")[:limit],
                     many=True,
                 ).data
             )
@@ -240,7 +270,8 @@ class AdminCandidateReviewView(APIView):
                 queryset = queryset.filter(status__in=values)
             if work_filter:
                 queryset = queryset.filter(observations__work_id=work_filter)
-            for row in queryset.order_by("-confidence", "created_at")[:200]:
+            kind_counts["new_authority"] = queryset.distinct().count()
+            for row in queryset.order_by("-confidence", "created_at").distinct()[:limit]:
                 payload = NewAuthorityCandidateSerializer(row).data
                 payload["target_label"] = row.primary_term
                 payload["proposed_term"] = row.primary_term
@@ -260,7 +291,8 @@ class AdminCandidateReviewView(APIView):
                 queryset = queryset.filter(upload_item__edition__work_id=work_filter)
             if source_filter:
                 queryset = queryset.filter(source=source_filter)
-            for row in queryset.order_by("-confidence", "created_at")[:200]:
+            kind_counts["metadata"] = queryset.count()
+            for row in queryset.order_by("-confidence", "created_at")[:limit]:
                 rows.append(
                     _with_review_status({
                         "id": str(row.id),
@@ -289,7 +321,8 @@ class AdminCandidateReviewView(APIView):
                 tasks = tasks.filter(status__in=values)
             if work_filter:
                 tasks = tasks.filter(work_id=work_filter)
-            for row in tasks.order_by("-confidence", "created_at")[:200]:
+            kind_counts["theory"] = tasks.count()
+            for row in tasks.order_by("-confidence", "created_at")[:limit]:
                 rows.append(
                     _with_review_status({
                         "id": str(row.id),
@@ -315,18 +348,18 @@ class AdminCandidateReviewView(APIView):
                 str(row.get("created_at") or ""),
             )
         )
+        total_count = sum(kind_counts.values())
         return Response(
             {
-                "results": rows[:200],
+                "results": rows[:limit],
                 "status": status_filter,
                 "kind": kind,
+                "limit": limit,
+                "returned_count": min(len(rows), limit),
+                "truncated": total_count > limit,
                 "counts": {
-                    "total": len(rows),
-                    "field_enrichment": sum(row.get("review_kind") == "field_enrichment" for row in rows),
-                    "query_lexicon": sum(row.get("review_kind") == "query_lexicon" for row in rows),
-                    "new_authority": sum(row.get("review_kind") == "new_authority" for row in rows),
-                    "metadata": sum(row.get("review_kind") == "metadata" for row in rows),
-                    "theory": sum(row.get("review_kind") == "theory" for row in rows),
+                    "total": total_count,
+                    **kind_counts,
                 },
             }
         )

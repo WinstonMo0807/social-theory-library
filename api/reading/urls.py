@@ -21,7 +21,12 @@ from .library_views import (
     LibraryMessageSourceDetailView,
     LibraryMessageSourcesView,
 )
-from .runtime_views import AdminAIRuntimeProfilesView, AdminAIRuntimeProfileTestView
+from .runtime_views import (
+    AdminAIRuntimeProfilesView,
+    AdminAIRuntimeProfileTestView,
+    ReaderAIConnectionTestView,
+    ReaderAIConnectionView,
+)
 
 router = DefaultRouter()
 router.register("progress", ReadingProgressViewSet, basename="progress")
@@ -70,6 +75,16 @@ urlpatterns = [
         "library-assistant/status/",
         LibraryAssistantStatusView.as_view(),
         name="library-assistant-status",
+    ),
+    path(
+        "library-assistant/connection/",
+        ReaderAIConnectionView.as_view(),
+        name="reader-ai-connection",
+    ),
+    path(
+        "library-assistant/connection/test/",
+        ReaderAIConnectionTestView.as_view(),
+        name="reader-ai-connection-test",
     ),
     path(
         "admin/ai-runtime-profiles/",

@@ -318,3 +318,12 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 公网 smoke 通过：ready/health 版本 2.7，首页 200，V1 semantic `search_version=v1`、`fallback_used=false`，PDF Range 返回 206 和 `application/pdf`。Celery、Redis、Meilisearch、API、Worker、Ingestion Worker、Beat、Edge healthy；应用 RestartCount 为 0；日志无 schema/exception/secret pattern。
 - AI 状态为 `NOT_CONFIGURED`，general web 为 `NOT_CONFIGURED`，本地 embedding 为 available，Ask retrieval profile 为 stable，公开 V2 仍为 false。
 - 当前状态：`PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。登录后的 Admin、Reader Center、Candidate Review、Ask Library 和长期公网观察留给用户人工验证。
+
+### 2026-08-19 2.7 post-cutover usability and reader configuration pass
+
+- Ask Library 增加 `ReaderAIConnection` 读者自助配置。连接地址经过公开地址和 SSRF 校验，API Key 使用既有 private-data Fernet 加密，响应、日志、Local Storage 和会话正文均不包含密钥。注册读者仍必须登录，检索范围和证据门槛不变；服务器端 Library QA profile 只作为可选回退与治理入口。
+- 后台会话刷新改为可区分的后台探测与显式跨标签会话事件。后台 5xx、网络错误或单次刷新 401 不会卸载正在上传的工作区；跨标签 logout、明确 403 和下一次受保护动作仍由服务器决定。上传拖拽增加键盘入口、拖拽深度计数、类型提示和可恢复队列反馈。
+- Reader toolbar 修复带纸本页码控件的隐式网格溢出，OCR 状态条改为正文流内的可换行提示，不再覆盖 PDF 内容。
+- Candidate Review 明确为跨领域审核队列，不等同于自更新词典。QueryLexicon 页面改为派生词典说明；System Status、Intake、Knowledge、Semantic Index、System Health 和后台导航补充规范中文和可展开的结构化详情。候选 API 增加按类型准确计数和截断提示，联网来源错误显示 provider 分类、请求编号和部分结果，不再把 provider failure 伪装成空候选。
+- Intake Workspace 增加失败重试和单目标 Projection Refresh 入口，仍复用现有 ProcessingJob/Celery，不扫描全馆。新增 `reading.0007_reader_ai_connection` 仅创建读者连接表和索引，不联网、不生成候选、不改 authority 或 semantic index。
+- 本地最终门槛：后端全量 pytest 退出码 0；Django check、migration drift、compileall、TypeScript、Vinext build、ESLint、前端定向回归和 `git diff --check` 通过。`reading.0007` 尚未应用生产，需在下一次受控发布前完成 fresh backup、migration plan 和健康检查。

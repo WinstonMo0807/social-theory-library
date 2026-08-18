@@ -205,3 +205,13 @@ Projection Refresh 复用 `ProcessingJob` 和现有 Celery recovery。它接收�
 ### Live 2.7 deployment update, 2026-08-19
 
 The authorized NAS runtime has now been verified. Production heads are catalog `0030_knowledgenodealias_is_verified_and_more`, ingestion `0012_alter_processingjob_job_type`, and reading `0006_final_scope_normalization`. API, Worker, Ingestion Worker, Beat and Web use the same 2.7 release revision. QueryLexicon remains revision 1 with the prior active generation. A clean semantic UID was validated against 3,005 ready chunks and 3,005 Meilisearch documents before activation; the historical UID remains retired for rollback. Public V2 is still disabled, Ask uses stable retrieval, AI/Web providers report not configured when credentials are absent, and no authority or candidate decision was automated.
+
+## 2.7 post-cutover usability architecture, 2026-08-19
+
+Ask Library is open to authenticated readers. A reader may store one personal OpenAI-compatible, Ollama or vLLM connection in `reading.ReaderAIConnection`; the API key is encrypted with the existing private-data key and is never serialized, logged or stored in browser storage. The server-side AI profile remains an optional fallback and governance surface, not a prerequisite for reader access. Retrieval still uses the published-library scope and stable profile, so a personal model cannot expand visibility or bypass evidence checks.
+
+The intake surface keeps one real `UploadBatch` and `UploadItem` workflow. Drag and drop, file selection, chunk resume, metadata pairing, OCR, review, publication and projection refresh all point to the existing records and jobs. Background session probes are non-destructive while an authenticated workspace is active; explicit cross-tab logout and server-side permission responses remain authoritative. A failed probe cannot silently erase a queued PDF.
+
+The Reader toolbar allocates the optional printed-page control explicitly and keeps the OCR notice in document flow. The notice no longer covers PDF text. Candidate Review is a review queue, not a self-updating dictionary. QueryLexicon remains a derived, rebuildable dictionary and is only changed through authority change events.
+
+Authority and field enrichment errors now return a request identifier, provider/error category and partial-result envelope. A provider outage is not rendered as an empty evidence result. Structured providers, web fetch, source provenance and field policies remain shared; no second provider or retrieval stack is introduced. `reading.0007_reader_ai_connection` is additive schema only and must be applied through the normal deployment gate before reader self-configuration is available in production.

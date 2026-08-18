@@ -7,6 +7,7 @@ from common.ai_runtime import (
     SUPPORTED_AI_PROVIDERS,
     validate_profile_document,
 )
+from .models import ReaderAIConnection
 
 
 class AIRuntimeProfileSerializer(serializers.Serializer):
@@ -40,3 +41,11 @@ class AIRuntimeProfileDocumentSerializer(serializers.Serializer):
 
 class AIRuntimeProfileTestSerializer(serializers.Serializer):
     profile_key = serializers.CharField(max_length=64)
+
+
+class ReaderAIConnectionSerializer(serializers.Serializer):
+    provider = serializers.ChoiceField(choices=ReaderAIConnection.Provider.choices)
+    base_url = serializers.URLField(max_length=2000)
+    model = serializers.CharField(max_length=300)
+    api_key = serializers.CharField(max_length=4000, write_only=True, required=False, allow_blank=True)
+    enabled = serializers.BooleanField(default=True)
