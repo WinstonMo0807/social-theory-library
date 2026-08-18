@@ -35,7 +35,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { Work } from "@/lib/data";
-import { apiRequest, getStoredAccessToken, normalizePublicResourceUrl } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import type { CanonicalBlock } from "./pdf-canvas";
 import {
   PdfContinuousViewer,
@@ -44,6 +44,7 @@ import {
 } from "./pdf-continuous-viewer";
 import { BookCover } from "./ui";
 import { UsageTracker } from "./usage-tracker";
+import { AskLibraryLink } from "./ask-library-link";
 
 type AccessPayload = {
   url: string;
@@ -324,7 +325,7 @@ export function ReaderShell({
   }, [work.id]);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     let cancelled = false;
     Promise.all([
@@ -471,7 +472,7 @@ export function ReaderShell({
   }, [editionId, page]);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -597,7 +598,7 @@ export function ReaderShell({
   }, [page]);
 
   function protectedAction(label: string) {
-    if (!getStoredAccessToken()) {
+    if (!getServerSessionCredential()) {
       setGate(label);
       return;
     }
@@ -686,7 +687,7 @@ export function ReaderShell({
     kind: AnnotationDraft["kind"],
     snapshot: SelectionSnapshot | null = captureSelection(),
   ) {
-    if (!getStoredAccessToken()) {
+    if (!getServerSessionCredential()) {
       setGate(kind === "note" ? "笔记" : kind === "underline" ? "划线" : "高亮");
       return;
     }
@@ -712,7 +713,7 @@ export function ReaderShell({
   }
 
   async function persistAnnotation(draft: AnnotationDraft) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const created = await apiRequest<ReaderAnnotation>(
@@ -755,7 +756,7 @@ export function ReaderShell({
     if (!annotation || !window.confirm(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`)) {
       return;
     }
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/reading/annotations/${annotationId}/`, { method: "DELETE" }, token);
@@ -769,7 +770,7 @@ export function ReaderShell({
 
   async function deleteBookmark(bookmarkId: string) {
     if (!window.confirm("确定删除这个书签吗？")) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/reading/bookmarks/${bookmarkId}/`, { method: "DELETE" }, token);
@@ -781,7 +782,7 @@ export function ReaderShell({
   }
 
   async function toggleBookmark(snapshot?: SelectionSnapshot | null) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setGate("书签");
       return;
@@ -913,7 +914,7 @@ export function ReaderShell({
   function showSidebarTab(tab: SidebarTab, label?: string) {
     if (
       label
-      && !getStoredAccessToken()
+      && !getServerSessionCredential()
       && ["highlights", "bookmarks", "notes"].includes(tab)
     ) {
       setGate(label);
@@ -1017,6 +1018,13 @@ export function ReaderShell({
           <button className={dark ? "active" : ""} type="button" aria-label="使用深色主题" onClick={() => setDark(true)}><Moon size={17} /></button>
         </div>
         <div className="reader-actions">
+          <AskLibraryLink
+            context="works"
+            ids={[work.workId]}
+            assetId={work.id}
+            label="问这本书"
+            className="reader-ask-library"
+          />
           {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={() => { void apiRequest("/catalog/usage-events/", { method: "POST", body: JSON.stringify({ event_type: "download", asset_id: work.id, work_id: work.workId, source: "reader" }) }).catch(() => undefined); }}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
           <button type="button" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
           <button className={bookmarkedPage ? "active" : ""} type="button" onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></button>

@@ -2,7 +2,7 @@
 
 import { Activity, CheckCircle2, CircleAlert, LoaderCircle, Play, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type ComponentHealth = {
   configured: boolean;
@@ -38,7 +38,7 @@ export function AdminSystemHealth() {
   const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {
@@ -57,7 +57,7 @@ export function AdminSystemHealth() {
   }, [load]);
 
   async function runSelfTest() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {

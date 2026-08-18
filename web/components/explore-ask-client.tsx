@@ -19,7 +19,8 @@ import {
   Square,
   UserRound,
 } from "lucide-react";
-import { ApiRequestError, apiRequest, apiStreamRequest, getStoredAccessToken } from "@/lib/api";
+import { ApiRequestError, apiRequest, apiStreamRequest, getServerSessionCredential } from "@/lib/api";
+import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 
 type AssistMode = "auto" | "on" | "off";
 
@@ -35,6 +36,7 @@ type Conversation = {
   id: string;
   title?: string;
   assist_mode?: AssistMode;
+  scope?: LibraryScope;
   created_at?: string;
   updated_at?: string;
 };
@@ -46,6 +48,9 @@ type LibraryMessage = {
   status?: string;
   retrieval_used?: boolean;
   source_count?: number;
+  evidence_count?: number;
+  insufficient_evidence?: boolean;
+  query_type?: string;
   created_at?: string;
 };
 
@@ -63,7 +68,19 @@ type LibrarySource = {
   snippet?: string;
   reader_url?: string;
   available?: boolean;
+  cited?: boolean;
+  passage_language?: string;
+  document_id?: string;
 };
+
+export type LibraryScope = {
+  context: "global" | "works" | "scholars" | "disciplines" | "subdisciplines" | "theories" | "topics" | "reading_paths";
+  ids?: string[];
+  asset_id?: string;
+  visibility?: "public";
+};
+
+const GLOBAL_LIBRARY_SCOPE: LibraryScope = { context: "global" };
 
 type Collection<T> = T[] | { results?: T[]; configured?: boolean; available?: boolean };
 
@@ -151,16 +168,23 @@ function responseError(payload: unknown, fallback: string) {
   return fallback;
 }
 
-export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: string }) {
-  const [state, setState] = useState<"checking" | "unauthenticated" | "unconfigured" | "unavailable" | "ready" | "error">("checking");
+export function ExploreAskClient({
+  initialQuestion = "",
+  initialScope = GLOBAL_LIBRARY_SCOPE,
+}: {
+  initialQuestion?: string;
+  initialScope?: LibraryScope;
+}) {
+  const { state: sessionState, retry: retrySession } = useSessionBootstrap();
+  const [state, setState] = useState<"checking" | "unauthenticated" | "forbidden" | "unconfigured" | "unavailable" | "ready" | "error">("checking");
   const [statusDetail, setStatusDetail] = useState("");
   const [modelLabel, setModelLabel] = useState("");
-  const [userRole, setUserRole] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [messages, setMessages] = useState<LibraryMessage[]>([]);
   const [draft, setDraft] = useState(initialQuestion);
   const [assistMode, setAssistMode] = useState<AssistMode>("auto");
+  const [scope, setScope] = useState<LibraryScope>(initialScope);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [sources, setSources] = useState<{ messageId: string; loading: boolean; items: LibrarySource[] } | null>(null);
@@ -182,33 +206,44 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
     setConversations(items);
     if (selectFirst && items[0]) {
       setActiveConversationId(items[0].id);
-      setAssistMode(items[0].assist_mode ?? "auto");
+      setAssistMode(items[0].assist_mode === "on" ? "on" : "auto");
+      setScope(items[0].scope ?? initialScope);
       await loadMessages(items[0].id, token);
     }
   }
 
   useEffect(() => {
     let cancelled = false;
-    const token = getStoredAccessToken();
-    if (!token) {
+    if (sessionState.status === "loading" || sessionState.status === "unknown") {
+      queueMicrotask(() => { if (!cancelled) setState("checking"); });
+      return () => { cancelled = true; };
+    }
+    if (sessionState.status === "unauthenticated") {
+      queueMicrotask(() => { if (!cancelled) setState("unauthenticated"); });
+      return () => { cancelled = true; };
+    }
+    if (sessionState.status === "forbidden") {
       queueMicrotask(() => {
-        if (!cancelled) setState("unauthenticated");
+        if (!cancelled) {
+          setState("forbidden");
+          setStatusDetail(sessionState.message ?? "当前账户没有使用 Ask Library 的权限。");
+        }
       });
       return () => { cancelled = true; };
     }
+    if (sessionState.status === "temporary_error") {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setState("error");
+          setStatusDetail(sessionState.message ?? "认证服务暂时不可用。");
+        }
+      });
+      return () => { cancelled = true; };
+    }
+    const token = getServerSessionCredential();
+    if (!token || sessionState.status !== "authenticated") return () => { cancelled = true; };
     (async () => {
       let serviceState: typeof state = "ready";
-      try {
-        const profile = await apiRequest<{ role: string }>("/auth/me/", {}, token);
-        if (cancelled) return;
-        setUserRole(profile.role || "");
-      } catch (reason) {
-        if (cancelled) return;
-        if (reason instanceof ApiRequestError && [401, 403].includes(reason.status)) {
-          setState("unauthenticated");
-          return;
-        }
-      }
       try {
         const service = await apiRequest<AssistantStatus>("/reading/library-assistant/status/", {}, token);
         if (cancelled) return;
@@ -221,8 +256,14 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
         }
       } catch (reason) {
         if (cancelled) return;
-        if (reason instanceof ApiRequestError && [401, 403].includes(reason.status)) {
+        if (reason instanceof ApiRequestError && reason.status === 401) {
+          retrySession();
           setState("unauthenticated");
+          return;
+        }
+        if (reason instanceof ApiRequestError && reason.status === 403) {
+          setState("forbidden");
+          setStatusDetail(reason.message);
           return;
         }
         if (reason instanceof ApiRequestError && reason.status === 404) {
@@ -253,14 +294,19 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
           );
           if (cancelled) return;
           setActiveConversationId(conversationItems[0].id);
-          setAssistMode(conversationItems[0].assist_mode ?? "auto");
+          setAssistMode(conversationItems[0].assist_mode === "on" ? "on" : "auto");
+          setScope(conversationItems[0].scope ?? initialScope);
           setMessages(collectionResults(messagePayload));
         }
         setState(serviceState);
       } catch (reason) {
         if (cancelled) return;
-        if (reason instanceof ApiRequestError && [401, 403].includes(reason.status)) {
+        if (reason instanceof ApiRequestError && reason.status === 401) {
+          retrySession();
           setState("unauthenticated");
+        } else if (reason instanceof ApiRequestError && reason.status === 403) {
+          setState("forbidden");
+          setError(reason.message);
         } else {
           setState(serviceState === "ready" ? "error" : serviceState);
           setError(reason instanceof Error ? reason.message : "暂时无法读取已保存会话。");
@@ -271,15 +317,16 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
       cancelled = true;
       abortRef.current?.abort();
     };
-  }, []);
+  }, [initialScope, retrySession, sessionState.message, sessionState.status, sessionState.user?.role]);
 
   async function chooseConversation(conversation: Conversation) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return setState("unauthenticated");
     setError("");
     setSources(null);
     setActiveConversationId(conversation.id);
-    setAssistMode(conversation.assist_mode ?? "auto");
+    setAssistMode(conversation.assist_mode === "on" ? "on" : "auto");
+    setScope(conversation.scope ?? initialScope);
     try {
       await loadMessages(conversation.id, token);
     } catch (reason) {
@@ -288,7 +335,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
   }
 
   async function createConversation(question?: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setState("unauthenticated");
       return null;
@@ -296,7 +343,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
     const title = question?.trim().slice(0, 36) || "新对话";
     const conversation = await apiRequest<Conversation>(
       "/reading/library-conversations/",
-      { method: "POST", body: JSON.stringify({ title, assist_mode: assistMode }) },
+      { method: "POST", body: JSON.stringify({ title, assist_mode: assistMode, scope }) },
       token,
     );
     setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]);
@@ -317,16 +364,19 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
   }
 
   async function showSources(messageId: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return setState("unauthenticated");
     setSources({ messageId, loading: true, items: [] });
     try {
-      const payload = await apiRequest<Collection<LibrarySource>>(
+      const payload = await apiRequest<Collection<LibrarySource> & { evidence?: LibrarySource[] }>(
         `/reading/library-messages/${messageId}/sources/`,
         {},
         token,
       );
-      setSources({ messageId, loading: false, items: collectionResults(payload) });
+      const items = !Array.isArray(payload) && Array.isArray(payload.evidence)
+        ? payload.evidence
+        : collectionResults(payload);
+      setSources({ messageId, loading: false, items });
     } catch (reason) {
       setSources({ messageId, loading: false, items: [] });
       setError(reason instanceof Error ? reason.message : "来源读取失败。");
@@ -334,7 +384,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
   }
 
   async function showSourceDetail(messageId: string, source: LibrarySource) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     const sourceId = source.id ?? source.source_id;
     if (!token) return setState("unauthenticated");
     if (!sourceId) return;
@@ -356,7 +406,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
   }
 
   async function stopGeneration() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (token && streamingMessageId && !streamingMessageId.startsWith("assistant-")) {
       try {
         await apiRequest(
@@ -375,7 +425,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
     event.preventDefault();
     const question = draft.trim();
     if (!question || isSending || state !== "ready") return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return setState("unauthenticated");
     setError("");
     setSources(null);
@@ -404,11 +454,18 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
           "Accept": "text/event-stream",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question, assist_mode: assistMode }),
+        body: JSON.stringify({ question, assist_mode: assistMode, scope }),
       }, token);
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        if ([401, 403].includes(response.status)) setState("unauthenticated");
+        if (response.status === 401) {
+          retrySession();
+          setState("unauthenticated");
+        } else if (response.status === 403) {
+          setState("forbidden");
+        } else if (response.status === 429) {
+          throw new Error("提问过于频繁，请稍后再试。登录状态未受影响。 ");
+        }
         throw new Error(responseError(payload, `提问失败（${response.status}）。`));
       }
 
@@ -432,9 +489,15 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
         }
         if (streamEvent === "sources") {
           const count = typeof payload.count === "number" ? payload.count : 0;
+          const evidence = Array.isArray(payload.evidence)
+            ? payload.evidence.filter((row): row is LibrarySource => Boolean(row && typeof row === "object"))
+            : [];
           setMessages((current) => current.map((message) => (
-            [temporaryAssistantId, assistantId].includes(message.id) ? { ...message, source_count: count } : message
+            [temporaryAssistantId, assistantId].includes(message.id)
+              ? { ...message, source_count: count, evidence_count: evidence.length }
+              : message
           )));
+          if (evidence.length) setSources({ messageId: assistantId, loading: false, items: evidence });
         }
         if (streamEvent === "done") {
           setMessages((current) => current.map((message) => (
@@ -444,7 +507,11 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
           )));
         }
         if (streamEvent === "error") {
+          const code = typeof payload.code === "string" ? payload.code : "";
           streamFailure = typeof payload.detail === "string" ? payload.detail : "回答生成失败。";
+          if (code === "ai_provider_rate_limited") {
+            streamFailure = "模型服务请求频率受限，请稍后重试。登录状态未受影响。";
+          }
         }
       });
       if (streamFailure) throw new Error(streamFailure);
@@ -487,6 +554,20 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
     );
   }
 
+  if (state === "forbidden") {
+    return (
+      <>
+        <AskLibraryIntro query={initialQuestion} />
+        <section className="ask-library-state" role="alert">
+          <ShieldCheck size={34} />
+          <h2>当前账户没有使用权限</h2>
+          <p>{statusDetail || "你仍保持登录，可以继续阅读馆藏或返回账户中心。"}</p>
+          <Link className="button secondary" href="/account">返回账户中心</Link>
+        </section>
+      </>
+    );
+  }
+
   if (state === "unconfigured" && !conversations.length) {
     return (
       <section className="ask-configuration-workspace" aria-labelledby="ask-configuration-heading">
@@ -524,7 +605,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
           </section>
           <footer>
             <Link className="button secondary" href="/explore/opinions">暂用观点检索</Link>
-            {userRole === "admin" ? (
+            {sessionState.user?.capabilities?.includes("can_manage_search_runtime") ? (
               <Link className="button" href="/admin/settings">打开后台运行设置 <ArrowRight size={16} aria-hidden="true" /></Link>
             ) : (
               <p className="ask-configuration-contact">请联系书库管理员完成服务配置。</p>
@@ -578,9 +659,9 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
             <select value={assistMode} onChange={(event) => setAssistMode(event.target.value as AssistMode)} disabled={isSending || !canGenerate}>
               <option value="auto">自动</option>
               <option value="on">始终检索</option>
-              <option value="off">关闭检索</option>
             </select>
           </label>
+          <small className="ask-scope-label">范围 {scope.context === "global" ? "全馆" : scope.context}</small>
         </header>
         {!canGenerate ? (
           <div className="ask-service-notice" role="status">
@@ -604,10 +685,10 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
                 <p>{message.content || (message.status === "streaming" ? "正在生成……" : "暂无内容")}</p>
                 {message.role === "assistant" ? (
                   <footer>
-                    {message.retrieval_used === false ? <small>本条回答未使用馆藏检索</small> : null}
-                    {message.source_count ? (
+                    {message.insufficient_evidence ? <small>馆藏证据不足，未使用模型常识补答</small> : null}
+                    {message.evidence_count || message.source_count ? (
                       <button type="button" onClick={() => void showSources(message.id)}>
-                        <BookOpen size={14} />查看 {message.source_count} 条来源
+                        <BookOpen size={14} />查看 {message.evidence_count ?? message.source_count} 条馆藏证据
                       </button>
                     ) : null}
                   </footer>
@@ -652,6 +733,7 @@ export function ExploreAskClient({ initialQuestion = "" }: { initialQuestion?: s
                 <span>[{source.citation_number ?? source.ordinal ?? index + 1}]</span>
                 <h3>{source.work_title ?? source.title ?? "馆藏原文"}</h3>
                 <p>{printedLabel ? `书页 ${printedLabel}` : source.page_index ? `PDF 第 ${source.page_index} 页` : "页码待核对"}</p>
+                {source.passage_language ? <small>原文语言 {source.passage_language}</small> : null}
                 {source.quote || source.snippet ? <blockquote>{source.quote ?? source.snippet}</blockquote> : null}
                 {!source.quote && !source.snippet && source.available !== false && source.id ? (
                   <button type="button" onClick={() => void showSourceDetail(sources.messageId, source)}>查看摘录</button>

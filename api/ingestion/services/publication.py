@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -145,6 +147,16 @@ def invalidate_public_recommendations() -> None:
     ).update(is_current=False, updated_at=timezone.now())
 
 
+def _publication_event_key(value: str) -> str:
+    """Fit a deterministic business key into PublicationEvent.max_length."""
+
+    max_length = PublicationEvent._meta.get_field("idempotency_key").max_length
+    if len(value) <= max_length:
+        return value
+    digest = sha256(value.encode("utf-8")).hexdigest()[:24]
+    return f"{value[: max_length - len(digest) - 1]}:{digest}"
+
+
 @transaction.atomic
 def publish_edition(
     edition: Edition,
@@ -171,6 +183,7 @@ def publish_edition(
     event_key = idempotency_key or f"publish:{edition.id}:{edition.updated_at.isoformat()}"
     if is_republication:
         event_key = f"{event_key}:republish:{edition.updated_at.isoformat()}"
+    event_key = _publication_event_key(event_key)
     event, created = PublicationEvent.objects.get_or_create(
         idempotency_key=event_key,
         defaults={

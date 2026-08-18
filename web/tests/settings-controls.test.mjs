@@ -95,27 +95,27 @@ test("admin navigation uses the approved groups and only real routes", async () 
   const navigationSource = source.slice(navigationStart, navigationEnd);
 
   const expectedGroups = [
-    ["概览", ["/admin", "/admin/analytics"]],
-    ["上架", ["/admin/uploads", "/admin/review", "/admin/processing"]],
-    ["馆藏", ["/admin/library"]],
-    ["学者与机构", ["/admin/scholars"]],
-    ["理论知识", [
+    ["Dashboard", ["/admin"]],
+    ["Library", ["/admin/uploads", "/admin/review", "/admin/library", "/admin/publication"]],
+    ["Knowledge", [
+      "/admin/knowledge",
+      "/admin/scholars",
       "/admin/disciplines",
       "/admin/subdisciplines",
       "/admin/theory-nodes",
-      "/admin/theory-relations",
-      "/admin/theory-timeline",
       "/admin/topics",
+      "/admin/theory-relations",
       "/admin/reading-paths",
     ]],
-    ["搜索与模型", ["/admin/semantic-index"]],
-    ["发布", ["/admin/publication", "/admin/recommendations", "/admin/about"]],
-    ["系统", [
-      "/admin/system-health",
-      "/admin/users",
+    ["Review", ["/admin/candidates"]],
+    ["Search & Intelligence", ["/admin/query-lexicon", "/admin/semantic-index", "/admin/settings"]],
+    ["Operations", [
+      "/admin/processing",
+      "/admin/status",
       "/admin/distribution",
-      "/admin/settings",
+      "/admin/analytics",
     ]],
+    ["Administration", ["/admin/users", "/admin/about", "/admin/recommendations"]],
   ];
 
   const groupPositions = expectedGroups.map(([group]) => {
@@ -183,7 +183,9 @@ test("admin-only navigation permissions remain explicit after regrouping", async
     .map((match) => match[1]);
 
   assert.deepEqual(routes, [
+    "/admin/status",
     "/admin/system-health",
+    "/admin/query-lexicon",
     "/admin/semantic-index",
     "/admin/analytics",
     "/admin/users",
@@ -191,6 +193,21 @@ test("admin-only navigation permissions remain explicit after regrouping", async
     "/admin/settings",
   ]);
   assert.match(source, /user\.role === "admin" \|\| !administratorOnlyRoutes\.has\(href\)/);
+  assert.match(source, /"\/admin\/query-lexicon": \["can_view_query_lexicon"\]/);
+  assert.match(source, /"\/admin\/semantic-index": \["can_view_semantic_index"\]/);
+});
+
+test("query lexicon and semantic index keep ordinary admin views read-only", async () => {
+  const [lexicon, semantic] = await Promise.all([
+    readFile(new URL("../components/query-lexicon-workspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/semantic-index-admin.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(lexicon, /payload\?\.permissions\?\.can_manage/);
+  assert.match(lexicon, /Reconcile 由超级管理员执行/);
+  assert.match(semantic, /data\?\.permissions\.can_manage/);
+  assert.match(semantic, /索引构建与切换由超级管理员执行/);
+  assert.match(semantic, /version\.status === "ready" && data\.permissions\.can_manage/);
 });
 
 test("shared admin UI primitives expose text states and keyboard-safe controls", async () => {
@@ -240,7 +257,7 @@ test("structured admin editors replace delimiter-driven core forms without chang
   assert.doesNotMatch([sections, knowledge, theory].join("\n"), /每行一项|每行“/);
 });
 
-test("authority suggestions debounce, limit results and only fill editable drafts", async () => {
+test("authority identity suggestions require an explicit request and never fill drafts", async () => {
   const [shared, sections, knowledge, theory] = await Promise.all([
     readFile(new URL("../components/structured-editors.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/admin-sections.tsx", import.meta.url), "utf8"),
@@ -248,16 +265,21 @@ test("authority suggestions debounce, limit results and only fill editable draft
     readFile(new URL("../components/theory-system-admin.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(shared, /authority-suggestions\/\?entity_type=\$\{encodeURIComponent\(entityType\)\}&q=\$\{encodeURIComponent\(normalizedQuery\)\}/);
-  assert.match(shared, /\}, 650\)/);
+  assert.match(shared, /authority-suggestions\/\?entity_type=\$\{encodeURIComponent\(entityType\)\}&q=\$\{encodeURIComponent\(request\.query\)\}/);
+  assert.match(shared, /查找权威对象/);
+  assert.match(shared, /setRequest\(\{ query: normalizedQuery, nonce:/);
+  assert.doesNotMatch(shared, /\}, 650\)/);
   assert.match(shared, /\.slice\(0, 3\)/);
-  assert.match(shared, /采用后只填入当前草稿，仍需单独保存和发布/);
+  assert.match(shared, /只用于确认“查的是谁”。字段写入必须进入候选审核/);
+  assert.match(shared, /result\.source_url/);
+  assert.doesNotMatch(shared, /onApply/);
   assert.match(shared, /typeof entry === "string"/);
   assert.match(shared, /text\(row\.name\) \|\| text\(row\.alias\)/);
   assert.match(sections, /entityType="person"/);
   assert.match(knowledge, /entityType="discipline"/);
   assert.match(knowledge, /entityType="subdiscipline"/);
   assert.match(theory, /entityType=\{draft\.node_type === "theory_tradition"/);
+  assert.doesNotMatch([sections, knowledge, theory].join("\n"), /onApply=/);
   assert.doesNotMatch(shared, /editorial_status|publication_status|published_at/);
 });
 

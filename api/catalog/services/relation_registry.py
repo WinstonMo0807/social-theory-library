@@ -44,12 +44,26 @@ RELATION_POLICIES = {
         directed=True,
         inverse_predicate="revised_by",
     ),
+    KnowledgeRelation.RelationType.EXTENDS: RelationPolicy(
+        predicate=KnowledgeRelation.RelationType.EXTENDS,
+        allowed_subject_types=_NODE_TYPES,
+        allowed_object_types=_NODE_TYPES,
+        directed=True,
+        inverse_predicate="extended_by",
+    ),
     KnowledgeRelation.RelationType.CRITICIZES: RelationPolicy(
         predicate=KnowledgeRelation.RelationType.CRITICIZES,
         allowed_subject_types=_NODE_TYPES,
         allowed_object_types=_NODE_TYPES,
         directed=True,
         inverse_predicate="criticized_by",
+    ),
+    KnowledgeRelation.RelationType.RESPONDS_TO: RelationPolicy(
+        predicate=KnowledgeRelation.RelationType.RESPONDS_TO,
+        allowed_subject_types=_NODE_TYPES,
+        allowed_object_types=_NODE_TYPES,
+        directed=True,
+        inverse_predicate="receives_response_from",
     ),
     KnowledgeRelation.RelationType.COMPETES_WITH: RelationPolicy(
         predicate=KnowledgeRelation.RelationType.COMPETES_WITH,

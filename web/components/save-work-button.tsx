@@ -2,7 +2,7 @@
 
 import { Bookmark } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export function SaveWorkButton({
   workId,
@@ -15,7 +15,7 @@ export function SaveWorkButton({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !workId) return;
     let cancelled = false;
     apiRequest<{ results: { id: string }[] }>(
@@ -33,7 +33,7 @@ export function SaveWorkButton({
   }, [workId]);
 
   async function toggle() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
       return;

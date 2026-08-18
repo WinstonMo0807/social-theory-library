@@ -255,6 +255,10 @@ def test_registered_asset_requires_login_but_remains_available_to_reader(
     authenticated = api_client.get(f"/api/distribution/assets/{asset.id}/access/")
     assert authenticated.status_code == 200
     assert authenticated.data["requested_asset_id"] == str(asset.id)
+    protected_file = api_client.get(f"/api/distribution/assets/{asset.id}/file/")
+    assert protected_file.status_code == 200
+    assert protected_file["Cache-Control"] == "private, no-store, no-transform"
+    assert "Cookie" in protected_file["Vary"]
 
 
 @pytest.mark.django_db

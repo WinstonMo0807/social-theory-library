@@ -23,16 +23,16 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
 import {
   AuthoritySuggestions,
   StringListEditor,
   StructuredRowsEditor,
-  mergeUniqueStrings,
   type StructuredRow,
 } from "@/components/structured-editors";
 
@@ -58,7 +58,7 @@ function useAdminResource<T>(path: string | null) {
       });
       return;
     }
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     let active = true;
     if (!token) {
       Promise.resolve().then(() => {
@@ -153,7 +153,7 @@ export function LibraryAdmin({ initialQuery = "" }: { initialQuery?: string }) {
   const resource = useAdminResource<Paginated<AdminUploadItem>>(path);
 
   async function action(item: AdminUploadItem, type: "retry" | "withdraw" | "delete") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(
@@ -177,7 +177,7 @@ export function LibraryAdmin({ initialQuery = "" }: { initialQuery?: string }) {
   }
 
   async function replacePdf(item: AdminUploadItem, file: File) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     if (!window.confirm(`确认用“${file.name}”替换“${item.review_data?.title ?? item.source_filename}”的公开 PDF 吗？旧文件会保留，新文件处理完成前不会影响当前阅读。`)) return;
     const body = new FormData();
@@ -543,7 +543,7 @@ export function TaxonomyAdmin({
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const base = draft.kind === "theory" ? "/catalog/admin/theory-schools" : "/catalog/admin/topics";
     const terms = splitValues(draft.terms);
@@ -725,13 +725,14 @@ export function TaxonomyAdmin({
           <AuthoritySuggestions
             entityType={draft.kind === "theory" ? "theory_tradition" : "topic"}
             query={draft.name}
-            onApply={(suggestion) => setDraft((current) => ({
-              ...current,
-              name: suggestion.label,
-              foreignName: suggestion.original_name || current.foreignName,
-              description: current.description || suggestion.description || "",
-            }))}
           />
+          {draft.kind === "topic" ? <FieldEnrichmentControl
+            targetType="topic"
+            targetId={draft.id}
+            title="主题字段核对"
+            fields={[{ name: "discipline", label: "学科分类" }]}
+            onAccepted={detail.refresh}
+          /> : null}
           <label><span>固定链接</span><input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="留空自动生成" /></label>
           {draft.kind === "theory" ? <>
             <div className="inline-fields">
@@ -976,6 +977,7 @@ export function TaxonomyAdmin({
 
 type AdminScholar = {
   id: string;
+  person_id: string;
   slug: string;
   preferred_name: string;
   original_name: string;
@@ -1003,6 +1005,7 @@ type AdminScholar = {
 
 type ScholarDraft = {
   id: string | null;
+  personId: string | null;
   slug: string;
   name: string;
   originalName: string;
@@ -1030,6 +1033,7 @@ type ScholarDraft = {
 
 const emptyScholar: ScholarDraft = {
   id: null,
+  personId: null,
   slug: "",
   name: "",
   originalName: "",
@@ -1057,32 +1061,45 @@ const emptyScholar: ScholarDraft = {
 
 export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const router = useRouter();
-  const createName = useSearchParams().get("create")?.trim() ?? "";
+  const searchParams = useSearchParams();
+  const createName = searchParams.get("create")?.trim() ?? "";
+  const requestedQuery = searchParams.get("q")?.trim() ?? "";
   const editorOnly = scholarId !== undefined;
+  const [query, setQuery] = useState(requestedQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(requestedQuery);
   const resource = useAdminResource<Paginated<AdminScholar>>(
-    editorOnly ? null : "/catalog/admin/scholars/",
+    editorOnly
+      ? null
+      : `/catalog/admin/scholars/${submittedQuery ? `?search=${encodeURIComponent(submittedQuery)}` : ""}`,
   );
   const detail = useAdminResource<AdminScholar>(
     editorOnly && scholarId !== "new"
       ? `/catalog/admin/scholars/${scholarId}/`
       : null,
   );
-  const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<ScholarDraft>({ ...emptyScholar, name: createName });
   const [message, setMessage] = useState("");
   const [portraitFile, setPortraitFile] = useState<File | null>(null);
-  const visible = resource.data?.results.filter((scholar) => (
-    [scholar.preferred_name, scholar.original_name, ...scholar.aliases]
-      .join(" ")
-      .toLocaleLowerCase()
-      .includes(query.toLocaleLowerCase())
-  )) ?? [];
+  const visible = resource.data?.results ?? [];
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setQuery(requestedQuery);
+      setSubmittedQuery(requestedQuery);
+    });
+    return () => {
+      active = false;
+    };
+  }, [requestedQuery]);
 
   function edit(scholar: AdminScholar) {
     const curation = scholar.curation ?? {};
     const network = Array.isArray(curation.network) ? curation.network : [];
     setDraft({
       id: scholar.id,
+      personId: scholar.person_id,
       slug: scholar.slug,
       name: scholar.preferred_name,
       originalName: scholar.original_name,
@@ -1136,7 +1153,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const curation = {
       ...draft.baseCuration,
@@ -1200,6 +1217,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       setDraft((current) => ({
         ...current,
         id: saved.id,
+        personId: saved.person_id,
         slug: saved.slug,
         baseCuration: saved.curation ?? current.baseCuration,
         suggestions: saved.suggestions ?? current.suggestions,
@@ -1216,7 +1234,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
 
   return (
     <AdminPageFrame eyebrow="人物资料" title="学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
-      {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => undefined} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
+      {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => { const normalized = query.trim(); setSubmittedQuery(normalized); router.replace(normalized ? `/admin/scholars?q=${encodeURIComponent(normalized)}` : "/admin/scholars"); }} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
       <div className={`admin-master-detail ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section className="admin-entity-table scholar-admin-table admin-panel">
           <header><span>学者</span><span>原名</span><span>年代</span><span>关注领域</span><span>公开档案</span><span>操作</span></header>
@@ -1239,17 +1257,6 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <AuthoritySuggestions
             entityType="person"
             query={draft.name}
-            onApply={(suggestion) => setDraft((current) => ({
-              ...current,
-              name: suggestion.label,
-              originalName: suggestion.original_name || current.originalName,
-              aliases: mergeUniqueStrings(
-                editorLines(current.aliases),
-                suggestion.aliases.map((alias) => alias.name),
-              ).join("\n"),
-              birthYear: suggestion.birth_year ? String(suggestion.birth_year) : current.birthYear,
-              deathYear: suggestion.death_year ? String(suggestion.death_year) : current.deathYear,
-            }))}
           />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
@@ -1258,6 +1265,22 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <label><span>页面简介</span><textarea rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small>用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
           <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
           <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
+          <FieldEnrichmentControl
+            targetType="person"
+            targetId={draft.personId}
+            title="学者字段核对"
+            fields={[
+              { name: "external_identifier", label: "权威标识符" },
+              { name: "affiliation", label: "机构", currentValue: editorLines(draft.affiliations) },
+              { name: "name_variant", label: "译名或别名", currentValue: editorLines(draft.aliases) },
+            ]}
+            formContext={{
+              language: "zh",
+              known_birth_year: Number(draft.birthYear) || null,
+              known_death_year: Number(draft.deathYear) || null,
+            }}
+            onAccepted={detail.refresh}
+          />
           <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
           <StructuredRowsEditor
             label="生平与重要发表"
@@ -1408,7 +1431,7 @@ export function UsersAdmin() {
   }
 
   async function saveAccount() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || target === null) return;
     try {
       await apiRequest(
@@ -1428,7 +1451,7 @@ export function UsersAdmin() {
 
   async function reset(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || target === null) {
       setMessage("请先从真实用户列表选择账户。");
       return;
@@ -1569,7 +1592,7 @@ export function DistributionAdmin() {
   }
 
   async function save() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const provider = await apiRequest<CloudProvider>(
@@ -1608,7 +1631,7 @@ export function DistributionAdmin() {
 
   async function addUsage(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !draft.id) return;
     try {
       await apiRequest(
@@ -1769,6 +1792,47 @@ type SemanticRuntime = {
   task?: { taskUid?: number; status?: string; version_id?: string; index_uid?: string; type?: string } | null;
 };
 
+type AIRuntimeCapability = "metadata_extraction" | "library_qa" | "field_enrichment_optional";
+
+type AIRuntimeProfile = {
+  key: string;
+  capability: AIRuntimeCapability;
+  provider: "none" | "ollama" | "vllm" | "openai_compatible";
+  model: string;
+  enabled: boolean;
+  temperature: number;
+  max_output_tokens: number;
+  timeout_seconds: number;
+  max_input_chars: number;
+  endpoint_alias: string;
+  credential_alias: string;
+  retrieval_profile: "stable" | "experimental_v2";
+  answer_behavior: string;
+  fallback_profile_key?: string;
+  reasoning?: Record<string, string | number | boolean | null>;
+  environment?: {
+    endpoint_configured: boolean;
+    credential_configured: boolean;
+    restart_may_be_required: boolean;
+  };
+};
+
+type AIRuntimeDocument = {
+  version: string;
+  active: Record<AIRuntimeCapability, string>;
+  profiles: AIRuntimeProfile[];
+  source: string;
+  secret_values_exposed: false;
+  hot_reload_fields: string[];
+  deployment_fields: string[];
+};
+
+const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
+  metadata_extraction: "元数据提取",
+  library_qa: "Ask Library",
+  field_enrichment_optional: "联网补全可选判断",
+};
+
 const defaultSemanticRuntime: SemanticRuntime = {
   engine: "lightweight",
   provider: "huggingFace",
@@ -1793,10 +1857,12 @@ export function SettingsAdmin() {
   const submissionResource = useAdminResource<{ email: string }>("/catalog/admin/reader-submission/");
   const ocrResource = useAdminResource<OcrRuntime>("/catalog/admin/ocr-runtime/");
   const semanticResource = useAdminResource<SemanticRuntime>("/catalog/admin/semantic-runtime/");
+  const aiRuntimeResource = useAdminResource<AIRuntimeDocument>("/reading/admin/ai-runtime-profiles/");
   const backups = useAdminResource<Paginated<BackupJob>>("/distribution/backups/");
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [ocrDraft, setOcrDraft] = useState<OcrRuntime | null>(null);
   const [semanticDraft, setSemanticDraft] = useState<SemanticRuntime | null>(null);
+  const [aiRuntimeDraft, setAiRuntimeDraft] = useState<AIRuntimeDocument | null>(null);
   const [submissionEmailDraft, setSubmissionEmail] = useState<string | null>(null);
   const [backupPath, setBackupPath] = useState("/data/backups");
   const [includeOriginals, setIncludeOriginals] = useState(false);
@@ -1810,6 +1876,7 @@ export function SettingsAdmin() {
     ?? semanticResource.data
     ?? defaultSemanticRuntime;
   const semanticRuntimeReady = Boolean(semanticDraft ?? semanticResource.data);
+  const aiRuntime = aiRuntimeDraft ?? aiRuntimeResource.data;
 
   function updateConfig(patch: Partial<SiteConfig>) {
     setDraft({ ...config, ...patch });
@@ -1817,7 +1884,7 @@ export function SettingsAdmin() {
 
   async function saveConfig(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const saved = await apiRequest<SiteConfig>(
@@ -1833,7 +1900,7 @@ export function SettingsAdmin() {
   }
 
   async function createBackup() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(
@@ -1856,7 +1923,7 @@ export function SettingsAdmin() {
 
   async function saveSubmissionEmail(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const saved = await apiRequest<{ email: string }>(
@@ -1876,7 +1943,7 @@ export function SettingsAdmin() {
 
   async function saveOcrRuntime(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const saved = await apiRequest<OcrRuntime>(
@@ -1899,7 +1966,7 @@ export function SettingsAdmin() {
   }
 
   async function testOcrRuntime(action: "test_nas" | "test_remote") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const result = await apiRequest<{ reachable: boolean; detail: string; target: string }>(
@@ -1916,7 +1983,7 @@ export function SettingsAdmin() {
 
   async function saveSemanticRuntime(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !semanticRuntimeReady) {
       setMessage("尚未读取服务器上的观点检索配置，未执行保存。");
       return;
@@ -1956,6 +2023,65 @@ export function SettingsAdmin() {
       );
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "观点检索设置保存失败。");
+    }
+  }
+
+  function updateAiProfile(profileKey: string, patch: Partial<AIRuntimeProfile>) {
+    if (!aiRuntime) return;
+    setAiRuntimeDraft({
+      ...aiRuntime,
+      profiles: aiRuntime.profiles.map((profile) => (
+        profile.key === profileKey ? { ...profile, ...patch } : profile
+      )),
+    });
+  }
+
+  async function saveAiRuntime(event: FormEvent) {
+    event.preventDefault();
+    const token = getServerSessionCredential();
+    if (!token || !aiRuntime) {
+      setMessage("尚未读取服务器上的 AI Runtime 配置，未执行保存。");
+      return;
+    }
+    try {
+      const saved = await apiRequest<AIRuntimeDocument>(
+        "/reading/admin/ai-runtime-profiles/",
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            active: aiRuntime.active,
+            profiles: aiRuntime.profiles.map((profile) => {
+              const persisted = { ...profile };
+              delete persisted.environment;
+              return persisted;
+            }),
+          }),
+        },
+        token,
+      );
+      setAiRuntimeDraft(saved);
+      setMessage("AI Runtime profiles 已保存。非密钥参数会在下一次任务或问答时读取。");
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "AI Runtime 设置保存失败。");
+    }
+  }
+
+  async function testAiRuntime(profileKey: string) {
+    const token = getServerSessionCredential();
+    if (!token) return;
+    try {
+      const result = await apiRequest<{
+        available: boolean;
+        detail: string;
+        profile_key: string;
+      }>(
+        "/reading/admin/ai-runtime-profiles/test/",
+        { method: "POST", body: JSON.stringify({ profile_key: profileKey }) },
+        token,
+      );
+      setMessage(`${result.profile_key}：${result.available ? "模型服务可用" : "模型服务不可用"}。${result.detail}`);
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "AI Runtime 连通性测试失败。");
     }
   }
 
@@ -2035,6 +2161,35 @@ export function SettingsAdmin() {
           {ocrRuntime.last_job?.error ? <p className="attempt-error">最近错误：{ocrRuntime.last_job.error}</p> : null}
           <small>远程密钥只写入服务器的 <code>OCR_REMOTE_API_KEY</code> 环境变量，后台页面不会读取或显示密钥原文。</small>
           <div className="admin-action-row"><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</button><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_remote")} disabled={!ocrRuntime.remote_fallback_available}>测试远程 OCR</button><button className="button" type="submit"><Save size={15} />保存 OCR 设置</button></div>
+        </form>
+        <form className="admin-panel ai-runtime-settings" onSubmit={saveAiRuntime}>
+          <header><h2>AI Runtime</h2></header>
+          <p>各项能力可以使用不同的 provider 与模型。密钥和实际 endpoint 只由服务器环境提供，页面不会读取或保存其原文。</p>
+          {aiRuntime ? <>
+            {aiRuntime.profiles.map((profile) => (
+              <fieldset key={profile.key}>
+                <legend>{aiCapabilityLabels[profile.capability]} · {profile.key}</legend>
+                <label className="switch-row">
+                  <input type="checkbox" checked={profile.enabled} onChange={(event) => updateAiProfile(profile.key, { enabled: event.target.checked })} />
+                  <span>启用该 profile</span>
+                </label>
+                <label><span>Provider</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI-compatible</option></select></label>
+                <label><span>模型标识</span><input value={profile.model} onChange={(event) => updateAiProfile(profile.key, { model: event.target.value })} /></label>
+                <label><span>Temperature</span><input type="number" min="0" max="2" step="0.05" value={profile.temperature} onChange={(event) => updateAiProfile(profile.key, { temperature: Number(event.target.value) })} /></label>
+                <label><span>最大输出 tokens</span><input type="number" min="128" max="8192" value={profile.max_output_tokens} onChange={(event) => updateAiProfile(profile.key, { max_output_tokens: Number(event.target.value) })} /></label>
+                <label><span>超时，秒</span><input type="number" min="3" max="600" value={profile.timeout_seconds} onChange={(event) => updateAiProfile(profile.key, { timeout_seconds: Number(event.target.value) })} /></label>
+                {profile.capability === "library_qa" ? <label><span>馆藏检索配置</span><select value={profile.retrieval_profile} onChange={(event) => updateAiProfile(profile.key, { retrieval_profile: event.target.value as AIRuntimeProfile["retrieval_profile"] })}><option value="stable">Stable，公开认可路径</option><option value="experimental_v2">Experimental V2，仅管理员显式使用</option></select></label> : null}
+                <dl className="ocr-runtime-status">
+                  <div><dt>Endpoint</dt><dd>{profile.environment?.endpoint_configured ? "服务器已配置" : "服务器未配置"}</dd></div>
+                  <div><dt>Credential</dt><dd>{profile.environment?.credential_configured ? "服务器已配置或不需要" : "服务器未配置"}</dd></div>
+                  <div><dt>生效方式</dt><dd>模型参数热读取；密钥和 endpoint 需部署环境变更</dd></div>
+                </dl>
+                <button className="button secondary" type="button" onClick={() => void testAiRuntime(profile.key)}>测试配置</button>
+              </fieldset>
+            ))}
+            <small>当前配置来源：{aiRuntime.source}。健康检查失败不会自动停用 profile。</small>
+            <button className="button" type="submit"><Save size={15} />保存 AI Runtime</button>
+          </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
         <form className="admin-panel semantic-runtime-settings" onSubmit={saveSemanticRuntime}>
           <header><h2>观点检索资源</h2><Link href="/admin/semantic-index">打开索引管理</Link></header>

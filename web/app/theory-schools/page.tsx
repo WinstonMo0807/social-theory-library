@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpen, CircleDot, Layers3, Network, Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ArchitecturalImage, BookCover, SearchField, SectionHeading } from "@/components/ui";
 import {
   loadKnowledgeMatrix,
   loadRecommendations,
-  loadTheorySchools,
+  loadTheorySchoolPage,
   recommendationWorks,
 } from "@/lib/server-api";
+import { searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = {
   title: "探索理论流派",
@@ -20,6 +22,8 @@ type TheorySearchParams = {
   discipline?: string;
   has_works?: string;
   sort?: string;
+  page?: string;
+  context?: string;
 };
 
 export default async function TheorySchoolsPage({
@@ -30,15 +34,17 @@ export default async function TheorySchoolsPage({
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const discipline = params.discipline?.trim() ?? "";
-  const [matrix, schools, recommendations] = await Promise.all([
+  const page = searchPage(params.page);
+  const [matrix, schoolPage, recommendations] = await Promise.all([
     loadKnowledgeMatrix(),
-    loadTheorySchools(query, {
+    loadTheorySchoolPage(query, {
       discipline,
       hasWorks: params.has_works === "true",
       sort: params.sort === "works" ? "works" : "name",
-    }),
+    }, page),
     loadRecommendations(),
   ]);
+  const schools = schoolPage.results;
   const weeklyWorks = recommendationWorks(recommendations, "theory_weekly");
 
   return (
@@ -50,7 +56,8 @@ export default async function TheorySchoolsPage({
             <h1>从三大学科进入理论世界</h1>
             <p>以学科为起点，贯通理论传统与子学科，系统探索社会理论的多元脉络。</p>
             <form className="theory-world-hero-search" action="/theory-schools">
-              <SearchField defaultValue={query} placeholder="搜索理论、学者、概念或馆藏文献……" />
+              <input type="hidden" name="context" value="theories" />
+              <SearchField defaultValue={query} placeholder="搜索理论传统、别名或外文名……" />
               {discipline ? <input type="hidden" name="discipline" value={discipline} /> : null}
               <button type="submit"><Search size={18} />搜索</button>
             </form>
@@ -62,7 +69,7 @@ export default async function TheorySchoolsPage({
           {matrix.disciplines.map((item) => (
             <Link
               className={discipline === item.slug ? "discipline-card active" : "discipline-card"}
-              href={theoryHref(params, { discipline: discipline === item.slug ? null : item.slug })}
+              href={theoryHref(params, { discipline: discipline === item.slug ? null : item.slug, page: null })}
               key={item.id}
             >
               <div
@@ -127,6 +134,7 @@ export default async function TheorySchoolsPage({
         <section className="theory-directory panel">
           <SectionHeading title="浏览理论传统" action={`${schools.length} 个结果`} />
           <form className="theory-directory-search" action="/theory-schools">
+            <input type="hidden" name="context" value="theories" />
             {discipline ? <input type="hidden" name="discipline" value={discipline} /> : null}
             <SearchField defaultValue={query} placeholder="搜索理论传统、别名或相关内容……" />
             <label><input type="checkbox" name="has_works" value="true" defaultChecked={params.has_works === "true"} />仅显示有馆藏的理论</label>
@@ -146,6 +154,7 @@ export default async function TheorySchoolsPage({
             ))}
             {!schools.length ? <p className="empty-state">没有找到符合条件的公开理论传统。</p> : null}
           </div>
+          <ScopedSearchPagination path="/theory-schools" context="theories" page={page} totalPages={schoolPage.totalPages} params={{ q: query, discipline, has_works: params.has_works, sort: params.sort }} />
         </section>
       </main>
       <SiteFooter />

@@ -9,6 +9,7 @@ from django.utils.text import slugify
 
 from catalog.models import (
     Contribution,
+    Edition,
     KnowledgeNode,
     KnowledgePublicationStatus,
     OrganizationAuthority,
@@ -18,7 +19,7 @@ from catalog.models import (
     PublisherAuthority,
     Work,
 )
-from ingestion.models import DecisionLog, EntityResolutionCandidate, ReviewTask
+from ingestion.models import DecisionLog, EntityResolutionCandidate, ReviewTask, UploadItem
 
 from .reconciliation import normalized_label
 
@@ -96,6 +97,20 @@ def _review_task_for(candidate: EntityResolutionCandidate, *, lock: bool) -> Rev
         target_type=candidate.target_type,
         target_id=normalized_label(candidate.source_name)[:128],
     ).order_by("created_at").first()
+
+
+def _lock_upload_context(upload_item_id) -> UploadItem:
+    """Serialize review mutations through their shared intake and edition."""
+
+    item = UploadItem.objects.select_for_update(of=("self",)).get(pk=upload_item_id)
+    if item.edition_id:
+        edition = (
+            Edition.objects.select_for_update(of=("self",))
+            .select_related("work")
+            .get(pk=item.edition_id)
+        )
+        item.edition = edition
+    return item
 
 
 def _unique_node_slug(name: str) -> str:
@@ -379,11 +394,13 @@ def decide_entity_resolution(
     if action not in ACTION_STATUS:
         raise ResolutionDecisionError("不支持的实体消歧决定。")
 
-    candidate = (
-        EntityResolutionCandidate.objects.select_for_update()
-        .select_related("upload_item__edition")
-        .get(pk=candidate.pk)
+    item = _lock_upload_context(candidate.upload_item_id)
+    candidate = EntityResolutionCandidate.objects.select_for_update(of=("self",)).get(
+        pk=candidate.pk
     )
+    if candidate.upload_item_id != item.id:
+        raise ResolutionDecisionError("候选所属上传记录已变化，请刷新后重试。")
+    candidate.upload_item = item
     if target_type != candidate.target_type:
         raise ResolutionDecisionError("目标类型与当前候选不一致。")
 
@@ -600,8 +617,14 @@ def revert_entity_resolution_decision(
     reason: str,
     correlation_id: str = "",
 ) -> ResolutionRevertResult:
+    if decision.resolution_candidate_id is None:
+        raise ResolutionDecisionError("该决定不属于实体消歧，不能在此撤销。")
+    candidate_hint = EntityResolutionCandidate.objects.only("upload_item_id").get(
+        pk=decision.resolution_candidate_id
+    )
+    item = _lock_upload_context(candidate_hint.upload_item_id)
     decision = (
-        DecisionLog.objects.select_for_update()
+        DecisionLog.objects.select_for_update(of=("self",))
         .select_related("resolution_candidate__upload_item__edition", "review_task")
         .get(pk=decision.pk)
     )
@@ -609,6 +632,9 @@ def revert_entity_resolution_decision(
         raise ResolutionDecisionError("撤销记录本身不能再次撤销。")
     if decision.resolution_candidate_id is None:
         raise ResolutionDecisionError("该决定不属于实体消歧，不能在此撤销。")
+    if decision.resolution_candidate.upload_item_id != item.id:
+        raise ResolutionDecisionError("决定所属上传记录已变化，请刷新后重试。")
+    decision.resolution_candidate.upload_item = item
     if decision.reverted_at:
         reversal = DecisionLog.objects.get(reverts_decision=decision)
         candidate = decision.resolution_candidate
@@ -631,7 +657,7 @@ def revert_entity_resolution_decision(
     candidate = EntityResolutionCandidate.objects.select_for_update().get(
         pk=decision.resolution_candidate_id
     )
-    item = candidate.upload_item
+    candidate.upload_item = item
     if item.edition_id and item.edition.state == PublicationState.PUBLISHED:
         raise ResolutionDecisionError("已发布版本的实体决定不能直接撤销，请先创建修订或下架。")
     group = list(

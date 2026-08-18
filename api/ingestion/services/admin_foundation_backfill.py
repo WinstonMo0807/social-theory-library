@@ -527,7 +527,7 @@ def _create_candidate_evidence(candidate: MetadataCandidate) -> bool:
 
 
 def _enrich_candidate(action: BackfillAction) -> bool:
-    candidate = MetadataCandidate.objects.select_for_update().select_related(
+    candidate = MetadataCandidate.objects.select_for_update(of=("self",)).select_related(
         "upload_item",
     ).get(pk=action.target_id)
     fields = set(action.details.get("fields") or [])

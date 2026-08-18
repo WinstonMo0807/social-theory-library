@@ -14,9 +14,11 @@ from .services.dispatch import (
 from .services.pipeline import resume_reviewed_item_publication, run_pipeline
 from .services.ocr_provider import OCRServiceUnavailable
 from .services.processing import (
+    recover_stalled_processing_jobs,
     run_external_enrichment_job,
     run_ocr_job,
     run_page_label_job,
+    run_query_lexicon_candidate_job,
 )
 
 
@@ -215,9 +217,28 @@ def process_page_label_job(self, job_id):
     return {"id": str(job.id), "status": job.status, "attempt": job.attempt}
 
 
+@shared_task(
+    bind=True,
+    autoretry_for=(OSError, ConnectionError, TimeoutError),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=2,
+    ignore_result=True,
+)
+def process_query_lexicon_candidate_job(self, job_id):
+    job = run_query_lexicon_candidate_job(
+        str(job_id),
+        task_id=str(self.request.id or ""),
+    )
+    return {"id": str(job.id), "status": job.status, "attempt": job.attempt}
+
+
 @shared_task(ignore_result=True)
 def recover_ingestion_queue():
-    return recover_ingestion_dispatches(limit=100)
+    return {
+        "uploads": recover_ingestion_dispatches(limit=100),
+        "processing_jobs": recover_stalled_processing_jobs(limit=100),
+    }
 
 
 @shared_task(ignore_result=True)

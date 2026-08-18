@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { apiRequest, getStoredAccessToken, logoutCurrentSession } from "@/lib/api";
+import { getServerSessionCredential, logoutCurrentSession, subscribeToSessionChanges } from "@/lib/api";
+import { bootstrapSession } from "@/lib/session";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { DisplayPreferences } from "./display-preferences";
 
@@ -47,11 +48,23 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
   ] as const;
 
   useEffect(() => {
-    const token = getStoredAccessToken();
-    if (!token) return;
-    apiRequest<{ display_name: string; role: string }>("/auth/me/", {}, token)
-      .then(setUser)
-      .catch(() => setUser(null));
+    let active = true;
+    const verify = async (force = false) => {
+      if (!force && !getServerSessionCredential()) return;
+      const session = await bootstrapSession();
+      if (!active) return;
+      if (session.status === "authenticated" && session.user) {
+        setUser(session.user);
+      } else if (["unauthenticated", "forbidden"].includes(session.status)) {
+        setUser(null);
+      }
+    };
+    void verify();
+    const unsubscribe = subscribeToSessionChanges(() => void verify(true));
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -125,9 +138,19 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {navigation.map(([href, label]) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = href === "/"
+            ? pathname === "/"
+            : href === "/theories"
+              ? pathname.startsWith("/theories") || pathname.startsWith("/theory-schools")
+              : pathname.startsWith(href);
           return (
-            <Link className={active ? "active" : ""} href={href} key={href} prefetch={false}>
+            <Link
+              aria-current={active ? "page" : undefined}
+              className={active ? "active" : ""}
+              href={href}
+              key={href}
+              prefetch={false}
+            >
               {label}
             </Link>
           );

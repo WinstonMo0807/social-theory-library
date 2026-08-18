@@ -47,7 +47,11 @@ def create_published_work(title: str, document_type: str, year: int):
 
 
 def create_scholar(name: str, slug: str, *, status: str = "published"):
-    person = Person.objects.create(preferred_name=name, original_name=f"{name} Original")
+    person = Person.objects.create(
+        preferred_name=name,
+        original_name=f"{name} Original",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
     return ScholarProfile.objects.create(
         person=person,
         slug=slug,

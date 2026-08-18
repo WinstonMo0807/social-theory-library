@@ -8,6 +8,7 @@ import {
   type Work,
 } from "./data";
 import { defaultSiteConfig, type SiteConfig } from "./site-config";
+import type { SearchContext } from "./search-context";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -358,6 +359,24 @@ type Paginated<T> = {
   previous?: string | null;
 };
 
+export type DirectoryPage<T> = {
+  count: number;
+  results: T[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+function directoryPage<T>(payload: Paginated<T>, page: number, pageSize = 24): DirectoryPage<T> {
+  return {
+    count: payload.count,
+    results: payload.results,
+    page,
+    pageSize,
+    totalPages: payload.count ? Math.ceil(payload.count / pageSize) : 0,
+  };
+}
+
 export type TheoryDisciplineCompact = {
   id: string;
   code: string;
@@ -622,14 +641,38 @@ export type LocalTheoryGraph = {
   truncated: boolean;
 };
 
-export type TheorySystemSearchResult = {
-  kind: "knowledge_node" | "scholar" | "work" | "passage";
+export type ScopedSearchResult = {
+  context: Exclude<SearchContext, "global">;
+  entity_type: string;
   id: string;
   title: string;
   subtitle: string;
   description: string;
-  href: string;
-  node_type?: string;
+  url: string;
+  match: {
+    type: "exact" | "verified_alias" | "prefix" | "text" | "browse";
+    query: string;
+    highlights: string[];
+  };
+  metadata: Record<string, unknown>;
+};
+
+export type ScopedSearchEnvelope = {
+  implementation_version: string;
+  context: SearchContext;
+  visibility: "public" | "admin";
+  query: string;
+  groups: Array<{
+    context: Exclude<SearchContext, "global">;
+    label: string;
+    backend: string;
+    count: number;
+    results: ScopedSearchResult[];
+    pagination?: { page: number; limit: number; total: number; total_pages: number };
+  }>;
+  total: number;
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+  latency_ms: number;
 };
 
 type SearchPayload = {
@@ -819,7 +862,7 @@ export async function loadSiteStats(): Promise<SiteStats> {
       knowledge_objects: 0,
       last_updated: null,
       last_updated_label: "尚未发布",
-      version: "2.6.1",
+      version: "2.7",
     };
   }
 }
@@ -834,15 +877,25 @@ export async function loadDisciplines(): Promise<Discipline[]> {
   }
 }
 
-export async function loadSubdisciplines(discipline = ""): Promise<Subdiscipline[]> {
+export async function loadSubdisciplinePage(
+  discipline = "",
+  query = "",
+  page = 1,
+): Promise<DirectoryPage<Subdiscipline>> {
   try {
-    const query = discipline ? `?discipline=${encodeURIComponent(discipline)}` : "";
-    const payload = await serverRequest<Paginated<Subdiscipline>>(`/catalog/subdisciplines/${query}`);
-    return payload.results;
+    const parameters = new URLSearchParams({ page: String(page) });
+    if (discipline) parameters.set("discipline", discipline);
+    if (query.trim()) parameters.set("q", query.trim());
+    const payload = await serverRequest<Paginated<Subdiscipline>>(`/catalog/subdisciplines/?${parameters.toString()}`);
+    return directoryPage(payload, page);
   } catch (error) {
     if (!allowDemoFallback) throw error;
-    return [];
+    return directoryPage({ count: 0, results: [] }, page);
   }
+}
+
+export async function loadSubdisciplines(discipline = "", query = ""): Promise<Subdiscipline[]> {
+  return (await loadSubdisciplinePage(discipline, query)).results;
 }
 
 export async function loadSubdiscipline(slug: string): Promise<(Omit<Subdiscipline, "works"> & { works: Work[] }) | null> {
@@ -886,15 +939,29 @@ export async function loadTheorySystemOverview(): Promise<TheorySystemOverview |
   }
 }
 
-export async function searchTheorySystem(query: string): Promise<TheorySystemSearchResult[]> {
-  if (!query.trim()) return [];
+export async function loadScopedSearch(
+  context: SearchContext,
+  query = "",
+  options: { page?: number; limit?: number } = {},
+): Promise<ScopedSearchEnvelope> {
+  const parameters = new URLSearchParams({ context, envelope: "1" });
+  if (query.trim()) parameters.set("q", query.trim());
+  if (options.page) parameters.set("page", String(options.page));
+  if (options.limit) parameters.set("limit", String(options.limit));
   try {
-    const payload = await serverRequest<{ query: string; results: TheorySystemSearchResult[] }>(
-      `/catalog/theory-system/search/?q=${encodeURIComponent(query.trim())}`,
-    );
-    return payload.results;
-  } catch {
-    return [];
+    return await serverRequest<ScopedSearchEnvelope>(`/catalog/search/?${parameters.toString()}`);
+  } catch (error) {
+    if (!allowDemoFallback) throw error;
+    return {
+      implementation_version: "scoped-search-demo-fallback",
+      context,
+      visibility: "public",
+      query,
+      groups: [],
+      total: 0,
+      pagination: { page: options.page || 1, limit: options.limit || 24, total: 0, total_pages: 0 },
+      latency_ms: 0,
+    };
   }
 }
 
@@ -1176,6 +1243,7 @@ function adaptScholar(value: ApiScholar): Scholar {
   const birth = value.person.birth_year;
   const death = value.person.death_year;
   return {
+    id: value.person.id,
     slug: value.slug,
     name: value.person.preferred_name,
     originalName: value.person.original_name || value.person.preferred_name,
@@ -1243,15 +1311,23 @@ export async function loadWork(slug: string): Promise<Work | null> {
   }
 }
 
-export async function loadScholars(query = ""): Promise<Scholar[]> {
+export async function loadScholarPage(query = "", page = 1): Promise<DirectoryPage<Scholar>> {
   try {
-    const suffix = query ? `?search=${encodeURIComponent(query)}` : "";
-    const payload = await serverRequest<Paginated<ApiScholar>>(`/catalog/scholars/${suffix}`);
-    return payload.results.map(adaptScholar);
+    const parameters = new URLSearchParams({ page: String(page) });
+    if (query) parameters.set("q", query);
+    const payload = await serverRequest<Paginated<ApiScholar>>(`/catalog/scholars/?${parameters.toString()}`);
+    return directoryPage(
+      { ...payload, results: payload.results.map(adaptScholar) },
+      page,
+    );
   } catch (error) {
     if (!allowDemoFallback) throw error;
-    return demoScholars;
+    return directoryPage({ count: demoScholars.length, results: demoScholars }, page);
   }
+}
+
+export async function loadScholars(query = ""): Promise<Scholar[]> {
+  return (await loadScholarPage(query)).results;
 }
 
 export type TheoryDirectoryFilters = {
@@ -1266,9 +1342,18 @@ export async function loadTheorySchools(
   query = "",
   filters: TheoryDirectoryFilters = {},
 ): Promise<TheorySchool[]> {
+  return (await loadTheorySchoolPage(query, filters)).results;
+}
+
+export async function loadTheorySchoolPage(
+  query = "",
+  filters: TheoryDirectoryFilters = {},
+  page = 1,
+): Promise<DirectoryPage<TheorySchool>> {
   try {
     const parameters = new URLSearchParams();
-    if (query) parameters.set("search", query);
+    parameters.set("page", String(page));
+    if (query) parameters.set("q", query);
     if (filters.theme) parameters.set("theme", filters.theme);
     if (filters.discipline) parameters.set("discipline", filters.discipline);
     if (filters.hasWorks) parameters.set("has_works", "true");
@@ -1276,7 +1361,7 @@ export async function loadTheorySchools(
     if (filters.sort && filters.sort !== "name") parameters.set("sort", filters.sort);
     const suffix = parameters.size ? `?${parameters.toString()}` : "";
     const payload = await serverRequest<Paginated<ApiTheorySchool>>(`/catalog/theory-schools/${suffix}`);
-    return payload.results.map((school, index) => ({
+    const results = payload.results.map((school, index) => ({
       slug: school.slug,
       name: school.name,
       description: school.description || "馆藏关联理论流派",
@@ -1284,9 +1369,10 @@ export async function loadTheorySchools(
       scholars: school.scholar_count,
       symbol: school.symbol || school.name.slice(0, 2) || String(index + 1),
     }));
+    return directoryPage({ ...payload, results }, page);
   } catch (error) {
     if (!allowDemoFallback) throw error;
-    return demoTheorySchools;
+    return directoryPage({ count: demoTheorySchools.length, results: demoTheorySchools }, page);
   }
 }
 
@@ -1485,19 +1571,31 @@ export async function loadTopics(
   query = "",
   filters: { discipline?: string; subdiscipline?: string; theory?: string; sort?: "name" | "works" } = {},
 ): Promise<LibraryTopic[]> {
+  return (await loadTopicPage(query, filters)).results;
+}
+
+export async function loadTopicPage(
+  query = "",
+  filters: { discipline?: string; subdiscipline?: string; theory?: string; sort?: "name" | "works" } = {},
+  page = 1,
+): Promise<DirectoryPage<LibraryTopic>> {
   try {
     const parameters = new URLSearchParams();
-    if (query) parameters.set("search", query);
+    parameters.set("page", String(page));
+    if (query) parameters.set("q", query);
     if (filters.discipline) parameters.set("discipline", filters.discipline);
     if (filters.subdiscipline) parameters.set("subdiscipline", filters.subdiscipline);
     if (filters.theory) parameters.set("theory", filters.theory);
     if (filters.sort) parameters.set("sort", filters.sort);
     const suffix = parameters.size ? `?${parameters.toString()}` : "";
     const payload = await serverRequest<Paginated<ApiTopic>>(`/catalog/topics/${suffix}`);
-    return payload.results.map(adaptTopic);
+    return directoryPage(
+      { ...payload, results: payload.results.map(adaptTopic) },
+      page,
+    );
   } catch (error) {
     if (!allowDemoFallback) throw error;
-    return [{
+    const results = [{
       ...demoTopic,
       id: demoTopic.slug,
       problemStatement: demoTopic.description,
@@ -1526,6 +1624,7 @@ export async function loadTopics(
         featuredPassageEvidence: {},
       },
     }];
+    return directoryPage({ count: results.length, results }, page);
   }
 }
 
@@ -1655,7 +1754,7 @@ export async function loadScholar(slug: string): Promise<{
 
 export async function loadSearch(query: string, filters: SearchFilters = {}) {
   try {
-    const parameters = new URLSearchParams();
+    const parameters = new URLSearchParams({ context: "global" });
     if (query) parameters.set("q", query);
     if (filters.scope) parameters.set("scope", filters.scope);
     if (filters.sort) parameters.set("sort", filters.sort);

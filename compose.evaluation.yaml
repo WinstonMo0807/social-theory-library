@@ -1,0 +1,66 @@
+name: social-theory-library-evaluation
+
+services:
+  evaluation-postgres:
+    image: ${EVALUATION_POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EVALUATION_POSTGRES_DB:-library_evaluation}
+      POSTGRES_USER: ${EVALUATION_POSTGRES_USER:-library_evaluation}
+      POSTGRES_PASSWORD: ${EVALUATION_POSTGRES_PASSWORD:?set EVALUATION_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${EVALUATION_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - evaluation_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Optional landing zone for an existing full backup. It is deliberately
+  # separate from the sanitized target database and should be removed after
+  # export_semantic_search_evaluation_snapshot succeeds.
+  evaluation-source-postgres:
+    image: ${EVALUATION_POSTGRES_IMAGE:-postgres:16-alpine}
+    profiles: ["source-copy"]
+    restart: "no"
+    environment:
+      POSTGRES_DB: ${EVALUATION_SOURCE_POSTGRES_DB:-library_evaluation_source}
+      POSTGRES_USER: ${EVALUATION_SOURCE_POSTGRES_USER:-library_evaluation_source}
+      POSTGRES_PASSWORD: ${EVALUATION_SOURCE_POSTGRES_PASSWORD:?set EVALUATION_SOURCE_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${EVALUATION_SOURCE_POSTGRES_PORT:-55433}:5432"
+    volumes:
+      - evaluation_source_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  evaluation-meilisearch:
+    image: ${EVALUATION_MEILISEARCH_IMAGE:-getmeili/meilisearch:v1.37}
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${EVALUATION_MEILISEARCH_MASTER_KEY:?set EVALUATION_MEILISEARCH_MASTER_KEY}
+      MEILI_NO_ANALYTICS: "true"
+      HF_HOME: /meili_data/models
+      HF_HUB_OFFLINE: ${EVALUATION_HF_HUB_OFFLINE:-1}
+      TRANSFORMERS_OFFLINE: ${EVALUATION_HF_HUB_OFFLINE:-1}
+    ports:
+      - "127.0.0.1:${EVALUATION_MEILISEARCH_PORT:-57700}:7700"
+    volumes:
+      - evaluation_meilisearch_data:/meili_data
+      - ${EVALUATION_MODEL_CACHE:-./data/evaluation/models}:/meili_data/models
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  evaluation_postgres_data:
+  evaluation_source_postgres_data:
+  evaluation_meilisearch_data:

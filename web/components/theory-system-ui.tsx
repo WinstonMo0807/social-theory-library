@@ -48,7 +48,8 @@ export function TheorySearchForm({ defaultValue = "", action = "/theories" }: { 
   return (
     <form action={action} className="theory-system-search">
       <Search size={20} strokeWidth={1.6} />
-      <input name="q" defaultValue={defaultValue} placeholder="搜索理论、学者、概念或馆藏文献" aria-label="搜索理论知识系统" />
+      <input type="hidden" name="context" value="theories" />
+      <input name="q" defaultValue={defaultValue} placeholder="搜索理论名称、别名或外文名" aria-label="搜索理论知识系统" />
       <button type="submit">搜索</button>
     </form>
   );

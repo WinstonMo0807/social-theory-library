@@ -1,8 +1,8 @@
 "use client";
 
-import { LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export type AuthorityAlias = {
   name: string;
@@ -20,6 +20,7 @@ export type AuthoritySuggestion = {
   death_year?: number | null;
   external_ids?: Record<string, string>;
   source?: string;
+  source_url?: string;
   source_record_id?: string;
   match_reasons?: string[];
   conflicts?: string[];
@@ -75,6 +76,7 @@ function normalizeSuggestion(value: RawAuthoritySuggestion): AuthoritySuggestion
       }))
       : {},
     source: text(value.source) || text(value.provider),
+    source_url: text(value.source_url),
     source_record_id: text(value.source_record_id),
     match_reasons: Array.isArray(value.match_reasons) ? value.match_reasons.map(text).filter(Boolean) : [],
     conflicts: Array.isArray(value.conflicts) ? value.conflicts.map(text).filter(Boolean) : [],
@@ -251,37 +253,26 @@ export function StructuredRowsEditor({
 type AuthoritySuggestionsProps = {
   entityType: "person" | "concept" | "discipline" | "subdiscipline" | "theory_tradition" | "topic";
   query: string;
-  onApply: (suggestion: AuthoritySuggestion) => void;
 };
 
-export function AuthoritySuggestions({ entityType, query, onApply }: AuthoritySuggestionsProps) {
+export function AuthoritySuggestions({ entityType, query }: AuthoritySuggestionsProps) {
   const normalizedQuery = useMemo(() => query.normalize("NFKC").trim(), [query]);
+  const [request, setRequest] = useState<{ query: string; nonce: number } | null>(null);
   const [results, setResults] = useState<AuthoritySuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const minimumLength = /[\u3400-\u9fff]/.test(normalizedQuery) ? 2 : 3;
-    if (normalizedQuery.length < minimumLength) {
-      let active = true;
-      queueMicrotask(() => {
-        if (!active) return;
-        setResults([]);
-        setMessage("");
-        setLoading(false);
-      });
-      return () => {
-        active = false;
-      };
-    }
+    if (!request) return;
     const controller = new AbortController();
     let active = true;
-    const timer = window.setTimeout(() => {
+    queueMicrotask(() => {
+      if (!active) return;
       setLoading(true);
       setMessage("");
-      const token = getStoredAccessToken();
+      const token = getServerSessionCredential();
       apiRequest<AuthoritySuggestionResponse>(
-        `/catalog/admin/authority-suggestions/?entity_type=${encodeURIComponent(entityType)}&q=${encodeURIComponent(normalizedQuery)}`,
+        `/catalog/admin/authority-suggestions/?entity_type=${encodeURIComponent(entityType)}&q=${encodeURIComponent(request.query)}`,
         { signal: controller.signal },
         token,
       )
@@ -303,26 +294,27 @@ export function AuthoritySuggestions({ entityType, query, onApply }: AuthoritySu
         .finally(() => {
           if (active) setLoading(false);
         });
-    }, 650);
+    });
     return () => {
       active = false;
       controller.abort();
-      window.clearTimeout(timer);
     };
-  }, [entityType, normalizedQuery]);
+  }, [entityType, request]);
 
-  if (!loading && !message && !results.length) return null;
+  const minimumLength = /[\u3400-\u9fff]/.test(normalizedQuery) ? 2 : 3;
+  if (normalizedQuery.length < minimumLength) return null;
+  const currentRequest = request?.query === normalizedQuery;
   return (
     <section className="authority-suggestions" aria-label="联网权威候选">
       <header>
-        <strong>联网权威候选</strong>
-        <span>采用后只填入当前草稿，仍需单独保存和发布。</span>
+        <div><strong>联网身份候选</strong><span>只用于确认“查的是谁”。字段写入必须进入候选审核。</span></div>
+        <button type="button" disabled={loading} onClick={() => setRequest({ query: normalizedQuery, nonce: (request?.nonce ?? 0) + 1 })}>查找权威对象</button>
       </header>
       <div aria-live="polite" aria-atomic="true">
-        {loading ? <p className="authority-suggestion-status"><LoaderCircle className="spin" size={15} />正在核对来源……</p> : null}
-        {!loading && message ? <p className="authority-suggestion-status">{message}</p> : null}
+        {loading && currentRequest ? <p className="authority-suggestion-status"><LoaderCircle className="spin" size={15} />正在核对来源……</p> : null}
+        {!loading && currentRequest && message ? <p className="authority-suggestion-status">{message}</p> : null}
       </div>
-      {!loading && results.length ? <div className="authority-suggestion-list">
+      {!loading && currentRequest && results.length ? <div className="authority-suggestion-list">
         {results.map((result, index) => (
           <article key={result.id || `${result.label}-${index}`}>
             <div>
@@ -336,7 +328,7 @@ export function AuthoritySuggestions({ entityType, query, onApply }: AuthoritySu
               {result.description ? <p>{result.description}</p> : null}
               {result.match_reasons?.length ? <p className="authority-match-reason">匹配依据 {result.match_reasons.slice(0, 2).join("；")}</p> : null}
             </div>
-            <button type="button" onClick={() => onApply(result)}>采用候选</button>
+            {result.source_url ? <a href={result.source_url} target="_blank" rel="noreferrer">查看来源<ExternalLink size={13} /></a> : <span>来源记录已保留</span>}
           </article>
         ))}
       </div> : null}

@@ -1,6 +1,6 @@
 # 部署说明
 
-更新日期为 2026-08-16。本文件记录源码中的部署入口和安全要求，不是当前生产环境的实时状态证明。
+更新日期为 2026-08-19。本文件记录源码中的部署入口和安全要求，不是当前生产环境的实时状态证明。
 
 ## 部署文件
 
@@ -73,6 +73,25 @@ docker compose --profile ocr up -d --build
 
 所有 schema 修改必须通过 Django migration。禁止直接在生产 PostgreSQL 执行临时结构修改。
 
+### BackupJob PostgreSQL runtime
+
+正式 BackupJob 由 `api/distribution/tasks.py` 执行。API 镜像明确安装 PostgreSQL 16 client，不能改回 Debian 未锁 major 的 `postgresql-client`，也不能使用 `postgres:latest` 作为正式工具来源。API、默认 Worker、Ingestion Worker 与 Beat 必须使用同一 API 镜像。当前没有独立的定时 BackupJob，管理员请求由默认 Worker 消费。
+
+任务开始导出前会读取 PostgreSQL server、pg_dump 与 pg_restore 版本。pg_dump 或 pg_restore 的 major 小于 server major 时，任务立即失败并写入明确的无凭据错误。数据库密码只通过子进程环境传入，不出现在 argv、manifest 或错误文本。
+
+成功归档继续采用现有 tar.gz 格式。内部包含 custom-format `database.dump`、asset inventory 与 manifest。BackupJob 记录 artifact 名称、创建时间、大小、SHA-256、server/client 版本和 applied migration heads。生成归档以后仍必须完成 restore rehearsal，不能只以文件存在作为迁移门槛。
+
+恢复演练使用空白、隔离、名称含 `restore`、`rehearsal`、`evaluation`、`disposable` 或 `test` 的 PostgreSQL 数据库。连接信息通过环境变量提供，不写进命令行示例。命令还要求目标数据库名二次确认：
+
+```powershell
+Set-Location api
+..\.venv\Scripts\python.exe manage.py rehearse_database_restore `
+  C:\path\to\library-backup.tar.gz `
+  --confirm-disposable-database library_restore_rehearsal
+```
+
+命令会拒绝非 PostgreSQL、名称不符合 disposable 约束、确认值不一致或已经存在业务表的目标。它校验归档内 database.dump 的 SHA-256，并在 pg_restore 前再次检查 client、目标 server 和 dump client major。
+
 部署前运行：
 
 ```powershell
@@ -112,3 +131,27 @@ Set-Location api
 每次发布应保留旧源码、旧镜像标签、环境配置和数据库备份。无 migration 的应用回退可以恢复旧源码与镜像。包含 migration 的回退必须依据迁移影响单独决定，不能默认反向迁移安全。
 
 回退后仍要复核 readiness、队列、活动索引、Range、登录和公开页面。生产备份、馆藏、模型与索引不进入 GitHub，它们继续保存在服务器或授权制品存储。
+
+### Production Task 3 回退记录
+
+2026-08-17 部署镜像为 `social-theory-library-api:2.6.1-task3-prod-20260817-181038-a611debdf616`，source revision 为 `a611debdf6167cbf3b4448718922b8cf62a375d593e16973f1041634456a9327`。部署前环境回退副本为 `/volume2/library/docker/social-theory-library/.env.pre-production-task3-20260817-182353`。原 STL-008 hotfix image 与更早 r60 image继续保留。
+
+catalog 0027/0028 与 ingestion 0011 都是 additive schema。正式 artifact 的 disposable rehearsal 已证明旧 STL-008 hotfix image 能在保留这三份 schema 的数据库上通过 Django check、migrate plan 与核心 ORM 读取。因此应用故障时优先恢复环境文件并切回旧 image，不自动 down migration，不删除 QueryLexicon/Candidate tables，也不重写 authority。
+
+生产切换后 QueryLexicon revision 为 1，generation 为 `af302b64-1b3f-447d-88ca-5ed505bc87e9`。公开 V2 仍关闭，active semantic UID 仍为 `semantic_passages_20260809143729_4cf87bc9`。回退前后都要复核这三个值。
+
+## Version 2.7 release gate
+
+2.7 的统一 release 必须让 API、Worker、Ingestion Worker、Beat 和 Web 使用同一源码 revision。生产前最低检查为 fresh BackupJob、artifact checksum、`migrate --plan`、`manage.py check`、后端 migration drift、前端 TypeScript/build 和基础设施可访问性。迁移前暂停不兼容旧 worker，迁移后再启动统一镜像。
+
+上线顺序固定为备份、计划检查、暂停不兼容 worker、使用一次性 API 容器执行显式 migration、统一应用发布、QueryLexicon dry-run/reconciliation、必要的 clean semantic projection、健康检查和恢复处理队列。`compose.public.yaml` 的 API 启动命令只执行 collectstatic 和 Gunicorn，不会自行 migrate；生产迁移必须由发布操作者在核对 `migrate --plan` 后执行。不得自动发布 draft authority、自动 Accept Candidate、自动全库 web/AI enrichment 或切换公开 V2。若生产基础设施或备份门槛不能证明，状态必须保持 `DEPLOYMENT BLOCKED`。
+
+受控迁移示例（目标主机上执行，不把真实环境值写入命令记录）：
+
+```text
+docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py migrate --plan
+docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py check
+docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py migrate --noinput
+```
+
+2026-08-19 本地 2.7 门槛已通过：后端全量回归、Django check、migration drift、compileall、前端 Node 回归、TypeScript、ESLint、Vinext build 和 diff check 均退出成功。目标主机 `Winston@192.168.5.6:22` 的只读 SSH 仍返回公钥认证拒绝，本机也没有 Docker 或 PostgreSQL 16 runtime；因此本轮没有执行 fresh BackupJob、生产 migration、镜像切换、QueryLexicon reconciliation 或 semantic cutover。

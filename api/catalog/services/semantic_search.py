@@ -53,6 +53,35 @@ YEAR_FILTERS = {
     "2020-now": (2020, None),
 }
 
+
+def _language_filter_values(values) -> list[str]:
+    """Accept legacy bibliographic labels and new passage-level labels.
+
+    This is a filter compatibility adapter only. It does not alter V1 ranking
+    or query analysis, and lets newly detected ``zh``/``en`` chunks remain
+    reachable through existing ``zh-CN``/``en`` UI filters.
+    """
+
+    expanded: list[str] = []
+    seen: set[str] = set()
+    for raw in values or []:
+        value = str(raw or "").strip()
+        folded = value.casefold()
+        candidates = [value]
+        if folded in {"zh", "zh-cn", "zh-hans", "zh-sg"}:
+            candidates.extend(["zh", "zh-Hans", "zh-CN", "zh-cn", "zh-SG"])
+        elif folded in {"zh-tw", "zh-hant", "zh-hk", "zh-mo"}:
+            candidates.extend(["zh", "zh-Hant", "zh-TW", "zh-HK", "zh-MO"])
+        elif folded in {"en", "en-us", "en-gb"}:
+            candidates.extend(["en", "en-US", "en-GB"])
+        elif folded in {"unknown", "und"}:
+            candidates.extend(["unknown", "und"])
+        for candidate in candidates:
+            if candidate and candidate not in seen:
+                seen.add(candidate)
+                expanded.append(candidate)
+    return expanded
+
 logger = logging.getLogger(__name__)
 
 
@@ -294,6 +323,7 @@ def semantic_model_health(config: dict | None = None) -> dict:
     return {
         "configured": bool(repo_id),
         "available": available,
+        "error_code": None if available else "MODEL_UNAVAILABLE",
         "reason": (
             "本地模型缓存已通过文件检查。"
             if available
@@ -436,7 +466,7 @@ def _base_queryset(filters: dict):
         mapped = ["journal_article" if value in {"article", "journal_article"} else value for value in filters["document_types"]]
         queryset = queryset.filter(document_type__in=mapped)
     if filters.get("languages"):
-        queryset = queryset.filter(language__in=filters["languages"])
+        queryset = queryset.filter(language__in=_language_filter_values(filters["languages"]))
     if filters.get("authors"):
         queryset = queryset.filter(
             asset__edition__contributions__person_id__in=filters["authors"],
@@ -524,7 +554,11 @@ def _passage_base_queryset(filters: dict):
         ]
         queryset = queryset.filter(page__asset__edition__work__document_type__in=mapped)
     if filters.get("languages"):
-        queryset = queryset.filter(page__asset__edition__work__language__in=filters["languages"])
+        queryset = queryset.filter(
+            page__asset__edition__work__language__in=_language_filter_values(
+                filters["languages"]
+            )
+        )
     if filters.get("authors"):
         queryset = queryset.filter(
             page__asset__edition__contributions__person_id__in=filters["authors"],
@@ -645,6 +679,8 @@ def _meili_filters(
         values = filters.get(source) or []
         if source == "document_types":
             values = ["journal_article" if value in {"article", "journal_article"} else value for value in values]
+        if source == "languages":
+            values = _language_filter_values(values)
         if values:
             output.append(f"{target} IN [{', '.join(_json_value(value) for value in values)}]")
     year_groups = []
@@ -1165,6 +1201,8 @@ def semantic_search(
     search_profile: str | None = None,
     rerank_top_k_override: int | None = None,
     runtime_config_override: dict | None = None,
+    disabled_v2_branch_types=None,
+    v2_final_top_k_override: int | None = None,
 ):
     """Dispatch to the stable V1 or the additive viewpoint-search V2.
 
@@ -1203,6 +1241,8 @@ def semantic_search(
             search_profile=search_profile or profile_aliases.get(requested),
             rerank_top_k_override=rerank_top_k_override,
             runtime_config_override=runtime_config_override,
+            disabled_branch_types=disabled_v2_branch_types,
+            final_top_k_override=v2_final_top_k_override,
         )
     return semantic_search_v1(
         query,

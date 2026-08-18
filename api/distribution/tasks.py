@@ -1,10 +1,7 @@
 from celery import shared_task
 from pathlib import Path
-import hashlib
 import json
-import os
 import shutil
-import subprocess
 import tarfile
 import tempfile
 
@@ -14,6 +11,12 @@ from django.utils import timezone
 from catalog.models import Asset
 
 from .models import BackupJob, CloudObject
+from .database_backup import (
+    applied_migration_heads,
+    create_database_dump,
+    file_sha256,
+    redact_backup_error,
+)
 from .services import sync_asset_to_cloud
 
 
@@ -57,43 +60,7 @@ def delete_cloud_object(self, cloud_object_id):
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _dump_database(destination: Path) -> str:
-    engine = settings.DATABASES["default"]["ENGINE"]
-    if engine.endswith("sqlite3"):
-        source = Path(settings.DATABASES["default"]["NAME"]).resolve()
-        target = destination / "database.sqlite3"
-        shutil.copy2(source, target)
-        return target.name
-    if engine.endswith("postgresql"):
-        target = destination / "database.dump"
-        configuration = settings.DATABASES["default"]
-        environment = os.environ.copy()
-        if configuration.get("PASSWORD"):
-            environment["PGPASSWORD"] = str(configuration["PASSWORD"])
-        command = [
-            "pg_dump",
-            "--format=custom",
-            "--no-owner",
-            "--file",
-            str(target),
-            "--host",
-            str(configuration.get("HOST") or "localhost"),
-            "--port",
-            str(configuration.get("PORT") or "5432"),
-            "--username",
-            str(configuration.get("USER") or ""),
-            str(configuration.get("NAME") or ""),
-        ]
-        subprocess.run(command, env=environment, check=True, timeout=60 * 60)
-        return target.name
-    raise RuntimeError(f"暂不支持备份数据库引擎：{engine}")
+    return file_sha256(path)
 
 
 @shared_task(bind=True, ignore_result=True)
@@ -108,12 +75,15 @@ def create_backup_archive(self, job_id):
     job.started_at = timezone.now()
     job.error_message = ""
     job.save(update_fields=["status", "started_at", "error_message", "updated_at"])
+    archive = None
     try:
-        stamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+        backup_created_at = timezone.now()
+        stamp = backup_created_at.strftime("%Y%m%d-%H%M%S")
         archive = destination / f"library-backup-{stamp}-{str(job.id)[:8]}.tar.gz"
         with tempfile.TemporaryDirectory(prefix="library-backup-", dir=destination) as temporary:
             staging = Path(temporary)
-            database_name = _dump_database(staging)
+            database = create_database_dump(staging)
+            migration_heads = applied_migration_heads()
             assets = []
             for asset in Asset.objects.select_related("edition__work").all().iterator(chunk_size=200):
                 source = Path(asset.file.path)
@@ -138,8 +108,12 @@ def create_backup_archive(self, job_id):
                     shutil.copy2(source, target)
             manifest = {
                 "schema": 1,
-                "created_at": timezone.now().isoformat(),
-                "database": database_name,
+                "created_at": backup_created_at.isoformat(),
+                "database": database.filename,
+                "database_sha256": database.sha256,
+                "database_bytes": database.byte_size,
+                "database_metadata": database.metadata,
+                "migration_heads": migration_heads,
                 "include_originals": job.include_originals,
                 "assets": assets,
                 "restore_note": "恢复前需校验归档哈希，并在维护窗口内导入数据库。",
@@ -156,11 +130,19 @@ def create_backup_archive(self, job_id):
         job.archive_path = str(archive)
         job.checksum = _sha256(archive)
         job.manifest = {
+            "artifact_filename": archive.name,
+            "created_at": backup_created_at.isoformat(),
             "asset_count": len(assets),
             "included_original_count": sum(
                 1 for asset in assets if asset["kind"] == Asset.Kind.ORIGINAL and job.include_originals
             ),
             "archive_bytes": archive.stat().st_size,
+            "archive_sha256": job.checksum,
+            "database": database.filename,
+            "database_sha256": database.sha256,
+            "database_bytes": database.byte_size,
+            "database_metadata": database.metadata,
+            "migration_heads": migration_heads,
         }
         job.completed_at = timezone.now()
         job.save(
@@ -175,8 +157,16 @@ def create_backup_archive(self, job_id):
         )
         return str(archive)
     except Exception as exc:
+        if archive is not None and archive.exists():
+            try:
+                archive.unlink()
+            except OSError:
+                pass
         job.status = BackupJob.Status.FAILED
-        job.error_message = str(exc)[:4000]
+        job.error_message = redact_backup_error(
+            str(exc),
+            secrets=(settings.DATABASES["default"].get("PASSWORD"),),
+        )
         job.completed_at = timezone.now()
         job.save(update_fields=["status", "error_message", "completed_at", "updated_at"])
         raise

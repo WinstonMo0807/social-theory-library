@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BookOpen, StickyNote, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, RefreshCw, StickyNote, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import {
+  apiRequest,
+  clearStoredSession,
+  getServerSessionCredential,
+  isUnauthenticatedError,
+} from "@/lib/api";
 import { adaptWork, type ApiWork } from "@/lib/server-api";
+import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { BookCover } from "./ui";
 
 type AnnotationRow = {
@@ -43,25 +49,52 @@ async function loadAllBookNotes(assetId: string, token: string) {
 }
 
 export function ReaderBookNotes({ assetId }: { assetId: string }) {
+  const { state: session, retry: retrySession } = useSessionBootstrap();
   const [notes, setNotes] = useState<AnnotationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
-    if (!token) {
+    if (session.status === "unauthenticated") {
       window.location.replace(`/login?next=/account/notes/${assetId}`);
-      return;
     }
-    loadAllBookNotes(assetId, token)
-      .then(setNotes)
-      .catch((error: unknown) => setMessage(error instanceof Error ? error.message : "笔记读取失败。"))
-      .finally(() => setLoading(false));
-  }, [assetId]);
+  }, [assetId, session.status]);
+
+  useEffect(() => {
+    if (session.status !== "authenticated") return;
+    const credential = getServerSessionCredential();
+    if (!credential) return;
+    let mounted = true;
+    Promise.resolve().then(() => {
+      if (!mounted) return;
+      setLoading(true);
+      setMessage("");
+    });
+    loadAllBookNotes(assetId, credential)
+      .then((rows) => {
+        if (mounted) setNotes(rows);
+      })
+      .catch((error: unknown) => {
+        if (!mounted) return;
+        if (isUnauthenticatedError(error)) {
+          clearStoredSession();
+          window.location.replace(`/login?next=/account/notes/${assetId}`);
+          return;
+        }
+        setMessage(error instanceof Error ? error.message : "笔记读取失败。");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [assetId, loadAttempt, session.status]);
 
   async function deleteNote(id: string) {
     if (!window.confirm("确定删除这条笔记吗？")) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/reading/annotations/${id}/`, { method: "DELETE" }, token);
@@ -70,6 +103,18 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "笔记删除失败。");
     }
+  }
+
+  if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
+    return <main className="account-loading">{session.status === "unauthenticated" ? "登录已过期，正在转到登录页面……" : "正在验证登录状态……"}</main>;
+  }
+
+  if (session.status === "forbidden") {
+    return <main className="account-loading" data-error-category={session.errorCategory}><strong>当前账户没有权限查看这些笔记</strong><p>{session.message}</p><Link href="/account">返回读者中心</Link></main>;
+  }
+
+  if (session.status === "temporary_error") {
+    return <main className="account-loading" data-error-category={session.errorCategory}><strong>认证服务暂时不可用</strong><p>{session.message}</p><button type="button" onClick={retrySession}><RefreshCw size={15} />保留会话并重试</button></main>;
   }
 
   if (loading) {
@@ -108,7 +153,10 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
         ))}
         {!notes.length ? <p className="empty-state">这本书目前没有笔记，可能已经被删除。</p> : null}
       </section>
-      {message ? <p className="form-message" role="status">{message}</p> : null}
+      {message ? <p className="form-message error" role="status">{message} <button type="button" onClick={() => {
+        setLoading(true);
+        setLoadAttempt((value) => value + 1);
+      }}><RefreshCw size={14} />重试</button></p> : null}
     </main>
   );
 }

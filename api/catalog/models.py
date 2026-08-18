@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -1037,7 +1039,160 @@ class CoverCandidate(UUIDTimeStampedModel):
         ]
 
 
-class Person(UUIDTimeStampedModel):
+class QueryLexiconAuthorityQuerySet(models.QuerySet):
+    """Keep bulk authority writes in the same transaction as lexicon outbox events."""
+
+    def update(self, **kwargs):
+        from catalog.services.query_lexicon.mutations import (
+            mutate_authority_queryset,
+            nested_queryset_mutation_is_suppressed,
+        )
+
+        if nested_queryset_mutation_is_suppressed():
+            return super().update(**kwargs)
+
+        pk_names = {self.model._meta.pk.name, self.model._meta.pk.attname, "pk"}
+        if pk_names.intersection(kwargs):
+            raise ValueError("QueryLexicon authority 不允许通过 QuerySet.update 修改主键。")
+        label = self.model._meta.label_lower
+        if label == "catalog.personnamevariant" and "name" in kwargs:
+            from catalog.services.query_lexicon.normalization import normalize_term
+
+            if not isinstance(kwargs["name"], str):
+                raise ValueError("人物名称的批量更新只接受字符串，请改用逐条 save。")
+            kwargs["normalized_name"] = normalize_term(kwargs["name"])
+        elif label == "catalog.knowledgenodealias" and "alias" in kwargs:
+            if not isinstance(kwargs["alias"], str):
+                raise ValueError("知识别名的批量更新只接受字符串，请改用逐条 save。")
+            kwargs["normalized_alias"] = " ".join(kwargs["alias"].casefold().split())
+        elif label == "catalog.person" and {
+            "preferred_name",
+            "original_name",
+            "aliases",
+        }.intersection(kwargs):
+            raise ValueError("人物名称字段请使用逐条 save 或 bulk_update，以同步 legacy aliases。")
+        elif label in {
+            "catalog.discipline",
+            "catalog.theoryschool",
+            "catalog.topic",
+            "catalog.concept",
+            "catalog.subdiscipline",
+        } and {"name", "search_aliases"}.intersection(kwargs):
+            raise ValueError("知识名称字段请使用逐条 save 或 bulk_update，以同步 search_aliases。")
+
+        parent_update = super().update
+        return mutate_authority_queryset(
+            self,
+            action="update",
+            operation=lambda: parent_update(**kwargs),
+        )
+
+    def delete(self):
+        from catalog.services.query_lexicon.mutations import mutate_authority_queryset
+
+        parent_delete = super().delete
+        return mutate_authority_queryset(
+            self,
+            action="delete",
+            operation=parent_delete,
+            include_after=False,
+        )
+
+    def bulk_create(self, objs, **kwargs):
+        from catalog.services.query_lexicon.mutations import mutate_authority_objects
+
+        objects = list(objs)
+        parent_bulk_create = super().bulk_create
+        return mutate_authority_objects(
+            objects,
+            action="create",
+            operation=lambda: parent_bulk_create(objects, **kwargs),
+            include_before=False,
+        )
+
+    def bulk_update(self, objs, fields, **kwargs):
+        from catalog.services.query_lexicon.mutations import (
+            mutate_authority_objects,
+            suppress_nested_queryset_mutation,
+        )
+
+        objects = list(objs)
+        fields = list(fields)
+        label = self.model._meta.label_lower
+        if label == "catalog.personnamevariant" and "name" in fields:
+            fields.append("normalized_name")
+        elif label == "catalog.knowledgenodealias" and "alias" in fields:
+            fields.append("normalized_alias")
+        elif label == "catalog.person":
+            if {
+                "preferred_name",
+                "original_name",
+                "aliases",
+            }.intersection(fields):
+                fields.append("aliases")
+            if {
+                "authority_status",
+                "merged_into",
+                "merged_into_id",
+            }.intersection(fields):
+                fields = [field for field in fields if field != "merged_into_id"]
+                fields.extend(["authority_status", "merged_into"])
+        elif label in {
+            "catalog.discipline",
+            "catalog.theoryschool",
+            "catalog.topic",
+            "catalog.concept",
+            "catalog.subdiscipline",
+        } and {"name", "search_aliases"}.intersection(fields):
+            fields.append("search_aliases")
+        fields = list(dict.fromkeys(fields))
+        parent_bulk_update = super().bulk_update
+
+        def operation():
+            with suppress_nested_queryset_mutation():
+                return parent_bulk_update(objects, fields, **kwargs)
+
+        return mutate_authority_objects(
+            objects,
+            action="update",
+            operation=operation,
+        )
+
+
+QueryLexiconAuthorityManager = models.Manager.from_queryset(QueryLexiconAuthorityQuerySet)
+
+
+class QueryLexiconAuthorityMixin(models.Model):
+    """Wrap one authority mutation and its durable event in one DB transaction."""
+
+    objects = QueryLexiconAuthorityManager()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        from catalog.services.query_lexicon.mutations import mutate_authority_instance
+
+        parent_save = super().save
+        return mutate_authority_instance(
+            self,
+            action="create" if self._state.adding else "update",
+            operation=lambda: parent_save(*args, **kwargs),
+        )
+
+    def delete(self, *args, **kwargs):
+        from catalog.services.query_lexicon.mutations import mutate_authority_instance
+
+        parent_delete = super().delete
+        return mutate_authority_instance(
+            self,
+            action="delete",
+            operation=lambda: parent_delete(*args, **kwargs),
+            include_after=False,
+        )
+
+
+class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     class AuthorityStatus(models.TextChoices):
         DRAFT = "draft", "草稿"
         NEEDS_REVIEW = "needs_review", "待消歧"
@@ -1055,6 +1210,13 @@ class Person(UUIDTimeStampedModel):
     biography = models.TextField(blank=True)
     portrait = models.ImageField(upload_to="public/people/%Y/%m/", blank=True)
     external_ids = models.JSONField(default=dict, blank=True)
+    merged_into = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="merged_people",
+    )
     authority_status = models.CharField(
         max_length=20,
         choices=AuthorityStatus.choices,
@@ -1064,19 +1226,187 @@ class Person(UUIDTimeStampedModel):
 
     class Meta:
         ordering = ["sort_name", "preferred_name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(id=models.F("merged_into_id")),
+                name="person_merge_target_not_self",
+            ),
+        ]
 
     def __str__(self):
         return self.preferred_name
 
+    def validate_query_lexicon_authority_state(self):
+        from django.core.exceptions import ValidationError
+
+        if self.authority_status == self.AuthorityStatus.MERGED:
+            if not self.merged_into_id:
+                raise ValidationError({"merged_into": "已合并人物必须指定保留人物。"})
+        elif self.merged_into_id:
+            raise ValidationError({"merged_into": "只有已合并人物可以指定保留人物。"})
+        if self.pk and self.merged_into_id == self.pk:
+            raise ValidationError({"merged_into": "人物不能合并到自身。"})
+        if not self.merged_into_id:
+            return
+        current = self.merged_into
+        seen = {self.pk} if self.pk else set()
+        depth = 0
+        while current is not None:
+            if current.pk in seen:
+                raise ValidationError({"merged_into": "人物合并关系不能形成循环。"})
+            if current.authority_status in {
+                self.AuthorityStatus.REJECTED,
+                self.AuthorityStatus.ARCHIVED,
+            }:
+                raise ValidationError({"merged_into": "保留人物不能是已拒绝或已归档记录。"})
+            seen.add(current.pk)
+            depth += 1
+            if depth > 32:
+                raise ValidationError({"merged_into": "人物合并关系过深。"})
+            if current.authority_status != self.AuthorityStatus.MERGED:
+                break
+            if not current.merged_into_id:
+                raise ValidationError({"merged_into": "合并目标缺少最终保留人物。"})
+            current = current.merged_into
+
     def save(self, *args, **kwargs):
+        self.prepare_query_lexicon_bulk_object()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            fields = list(update_fields)
+            if {
+                "preferred_name",
+                "original_name",
+                "aliases",
+            }.intersection(fields):
+                fields.append("aliases")
+            if {
+                "authority_status",
+                "merged_into",
+                "merged_into_id",
+            }.intersection(fields):
+                fields = [field for field in fields if field != "merged_into_id"]
+                fields.extend(["authority_status", "merged_into"])
+            kwargs["update_fields"] = tuple(dict.fromkeys(fields))
+        super().save(*args, **kwargs)
+
+    def prepare_query_lexicon_bulk_object(self):
         from catalog.services.aliases import search_aliases
 
+        self.validate_query_lexicon_authority_state()
         self.aliases = search_aliases(
             self.preferred_name,
             self.original_name,
             *self.aliases,
         )
+
+
+class PersonNameVariant(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
+    class VariantType(models.TextChoices):
+        TRANSLATION = "translation", "译名"
+        ALIAS = "alias", "别名"
+        ABBREVIATION = "abbreviation", "简称"
+        HISTORICAL = "historical", "历史名称"
+        TRANSLITERATION = "transliteration", "音译"
+
+    class SourceKind(models.TextChoices):
+        EDITORIAL = "editorial", "编辑确认"
+        AUTHORITY_IMPORT = "authority_import", "权威库导入"
+        LEGACY_REVIEW = "legacy_review", "历史名称复核"
+        PDF_EVIDENCE = "pdf_evidence", "馆藏 PDF 证据"
+        OTHER = "other", "其他已记录来源"
+
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="name_variants")
+    name = models.CharField(max_length=240)
+    normalized_name = models.CharField(max_length=500, db_index=True)
+    language = models.CharField(max_length=24, default="und")
+    variant_type = models.CharField(max_length=24, choices=VariantType.choices)
+    source_kind = models.CharField(
+        max_length=32,
+        choices=SourceKind.choices,
+        default=SourceKind.EDITORIAL,
+    )
+    source_note = models.TextField(blank=True)
+    displayable = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_person_name_variants",
+    )
+
+    class Meta:
+        ordering = ["person__preferred_name", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["person", "normalized_name"],
+                name="unique_person_name_variant",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(displayable=False) | models.Q(is_verified=True),
+                name="displayable_person_variant_verified",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(name="") & ~models.Q(normalized_name=""),
+                name="person_variant_name_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    variant_type__in=[
+                        "translation",
+                        "alias",
+                        "abbreviation",
+                        "historical",
+                        "transliteration",
+                    ]
+                ),
+                name="person_variant_type_allowed",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    source_kind__in=[
+                        "editorial",
+                        "authority_import",
+                        "legacy_review",
+                        "pdf_evidence",
+                        "other",
+                    ]
+                ),
+                name="person_variant_source_allowed",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def validate_query_lexicon_authority_state(self):
+        from django.core.exceptions import ValidationError
+
+        if not self.normalized_name:
+            raise ValidationError({"name": "人物名称不能为空。"})
+        if self.variant_type not in self.VariantType.values:
+            raise ValidationError({"variant_type": "人物名称变体类型无效。"})
+        if self.source_kind not in self.SourceKind.values:
+            raise ValidationError({"source_kind": "人物名称来源类型无效。"})
+        if self.displayable and not self.is_verified:
+            raise ValidationError({"displayable": "未经确认的人物名称不能公开展示。"})
+
+    def save(self, *args, **kwargs):
+        self.prepare_query_lexicon_bulk_object()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "name" in update_fields:
+            kwargs["update_fields"] = tuple(
+                dict.fromkeys([*update_fields, "normalized_name"])
+            )
         super().save(*args, **kwargs)
+
+    def prepare_query_lexicon_bulk_object(self):
+        from catalog.services.query_lexicon.normalization import normalize_term
+
+        self.normalized_name = normalize_term(self.name)
+        self.validate_query_lexicon_authority_state()
 
 
 class ScholarProfile(UUIDTimeStampedModel):
@@ -1115,7 +1445,7 @@ class Contribution(UUIDTimeStampedModel):
         ]
 
 
-class NamedKnowledgeObject(UUIDTimeStampedModel):
+class NamedKnowledgeObject(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     name = models.CharField(max_length=240, unique=True)
     slug = models.SlugField(max_length=180, unique=True)
     search_aliases = models.JSONField(default=list, blank=True)
@@ -1131,10 +1461,20 @@ class NamedKnowledgeObject(UUIDTimeStampedModel):
         return self.name
 
     def save(self, *args, **kwargs):
+        self.prepare_query_lexicon_bulk_object()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and {"name", "search_aliases"}.intersection(
+            update_fields
+        ):
+            kwargs["update_fields"] = tuple(
+                dict.fromkeys([*update_fields, "search_aliases"])
+            )
+        super().save(*args, **kwargs)
+
+    def prepare_query_lexicon_bulk_object(self):
         from catalog.services.aliases import search_aliases
 
         self.search_aliases = search_aliases(self.name, *self.search_aliases)
-        super().save(*args, **kwargs)
 
 
 class Discipline(NamedKnowledgeObject):
@@ -1772,7 +2112,7 @@ class TheoryTimelineEvent(UUIDTimeStampedModel):
         ordering = ["start_year", "display_order", "title"]
 
 
-class KnowledgeNode(UUIDTimeStampedModel):
+class KnowledgeNode(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     class NodeType(models.TextChoices):
         DISCIPLINE = "discipline", "学科"
         THEORY_TRADITION = "theory_tradition", "理论传统"
@@ -1871,18 +2211,35 @@ class KnowledgeNode(UUIDTimeStampedModel):
             current = current.parent
 
 
-class KnowledgeNodeAlias(UUIDTimeStampedModel):
+class KnowledgeNodeAlias(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     class AliasType(models.TextChoices):
         ALIAS = "alias", "别名"
         TRANSLATION = "translation", "译名"
         ABBREVIATION = "abbreviation", "简称"
         HISTORICAL = "historical", "历史名称"
+        TRANSLITERATION = "transliteration", "音译"
+
+    class SourceKind(models.TextChoices):
+        EDITORIAL = "editorial", "编辑确认"
+        AUTHORITY_IMPORT = "authority_import", "权威库导入"
+        LEGACY_REVIEW = "legacy_review", "历史名称复核"
+        PDF_EVIDENCE = "pdf_evidence", "馆藏 PDF 证据"
+        WEB_EVIDENCE = "web_evidence", "联网证据"
+        OTHER = "other", "其他已记录来源"
 
     node = models.ForeignKey(KnowledgeNode, on_delete=models.CASCADE, related_name="aliases")
     alias = models.CharField(max_length=240)
     language = models.CharField(max_length=16, default="zh-CN")
     alias_type = models.CharField(max_length=20, choices=AliasType.choices, default=AliasType.ALIAS)
     normalized_alias = models.CharField(max_length=240, db_index=True)
+    source_kind = models.CharField(
+        max_length=32,
+        choices=SourceKind.choices,
+        default=SourceKind.EDITORIAL,
+    )
+    # Existing aliases are promoted by migration for backwards compatibility;
+    # newly observed aliases stay unverified until an explicit review decision.
+    is_verified = models.BooleanField(default=False, db_index=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -1901,8 +2258,31 @@ class KnowledgeNodeAlias(UUIDTimeStampedModel):
         ]
 
     def save(self, *args, **kwargs):
-        self.normalized_alias = " ".join(self.alias.casefold().split())
+        self.prepare_query_lexicon_bulk_object()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "alias" in update_fields:
+            kwargs["update_fields"] = tuple(
+                dict.fromkeys([*update_fields, "normalized_alias"])
+            )
         super().save(*args, **kwargs)
+
+    def prepare_query_lexicon_bulk_object(self):
+        self.normalized_alias = " ".join(self.alias.casefold().split())
+        # An explicit editor-created alias is a reviewed authority mutation.
+        # PDF/web observations must pass their own review path and set
+        # ``is_verified`` explicitly, so they remain unverified here.
+        if (
+            self._state.adding
+            and self.created_by_id
+            and self.source_kind
+            in {
+                self.SourceKind.EDITORIAL,
+                self.SourceKind.AUTHORITY_IMPORT,
+                self.SourceKind.LEGACY_REVIEW,
+                self.SourceKind.OTHER,
+            }
+        ):
+            self.is_verified = True
 
 
 class KnowledgeNodeDiscipline(UUIDTimeStampedModel):
@@ -1945,7 +2325,9 @@ class KnowledgeRelation(UUIDTimeStampedModel):
     class RelationType(models.TextChoices):
         INHERITED_FROM = "inherited_from", "继承"
         REVISES = "revises", "修正"
+        EXTENDS = "extends", "扩展"
         CRITICIZES = "criticizes", "批判"
+        RESPONDS_TO = "responds_to", "回应"
         COMPETES_WITH = "competes_with", "竞争"
         SYNTHESIZES = "synthesizes", "综合"
         BRANCHES_FROM = "branches_from", "分化"
@@ -2307,7 +2689,7 @@ class KnowledgeRelationVersion(UUIDTimeStampedModel):
         ]
 
 
-class LegacyKnowledgeMapping(UUIDTimeStampedModel):
+class LegacyKnowledgeMapping(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     class MigrationStatus(models.TextChoices):
         MAPPED = "mapped", "已映射"
         NEEDS_REVIEW = "needs_review", "待审核"
@@ -2356,6 +2738,893 @@ class KnowledgeNodeMergeRecord(UUIDTimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class QueryLexiconGeneration(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        STAGING = "staging", "构建中"
+        ACTIVE = "active", "活动"
+        RETIRED = "retired", "已退役"
+        FAILED = "failed", "构建失败"
+        DISCARDED = "discarded", "内容未变化"
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.STAGING,
+        db_index=True,
+    )
+    start_event_seq = models.PositiveBigIntegerField(default=0)
+    cutover_event_seq = models.PositiveBigIntegerField(default=0)
+    normalization_version = models.CharField(max_length=80)
+    source_registry_version = models.CharField(max_length=80)
+    effective_content_hash = models.CharField(max_length=64, blank=True)
+    entry_count = models.PositiveBigIntegerField(default=0)
+    build_stats = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True)
+    built_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    retired_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["status"],
+                condition=models.Q(status="active"),
+                name="single_active_query_lexicon_generation",
+            ),
+        ]
+
+
+class QueryLexiconState(models.Model):
+    key = models.CharField(max_length=32, primary_key=True, default="default", editable=False)
+    revision = models.PositiveBigIntegerField(default=0)
+    active_generation = models.ForeignKey(
+        QueryLexiconGeneration,
+        on_delete=models.PROTECT,
+        related_name="active_states",
+    )
+    normalization_version = models.CharField(max_length=80)
+    source_registry_version = models.CharField(max_length=80)
+    last_successful_sync_at = models.DateTimeField(null=True, blank=True)
+    last_reconciled_at = models.DateTimeField(null=True, blank=True)
+    last_reconciled_content_hash = models.CharField(max_length=64, blank=True)
+    last_reconciled_revision = models.PositiveBigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(key="default"),
+                name="query_lexicon_state_default_key",
+            ),
+        ]
+
+
+class QueryLexiconEntry(UUIDTimeStampedModel):
+    class EntityType(models.TextChoices):
+        PERSON = "person", "人物"
+        KNOWLEDGE_NODE = "knowledge_node", "知识节点"
+        DISCIPLINE = "discipline", "学科"
+        THEORY_SCHOOL = "theory_school", "理论流派"
+        TOPIC = "topic", "主题"
+        CONCEPT = "concept", "概念"
+        SUBDISCIPLINE = "subdiscipline", "子学科"
+
+    class TermType(models.TextChoices):
+        CANONICAL = "canonical", "规范名称"
+        TRANSLATION = "translation", "译名"
+        ALIAS = "alias", "别名"
+        ABBREVIATION = "abbreviation", "简称"
+        HISTORICAL = "historical", "历史名称"
+        TRANSLITERATION = "transliteration", "音译"
+        SEARCH_VARIANT = "search_variant", "检索变体"
+
+    class SourceKind(models.TextChoices):
+        AUTHORITY_FIELD = "authority_field", "权威字段"
+        PERSON_NAME_VARIANT = "person_name_variant", "结构化人物名称"
+        KNOWLEDGE_NODE_ALIAS = "knowledge_node_alias", "结构化知识别名"
+        LEGACY_AUTHORITY_FIELD = "legacy_authority_field", "旧权威字段"
+        LEGACY_MIXED_ALIAS = "legacy_mixed_alias", "历史混合别名"
+        GENERATED_SEARCH_VARIANT = "generated_search_variant", "机器检索变体"
+
+    class TrustLevel(models.TextChoices):
+        AUTHORITATIVE = "authoritative", "权威规范"
+        VERIFIED = "verified", "人工或权威来源确认"
+        UNVERIFIED = "unverified", "结构化但未确认"
+        LEGACY = "legacy", "历史来源不明"
+        GENERATED = "generated", "机器派生"
+
+    generation = models.ForeignKey(
+        QueryLexiconGeneration,
+        on_delete=models.CASCADE,
+        related_name="entries",
+    )
+    entity_type = models.CharField(max_length=32, choices=EntityType.choices)
+    entity_id = models.UUIDField()
+    term = models.CharField(max_length=500)
+    normalized_term = models.CharField(max_length=500)
+    language = models.CharField(max_length=24, default="und")
+    term_type = models.CharField(max_length=24, choices=TermType.choices)
+    source_kind = models.CharField(max_length=40, choices=SourceKind.choices)
+    trust_level = models.CharField(max_length=24, choices=TrustLevel.choices)
+    source_ref = models.CharField(max_length=320)
+    source_fingerprint = models.CharField(max_length=64)
+    provenance = models.JSONField(default=dict, blank=True)
+    displayable = models.BooleanField(default=False)
+    public_active = models.BooleanField(default=False)
+    admin_resolvable = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["entity_type", "entity_id", "normalized_term"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["generation", "entity_type", "entity_id", "normalized_term"],
+                name="unique_query_lexicon_entity_term",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(term="") & ~models.Q(normalized_term=""),
+                name="query_lexicon_term_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(public_active=False) | models.Q(admin_resolvable=True),
+                name="public_query_term_admin_resolvable",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(displayable=False)
+                    | ~models.Q(
+                        source_kind__in=[
+                            "legacy_mixed_alias",
+                            "generated_search_variant",
+                        ]
+                    )
+                ),
+                name="untrusted_query_term_not_displayable",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(source_kind="generated_search_variant")
+                    | models.Q(term_type="search_variant", displayable=False)
+                ),
+                name="generated_query_term_is_search_variant",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["generation", "public_active", "normalized_term"],
+                name="ql_public_term_idx",
+            ),
+            models.Index(
+                fields=["generation", "admin_resolvable", "normalized_term"],
+                name="ql_admin_term_idx",
+            ),
+            models.Index(
+                fields=["generation", "entity_type", "entity_id"],
+                name="ql_entity_idx",
+            ),
+        ]
+
+
+class QueryLexiconCandidate(UUIDTimeStampedModel):
+    """A reviewable PDF-derived proposal; never an authority record itself."""
+
+    class CandidateType(models.TextChoices):
+        PERSON_NAME_VARIANT = "person_name_variant", "人物名称变体"
+        KNOWLEDGE_NODE_ALIAS = "knowledge_node_alias", "知识节点别名"
+
+    class TargetEntityType(models.TextChoices):
+        PERSON = "person", "人物"
+        KNOWLEDGE_NODE = "knowledge_node", "知识节点"
+
+    class LinkingStatus(models.TextChoices):
+        LINKED = "linked", "已唯一关联"
+        AMBIGUOUS = "ambiguous", "存在歧义"
+        UNRESOLVED = "unresolved", "未解析"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "待审核"
+        ACCEPTED = "accepted", "已接受"
+        REJECTED = "rejected", "已拒绝"
+        SUPERSEDED = "superseded", "证据已过期"
+
+    class SourceKind(models.TextChoices):
+        PDF = "pdf", "馆藏 PDF"
+
+    candidate_type = models.CharField(max_length=32, choices=CandidateType.choices)
+    target_entity_type = models.CharField(
+        max_length=32,
+        choices=TargetEntityType.choices,
+        blank=True,
+    )
+    target_entity_id = models.UUIDField(null=True, blank=True)
+    anchor_term = models.CharField(max_length=500)
+    normalized_anchor_term = models.CharField(max_length=500, db_index=True)
+    proposed_term = models.CharField(max_length=500)
+    normalized_term = models.CharField(max_length=500, db_index=True)
+    language = models.CharField(max_length=24, default="und")
+    proposed_term_type = models.CharField(
+        max_length=24,
+        choices=[
+            ("translation", "译名"),
+            ("alias", "别名"),
+            ("abbreviation", "简称"),
+            ("historical", "历史名称"),
+            ("transliteration", "音译"),
+        ],
+    )
+    source_kind = models.CharField(
+        max_length=24,
+        choices=SourceKind.choices,
+        default=SourceKind.PDF,
+    )
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    confidence_factors = models.JSONField(default=dict, blank=True)
+    linking_status = models.CharField(
+        max_length=20,
+        choices=LinkingStatus.choices,
+        default=LinkingStatus.LINKED,
+        db_index=True,
+    )
+    possible_targets = models.JSONField(default=list, blank=True)
+    ambiguity = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    displayable = models.BooleanField(default=False)
+    extraction_version = models.CharField(max_length=80)
+    fingerprint = models.CharField(max_length=64, unique=True, editable=False)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reviewed_query_lexicon_candidates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_reason = models.TextField(blank=True)
+    accepted_authority_model = models.CharField(max_length=120, blank=True)
+    accepted_authority_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-confidence", "created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(anchor_term="")
+                & ~models.Q(normalized_anchor_term="")
+                & ~models.Q(proposed_term="")
+                & ~models.Q(normalized_term=""),
+                name="ql_candidate_terms_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        linking_status="linked",
+                        target_entity_type__in=["person", "knowledge_node"],
+                        target_entity_id__isnull=False,
+                    )
+                    | models.Q(
+                        linking_status="ambiguous",
+                        target_entity_type__in=["person", "knowledge_node"],
+                        target_entity_id__isnull=True,
+                    )
+                    | models.Q(
+                        linking_status="unresolved",
+                        target_entity_type="",
+                        target_entity_id__isnull=True,
+                    )
+                ),
+                name="ql_candidate_link_target_state",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status="accepted")
+                    | models.Q(
+                        linking_status="linked",
+                        target_entity_id__isnull=False,
+                    )
+                ),
+                name="ql_candidate_accept_requires_target",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    proposed_term_type__in=[
+                        "translation",
+                        "alias",
+                        "abbreviation",
+                        "historical",
+                        "transliteration",
+                    ]
+                ),
+                name="ql_candidate_term_type_allowed",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_kind="pdf"),
+                name="ql_candidate_source_is_pdf",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "linking_status", "-confidence"],
+                name="ql_candidate_status_idx",
+            ),
+            models.Index(
+                fields=["target_entity_type", "target_entity_id"],
+                name="ql_candidate_target_idx",
+            ),
+            models.Index(
+                fields=["normalized_term", "language"],
+                name="ql_candidate_term_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return self.proposed_term
+
+    def save(self, *args, **kwargs):
+        from catalog.services.query_lexicon.normalization import (
+            normalize_language,
+            normalize_term,
+        )
+
+        self.anchor_term = " ".join(str(self.anchor_term or "").split()).strip()
+        self.proposed_term = " ".join(str(self.proposed_term or "").split()).strip()
+        self.normalized_anchor_term = normalize_term(self.anchor_term)
+        self.normalized_term = normalize_term(self.proposed_term)
+        self.language = normalize_language(self.language)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and {
+            "anchor_term",
+            "proposed_term",
+            "language",
+        }.intersection(update_fields):
+            kwargs["update_fields"] = tuple(
+                dict.fromkeys(
+                    [
+                        *update_fields,
+                        "normalized_anchor_term",
+                        "normalized_term",
+                        "language",
+                    ]
+                )
+            )
+        super().save(*args, **kwargs)
+
+
+class QueryLexiconCandidateEvidence(UUIDTimeStampedModel):
+    candidate = models.ForeignKey(
+        QueryLexiconCandidate,
+        on_delete=models.CASCADE,
+        related_name="evidence_records",
+    )
+    work = models.ForeignKey(
+        Work,
+        on_delete=models.PROTECT,
+        related_name="query_lexicon_candidate_evidence",
+    )
+    edition = models.ForeignKey(
+        Edition,
+        on_delete=models.PROTECT,
+        related_name="query_lexicon_candidate_evidence",
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.PROTECT,
+        related_name="query_lexicon_candidate_evidence",
+    )
+    page = models.ForeignKey(
+        Page,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="query_lexicon_candidate_evidence",
+    )
+    semantic_chunk = models.ForeignKey(
+        SemanticChunk,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="query_lexicon_candidate_evidence",
+    )
+    document_id = models.CharField(max_length=64, blank=True, db_index=True)
+    page_number = models.PositiveIntegerField(null=True, blank=True)
+    printed_page_label = models.CharField(max_length=40, blank=True)
+    bbox = models.JSONField(default=list, blank=True)
+    evidence_text = models.TextField()
+    start_offset = models.PositiveIntegerField(default=0)
+    end_offset = models.PositiveIntegerField(default=0)
+    left_term = models.CharField(max_length=500)
+    right_term = models.CharField(max_length=500)
+    detected_pair = models.JSONField(default=dict, blank=True)
+    extraction_method = models.CharField(max_length=80)
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    confidence_factors = models.JSONField(default=dict, blank=True)
+    ocr_quality = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    quality_flags = models.JSONField(default=list, blank=True)
+    source_text_checksum = models.CharField(max_length=64)
+    extraction_version = models.CharField(max_length=80)
+    fingerprint = models.CharField(max_length=64, editable=False)
+    is_current = models.BooleanField(default=True, db_index=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["work__title", "page_number", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate", "fingerprint"],
+                name="unique_ql_candidate_evidence",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(end_offset__gte=models.F("start_offset")),
+                name="ql_evidence_offsets_ordered",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(evidence_text="")
+                & ~models.Q(source_text_checksum=""),
+                name="ql_evidence_source_not_empty",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["candidate", "is_current"],
+                name="ql_evidence_current_idx",
+            ),
+            models.Index(
+                fields=["asset", "page_number"],
+                name="ql_evidence_asset_idx",
+            ),
+            models.Index(
+                fields=["work", "is_current"],
+                name="ql_evidence_work_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.candidate.proposed_term} · {self.work.title} · {self.page_number or '-'}"
+
+
+class NewAuthorityCandidate(UUIDTimeStampedModel):
+    """Aggregated unresolved PDF observation requiring an explicit admin choice."""
+
+    class EntityType(models.TextChoices):
+        PERSON = "person", "人物"
+        KNOWLEDGE_NODE = "knowledge_node", "知识节点"
+        TOPIC = "topic", "主题"
+        UNKNOWN = "unknown", "待判断"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "待审核"
+        MATCHED = "matched", "已关联现有实体"
+        DRAFT_CREATED = "draft_created", "已创建草稿"
+        REJECTED = "rejected", "已拒绝"
+        SUPERSEDED = "superseded", "证据已过期"
+
+    entity_type = models.CharField(
+        max_length=32,
+        choices=EntityType.choices,
+        default=EntityType.UNKNOWN,
+        db_index=True,
+    )
+    primary_term = models.CharField(max_length=500)
+    normalized_primary_term = models.CharField(max_length=500, db_index=True)
+    terms = models.JSONField(default=list)
+    languages = models.JSONField(default=list, blank=True)
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    confidence_factors = models.JSONField(default=dict, blank=True)
+    possible_matches = models.JSONField(default=list, blank=True)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    fingerprint = models.CharField(max_length=64, unique=True, editable=False)
+    matched_entity_type = models.CharField(max_length=32, blank=True)
+    matched_entity_id = models.UUIDField(null=True, blank=True)
+    draft_entity_type = models.CharField(max_length=32, blank=True)
+    draft_entity_id = models.UUIDField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reviewed_new_authority_candidates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-confidence", "created_at"]
+        indexes = [
+            models.Index(
+                fields=["status", "entity_type", "-confidence"],
+                name="new_authority_review_idx",
+            ),
+            models.Index(
+                fields=["normalized_primary_term", "entity_type"],
+                name="new_authority_term_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(primary_term="")
+                & ~models.Q(normalized_primary_term=""),
+                name="new_authority_term_not_empty",
+            ),
+        ]
+
+    def __str__(self):
+        return self.primary_term
+
+
+class UnknownEntityObservation(UUIDTimeStampedModel):
+    """Auditable PDF evidence that did not have a safe canonical anchor."""
+
+    candidate = models.ForeignKey(
+        NewAuthorityCandidate,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="observations",
+    )
+    work = models.ForeignKey(
+        Work,
+        on_delete=models.PROTECT,
+        related_name="unknown_entity_observations",
+    )
+    edition = models.ForeignKey(
+        Edition,
+        on_delete=models.PROTECT,
+        related_name="unknown_entity_observations",
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.PROTECT,
+        related_name="unknown_entity_observations",
+    )
+    page = models.ForeignKey(
+        Page,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="unknown_entity_observations",
+    )
+    semantic_chunk = models.ForeignKey(
+        SemanticChunk,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="unknown_entity_observations",
+    )
+    document_id = models.CharField(max_length=64, blank=True, db_index=True)
+    page_number = models.PositiveIntegerField(null=True, blank=True)
+    printed_page_label = models.CharField(max_length=40, blank=True)
+    terms = models.JSONField(default=list)
+    languages = models.JSONField(default=list, blank=True)
+    entity_guess = models.CharField(
+        max_length=32,
+        choices=NewAuthorityCandidate.EntityType.choices,
+        default=NewAuthorityCandidate.EntityType.UNKNOWN,
+        db_index=True,
+    )
+    evidence_text = models.TextField()
+    start_offset = models.PositiveIntegerField(default=0)
+    end_offset = models.PositiveIntegerField(default=0)
+    extraction_method = models.CharField(max_length=80)
+    extraction_version = models.CharField(max_length=80)
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    confidence_factors = models.JSONField(default=dict, blank=True)
+    source_text_checksum = models.CharField(max_length=64)
+    fingerprint = models.CharField(max_length=64, unique=True, editable=False)
+    is_current = models.BooleanField(default=True, db_index=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["work__title", "page_number", "created_at"]
+        indexes = [
+            models.Index(
+                fields=["candidate", "is_current"],
+                name="unknown_obs_current_idx",
+            ),
+            models.Index(
+                fields=["asset", "is_current"],
+                name="unknown_observation_asset_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end_offset__gte=models.F("start_offset")),
+                name="unknown_observation_offsets_ordered",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(evidence_text="")
+                & ~models.Q(source_text_checksum=""),
+                name="unknown_observation_source_not_empty",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.candidate or self.terms} · {self.work.title}"
+
+
+class EnrichmentSourceClass(models.TextChoices):
+    IDENTIFIER_REGISTRY = "identifier_registry", "标识符注册库"
+    PUBLISHER = "publisher", "出版社"
+    NATIONAL_LIBRARY = "national_library", "国家图书馆"
+    LIBRARY_CATALOG = "library_catalog", "图书馆目录"
+    UNIVERSITY = "university", "大学"
+    RESEARCH_INSTITUTE = "research_institute", "研究机构"
+    ACADEMIC_JOURNAL = "academic_journal", "学术期刊"
+    PROFESSIONAL_ASSOCIATION = "professional_association", "专业协会"
+    SCHOLARLY_ENCYCLOPEDIA = "scholarly_encyclopedia", "学术百科"
+    SCHOLAR_HOMEPAGE = "scholar_homepage", "学者主页"
+    SYLLABUS = "syllabus", "课程大纲"
+    GENERAL_WEB = "general_web", "一般网页"
+    UNKNOWN = "unknown", "未知来源"
+
+
+class EnrichmentCandidate(UUIDTimeStampedModel):
+    """Reviewable field value proposed from structured or fetched sources."""
+
+    class TargetType(models.TextChoices):
+        PERSON = "person", "人物"
+        WORK = "work", "作品"
+        EDITION = "edition", "版本"
+        DISCIPLINE = "discipline", "学科"
+        SUBDISCIPLINE = "subdiscipline", "子学科"
+        KNOWLEDGE_NODE = "knowledge_node", "知识节点"
+        TOPIC = "topic", "主题"
+        READING_PATH = "reading_path", "阅读路径"
+
+    class CandidateKind(models.TextChoices):
+        FACTUAL = "factual", "事实"
+        CLASSIFICATION = "classification", "分类"
+        INTERPRETIVE = "interpretive", "解释"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "待审核"
+        ACCEPTED = "accepted", "已接受"
+        REJECTED = "rejected", "已拒绝"
+        SUPERSEDED = "superseded", "已被替代"
+
+    class IdentityStatus(models.TextChoices):
+        NOT_REQUIRED = "not_required", "无需身份核验"
+        CONFIRMED = "confirmed", "身份已确认"
+        AMBIGUOUS = "ambiguous", "身份存在歧义"
+        CONFLICT = "conflict", "身份冲突"
+
+    class RequestedMode(models.TextChoices):
+        STRUCTURED = "structured", "结构化来源"
+        WEB = "web", "联网来源"
+        FULL = "full", "结构化与联网来源"
+
+    target_type = models.CharField(max_length=32, choices=TargetType.choices, db_index=True)
+    target_id = models.UUIDField(db_index=True)
+    field_name = models.CharField(max_length=96, db_index=True)
+    candidate_kind = models.CharField(max_length=24, choices=CandidateKind.choices, db_index=True)
+    proposed_value = models.JSONField()
+    normalized_value = models.JSONField(default=dict, blank=True)
+    current_value = models.JSONField(default=dict, blank=True, null=True)
+    request_context = models.JSONField(default=dict, blank=True)
+    source_class = models.CharField(
+        max_length=40,
+        choices=EnrichmentSourceClass.choices,
+        default=EnrichmentSourceClass.UNKNOWN,
+        db_index=True,
+    )
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    confidence_factors = models.JSONField(default=dict, blank=True)
+    conflicts = models.JSONField(default=list, blank=True)
+    identity_status = models.CharField(
+        max_length=24,
+        choices=IdentityStatus.choices,
+        default=IdentityStatus.NOT_REQUIRED,
+        db_index=True,
+    )
+    identity_evidence = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    requested_mode = models.CharField(
+        max_length=20,
+        choices=RequestedMode.choices,
+        default=RequestedMode.STRUCTURED,
+    )
+    request_id = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
+    conflict_group = models.CharField(max_length=64, db_index=True)
+    policy_version = models.CharField(max_length=80)
+    extraction_version = models.CharField(max_length=80)
+    fingerprint = models.CharField(max_length=64, unique=True, editable=False)
+    refresh_after = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_enrichment_candidates",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reviewed_enrichment_candidates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_reason = models.TextField(blank=True)
+    accepted_authority_model = models.CharField(max_length=120, blank=True)
+    accepted_authority_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-confidence", "created_at"]
+        indexes = [
+            models.Index(
+                fields=["target_type", "target_id", "field_name", "status"],
+                name="enrich_target_field_idx",
+            ),
+            models.Index(
+                fields=["status", "candidate_kind", "-confidence"],
+                name="enrich_review_queue_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(field_name="") & ~models.Q(conflict_group=""),
+                name="enrichment_candidate_keys_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status="accepted")
+                    | (
+                        ~models.Q(accepted_authority_model="")
+                        & models.Q(accepted_authority_id__isnull=False)
+                    )
+                ),
+                name="enrichment_accept_has_authority",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.target_type}:{self.target_id} · {self.field_name}"
+
+
+class EnrichmentEvidence(UUIDTimeStampedModel):
+    candidate = models.ForeignKey(
+        EnrichmentCandidate,
+        on_delete=models.CASCADE,
+        related_name="evidence_records",
+    )
+    source_record = models.ForeignKey(
+        "ingestion.SourceRecord",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="enrichment_evidence",
+    )
+    source_url = models.URLField(max_length=2000)
+    canonical_url = models.URLField(max_length=2000)
+    source_title = models.CharField(max_length=1000)
+    source_domain = models.CharField(max_length=255, db_index=True)
+    source_class = models.CharField(
+        max_length=40,
+        choices=EnrichmentSourceClass.choices,
+        db_index=True,
+    )
+    provider = models.CharField(max_length=120, db_index=True)
+    external_identifier = models.CharField(max_length=500, blank=True, db_index=True)
+    supporting_text = models.TextField()
+    locator = models.JSONField(default=dict, blank=True)
+    retrieved_at = models.DateTimeField(db_index=True)
+    http_status = models.PositiveSmallIntegerField(null=True, blank=True)
+    content_type = models.CharField(max_length=160, blank=True)
+    content_checksum = models.CharField(max_length=64)
+    entity_match_evidence = models.JSONField(default=dict, blank=True)
+    extraction_method = models.CharField(max_length=80)
+    extraction_version = models.CharField(max_length=80)
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    fingerprint = models.CharField(max_length=64, editable=False)
+    is_current = models.BooleanField(default=True, db_index=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-retrieved_at", "source_title"]
+        indexes = [
+            models.Index(
+                fields=["candidate", "is_current"],
+                name="enrich_evidence_current_idx",
+            ),
+            models.Index(
+                fields=["canonical_url", "is_current"],
+                name="enrich_evidence_url_idx",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate", "fingerprint"],
+                name="unique_enrichment_evidence",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(source_url="")
+                    & ~models.Q(canonical_url="")
+                    & ~models.Q(source_title="")
+                    & ~models.Q(supporting_text="")
+                    & ~models.Q(content_checksum="")
+                ),
+                name="enrichment_evidence_source_not_empty",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.candidate.field_name} · {self.source_title}"
+
+
+class QueryLexiconChangeEvent(models.Model):
+    class Action(models.TextChoices):
+        CREATE = "create", "创建"
+        UPDATE = "update", "更新"
+        DELETE = "delete", "删除"
+
+    event_seq = models.BigAutoField(primary_key=True)
+    entity_type = models.CharField(max_length=32, choices=QueryLexiconEntry.EntityType.choices)
+    entity_id = models.UUIDField()
+    action = models.CharField(max_length=16, choices=Action.choices)
+    source_model = models.CharField(max_length=120)
+    source_object_id = models.UUIDField()
+    correlation_id = models.UUIDField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    applied_revision = models.PositiveBigIntegerField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+    dead_lettered_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["event_seq"]
+        indexes = [
+            models.Index(
+                fields=["next_attempt_at", "event_seq"],
+                condition=models.Q(processed_at__isnull=True, dead_lettered_at__isnull=True),
+                name="ql_event_pending_idx",
+            ),
+            models.Index(
+                fields=["entity_type", "entity_id", "event_seq"],
+                name="ql_event_entity_idx",
+            ),
+        ]
 
 
 class PublicationEvent(UUIDTimeStampedModel):

@@ -3,7 +3,7 @@
 import { Archive, ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ConfirmDialog } from "./confirm-dialog";
 
 type Dependency = {
@@ -52,7 +52,7 @@ export function EntityLifecycleActions({
   const [confirmation, setConfirmation] = useState<"archive" | "restore" | "delete" | null>(null);
 
   async function loadImpact() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setWorking(true);
     try {
@@ -68,7 +68,7 @@ export function EntityLifecycleActions({
 
   async function changeStatus(action: "archive" | "restore") {
     const label = action === "archive" ? "下线" : "恢复为草稿";
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setWorking(true);
     try {
@@ -98,7 +98,7 @@ export function EntityLifecycleActions({
       setMessage("公开内容必须先下线。下线后可以保留旧链接和关系，也可以继续永久删除。");
       return;
     }
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setWorking(true);
     try {

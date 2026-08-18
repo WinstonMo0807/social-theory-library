@@ -109,8 +109,12 @@ def create_searchable_ocr_pdf(
 ) -> Asset:
     """Create a versioned derivative without replacing the reader anchor."""
 
-    asset = Asset.objects.select_for_update().select_related("edition", "source_asset").get(
-        pk=asset.pk
+    # Only the normalized source row coordinates derivative version creation.
+    # source_asset is nullable provenance and must not be included in FOR UPDATE.
+    asset = (
+        Asset.objects.select_for_update(of=("self",))
+        .select_related("edition", "source_asset")
+        .get(pk=asset.pk)
     )
     if asset.kind != Asset.Kind.NORMALIZED or asset.status != Asset.Status.READY:
         raise OcrPdfValidationError("只有已验证的规范阅读 PDF 可以生成 OCR 下载副本。")

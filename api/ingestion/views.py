@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -62,6 +63,7 @@ from catalog.services.publication_places import (
     serialize_publication_place_evidence,
 )
 from common.permissions import IsCatalogEditor, IsLibraryAdmin, IsLibraryStaff
+from common.capabilities import Capability, has_capability
 
 from .models import (
     AuditEvent,
@@ -260,11 +262,13 @@ def _assemble_uploaded_chunks(
     chunk_directory: Path,
     *,
     total_chunks: int,
-) -> Path:
+) -> tuple[Path, str, int]:
     """Build the complete PDF atomically so an interrupted merge stays resumable."""
 
     assembled_path = chunk_directory / "assembled.pdf"
     temporary_path = chunk_directory / f".assembled.{uuid.uuid4().hex}.tmp"
+    digest = sha256()
+    byte_size = 0
     try:
         with temporary_path.open("wb") as assembled:
             for index in range(total_chunks):
@@ -272,9 +276,12 @@ def _assemble_uploaded_chunks(
                 if not part_path.is_file():
                     raise FileNotFoundError(index)
                 with part_path.open("rb") as part:
-                    shutil.copyfileobj(part, assembled, length=8 * 1024 * 1024)
+                    while piece := part.read(8 * 1024 * 1024):
+                        assembled.write(piece)
+                        digest.update(piece)
+                        byte_size += len(piece)
         temporary_path.replace(assembled_path)
-        return assembled_path
+        return assembled_path, digest.hexdigest(), byte_size
     finally:
         temporary_path.unlink(missing_ok=True)
 
@@ -690,7 +697,7 @@ class BatchItemChunkUploadView(APIView):
             )
 
         try:
-            assembled_path = _assemble_uploaded_chunks(
+            assembled_path, assembled_sha256, assembled_size = _assemble_uploaded_chunks(
                 chunk_directory,
                 total_chunks=total_chunks,
             )
@@ -707,7 +714,7 @@ class BatchItemChunkUploadView(APIView):
             )
 
         rejection_reason = ""
-        if assembled_path.stat().st_size != total_size:
+        if assembled_size != total_size:
             rejection_reason = "分段合并后的文件大小不一致。"
         else:
             with assembled_path.open("rb") as assembled:
@@ -735,6 +742,8 @@ class BatchItemChunkUploadView(APIView):
                         if rejection_reason
                         else UploadItem.DispatchStatus.PENDING
                     ),
+                    sha256=assembled_sha256,
+                    byte_size=assembled_size,
                 )
                 storage_write = "rejected"
                 try:
@@ -756,6 +765,8 @@ class BatchItemChunkUploadView(APIView):
                         "accepted": not rejection_reason,
                         "total_chunks": total_chunks,
                         "chunk_size": chunk_size,
+                        "sha256": assembled_sha256,
+                        "byte_size": assembled_size,
                         "storage_write": storage_write,
                     },
                     request_ip=_request_ip(request),
@@ -982,8 +993,18 @@ class UploadItemPreviewView(APIView):
 class RetryUploadItemView(APIView):
     permission_classes = [IsCatalogEditor]
 
+    @transaction.atomic
     def post(self, request, item_id):
-        item = get_object_or_404(UploadItem, pk=item_id)
+        item = get_object_or_404(
+            _locked_upload_items("edition"),
+            pk=item_id,
+        )
+        if item.status in {
+            UploadItem.Status.PUBLISHED,
+            UploadItem.Status.WITHDRAWN,
+            UploadItem.Status.DELETED,
+        }:
+            return Response({"detail": "已发布、已下架或已删除记录不能从入库预检阶段重试。"}, status=409)
         stalled_seconds = max(
             0,
             int((timezone.now() - item.updated_at).total_seconds()),
@@ -1167,9 +1188,10 @@ class QueueHealthView(APIView):
 class ResumeUploadItemView(APIView):
     permission_classes = [IsCatalogEditor]
 
+    @transaction.atomic
     def post(self, request, item_id):
         item = get_object_or_404(
-            UploadItem.objects.select_related("edition"),
+            _locked_upload_items("edition"),
             pk=item_id,
         )
         if item.status in {
@@ -1358,17 +1380,24 @@ class MetadataReviewView(APIView):
     def put(self, request, item_id):
         item = get_object_or_404(
             _locked_upload_items(
-                "edition__work",
                 "batch",
             ),
             pk=item_id,
         )
-        if item.edition is None:
+        if item.edition_id is None:
             return Response({"detail": "识别流程尚未建立文献记录。"}, status=409)
+        # UploadItem coordinates one review request. Edition and Work are also
+        # mutated below and can be shared by replacement or duplicate intake
+        # records, so lock both explicitly through their non-null inner join.
+        edition = (
+            Edition.objects.select_for_update(of=("self", "work"))
+            .select_related("work")
+            .get(pk=item.edition_id)
+        )
+        item.edition = edition
         serializer = MetadataReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        edition = item.edition
         work = edition.work
         was_published = edition.state == PublicationState.PUBLISHED
         previous_title = work.title
@@ -2520,7 +2549,7 @@ class ProcessingCenterView(APIView):
         )
 
     def post(self, request):
-        if request.user.role != "admin":
+        if not has_capability(request.user, Capability.RETRY_JOBS):
             return Response({"detail": "只有管理员可以暂停、恢复、重试或取消处理任务。"}, status=403)
         action = str(request.data.get("action") or "").strip()
         workload_job_type = str(request.data.get("job_type") or "").strip()

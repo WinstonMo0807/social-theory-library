@@ -14,6 +14,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { AskLibraryLink } from "@/components/ask-library-link";
 import { SaveTopicButton } from "@/components/save-topic-button";
 import { ArchitecturalImage, BookCard, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
 import { loadTopic } from "@/lib/server-api";
@@ -50,6 +51,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
             <h1>{topic.name}</h1>
             <p>{topic.problemStatement || topic.description || "该研究主题的说明尚待管理员编辑。"}</p>
             <TagList items={topic.concepts} />
+            <AskLibraryLink context="topics" ids={[topic.id]} label={`询问关于${topic.name}的馆藏`} />
           </div>
           <div
             className={`topic-problem-image${topic.heroImage ? " has-image" : ""}`}

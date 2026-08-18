@@ -2,7 +2,7 @@ name: social-science-library-nas
 
 services:
   worker:
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     restart: unless-stopped
@@ -47,7 +47,7 @@ services:
       start_period: 60s
 
   ingestion-worker:
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     restart: unless-stopped

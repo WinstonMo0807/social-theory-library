@@ -1,8 +1,21 @@
 import pytest
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User
+
+
+def _set_cookie_session(client, settings, user, *, expired_access=False):
+    refresh = RefreshToken.for_user(user)
+    refresh["token_version"] = user.token_version
+    access = refresh.access_token
+    if expired_access:
+        access["exp"] = int(timezone.now().timestamp()) - 1
+    client.cookies[settings.JWT_ACCESS_COOKIE_NAME] = str(access)
+    client.cookies[settings.JWT_REFRESH_COOKIE_NAME] = str(refresh)
+    return refresh
 
 
 @pytest.mark.django_db
@@ -180,7 +193,13 @@ def test_browser_session_uses_httponly_cookies_and_csrf(settings, reader_user):
     assert login.data["session"] == "cookie"
     assert login.cookies[settings.JWT_ACCESS_COOKIE_NAME]["httponly"]
     assert login.cookies[settings.JWT_ACCESS_COOKIE_NAME]["secure"]
+    assert login.cookies[settings.JWT_ACCESS_COOKIE_NAME]["samesite"] == "Lax"
+    assert login.cookies[settings.JWT_ACCESS_COOKIE_NAME]["path"] == "/"
+    assert not login.cookies[settings.JWT_ACCESS_COOKIE_NAME]["domain"]
     assert login.cookies[settings.JWT_REFRESH_COOKIE_NAME]["httponly"]
+    assert login.cookies[settings.JWT_REFRESH_COOKIE_NAME]["samesite"] == "Strict"
+    assert login.cookies[settings.JWT_REFRESH_COOKIE_NAME]["path"] == "/api/auth/"
+    assert not login.cookies[settings.JWT_REFRESH_COOKIE_NAME]["domain"]
     assert client.get("/api/auth/me/").status_code == 200
 
     rejected = client.patch("/api/auth/me/", {"display_name": "被拒绝"}, format="json")
@@ -245,3 +264,94 @@ def test_trusted_lan_login_keeps_cookie_session_on_http(settings, reader_user):
         HTTP_X_LIBRARY_LAN="1",
         HTTP_X_LIBRARY_LAN_TOKEN=settings.LAN_PROXY_TOKEN,
     ).status_code == 200
+
+
+@pytest.mark.django_db
+def test_valid_cookie_session_is_the_authentication_source_without_browser_hint(settings, reader_user):
+    settings.JWT_COOKIE_AUTH_ENABLED = True
+    client = APIClient()
+    _set_cookie_session(client, settings, reader_user)
+
+    response = client.get("/api/auth/me/")
+
+    assert response.status_code == 200
+    assert response.data["email"] == reader_user.email
+
+
+@pytest.mark.django_db
+def test_expired_access_cookie_can_recover_through_refresh_cookie(settings, reader_user):
+    settings.JWT_COOKIE_AUTH_ENABLED = True
+    settings.JWT_RETURN_TOKENS_IN_BODY = False
+    client = APIClient()
+    _set_cookie_session(client, settings, reader_user, expired_access=True)
+
+    assert client.get("/api/auth/me/").status_code == 401
+    refresh = client.post("/api/auth/token/refresh/", {}, format="json")
+    assert refresh.status_code == 200
+    assert client.get("/api/auth/me/").status_code == 200
+
+
+@pytest.mark.django_db
+def test_authenticated_reader_gets_forbidden_without_losing_cookie_session(settings, reader_user, caplog):
+    settings.JWT_COOKIE_AUTH_ENABLED = True
+    client = APIClient()
+    _set_cookie_session(client, settings, reader_user)
+    caplog.set_level("INFO", logger="library.api")
+
+    forbidden = client.get("/api/auth/users/")
+
+    assert forbidden.status_code == 403
+    assert settings.JWT_ACCESS_COOKIE_NAME in client.cookies
+    assert "reason=permission_denied" in caplog.text
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("session_kind", "expected_reason"),
+    [
+        ("missing", "no_cookie"),
+        ("expired", "expired_session"),
+        ("invalid", "invalid_session"),
+        ("deleted_user", "user_not_found"),
+    ],
+)
+def test_authentication_failure_reason_is_logged_without_credentials(
+    settings,
+    reader_user,
+    caplog,
+    session_kind,
+    expected_reason,
+):
+    settings.JWT_COOKIE_AUTH_ENABLED = True
+    client = APIClient()
+    if session_kind == "expired":
+        _set_cookie_session(client, settings, reader_user, expired_access=True)
+    elif session_kind == "invalid":
+        client.cookies[settings.JWT_ACCESS_COOKIE_NAME] = "invalid-cookie-value"
+    elif session_kind == "deleted_user":
+        _set_cookie_session(client, settings, reader_user)
+        reader_user.delete()
+    caplog.set_level("INFO", logger="library.api")
+
+    response = client.get("/api/auth/me/")
+
+    assert response.status_code == 401
+    assert f"reason={expected_reason}" in caplog.text
+    assert "invalid-cookie-value" not in caplog.text
+
+
+@pytest.mark.django_db
+def test_invalid_refresh_is_logged_as_refresh_failed_without_echoing_token(settings, caplog):
+    settings.JWT_COOKIE_AUTH_ENABLED = True
+    client = APIClient()
+    caplog.set_level("INFO", logger="library.api")
+
+    response = client.post(
+        "/api/auth/token/refresh/",
+        {"refresh": "invalid-refresh-value"},
+        format="json",
+    )
+
+    assert response.status_code == 401
+    assert "reason=refresh_failed" in caplog.text
+    assert "invalid-refresh-value" not in caplog.text

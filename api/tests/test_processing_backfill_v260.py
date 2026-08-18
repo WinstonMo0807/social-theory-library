@@ -28,6 +28,15 @@ from catalog.services.semantic_indexing import (
 from .test_resilient_publication_v260 import create_item_with_files
 
 
+def active_semantic_version(marker: str) -> SemanticIndexVersion:
+    return SemanticIndexVersion.objects.create(
+        uid=f"test-active-{marker}",
+        provider="huggingFace",
+        model_repo_id="example/model",
+        status=SemanticIndexVersion.Status.ACTIVE,
+    )
+
+
 def semantic_runtime(tmp_path):
     return {
         "engine": "meilisearch_hybrid",
@@ -180,6 +189,8 @@ def test_semantic_snapshot_waits_for_validation_before_switching_active_index(
 
 @pytest.mark.django_db
 def test_admin_semantic_activation_requires_explicit_confirmation(api_client, admin_user):
+    admin_user.is_superuser = True
+    admin_user.save(update_fields=["is_superuser"])
     api_client.force_authenticate(admin_user)
     candidate = SemanticIndexVersion.objects.create(
         uid="semantic_passages_confirmation_required",
@@ -255,6 +266,7 @@ def test_semantic_index_wait_uses_processing_task_timeout(
         title="长任务等待配置",
     )
     settings.SEMANTIC_INDEX_TASK_TIMEOUT_SECONDS = 901
+    active_semantic_version("wait")
 
     with patch(
         "catalog.services.semantic_indexing.semantic_documents",
@@ -266,12 +278,139 @@ def test_semantic_index_wait_uses_processing_task_timeout(
     ) as posted, patch(
         "catalog.services.semantic_indexing._wait_task",
         return_value={"status": "succeeded"},
-    ) as waited:
+    ) as waited, patch(
+        "catalog.services.semantic_indexing.synchronize_active_semantic_index_document_count",
+        return_value=1,
+    ):
         posted.return_value.json.return_value = {"taskUid": 38}
         result = index_semantic_asset(normalized)
 
     assert result["backend"] == "meilisearch"
     waited.assert_called_once_with({"taskUid": 38}, timeout=901)
+
+
+@pytest.mark.django_db
+def test_semantic_asset_write_uses_bounded_idempotent_batches(settings, tmp_path):
+    _work, _edition, _original, normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="语义文档分批写入",
+    )
+    active_semantic_version("batches")
+    settings.SEMANTIC_INDEX_DOCUMENT_BATCH_SIZE = 2
+    documents = [
+        {"id": f"chunk-{index}", "asset_id": str(normalized.id)}
+        for index in range(5)
+    ]
+    response = Mock()
+    response.json.return_value = {"taskUid": 71}
+
+    with patch(
+        "catalog.services.semantic_indexing.semantic_documents",
+        return_value=documents,
+    ), patch(
+        "catalog.services.semantic_indexing.ensure_semantic_index"
+    ), patch(
+        "catalog.services.semantic_indexing.httpx.post",
+        return_value=response,
+    ) as posted, patch(
+        "catalog.services.semantic_indexing._wait_task",
+        return_value={"status": "succeeded"},
+    ), patch(
+        "catalog.services.semantic_indexing._remove_stale_semantic_asset_documents",
+        return_value=0,
+    ), patch(
+        "catalog.services.semantic_indexing.synchronize_active_semantic_index_document_count",
+        return_value=5,
+    ):
+        first = index_semantic_asset(normalized)
+        second = index_semantic_asset(normalized)
+
+    assert first["batches"] == second["batches"] == 3
+    assert first["document_batch_size"] == 2
+    assert [len(call.kwargs["json"]) for call in posted.call_args_list] == [2, 2, 1, 2, 2, 1]
+
+
+@pytest.mark.django_db
+def test_active_incremental_write_synchronizes_current_document_count(settings, tmp_path):
+    _work, _edition, _original, normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="活动索引增量计数",
+    )
+    version = SemanticIndexVersion.objects.create(
+        uid="semantic_active_incremental_count",
+        provider="huggingFace",
+        model_repo_id="example/model",
+        document_count=1,
+        expected_document_count=1,
+        status=SemanticIndexVersion.Status.ACTIVE,
+    )
+    response = Mock()
+    response.json.return_value = {"taskUid": 72}
+
+    with patch(
+        "catalog.services.semantic_indexing.semantic_documents",
+        return_value=[{"id": "chunk-2", "asset_id": str(normalized.id)}],
+    ), patch(
+        "catalog.services.semantic_indexing.ensure_semantic_index"
+    ), patch(
+        "catalog.services.semantic_indexing.httpx.post",
+        return_value=response,
+    ), patch(
+        "catalog.services.semantic_indexing._wait_task",
+        return_value={"status": "succeeded"},
+    ), patch(
+        "catalog.services.semantic_indexing._remove_stale_semantic_asset_documents",
+        return_value=0,
+    ), patch(
+        "catalog.services.semantic_indexing.semantic_index_document_count",
+        return_value=2,
+    ):
+        index_semantic_asset(normalized)
+
+    version.refresh_from_db()
+    assert version.document_count == 2
+    assert version.expected_document_count == 1
+    assert version.validation_details["current_document_count"] == 2
+    assert version.validation_details["document_count_semantics"] == "current_remote_document_count"
+
+
+@pytest.mark.django_db
+def test_active_empty_asset_removal_synchronizes_current_document_count(settings, tmp_path):
+    _work, _edition, _original, normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="活动索引空文档清理计数",
+    )
+    version = SemanticIndexVersion.objects.create(
+        uid="semantic_active_empty_asset_count",
+        provider="huggingFace",
+        model_repo_id="example/model",
+        document_count=3,
+        expected_document_count=3,
+        status=SemanticIndexVersion.Status.ACTIVE,
+    )
+
+    with patch(
+        "catalog.services.semantic_indexing.semantic_documents",
+        return_value=[],
+    ), patch(
+        "catalog.services.semantic_indexing.ensure_semantic_index"
+    ), patch(
+        "catalog.services.semantic_indexing._remove_stale_semantic_asset_documents",
+        return_value=3,
+    ), patch(
+        "catalog.services.semantic_indexing.semantic_index_document_count",
+        return_value=0,
+    ):
+        result = index_semantic_asset(normalized)
+
+    version.refresh_from_db()
+    assert result["backend"] == "no-chunks"
+    assert result["removed_stale_documents"] == 3
+    assert version.document_count == 0
+    assert version.expected_document_count == 3
 
 
 @pytest.mark.django_db
@@ -281,6 +420,7 @@ def test_semantic_asset_sync_removes_stale_chunk_ids(settings, tmp_path):
         tmp_path,
         title="语义旧分块清理",
     )
+    active_semantic_version("stale")
     document_response = Mock()
     document_response.json.return_value = {"taskUid": 51}
     fetch_response = Mock()
@@ -302,6 +442,9 @@ def test_semantic_asset_sync_removes_stale_chunk_ids(settings, tmp_path):
     ) as posted, patch(
         "catalog.services.semantic_indexing._wait_task",
         return_value={"status": "succeeded"},
+    ), patch(
+        "catalog.services.semantic_indexing.synchronize_active_semantic_index_document_count",
+        return_value=1,
     ):
         result = index_semantic_asset(normalized)
 

@@ -252,3 +252,15 @@ python manage.py benchmark_opinion_search `
 - [DAPR，ACL Anthology](https://aclanthology.org/2024.acl-long.236/)
 
 这些资料用于说明架构选择。它们不构成本馆精度或 NAS 性能的验证记录。
+
+## 15. Task 2B-0 离线评测工具
+
+Task 2B-0 在旧评估模型之外增加了适合批量人工判断的 JSONL 与静态 HTML 工具。正式跨语言集目标为至少 120 条真实馆藏 query，五个方向各至少 20 条。最初本地快照没有 SemanticChunk。此后真实馆藏副本已建立 3,881 文档的 repaired shadow corpus，但仍没有人工 gold，实际可用 benchmark query 仍为 0。仓库里的 10 条模板不能填入本页结果表。
+
+候选池由 V1、V2、纯 lexical 和纯 dense 的 top candidates 合并。相同稳定段落只保留一次。人工页面使用固定 seed 盲化顺序，并默认折叠系统来源、rank 和 branch provenance。它不提供推荐 relevance grade。
+
+数据集 split 为 diagnostic、dev 和 test。split 只由 query ID 和固定 seed 决定，不读取检索结果或 gold。Task 2B-1 只能使用 dev 调参。test 在参数冻结前不得参与选择，也不能因为结果困难而删除 query。
+
+Task 2A 参数集标识为 `baseline_v2a`。当前本地 config hash 为 `79650a79de2c5c973172d14a6b61c6b72fdd46983b56484501940d23f89bd8c3`。以后每次实验都必须保存新的有效 config hash，不能只写方案名称。
+
+repair 前的 34 条 pilot 候选和 766 个 pooled candidate 只保留为诊断记录，已经标记 `pre-corpus-repair`。后续需要在同一个 repaired UID 上分别执行 SHADOW BASELINE 与 SHADOW V2，再生成新盲标包。公开 V1 的 3,005 文档只作为现网参考，不能与 3,881 文档的 shadow V2 直接计算算法收益。

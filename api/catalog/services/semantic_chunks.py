@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from catalog.models import Asset, SemanticChunk
+from catalog.services.passage_language import detect_passage_language
 from catalog.services.text import normalize_search_text
 
 
@@ -260,7 +261,7 @@ def build_semantic_chunks(
                 normalized_text=draft.normalized_text,
                 context_before=previous_text[-700:],
                 context_after=next_text[:700],
-                language=work.language,
+                language=detect_passage_language(draft.original_text),
                 document_type=work.document_type,
                 parser_version=PARSER_VERSION,
                 chunk_version=CHUNK_VERSION,

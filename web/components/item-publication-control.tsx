@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, RefreshCw, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ConfirmDialog } from "./confirm-dialog";
 
 export type PublicationPreflight = {
@@ -64,7 +64,7 @@ export function ItemPublicationControl({
   const [withdrawing, setWithdrawing] = useState(false);
 
   async function refreshPreflight() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {
@@ -83,7 +83,7 @@ export function ItemPublicationControl({
   }
 
   async function publish(confirmWarnings: boolean) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     if (preflight.blockers.length) {
       onMessage("仍有技术问题阻止发布，请先恢复原始 PDF 或公开阅读文件。");
@@ -131,7 +131,7 @@ export function ItemPublicationControl({
   }
 
   async function withdraw(reason: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {
@@ -150,7 +150,7 @@ export function ItemPublicationControl({
   }
 
   async function updatePolicy(next: "auto" | "original" | "ocr") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {

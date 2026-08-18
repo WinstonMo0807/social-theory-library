@@ -28,6 +28,18 @@ def api_exception_handler(exc, context):
             status=500,
         )
 
+    if response.status_code in {401, 403}:
+        request = context.get("request")
+        reason = getattr(request, "library_auth_failure_reason", "")
+        if not reason:
+            reason = "permission_denied" if response.status_code == 403 else "invalid_session"
+        logger.info(
+            "Authentication outcome reason=%s method=%s path=%s",
+            reason,
+            getattr(request, "method", ""),
+            getattr(request, "path", ""),
+        )
+
     detail = response.data
     response.data = {
         "error": {

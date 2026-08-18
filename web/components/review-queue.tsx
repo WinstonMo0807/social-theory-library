@@ -10,8 +10,8 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Candidate = {
   field_name: string;
@@ -71,7 +71,7 @@ export function ReviewQueue() {
   const [revision, setRevision] = useState(0);
 
   const load = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setError("请先登录后台。");
       setLoading(false);
@@ -80,8 +80,9 @@ export function ReviewQueue() {
     setLoading(true);
     try {
       const search = query.trim() ? `&search=${encodeURIComponent(query.trim())}` : "";
+      const statusFilter = status === "all" ? "" : `&status=${encodeURIComponent(status)}`;
       const payload = await apiRequest<Paginated<ReviewItem>>(
-        `/ingestion/items/?scope=review&ordering=-updated_at${search}`,
+        `/ingestion/items/?scope=review&ordering=-updated_at${search}${statusFilter}`,
         {},
         token,
       );
@@ -93,17 +94,14 @@ export function ReviewQueue() {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, status]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load, revision]);
 
-  const visible = useMemo(
-    () => status === "all" ? items : items.filter((item) => item.status === status),
-    [items, status],
-  );
+  const visible = items;
 
   function submit(event: FormEvent) {
     event.preventDefault();

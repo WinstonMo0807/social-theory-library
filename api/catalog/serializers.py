@@ -2008,6 +2008,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
 
 
 class AdminScholarSerializer(serializers.ModelSerializer):
+    person_id = serializers.UUIDField(source="person.id", read_only=True)
     preferred_name = serializers.CharField(source="person.preferred_name", max_length=240)
     original_name = serializers.CharField(source="person.original_name", max_length=240, required=False, allow_blank=True)
     aliases = serializers.ListField(source="person.aliases", child=serializers.CharField(max_length=240), required=False)
@@ -2022,6 +2023,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
         model = ScholarProfile
         fields = (
             "id",
+            "person_id",
             "slug",
             "preferred_name",
             "original_name",

@@ -272,7 +272,7 @@ def extract_local_candidates(path: str | Path) -> tuple[list[Candidate], str]:
 
 
 def resolve_doi(doi: str) -> list[Candidate]:
-    user_agent = "SocialTheoryLibrary/2.6.1 (metadata resolution"
+    user_agent = "SocialTheoryLibrary/2.7 (metadata resolution"
     if settings.CROSSREF_MAILTO:
         user_agent = f"{user_agent}; mailto:{settings.CROSSREF_MAILTO}"
     user_agent = f"{user_agent})"
@@ -315,7 +315,7 @@ def resolve_doi(doi: str) -> list[Candidate]:
 def resolve_isbn(isbn: str) -> list[Candidate]:
     response = httpx.get(
         f"https://openlibrary.org/isbn/{isbn}.json",
-        headers={"User-Agent": "SocialTheoryLibrary/2.6.1 metadata-candidate-service"},
+        headers={"User-Agent": "SocialTheoryLibrary/2.7 metadata-candidate-service"},
         timeout=settings.METADATA_PROVIDER_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
@@ -347,7 +347,7 @@ def resolve_isbn(isbn: str) -> list[Candidate]:
             "fields": "title,author_name,first_publish_year,publisher,publish_place,edition_key",
             "limit": 1,
         },
-        headers={"User-Agent": "SocialTheoryLibrary/2.6.1 metadata-candidate-service"},
+        headers={"User-Agent": "SocialTheoryLibrary/2.7 metadata-candidate-service"},
         timeout=settings.METADATA_PROVIDER_TIMEOUT_SECONDS,
     )
     search_response.raise_for_status()
@@ -383,7 +383,7 @@ def resolve_isbn(isbn: str) -> list[Candidate]:
 
 
 def search_crossref_title(title: str, *, limit: int = 3) -> list[Candidate]:
-    user_agent = "SocialTheoryLibrary/2.6.1 (administrator metadata suggestions"
+    user_agent = "SocialTheoryLibrary/2.7 (administrator metadata suggestions"
     if settings.CROSSREF_MAILTO:
         user_agent = f"{user_agent}; mailto:{settings.CROSSREF_MAILTO}"
     user_agent = f"{user_agent})"
@@ -442,7 +442,7 @@ def search_openlibrary_title(title: str, *, language: str = "zh", limit: int = 3
             "fields": "key,title,author_name,first_publish_year,publisher,publish_place,isbn,edition_key,language",
             "limit": max(1, min(limit, 5)),
         },
-        headers={"User-Agent": "SocialTheoryLibrary/2.6.1 metadata-candidate-service"},
+        headers={"User-Agent": "SocialTheoryLibrary/2.7 metadata-candidate-service"},
         timeout=settings.METADATA_PROVIDER_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
@@ -515,7 +515,7 @@ def _google_books_records(query: str, *, language: str = "", limit: int = 3) -> 
     response = httpx.get(
         "https://www.googleapis.com/books/v1/volumes",
         params=params,
-        headers={"User-Agent": "SocialTheoryLibrary/2.6.1 (administrator metadata suggestions)"},
+        headers={"User-Agent": "SocialTheoryLibrary/2.7 (administrator metadata suggestions)"},
         timeout=settings.METADATA_PROVIDER_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
@@ -599,7 +599,7 @@ def search_google_books_title(title: str, *, language: str = "", limit: int = 3)
 
 
 def _openalex_headers() -> dict[str, str]:
-    headers = {"User-Agent": "SocialTheoryLibrary/2.6.1 (administrator metadata suggestions)"}
+    headers = {"User-Agent": "SocialTheoryLibrary/2.7 (administrator metadata suggestions)"}
     if getattr(settings, "OPENALEX_API_KEY", ""):
         headers["api_key"] = settings.OPENALEX_API_KEY
     return headers

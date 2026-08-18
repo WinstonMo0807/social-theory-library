@@ -14,6 +14,7 @@ from reading.library_assistant import (
     stream_conversation_answer,
     validated_source_rows,
 )
+from reading.library_retrieval import LibraryEvidence, LibraryRetrievalResult, LibraryRetrievalService
 from reading.models import LibraryConversation, LibraryMessage, LibraryMessageSource
 from reading.services import decrypt_private_text, encrypt_private_text
 
@@ -51,6 +52,37 @@ def source_row(work, edition, asset, *, index=1):
         "chapter_title": "权力与主体",
         "snippet": f"这是第 {index} 条真实馆藏摘录。",
     }
+
+
+def mock_retrieval(monkeypatch, rows, *, sufficient=True, reason=""):
+    evidence = tuple(
+        LibraryEvidence(
+            evidence_id=str(row["id"]),
+            work_id=str(row["work_id"]),
+            work_title=str(row["title"]),
+            edition_id=str(row["edition_id"]),
+            asset_id=str(row["asset_id"]),
+            page_id=str(row.get("page_id") or ""),
+            page_index=row.get("page_index"),
+            printed_label=str(row.get("printed_label") or ""),
+            semantic_chunk_id=str(row["id"]),
+            document_id=str(row.get("document_id") or ""),
+            original_passage=str(row["snippet"]),
+            language=str(row.get("language") or "zh"),
+            authors=tuple(row.get("authors") or ()),
+            chapter_title=str(row.get("chapter_title") or ""),
+            reader_url=f"/reader/{row['asset_id']}?page={row.get('page_index') or 1}",
+            retrieval_provenance={"branch": "test"},
+        )
+        for row in rows
+    )
+    result = LibraryRetrievalResult(
+        evidence=evidence,
+        sufficient=sufficient,
+        insufficiency_reason=reason,
+        metadata={"engine": "test", "evidence_count": len(evidence), "fallback_used": False},
+    )
+    monkeypatch.setattr(LibraryRetrievalService, "retrieve", lambda self, **kwargs: result)
 
 
 def stream_text(response):
@@ -91,7 +123,7 @@ def test_conversations_are_private_to_the_authenticated_reader(api_client, reade
 
 
 @pytest.mark.django_db
-def test_assist_off_skips_library_retrieval_and_encrypts_messages(
+def test_assist_off_is_rejected_before_any_free_model_answer(
     api_client,
     reader_user,
     monkeypatch,
@@ -102,39 +134,15 @@ def test_assist_off_skips_library_retrieval_and_encrypts_messages(
         assist_mode=LibraryConversation.AssistMode.OFF,
     )
 
-    def fail_retrieval(*args, **kwargs):
-        raise AssertionError("关闭馆藏辅助时不应执行检索")
-
-    monkeypatch.setattr("reading.library_assistant.retrieve_library_sources", fail_retrieval)
-    monkeypatch.setattr(
-        "reading.library_assistant._provider_stream",
-        lambda messages: iter(["这是一般解释，未使用馆藏资料。"]),
+    response = api_client.post(
+        f"/api/reading/library-conversations/{conversation.id}/messages/stream/",
+        {"question": "什么是社会结构？", "assist_mode": "off"},
+        format="json",
     )
 
-    with override_settings(
-        AI_PROVIDER="openai_compatible",
-        AI_BASE_URL="http://localhost:11434",
-        AI_ALLOWED_HOSTS=("localhost",),
-        AI_METADATA_MODEL="local-chat",
-        AI_LIBRARY_MODEL="local-chat",
-    ):
-        response = api_client.post(
-            f"/api/reading/library-conversations/{conversation.id}/messages/stream/",
-            {"question": "什么是社会结构？", "assist_mode": "off"},
-            format="json",
-        )
-        body = stream_text(response)
-
-    assert response.status_code == 200
-    assert event_payloads(body, "done")[0]["status"] == "completed"
-    messages = list(conversation.messages.order_by("created_at"))
-    assert len(messages) == 2
-    assert "社会结构".encode("utf-8") not in bytes(messages[0].body_ciphertext)
-    assert decrypt_private_text(messages[0].body_ciphertext) == "什么是社会结构？"
-    assert messages[1].retrieval_used is False
-    export = api_client.get("/api/reading/export/")
-    assert export.status_code == 200
-    assert export.data["library_conversations"][0]["messages"][0]["content"] == "什么是社会结构？"
+    assert response.status_code == 400
+    assert "必须检索馆藏" in str(response.data)
+    assert conversation.messages.count() == 0
 
 
 @pytest.mark.django_db
@@ -145,15 +153,12 @@ def test_strict_library_mode_returns_no_evidence_message_without_calling_model(
 ):
     api_client.force_authenticate(reader_user)
     conversation = LibraryConversation.objects.create(user=reader_user, assist_mode="on")
-    monkeypatch.setattr(
-        "reading.library_assistant.retrieve_library_sources",
-        lambda *args, **kwargs: ([], {"engine": "keyword_fallback", "fallback_used": False}),
-    )
+    mock_retrieval(monkeypatch, [], sufficient=False, reason="no_library_evidence")
 
     def fail_model(*args, **kwargs):
         raise AssertionError("严格馆藏模式无证据时不应调用模型")
 
-    monkeypatch.setattr("reading.library_assistant._provider_stream", fail_model)
+    monkeypatch.setattr("reading.library_assistant.stream_library_answer", fail_model)
     response = api_client.post(
         f"/api/reading/library-conversations/{conversation.id}/messages/stream/",
         {"question": "馆藏里完全不存在的问题", "assist_mode": "on"},
@@ -181,12 +186,9 @@ def test_stream_only_preserves_real_source_markers_and_progressively_exposes_sou
         source_row(work1, edition1, asset1, index=1),
         source_row(work2, edition2, asset2, index=2),
     ]
+    mock_retrieval(monkeypatch, rows)
     monkeypatch.setattr(
-        "reading.library_assistant.retrieve_library_sources",
-        lambda *args, **kwargs: (rows, {"engine": "hybrid", "fallback_used": False}),
-    )
-    monkeypatch.setattr(
-        "reading.library_assistant._provider_stream",
+        "reading.library_assistant.stream_library_answer",
         lambda messages: iter(["第一条证据 [S", "1]。错误编号 [S99] 和 [S1234] 不应保留。"]),
     )
     api_client.force_authenticate(reader_user)
@@ -317,7 +319,7 @@ def test_disconnect_after_meta_cancels_answer_and_releases_conversation_slot(
 ):
     conversation = LibraryConversation.objects.create(user=reader_user, assist_mode="off")
     monkeypatch.setattr(
-        "reading.library_assistant._provider_stream",
+        "reading.library_assistant.stream_library_answer",
         lambda messages: iter(["不应在断开后继续生成"]),
     )
     first = stream_conversation_answer(
@@ -349,25 +351,25 @@ def test_disconnect_after_meta_cancels_answer_and_releases_conversation_slot(
 def test_disconnect_preserves_cited_sources_and_removes_partial_marker(reader_user, monkeypatch):
     work, edition, asset = create_source_work(7)
     conversation = LibraryConversation.objects.create(user=reader_user)
+    mock_retrieval(monkeypatch, [source_row(work, edition, asset, index=1)])
     monkeypatch.setattr(
-        "reading.library_assistant.retrieve_library_sources",
-        lambda *args, **kwargs: (
-            [source_row(work, edition, asset, index=1)],
-            {"engine": "hybrid", "fallback_used": False},
-        ),
-    )
-    monkeypatch.setattr(
-        "reading.library_assistant._provider_stream",
+        "reading.library_assistant.stream_library_answer",
         lambda messages: iter(["已取得证据 [S1]，末尾残片 [S"]),
     )
-    stream = stream_conversation_answer(
-        conversation=conversation,
-        question="断流来源测试",
-        assist_mode="auto",
-    )
-    assert "event: meta" in next(stream)
-    assert "event: delta" in next(stream)
-    stream.close()
+    with override_settings(
+        AI_PROVIDER="openai_compatible",
+        AI_BASE_URL="http://localhost:11434",
+        AI_ALLOWED_HOSTS=("localhost",),
+        AI_LIBRARY_MODEL="local-chat",
+    ):
+        stream = stream_conversation_answer(
+            conversation=conversation,
+            question="断流来源测试",
+            assist_mode="auto",
+        )
+        assert "event: meta" in next(stream)
+        assert "event: delta" in next(stream)
+        stream.close()
 
     answer = conversation.messages.get(role=LibraryMessage.Role.ASSISTANT)
     body = decrypt_private_text(answer.body_ciphertext)
@@ -379,7 +381,9 @@ def test_disconnect_preserves_cited_sources_and_removes_partial_marker(reader_us
 
 @pytest.mark.django_db
 def test_cancel_requested_after_last_delta_wins_over_completion(reader_user, monkeypatch):
-    conversation = LibraryConversation.objects.create(user=reader_user, assist_mode="off")
+    work, edition, asset = create_source_work(35)
+    conversation = LibraryConversation.objects.create(user=reader_user)
+    mock_retrieval(monkeypatch, [source_row(work, edition, asset, index=1)])
 
     def provider(messages):
         yield "已经生成的部分"
@@ -388,14 +392,20 @@ def test_cancel_requested_after_last_delta_wins_over_completion(reader_user, mon
             role=LibraryMessage.Role.ASSISTANT,
         ).update(cancel_requested_at=timezone.now())
 
-    monkeypatch.setattr("reading.library_assistant._provider_stream", provider)
-    body = "".join(
-        stream_conversation_answer(
-            conversation=conversation,
-            question="停止边界测试",
-            assist_mode="off",
+    monkeypatch.setattr("reading.library_assistant.stream_library_answer", provider)
+    with override_settings(
+        AI_PROVIDER="openai_compatible",
+        AI_BASE_URL="http://localhost:11434",
+        AI_ALLOWED_HOSTS=("localhost",),
+        AI_LIBRARY_MODEL="local-chat",
+    ):
+        body = "".join(
+            stream_conversation_answer(
+                conversation=conversation,
+                question="停止边界测试",
+                assist_mode="auto",
+            )
         )
-    )
 
     answer = conversation.messages.get(role=LibraryMessage.Role.ASSISTANT)
     assert answer.status == LibraryMessage.Status.CANCELED
@@ -406,26 +416,26 @@ def test_cancel_requested_after_last_delta_wins_over_completion(reader_user, mon
 def test_provider_failure_finalizes_partial_answer_and_real_citation(reader_user, monkeypatch):
     work, edition, asset = create_source_work(32)
     conversation = LibraryConversation.objects.create(user=reader_user)
-    monkeypatch.setattr(
-        "reading.library_assistant.retrieve_library_sources",
-        lambda *args, **kwargs: (
-            [source_row(work, edition, asset, index=1)],
-            {"engine": "hybrid", "fallback_used": False},
-        ),
-    )
+    mock_retrieval(monkeypatch, [source_row(work, edition, asset, index=1)])
 
     def provider(messages):
         yield "已取得证据 [S1]。"
         raise LibraryAssistantUnavailable("private endpoint must not reach reader")
 
-    monkeypatch.setattr("reading.library_assistant._provider_stream", provider)
-    body = "".join(
-        stream_conversation_answer(
-            conversation=conversation,
-            question="失败收尾测试",
-            assist_mode="auto",
+    monkeypatch.setattr("reading.library_assistant.stream_library_answer", provider)
+    with override_settings(
+        AI_PROVIDER="openai_compatible",
+        AI_BASE_URL="http://localhost:11434",
+        AI_ALLOWED_HOSTS=("localhost",),
+        AI_LIBRARY_MODEL="local-chat",
+    ):
+        body = "".join(
+            stream_conversation_answer(
+                conversation=conversation,
+                question="失败收尾测试",
+                assist_mode="auto",
+            )
         )
-    )
 
     answer = conversation.messages.get(role=LibraryMessage.Role.ASSISTANT)
     assert answer.status == LibraryMessage.Status.FAILED
@@ -554,6 +564,50 @@ def test_stale_or_non_reader_asset_is_filtered_before_prompt():
 
 
 @pytest.mark.django_db
+def test_filtered_retrieval_evidence_never_reaches_free_model_answer(
+    api_client,
+    reader_user,
+    monkeypatch,
+):
+    work = Work.objects.create(document_type="book", title="不可作为问答证据的原始文件")
+    edition = Edition.objects.create(
+        work=work,
+        state=PublicationState.PUBLISHED,
+        public_slug="task6-invalid-evidence",
+        is_primary=True,
+    )
+    original = Asset.objects.create(
+        edition=edition,
+        kind=Asset.Kind.ORIGINAL,
+        file="archive/task6-invalid-evidence.pdf",
+        sha256=f"{9902:064x}",
+        status=Asset.Status.READY,
+        is_current=True,
+    )
+    mock_retrieval(monkeypatch, [source_row(work, edition, original)])
+    monkeypatch.setattr(
+        "reading.library_assistant.stream_library_answer",
+        lambda _messages: (_ for _ in ()).throw(AssertionError("无有效公开证据时不得调用模型")),
+    )
+    conversation = LibraryConversation.objects.create(user=reader_user)
+    api_client.force_authenticate(reader_user)
+
+    response = api_client.post(
+        f"/api/reading/library-conversations/{conversation.id}/messages/stream/",
+        {"question": "请自由补答", "assist_mode": "auto"},
+        format="json",
+    )
+    body = stream_text(response)
+
+    assert response.status_code == 200
+    assert "没有找到足以回答这个问题的原文证据" in body
+    answer = conversation.messages.get(role=LibraryMessage.Role.ASSISTANT)
+    assert answer.retrieval_used is False
+    assert answer.sources.count() == 0
+    assert answer.usage["insufficient_evidence"] is True
+
+
+@pytest.mark.django_db
 def test_output_is_bounded_and_reader_health_hides_internal_reason(
     api_client,
     reader_user,
@@ -561,10 +615,12 @@ def test_output_is_bounded_and_reader_health_hides_internal_reason(
     caplog,
 ):
     api_client.force_authenticate(reader_user)
-    conversation = LibraryConversation.objects.create(user=reader_user, assist_mode="off")
+    work, edition, asset = create_source_work(36)
+    conversation = LibraryConversation.objects.create(user=reader_user)
+    mock_retrieval(monkeypatch, [source_row(work, edition, asset, index=1)])
     monkeypatch.setattr(
-        "reading.library_assistant._provider_stream",
-        lambda messages: iter(["很长的模型输出" * 100]),
+        "reading.library_assistant.stream_library_answer",
+        lambda messages: iter(["证据 [S1]。" + "很长的模型输出" * 100]),
     )
     with override_settings(
         AI_PROVIDER="openai_compatible",
@@ -576,7 +632,7 @@ def test_output_is_bounded_and_reader_health_hides_internal_reason(
     ):
         response = api_client.post(
             f"/api/reading/library-conversations/{conversation.id}/messages/stream/",
-            {"question": "输出限制测试", "assist_mode": "off"},
+            {"question": "输出限制测试", "assist_mode": "auto"},
             format="json",
         )
         stream_text(response)

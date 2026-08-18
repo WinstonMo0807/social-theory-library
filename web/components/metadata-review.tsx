@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
-import { apiBlob, apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiBlob, apiRequest, getServerSessionCredential } from "@/lib/api";
 import type { PublicationPreflight } from "@/components/item-publication-control";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageMappingEditor } from "@/components/page-mapping-editor";
@@ -686,7 +686,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }, []);
 
   const loadItem = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先以管理员或编辑账户登录。");
       setLoading(false);
@@ -705,7 +705,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }, [hydrate, itemId]);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     let active = true;
     if (!token) {
       Promise.resolve().then(() => {
@@ -737,7 +737,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
 
   useEffect(() => {
     if (activeTab !== "pdf" || previewUrl || !item) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     let active = true;
     void apiBlob(`/ingestion/items/${itemId}/preview/`, token)
@@ -835,7 +835,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function decideMetadataCandidate(candidate: MetadataCandidate, action: "reject" | "reopen") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先以管理员或编辑账户登录。");
       return;
@@ -872,7 +872,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
     action: EntityResolutionAction,
     reason = "",
   ) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先以管理员或编辑账户登录。");
       return;
@@ -918,7 +918,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function revertEntityResolution(candidate: EntityResolutionCandidate, reason: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     const decisionId = candidate.latest_decision?.id;
     if (!token || !decisionId) {
       setMessage("没有可撤销的实体决定，请刷新页面后重试。");
@@ -957,7 +957,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function refreshMetadataSuggestions() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !item?.review_data) return;
     setSuggestionsPending(true);
     try {
@@ -987,7 +987,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function importMetadataFile() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先以管理员或编辑账户登录。");
       return;
@@ -1033,7 +1033,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先以管理员或编辑账户登录。");
       return;
@@ -1121,7 +1121,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function retry() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setMessage("请先登录。");
       return;
@@ -1140,7 +1140,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function removeFromQueue() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !item) return;
     setPending(true);
     try {
@@ -1157,7 +1157,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function regenerateCoverCandidates() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     const workId = item?.review_data?.work_id;
     if (!token || !workId) return;
     setPending(true);
@@ -1178,7 +1178,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function updatePublicationPlaces(action: "reanalyze" | "confirm" | "correct", evidence?: PublicationPlaceEvidence) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     setMessage("");
@@ -1202,7 +1202,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
   }
 
   async function selectCoverCandidate(candidateId: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     const workId = item?.review_data?.work_id;
     if (!token || !workId) return;
     setPending(true);
@@ -1901,7 +1901,7 @@ function Field({
 }
 
 function CoverCandidatePreview({ candidate }: { candidate: CoverCandidate }) {
-  const token = getStoredAccessToken();
+  const token = getServerSessionCredential();
   const source = candidate.thumbnail_url;
   const [loaded, setLoaded] = useState<{ source: string; url: string } | null>(null);
   const [failedSource, setFailedSource] = useState("");
@@ -1961,7 +1961,7 @@ function RecommendationImageEditor({
   const [image, setImage] = useState<File | null>(null);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !workId) return;
     let active = true;
     let objectUrl = "";
@@ -2003,7 +2003,7 @@ function RecommendationImageEditor({
   }, [revision, workId]);
 
   async function submitImage() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !image) return;
     const body = new FormData();
     body.append("image", image);
@@ -2021,7 +2021,7 @@ function RecommendationImageEditor({
   }
 
   async function change(action: "regenerate" | "clear") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setBusy(true);
     try {
@@ -2103,7 +2103,7 @@ function EntityPicker({
 
   useEffect(() => {
     if (!open) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     let active = true;
     const timer = window.setTimeout(() => {

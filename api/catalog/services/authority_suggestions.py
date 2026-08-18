@@ -8,10 +8,12 @@ import json
 import re
 import socket
 import threading
+import time
 from urllib.parse import urlparse
 
 import httpx
 from django.conf import settings
+from django.core.cache import cache
 from django.db import close_old_connections, connection
 from django.db.models import Q
 from django.utils import timezone
@@ -139,7 +141,7 @@ def _request_json(url: str, *, params: dict) -> object:
         follow_redirects=False,
         headers={
             "Accept": "application/json",
-            "User-Agent": "SocialTheoryLibrary/2.6.1 authority-candidate-service",
+            "User-Agent": "SocialTheoryLibrary/2.7 authority-candidate-service",
         },
     )
     if 300 <= response.status_code < 400:
@@ -409,6 +411,8 @@ def _wikidata_candidates(entity_type: str, query: str) -> tuple[list[dict], Sour
                     **({"orcid": orcid_id} if orcid_id else {}),
                 },
                 "source": "Wikidata",
+                "provider": "wikidata",
+                "source_url": f"https://www.wikidata.org/wiki/{entity_id}",
                 "source_record_id": str(record.id),
                 "match_reasons": [f"Wikidata {language} 标签或别名命中"],
                 "conflicts": [],
@@ -445,6 +449,8 @@ def _viaf_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRe
                 "death_year": None,
                 "external_ids": {"viaf": viaf_id},
                 "source": "VIAF",
+                "provider": "viaf",
+                "source_url": f"https://viaf.org/viaf/{viaf_id}/",
                 "source_record_id": str(record.id),
                 "match_reasons": ["全球图书馆权威名称匹配"],
                 "conflicts": [],
@@ -482,6 +488,8 @@ def _loc_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRec
                 "death_year": None,
                 "external_ids": {"loc": uri or external_id},
                 "source": "Library of Congress",
+                "provider": "loc",
+                "source_url": uri or f"https://id.loc.gov/authorities/{vocabulary}/{external_id}",
                 "source_record_id": str(record.id),
                 "match_reasons": ["美国国会图书馆权威词命中"],
                 "conflicts": [],
@@ -526,7 +534,17 @@ def _openalex_candidates(query: str) -> tuple[list[dict], SourceRecord]:
                     **({"orcid": item.get("orcid")} if item.get("orcid") else {}),
                 },
                 "source": "OpenAlex",
+                "provider": "openalex",
+                "source_url": f"https://openalex.org/{entity_id}",
                 "source_record_id": str(record.id),
+                "affiliations": [
+                    {
+                        "name": str(row.get("display_name") or "").strip(),
+                        "id": str(row.get("id") or "").rstrip("/").rsplit("/", 1)[-1],
+                    }
+                    for row in institutions
+                    if isinstance(row, dict) and str(row.get("display_name") or "").strip()
+                ][:8],
                 "match_reasons": ["学术作品与机构作者记录命中"],
                 "conflicts": [],
             }
@@ -560,12 +578,37 @@ def _fetch_provider(provider: str, entity_type: str, query: str) -> list[dict]:
     return values
 
 
+def _fetch_provider_with_policy(provider: str, entity_type: str, query: str) -> list[dict]:
+    """Apply the shared bounded rate and retry policy to existing adapters."""
+
+    minimum = max(
+        0,
+        min(int(getattr(settings, "AUTHORITY_PROVIDER_MIN_INTERVAL_MS", 200)), 5000),
+    ) / 1000
+    key = f"authority-provider:last-request:{provider}"
+    previous = cache.get(key)
+    if previous is not None:
+        remaining = minimum - (time.time() - float(previous))
+        if remaining > 0:
+            time.sleep(min(remaining, 1))
+    cache.set(key, time.time(), timeout=60)
+    retries = max(0, min(int(getattr(settings, "AUTHORITY_PROVIDER_RETRIES", 1)), 2))
+    for attempt in range(retries + 1):
+        try:
+            return _fetch_provider(provider, entity_type, query)
+        except (httpx.TimeoutException, httpx.RequestError, OSError):
+            if attempt >= retries:
+                raise
+            time.sleep(min(0.25 * (2**attempt), 1))
+    return []
+
+
 def _thread_fetch_provider(provider: str, entity_type: str, query: str) -> list[dict]:
     """Run one provider with a thread-local Django connection."""
 
     close_old_connections()
     try:
-        return _fetch_provider(provider, entity_type, query)
+        return _fetch_provider_with_policy(provider, entity_type, query)
     finally:
         close_old_connections()
 
@@ -648,7 +691,7 @@ def authority_suggestions(entity_type: str, query: str) -> dict:
         if connection.vendor == "sqlite":
             for provider in providers:
                 try:
-                    completed[provider] = _fetch_provider(provider, entity_type, query)
+                    completed[provider] = _fetch_provider_with_policy(provider, entity_type, query)
                 except (httpx.HTTPError, ValueError, OSError) as exc:
                     warnings.append(f"{provider}：{str(exc)[:240]}")
         else:

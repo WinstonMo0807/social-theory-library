@@ -4,7 +4,7 @@ import { Check, ExternalLink, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Page<T> = { results: T[] };
 type Named = { id: string; name: string; slug?: string; foreign_name?: string; discipline?: string };
@@ -15,7 +15,7 @@ function useRows<T>(path: string) {
   const [revision, setRevision] = useState(0);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     let active = true;
     if (!token) return;
     apiRequest<Page<T> | T[]>(path, {}, token).then((payload) => {
@@ -64,7 +64,7 @@ function RelationEditor({
   async function add(event: FormEvent) {
     event.preventDefault();
     if (!target) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/knowledge-relations/${resource}/`, {
@@ -87,7 +87,7 @@ function RelationEditor({
   }
 
   async function remove(id: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !window.confirm("删除这条已确认关系吗？相关前台模块会同步更新。")) return;
     await apiRequest(`/catalog/admin/knowledge-relations/${resource}/${id}/`, { method: "DELETE" }, token);
     refresh();

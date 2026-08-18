@@ -135,9 +135,13 @@ def persist_metadata_candidates(
 ) -> dict[str, int]:
     """Upsert candidates while preserving every human decision and field lock."""
 
+    # The parent row is the serialization point even when this item has no
+    # candidates yet. Row-locking only the current candidate queryset would
+    # not protect the empty-set case from concurrent duplicate inserts.
+    item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk)
     selected = selected or {}
     existing = list(
-        item.metadata_candidates.select_for_update()
+        item.metadata_candidates.select_for_update(of=("self",))
         .select_related("source_record")
         .prefetch_related("evidence_records")
     )

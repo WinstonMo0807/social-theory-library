@@ -30,7 +30,11 @@ def test_symmetric_relation_rejects_directed_direction():
     source = node("source")
     target = node("target")
     serializer = AdminKnowledgeRelationSerializer(
-        context={"request": SimpleNamespace(user=SimpleNamespace(role="admin"))},
+        context={
+            "request": SimpleNamespace(
+                user=SimpleNamespace(role="admin", is_authenticated=True, is_superuser=False)
+            )
+        },
         data={
             "source_node": source.id,
             "target_node": target.id,
@@ -47,7 +51,11 @@ def test_published_relation_requires_evidence():
     source = node("source")
     target = node("target")
     serializer = AdminKnowledgeRelationSerializer(
-        context={"request": SimpleNamespace(user=SimpleNamespace(role="admin"))},
+        context={
+            "request": SimpleNamespace(
+                user=SimpleNamespace(role="admin", is_authenticated=True, is_superuser=False)
+            )
+        },
         data={
             "source_node": source.id,
             "target_node": target.id,

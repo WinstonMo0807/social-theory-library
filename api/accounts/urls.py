@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.urls import path
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from .views import (
     AdminUserDetailView,
     AdminUserListView,
     CurrentUserView,
+    CurrentCapabilitiesView,
     LoginView,
     LogoutView,
     PasswordResetConfirmView,
@@ -43,7 +45,11 @@ class ThrottledTokenRefreshView(TokenRefreshView):
                 expose_csrf_cookie(request)
             return response
         except get_user_model().DoesNotExist as exc:
+            request.library_auth_failure_reason = "refresh_failed"
             raise InvalidToken("刷新令牌对应的账户已不存在。") from exc
+        except APIException:
+            request.library_auth_failure_reason = "refresh_failed"
+            raise
 
 
 urlpatterns = [
@@ -52,6 +58,7 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("token/refresh/", ThrottledTokenRefreshView.as_view(), name="token-refresh"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
+    path("capabilities/", CurrentCapabilitiesView.as_view(), name="current-capabilities"),
     path("users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("password/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),

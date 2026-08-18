@@ -24,13 +24,13 @@ import Link from "next/link";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
+import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
 import {
   AuthoritySuggestions,
   StringListEditor,
   StructuredRowsEditor,
-  mergeUniqueStrings,
 } from "@/components/structured-editors";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Page<T> = { count: number; next?: string | null; previous?: string | null; results: T[] };
 
@@ -71,6 +71,7 @@ type KnowledgeNode = {
   start_year: number | null;
   end_year: number | null;
   period_label: string;
+  parent: string | null;
   primary_discipline: string | null;
   primary_discipline_data: Discipline | null;
   status: string;
@@ -155,7 +156,7 @@ function useAdminData<T>(path: string | null) {
   useEffect(() => {
     if (!path) return;
     let active = true;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     Promise.resolve()
       .then(() => {
@@ -222,6 +223,7 @@ type NodeDraft = {
   start_year: string;
   end_year: string;
   period_label: string;
+  parent: string;
   primary_discipline: string;
   related_disciplines: string[];
   status: string;
@@ -242,6 +244,7 @@ const emptyNodeDraft: NodeDraft = {
   start_year: "",
   end_year: "",
   period_label: "",
+  parent: "",
   primary_discipline: "",
   related_disciplines: [],
   status: "draft",
@@ -267,6 +270,7 @@ function nodeToDraft(node: KnowledgeNode): NodeDraft {
     start_year: node.start_year?.toString() ?? "",
     end_year: node.end_year?.toString() ?? "",
     period_label: node.period_label,
+    parent: node.parent ?? "",
     primary_discipline: node.primary_discipline ?? "",
     related_disciplines: node.discipline_links
       .filter((item) => item.relation_type !== "primary")
@@ -351,7 +355,7 @@ export function TheoryNodesAdmin() {
 
   async function saveNode(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setSaving(true);
     setMessage("");
@@ -383,6 +387,7 @@ export function TheoryNodesAdmin() {
       start_year: draft.start_year ? Number(draft.start_year) : null,
       end_year: draft.end_year ? Number(draft.end_year) : null,
       period_label: draft.period_label,
+      parent: draft.parent || null,
       primary_discipline: draft.primary_discipline || null,
       discipline_links,
       status: draft.status,
@@ -413,7 +418,7 @@ export function TheoryNodesAdmin() {
 
   async function loadVersions() {
     if (!editing) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const payload = await apiRequest<Page<{ id: string; version_number: number; change_note: string; created_by_name: string; created_at: string }>>(`/catalog/admin/theory-system/nodes/${editing.id}/versions/`, {}, token);
@@ -426,7 +431,7 @@ export function TheoryNodesAdmin() {
   async function mergeNode() {
     if (!editing || !mergeTarget) return;
     const target = allNodes.data?.results.find((item) => item.id === mergeTarget);
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const preview = await apiRequest<{ affected: Record<string, number> }>(`/catalog/admin/theory-system/nodes/${editing.id}/merge-preview/`, {}, token);
@@ -479,27 +484,6 @@ export function TheoryNodesAdmin() {
           <AuthoritySuggestions
             entityType={draft.node_type === "theory_tradition" ? "theory_tradition" : draft.node_type === "subdiscipline" ? "subdiscipline" : "concept"}
             query={draft.canonical_name_zh}
-            onApply={(suggestion) => setDraft((current) => {
-              const existingNames = current.aliases.map((alias) => alias.alias);
-              const mergedNames = mergeUniqueStrings(existingNames, suggestion.aliases.map((alias) => alias.name));
-              const existingByName = new Map(current.aliases.map((alias) => [alias.alias.toLocaleLowerCase(), alias]));
-              const suggestedByName = new Map(suggestion.aliases.map((alias) => [alias.name.toLocaleLowerCase(), alias]));
-              return {
-                ...current,
-                canonical_name_zh: suggestion.label,
-                canonical_name_en: suggestion.original_name || current.canonical_name_en,
-                summary: suggestion.description || current.summary,
-                aliases: mergedNames.map((name) => {
-                  const key = name.toLocaleLowerCase();
-                  const suggested = suggestedByName.get(key);
-                  return existingByName.get(key) || {
-                    alias: name,
-                    language: suggested?.language || (/^[\x00-\x7F]+$/.test(name) ? "en" : "zh-CN"),
-                    alias_type: suggested?.type || (/^[\x00-\x7F]+$/.test(name) ? "translation" : "alias"),
-                  };
-                }),
-              };
-            })}
           />
           <label><span>外文名称</span><input value={draft.canonical_name_en} onChange={(event) => setDraft({ ...draft, canonical_name_en: event.target.value })} /></label>
           <StructuredRowsEditor
@@ -515,6 +499,18 @@ export function TheoryNodesAdmin() {
               { key: "alias_type", label: "类型", options: [{ value: "alias", label: "别名" }, { value: "translation", label: "译名" }, { value: "abbreviation", label: "简称" }, { value: "former_name", label: "旧称" }] },
             ]}
             onChange={(value) => setDraft({ ...draft, aliases: value.map((item) => ({ alias: item.alias || "", language: item.language || "zh-CN", alias_type: item.alias_type || "alias" })) })}
+          />
+          <FieldEnrichmentControl
+            targetType="knowledge_node"
+            targetId={editing?.id}
+            title="理论字段核对"
+            fields={[
+              { name: "alias", label: "译名或别名", currentValue: draft.aliases },
+              { name: "discipline", label: "学科分类", currentValue: draft.related_disciplines },
+              { name: "subdiscipline", label: "子学科分类", currentValue: draft.parent },
+            ]}
+            formContext={{ language: "zh" }}
+            onAccepted={() => { nodes.refresh(); allNodes.refresh(); }}
           />
           <div className="inline-fields"><label><span>主要学科</span><select value={draft.primary_discipline} onChange={(event) => setDraft({ ...draft, primary_discipline: event.target.value, related_disciplines: draft.related_disciplines.filter((id) => id !== event.target.value) })}><option value="">非强制</option>{disciplines.data?.results.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="symbolic-interactionism" /></label></div>
           <fieldset className="theory-checkbox-field"><legend>关联学科</legend>{disciplines.data?.results.filter((item) => item.id !== draft.primary_discipline).map((item) => <label key={item.id}><input type="checkbox" checked={draft.related_disciplines.includes(item.id)} onChange={(event) => setDraft({ ...draft, related_disciplines: event.target.checked ? [...draft.related_disciplines, item.id] : draft.related_disciplines.filter((id) => id !== item.id) })} />{item.name}</label>)}</fieldset>
@@ -675,7 +671,7 @@ export function TheoryRelationsAdmin() {
 
   async function review(action: "confirm" | "modify_confirm" | "create_node" | "alias_existing" | "reject" | "defer" | "insufficient" | "needs_changes") {
     if (!selected) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const updated = await apiRequest<ReviewTask>(`/catalog/admin/theory-system/review-tasks/${selected.id}/action/`, {
@@ -711,7 +707,7 @@ export function TheoryRelationsAdmin() {
   async function saveRelation(event: FormEvent) {
     event.preventDefault();
     if (!relationDraft.source_node || !relationDraft.target_node) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(
@@ -732,7 +728,7 @@ export function TheoryRelationsAdmin() {
 
   async function removeRelation(relation: KnowledgeRelation) {
     if (!window.confirm(`删除“${relation.source_name} ${relation.relation_label} ${relation.target_name}”吗？`)) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/theory-system/relations/${relation.id}/`, { method: "DELETE" }, token);
@@ -765,7 +761,7 @@ export function TheoryRelationsAdmin() {
     if (!selected) return;
     const label = selected.work_title || selected.suggested_node_name || "该审核项";
     if (!window.confirm(`确认删除“${label}”的审核候选吗？已确认生成的公开关系不会随审核记录一起删除。`)) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/theory-system/review-tasks/${selected.id}/`, { method: "DELETE" }, token);
@@ -989,7 +985,7 @@ export function NormalizedTimelineAdmin() {
 
   async function saveEvent(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const relations: TimelineRelation[] = [
       ...draft.nodes.map((node, index) => ({ relation_type: "subject", node, discipline: null, scholar: null, work: null, evidence: null, description: "", sort_order: index })),
@@ -1030,7 +1026,7 @@ export function NormalizedTimelineAdmin() {
 
   async function removeEvent() {
     if (!editing || !window.confirm(`删除“${editing.title}”吗？`)) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/theory-timeline/${editing.id}/`, { method: "DELETE" }, token);
@@ -1165,7 +1161,7 @@ export function ReadingPathsAdmin() {
 
   async function savePath(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const payload = {
       ...draft,
@@ -1198,7 +1194,7 @@ export function ReadingPathsAdmin() {
 
   async function removePath() {
     if (!editing || !window.confirm(`删除阅读路径“${editing.title}”吗？`)) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`, { method: "DELETE" }, token);

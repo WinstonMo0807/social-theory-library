@@ -36,6 +36,7 @@ export type Work = {
 };
 
 export type Scholar = {
+  id?: string;
   slug: string;
   name: string;
   originalName: string;

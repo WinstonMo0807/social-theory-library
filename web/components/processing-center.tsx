@@ -19,7 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ConfirmDialog } from "./confirm-dialog";
 
 type Attempt = {
@@ -207,7 +207,7 @@ export function ProcessingCenter() {
   const [actionPending, setActionPending] = useState(false);
 
   const load = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const [itemsResult, healthResult, jobsResult, semanticResult, reviewResult] = await Promise.allSettled([
@@ -279,7 +279,7 @@ export function ProcessingCenter() {
   }, [load, revision]);
 
   async function retry(item: ProcessingItem) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setMessage("");
     try {
@@ -293,7 +293,7 @@ export function ProcessingCenter() {
   }
 
   async function removeConfirmed() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !removeTarget) return;
     const label = removeTarget.review_data?.title || removeTarget.source_filename;
     setActionPending(true);
@@ -313,7 +313,7 @@ export function ProcessingCenter() {
   }
 
   async function jobAction(job: ProcessingJob, action: "retry" | "cancel" | "pause" | "resume") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setMessage("");
     try {
@@ -334,7 +334,7 @@ export function ProcessingCenter() {
   }
 
   async function workloadAction(type: "ocr" | "external_enrichment", paused: boolean) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setMessage("");
     try {
@@ -353,7 +353,7 @@ export function ProcessingCenter() {
   }
 
   async function reviewTaskAction(task: ReviewTask, action: "assign_self" | "complete" | "reopen") {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setMessage("");
     try {

@@ -193,6 +193,7 @@ REST_FRAMEWORK = {
         "exact_search_user": os.getenv("EXACT_SEARCH_USER_RATE", "240/min"),
         "semantic_search_anon": os.getenv("SEMANTIC_SEARCH_ANON_RATE", os.getenv("SEMANTIC_SEARCH_RATE", "30/min")),
         "semantic_search_user": os.getenv("SEMANTIC_SEARCH_USER_RATE", "120/min"),
+        "library_qa": os.getenv("LIBRARY_QA_RATE", "30/hour"),
         "public_usage_event": os.getenv("PUBLIC_USAGE_EVENT_RATE", "120/min"),
     },
 }
@@ -245,10 +246,16 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TIME_LIMIT = 60 * 60
 INGESTION_TASK_QUEUE = os.getenv("INGESTION_TASK_QUEUE", "ingestion").strip() or "ingestion"
 SEARCH_EVALUATION_TASK_QUEUE = os.getenv("SEARCH_EVALUATION_TASK_QUEUE", "celery").strip() or "celery"
+QUERY_LEXICON_TASK_QUEUE = os.getenv("QUERY_LEXICON_TASK_QUEUE", "celery").strip() or "celery"
 CELERY_TASK_ROUTES = {
     "ingestion.tasks.process_upload_item": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_reviewed_upload_item": {"queue": INGESTION_TASK_QUEUE},
+    "ingestion.tasks.process_query_lexicon_candidate_job": {
+        "queue": INGESTION_TASK_QUEUE
+    },
     "catalog.tasks.run_search_evaluation": {"queue": SEARCH_EVALUATION_TASK_QUEUE},
+    "catalog.tasks.process_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
+    "catalog.tasks.recover_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
 }
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = None
@@ -276,6 +283,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "catalog.tasks.recover_semantic_index_queue",
         "schedule": 120,
     },
+    "recover-query-lexicon-events": {
+        "task": "catalog.tasks.recover_query_lexicon_events",
+        "schedule": max(
+            1,
+            int(os.getenv("QUERY_LEXICON_RECOVERY_INTERVAL_SECONDS", "60")),
+        ),
+    },
     "aggregate-anonymous-searches-hourly": {
         "task": "catalog.tasks.aggregate_anonymous_searches",
         "schedule": 60 * 60,
@@ -285,6 +299,34 @@ PROCESS_INGESTION_INLINE = env_bool("PROCESS_INGESTION_INLINE", DEBUG)
 CELERY_TASK_ALWAYS_EAGER = env_bool(
     "CELERY_TASK_ALWAYS_EAGER",
     PROCESS_INGESTION_INLINE,
+)
+QUERY_LEXICON_EVENT_BATCH_SIZE = max(
+    1,
+    min(500, int(os.getenv("QUERY_LEXICON_EVENT_BATCH_SIZE", "100"))),
+)
+QUERY_LEXICON_EVENT_LEASE_SECONDS = max(
+    5,
+    int(os.getenv("QUERY_LEXICON_EVENT_LEASE_SECONDS", "300")),
+)
+QUERY_LEXICON_EVENT_MAX_ATTEMPTS = max(
+    1,
+    int(os.getenv("QUERY_LEXICON_EVENT_MAX_ATTEMPTS", "8")),
+)
+QUERY_LEXICON_EVENT_RETRY_BASE_SECONDS = max(
+    1,
+    int(os.getenv("QUERY_LEXICON_EVENT_RETRY_BASE_SECONDS", "30")),
+)
+QUERY_LEXICON_EVENT_RETRY_MAX_SECONDS = max(
+    QUERY_LEXICON_EVENT_RETRY_BASE_SECONDS,
+    int(os.getenv("QUERY_LEXICON_EVENT_RETRY_MAX_SECONDS", "3600")),
+)
+QUERY_LEXICON_RESOLVER_MAX_RESULTS = max(
+    1,
+    min(500, int(os.getenv("QUERY_LEXICON_RESOLVER_MAX_RESULTS", "100"))),
+)
+QUERY_LEXICON_SEARCH_CACHE_SECONDS = max(
+    1,
+    min(3600, int(os.getenv("QUERY_LEXICON_SEARCH_CACHE_SECONDS", "300"))),
 )
 INGESTION_QUEUE_STALLED_SECONDS = int(
     os.getenv("INGESTION_QUEUE_STALLED_SECONDS", "180")
@@ -299,6 +341,21 @@ INGESTION_TASK_LOCK_SECONDS = max(
 
 MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
 MEILISEARCH_MASTER_KEY = os.getenv("MEILISEARCH_MASTER_KEY", "")
+# Evaluation commands are deliberately inert unless all three values are set.
+# The service-level guard also requires PostgreSQL plus an evaluation-shaped
+# database name, host and Meilisearch endpoint before it permits any write.
+SEMANTIC_SEARCH_EVALUATION_MODE = env_bool(
+    "SEMANTIC_SEARCH_EVALUATION_MODE",
+    False,
+)
+SEMANTIC_SEARCH_EVALUATION_DATABASE_NAME = os.getenv(
+    "SEMANTIC_SEARCH_EVALUATION_DATABASE_NAME",
+    "",
+).strip()
+SEMANTIC_SEARCH_EVALUATION_MEILISEARCH_URL = os.getenv(
+    "SEMANTIC_SEARCH_EVALUATION_MEILISEARCH_URL",
+    "",
+).strip()
 USE_EXTERNAL_SEARCH = env_bool("USE_EXTERNAL_SEARCH", not DEBUG)
 SEMANTIC_EMBEDDING_API_KEY = os.getenv("SEMANTIC_EMBEDDING_API_KEY", "")
 SEMANTIC_SEARCH_ENABLED = env_bool("SEMANTIC_SEARCH_ENABLED", True)
@@ -339,6 +396,10 @@ SEMANTIC_INDEX_RECOVERY_BATCH_SIZE = max(
 SEMANTIC_INDEX_STAGE_BATCH_SIZE = max(
     1,
     min(int(os.getenv("SEMANTIC_INDEX_STAGE_BATCH_SIZE", "1")), 20),
+)
+SEMANTIC_INDEX_DOCUMENT_BATCH_SIZE = max(
+    1,
+    min(int(os.getenv("SEMANTIC_INDEX_DOCUMENT_BATCH_SIZE", "128")), 1000),
 )
 SEMANTIC_INDEX_TASK_TIMEOUT_SECONDS = max(
     180,
@@ -385,6 +446,22 @@ SEMANTIC_SEARCH_QUERY_EXPANSION_MAX = max(
     0,
     min(int(os.getenv("SEMANTIC_SEARCH_QUERY_EXPANSION_MAX", "3")), 5),
 )
+SEMANTIC_SEARCH_V2_MAX_MATCHED_ENTITIES = max(
+    1,
+    min(int(os.getenv("SEMANTIC_SEARCH_V2_MAX_MATCHED_ENTITIES", "4")), 8),
+)
+SEMANTIC_SEARCH_V2_MAX_TERMS_PER_ENTITY = max(
+    1,
+    min(int(os.getenv("SEMANTIC_SEARCH_V2_MAX_TERMS_PER_ENTITY", "4")), 8),
+)
+SEMANTIC_SEARCH_V2_MAX_EXPANSION_CHARACTERS = max(
+    80,
+    min(int(os.getenv("SEMANTIC_SEARCH_V2_MAX_EXPANSION_CHARACTERS", "600")), 1200),
+)
+SEMANTIC_SEARCH_V2_MAX_RECOGNITION_SPANS = max(
+    64,
+    min(int(os.getenv("SEMANTIC_SEARCH_V2_MAX_RECOGNITION_SPANS", "512")), 1024),
+)
 SEMANTIC_SEARCH_V2_QUERY_EXPANSION_ENABLED = env_bool(
     "SEMANTIC_SEARCH_V2_QUERY_EXPANSION_ENABLED",
     True,
@@ -422,7 +499,11 @@ AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_METADATA_MODEL = os.getenv("AI_METADATA_MODEL", "")
 AI_CLASSIFIER_MODEL = os.getenv("AI_CLASSIFIER_MODEL", "")
 AI_VISION_MODEL = os.getenv("AI_VISION_MODEL", "")
-AI_LIBRARY_MODEL = os.getenv("AI_LIBRARY_MODEL", AI_METADATA_MODEL)
+AI_LIBRARY_MODEL = os.getenv("AI_LIBRARY_MODEL", "")
+AI_LIBRARY_TEMPERATURE = min(
+    2.0,
+    max(0.0, float(os.getenv("AI_LIBRARY_TEMPERATURE", "0.2"))),
+)
 AI_LIBRARY_MAX_CONCURRENCY = max(
     1,
     min(int(os.getenv("AI_LIBRARY_MAX_CONCURRENCY", "2")), 8),
@@ -434,6 +515,34 @@ AI_LIBRARY_MAX_OUTPUT_TOKENS = max(
 AI_LIBRARY_MAX_OUTPUT_CHARS = max(
     1000,
     min(int(os.getenv("AI_LIBRARY_MAX_OUTPUT_CHARS", "12000")), 50000),
+)
+LIBRARY_QA_MAX_QUESTION_CHARS = max(
+    200,
+    min(int(os.getenv("LIBRARY_QA_MAX_QUESTION_CHARS", "4000")), 8000),
+)
+LIBRARY_QA_MAX_HISTORY_MESSAGES = max(
+    0,
+    min(int(os.getenv("LIBRARY_QA_MAX_HISTORY_MESSAGES", "8")), 20),
+)
+LIBRARY_RAG_MAX_PASSAGES = max(
+    1,
+    min(int(os.getenv("LIBRARY_RAG_MAX_PASSAGES", "8")), 16),
+)
+LIBRARY_RAG_MAX_EVIDENCE_CHARS = max(
+    1000,
+    min(int(os.getenv("LIBRARY_RAG_MAX_EVIDENCE_CHARS", "9000")), 24000),
+)
+LIBRARY_RAG_PER_WORK_CAP = max(
+    1,
+    min(int(os.getenv("LIBRARY_RAG_PER_WORK_CAP", "2")), 6),
+)
+LIBRARY_RAG_COMPARISON_PER_ANCHOR = max(
+    1,
+    min(int(os.getenv("LIBRARY_RAG_COMPARISON_PER_ANCHOR", "2")), 4),
+)
+LIBRARY_RAG_MAX_ENTITY_BRANCHES = max(
+    1,
+    min(int(os.getenv("LIBRARY_RAG_MAX_ENTITY_BRANCHES", "3")), 4),
 )
 AI_TIMEOUT = max(3, min(int(os.getenv("AI_TIMEOUT", "60")), 600))
 AI_MAX_CONCURRENCY = max(1, min(int(os.getenv("AI_MAX_CONCURRENCY", "1")), 8))
@@ -455,6 +564,14 @@ AUTHORITY_PROVIDER_ALLOWED_HOSTS = os.getenv(
 AUTHORITY_PROVIDER_TIMEOUT_SECONDS = max(
     2,
     min(int(os.getenv("AUTHORITY_PROVIDER_TIMEOUT_SECONDS", "8")), 30),
+)
+AUTHORITY_PROVIDER_RETRIES = max(
+    0,
+    min(int(os.getenv("AUTHORITY_PROVIDER_RETRIES", "1")), 2),
+)
+AUTHORITY_PROVIDER_MIN_INTERVAL_MS = max(
+    0,
+    min(int(os.getenv("AUTHORITY_PROVIDER_MIN_INTERVAL_MS", "200")), 5000),
 )
 AUTHORITY_PROVIDER_VERIFY_DNS = os.getenv(
     "AUTHORITY_PROVIDER_VERIFY_DNS",
@@ -495,6 +612,75 @@ METADATA_PROVIDER_ENABLED = os.getenv(
 METADATA_PROVIDER_ALLOWED_HOSTS = os.getenv(
     "METADATA_PROVIDER_ALLOWED_HOSTS",
     "api.crossref.org,openlibrary.org,www.googleapis.com,api.openalex.org",
+)
+FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER = os.getenv(
+    "FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER",
+    "searxng",
+).strip().lower()
+FIELD_ENRICHMENT_SEARXNG_URL = os.getenv("FIELD_ENRICHMENT_SEARXNG_URL", "").strip()
+FIELD_ENRICHMENT_SEARCH_ALLOWED_HOSTS = os.getenv(
+    "FIELD_ENRICHMENT_SEARCH_ALLOWED_HOSTS",
+    "",
+)
+FIELD_ENRICHMENT_SEARCH_TIMEOUT_SECONDS = max(
+    2,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_TIMEOUT_SECONDS", "8")), 30),
+)
+FIELD_ENRICHMENT_SEARCH_RETRIES = max(
+    0,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_RETRIES", "1")), 2),
+)
+FIELD_ENRICHMENT_SEARCH_MIN_INTERVAL_MS = max(
+    0,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_MIN_INTERVAL_MS", "200")), 5000),
+)
+FIELD_ENRICHMENT_SEARCH_MAX_BYTES = max(
+    16384,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_MAX_BYTES", "524288")), 2097152),
+)
+FIELD_ENRICHMENT_SEARCH_CACHE_SECONDS = max(
+    60,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_CACHE_SECONDS", "86400")), 2592000),
+)
+FIELD_ENRICHMENT_FETCH_TIMEOUT_SECONDS = max(
+    2,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_TIMEOUT_SECONDS", "10")), 30),
+)
+FIELD_ENRICHMENT_FETCH_RETRIES = max(
+    0,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_RETRIES", "1")), 2),
+)
+FIELD_ENRICHMENT_FETCH_MAX_BYTES = max(
+    16384,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_MAX_BYTES", "1048576")), 5242880),
+)
+FIELD_ENRICHMENT_FETCH_TEXT_CHARS = max(
+    4000,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_TEXT_CHARS", "120000")), 500000),
+)
+FIELD_ENRICHMENT_FETCH_REDIRECT_LIMIT = max(
+    0,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_REDIRECT_LIMIT", "3")), 5),
+)
+FIELD_ENRICHMENT_FETCH_MIN_INTERVAL_MS = max(
+    0,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_MIN_INTERVAL_MS", "250")), 5000),
+)
+FIELD_ENRICHMENT_FETCH_CACHE_SECONDS = max(
+    60,
+    min(int(os.getenv("FIELD_ENRICHMENT_FETCH_CACHE_SECONDS", "86400")), 2592000),
+)
+FIELD_ENRICHMENT_MAX_SEARCH_QUERIES = max(
+    1,
+    min(int(os.getenv("FIELD_ENRICHMENT_MAX_SEARCH_QUERIES", "8")), 16),
+)
+FIELD_ENRICHMENT_SEARCH_RESULTS_PER_QUERY = max(
+    1,
+    min(int(os.getenv("FIELD_ENRICHMENT_SEARCH_RESULTS_PER_QUERY", "5")), 10),
+)
+FIELD_ENRICHMENT_MAX_FETCHED_DOCUMENTS = max(
+    1,
+    min(int(os.getenv("FIELD_ENRICHMENT_MAX_FETCHED_DOCUMENTS", "12")), 24),
 )
 ANONYMOUS_EVENT_RETENTION_DAYS = max(
     7,

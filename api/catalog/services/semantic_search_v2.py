@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
+from copy import deepcopy
 from difflib import SequenceMatcher
 from hashlib import sha256
 import logging
 import re
 import time
+import unicodedata
 
 import httpx
 from django.conf import settings
-from django.core.cache import cache
 from django.db import DatabaseError
 
 from catalog.models import SemanticChunk
+from catalog.services.query_lexicon.search import resolve_search_query
+from catalog.services.query_lexicon.sync import QueryLexiconInvariantError
 from catalog.services.semantic_indexing import active_semantic_index_uid
 from catalog.services.semantic_reranker import (
     SemanticRerankerError,
@@ -28,9 +32,16 @@ from catalog.services.semantic_search import (
     _query_terms,
     _rrf,
     _serialize_row,
-    _taxonomy_matches,
     current_semantic_runtime,
     semantic_model_health,
+)
+from catalog.services.query_lexicon.normalization import normalize_term
+from catalog.services.semantic_search_v2_config import (
+    MAX_BRANCH_HITS_PER_CANDIDATE,
+    QUERY_PROFILE_RULES,
+    branch_weight,
+    current_search_v2_limits,
+    effective_semantic_ratio,
 )
 from ingestion.services.indexing import _headers
 
@@ -64,9 +75,26 @@ QUESTION_TRIM_RE = re.compile(
     r"(?:是什么|为什么|有什么|怎么办|如何|怎样|是否|能否|何以|何种|哪些|吗|呢)+[？?。！!]*$"
 )
 PUNCT_RE = re.compile(r"[，。；：、！？?,.;:!]+")
+SUPPLEMENTAL_BRANCH_TYPES = frozenset(
+    {
+        "canonical_equivalent",
+        "verified_translation",
+        "verified_alias",
+        "historical",
+        "legacy_search_variant",
+        "generated_search_variant",
+        "explicit_rewrite",
+        "intent_rewrite",
+    }
+)
 
 
-def _profile(name: str | None, *, rerank_top_k_override: int | None) -> dict:
+def _profile(
+    name: str | None,
+    *,
+    rerank_top_k_override: int | None,
+    final_top_k_override: int | None = None,
+) -> dict:
     selected = str(name or getattr(settings, "SEMANTIC_SEARCH_PROFILE", "precision")).strip().casefold()
     if selected not in PROFILE_NAMES:
         selected = "precision"
@@ -84,13 +112,19 @@ def _profile(name: str | None, *, rerank_top_k_override: int | None) -> dict:
         rerank_top_k = min(rerank_top_k, 12)
     if rerank_top_k_override is not None:
         rerank_top_k = max(0, min(int(rerank_top_k_override), 64))
+    final_top_k = int(getattr(settings, "SEMANTIC_SEARCH_FINAL_TOP_K", 10))
+    if final_top_k_override is not None:
+        # Offline evaluation may need a complete top 20 for Recall@20. This
+        # only changes how many already-ranked candidates are returned; the
+        # public profile default and every ranking parameter remain unchanged.
+        final_top_k = max(1, min(int(final_top_k_override), fusion_top_k, 50))
     return {
         "name": selected,
         "dense_top_k": int(getattr(settings, "SEMANTIC_SEARCH_DENSE_TOP_K", 50)),
         "sparse_top_k": int(getattr(settings, "SEMANTIC_SEARCH_SPARSE_TOP_K", 50)),
         "fusion_top_k": fusion_top_k,
         "rerank_top_k": rerank_top_k,
-        "final_top_k": int(getattr(settings, "SEMANTIC_SEARCH_FINAL_TOP_K", 10)),
+        "final_top_k": final_top_k,
         "expansion_limit": expansion_limit,
     }
 
@@ -126,27 +160,120 @@ def _query_object(query: str) -> str:
     return re.sub(r"\s+", " ", value).strip()[:120]
 
 
-def _safe_taxonomy(query: str, terms: list[str]) -> list[dict]:
-    cache_key = "semantic:v2:taxonomy:" + sha256(query.encode("utf-8")).hexdigest()
-    cached = cache.get(cache_key)
-    if isinstance(cached, list):
-        return cached
-    try:
-        rows = _taxonomy_matches(query, terms)
-    except DatabaseError:
-        return []
-    cache.set(cache_key, rows, timeout=300)
-    return rows
-
-
-def analyze_query(query: str, *, expansion_limit: int, explicit_rewrite: str = "") -> dict:
+def analyze_query(
+    query: str,
+    *,
+    expansion_limit: int,
+    explicit_rewrite: str = "",
+    disabled_branch_types: Iterable[str] | None = None,
+) -> dict:
     folded, terms = _query_terms(query)
     intent = _intent(query)
     target = _query_object(query) or query.strip()[:120]
-    taxonomy = _safe_taxonomy(folded, terms)
-    rewrites = [query.strip()]
+    limits = current_search_v2_limits(expansion_limit=expansion_limit)
+    lexicon_fallback_reason = ""
+    try:
+        resolution = resolve_search_query(
+            query,
+            expansion_limit=expansion_limit,
+        )
+    except (
+        DatabaseError,
+        QueryLexiconInvariantError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        lexicon_fallback_reason = exc.__class__.__name__
+        resolution = {
+            "normalized_original_query": normalize_term(query),
+            "query_language": "unknown",
+            "query_lexicon_revision": None,
+            "matched_entities": [],
+            "ambiguous": False,
+            "truncated": False,
+            "query_profile": "conceptual",
+            "limits": limits.as_dict(),
+            "recognition_span_count": 0,
+            "cache_hit": False,
+            "resolver_db_query_count": 0,
+            "resolver_timing_ms": 0.0,
+            "expansion_branches": [
+                {
+                    "branch_id": "original:0",
+                    "branch_type": "original",
+                    "query": query.strip(),
+                    "term": query.strip(),
+                    "language": "unknown",
+                    "term_type": "original",
+                    "source_kind": "original_query",
+                    "trust_level": "original",
+                    "effective_trust_level": "original",
+                    "displayable": True,
+                    "ambiguous": False,
+                    "retrieval_channels": ["sparse", "dense"],
+                    "entities": [],
+                }
+            ],
+        }
+    disabled = {
+        str(value).strip()
+        for value in (disabled_branch_types or ())
+        if str(value).strip() in SUPPLEMENTAL_BRANCH_TYPES
+    }
+    branches = [
+        dict(branch)
+        for branch in resolution["expansion_branches"]
+        if branch.get("branch_type") == "original"
+        or branch.get("branch_type") not in disabled
+    ]
+    seen_queries = {normalize_term(branch["query"]) for branch in branches}
+    used_characters = sum(len(str(branch["query"])) for branch in branches[1:])
+
+    def add_branch(candidate: str, *, branch_type: str, trust_level: str) -> None:
+        nonlocal used_characters
+        value = str(candidate or "").strip()
+        normalized = normalize_term(value)
+        if (
+            branch_type in disabled
+            or not value
+            or not normalized
+            or normalized in seen_queries
+            or len(branches) >= limits.max_expansion_branches
+            or used_characters + len(value) > limits.max_expansion_characters
+        ):
+            return
+        branches.append(
+            {
+                "branch_id": f"{branch_type}:{len(branches)}",
+                "branch_type": branch_type,
+                "query": value,
+                "term": value,
+                "language": resolution["query_language"],
+                "term_type": branch_type,
+                "source_kind": (
+                    "reader_explicit_rewrite"
+                    if branch_type == "explicit_rewrite"
+                    else "deterministic_intent_rule"
+                ),
+                "trust_level": trust_level,
+                "effective_trust_level": trust_level,
+                "displayable": branch_type
+                not in {"legacy_search_variant", "generated_search_variant"},
+                "ambiguous": False,
+                "retrieval_channels": ["sparse", "dense"],
+                "entities": [],
+            }
+        )
+        seen_queries.add(normalized)
+        used_characters += len(value)
+
     if explicit_rewrite:
-        rewrites.append(f"{query.strip()} {explicit_rewrite.strip()[:600]}".strip())
+        add_branch(
+            explicit_rewrite.strip()[:600],
+            branch_type="explicit_rewrite",
+            trust_level="original",
+        )
     patterns = {
         "definition": ("概念界定", "含义"),
         "cause": ("原因", "形成条件"),
@@ -159,20 +286,12 @@ def analyze_query(query: str, *, expansion_limit: int, explicit_rewrite: str = "
         "statement": (),
     }
     for phrase in patterns[intent]:
-        candidate = f"{target} {phrase}".strip()
-        if candidate and candidate not in rewrites:
-            rewrites.append(candidate)
-    # A controlled concept is only added when it already appears in the query
-    # or the local matcher is unusually strong.  This avoids treating adjacent
-    # social-science concepts as interchangeable synonyms.
-    for item in taxonomy:
-        name = str(item.get("name") or "").strip()
-        if not name or not (name in query or float(item.get("score") or 0) >= 0.38):
-            continue
-        candidate = f"{query.strip()} {name}".strip()
-        if candidate not in rewrites:
-            rewrites.append(candidate)
-    bounded = [rewrites[0], *rewrites[1 : 1 + max(0, expansion_limit)]]
+        add_branch(
+            f"{target} {phrase}".strip(),
+            branch_type="intent_rewrite",
+            trust_level="deterministic",
+        )
+    rewrites = [branch["query"] for branch in branches]
     return {
         "type": INTENT_LABELS[intent],
         "intent": intent,
@@ -180,11 +299,31 @@ def analyze_query(query: str, *, expansion_limit: int, explicit_rewrite: str = "
         "object": target,
         "terms": terms[:10],
         "related_concepts": [
-            {"name": item["name"], "kind": item["label"], "slug": item["slug"]}
-            for item in taxonomy[:8]
+            {
+                "name": item["canonical_entity"]["canonical_label"],
+                "kind": item["canonical_entity"]["entity_type"],
+                "entity_id": item["canonical_entity"]["entity_id"],
+                # Keep the legacy response shape used by the Explore UI. The
+                # stable entity id is used as the key because the resolver does
+                # not perform an extra authority lookup just to obtain a slug.
+                "slug": item["canonical_entity"]["entity_id"],
+                "ambiguous": item["ambiguity"]["is_ambiguous"],
+            }
+            for item in resolution["matched_entities"]
         ],
-        "rewrites": bounded,
-        "rewrite_source": "原始问题与保守问题结构",
+        "rewrites": rewrites,
+        "rewrite_source": (
+            "QueryLexicon 与保守问题结构"
+            if resolution["matched_entities"]
+            else "原始问题与保守问题结构"
+        ),
+        "query_profile": resolution["query_profile"],
+        "query_lexicon_revision": resolution["query_lexicon_revision"],
+        "query_lexicon": resolution,
+        "matched_entities": resolution["matched_entities"],
+        "expansion_branches": branches,
+        "disabled_branch_types": sorted(disabled),
+        "lexicon_fallback_reason": lexicon_fallback_reason,
     }
 
 
@@ -238,52 +377,291 @@ def _meili_dense_candidates(query: str, config: dict, filters: dict, *, limit: i
     ]
 
 
-def _hydrate(rows: list[tuple[str, float]], filters: dict) -> list[tuple[object, float]]:
-    ids = [item[0] for item in rows]
-    chunks = _base_queryset(filters).filter(pk__in=ids)
+def _hydrate_sources(
+    sources: list[tuple[list[tuple[str, float]], float, dict]],
+    filters: dict,
+) -> list[tuple[list[tuple[object, float]], float, dict]]:
+    """Hydrate every sparse branch with one bounded ORM query."""
+
+    identifiers = {
+        str(identifier)
+        for rows, _weight, _metadata in sources
+        for identifier, _raw_score in rows
+    }
+    if not identifiers:
+        return []
+    chunks = _base_queryset(filters).filter(pk__in=identifiers)
     mapping = {str(chunk.id): chunk for chunk in chunks}
-    return [(mapping[item_id], score) for item_id, score in rows if item_id in mapping]
+    return [
+        (
+            [
+                (mapping[identifier], raw_score)
+                for identifier, raw_score in rows
+                if identifier in mapping
+            ],
+            weight,
+            metadata,
+        )
+        for rows, weight, metadata in sources
+    ]
 
 
-def _merge_ranked_lists(sources: list[tuple[list[tuple[object, float]], float]], *, key) -> list[tuple[object, float]]:
-    scores: dict[str, float] = defaultdict(float)
+def _merge_ranked_lists(
+    sources: list[tuple[list[tuple[object, float]], float] | tuple[list[tuple[object, float]], float, dict]],
+    *,
+    key,
+    return_provenance: bool = False,
+):
+    """Fuse bounded branches without multiplying a score by alias count.
+
+    The original branch contributes fully. Expansion branches contribute their
+    strongest hit and at most a quarter of one additional hit. Every passage
+    remains one candidate, even when it appears in several branch result sets.
+    """
+
     values: dict[str, object] = {}
     strongest: dict[str, float] = defaultdict(float)
-    for rows, weight in sources:
+    contributions: dict[str, list[dict]] = defaultdict(list)
+    for source_index, source in enumerate(sources):
+        rows, weight = source[:2]
+        metadata = source[2] if len(source) > 2 else {}
         if weight <= 0:
             continue
         for rank, (value, raw_score) in enumerate(rows, start=1):
             item_key = key(value)
             values[item_key] = value
-            scores[item_key] += float(weight) / (60 + rank)
             strongest[item_key] = max(strongest[item_key], float(raw_score or 0))
-    ordered = sorted(scores, key=lambda item: scores[item], reverse=True)
-    return [(values[item], strongest[item]) for item in ordered]
+            contributions[item_key].append(
+                {
+                    "branch_id": metadata.get("branch_id", f"branch:{source_index}"),
+                    "branch_type": metadata.get("branch_type", "original"),
+                    "rank": rank,
+                    "weight": float(weight),
+                    "raw_score": float(raw_score or 0),
+                }
+            )
+    scores: dict[str, float] = {}
+    provenance: dict[str, list[dict]] = {}
+    for item_key, hits in contributions.items():
+        original_hits = [hit for hit in hits if hit["branch_type"] == "original"]
+        expansion_hits = [hit for hit in hits if hit["branch_type"] != "original"]
+        expansion_hits.sort(
+            key=lambda hit: (hit["weight"] / (60 + hit["rank"]), -hit["rank"]),
+            reverse=True,
+        )
+        selected_hits = original_hits + expansion_hits[:MAX_BRANCH_HITS_PER_CANDIDATE]
+        score = 0.0
+        for index, hit in enumerate(selected_hits):
+            contribution = hit["weight"] / (60 + hit["rank"])
+            if hit["branch_type"] != "original" and index > len(original_hits):
+                contribution *= 0.25
+            score += contribution
+        scores[item_key] = score
+        provenance[item_key] = selected_hits
+    ordered = sorted(
+        scores,
+        key=lambda item: (-scores[item], str(item)),
+    )
+    result = [(values[item], strongest[item]) for item in ordered]
+    if return_provenance:
+        return result, provenance
+    return result
+
+
+def _entity_coverage_context(understanding: dict) -> list[dict]:
+    context = []
+    query_language = understanding.get("query_lexicon", {}).get("query_language", "unknown")
+    for matched in understanding.get("matched_entities", []):
+        ambiguity = matched.get("ambiguity") or {}
+        if ambiguity.get("expansion_suppressed"):
+            continue
+        terms = []
+        for group_name in ("canonical_terms", "verified_translations", "verified_aliases"):
+            terms.extend(matched.get(group_name) or [])
+        trusted_terms = []
+        for term in terms:
+            normalized = normalize_term(term.get("term"))
+            if not normalized or len(normalized) < 2:
+                continue
+            language = str(term.get("language") or "").casefold()
+            language_family = (
+                "zh" if language.startswith("zh") else "en" if language.startswith("en") else "unknown"
+            )
+            trusted_terms.append(
+                {
+                    "normalized_term": normalized,
+                    "language": language_family,
+                    "cross_language": (
+                        query_language in {"zh", "en"}
+                        and language_family in {"zh", "en"}
+                        and language_family != query_language
+                    ),
+                }
+            )
+        if trusted_terms:
+            context.append(
+                {
+                    "entity": matched["canonical_entity"],
+                    "terms": trusted_terms,
+                    "ambiguous": bool(ambiguity.get("is_ambiguous")),
+                }
+            )
+    return context
+
+
+def _is_latin_word_character(value: str) -> bool:
+    if not value:
+        return False
+    if value.isdigit():
+        return True
+    return "LATIN" in unicodedata.name(value, "")
+
+
+def _normalized_term_occurs(normalized_text: str, raw_term: object) -> bool:
+    """Match Latin terms at word boundaries while preserving CJK compounds.
+
+    Plain substring checks make ``field`` match ``midfield`` and ``structure``
+    match ``infrastructure``. Chinese terms still use substring matching because
+    ordinary Chinese prose has no explicit word separators. NFKC and casefold
+    are inherited from QueryLexicon normalization.
+    """
+
+    normalized_text = normalize_term(normalized_text)
+    term = normalize_term(raw_term)
+    if not term:
+        return False
+    position = normalized_text.find(term)
+    while position >= 0:
+        end = position + len(term)
+        before = normalized_text[position - 1] if position else ""
+        after = normalized_text[end] if end < len(normalized_text) else ""
+        left_ok = not (
+            _is_latin_word_character(term[0])
+            and _is_latin_word_character(before)
+        )
+        right_ok = not (
+            _is_latin_word_character(term[-1])
+            and _is_latin_word_character(after)
+        )
+        if left_ok and right_ok:
+            return True
+        position = normalized_text.find(term, position + 1)
+    return False
+
+
+def _coverage_features(chunk, terms: list[str], entity_context: list[dict]) -> dict:
+    normalized = normalize_term(getattr(chunk, "original_text", "") or getattr(chunk, "normalized_text", ""))
+    literal_hits = [term for term in terms if _normalized_term_occurs(normalized, term)]
+    entity_hits = 0
+    cross_language_hits = 0
+    entity_terms: list[str] = []
+    for entity in entity_context:
+        hits = [
+            term
+            for term in entity["terms"]
+            if _normalized_term_occurs(normalized, term["normalized_term"])
+        ]
+        if not hits:
+            continue
+        entity_hits += 1
+        entity_terms.extend(term["normalized_term"] for term in hits[:3])
+        if any(term["cross_language"] for term in hits):
+            cross_language_hits += 1
+    denominator = max(1, len(entity_context))
+    return {
+        "literal_coverage": len(literal_hits) / max(1, len(terms)),
+        "entity_coverage": entity_hits / denominator if entity_context else 0.0,
+        "cross_language_alias_coverage": (
+            cross_language_hits / denominator if entity_context else 0.0
+        ),
+        "literal_hits": literal_hits[:6],
+        "entity_term_hits": entity_terms[:6],
+    }
+
+
+def _public_understanding(understanding: dict) -> dict:
+    """Hide internal-only generated and legacy terms from reader responses."""
+
+    sanitized = deepcopy(understanding)
+    resolution = sanitized.get("query_lexicon")
+    if not isinstance(resolution, dict):
+        return sanitized
+    for matched in resolution.get("matched_entities") or []:
+        matched_term = matched.get("matched_term")
+        if isinstance(matched_term, dict) and not matched_term.get("displayable", True):
+            matched_term["term"] = ""
+        matched["search_variants"] = []
+        for group_name in (
+            "canonical_terms",
+            "verified_translations",
+            "verified_aliases",
+            "historical_terms",
+        ):
+            matched[group_name] = [
+                term
+                for term in matched.get(group_name) or []
+                if term.get("displayable", False)
+            ]
+    resolution["expansion_branches"] = [
+        branch
+        for branch in resolution.get("expansion_branches") or []
+        if branch.get("displayable", True)
+    ]
+    sanitized["matched_entities"] = resolution.get("matched_entities", [])
+    sanitized["expansion_branches"] = resolution.get("expansion_branches", [])
+    return sanitized
 
 
 def _intent_signal(text: str, intent: str) -> bool:
     return any(marker in text for marker in INTENT_MARKERS.get(intent, ()))
 
 
-def _rule_rerank_v2(rows: list[dict], terms: list[str], intent: str) -> list[dict]:
+def _rule_rerank_v2(
+    rows: list[dict],
+    terms: list[str],
+    intent: str,
+    *,
+    entity_context: list[dict] | None = None,
+    query_profile: str = "conceptual",
+) -> list[dict]:
+    profile_rules = QUERY_PROFILE_RULES.get(
+        query_profile,
+        QUERY_PROFILE_RULES["conceptual"],
+    )
+    literal_weight = float(profile_rules.get("literal_coverage_weight", 0.10))
+    entity_weight = float(profile_rules.get("entity_coverage_weight", 0.10))
+    cross_language_weight = float(
+        profile_rules.get("cross_language_coverage_weight", 0.09)
+    )
     for row in rows:
         chunk = row["chunk"]
-        normalized = str(chunk.normalized_text or "")
-        coverage = sum(1 for term in terms if term in normalized) / max(1, len(terms))
-        heading = f"{chunk.chapter_title} {chunk.section_title}"
-        heading_signal = any(term in heading for term in terms)
+        coverage = _coverage_features(chunk, terms, entity_context or [])
+        heading = normalize_term(f"{chunk.chapter_title} {chunk.section_title}")
+        heading_signal = any(
+            _normalized_term_occurs(heading, term)
+            for term in terms
+        )
         answer_signal = _intent_signal(str(chunk.original_text or ""), intent)
         quality_penalty = any(
             flag in chunk.quality_flags for flag in ("references", "table_of_contents")
         )
         multiplier = (
             1
-            + coverage * 0.20
+            + coverage["literal_coverage"] * literal_weight
+            + coverage["entity_coverage"] * entity_weight
+            + coverage["cross_language_alias_coverage"] * cross_language_weight
             + (0.12 if answer_signal else 0)
             + (0.05 if heading_signal else 0)
             - (0.28 if quality_penalty else 0)
         )
-        row["term_coverage"] = coverage
+        row["term_coverage"] = coverage["literal_coverage"]
+        row["literal_coverage"] = coverage["literal_coverage"]
+        row["entity_coverage"] = coverage["entity_coverage"]
+        row["cross_language_alias_coverage"] = coverage[
+            "cross_language_alias_coverage"
+        ]
+        row["literal_hits"] = coverage["literal_hits"]
+        row["entity_term_hits"] = coverage["entity_term_hits"]
         row["intent_signal"] = answer_signal
         row["reranker_score"] = max(0.0, row["rrf"] * multiplier)
     return sorted(rows, key=lambda row: row["reranker_score"], reverse=True)
@@ -328,32 +706,61 @@ def _deduplicate_v2(rows: list[dict], *, limit: int, max_per_work: int) -> list[
 
 def _response_type(row: dict, *, intent: str, model_applied: bool) -> tuple[str, str]:
     coverage = float(row.get("term_coverage") or 0)
+    entity_coverage = float(row.get("entity_coverage") or 0)
+    cross_language_coverage = float(
+        row.get("cross_language_alias_coverage") or 0
+    )
     intent_signal = bool(row.get("intent_signal"))
     model_rank = int(row.get("model_rerank_rank") or 0)
-    if model_applied and model_rank and model_rank <= 3 and intent_signal and coverage >= 0.15:
+    evidence_coverage = max(coverage, entity_coverage * 0.75, cross_language_coverage * 0.8)
+    if model_applied and model_rank and model_rank <= 3 and intent_signal and evidence_coverage >= 0.15:
         return "possible_response", "可能回应"
-    if intent_signal and coverage >= 0.12:
+    if intent_signal and evidence_coverage >= 0.12:
         return "substantive_evidence", "相关论述"
     if row.get("vector_rank") and not row.get("keyword_rank"):
         return "semantic_related", "语义近似"
     return "background_context", "背景材料"
 
 
-def _serialize_v2(row: dict, rank: int, total: int, terms: list[str], *, intent: str, model_applied: bool, debug: bool) -> dict:
+def _serialize_v2(
+    row: dict,
+    rank: int,
+    total: int,
+    terms: list[str],
+    *,
+    intent: str,
+    model_applied: bool,
+    debug: bool,
+    entity_context: list[dict] | None = None,
+    query_profile: str = "conceptual",
+) -> dict:
     # Classification is a post-ranking description.  Computing these signals
     # here keeps the fast and balanced ablations free of intent-based ranking
     # bonuses while still giving readers a consistent, non-probabilistic label.
     if "term_coverage" not in row:
-        normalized = str(row["chunk"].normalized_text or "")
-        row["term_coverage"] = sum(
-            1 for term in terms if term in normalized
-        ) / max(1, len(terms))
+        coverage = _coverage_features(row["chunk"], terms, entity_context or [])
+        row["term_coverage"] = coverage["literal_coverage"]
+        row["literal_coverage"] = coverage["literal_coverage"]
+        row["entity_coverage"] = coverage["entity_coverage"]
+        row["cross_language_alias_coverage"] = coverage[
+            "cross_language_alias_coverage"
+        ]
+        row["literal_hits"] = coverage["literal_hits"]
+        row["entity_term_hits"] = coverage["entity_term_hits"]
     if "intent_signal" not in row:
         row["intent_signal"] = _intent_signal(
             str(row["chunk"].original_text or ""),
             intent,
         )
     payload = _serialize_row(row, rank, total, terms, debug=debug)
+    # V1's serializer deliberately keeps its historical Work.language field.
+    # V2 exposes the passage-level value without changing the V1 response.
+    payload["language"] = getattr(row["chunk"], "language", "") or payload["language"]
+    if row.get("cross_language_alias_coverage", 0) > 0:
+        payload["reasons"] = [
+            *payload.get("reasons", []),
+            "原文命中同一术语实体的已确认跨语言名称",
+        ]
     response_type, response_label = _response_type(
         row,
         intent=intent,
@@ -372,6 +779,22 @@ def _serialize_v2(row: dict, rank: int, total: int, terms: list[str], *, intent:
                 "vector_score": row.get("vector_score"),
                 "model_rerank_score": row.get("model_rerank_score"),
                 "term_coverage": round(float(row.get("term_coverage") or 0), 6),
+                "literal_coverage": round(
+                    float(row.get("literal_coverage") or 0),
+                    6,
+                ),
+                "entity_coverage": round(
+                    float(row.get("entity_coverage") or 0),
+                    6,
+                ),
+                "cross_language_alias_coverage": round(
+                    float(row.get("cross_language_alias_coverage") or 0),
+                    6,
+                ),
+                "literal_hits": row.get("literal_hits", [])[:6],
+                "entity_term_hits": row.get("entity_term_hits", [])[:6],
+                "sparse_branch_hits": row.get("sparse_branch_hits", [])[:MAX_BRANCH_HITS_PER_CANDIDATE],
+                "dense_branch_hits": row.get("dense_branch_hits", [])[:MAX_BRANCH_HITS_PER_CANDIDATE],
                 "intent_signal": bool(row.get("intent_signal")),
             }
         )
@@ -394,13 +817,19 @@ def semantic_search_v2(
     search_profile: str | None = None,
     rerank_top_k_override: int | None = None,
     runtime_config_override: dict | None = None,
+    disabled_branch_types: Iterable[str] | None = None,
+    final_top_k_override: int | None = None,
 ) -> dict:
     started = time.monotonic()
     timings: dict[str, float | None] = {"query_embedding_ms": None}
     counts: dict[str, int] = {}
     config = runtime_config_override or current_semantic_runtime()
     filters = filters or {}
-    profile = _profile(search_profile, rerank_top_k_override=rerank_top_k_override)
+    profile = _profile(
+        search_profile,
+        rerank_top_k_override=rerank_top_k_override,
+        final_top_k_override=final_top_k_override,
+    )
     index_uid = index_uid or active_semantic_index_uid()
     query_override = str(query_override or "").strip()[:600]
     expansion_enabled = bool(
@@ -415,6 +844,7 @@ def semantic_search_v2(
             query,
             expansion_limit=profile["expansion_limit"] if expansion_enabled else 0,
             explicit_rewrite=query_override,
+            disabled_branch_types=disabled_branch_types,
         )
     except (DatabaseError, RuntimeError, TypeError, ValueError):
         query_rewrite_fallback = True
@@ -431,50 +861,94 @@ def semantic_search_v2(
         }
     timings["query_analysis_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
     folded, terms = _query_terms(query)
-    rewrites = understanding["rewrites"]
-    expansion_queries = rewrites[1:]
-
-    semantic_ratio = (
+    expansion_branches = [dict(branch) for branch in understanding.get("expansion_branches", [])]
+    if not expansion_branches:
+        expansion_branches = [
+            {
+                "branch_id": "original:0",
+                "branch_type": "original",
+                "query": query,
+                "term": query,
+                "trust_level": "original",
+                "effective_trust_level": "original",
+                "displayable": True,
+                "retrieval_channels": ["sparse", "dense"],
+                "ambiguous": False,
+                "entities": [],
+            }
+        ]
+    for branch in expansion_branches:
+        branch["weight"] = branch_weight(branch)
+    expansion_queries = expansion_branches[1:]
+    entity_context = _entity_coverage_context(understanding)
+    query_profile = understanding.get("query_profile") or "conceptual"
+    semantic_ratio_base = (
         config["semantic_ratio"]
         if semantic_ratio_override is None
         else min(1.0, max(0.0, float(semantic_ratio_override)))
     )
+    semantic_ratio = (
+        effective_semantic_ratio(semantic_ratio_base, query_profile)
+        if semantic_ratio_override is None
+        else semantic_ratio_base
+    )
     fallback_reasons: list[str] = []
     page_fallback_used = False
+    counts["retrieval_branch_count"] = len(expansion_branches)
+    counts["expansion_branch_count"] = len(expansion_queries)
+    counts["matched_entity_count"] = len(understanding.get("matched_entities") or [])
+    counts["query_lexicon_db_query_count"] = int(
+        understanding.get("query_lexicon", {}).get("resolver_db_query_count") or 0
+    )
+    timings["query_lexicon_ms"] = float(
+        understanding.get("query_lexicon", {}).get("resolver_timing_ms") or 0
+    )
 
-    sparse_sources: list[tuple[list[tuple[object, float]], float]] = []
+    sparse_sources: list[tuple[list[tuple[object, float]], float, dict]] = []
+    sparse_remote_sources: list[tuple[list[tuple[str, float]], float, dict]] = []
     stage_started = time.monotonic()
     if strategy != "vector":
-        try:
-            sparse_original = _hydrate(
-                _meili_sparse_candidates(
-                    query,
-                    filters,
-                    limit=profile["sparse_top_k"],
-                    index_uid=index_uid,
-                ),
-                filters,
-            )
-            sparse_sources.append((sparse_original, 1.0))
-            for rewrite in expansion_queries:
-                sparse_sources.append(
+        for branch in expansion_branches:
+            if "sparse" not in branch.get("retrieval_channels", ["sparse"]):
+                continue
+            try:
+                sparse_remote_sources.append(
                     (
-                        _hydrate(
-                            _meili_sparse_candidates(
-                                rewrite,
-                                filters,
-                                limit=profile["sparse_top_k"],
-                                index_uid=index_uid,
-                            ),
+                        _meili_sparse_candidates(
+                            branch["query"],
                             filters,
+                            limit=profile["sparse_top_k"],
+                            index_uid=index_uid,
                         ),
-                        0.32,
+                        float(branch.get("weight") or 0),
+                        {
+                            "branch_id": branch["branch_id"],
+                            "branch_type": branch["branch_type"],
+                        },
                     )
                 )
-        except (httpx.HTTPError, KeyError, TypeError, ValueError):
-            fallback_reasons.append("sparse_service_unavailable")
+            except (httpx.HTTPError, KeyError, TypeError, ValueError):
+                fallback_reasons.append(
+                    "sparse_service_unavailable"
+                    if branch["branch_type"] == "original"
+                    else "sparse_expansion_unavailable"
+                )
+        sparse_sources.extend(_hydrate_sources(sparse_remote_sources, filters))
+        if not sparse_remote_sources or not any(
+            metadata.get("branch_type") == "original"
+            for _rows, _weight, metadata in sparse_sources
+        ):
             sparse_sources.append(
-                (_keyword_candidates(folded, terms, filters, limit=profile["sparse_top_k"]), 1.0)
+                (
+                    _keyword_candidates(
+                        folded,
+                        terms,
+                        filters,
+                        limit=profile["sparse_top_k"],
+                    ),
+                    1.0,
+                    {"branch_id": "original:db-fallback", "branch_type": "original"},
+                )
             )
         passage_rows = _passage_keyword_candidates(
             folded,
@@ -484,15 +958,23 @@ def semantic_search_v2(
         )
         if passage_rows:
             page_fallback_used = True
-            sparse_sources.append((passage_rows, 0.82))
-    sparse_rows = _merge_ranked_lists(
+            sparse_sources.append(
+                (
+                    passage_rows,
+                    0.82,
+                    {"branch_id": "original:passage-fallback", "branch_type": "original"},
+                )
+            )
+    sparse_rows, sparse_provenance = _merge_ranked_lists(
         sparse_sources,
         key=lambda value: str(value.id),
+        return_provenance=True,
     )
     timings["sparse_retrieval_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
     counts["sparse_candidate_count"] = len(sparse_rows)
+    counts["sparse_retrieval_request_count"] = len(sparse_remote_sources)
 
-    dense_sources: list[tuple[list[tuple[object, float]], float]] = []
+    dense_sources: list[tuple[list[tuple[str, float]], float, dict]] = []
     stage_started = time.monotonic()
     if strategy not in {"keyword", "legacy"} and semantic_ratio > 0:
         local_health = (
@@ -505,37 +987,40 @@ def semantic_search_v2(
         elif local_health is not None and not local_health.get("available"):
             fallback_reasons.append("local_model_unavailable")
         else:
-            try:
-                dense_sources.append(
-                    (
-                        _meili_dense_candidates(
-                            query,
-                            config,
-                            filters,
-                            limit=profile["dense_top_k"],
-                            index_uid=index_uid,
-                        ),
-                        1.0,
-                    )
-                )
-                for rewrite in expansion_queries:
+            for branch in expansion_branches:
+                if "dense" not in branch.get("retrieval_channels", ["dense"]):
+                    continue
+                try:
                     dense_sources.append(
                         (
                             _meili_dense_candidates(
-                                rewrite,
+                                branch["query"],
                                 config,
                                 filters,
                                 limit=profile["dense_top_k"],
                                 index_uid=index_uid,
                             ),
-                            0.32,
+                            float(branch.get("weight") or 0),
+                            {
+                                "branch_id": branch["branch_id"],
+                                "branch_type": branch["branch_type"],
+                            },
                         )
                     )
-            except (httpx.HTTPError, KeyError, TypeError, ValueError):
-                fallback_reasons.append("semantic_service_unavailable")
-    dense_rows = _merge_ranked_lists(dense_sources, key=str)
+                except (httpx.HTTPError, KeyError, TypeError, ValueError):
+                    fallback_reasons.append(
+                        "semantic_service_unavailable"
+                        if branch["branch_type"] == "original"
+                        else "dense_expansion_unavailable"
+                    )
+    dense_rows, dense_provenance = _merge_ranked_lists(
+        dense_sources,
+        key=str,
+        return_provenance=True,
+    )
     timings["dense_retrieval_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
     counts["dense_candidate_count"] = len(dense_rows)
+    counts["dense_retrieval_request_count"] = len(dense_sources)
 
     stage_started = time.monotonic()
     rows = _rrf(
@@ -544,13 +1029,23 @@ def semantic_search_v2(
         filters=filters,
         semantic_ratio=semantic_ratio,
     )
+    for row in rows:
+        candidate_id = str(row["chunk"].id)
+        row["sparse_branch_hits"] = sparse_provenance.get(candidate_id, [])
+        row["dense_branch_hits"] = dense_provenance.get(candidate_id, [])
     rows = sorted(rows, key=lambda row: row["rrf"], reverse=True)[: profile["fusion_top_k"]]
     timings["rrf_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
     counts["fusion_candidate_count"] = len(rows)
 
     stage_started = time.monotonic()
     if profile["name"] == "precision":
-        rows = _rule_rerank_v2(rows, terms, understanding["intent"])
+        rows = _rule_rerank_v2(
+            rows,
+            terms,
+            understanding["intent"],
+            entity_context=entity_context,
+            query_profile=query_profile,
+        )
     reranker_config = current_reranker_config()
     model_applied = False
     reranker_fallback = False
@@ -618,12 +1113,28 @@ def semantic_search_v2(
             intent=understanding["intent"],
             model_applied=model_applied,
             debug=debug,
+            entity_context=entity_context,
+            query_profile=query_profile,
         )
         for rank, row in enumerate(rows, start=1)
     ]
     timings["context_fetch_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
     timings["total_ms"] = round((time.monotonic() - started) * 1000, 2)
     counts["final_result_count"] = len(results)
+    response_understanding = (
+        understanding if debug else _public_understanding(understanding)
+    )
+    response_branches = (
+        expansion_branches
+        if debug
+        else [branch for branch in expansion_branches if branch.get("displayable", True)]
+    )
+    response_expansions = response_branches[1:]
+    response_understanding["rewrites"] = [
+        str(branch.get("query") or "") for branch in response_branches
+    ]
+    response_understanding["expansion_branches"] = response_branches
+    fallback_reasons = list(dict.fromkeys(fallback_reasons))
     fallback_used = bool(fallback_reasons)
     engine = (
         "v2_hybrid"
@@ -653,6 +1164,7 @@ def semantic_search_v2(
         "engine": engine,
         "index_uid": index_uid,
         "semantic_ratio": semantic_ratio,
+        "semantic_ratio_base": semantic_ratio_base,
         "strategy": strategy,
         "sort": sort,
         "fallback_used": fallback_used,
@@ -666,13 +1178,20 @@ def semantic_search_v2(
             if not dense_rows and sparse_rows
             else "结果经过关键词与语义候选融合，并保留原文、上下文和页码供核对。"
         ),
-        "understanding": understanding,
+        "understanding": response_understanding,
         "query_rewrite_enabled": bool(
             getattr(settings, "SEMANTIC_SEARCH_V2_QUERY_EXPANSION_ENABLED", True)
         ),
-        "query_rewrite_active": bool(expansion_queries),
-        "active_rewrite": " | ".join(expansion_queries),
+        "query_rewrite_active": bool(response_expansions),
+        "active_rewrite": " | ".join(
+            str(branch.get("query") or "") for branch in response_expansions
+        ),
         "query_rewrite_fallback": query_rewrite_fallback,
+        "query_profile": query_profile,
+        "disabled_branch_types": understanding.get("disabled_branch_types", []),
+        "query_lexicon_revision": understanding.get("query_lexicon_revision"),
+        "query_lexicon_resolution": response_understanding.get("query_lexicon"),
+        "expansion_branches": response_branches,
         "reranker": {
             "provider": reranker_config.provider,
             "model": reranker_config.model if reranker_config.provider == "local_http" else "",
@@ -689,6 +1208,18 @@ def semantic_search_v2(
             "timing_ms": timings,
             "candidate_counts": counts,
             "query_embedding_ms_note": "查询向量由 Meilisearch 在 dense 请求内生成，当前无法单独测量。",
+            "query_lexicon_revision": understanding.get("query_lexicon_revision"),
+            "query_profile": query_profile,
+            "disabled_branch_types": understanding.get(
+                "disabled_branch_types",
+                [],
+            ),
+            "expansion_limits": understanding.get("query_lexicon", {}).get(
+                "limits",
+                current_search_v2_limits(
+                    expansion_limit=profile["expansion_limit"]
+                ).as_dict(),
+            ),
         }
         if debug
         else None,

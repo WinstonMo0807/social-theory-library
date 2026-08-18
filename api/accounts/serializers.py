@@ -15,11 +15,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import RecoveryCode, User
 from .ownership import is_library_owner
+from common.capabilities import capability_snapshot
 
 
 class UserSerializer(serializers.ModelSerializer):
     reading_preferences = serializers.JSONField(required=False)
     is_library_owner = serializers.SerializerMethodField()
+    access_level = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -32,11 +35,19 @@ class UserSerializer(serializers.ModelSerializer):
             "email_verified_at",
             "reading_preferences",
             "is_library_owner",
+            "access_level",
+            "capabilities",
         )
         read_only_fields = ("id", "role", "email_verified_at")
 
     def get_is_library_owner(self, instance):
         return is_library_owner(instance)
+
+    def get_access_level(self, instance):
+        return capability_snapshot(instance).access_level
+
+    def get_capabilities(self, instance):
+        return list(capability_snapshot(instance).capabilities)
 
     def validate_reading_preferences(self, value):
         if not isinstance(value, dict):

@@ -9,8 +9,17 @@ from urllib.parse import urlparse
 import httpx
 from django.conf import settings
 
+from common.ai_runtime import (
+    AICapability,
+    AIRuntimeProfileError,
+    SUPPORTED_AI_PROVIDERS,
+    resolve_credential,
+    resolve_endpoint,
+    runtime_profile,
+)
 
-SUPPORTED_PROVIDERS = {"none", "ollama", "vllm", "openai_compatible"}
+
+SUPPORTED_PROVIDERS = SUPPORTED_AI_PROVIDERS
 
 
 class AIServiceError(RuntimeError):
@@ -29,6 +38,18 @@ class AIConfigurationError(AIServiceError):
     code = "ai_configuration_error"
 
 
+class AIProviderTimeout(AIServiceError):
+    code = "ai_provider_timeout"
+
+
+class AIProviderAuthError(AIServiceError):
+    code = "ai_provider_auth_failure"
+
+
+class AIProviderRateLimited(AIServiceError):
+    code = "ai_provider_rate_limited"
+
+
 @dataclass(frozen=True, slots=True)
 class AIConfiguration:
     provider: str
@@ -41,6 +62,15 @@ class AIConfiguration:
     max_concurrency: int
     max_input_chars: int
     allowed_hosts: tuple[str, ...]
+    capability: str = AICapability.METADATA_EXTRACTION
+    profile_key: str = "metadata-default"
+    model: str = ""
+    temperature: float = 0
+    max_output_tokens: int = 2048
+    retrieval_profile: str = "stable"
+    answer_behavior: str = "structured_candidates"
+    fallback_profile_key: str = ""
+    reasoning: dict | None = None
 
     @property
     def enabled(self) -> bool:
@@ -55,12 +85,28 @@ class AIResult:
     prompt_version: str
     latency_ms: int
     attempts: int
+    usage: dict | None = None
 
 
-def current_ai_configuration() -> AIConfiguration:
-    provider = str(settings.AI_PROVIDER or "none").strip().casefold()
-    if provider not in SUPPORTED_PROVIDERS:
-        raise AIConfigurationError(f"不支持的 AI provider：{provider}")
+@dataclass(frozen=True, slots=True)
+class AITextResult:
+    text: str
+    provider: str
+    model: str
+    profile_key: str
+    latency_ms: int
+    usage: dict
+
+
+def current_ai_configuration(
+    capability: str = AICapability.METADATA_EXTRACTION,
+    profile_key: str | None = None,
+) -> AIConfiguration:
+    try:
+        profile = runtime_profile(capability, profile_key)
+    except AIRuntimeProfileError as exc:
+        raise AIConfigurationError(str(exc)) from exc
+    provider = profile.provider if profile.enabled else "none"
     allowed_hosts = tuple(
         host.strip().casefold()
         for host in settings.AI_ALLOWED_HOSTS
@@ -68,22 +114,35 @@ def current_ai_configuration() -> AIConfiguration:
     )
     config = AIConfiguration(
         provider=provider,
-        base_url=str(settings.AI_BASE_URL or "").strip().rstrip("/"),
-        api_key=str(settings.AI_API_KEY or ""),
-        metadata_model=str(settings.AI_METADATA_MODEL or "").strip(),
+        base_url=resolve_endpoint(profile.endpoint_alias),
+        api_key=resolve_credential(profile.credential_alias),
+        metadata_model=(
+            profile.model
+            if capability == AICapability.METADATA_EXTRACTION
+            else str(settings.AI_METADATA_MODEL or "").strip()
+        ),
         classifier_model=str(settings.AI_CLASSIFIER_MODEL or "").strip(),
         vision_model=str(settings.AI_VISION_MODEL or "").strip(),
-        timeout=float(settings.AI_TIMEOUT),
+        timeout=float(profile.timeout_seconds),
         max_concurrency=int(settings.AI_MAX_CONCURRENCY),
-        max_input_chars=int(settings.AI_MAX_INPUT_CHARS),
+        max_input_chars=int(profile.max_input_chars),
         allowed_hosts=allowed_hosts,
+        capability=capability,
+        profile_key=profile.key,
+        model=profile.model,
+        temperature=profile.temperature,
+        max_output_tokens=profile.max_output_tokens,
+        retrieval_profile=profile.retrieval_profile,
+        answer_behavior=profile.answer_behavior,
+        fallback_profile_key=profile.fallback_profile_key,
+        reasoning=profile.reasoning,
     )
     if not config.enabled:
         return config
     if not config.base_url:
         raise AIConfigurationError("已启用 AI provider，但 AI_BASE_URL 未配置。")
-    if not config.metadata_model:
-        raise AIConfigurationError("已启用 AI provider，但 AI_METADATA_MODEL 未配置。")
+    if not config.model:
+        raise AIConfigurationError(f"已启用 {capability}，但 profile model 未配置。")
     _validate_endpoint(config.base_url, config.allowed_hosts)
     return config
 
@@ -149,12 +208,20 @@ def _validate_schema(value, schema: dict, path: str = "$") -> None:
 
 
 class AIClient:
-    """A bounded JSON-only client. It never writes application data itself."""
+    """Capability-aware bounded provider client with no application writes."""
 
-    def __init__(self, config: AIConfiguration | None = None, transport=None):
-        self.config = config or current_ai_configuration()
+    def __init__(
+        self,
+        config: AIConfiguration | None = None,
+        transport=None,
+        *,
+        capability: str = AICapability.METADATA_EXTRACTION,
+        profile_key: str | None = None,
+    ):
+        self.config = config or current_ai_configuration(capability, profile_key)
         self._transport = transport
         self._semaphore = threading.BoundedSemaphore(self.config.max_concurrency)
+        self.last_usage: dict = {}
 
     def health_check(self) -> dict:
         if not self.config.enabled:
@@ -163,6 +230,8 @@ class AIClient:
                 "available": False,
                 "status": "disabled",
                 "provider": "none",
+                "profile_key": self.config.profile_key,
+                "capability": self.config.capability,
             }
         try:
             endpoint = (
@@ -182,6 +251,9 @@ class AIClient:
                 "available": False,
                 "status": "down",
                 "provider": self.config.provider,
+                "profile_key": self.config.profile_key,
+                "capability": self.config.capability,
+                "model": self.config.model or self.config.metadata_model,
                 "reason": str(exc)[:300],
             }
         return {
@@ -189,6 +261,9 @@ class AIClient:
             "available": True,
             "status": "healthy",
             "provider": self.config.provider,
+            "profile_key": self.config.profile_key,
+            "capability": self.config.capability,
+            "model": self.config.model or self.config.metadata_model,
         }
 
     def generate_json(
@@ -203,7 +278,7 @@ class AIClient:
     ) -> AIResult:
         if not self.config.enabled:
             raise AIServiceUnavailable("AI 功能当前已关闭。")
-        selected_model = (model or self.config.metadata_model).strip()
+        selected_model = (model or self.config.model or self.config.metadata_model).strip()
         if not selected_model:
             raise AIConfigurationError("当前任务没有可用模型。")
         input_text = document_text[: self.config.max_input_chars]
@@ -251,8 +326,23 @@ class AIClient:
                         prompt_version=prompt_version,
                         latency_ms=round((time.monotonic() - started) * 1000),
                         attempts=attempt,
+                        usage=(
+                            response.json().get("usage", {})
+                            if isinstance(response.json(), dict)
+                            else {}
+                        ),
                     )
-                except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError) as exc:
+                except httpx.TimeoutException as exc:
+                    raise AIProviderTimeout("AI provider 响应超时。") from exc
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code in {401, 403}:
+                        raise AIProviderAuthError("AI provider 认证失败。") from exc
+                    if exc.response.status_code == 429:
+                        raise AIProviderRateLimited("AI provider 请求频率受限。") from exc
+                    last_error = exc
+                    if attempt < 2 and exc.response.status_code >= 500:
+                        continue
+                except (httpx.RequestError, ValueError, KeyError, json.JSONDecodeError) as exc:
                     last_error = exc
                     if attempt < 2:
                         continue
@@ -260,11 +350,198 @@ class AIClient:
                     raise
         raise AIServiceUnavailable(f"AI 服务调用失败：{str(last_error)[:300]}")
 
+    def _bounded_messages(self, messages: list[dict]) -> list[dict]:
+        remaining = self.config.max_input_chars
+        output = []
+        for row in messages:
+            if not isinstance(row, dict):
+                continue
+            role = str(row.get("role") or "user")[:20]
+            content = str(row.get("content") or "")
+            if remaining <= 0:
+                break
+            bounded = content[:remaining]
+            remaining -= len(bounded)
+            if bounded:
+                output.append({"role": role, "content": bounded})
+        if not output:
+            raise AIInvalidOutput("模型消息为空。")
+        return output
+
+    def generate(
+        self,
+        *,
+        messages: list[dict],
+        model: str | None = None,
+        temperature: float | None = None,
+        max_output_tokens: int | None = None,
+    ) -> AITextResult:
+        if not self.config.enabled:
+            raise AIServiceUnavailable("AI 功能当前已关闭。")
+        selected_model = (model or self.config.model or self.config.metadata_model).strip()
+        if not selected_model:
+            raise AIConfigurationError("当前 capability 没有可用模型。")
+        bounded = self._bounded_messages(messages)
+        chosen_temperature = self.config.temperature if temperature is None else float(temperature)
+        chosen_tokens = int(max_output_tokens or self.config.max_output_tokens)
+        if self.config.provider == "ollama":
+            endpoint = f"{self.config.base_url}/api/chat"
+            payload = {
+                "model": selected_model,
+                "messages": bounded,
+                "stream": False,
+                "options": {
+                    "temperature": chosen_temperature,
+                    "num_predict": chosen_tokens,
+                },
+            }
+        else:
+            endpoint = f"{self.config.base_url}/v1/chat/completions"
+            payload = {
+                "model": selected_model,
+                "messages": bounded,
+                "stream": False,
+                "temperature": chosen_temperature,
+                "max_tokens": chosen_tokens,
+            }
+        started = time.monotonic()
+        try:
+            with self._semaphore:
+                with httpx.Client(
+                    timeout=self.config.timeout,
+                    follow_redirects=False,
+                    transport=self._transport,
+                ) as client:
+                    response = client.post(endpoint, headers=self._headers(), json=payload)
+                    response.raise_for_status()
+            data = response.json()
+            if self.config.provider == "ollama":
+                text = str(data.get("message", {}).get("content") or "")
+            else:
+                text = str(data.get("choices", [{}])[0].get("message", {}).get("content") or "")
+            if not text:
+                raise AIInvalidOutput("AI provider 没有返回文本。")
+            usage = data.get("usage", {}) if isinstance(data, dict) else {}
+            self.last_usage = usage if isinstance(usage, dict) else {}
+            return AITextResult(
+                text=text,
+                provider=self.config.provider,
+                model=selected_model,
+                profile_key=self.config.profile_key,
+                latency_ms=round((time.monotonic() - started) * 1000),
+                usage=self.last_usage,
+            )
+        except httpx.TimeoutException as exc:
+            raise AIProviderTimeout("AI provider 响应超时。") from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in {401, 403}:
+                raise AIProviderAuthError("AI provider 认证失败。") from exc
+            if exc.response.status_code == 429:
+                raise AIProviderRateLimited("AI provider 请求频率受限。") from exc
+            raise AIServiceUnavailable(f"AI provider 返回 HTTP {exc.response.status_code}。") from exc
+        except (httpx.RequestError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            if isinstance(exc, AIServiceError):
+                raise
+            raise AIServiceUnavailable("AI provider 响应无法解析。") from exc
+
+    def stream(
+        self,
+        *,
+        messages: list[dict],
+        model: str | None = None,
+        temperature: float | None = None,
+        max_output_tokens: int | None = None,
+    ):
+        if not self.config.enabled:
+            raise AIServiceUnavailable("AI 功能当前已关闭。")
+        selected_model = (model or self.config.model or self.config.metadata_model).strip()
+        if not selected_model:
+            raise AIConfigurationError("当前 capability 没有可用模型。")
+        bounded = self._bounded_messages(messages)
+        chosen_temperature = self.config.temperature if temperature is None else float(temperature)
+        chosen_tokens = int(max_output_tokens or self.config.max_output_tokens)
+        if self.config.provider == "ollama":
+            endpoint = f"{self.config.base_url}/api/chat"
+            payload = {
+                "model": selected_model,
+                "messages": bounded,
+                "stream": True,
+                "options": {
+                    "temperature": chosen_temperature,
+                    "num_predict": chosen_tokens,
+                },
+            }
+        else:
+            endpoint = f"{self.config.base_url}/v1/chat/completions"
+            payload = {
+                "model": selected_model,
+                "messages": bounded,
+                "stream": True,
+                "temperature": chosen_temperature,
+                "max_tokens": chosen_tokens,
+            }
+        started = time.monotonic()
+        emitted = False
+        try:
+            with self._semaphore:
+                with httpx.Client(
+                    timeout=self.config.timeout,
+                    follow_redirects=False,
+                    transport=self._transport,
+                ) as client:
+                    with client.stream("POST", endpoint, headers=self._headers(), json=payload) as response:
+                        response.raise_for_status()
+                        deadline = time.monotonic() + float(self.config.timeout)
+                        for line in response.iter_lines():
+                            if time.monotonic() > deadline:
+                                raise AIProviderTimeout("AI provider 流式响应超时。")
+                            line = line.strip()
+                            if not line:
+                                continue
+                            if self.config.provider == "ollama":
+                                data = json.loads(line)
+                                text = str(data.get("message", {}).get("content") or "")
+                                if isinstance(data.get("eval_count"), int):
+                                    self.last_usage = {"completion_tokens": data["eval_count"]}
+                            else:
+                                if not line.startswith("data:"):
+                                    continue
+                                raw = line[5:].strip()
+                                if raw == "[DONE]":
+                                    break
+                                data = json.loads(raw)
+                                usage = data.get("usage")
+                                if isinstance(usage, dict):
+                                    self.last_usage = usage
+                                choices = data.get("choices")
+                                first_choice = choices[0] if isinstance(choices, list) and choices else {}
+                                text = str(first_choice.get("delta", {}).get("content") or "")
+                            if text:
+                                emitted = True
+                                yield text
+            self.last_usage = {
+                **self.last_usage,
+                "generation_latency_ms": round((time.monotonic() - started) * 1000),
+            }
+        except httpx.TimeoutException as exc:
+            raise AIProviderTimeout("AI provider 响应超时。") from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in {401, 403}:
+                raise AIProviderAuthError("AI provider 认证失败。") from exc
+            if exc.response.status_code == 429:
+                raise AIProviderRateLimited("AI provider 请求频率受限。") from exc
+            raise AIServiceUnavailable(f"AI provider 返回 HTTP {exc.response.status_code}。") from exc
+        except AIServiceError:
+            raise
+        except (httpx.RequestError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            detail = "AI provider 流式响应在生成后中断。" if emitted else "AI provider 流式响应不可用。"
+            raise AIServiceUnavailable(detail) from exc
+
     def _headers(self) -> dict[str, str]:
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "SocialTheoryLibrary/2.6.1 metadata-candidate-service",
+            "User-Agent": f"SocialTheoryLibrary/2.7 ai-{self.config.capability}",
         }
         if self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
@@ -278,7 +555,7 @@ class AIClient:
                     "messages": messages,
                     "stream": False,
                     "format": schema,
-                    "options": {"temperature": 0},
+                    "options": {"temperature": self.config.temperature},
                 },
                 f"{self.config.base_url}/api/chat",
             )
@@ -286,7 +563,7 @@ class AIClient:
             {
                 "model": model,
                 "messages": messages,
-                "temperature": 0,
+                "temperature": self.config.temperature,
                 "response_format": {
                     "type": "json_schema",
                     "json_schema": {

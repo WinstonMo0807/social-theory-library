@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import FileResponse, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.cache import patch_vary_headers
 from django.utils.http import content_disposition_header
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
@@ -146,17 +147,29 @@ def _file_chunk_iterator(path: Path, start: int, length: int, chunk_size: int = 
             yield chunk
 
 
-def _public_file_headers(response, *, sha256: str):
+def _asset_file_headers(response, *, sha256: str, access_status: str):
     response["Accept-Ranges"] = "bytes"
     response["X-Content-Type-Options"] = "nosniff"
     response["ETag"] = f'"{sha256}"'
-    # Local NAS delivery remains easy to revoke. The long-lived immutable copy
-    # is served only from an explicitly enabled cloud object/custom domain.
-    response["Cache-Control"] = "public, max-age=300, must-revalidate, no-transform"
+    if access_status in {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT}:
+        # Local public delivery remains easy to revoke. Long-lived immutable
+        # caching is reserved for explicitly public content-addressed objects.
+        response["Cache-Control"] = "public, max-age=300, must-revalidate, no-transform"
+    else:
+        # Registered and staff-only PDFs must never enter a shared proxy cache.
+        response["Cache-Control"] = "private, no-store, no-transform"
+        patch_vary_headers(response, ("Cookie",))
     return response
 
 
-def _x_accel_response(path: Path, *, filename: str, as_attachment: bool, sha256: str):
+def _x_accel_response(
+    path: Path,
+    *,
+    filename: str,
+    as_attachment: bool,
+    sha256: str,
+    access_status: str,
+):
     try:
         relative_path = path.resolve().relative_to(settings.NAS_PUBLIC_ROOT.resolve())
     except ValueError:
@@ -168,7 +181,11 @@ def _x_accel_response(path: Path, *, filename: str, as_attachment: bool, sha256:
     disposition = content_disposition_header(as_attachment, filename)
     if disposition:
         response["Content-Disposition"] = disposition
-    return _public_file_headers(response, sha256=sha256)
+    return _asset_file_headers(
+        response,
+        sha256=sha256,
+        access_status=access_status,
+    )
 
 
 class AssetAccessView(APIView):
@@ -303,7 +320,11 @@ class AssetFileView(APIView):
             return Response({"detail": "本地阅读副本不存在。"}, status=404)
         response = HttpResponse(status=200, content_type="application/pdf")
         response["Content-Length"] = str(path.stat().st_size)
-        _public_file_headers(response, sha256=asset.sha256)
+        _asset_file_headers(
+            response,
+            sha256=asset.sha256,
+            access_status=anchor.access_status,
+        )
         disposition = content_disposition_header(
             bool(download_mode),
             asset.edition.canonical_filename or path.name,
@@ -342,6 +363,7 @@ class AssetFileView(APIView):
                 filename=filename,
                 as_attachment=as_attachment,
                 sha256=asset.sha256,
+                access_status=anchor.access_status,
             )
             if response is None:
                 return Response({"detail": "本地阅读副本路径不在允许目录内。"}, status=503)
@@ -362,7 +384,11 @@ class AssetFileView(APIView):
                 filename=filename,
             )
             response["Content-Length"] = str(size)
-            return _public_file_headers(response, sha256=asset.sha256)
+            return _asset_file_headers(
+                response,
+                sha256=asset.sha256,
+                access_status=anchor.access_status,
+            )
 
         bounds = _range_bounds(range_value, size)
         if bounds is None:
@@ -380,7 +406,11 @@ class AssetFileView(APIView):
         response["Content-Length"] = str(end - start + 1)
         if disposition:
             response["Content-Disposition"] = disposition
-        return _public_file_headers(response, sha256=asset.sha256)
+        return _asset_file_headers(
+            response,
+            sha256=asset.sha256,
+            access_status=anchor.access_status,
+        )
 
 
 class CloudProviderListView(generics.ListCreateAPIView):

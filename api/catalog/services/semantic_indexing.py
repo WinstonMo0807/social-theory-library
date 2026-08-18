@@ -28,6 +28,7 @@ from catalog.services.semantic_chunks import (
     PARSER_VERSION,
     build_semantic_chunks,
 )
+from catalog.services.passage_language import language_detector_config
 from ingestion.services.indexing import _headers, _wait_task
 
 
@@ -35,6 +36,8 @@ SEMANTIC_INDEX_UID = "semantic_passages"
 SEMANTIC_PAUSE_KEY = "semantic_index_paused"
 MANUAL_ACTIVATION_MODE = "manual"
 SEMANTIC_INDEX_PROTOCOL_VERSION = "v2"
+DEFAULT_SEMANTIC_DOCUMENT_BATCH_SIZE = 128
+MAX_SEMANTIC_DOCUMENT_BATCH_SIZE = 1000
 DEFAULT_DOCUMENT_TEMPLATE = (
     "{{doc.title}}\n{{doc.authors}}\n{{doc.chapter_title}}\n"
     "{{doc.section_title}}\n{{doc.original_text}}"
@@ -93,6 +96,46 @@ EFFECTIVE_RUNTIME_FIELDS = (
 )
 
 
+class SemanticIndexVersionRequired(RuntimeError):
+    """Raised when an index write cannot be bound to one unambiguous version."""
+
+    error_code = "INDEX_VERSION_REQUIRED"
+
+
+class SemanticModelUnavailable(RuntimeError):
+    """Raised when the configured offline embedding model is not on disk."""
+
+    error_code = "MODEL_UNAVAILABLE"
+
+
+def active_semantic_index_version() -> SemanticIndexVersion:
+    """Return the only active version allowed to receive incremental writes.
+
+    The historical UID fallback remains available to read-only search code, but
+    writes must never guess a target when the database has zero or multiple
+    active version rows.
+    """
+
+    active = list(
+        SemanticIndexVersion.objects.filter(
+            status=SemanticIndexVersion.Status.ACTIVE,
+        ).order_by("-activated_at", "-created_at")[:2]
+    )
+    if len(active) != 1:
+        raise SemanticIndexVersionRequired(
+            "语义索引写入需要且只能有一个 active SemanticIndexVersion。"
+        )
+    return active[0]
+
+
+def _write_index_version(
+    index_version: SemanticIndexVersion | None,
+) -> SemanticIndexVersion:
+    if index_version is not None:
+        return index_version
+    return active_semantic_index_version()
+
+
 def active_semantic_index_uid() -> str:
     active = SemanticIndexVersion.objects.filter(
         status=SemanticIndexVersion.Status.ACTIVE,
@@ -147,6 +190,7 @@ def semantic_index_config_snapshot(config: dict) -> dict:
             "protocol_version": SEMANTIC_INDEX_PROTOCOL_VERSION,
             "parser_version": PARSER_VERSION,
             "chunk_version": CHUNK_VERSION,
+            "language_detector": language_detector_config(),
             "document_template": str(
                 config.get("document_template") or DEFAULT_DOCUMENT_TEMPLATE
             ),
@@ -163,6 +207,51 @@ def semantic_index_version_runtime(
     if version is None or not isinstance(version.config_snapshot, dict):
         return None
     return dict(version.config_snapshot) if version.config_snapshot else None
+
+
+def semantic_document_batch_size(value: int | None = None) -> int:
+    configured = (
+        value
+        if value is not None
+        else getattr(
+            settings,
+            "SEMANTIC_INDEX_DOCUMENT_BATCH_SIZE",
+            DEFAULT_SEMANTIC_DOCUMENT_BATCH_SIZE,
+        )
+    )
+    return min(MAX_SEMANTIC_DOCUMENT_BATCH_SIZE, max(1, int(configured)))
+
+
+def index_semantic_documents_in_batches(
+    index_uid: str,
+    documents: list[dict],
+    *,
+    document_batch_size: int | None = None,
+) -> dict:
+    """Idempotently upsert a bounded document batch sequence into Meilisearch."""
+
+    batch_size = semantic_document_batch_size(document_batch_size)
+    tasks: list[dict] = []
+    for offset in range(0, len(documents), batch_size):
+        response = httpx.post(
+            f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/documents",
+            headers=_headers(),
+            json=documents[offset : offset + batch_size],
+            timeout=max(30, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
+        )
+        response.raise_for_status()
+        tasks.append(
+            _wait_task(
+                response.json(),
+                timeout=settings.SEMANTIC_INDEX_TASK_TIMEOUT_SECONDS,
+            )
+        )
+    return {
+        "documents": len(documents),
+        "batches": len(tasks),
+        "document_batch_size": batch_size,
+        "task": tasks[-1] if tasks else None,
+    }
 
 
 def semantic_runtime_setting_value(config: dict) -> dict:
@@ -278,6 +367,8 @@ def resume_semantic_job(job: SemanticIndexJob, *, actor=None) -> SemanticIndexJo
         raise ValueError("只有已暂停的语义任务可以恢复。")
     if job.asset_id is None:
         raise ValueError("语义任务目标 PDF 已不存在。")
+    if not _bind_legacy_job_version(job):
+        raise SemanticIndexVersionRequired(job.error_message)
 
     task_id = str(uuid.uuid4())
     job.status = SemanticIndexJob.Status.QUEUED
@@ -312,7 +403,7 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
     from catalog.services.semantic_search import current_semantic_runtime, semantic_model_health
 
     config = config or current_semantic_runtime()
-    index_uid = index_uid or active_semantic_index_uid()
+    index_uid = index_uid or active_semantic_index_version().uid
     if (
         config.get("engine") == "meilisearch_hybrid"
         and config.get("provider") == "huggingFace"
@@ -320,7 +411,9 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
     ):
         model_health = semantic_model_health(config)
         if not model_health["available"]:
-            raise ValueError(model_health["reason"])
+            raise SemanticModelUnavailable(
+                model_health.get("reason") or "本地语义模型不可用。"
+            )
     base_url = settings.MEILISEARCH_URL.rstrip("/")
     response = httpx.get(f"{base_url}/indexes/{index_uid}", headers=_headers(), timeout=5)
     if response.status_code == 404:
@@ -475,7 +568,7 @@ def semantic_documents(
             "authors": authors,
             "author_ids": [str(value) for value in author_ids],
             "document_type": work.document_type,
-            "language": work.language,
+            "language": chunk.language or "unknown",
             "access_status": asset.access_status,
             "publication_year": edition.publication_year,
             "page_start": chunk.page_start,
@@ -550,12 +643,48 @@ def _remove_stale_semantic_asset_documents(
     return len(stale_ids)
 
 
+def _bind_legacy_job_version(job: SemanticIndexJob) -> bool:
+    """Safely repair a historical null-version job before it can write."""
+
+    if job.index_version_id:
+        return True
+    try:
+        version = active_semantic_index_version()
+    except SemanticIndexVersionRequired as exc:
+        job.status = SemanticIndexJob.Status.FAILED
+        job.error_code = exc.error_code
+        job.error_message = str(exc)
+        job.finished_at = timezone.now()
+        job.save(
+            update_fields=[
+                "status",
+                "error_code",
+                "error_message",
+                "finished_at",
+                "updated_at",
+            ]
+        )
+        return False
+    with transaction.atomic():
+        updated = SemanticIndexJob.objects.filter(
+            pk=job.pk,
+            index_version__isnull=True,
+        ).update(index_version=version, updated_at=timezone.now())
+    if updated:
+        job.index_version = version
+        job.index_version_id = version.pk
+    else:
+        job.refresh_from_db(fields=["index_version"])
+    return bool(job.index_version_id)
+
+
 def index_semantic_asset(
     asset: Asset,
     *,
     index_version: SemanticIndexVersion | None = None,
     runtime_config: dict | None = None,
 ) -> dict:
+    index_version = _write_index_version(index_version)
     runtime = (
         runtime_config
         if runtime_config is not None
@@ -563,7 +692,7 @@ def index_semantic_asset(
     )
     documents = semantic_documents(asset, runtime_config=runtime)
     try:
-        index_uid = index_version.uid if index_version else active_semantic_index_uid()
+        index_uid = index_version.uid
         ensure_semantic_index(runtime, index_uid=index_uid)
         if not documents:
             removed = _remove_stale_semantic_asset_documents(
@@ -571,22 +700,16 @@ def index_semantic_asset(
                 str(asset.id),
                 set(),
             )
+            synchronize_active_semantic_index_document_count(index_uid)
             return {
                 "backend": "no-chunks",
                 "index_uid": index_uid,
                 "documents": 0,
                 "removed_stale_documents": removed,
             }
-        response = httpx.post(
-            f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/documents",
-            headers=_headers(),
-            json=documents,
-            timeout=max(30, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
-        )
-        response.raise_for_status()
-        task = _wait_task(
-            response.json(),
-            timeout=settings.SEMANTIC_INDEX_TASK_TIMEOUT_SECONDS,
+        write_result = index_semantic_documents_in_batches(
+            index_uid,
+            documents,
         )
         asset.semantic_chunks.update(
             index_status=SemanticChunk.IndexStatus.READY,
@@ -599,13 +722,25 @@ def index_semantic_asset(
             str(asset.id),
             {document["id"] for document in documents},
         )
+        synchronize_active_semantic_index_document_count(index_uid)
         return {
             "backend": "meilisearch",
             "index_uid": index_uid,
             "documents": len(documents),
+            "batches": write_result["batches"],
+            "document_batch_size": write_result["document_batch_size"],
             "removed_stale_documents": removed,
-            "task": task,
+            "task": write_result["task"],
         }
+    except SemanticModelUnavailable:
+        asset.semantic_chunks.filter(
+            index_status=SemanticChunk.IndexStatus.INDEXING,
+        ).update(
+            index_status=SemanticChunk.IndexStatus.READY,
+            index_error="",
+            updated_at=timezone.now(),
+        )
+        raise
     except (httpx.HTTPError, RuntimeError, TimeoutError, ValueError) as exc:
         asset.semantic_chunks.update(
             index_status=SemanticChunk.IndexStatus.FAILED,
@@ -618,7 +753,13 @@ def index_semantic_asset(
 
 
 def remove_semantic_asset(asset_id: str) -> None:
-    index_uid = active_semantic_index_uid()
+    try:
+        index_uid = active_semantic_index_version().uid
+    except SemanticIndexVersionRequired:
+        # A missing or ambiguous active version must never turn into a write
+        # against the historical fallback UID. Callers can record the warning
+        # and continue their source-of-truth operation independently.
+        return
     try:
         response = httpx.post(
             f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/documents/delete",
@@ -630,6 +771,7 @@ def remove_semantic_asset(asset_id: str) -> None:
             return
         response.raise_for_status()
         _wait_task(response.json(), timeout=30)
+        synchronize_active_semantic_index_document_count(index_uid)
     except (httpx.HTTPError, RuntimeError, TimeoutError):
         if settings.SEMANTIC_SEARCH_REQUIRED:
             raise
@@ -650,6 +792,8 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
         job.finished_at = timezone.now()
         job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
         return job
+    if not _bind_legacy_job_version(job):
+        return job
     if _semantic_pause_requested(job):
         return _mark_semantic_job_paused(job, stage="before_chunk_build")
 
@@ -662,6 +806,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
     job.save(update_fields=["status", "started_at", "attempts", "progress", "updated_at"])
     job.asset.edition.semantic_index_status = SemanticIndexStatus.RUNNING
     job.asset.edition.save(update_fields=["semantic_index_status", "updated_at"])
+    candidate_extraction_stats = {}
     try:
         job.asset.semantic_chunks.update(index_status=SemanticChunk.IndexStatus.INDEXING)
         chunks = build_semantic_chunks(
@@ -671,6 +816,25 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
         )
         job.progress = 55
         job.save(update_fields=["progress", "updated_at"])
+        try:
+            from ingestion.services.processing import (
+                queue_query_lexicon_candidate_job,
+            )
+
+            candidate_job = queue_query_lexicon_candidate_job(
+                job.asset,
+                actor=job.requested_by,
+            )
+            candidate_extraction_stats = {
+                "query_lexicon_candidate_job_id": str(candidate_job.id),
+                "query_lexicon_candidate_job_status": candidate_job.status,
+            }
+        except Exception as exc:
+            # Candidate discovery is enrichment. Its durable job can be
+            # repaired independently and must never fail semantic indexing.
+            candidate_extraction_stats = {
+                "query_lexicon_candidate_warning": str(exc)[:2000],
+            }
         if _semantic_pause_requested(job):
             job.model_name = chunks[0].embedding_model if chunks else ""
             job.chunk_version = CHUNK_VERSION
@@ -680,6 +844,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                 "runtime_protocol": (
                     runtime_config or {}
                 ).get("protocol_version", "legacy"),
+                **candidate_extraction_stats,
             }
             job.save(
                 update_fields=[
@@ -710,6 +875,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                 "runtime_protocol": (
                     runtime_config or {}
                 ).get("protocol_version", "legacy"),
+                **candidate_extraction_stats,
             }
             job.save(
                 update_fields=[
@@ -727,7 +893,12 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
             else SemanticIndexJob.Status.COMPLETED
         )
         job.progress = 100
-        job.stats = {**result, "chunks": len(chunks), "elapsed_seconds": elapsed}
+        job.stats = {
+            **result,
+            "chunks": len(chunks),
+            "elapsed_seconds": elapsed,
+            **candidate_extraction_stats,
+        }
         job.model_name = chunks[0].embedding_model if chunks else ""
         job.chunk_version = CHUNK_VERSION
         job.error_code = ""
@@ -756,10 +927,18 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                 )
     except Exception as exc:
         job.status = SemanticIndexJob.Status.FAILED
-        job.error_code = exc.__class__.__name__
+        job.error_code = getattr(exc, "error_code", exc.__class__.__name__)
         job.error_message = str(exc)[:4000]
         job.finished_at = timezone.now()
         job.save()
+        if isinstance(exc, SemanticModelUnavailable):
+            job.asset.semantic_chunks.filter(
+                index_status=SemanticChunk.IndexStatus.INDEXING,
+            ).update(
+                index_status=SemanticChunk.IndexStatus.READY,
+                index_error="",
+                updated_at=timezone.now(),
+            )
         job.asset.edition.semantic_index_status = SemanticIndexStatus.FAILED
         job.asset.edition.save(update_fields=["semantic_index_status", "updated_at"])
         if job.index_version_id:
@@ -780,6 +959,17 @@ def create_semantic_job(
     index_version: SemanticIndexVersion | None = None,
     deferred: bool = False,
 ) -> SemanticIndexJob | None:
+    # Reuse an already queued/running job before resolving the active version.
+    # A temporary version-management outage must not turn an idempotent enqueue
+    # into a second failure when the existing job already has its own target.
+    if not force:
+        pending = asset.semantic_index_jobs.filter(
+            status__in=[SemanticIndexJob.Status.QUEUED, SemanticIndexJob.Status.RUNNING],
+        ).first()
+        if pending:
+            return pending
+
+    index_version = _write_index_version(index_version)
     if deferred:
         return SemanticIndexJob.objects.create(
             operation=SemanticIndexJob.Operation.REBUILD if force else SemanticIndexJob.Operation.BUILD,
@@ -799,11 +989,6 @@ def create_semantic_job(
             index_version=index_version,
             pause_requested_at=timezone.now(),
         )
-    pending = asset.semantic_index_jobs.filter(
-        status__in=[SemanticIndexJob.Status.QUEUED, SemanticIndexJob.Status.RUNNING],
-    ).first()
-    if pending and not force:
-        return pending
     return SemanticIndexJob.objects.create(
         operation=SemanticIndexJob.Operation.REBUILD if force else SemanticIndexJob.Operation.BUILD,
         asset=asset,
@@ -820,12 +1005,44 @@ def queue_semantic_job(
     actor=None,
     index_version: SemanticIndexVersion | None = None,
 ) -> SemanticIndexJob | None:
-    job = create_semantic_job(
-        asset,
-        force=force,
-        actor=actor,
-        index_version=index_version,
-    )
+    try:
+        job = create_semantic_job(
+            asset,
+            force=force,
+            actor=actor,
+            index_version=index_version,
+        )
+    except SemanticIndexVersionRequired as exc:
+        # Semantic indexing is derived enrichment. Record a durable, explicit
+        # failure while allowing upload/publication and stored page text to
+        # complete. A later retry with one active version can create a fresh
+        # queued job; repeated failed enqueues remain idempotent for this asset.
+        if not force:
+            existing_failure = asset.semantic_index_jobs.filter(
+                status=SemanticIndexJob.Status.FAILED,
+                error_code=exc.error_code,
+            ).order_by("-created_at").first()
+            if existing_failure:
+                return existing_failure
+        job = SemanticIndexJob.objects.create(
+            operation=(
+                SemanticIndexJob.Operation.REBUILD
+                if force
+                else SemanticIndexJob.Operation.BUILD
+            ),
+            status=SemanticIndexJob.Status.FAILED,
+            asset=asset,
+            requested_by=actor,
+            chunk_version=CHUNK_VERSION,
+            error_code=exc.error_code,
+            error_message=str(exc)[:4000],
+            finished_at=timezone.now(),
+        )
+        Edition.objects.filter(pk=asset.edition_id).update(
+            semantic_index_status=SemanticIndexStatus.FAILED,
+            updated_at=timezone.now(),
+        )
+        return job
     if job is None or job.status == SemanticIndexJob.Status.PAUSED:
         return job
     if job.task_id:
@@ -1201,6 +1418,41 @@ def semantic_index_document_count(index_uid: str) -> int:
     )
     response.raise_for_status()
     return int(response.json().get("numberOfDocuments") or 0)
+
+
+def synchronize_active_semantic_index_document_count(index_uid: str) -> int | None:
+    """Persist the current remote count after one active-index mutation.
+
+    Candidate versions remain frozen and are finalized by their existing build
+    validation. Active indexes accept later asset upserts and deletions, so the
+    corresponding version row must track the current UID rather than retain the
+    original build count forever.
+    """
+
+    with transaction.atomic():
+        version = (
+            SemanticIndexVersion.objects.select_for_update()
+            .filter(uid=index_uid, status=SemanticIndexVersion.Status.ACTIVE)
+            .first()
+        )
+        if version is None:
+            return None
+        actual = semantic_index_document_count(index_uid)
+        version.document_count = actual
+        version.validation_details = {
+            **(version.validation_details or {}),
+            "document_count_semantics": "current_remote_document_count",
+            "current_document_count": actual,
+            "document_count_synced_at": timezone.now().isoformat(),
+        }
+        version.save(
+            update_fields=[
+                "document_count",
+                "validation_details",
+                "updated_at",
+            ]
+        )
+        return actual
 
 
 def validate_semantic_index_version(

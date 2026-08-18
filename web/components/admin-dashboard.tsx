@@ -7,7 +7,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { EmptyState, PageHeader, StatusBadge, type StatusTone } from "./admin-ui";
 
 type MetadataCandidate = {
@@ -99,7 +99,7 @@ export function AdminDashboard() {
   const [hotSearches, setHotSearches] = useState<HotSearchPayload["results"]>([]);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     apiRequest<DashboardData>("/ingestion/dashboard/", {}, token)
       .then(setLive)

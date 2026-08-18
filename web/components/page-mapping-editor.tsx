@@ -2,7 +2,7 @@
 
 import { Check, ExternalLink, RefreshCw, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type MappingPage = {
   id: string;
@@ -42,7 +42,7 @@ export function PageMappingEditor({ assetId, onMessage }: { assetId: string; onM
   const [pageNumber, setPageNumber] = useState(1);
 
   const load = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {
@@ -62,7 +62,7 @@ export function PageMappingEditor({ assetId, onMessage }: { assetId: string; onM
   }, [load]);
 
   async function action(body: Record<string, unknown>, success: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setPending(true);
     try {

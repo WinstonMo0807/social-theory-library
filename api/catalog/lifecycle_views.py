@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
 from ingestion.models import AuditEvent
 
@@ -141,7 +142,7 @@ class AdminEntityLifecycleView(APIView):
         before = {"status": snapshot["status"], "name": snapshot["name"]}
 
         if action in {"archive", "restore"}:
-            if request.user.role != "admin":
+            if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以下线或恢复公开实体。"}, status=403)
             next_status = config.archived_value if action == "archive" else config.draft_value
             setattr(obj, config.status_field, next_status)
@@ -167,7 +168,10 @@ class AdminEntityLifecycleView(APIView):
             return Response(lifecycle_snapshot(kind, obj, config))
 
         if action == "delete":
-            if request.user.role != "admin":
+            # Entity lifecycle deletion is still the existing admin authority
+            # operation; storage/database destructive maintenance remains a
+            # separate superadmin capability.
+            if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以永久删除实体。"}, status=403)
             if snapshot["is_public"]:
                 return Response({"detail": "公开实体必须先下线，再执行永久删除。", "impact": snapshot}, status=409)

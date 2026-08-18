@@ -1,12 +1,13 @@
 import pytest
 from datetime import timedelta
+from hashlib import sha256
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from unittest.mock import patch
 
 from accounts.models import User
-from catalog.models import Asset, Edition, PublicationState, Topic, Work
+from catalog.models import Asset, Edition, Person, PublicationState, Topic, Work
 from distribution.models import CloudProvider
 from ingestion.models import AuditEvent, UploadBatch, UploadItem
 from distribution.services import cloud_budget_allows_new_publication, signed_read_url
@@ -257,6 +258,8 @@ def test_chunked_public_upload_assembles_pdf_and_is_idempotent(
     assert repeated.data["idempotent"] is True
     queued.assert_called_once()
     item = UploadItem.objects.get(pk=second.data["item"]["id"])
+    assert item.sha256 == sha256(payload).hexdigest()
+    assert item.byte_size == len(payload)
     with item.file.open("rb") as uploaded:
         assert uploaded.read() == payload
     audit = AuditEvent.objects.get(action="chunked_batch_item_received", object_id=str(item.id))
@@ -322,6 +325,7 @@ def test_chunked_public_upload_accepts_eight_mebibyte_chunks_and_validates_manif
     queued.assert_called_once()
     item = UploadItem.objects.get(pk=second.data["item"]["id"])
     assert item.file.size == len(payload)
+    assert item.sha256 == sha256(payload).hexdigest()
 
 
 @pytest.mark.django_db
@@ -521,6 +525,12 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         format="json",
     )
     assert related_scholar.status_code == 201
+
+    # Public scholar search requires an independently verified authority target;
+    # editorial publication of the profile alone must not publish a draft Person.
+    Person.objects.filter(pk=scholar.data["person_id"]).update(
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
 
     scholar_curation = api_client.patch(
         f"/api/catalog/admin/scholars/{scholar.data['id']}/",

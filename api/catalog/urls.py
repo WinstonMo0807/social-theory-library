@@ -27,6 +27,24 @@ from .knowledge_views import (
     TheoryTimelineListView,
 )
 from .lifecycle_views import AdminEntityLifecycleView
+from .enrichment_views import (
+    AdminCandidateReviewDecisionView,
+    AdminCandidateReviewView,
+    AdminFieldEnrichmentCandidateDetailView,
+    AdminFieldEnrichmentDecisionView,
+    AdminFieldEnrichmentPolicyView,
+    AdminFieldEnrichmentView,
+    AdminNewAuthorityCandidateView,
+)
+from .backoffice_views import (
+    AdminIntakeWorkspaceView,
+    AdminKnowledgeWorkspaceView,
+    AdminProjectionRefreshView,
+    AdminProjectionStatusView,
+    AdminQueryLexiconTermInspectorView,
+    AdminQueryLexiconWorkspaceView,
+    AdminSystemStatusView,
+)
 from .search_evaluation_views import (
     SearchEvaluationRunDetailView,
     SearchEvaluationRunListCreateView,
@@ -56,7 +74,6 @@ from .views import (
     HotSearchView,
     OcrRuntimeSettingsView,
     PassageFocusView,
-    LibraryQuestionView,
     PublicWorkCoverView,
     PublicWorkRecommendationImageView,
     PublicAssetManifestView,
@@ -107,10 +124,79 @@ from .theory_system_views import (
     ReadingPathListView,
     TheoryDisciplineDetailView,
     TheorySystemOverviewView,
-    TheorySystemSearchView,
 )
 
 urlpatterns = [
+    path(
+        "admin/query-lexicon/",
+        AdminQueryLexiconWorkspaceView.as_view(),
+        name="admin-query-lexicon-workspace",
+    ),
+    path(
+        "admin/query-lexicon/terms/",
+        AdminQueryLexiconTermInspectorView.as_view(),
+        name="admin-query-lexicon-term-inspector",
+    ),
+    path(
+        "admin/knowledge-workspace/",
+        AdminKnowledgeWorkspaceView.as_view(),
+        name="admin-knowledge-workspace",
+    ),
+    path(
+        "admin/system-status/",
+        AdminSystemStatusView.as_view(),
+        name="admin-system-status",
+    ),
+    path(
+        "admin/projection-status/<str:target_type>/<uuid:target_id>/",
+        AdminProjectionStatusView.as_view(),
+        name="admin-projection-status",
+    ),
+    path(
+        "admin/projection-status/<str:target_type>/<uuid:target_id>/refresh/",
+        AdminProjectionRefreshView.as_view(),
+        name="admin-projection-refresh",
+    ),
+    path(
+        "admin/intake/<uuid:item_id>/",
+        AdminIntakeWorkspaceView.as_view(),
+        name="admin-intake-workspace",
+    ),
+    path(
+        "admin/candidate-review/",
+        AdminCandidateReviewView.as_view(),
+        name="admin-candidate-review",
+    ),
+    path(
+        "admin/candidate-review/<str:candidate_kind>/<uuid:candidate_id>/decision/",
+        AdminCandidateReviewDecisionView.as_view(),
+        name="admin-candidate-review-decision",
+    ),
+    path(
+        "admin/field-enrichment/",
+        AdminFieldEnrichmentView.as_view(),
+        name="admin-field-enrichment",
+    ),
+    path(
+        "admin/field-enrichment/policies/",
+        AdminFieldEnrichmentPolicyView.as_view(),
+        name="admin-field-enrichment-policies",
+    ),
+    path(
+        "admin/field-enrichment/candidates/<uuid:candidate_id>/",
+        AdminFieldEnrichmentCandidateDetailView.as_view(),
+        name="admin-field-enrichment-candidate-detail",
+    ),
+    path(
+        "admin/field-enrichment/candidates/<uuid:candidate_id>/decision/",
+        AdminFieldEnrichmentDecisionView.as_view(),
+        name="admin-field-enrichment-candidate-decision",
+    ),
+    path(
+        "admin/new-authority-candidates/",
+        AdminNewAuthorityCandidateView.as_view(),
+        name="admin-new-authority-candidates",
+    ),
     path(
         "admin/authority-suggestions/",
         AdminAuthoritySuggestionView.as_view(),
@@ -121,7 +207,6 @@ urlpatterns = [
     path("about-blocks/", AboutPageBlockListView.as_view(), name="about-page-block-list"),
     path("knowledge-matrix/", KnowledgeMatrixView.as_view(), name="knowledge-matrix"),
     path("theory-system/overview/", TheorySystemOverviewView.as_view(), name="theory-system-overview"),
-    path("theory-system/search/", TheorySystemSearchView.as_view(), name="theory-system-search"),
     path("theory-system/nodes/", KnowledgeNodeListView.as_view(), name="knowledge-node-list"),
     path("theory-system/nodes/<slug:slug>/", KnowledgeNodeDetailView.as_view(), name="knowledge-node-detail"),
     path(
@@ -353,7 +438,6 @@ urlpatterns = [
     path("usage-events/", PublicUsageEventView.as_view(), name="usage-events"),
     path("semantic-search/", SemanticSearchView.as_view(), name="semantic-search"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
-    path("library-question/", LibraryQuestionView.as_view(), name="library-question"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),
     path("assets/<uuid:asset_id>/manifest/", PublicAssetManifestView.as_view(), name="asset-manifest"),
     path(

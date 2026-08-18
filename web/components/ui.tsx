@@ -146,7 +146,7 @@ export function ScholarCard({ scholar }: { scholar: Scholar }) {
 
 export function TagList({
   items,
-  hrefFor = (item) => `/explore?q=${encodeURIComponent(item)}`,
+  hrefFor = (item) => `/explore?context=global&q=${encodeURIComponent(item)}`,
 }: {
   items: string[];
   hrefFor?: (item: string) => string;

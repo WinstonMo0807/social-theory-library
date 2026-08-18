@@ -85,7 +85,7 @@ services:
 
   api:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     env_file:
@@ -127,8 +127,7 @@ services:
       SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
       X_ACCEL_REDIRECT_ENABLED: "true"
     command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
+      sh -c "python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout 120 --access-logfile - --error-logfile -"
     expose:
       - "8000"
@@ -153,7 +152,7 @@ services:
 
   worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     env_file:
@@ -194,7 +193,7 @@ services:
 
   ingestion-worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     env_file:
@@ -233,7 +232,7 @@ services:
 
   beat:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-science-library-api:2.6.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
     build:
       context: ./api
     env_file:
@@ -291,7 +290,7 @@ services:
 
   web:
     <<: *service-hardening
-    image: ${LIBRARY_WEB_IMAGE:-social-science-library-web:2.6.1}
+    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:2.7}
     build:
       context: ./web
     environment:

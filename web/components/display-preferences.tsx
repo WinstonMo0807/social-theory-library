@@ -2,7 +2,7 @@
 
 import { Check, Type } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type TextSize = "standard" | "comfortable" | "large";
 type FontFamily = "sans" | "serif";
@@ -26,7 +26,7 @@ export function DisplayPreferences() {
       : "standard";
     const nextFamily: FontFamily = savedFamily === "serif" ? "serif" : "sans";
     applyPreferences(nextSize, nextFamily);
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     Promise.resolve().then(async () => {
       if (!active) return;
       setSize(nextSize);
@@ -64,7 +64,7 @@ export function DisplayPreferences() {
   }, []);
 
   async function persistPreferences(nextSize: TextSize, nextFamily: FontFamily) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setSyncStatus("访客设置保存在当前浏览器");
       return;

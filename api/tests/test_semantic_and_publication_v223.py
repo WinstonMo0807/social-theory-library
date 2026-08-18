@@ -16,6 +16,7 @@ from catalog.models import (
     ScholarProfile,
     SemanticChunk,
     SemanticIndexJob,
+    SemanticIndexVersion,
     SemanticSearchFeedback,
     TheorySchool,
     Topic,
@@ -32,6 +33,15 @@ from catalog.services.semantic_indexing import create_semantic_job, run_semantic
 from catalog.services.semantic_search import semantic_search
 from catalog.services.search_backend import ExternalPassageSearch
 from ingestion.models import MetadataCandidate, UploadBatch, UploadItem
+
+
+def active_semantic_version(marker: str) -> SemanticIndexVersion:
+    return SemanticIndexVersion.objects.create(
+        uid=f"test-active-{marker}",
+        provider="huggingFace",
+        model_repo_id="example/model",
+        status=SemanticIndexVersion.Status.ACTIVE,
+    )
 
 
 def create_asset(
@@ -268,6 +278,7 @@ def test_semantic_index_job_is_partial_when_vector_backend_fails(settings):
         page_texts=["自然段分块应当保留原页位置和前后文。" * 15],
     )
     settings.SEMANTIC_SEARCH_ENABLED = True
+    active_semantic_version("partial")
     job = create_semantic_job(asset)
     with patch(
         "catalog.services.semantic_indexing.index_semantic_asset",
@@ -292,7 +303,7 @@ def test_site_stats_are_dynamic_and_include_version(api_client):
     assert response.data["documents"] == 1
     assert response.data["scholars"] == 1
     assert response.data["knowledge_objects"] == 2
-    assert response.data["version"] == "2.6.1"
+    assert response.data["version"] == "2.7"
     assert "年" in response.data["last_updated_label"]
 
 

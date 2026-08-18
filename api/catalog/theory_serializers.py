@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
 
+from common.capabilities import Capability, has_capability
+
 from catalog.models import (
     Asset,
     Discipline,
@@ -522,8 +524,8 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         request = self.context.get("request")
-        role = getattr(getattr(request, "user", None), "role", "")
-        if value in {"published", "archived"} and role != "admin":
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以发布或下线理论节点。")
         return value
 
@@ -578,10 +580,10 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
 class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
     def validate_status(self, value):
         request = self.context.get("request")
-        role = getattr(getattr(request, "user", None), "role", "")
-        if value in {"published", "rejected"} and role not in {"admin", "reviewer"}:
+        user = getattr(request, "user", None)
+        if value in {"published", "rejected"} and not has_capability(user, Capability.REVIEW_CANDIDATE):
             raise serializers.ValidationError("只有管理员或审核者可以确认理论关系。")
-        if value == "archived" and role != "admin":
+        if value == "archived" and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以下线理论关系。")
         return value
 
@@ -609,8 +611,8 @@ class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
 class AdminWorkNodeRelationSerializer(WorkNodeRelationSerializer):
     def validate_status(self, value):
         request = self.context.get("request")
-        role = getattr(getattr(request, "user", None), "role", "")
-        if value in {"published", "rejected"} and role not in {"admin", "reviewer"}:
+        user = getattr(request, "user", None)
+        if value in {"published", "rejected"} and not has_capability(user, Capability.REVIEW_CANDIDATE):
             raise serializers.ValidationError("只有管理员或审核者可以确认文献关系。")
         return value
 
@@ -724,8 +726,8 @@ class ReadingPathSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         request = self.context.get("request")
-        role = getattr(getattr(request, "user", None), "role", "")
-        if value in {"published", "archived"} and role != "admin":
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以发布或下线阅读路径。")
         return value
 

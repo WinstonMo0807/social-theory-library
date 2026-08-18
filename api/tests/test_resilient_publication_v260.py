@@ -707,10 +707,12 @@ def test_offline_semantic_health_checks_revision_files_and_dimensions(tmp_path):
 
     health = semantic_model_health({**runtime, "dimensions": 768})
     assert health["available"] is False
+    assert health["error_code"] == "MODEL_UNAVAILABLE"
     assert health["files"]["dimensions_match"] is False
 
     health = semantic_model_health({**runtime, "model_revision": "missing"})
     assert health["available"] is False
+    assert health["error_code"] == "MODEL_UNAVAILABLE"
     assert health["files"]["revision_available"] is False
 
     direct_commit = semantic_model_health({**runtime, "model_revision": "abc123"})

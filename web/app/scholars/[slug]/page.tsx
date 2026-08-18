@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Quote } from "lucide-react";
 import { KnowledgeMap } from "@/components/knowledge-map";
+import { AskLibraryLink } from "@/components/ask-library-link";
 import { SiteFooter } from "@/components/site-footer";
 import { BookCover, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
 import { loadScholar, loadTheorySchools } from "@/lib/server-api";
@@ -62,6 +63,7 @@ export default async function ScholarDetailPage({
             <p className="scholar-years">{scholar.years}</p>
             <p>{scholar.school}</p>
             <p className="biography">{shortDescription}</p>
+            {scholar.id ? <AskLibraryLink context="scholars" ids={[scholar.id]} label={`询问关于${scholar.name}的馆藏`} /> : null}
             <div className="affiliation-concerns">
               <div>
                 <h2>主要任职</h2>

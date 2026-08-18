@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -147,6 +149,7 @@ class LibraryMessage(UUIDTimeStampedModel):
         related_name="messages",
     )
     role = models.CharField(max_length=16, choices=Role.choices)
+    request_id = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
     body_ciphertext = models.BinaryField(blank=True, default=bytes)
     status = models.CharField(
         max_length=16,
@@ -157,6 +160,9 @@ class LibraryMessage(UUIDTimeStampedModel):
     retrieval_used = models.BooleanField(default=False)
     model_provider = models.CharField(max_length=40, blank=True)
     model_name = models.CharField(max_length=240, blank=True)
+    runtime_profile_key = models.CharField(max_length=64, blank=True)
+    query_type = models.CharField(max_length=32, blank=True)
+    retrieval_profile = models.CharField(max_length=32, blank=True)
     prompt_version = models.CharField(max_length=80, blank=True)
     error_code = models.CharField(max_length=80, blank=True)
     error_message = models.TextField(blank=True)
@@ -198,12 +204,23 @@ class LibraryMessageSource(UUIDTimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="library_answer_sources",
     )
+    page = models.ForeignKey(
+        "catalog.Page",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="library_answer_sources",
+    )
     source_chunk_id = models.CharField(max_length=120, blank=True)
+    document_id = models.CharField(max_length=64, blank=True, db_index=True)
     title_snapshot = models.CharField(max_length=500)
     authors_snapshot = models.JSONField(default=list, blank=True)
     page_index = models.PositiveIntegerField(null=True, blank=True)
     printed_label = models.CharField(max_length=80, blank=True)
     chapter_title = models.CharField(max_length=500, blank=True)
+    passage_language = models.CharField(max_length=16, blank=True)
+    reader_url_snapshot = models.CharField(max_length=1000, blank=True)
+    retrieval_provenance = models.JSONField(default=dict, blank=True)
     quote_ciphertext = models.BinaryField(blank=True, default=bytes)
     cited = models.BooleanField(default=False, db_index=True)
 

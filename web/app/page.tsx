@@ -60,20 +60,21 @@ export default async function Home() {
           <div className="home-editorial-copy">
             <p className="eyebrow">Social Theory Library · 社会理论书库</p>
             <h1>
-              {config.home_title_left_lines.map((line) => <span key={line}>{line}</span>)}
-              <em>{config.home_title_right_lines.map((line) => <span key={line}>{line}</span>)}</em>
+              <span>{config.home_title_left_lines.join("")}</span>
+              <em>{config.home_title_right_lines.join("")}</em>
             </h1>
             <div className="hero-intro">
               {config.intro_lines.map((line) => <p key={line}>{line}</p>)}
             </div>
             <form className="home-hero-search" action="/explore">
+              <input type="hidden" name="context" value="global" />
               <SearchField placeholder="检索书名、学者、理论、主题与馆藏原文……" />
               <button type="submit"><Search size={18} />检索书库</button>
             </form>
             {popularTags.length ? (
               <div className="home-hero-terms" aria-label="热门检索">
                 <span>近期检索</span>
-                {popularTags.slice(0, 5).map((tag) => <Link href={`/explore?q=${encodeURIComponent(tag)}`} key={tag}>{tag}</Link>)}
+                {popularTags.slice(0, 5).map((tag) => <Link href={`/explore?context=global&q=${encodeURIComponent(tag)}`} key={tag}>{tag}</Link>)}
               </div>
             ) : null}
           </div>
@@ -169,9 +170,9 @@ export default async function Home() {
           <section className="home-search-ledger">
             <div><BookOpen size={28} /><p className="eyebrow">Search the collection</p><h2>{config.sections.search}</h2><p>从书目检索进入，也可以沿逐页原文继续阅读与引用。</p></div>
             <div>
-              <form action="/explore"><SearchField /><button className="button" type="submit">搜索 <ArrowRight size={16} /></button></form>
+              <form action="/explore"><input type="hidden" name="context" value="global" /><SearchField /><button className="button" type="submit">搜索 <ArrowRight size={16} /></button></form>
               <div className="tag-list">
-                {popularTags.map((tag) => <Link href={`/explore?q=${encodeURIComponent(tag)}`} key={tag}>{tag}</Link>)}
+                {popularTags.map((tag) => <Link href={`/explore?context=global&q=${encodeURIComponent(tag)}`} key={tag}>{tag}</Link>)}
                 {!popularTags.length ? <span>暂无已发布标签</span> : null}
               </div>
             </div>

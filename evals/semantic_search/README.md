@@ -21,3 +21,17 @@
 6. 依赖健康且 gold 完整后，再执行真实比较。
 
 当前种子不构成完整评估集。NAS CPU、内存、Reranker 延迟、并发 5 与并发 10 的表现均需在目标环境实测，状态为 `待核实`。
+
+## Task 2B-0 双语 benchmark 记录格式
+
+`task2a_cross_language.schema.json` 沿用原文件名，并升级为稳定的 Task 2B-0 schema。每条 query 保存 `query_id`、查询语言、方向、query type、预期实体、固定 split 和 `gold_judgments`。judgment 必须包含 Work ID、稳定 chunk document ID、文件页、0 至 3 级人工判断及 reviewer note。
+
+`task2a_cross_language.template.jsonl` 只有 10 条候选问题，五个方向各 2 条。它不含 gold，也没有根据当前搜索结果填分。当前本地 SQLite 没有 SemanticChunk，不能把模板算作可用 benchmark。
+
+正式标注包必须用 `prepare_semantic_search_benchmark` 合并 V1、V2、纯 lexical 和纯 dense 的候选。指定索引需要有冻结的 runtime snapshot。包内包含馆藏原文，输出应放在已忽略的 `/data/` 或仓库外目录。`annotation.html` 默认隐藏来源算法，`diagnostic-pool.jsonl` 保留 rank 和 branch provenance 供事后诊断。评分命令要求每个 pooled candidate 都有人工 grade，不会把漏标项当成不相关。它默认只计算 dev，test 必须显式选择。训练性检查使用 diagnostic split，调参只看 dev，test 在参数冻结前保持封存。
+
+## Task 2B-0.5 evaluation 数据面
+
+`compose.evaluation.yaml`、`evaluation.env.example` 和 `docs/semantic-search-evaluation-environment.md` 定义独立 PostgreSQL、Meilisearch、search-only bundle、QueryLexicon rebuild、snapshot manifest 与 pilot 流程。真实 bundle、manifest、候选和标注包必须放在 `/data/` 或仓库外，不能放在本目录提交 Git。
+
+当前开发机没有真实 SemanticChunk、evaluation 服务或获准 snapshot。候选生成命令会在 chunk 为零、QueryLexicon 不可用或 evaluation index 未 ready 时停止，不会用模板凑足 30 条。

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ScholarCard, SearchField, SectionHeading, TagList } from "@/components/ui";
-import { loadRecommendations, loadRecommendedScholars, loadScholars } from "@/lib/server-api";
+import { loadRecommendations, loadRecommendedScholars, loadScholarPage } from "@/lib/server-api";
+import { searchPage, scopedSearchHref } from "@/lib/search-context";
 
 export const metadata: Metadata = {
   title: "学者",
@@ -12,15 +13,18 @@ export const metadata: Metadata = {
 export default async function ScholarsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; context?: string }>;
 }) {
-  const query = (await searchParams).q?.trim() ?? "";
+  const parameters = await searchParams;
+  const query = parameters.q?.trim() ?? "";
+  const page = searchPage(parameters.page);
   const recommendationsPromise = loadRecommendations();
   const recommendedScholarsPromise = recommendationsPromise.then((bundle) => loadRecommendedScholars(bundle, 3));
-  const [scholars, recommendedScholars] = await Promise.all([
-    loadScholars(query),
+  const [scholarPage, recommendedScholars] = await Promise.all([
+    loadScholarPage(query, page),
     recommendedScholarsPromise,
   ]);
+  const scholars = scholarPage.results;
   const primaryRecommendation = recommendedScholars[0];
   const supportingRecommendations = recommendedScholars.slice(1, 3);
   return (
@@ -32,9 +36,17 @@ export default async function ScholarsPage({
             <h1>学者</h1>
             <p>沿着人物进入社会理论。查找作品、概念、思想关系和可以在线阅读的馆藏版本。</p>
           </div>
-          <form action="/scholars">
+          <form action="/scholars" role="search">
+            <input type="hidden" name="context" value="scholars" />
             <SearchField defaultValue={query} placeholder="搜索中文名、外文名或译名……" />
-            <TagList items={["权力", "阶级", "性别", "殖民", "现代性", "文化"]} />
+            <button className="directory-search-submit" type="submit">
+              <Search aria-hidden="true" size={18} />
+              搜索学者
+            </button>
+            <TagList
+              items={["权力", "阶级", "性别", "殖民", "现代性", "文化"]}
+              hrefFor={(item) => scopedSearchHref("/scholars", "scholars", { q: item })}
+            />
           </form>
         </section>
         <section className="scholar-recommendations panel" aria-labelledby="scholar-recommendations-title">
@@ -63,7 +75,7 @@ export default async function ScholarsPage({
           )}
         </section>
         <section className="directory-results panel">
-          <SectionHeading title={query ? "搜索结果" : "全部学者"} action={`${scholars.length} 位学者`} />
+          <SectionHeading title={query ? "搜索结果" : "全部学者"} action={`${scholarPage.count} 位学者`} />
           <div className="scholar-directory-grid">
             {scholars.map((scholar) => (
               <ScholarCard scholar={scholar} key={scholar.slug} />
@@ -71,11 +83,7 @@ export default async function ScholarsPage({
             {!scholars.length ? <p className="empty-state">没有找到匹配的公开学者档案。</p> : null}
           </div>
         </section>
-        {scholars.length >= 24 ? (
-          <Link className="button secondary directory-more" href={`/scholars?page=2${query ? `&q=${encodeURIComponent(query)}` : ""}`}>
-            查看更多学者 <ArrowRight size={16} />
-          </Link>
-        ) : null}
+        <ScopedSearchPagination path="/scholars" context="scholars" page={page} totalPages={scholarPage.totalPages} params={{ q: query }} />
       </div>
       <SiteFooter />
     </>

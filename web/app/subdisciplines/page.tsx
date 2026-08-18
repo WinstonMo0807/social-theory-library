@@ -2,21 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Layers3 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ArchitecturalImage, SearchField, SectionHeading } from "@/components/ui";
-import { loadDisciplines, loadSubdisciplines } from "@/lib/server-api";
+import { loadDisciplines, loadSubdisciplinePage } from "@/lib/server-api";
+import { scopedSearchHref, searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = { title: "子学科" };
 
-export default async function SubdisciplinesPage({ searchParams }: { searchParams: Promise<{ discipline?: string; q?: string }> }) {
+export default async function SubdisciplinesPage({ searchParams }: { searchParams: Promise<{ discipline?: string; q?: string; page?: string; context?: string }> }) {
   const params = await searchParams;
-  const [disciplines, items] = await Promise.all([
+  const query = (params.q ?? "").trim();
+  const page = searchPage(params.page);
+  const [disciplines, itemPage] = await Promise.all([
     loadDisciplines(),
-    loadSubdisciplines(params.discipline ?? ""),
+    loadSubdisciplinePage(params.discipline ?? "", query, page),
   ]);
-  const query = (params.q ?? "").trim().toLocaleLowerCase();
-  const filtered = query
-    ? items.filter((item) => [item.name, item.foreign_name, item.description, item.research_object].join(" ").toLocaleLowerCase().includes(query))
-    : items;
+  const items = itemPage.results;
   return (
     <>
       <main className="page-shell subdiscipline-directory">
@@ -25,13 +26,13 @@ export default async function SubdisciplinesPage({ searchParams }: { searchParam
           <ArchitecturalImage compact />
         </section>
         <div className="subdiscipline-controls panel">
-          <form action="/subdisciplines"><SearchField defaultValue={params.q ?? ""} placeholder="搜索子学科、研究对象或问题……" /></form>
-          <nav><Link className={!params.discipline ? "active" : ""} href="/subdisciplines">全部</Link>{disciplines.map((item) => <Link className={params.discipline === item.slug ? "active" : ""} href={`/subdisciplines?discipline=${item.slug}`} key={item.id}>{item.name}</Link>)}</nav>
+          <form action="/subdisciplines"><input type="hidden" name="context" value="subdisciplines" />{params.discipline ? <input type="hidden" name="discipline" value={params.discipline} /> : null}<SearchField defaultValue={query} placeholder="搜索子学科、研究对象或问题……" /></form>
+          <nav><Link className={!params.discipline ? "active" : ""} href={scopedSearchHref("/subdisciplines", "subdisciplines", { q: query })}>全部</Link>{disciplines.map((item) => <Link className={params.discipline === item.slug ? "active" : ""} href={scopedSearchHref("/subdisciplines", "subdisciplines", { q: query, discipline: item.slug })} key={item.id}>{item.name}</Link>)}</nav>
         </div>
         <section className="panel">
-          <SectionHeading title="浏览子学科" action={`${filtered.length} 个结果`} />
+          <SectionHeading title="浏览子学科" action={`${itemPage.count} 个结果`} />
           <div className="subdiscipline-grid">
-            {filtered.map((item) => (
+            {items.map((item) => (
               <Link href={`/subdisciplines/${item.slug}`} key={item.id}>
                 <span className="subdiscipline-icon"><Layers3 size={24} /></span>
                 <div><p className="eyebrow">{item.discipline.name}</p><h2>{item.name}</h2><p>{item.description || item.research_object}</p></div>
@@ -39,8 +40,9 @@ export default async function SubdisciplinesPage({ searchParams }: { searchParam
                 <ArrowRight />
               </Link>
             ))}
-            {!filtered.length ? <p className="empty-state">管理员建立并发布子学科后会在这里显示。</p> : null}
+            {!items.length ? <p className="empty-state">没有找到匹配的公开子学科。</p> : null}
           </div>
+          <ScopedSearchPagination path="/subdisciplines" context="subdisciplines" page={page} totalPages={itemPage.totalPages} params={{ q: query, discipline: params.discipline }} />
         </section>
       </main>
       <SiteFooter />

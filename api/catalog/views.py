@@ -5,7 +5,7 @@ import re
 from uuid import UUID
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Max, Prefetch, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -89,9 +89,19 @@ from .services.semantic_indexing import (
     stage_semantic_index_version,
     stage_semantic_snapshot_version,
 )
+from .services.scoped_search import (
+    SearchContext,
+    SearchRequest,
+    SearchService,
+    SearchVisibility,
+    public_work_queryset,
+)
 from .services.text import clean_page_label, clipboard_payload, normalize_search_text, passage_snippet
 from .site_config import DEFAULT_SITE_CONFIG
 from config.version import APP_VERSION
+from common.permissions import CanManageSemanticIndex
+from common.permissions import CanRetryJobs
+from common.permissions import CanViewSemanticIndex
 from common.permissions import IsCatalogEditor
 from common.permissions import IsLibraryAdmin
 from common.permissions import IsLibraryStaff
@@ -100,19 +110,7 @@ from .services.authority_suggestions import authority_suggestions
 
 
 def public_works():
-    published_editions = Edition.objects.filter(
-        state=PublicationState.PUBLISHED,
-        is_primary=True,
-    ).prefetch_related("contributions__person", "assets")
-    return (
-        Work.objects.filter(editions__in=published_editions)
-        .distinct()
-        .prefetch_related(
-            Prefetch("editions", queryset=published_editions),
-            "knowledge_relations__theory_school",
-            "knowledge_relations__topic",
-        )
-    )
+    return public_work_queryset()
 
 
 class AdminAuthoritySuggestionView(APIView):
@@ -1179,7 +1177,15 @@ class WorkListView(generics.ListAPIView):
         featured = self.request.query_params.get("featured")
         if featured == "true":
             queryset = queryset.filter(is_featured=True)
-        return queryset
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        return SearchService(request=self.request).queryset(
+            SearchContext.WORKS,
+            query,
+            base_queryset=queryset,
+        )
 
 
 class WorkDetailView(generics.RetrieveAPIView):
@@ -1201,7 +1207,6 @@ class WorkDetailView(generics.RetrieveAPIView):
 class TheorySchoolListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = TheorySchoolSerializer
-    search_fields = ("name", "description", "search_aliases")
 
     def get_queryset(self):
         queryset = (
@@ -1257,10 +1262,20 @@ class TheorySchoolListView(generics.ListAPIView):
                     workknowledgerelation__work__editions__contributions__person__scholar_profile__editorial_status="published",
                 )
             )
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        queryset = SearchService(request=self.request).legacy_theory_queryset(
+            query,
+            base_queryset=queryset,
+        )
         ordering = self.request.query_params.get("sort")
         if ordering == "works":
-            return queryset.distinct().order_by("-work_count", "name")
-        return queryset.distinct().order_by("name")
+            fields = ("_search_rank", "-work_count", "name") if query else ("-work_count", "name")
+            return queryset.distinct().order_by(*fields)
+        fields = ("_search_rank", "name") if query else ("name",)
+        return queryset.distinct().order_by(*fields)
 
 
 class TheorySchoolDetailView(generics.RetrieveAPIView):
@@ -1307,7 +1322,6 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
 class TopicListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = TopicSerializer
-    search_fields = ("name", "description", "search_aliases")
 
     def get_queryset(self):
         queryset = Topic.objects.filter(editorial_status="published").annotate(
@@ -1353,9 +1367,20 @@ class TopicListView(generics.ListAPIView):
                 slug_field="theory_relations__theory_school__slug",
                 id_field="theory_relations__theory_school_id",
             )
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        queryset = SearchService(request=self.request).queryset(
+            SearchContext.TOPICS,
+            query,
+            base_queryset=queryset,
+        )
         if self.request.query_params.get("sort") == "works":
-            return queryset.distinct().order_by("-work_count", "name")
-        return queryset.distinct().order_by("-curation_level", "name")
+            fields = ("_search_rank", "-work_count", "name") if query else ("-work_count", "name")
+            return queryset.distinct().order_by(*fields)
+        fields = ("_search_rank", "-curation_level", "name") if query else ("-curation_level", "name")
+        return queryset.distinct().order_by(*fields)
 
 
 class TopicDetailView(generics.RetrieveAPIView):
@@ -1450,17 +1475,15 @@ class TopicDetailView(generics.RetrieveAPIView):
 class ScholarListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ScholarProfileSerializer
-    search_fields = (
-        "person__preferred_name",
-        "person__original_name",
-        "person__aliases",
-        "short_description",
-    )
 
     def get_queryset(self):
-        return ScholarProfile.objects.filter(editorial_status="published").select_related("person").order_by(
-            "person__sort_name",
-            "person__preferred_name",
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        return SearchService(request=self.request).queryset(
+            SearchContext.SCHOLARS,
+            query,
         )
 
 
@@ -1470,7 +1493,9 @@ class ScholarDetailView(generics.RetrieveAPIView):
     lookup_field = "slug"
 
     def get_queryset(self):
-        return ScholarListView().get_queryset()
+        list_view = ScholarListView()
+        list_view.request = self.request
+        return list_view.get_queryset()
 
 
 class GlobalSearchView(APIView):
@@ -1482,6 +1507,38 @@ class GlobalSearchView(APIView):
 
     def get(self, request):
         query = request.query_params.get("q", "").strip()
+        requested_context = request.query_params.get("context", "").strip()
+        if requested_context:
+            try:
+                search_request = SearchRequest.from_values(
+                    query=query,
+                    context=requested_context,
+                    page=request.query_params.get("page", 1),
+                    limit=request.query_params.get(
+                        "limit",
+                        request.query_params.get("page_size", 24),
+                    ),
+                    visibility=(
+                        SearchVisibility.ADMIN
+                        if request.query_params.get("visibility") == SearchVisibility.ADMIN
+                        and request.user.is_authenticated
+                        and (
+                            request.user.is_staff
+                            or getattr(request.user, "role", "")
+                            in {"admin", "editor", "reviewer"}
+                        )
+                        else SearchVisibility.PUBLIC
+                    ),
+                    filters=dict(request.query_params),
+                )
+            except ValueError as exc:
+                return Response({"context": [str(exc)]}, status=400)
+            if (
+                search_request.context != SearchContext.GLOBAL
+                or request.query_params.get("envelope") == "1"
+            ):
+                return Response(SearchService(request=request).search(search_request))
+        service = SearchService(request=request)
         passage_base = Passage.objects.filter(
             page__asset__edition__state=PublicationState.PUBLISHED,
             page__asset__kind=Asset.Kind.NORMALIZED,
@@ -1490,39 +1547,10 @@ class GlobalSearchView(APIView):
         ).select_related("page__asset__edition__work")
 
         if query:
-            work_base_matches = public_works().filter(
-                Q(title__icontains=query)
-                | Q(subtitle__icontains=query)
-                | Q(abstract__icontains=query)
-                | Q(search_aliases__icontains=query)
-                | Q(editions__contributions__person__preferred_name__icontains=query)
-                | Q(editions__contributions__person__original_name__icontains=query)
-                | Q(editions__contributions__person__aliases__icontains=query)
-                | Q(knowledge_relations__theory_school__name__icontains=query)
-                | Q(knowledge_relations__topic__name__icontains=query)
-                | Q(knowledge_relations__concept__name__icontains=query)
-            ).distinct()
-            scholar_matches = ScholarProfile.objects.filter(
-                editorial_status="published",
-            ).filter(
-                Q(person__preferred_name__icontains=query)
-                | Q(person__original_name__icontains=query)
-                | Q(person__aliases__icontains=query)
-                | Q(short_description__icontains=query)
-                | Q(key_concerns__icontains=query)
-            )
-            topic_matches = Topic.objects.filter(editorial_status="published").filter(
-                Q(name__icontains=query)
-                | Q(description__icontains=query)
-                | Q(search_aliases__icontains=query)
-                | Q(key_concepts__icontains=query)
-            )
-            theory_matches = TheorySchool.objects.filter(editorial_status="published").filter(
-                Q(name__icontains=query)
-                | Q(description__icontains=query)
-                | Q(search_aliases__icontains=query)
-                | Q(key_themes__icontains=query)
-            )
+            work_base_matches = service.legacy_global_work_queryset(query)
+            scholar_matches = service.legacy_global_scholar_queryset(query)
+            topic_matches = service.legacy_global_topic_queryset(query)
+            theory_matches = service.legacy_theory_queryset(query)
             external_result = external_passage_ids(query)
             if external_result is None:
                 passage_base_matches = passage_base.filter(
@@ -1532,7 +1560,7 @@ class GlobalSearchView(APIView):
                 passage_base_matches = passage_base.filter(pk__in=external_result.ids)
         else:
             work_base_matches = public_works()
-            scholar_matches = ScholarProfile.objects.filter(editorial_status="published")
+            scholar_matches = service.base_queryset(SearchContext.SCHOLARS)
             topic_matches = Topic.objects.filter(editorial_status="published")
             theory_matches = TheorySchool.objects.filter(editorial_status="published")
             passage_base_matches = passage_base.none()
@@ -1689,8 +1717,9 @@ class GlobalSearchView(APIView):
             + passage_count,
         )
         total_pages = max(1, (total_for_scope + page_size - 1) // page_size)
-        return Response(
+        response = Response(
             {
+                "context": SearchContext.GLOBAL,
                 "query": query,
                 "counts": {
                     "works": work_count,
@@ -1714,6 +1743,10 @@ class GlobalSearchView(APIView):
                 "passages": passages,
             }
         )
+        if not requested_context:
+            response["Deprecation"] = "true"
+            response["Warning"] = '299 - "Search context will become required."'
+        return response
 
 
 class SemanticSearchView(APIView):
@@ -1918,22 +1951,14 @@ class SemanticSearchFeedbackView(APIView):
         return response
 
 
-class LibraryQuestionView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        return Response(
-            {
-                "enabled": False,
-                "detail": "向书库提问正在保留接口阶段。原文检索和观点检索可以独立使用。",
-                "citations_required": True,
-            },
-            status=503,
-        )
-
-
 class SemanticIndexAdminView(APIView):
-    permission_classes = [IsLibraryAdmin]
+    def get_permissions(self):
+        if self.request.method != "POST":
+            return [CanViewSemanticIndex()]
+        action = str(self.request.data.get("action") or "").strip()
+        if action in {"resume", "retry_failed", "rebuild_asset", "rechunk_asset", "reembed_asset"}:
+            return [CanRetryJobs()]
+        return [CanManageSemanticIndex()]
 
     def get(self, request):
         runtime = current_semantic_runtime()
@@ -1949,6 +1974,9 @@ class SemanticIndexAdminView(APIView):
         jobs = SemanticIndexJob.objects.select_related("asset__edition__work")[:30]
         return Response(
             {
+                "permissions": {
+                    "can_manage": CanManageSemanticIndex().has_permission(request, self),
+                },
                 "runtime": runtime,
                 "model_health": semantic_model_health(runtime),
                 "index_versions": [

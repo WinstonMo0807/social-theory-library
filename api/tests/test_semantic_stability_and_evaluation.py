@@ -148,6 +148,31 @@ def test_force_rebuild_upserts_stable_chunk_ids_and_preserves_feedback():
 
 
 @pytest.mark.django_db
+def test_failed_chunk_recovery_is_idempotent_and_clears_only_derived_failure_state():
+    asset, pages = _create_asset("failed-recovery")
+    with patch("catalog.services.semantic_chunks._current_model_name", return_value="test-model"):
+        original = build_semantic_chunks(asset)
+    original_ids = [chunk.id for chunk in original]
+    original_document_ids = [chunk.document_id for chunk in original]
+    original_page_text = [page.text for page in pages]
+    asset.semantic_chunks.update(
+        index_status="failed",
+        index_error="temporary embedding transport failure",
+    )
+
+    with patch("catalog.services.semantic_chunks._current_model_name", return_value="test-model"):
+        first = build_semantic_chunks(asset, force=True)
+        second = build_semantic_chunks(asset, force=True)
+
+    assert [chunk.id for chunk in first] == original_ids
+    assert [chunk.id for chunk in second] == original_ids
+    assert [chunk.document_id for chunk in second] == original_document_ids
+    assert all(chunk.index_status == "pending" for chunk in second)
+    assert all(chunk.index_error == "" for chunk in second)
+    assert list(asset.pages.order_by("index").values_list("text", flat=True)) == original_page_text
+
+
+@pytest.mark.django_db
 def test_removed_locator_keeps_feedback_document_reference():
     asset, pages = _create_asset("removed-locator")
     with patch("catalog.services.semantic_chunks._current_model_name", return_value="test-model"):

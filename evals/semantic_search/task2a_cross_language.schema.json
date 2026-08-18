@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stl-task2b0-cross-language-benchmark-v1",
+  "title": "STL Task 2B-0 cross-language viewpoint-search benchmark query",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "query_id",
+    "query",
+    "query_language",
+    "direction",
+    "query_type",
+    "expected_entities",
+    "gold_judgments",
+    "notes"
+  ],
+  "properties": {
+    "query_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "query": {"type": "string", "minLength": 1, "maxLength": 1200},
+    "query_language": {"enum": ["zh", "en", "mixed"]},
+    "direction": {
+      "enum": ["zh_to_zh", "zh_to_en", "en_to_zh", "en_to_en", "mixed"]
+    },
+    "query_type": {
+      "enum": [
+        "exact_scholar",
+        "scholar_alias",
+        "exact_theory",
+        "theory_alias",
+        "conceptual",
+        "comparison",
+        "mechanism",
+        "quoted_phrase",
+        "ambiguous_term",
+        "mixed_language"
+      ]
+    },
+    "expected_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity_type", "entity_id", "label", "reviewer_note"],
+        "properties": {
+          "entity_type": {"type": "string", "minLength": 1, "maxLength": 64},
+          "entity_id": {"type": "string", "minLength": 1, "maxLength": 100},
+          "label": {"type": "string", "minLength": 1, "maxLength": 500},
+          "reviewer_note": {"type": "string", "maxLength": 2000}
+        }
+      }
+    },
+    "gold_judgments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "work_id",
+          "chunk_document_id",
+          "page",
+          "relevance_grade",
+          "reviewer_note"
+        ],
+        "properties": {
+          "work_id": {"type": "string", "minLength": 1, "maxLength": 100},
+          "chunk_document_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "page": {"type": "integer", "minimum": 0},
+          "relevance_grade": {"type": "integer", "minimum": 0, "maximum": 3},
+          "reviewer_note": {"type": "string", "maxLength": 4000}
+        }
+      }
+    },
+    "notes": {"type": "string", "maxLength": 4000},
+    "split": {"enum": ["diagnostic", "dev", "test", null]},
+    "filters": {"type": "object"}
+  }
+}

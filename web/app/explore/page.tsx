@@ -17,7 +17,7 @@ import {
   SectionHeading,
 } from "@/components/ui";
 import { SiteFooter } from "@/components/site-footer";
-import { ExploreAskClient } from "@/components/explore-ask-client";
+import { ExploreAskClient, type LibraryScope } from "@/components/explore-ask-client";
 import { ExploreLanding } from "@/components/explore-landing";
 import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
@@ -63,7 +63,22 @@ export default async function ExplorePage({
   const requestedMode = firstParam(params.mode);
   const mode = requestedMode === "semantic" || requestedMode === "ask" ? requestedMode : "exact";
   if (mode === "ask") {
-    return <AskLibraryPage query={query} />;
+    const requestedContext = firstParam(params.context) ?? "global";
+    const allowedContexts = new Set<LibraryScope["context"]>([
+      "global", "works", "scholars", "disciplines", "subdisciplines", "theories", "topics", "reading_paths",
+    ]);
+    const context = allowedContexts.has(requestedContext as LibraryScope["context"])
+      ? requestedContext as LibraryScope["context"]
+      : "global";
+    return <AskLibraryPage
+      query={query}
+      scope={{
+        context,
+        ids: listParam(params.id),
+        asset_id: firstParam(params.asset_id),
+        visibility: "public",
+      }}
+    />;
   }
   if (mode === "semantic") {
     const semanticFilters: SearchFilters = {
@@ -153,6 +168,7 @@ export default async function ExplorePage({
           </div>
           <div className="explore-query-column">
             <form className="explore-search" action="/explore/original">
+              <input type="hidden" name="context" value="global" />
               <SearchField defaultValue={query} />
               <button className="button" type="submit">
                 搜索
@@ -197,6 +213,7 @@ export default async function ExplorePage({
 
         <div className="search-layout">
           <form className="filter-sidebar" action="/explore/original">
+            <input type="hidden" name="context" value="global" />
             {query ? <input type="hidden" name="q" value={query} /> : null}
             {scope !== "all" ? <input type="hidden" name="type" value={scope} /> : null}
             {preservedForFilter.map(([name, value]) => (
@@ -413,6 +430,7 @@ export default async function ExplorePage({
             <section>
               <h2>排序</h2>
               <form className="sort-form exact-aside-sort" action="/explore/original">
+                <input type="hidden" name="context" value="global" />
                 {preservedForSort.map(([name, value]) => (
                   <input type="hidden" name={name} value={value} key={`${name}-${value}`} />
                 ))}
@@ -430,7 +448,7 @@ export default async function ExplorePage({
             <section>
               <h2>推荐搜索</h2>
               {hotSearches.map((item) => (
-                <Link href={`/explore/original?q=${encodeURIComponent(item)}`} key={item}><Search size={13} />{item}</Link>
+                <Link href={`/explore/original?context=global&q=${encodeURIComponent(item)}`} key={item}><Search size={13} />{item}</Link>
               ))}
               {!hotSearches.length ? <p className="empty-state">匿名搜索数据积累后将在这里显示。</p> : null}
             </section>
@@ -452,7 +470,7 @@ function SearchModeSwitch({
   const encodedQuery = query ? `?q=${encodeURIComponent(query)}` : "";
   return (
     <nav className="search-mode-switch" aria-label="检索方式">
-      <Link className={mode === "exact" ? "active" : ""} href={`/explore/original${encodedQuery}`}>
+      <Link className={mode === "exact" ? "active" : ""} href={`/explore/original?context=global${query ? `&q=${encodeURIComponent(query)}` : ""}`}>
         <span><strong>原文检索</strong></span>
       </Link>
       <Link className={mode === "semantic" ? "active" : ""} href={`/explore/opinions${encodedQuery}`}>
@@ -836,11 +854,11 @@ function documentTypeLabel(value: string) {
   }[value] ?? value;
 }
 
-function AskLibraryPage({ query }: { query: string }) {
+function AskLibraryPage({ query, scope }: { query: string; scope: LibraryScope }) {
   return (
     <>
       <div className="page-shell explore-page ask-library-page">
-        <ExploreAskClient initialQuestion={query} />
+        <ExploreAskClient initialQuestion={query} initialScope={scope} />
       </div>
       <SiteFooter />
     </>
@@ -910,6 +928,7 @@ function ExactMobileFilters({
     <details className="mobile-filter-disclosure">
       <summary>筛选结果{activeFilterCount ? ` · 已选 ${activeFilterCount}` : ""}<span>展开</span></summary>
       <form action="/explore/original">
+        <input type="hidden" name="context" value="global" />
         {query ? <input type="hidden" name="q" value={query} /> : null}
         {scope !== "all" ? <input type="hidden" name="type" value={scope} /> : null}
         {preserved.map(([name, value]) => <input type="hidden" name={name} value={value} key={`${name}-${value}`} />)}

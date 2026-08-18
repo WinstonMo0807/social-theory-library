@@ -3,9 +3,10 @@
 import { BarChart3, Pause, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type IndexPayload = {
+  permissions: { can_manage: boolean };
   runtime: {
     enabled: boolean;
     engine: string;
@@ -140,7 +141,7 @@ export function SemanticIndexAdmin() {
     || "";
 
   const refreshEvaluations = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const [sets, runs] = await Promise.all([
@@ -158,7 +159,7 @@ export function SemanticIndexAdmin() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       setData(await apiRequest<IndexPayload>("/catalog/admin/semantic-index/", {}, token));
@@ -171,7 +172,7 @@ export function SemanticIndexAdmin() {
 
   useEffect(() => {
     let active = true;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     apiRequest<IndexPayload>("/catalog/admin/semantic-index/", {}, token)
       .then((payload) => {
@@ -192,7 +193,7 @@ export function SemanticIndexAdmin() {
 
   useEffect(() => {
     let active = true;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     Promise.all([
       apiRequest<EvaluationSetSummary[]>("/catalog/admin/search-evaluations/sets/", {}, token),
@@ -221,7 +222,7 @@ export function SemanticIndexAdmin() {
   }, [evaluationRuns, refreshEvaluations]);
 
   async function runAction(action: string, assetId?: string | null) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setBusy(action);
     try {
@@ -239,7 +240,7 @@ export function SemanticIndexAdmin() {
 
   async function testQuery(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || query.trim().length < 2) return;
     setBusy("test");
     setError("");
@@ -260,7 +261,7 @@ export function SemanticIndexAdmin() {
 
   async function saveEvaluationQuery(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     const judgments = Object.entries(evaluationJudgments).map(([chunkId, relevance]) => ({
       chunk_id: chunkId,
       relevance,
@@ -315,7 +316,7 @@ export function SemanticIndexAdmin() {
   }
 
   async function runEvaluation(evaluationSetId: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !effectiveEvaluationIndexId || !data) {
       setEvaluationMessage("请先选择一个候选或活动索引版本。");
       return;
@@ -350,7 +351,7 @@ export function SemanticIndexAdmin() {
   }
 
   async function toggleEvaluationSet(evaluationSet: EvaluationSetSummary) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setBusy(`evaluation_set:${evaluationSet.id}`);
     try {
@@ -368,7 +369,7 @@ export function SemanticIndexAdmin() {
   }
 
   async function activateVersion() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !activateTarget) return;
     setBusy("activate_version");
     setError("");
@@ -421,11 +422,11 @@ export function SemanticIndexAdmin() {
           <p className="admin-help">混合检索权重只控制关键词与语义结果的融合，不是检索质量分数。模型状态不能单独证明关键词降级已经执行，请以下方测试查询结果为准。</p>
           {data?.model_health.reason ? <p className={data.model_health.available ? "admin-help" : "attempt-error"}>{data.model_health.reason}</p> : null}
           <div className="admin-action-row">
-            <button className="button secondary" type="button" disabled={Boolean(busy) || !data} onClick={() => runAction(data?.paused ? "resume" : "pause")}>{data?.paused ? <Play size={15} /> : <Pause size={15} />}{data?.paused ? "恢复任务" : "暂停任务"}</button>
-            <button className="button secondary" type="button" disabled={Boolean(busy) || !data} onClick={() => runAction("retry_failed")}><RefreshCw size={15} />只重试失败项目</button>
-            <button className="button" type="button" disabled={Boolean(busy) || !data} onClick={() => runAction("rebuild_all")}><RefreshCw size={15} />批量重建</button>
-            <button className="button" type="button" disabled={Boolean(busy) || !data || Boolean(data.index_versions.some((version) => version.status === "building" || version.status === "ready"))} onClick={() => runAction("stage_snapshot_version")}><RefreshCw size={15} />建立快照候选</button>
-            <button className="button secondary" type="button" disabled={Boolean(busy) || !data} onClick={() => runAction("clean_orphans")}><Trash2 size={15} />清理孤立索引</button>
+            {data?.permissions.can_manage ? <><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => runAction(data.paused ? "resume" : "pause")}>{data.paused ? <Play size={15} /> : <Pause size={15} />}{data.paused ? "恢复任务" : "暂停任务"}</button>
+            <button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => runAction("retry_failed")}><RefreshCw size={15} />只重试失败项目</button>
+            <button className="button" type="button" disabled={Boolean(busy)} onClick={() => runAction("rebuild_all")}><RefreshCw size={15} />批量重建</button>
+            <button className="button" type="button" disabled={Boolean(busy) || Boolean(data.index_versions.some((version) => version.status === "building" || version.status === "ready"))} onClick={() => runAction("stage_snapshot_version")}><RefreshCw size={15} />建立快照候选</button>
+            <button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => runAction("clean_orphans")}><Trash2 size={15} />清理孤立索引</button></> : <span className="status">只读。索引构建与切换由超级管理员执行。</span>}
           </div>
         </article>
         <form className="admin-panel semantic-index-test" onSubmit={testQuery}>
@@ -472,7 +473,7 @@ export function SemanticIndexAdmin() {
       <section className="admin-panel semantic-job-list">
         <header><h2>索引版本</h2><span>新版本完整验证后才切换生产指针</span></header>
         <div className="admin-table-scroll"><table><thead><tr><th>索引</th><th>模型</th><th>revision</th><th>维度</th><th>文档</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
-          {data?.index_versions.map((version) => <tr key={version.id}><td><strong>{version.uid}</strong>{version.error ? <small className="attempt-error">{version.error}</small> : null}</td><td>{version.model_repo_id}</td><td>{version.model_revision}</td><td>{version.dimensions ?? "模型默认"}</td><td>{version.document_count}{version.expected_document_count ? ` / ${version.expected_document_count}` : ""}</td><td>{indexStatusLabels[version.status] ?? version.status}</td><td>{new Date(version.created_at).toLocaleString("zh-CN")}</td><td>{version.status === "ready" ? <button type="button" disabled={Boolean(busy)} onClick={() => setActivateTarget(version)}>验证并切换</button> : version.status === "active" ? "当前生产" : "—"}</td></tr>)}
+          {data?.index_versions.map((version) => <tr key={version.id}><td><strong>{version.uid}</strong>{version.error ? <small className="attempt-error">{version.error}</small> : null}</td><td>{version.model_repo_id}</td><td>{version.model_revision}</td><td>{version.dimensions ?? "模型默认"}</td><td>{version.document_count}{version.expected_document_count ? ` / ${version.expected_document_count}` : ""}</td><td>{indexStatusLabels[version.status] ?? version.status}</td><td>{new Date(version.created_at).toLocaleString("zh-CN")}</td><td>{version.status === "ready" && data.permissions.can_manage ? <button type="button" disabled={Boolean(busy)} onClick={() => setActivateTarget(version)}>验证并切换</button> : version.status === "active" ? "当前生产" : "—"}</td></tr>)}
           {!dataLoaded ? <tr><td colSpan={8}>正在读取索引版本……</td></tr> : !data ? <tr><td colSpan={8}>索引版本暂时无法读取。</td></tr> : !data.index_versions.length ? <tr><td colSpan={8}>尚未建立版本化索引。</td></tr> : null}
         </tbody></table></div>
       </section>
@@ -639,7 +640,7 @@ export function SemanticIndexAdmin() {
       <section className="admin-panel semantic-job-list">
         <header><h2>最近索引任务</h2><span>{data ? `${data.recent_jobs.length} 条` : "加载中"}</span></header>
         <div className="admin-table-scroll"><table><thead><tr><th>文献</th><th>操作</th><th>状态</th><th>进度</th><th>尝试</th><th>时间</th><th>操作</th></tr></thead><tbody>
-          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
+          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id && data.permissions.can_manage ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
           {!dataLoaded ? <tr><td colSpan={7}>正在读取索引任务……</td></tr> : !data ? <tr><td colSpan={7}>索引任务暂时无法读取。</td></tr> : !data.recent_jobs.length ? <tr><td colSpan={7}>还没有语义索引任务。</td></tr> : null}
         </tbody></table></div>
       </section>

@@ -32,6 +32,21 @@ def _entity_resolution_pending(task: ReviewTask) -> bool:
     return query.exists()
 
 
+def _query_lexicon_candidate_pending(task: ReviewTask) -> bool:
+    if task.task_type != "query_lexicon_candidates":
+        return False
+    work_id = str((task.details or {}).get("work_id") or task.target_id or "").strip()
+    if not work_id:
+        return False
+    from catalog.models import QueryLexiconCandidate
+
+    return QueryLexiconCandidate.objects.filter(
+        status=QueryLexiconCandidate.Status.PENDING,
+        evidence_records__work_id=work_id,
+        evidence_records__is_current=True,
+    ).exists()
+
+
 @transaction.atomic
 def apply_review_task_action(
     task: ReviewTask,
@@ -67,6 +82,8 @@ def apply_review_task_action(
             idempotent = True
         elif _entity_resolution_pending(task):
             raise ReviewTaskActionError("该实体仍有待判断候选，请先完成实体决定。")
+        elif _query_lexicon_candidate_pending(task):
+            raise ReviewTaskActionError("该作品仍有待审核术语候选，请先接受或拒绝。")
         else:
             task.status = ReviewTask.Status.COMPLETED
             task.assigned_to = task.assigned_to or actor

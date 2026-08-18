@@ -156,7 +156,7 @@ def rerank_candidates(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "SocialTheoryLibrary/2.6.1 viewpoint-reranker",
+        "User-Agent": "SocialTheoryLibrary/2.7 viewpoint-reranker",
     }
     if config.api_key:
         headers["Authorization"] = f"Bearer {config.api_key}"

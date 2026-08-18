@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, ExternalLink, Network, UsersRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
+import { AskLibraryLink } from "@/components/ask-library-link";
 import {
   TheoryBanner,
   TheorySectionHeading,
@@ -47,6 +48,7 @@ export default async function KnowledgeNodePage({ params }: { params: Promise<{ 
             {disciplineLinks.length ? <div className="theory-discipline-pills">{disciplineLinks.map((discipline, index) => discipline ? <Link className={index === 0 ? "primary" : ""} href={`/theories/disciplines/${discipline.slug}`} key={discipline.id}>{discipline.name}</Link> : null)}</div> : null}
             {node.definition || node.summary ? <p className="definition">{node.definition || node.summary}</p> : null}
             {node.core_questions.length ? <div className="theory-core-question"><strong>核心问题</strong><p>{node.core_questions[0]}</p></div> : null}
+            <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
           </div>
           <div className="theory-node-hero-side">
             <TheoryBanner image={node.cover_url} />

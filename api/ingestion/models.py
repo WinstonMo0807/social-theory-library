@@ -235,6 +235,9 @@ class ProcessingJob(UUIDTimeStampedModel):
         TEXT_EXTRACTION = "text_extraction", "文本提取"
         PAGE_LABELS = "page_labels", "页码识别"
         SEMANTIC_INDEX = "semantic_index", "语义索引"
+        QUERY_LEXICON_CANDIDATES = "query_lexicon_candidates", "术语候选提取"
+        QUERY_LEXICON_RECONCILE = "query_lexicon_reconcile", "QueryLexicon 重建"
+        PROJECTION_REFRESH = "projection_refresh", "公开投影刷新"
         THUMBNAIL = "thumbnail", "缩略图"
         CACHE_REFRESH = "cache_refresh", "公开目录刷新"
 

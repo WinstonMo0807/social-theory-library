@@ -17,8 +17,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
-import { AuthoritySuggestions, StringListEditor, mergeUniqueStrings } from "@/components/structured-editors";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { AuthoritySuggestions, StringListEditor } from "@/components/structured-editors";
+import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Page<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
 
@@ -33,7 +34,7 @@ function useResource<T>(path: string) {
   }, []);
   useEffect(() => {
     let active = true;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     apiRequest<T>(path, {}, token)
       .then((payload) => { if (active) { setData(payload); setError(""); } })
@@ -139,7 +140,7 @@ export function DisciplinesAdmin() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       let saved = await apiRequest<DisciplineRow>(
@@ -204,13 +205,13 @@ export function DisciplinesAdmin() {
             <AuthoritySuggestions
               entityType="discipline"
               query={draft.name}
-              onApply={(suggestion) => setDraft((current) => ({
-                ...current,
-                name: suggestion.label,
-                foreign_name: suggestion.original_name || current.foreign_name,
-                search_aliases: mergeUniqueStrings(editorLineValues(current.search_aliases), suggestion.aliases.map((alias) => alias.name)).join("\n"),
-                description: suggestion.description || current.description,
-              }))}
+            />
+            <FieldEnrichmentControl
+              targetType="discipline"
+              targetId={editing?.id}
+              title="学科字段核对"
+              fields={[{ name: "foreign_name", label: "外文名称", currentValue: draft.foreign_name }]}
+              onAccepted={resource.refresh}
             />
             <StringListEditor label="检索别名" itemLabel="别名" value={editorLineValues(draft.search_aliases)} onChange={(value) => setDraft({ ...draft, search_aliases: value.join("\n") })} addLabel="添加别名" />
           </fieldset>
@@ -305,7 +306,7 @@ export function SubdisciplinesAdmin() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       let saved = await apiRequest<SubdisciplineRow>(
@@ -365,13 +366,13 @@ export function SubdisciplinesAdmin() {
             <AuthoritySuggestions
               entityType="subdiscipline"
               query={draft.name}
-              onApply={(suggestion) => setDraft((current) => ({
-                ...current,
-                name: suggestion.label,
-                foreign_name: suggestion.original_name || current.foreign_name,
-                search_aliases: mergeUniqueStrings(editorLineValues(current.search_aliases), suggestion.aliases.map((alias) => alias.name)).join("\n"),
-                description: suggestion.description || current.description,
-              }))}
+            />
+            <FieldEnrichmentControl
+              targetType="subdiscipline"
+              targetId={editing?.id}
+              title="子学科字段核对"
+              fields={[{ name: "foreign_name", label: "外文名称", currentValue: draft.foreign_name }]}
+              onAccepted={() => { rows.refresh(); disciplines.refresh(); }}
             />
             <StringListEditor label="检索别名" itemLabel="别名" value={editorLineValues(draft.search_aliases)} onChange={(value) => setDraft({ ...draft, search_aliases: value.join("\n") })} addLabel="添加别名" />
           </fieldset>
@@ -467,7 +468,7 @@ export function RecommendationsAdmin() {
 
   async function refresh(manual: boolean) {
     if (!policy) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/catalog/admin/recommendations/${policy.placement}/refresh/`, { method: "POST", body: JSON.stringify(manual ? { items: selected.map((id) => ({ target_type: targetType, id })) } : {}) }, token);
@@ -548,7 +549,7 @@ export function AboutAdmin() {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!current) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const saved = await apiRequest<AboutBlock>(
@@ -597,7 +598,7 @@ export function TimelineAdmin() {
   const disciplines = useResource<Page<DisciplineRow>>("/catalog/admin/disciplines/");
   const [draft, setDraft] = useState({ title: "", description: "", event_type: "development", start_year: "", end_year: "", date_label: "", orientation: "", theory_school: "", discipline: "", evidence_page: "", evidence_text: "", review_status: "suggested" });
   const [message, setMessage] = useState("");
-  async function save(event: FormEvent) { event.preventDefault(); const token = getStoredAccessToken(); if (!token) return; const payload = { ...draft, start_year: draft.start_year ? Number(draft.start_year) : null, end_year: draft.end_year ? Number(draft.end_year) : null, evidence_page: draft.evidence_page ? Number(draft.evidence_page) : null, theory_school: draft.theory_school || null, discipline: draft.discipline || null }; try { await apiRequest("/catalog/admin/theory-timeline/", { method: "POST", body: JSON.stringify(payload) }, token); setMessage("时间轴事件已经保存。只有审核通过的事件会出现在前台。"); events.refresh(); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "保存失败"); } }
-  async function remove(id: string) { const token = getStoredAccessToken(); if (!token || !window.confirm("删除这条时间轴事件吗？")) return; await apiRequest(`/catalog/admin/theory-timeline/${id}/`, { method: "DELETE" }, token); events.refresh(); }
+  async function save(event: FormEvent) { event.preventDefault(); const token = getServerSessionCredential(); if (!token) return; const payload = { ...draft, start_year: draft.start_year ? Number(draft.start_year) : null, end_year: draft.end_year ? Number(draft.end_year) : null, evidence_page: draft.evidence_page ? Number(draft.evidence_page) : null, theory_school: draft.theory_school || null, discipline: draft.discipline || null }; try { await apiRequest("/catalog/admin/theory-timeline/", { method: "POST", body: JSON.stringify(payload) }, token); setMessage("时间轴事件已经保存。只有审核通过的事件会出现在前台。"); events.refresh(); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "保存失败"); } }
+  async function remove(id: string) { const token = getServerSessionCredential(); if (!token || !window.confirm("删除这条时间轴事件吗？")) return; await apiRequest(`/catalog/admin/theory-timeline/${id}/`, { method: "DELETE" }, token); events.refresh(); }
   return <Frame eyebrow="理论历史" title="时间轴事件" description="时间轴事件独立管理。出版年份、关键词共现和系统建议都不能直接公开，必须保留依据并由管理员确认。"><div className="knowledge-admin-layout"><section className="admin-panel timeline-admin-list"><header><h2>事件记录</h2><Link href="/theory-schools/timeline">查看前台 <ArrowRight size={14} /></Link></header>{events.data?.results.map((row) => <article key={row.id}><CalendarDays size={20} /><div><strong>{row.date_label || row.start_year || "时期待定"} · {row.title}</strong><p>{row.description}</p><small>{row.review_status === "approved" ? "已公开" : "待确认"}{row.evidence_page ? ` · 证据页 ${row.evidence_page}` : ""}</small></div><button type="button" aria-label={`删除时间轴事件：${row.title}`} onClick={() => void remove(row.id)}><Trash2 size={14} /></button></article>)}</section><form className="admin-panel knowledge-admin-editor" onSubmit={save}><header><h2>新增时间轴事件</h2></header><label><span>事件标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>说明</span><textarea rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><div className="inline-fields"><label><span>开始年</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label></div><label><span>显示时期</span><input value={draft.date_label} onChange={(event) => setDraft({ ...draft, date_label: event.target.value })} placeholder="例如 20世纪初至中期" /></label><div className="inline-fields"><label><span>理论传统</span><select value={draft.theory_school} onChange={(event) => setDraft({ ...draft, theory_school: event.target.value })}><option value="">无</option>{theories.data?.results.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label><label><span>学科</span><select value={draft.discipline} onChange={(event) => setDraft({ ...draft, discipline: event.target.value })}><option value="">无</option>{disciplines.data?.results.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label></div><label><span>证据页码</span><input type="number" value={draft.evidence_page} onChange={(event) => setDraft({ ...draft, evidence_page: event.target.value })} /></label><label><span>证据原文或来源说明</span><textarea rows={4} value={draft.evidence_text} onChange={(event) => setDraft({ ...draft, evidence_text: event.target.value })} /></label><label><span>审核状态</span><select value={draft.review_status} onChange={(event) => setDraft({ ...draft, review_status: event.target.value })}><option value="suggested">候选</option><option value="approved">确认并公开</option><option value="rejected">拒绝</option></select></label><button className="button" type="submit"><Save size={15} />保存事件</button><Notice>{message}</Notice></form></div></Frame>;
 }

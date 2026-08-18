@@ -8,7 +8,8 @@ from statistics import mean
 from uuid import UUID
 
 import httpx
-from django.db import transaction
+from django.conf import settings
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 
 from catalog.models import (
@@ -16,10 +17,13 @@ from catalog.models import (
     SearchEvaluationResult,
     SearchEvaluationRun,
     SearchEvaluationSet,
+    QueryLexiconState,
     SemanticChunk,
     SemanticIndexVersion,
 )
 from catalog.services.semantic_indexing import semantic_index_document_count
+from catalog.services.passage_language import language_detector_config
+from catalog.services.semantic_search_v2_config import search_v2_config_snapshot
 from catalog.services.semantic_search import current_semantic_runtime, semantic_search
 
 
@@ -115,6 +119,40 @@ def _runtime_index_configuration(runtime: dict) -> dict:
         "dimensions": runtime.get("dimensions"),
         "pooling": str(runtime.get("pooling") or ""),
     }
+
+
+def _query_lexicon_snapshot(*, search_version: str | None, search_profile: str | None) -> dict:
+    """Freeze the query-time vocabulary inputs used by a V2 run."""
+
+    if search_version != "v2":
+        return {}
+    try:
+        state = QueryLexiconState.objects.select_related("active_generation").get(
+            key="default"
+        )
+    except (QueryLexiconState.DoesNotExist, DatabaseError, RuntimeError, ValueError):
+        return {
+            "query_lexicon_revision": None,
+            "query_lexicon_generation_id": None,
+        }
+    snapshot = search_v2_config_snapshot()
+    snapshot.update(
+        {
+            "query_lexicon_revision": state.revision,
+            "query_lexicon_generation_id": str(state.active_generation_id),
+            "query_lexicon_normalization_version": state.normalization_version,
+            "query_lexicon_source_registry_version": state.source_registry_version,
+            "ranking_profile": search_profile or "precision",
+            "language_detector": language_detector_config(),
+        }
+    )
+    return snapshot
+
+
+def _effective_search_version(search_version: str | None) -> str:
+    if search_version:
+        return search_version
+    return "v2" if bool(getattr(settings, "SEMANTIC_SEARCH_V2_ENABLED", False)) else "v1"
 
 
 def build_evaluation_plan(
@@ -238,6 +276,8 @@ def build_evaluation_plan(
         "judgment_count": sum(query.judgments.count() for query in queries),
         "index_version_id": str(index_version.id),
         "index_uid": index_version.uid,
+        "semantic_index_identifier": index_version.uid,
+        "semantic_index_version_id": str(index_version.id),
         "index_status": index_version.status,
         "recorded_document_count": index_version.document_count,
         "actual_document_count": actual_document_count,
@@ -251,6 +291,10 @@ def build_evaluation_plan(
             "3": "直接回应问题",
         },
         **search_options,
+        **_query_lexicon_snapshot(
+            search_version=_effective_search_version(search_options["search_version"]),
+            search_profile=search_options["search_profile"],
+        ),
         "blockers": blockers,
         "warnings": warnings,
         "changes_active_index": False,
@@ -435,6 +479,8 @@ def execute_evaluation(
     evaluation_snapshot, evaluation_snapshot_hash = _evaluation_snapshot(queries)
     config_snapshot = {
         "index_uid": index_version.uid,
+        "semantic_index_identifier": index_version.uid,
+        "semantic_index_version_id": str(index_version.id),
         "index_configuration": _index_configuration(index_version),
         "runtime_configuration": _runtime_index_configuration(runtime),
         "embedder_name": runtime.get("embedder_name"),
@@ -444,6 +490,10 @@ def execute_evaluation(
         "evaluation_snapshot": evaluation_snapshot,
         "evaluation_snapshot_hash": evaluation_snapshot_hash,
         **search_options,
+        **_query_lexicon_snapshot(
+            search_version=_effective_search_version(search_options["search_version"]),
+            search_profile=search_options["search_profile"],
+        ),
         "active_index_changed": False,
     }
     if existing_run is None:
@@ -513,6 +563,8 @@ def execute_evaluation(
                 search_kwargs["search_profile"] = search_options["search_profile"]
             if search_options["rerank_top_k"] is not None:
                 search_kwargs["rerank_top_k_override"] = search_options["rerank_top_k"]
+            if _effective_search_version(search_options["search_version"]) == "v2":
+                search_kwargs["v2_final_top_k_override"] = RESULT_LIMIT
             response = semantic_search(query.query_text, **search_kwargs)
             if response.get("fallback_used"):
                 reason = response.get("fallback_reason") or "unknown"
@@ -587,7 +639,10 @@ def execute_evaluation(
                         isinstance(response.get("reranker"), dict)
                         and response["reranker"].get("applied")
                     ),
-                    "rerank_fallback": bool(response.get("rerank_fallback")),
+                    "rerank_fallback": bool(
+                        response.get("reranker_fallback")
+                        or response.get("rerank_fallback")
+                    ),
                     "latency_ms": scored.latency_ms,
                 }
             )
@@ -705,10 +760,16 @@ def prepare_evaluation_run(
         created_by=actor,
         config_snapshot={
             "index_uid": index_version.uid,
+            "semantic_index_identifier": index_version.uid,
+            "semantic_index_version_id": str(index_version.id),
             "queued": True,
             "relevant_threshold": RELEVANT_THRESHOLD,
             "judgment_scale": plan["judgment_scale"],
             **search_options,
+            **_query_lexicon_snapshot(
+                search_version=_effective_search_version(search_options["search_version"]),
+                search_profile=search_options["search_profile"],
+            ),
             "active_index_changed": False,
         },
     )

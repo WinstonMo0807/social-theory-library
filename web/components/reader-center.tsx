@@ -13,12 +13,22 @@ import {
   List,
   LogOut,
   Mail,
+  RefreshCw,
   Settings,
   StickyNote,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { apiRequest, clearStoredSession, getStoredAccessToken, logoutCurrentSession } from "@/lib/api";
+import {
+  apiRequest,
+  classifyClientError,
+  clearStoredSession,
+  getServerSessionCredential,
+  isUnauthenticatedError,
+  logoutCurrentSession,
+  type ClientErrorCategory,
+} from "@/lib/api";
 import { adaptWork, type ApiWork } from "@/lib/server-api";
+import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { BookCard, BookCover, SectionHeading } from "./ui";
 import { DisplayPreferences } from "./display-preferences";
 
@@ -108,6 +118,13 @@ type ReaderData = {
   history: HistoryRow[];
 };
 
+type ReaderResourceKey = keyof ReaderData | "noteGroups";
+type ReaderResourceError = {
+  label: string;
+  message: string;
+  category: ClientErrorCategory;
+};
+
 const emptyData: ReaderData = {
   progress: [],
   saved: [],
@@ -119,11 +136,14 @@ const emptyData: ReaderData = {
 };
 
 export function ReaderCenter() {
+  const { state: session, retry: retrySession } = useSessionBootstrap();
   const [active, setActive] = useState("概览");
-  const [user, setUser] = useState<{ display_name: string; email: string } | null>(null);
+  const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
+  const [resourceErrors, setResourceErrors] = useState<Partial<Record<ReaderResourceKey, ReaderResourceError>>>({});
+  const [resourceAttempt, setResourceAttempt] = useState(0);
   const [submissionTitle, setSubmissionTitle] = useState("");
   const [submissionNote, setSubmissionNote] = useState("");
   const [message, setMessage] = useState("");
@@ -131,42 +151,119 @@ export function ReaderCenter() {
   const [profileName, setProfileName] = useState("");
 
   useEffect(() => {
-    const token = getStoredAccessToken();
-    if (!token) {
+    if (session.status === "unauthenticated") {
       window.location.replace("/login?next=/account");
-      return;
     }
-    Promise.all([
-      apiRequest<{ display_name: string; email: string }>("/auth/me/", {}, token),
-      apiRequest<Paginated<ProgressRow>>("/reading/progress/", {}, token),
-      apiRequest<Paginated<SavedRow>>("/reading/saved/", {}, token),
-      apiRequest<Paginated<SavedTopicRow>>("/reading/saved-topics/", {}, token),
-      apiRequest<Paginated<AnnotationRow>>("/reading/annotations/", {}, token),
-      apiRequest<Paginated<NoteGroupRow>>("/reading/annotations/note-groups/", {}, token),
-      apiRequest<Paginated<BookmarkRow>>("/reading/bookmarks/", {}, token),
-      apiRequest<Paginated<ReadingListRow>>("/reading/lists/", {}, token),
-      apiRequest<Paginated<HistoryRow>>("/reading/history/", {}, token),
-    ])
-      .then(([profile, progress, saved, savedTopics, annotations, noteGroupRows, bookmarks, lists, history]) => {
-        setUser(profile);
-        setProfileName(profile.display_name);
-        setReaderData({
-          progress: progress.results,
-          saved: saved.results,
-          savedTopics: savedTopics.results,
-          annotations: annotations.results,
-          bookmarks: bookmarks.results,
-          lists: lists.results,
-          history: history.results,
-        });
-        setNoteGroups(noteGroupRows.results);
-      })
-      .catch(() => {
+  }, [session.status]);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.resolve().then(() => {
+      if (!mounted) return;
+      if (session.status !== "authenticated" || !session.user) {
+        setProfile(null);
+        return;
+      }
+      setProfile({
+        display_name: session.user.display_name,
+        email: session.user.email,
+      });
+      setProfileName(session.user.display_name);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [session.status, session.user]);
+
+  useEffect(() => {
+    if (session.status !== "authenticated") return;
+    const credential = getServerSessionCredential();
+    if (!credential) return;
+    let mounted = true;
+    Promise.resolve().then(() => {
+      if (!mounted) return;
+      setResourcesLoading(true);
+      setResourceErrors({});
+    });
+
+    const requests: Promise<{ key: ReaderResourceKey; label: string; results: unknown[] }>[] = [
+      apiRequest<Paginated<ProgressRow>>("/reading/progress/", {}, credential)
+        .then((payload) => ({ key: "progress", label: "阅读进度", results: payload.results })),
+      apiRequest<Paginated<SavedRow>>("/reading/saved/", {}, credential)
+        .then((payload) => ({ key: "saved", label: "文献收藏", results: payload.results })),
+      apiRequest<Paginated<SavedTopicRow>>("/reading/saved-topics/", {}, credential)
+        .then((payload) => ({ key: "savedTopics", label: "主题收藏", results: payload.results })),
+      apiRequest<Paginated<AnnotationRow>>("/reading/annotations/", {}, credential)
+        .then((payload) => ({ key: "annotations", label: "高亮与笔记", results: payload.results })),
+      apiRequest<Paginated<NoteGroupRow>>("/reading/annotations/note-groups/", {}, credential)
+        .then((payload) => ({ key: "noteGroups", label: "作品笔记", results: payload.results })),
+      apiRequest<Paginated<BookmarkRow>>("/reading/bookmarks/", {}, credential)
+        .then((payload) => ({ key: "bookmarks", label: "书签", results: payload.results })),
+      apiRequest<Paginated<ReadingListRow>>("/reading/lists/", {}, credential)
+        .then((payload) => ({ key: "lists", label: "书单", results: payload.results })),
+      apiRequest<Paginated<HistoryRow>>("/reading/history/", {}, credential)
+        .then((payload) => ({ key: "history", label: "阅读历史", results: payload.results })),
+    ];
+
+    Promise.allSettled(requests).then((results) => {
+      if (!mounted) return;
+      const nextData: ReaderData = {
+        progress: [],
+        saved: [],
+        savedTopics: [],
+        annotations: [],
+        bookmarks: [],
+        lists: [],
+        history: [],
+      };
+      let nextNoteGroups: NoteGroupRow[] = [];
+      const nextErrors: Partial<Record<ReaderResourceKey, ReaderResourceError>> = {};
+      let sessionExpired = false;
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          const { key, results: rows } = result.value;
+          switch (key) {
+            case "progress": nextData.progress = rows as ProgressRow[]; break;
+            case "saved": nextData.saved = rows as SavedRow[]; break;
+            case "savedTopics": nextData.savedTopics = rows as SavedTopicRow[]; break;
+            case "annotations": nextData.annotations = rows as AnnotationRow[]; break;
+            case "noteGroups": nextNoteGroups = rows as NoteGroupRow[]; break;
+            case "bookmarks": nextData.bookmarks = rows as BookmarkRow[]; break;
+            case "lists": nextData.lists = rows as ReadingListRow[]; break;
+            case "history": nextData.history = rows as HistoryRow[]; break;
+          }
+          return;
+        }
+        if (isUnauthenticatedError(result.reason)) {
+          sessionExpired = true;
+          return;
+        }
+        const key = ["progress", "saved", "savedTopics", "annotations", "noteGroups", "bookmarks", "lists", "history"][index] as ReaderResourceKey;
+        const labels = ["阅读进度", "文献收藏", "主题收藏", "高亮与笔记", "作品笔记", "书签", "书单", "阅读历史"];
+        nextErrors[key] = {
+          label: labels[index],
+          message: result.reason instanceof Error ? result.reason.message : "内容暂时无法读取。",
+          category: classifyClientError(result.reason, "resource"),
+        };
+      });
+
+      if (sessionExpired) {
         clearStoredSession();
         window.location.replace("/login?next=/account");
-      })
-      .finally(() => setLoading(false));
-  }, []);
+        return;
+      }
+      setReaderData(nextData);
+      setNoteGroups(nextNoteGroups);
+      setResourceErrors(nextErrors);
+    }).finally(() => {
+      if (mounted) setResourcesLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [resourceAttempt, session.status]);
 
   const recentProgress = useMemo(
     () => [...readerData.progress]
@@ -183,7 +280,7 @@ export function ReaderCenter() {
 
   async function submitRecommendation(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setMessage("");
     try {
@@ -203,7 +300,7 @@ export function ReaderCenter() {
   }
 
   async function exportReaderData() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     const payload = await apiRequest<Record<string, unknown>>("/reading/export/", {}, token);
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -218,7 +315,7 @@ export function ReaderCenter() {
   }
 
   async function deleteRecord(kind: "saved" | "saved-topics" | "annotations" | "bookmarks", id: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     if (!window.confirm("确定删除这条个人阅读记录吗？")) return;
     try {
@@ -246,7 +343,7 @@ export function ReaderCenter() {
 
   async function createReadingList(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !newListTitle.trim()) return;
     try {
       const created = await apiRequest<ReadingListRow>(
@@ -266,7 +363,7 @@ export function ReaderCenter() {
   }
 
   async function addSavedWorkToList(listId: string, workId: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !workId) return;
     try {
       const item = await apiRequest<{ id: string; work: string; title: string }>(
@@ -289,7 +386,7 @@ export function ReaderCenter() {
   }
 
   async function deleteReadingList(id: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       await apiRequest(`/reading/lists/${id}/`, { method: "DELETE" }, token);
@@ -302,7 +399,7 @@ export function ReaderCenter() {
 
   async function updateProfile(event: FormEvent) {
     event.preventDefault();
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const updated = await apiRequest<{ display_name: string; email: string }>(
@@ -310,16 +407,46 @@ export function ReaderCenter() {
         { method: "PATCH", body: JSON.stringify({ display_name: profileName }) },
         token,
       );
-      setUser(updated);
+      setProfile(updated);
       setMessage("显示名称已更新。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "账户更新失败。");
     }
   }
 
-  if (loading || !user) {
-    return <div className="account-loading">正在读取你的个人阅读资料……</div>;
+  if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
+    return (
+      <div className="account-loading">
+        {session.status === "unauthenticated" ? "登录已过期，正在转到登录页面……" : "正在验证登录状态……"}
+      </div>
+    );
   }
+
+  if (session.status === "forbidden") {
+    return (
+      <div className="account-loading" data-error-category={session.errorCategory}>
+        <strong>当前账户不能访问读者中心</strong>
+        <p>{session.message}</p>
+        <Link href="/">返回书库首页</Link>
+      </div>
+    );
+  }
+
+  if (session.status === "temporary_error") {
+    return (
+      <div className="account-loading" data-error-category={session.errorCategory}>
+        <strong>认证服务暂时不可用</strong>
+        <p>{session.message}</p>
+        <button type="button" onClick={retrySession}><RefreshCw size={15} />保留会话并重试</button>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return <div className="account-loading">正在读取账户资料……</div>;
+  }
+
+  const user = profile;
 
   return (
     <div className="reader-center">
@@ -342,6 +469,21 @@ export function ReaderCenter() {
           <h1>{active}</h1>
           <p>个人阅读资料仅在你的账户中显示。</p>
         </header>
+
+        {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
+        {Object.keys(resourceErrors).length ? (
+          <section className="form-message error" role="status" data-error-category="resource_error">
+            <strong>部分内容暂时无法加载</strong>
+            <ul>
+              {Object.entries(resourceErrors).map(([key, error]) => (
+                <li key={key} data-error-category={error?.category}>{error?.label}：{error?.message}</li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setResourceAttempt((value) => value + 1)}>
+              <RefreshCw size={15} />重试未完成的内容
+            </button>
+          </section>
+        ) : null}
 
         {active === "概览" ? (
           <>

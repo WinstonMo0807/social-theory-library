@@ -5,6 +5,19 @@ export { getApiBase, normalizePublicResourceUrl };
 let activeRefresh: Promise<string | null> | null = null;
 const COOKIE_SESSION = "cookie-session";
 const SESSION_HINT_KEY = "library_session_active";
+const REFRESH_REVISION_KEY = "library_session_refresh_revision";
+const LEGACY_SESSION_KEYS = [
+  "library_access_token",
+  "library_refresh_token",
+  "library_user",
+] as const;
+
+export type ClientErrorCategory =
+  | "auth_401"
+  | "auth_403"
+  | "auth_5xx"
+  | "network_error"
+  | "resource_error";
 
 export class ApiRequestError extends Error {
   status: number;
@@ -17,23 +30,73 @@ export class ApiRequestError extends Error {
 }
 
 export function isAuthenticationError(reason: unknown) {
-  return reason instanceof ApiRequestError && [401, 403].includes(reason.status);
+  return reason instanceof ApiRequestError && reason.status === 401;
+}
+
+export const isUnauthenticatedError = isAuthenticationError;
+
+export function classifyClientError(
+  reason: unknown,
+  context: "auth" | "resource" = "resource",
+): ClientErrorCategory {
+  if (!(reason instanceof ApiRequestError)) return "resource_error";
+  if (reason.status === 0) return "network_error";
+  if (reason.status === 401) return "auth_401";
+  if (reason.status === 403) return "auth_403";
+  if (context === "auth" && reason.status >= 500) return "auth_5xx";
+  return "resource_error";
+}
+
+function readStorage(key: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Cookie authentication must keep working when browser storage is unavailable.
+  }
+}
+
+function removeStorage(key: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Cookie authentication must keep working when browser storage is unavailable.
+  }
+}
+
+function clearLegacyStoredTokens() {
+  for (const key of LEGACY_SESSION_KEYS) removeStorage(key);
 }
 
 export function clearStoredSession() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("library_access_token");
-  window.localStorage.removeItem("library_refresh_token");
-  window.localStorage.removeItem("library_user");
-  window.localStorage.removeItem(SESSION_HINT_KEY);
+  clearLegacyStoredTokens();
+  removeStorage(SESSION_HINT_KEY);
+  removeStorage(REFRESH_REVISION_KEY);
 }
 
 export function markSessionActive() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("library_access_token");
-  window.localStorage.removeItem("library_refresh_token");
-  window.localStorage.removeItem("library_user");
-  window.localStorage.setItem(SESSION_HINT_KEY, "1");
+  clearLegacyStoredTokens();
+  writeStorage(SESSION_HINT_KEY, "1");
+}
+
+export function subscribeToSessionChanges(listener: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key !== null && event.key !== SESSION_HINT_KEY) return;
+    listener();
+  };
+  window.addEventListener("storage", handleStorage);
+  return () => window.removeEventListener("storage", handleStorage);
 }
 
 function csrfToken() {
@@ -56,10 +119,29 @@ function errorText(value: unknown): string {
   return "";
 }
 
+function nextRefreshRevision() {
+  const random = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+  return `${Date.now()}-${random}`;
+}
+
+async function withBrowserRefreshLock<T>(callback: () => Promise<T>) {
+  if (typeof navigator === "undefined" || !navigator.locks) return callback();
+  return navigator.locks.request("social-theory-library-auth-refresh", callback);
+}
+
 async function refreshAccessToken() {
   if (typeof window === "undefined") return null;
   if (!activeRefresh) {
-    activeRefresh = (async () => {
+    const observedRevision = readStorage(REFRESH_REVISION_KEY);
+    activeRefresh = withBrowserRefreshLock(async () => {
+      const currentRevision = readStorage(REFRESH_REVISION_KEY);
+      if (currentRevision && currentRevision !== observedRevision) {
+        markSessionActive();
+        return COOKIE_SESSION;
+      }
+
       let response: Response;
       try {
         response = await fetch(apiEndpoint("/auth/token/refresh/"), {
@@ -74,7 +156,7 @@ async function refreshAccessToken() {
       } catch {
         throw new ApiRequestError("暂时无法连接认证服务，请稍后重试。", 0);
       }
-      if ([401, 403].includes(response.status)) {
+      if (response.status === 401) {
         clearStoredSession();
         return null;
       }
@@ -82,8 +164,9 @@ async function refreshAccessToken() {
         throw new ApiRequestError(`认证服务暂时不可用（${response.status}）。`, response.status);
       }
       markSessionActive();
+      writeStorage(REFRESH_REVISION_KEY, nextRefreshRevision());
       return COOKIE_SESSION;
-    })()
+    })
       .finally(() => {
         activeRefresh = null;
       });
@@ -301,29 +384,21 @@ export async function apiBlob(
   return response.blob();
 }
 
-export function getStoredAccessToken() {
-  if (typeof window === "undefined") return null;
-  window.localStorage.removeItem("library_access_token");
-  window.localStorage.removeItem("library_refresh_token");
-  window.localStorage.removeItem("library_user");
-  return window.localStorage.getItem(SESSION_HINT_KEY) ? COOKIE_SESSION : null;
+export function getServerSessionCredential() {
+  return typeof window === "undefined" ? null : COOKIE_SESSION;
 }
 
 export async function logoutCurrentSession() {
   if (typeof window === "undefined") return;
-  const session = getStoredAccessToken();
   try {
-    if (session) {
-      await apiRequest<void>(
-        "/auth/logout/",
-        {
-          method: "POST",
-          body: JSON.stringify({}),
-        },
-        session,
-        false,
-      );
-    }
+    await apiRequest<void>(
+      "/auth/logout/",
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+      COOKIE_SESSION,
+    );
   } catch {
     // Local cleanup must still happen when the server or network is unavailable.
   } finally {

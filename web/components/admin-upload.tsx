@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
-import { apiRequest, apiUpload, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
 import {
   formatUploadBytes,
   formatUploadEta,
@@ -328,7 +328,7 @@ export function AdminUpload() {
   useEffect(() => {
     const accepted = result?.accepted ?? [];
     if (!accepted.length) return;
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -411,7 +411,7 @@ export function AdminUpload() {
   }
 
   async function retryIngestionItem(itemId: string) {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     setRetryingItem(itemId);
     setIngestionError("");
@@ -435,7 +435,7 @@ export function AdminUpload() {
   }
 
   async function upload() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       setError("请先用管理员账户登录。");
       return;

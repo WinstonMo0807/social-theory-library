@@ -163,9 +163,22 @@ class ProcessingCancelled(Exception):
 
 
 def set_stage(item: UploadItem, status: str, progress: int) -> None:
-    current_status = UploadItem.objects.filter(pk=item.pk).values_list("status", flat=True).first()
-    if current_status == UploadItem.Status.DELETED:
+    current = UploadItem.objects.filter(pk=item.pk).values(
+        "status",
+        "dispatch_task_id",
+    ).first()
+    if current and current["status"] == UploadItem.Status.DELETED:
         item.status = UploadItem.Status.DELETED
+        raise ProcessingCancelled
+    if (
+        current
+        and item.dispatch_task_id
+        and current["dispatch_task_id"]
+        and item.dispatch_task_id != current["dispatch_task_id"]
+    ):
+        # Recovery assigns a new durable task token. An older worker that
+        # resumes after being considered stalled must stop before the next
+        # stage instead of writing over the recovered execution.
         raise ProcessingCancelled
     target_workflow = legacy_workflow_state(status)
     transition_upload_item(
@@ -793,13 +806,23 @@ def run_pipeline(item_id: str) -> UploadItem:
         with processing_attempt(
             item,
             "validate",
-            reuse_completed=bool(item.sha256 and item.byte_size and item.preflight_summary),
+            reuse_completed=bool(
+                item.sha256
+                and item.byte_size
+                and (item.preflight_summary or {}).get("mime_type") == "application/pdf"
+            ),
         ) as attempt:
             if attempt.should_run:
                 if not is_pdf(source_path):
                     raise ValueError("文件内容不是有效 PDF。")
                 validate_pdf_structure(source_path, settings.MAX_PDF_PAGES)
-                item.sha256, item.byte_size = sha256_file(source_path)
+                assembled_digest_available = bool(
+                    item.sha256
+                    and item.byte_size
+                    and source_path.stat().st_size == item.byte_size
+                )
+                if not assembled_digest_available:
+                    item.sha256, item.byte_size = sha256_file(source_path)
                 item.save(update_fields=["sha256", "byte_size", "updated_at"])
                 duplicate = Asset.objects.filter(
                     sha256=item.sha256,
@@ -813,6 +836,11 @@ def run_pipeline(item_id: str) -> UploadItem:
                     "exact_duplicate": bool(duplicate),
                     "duplicate_asset_id": str(duplicate.id) if duplicate else "",
                     "duplicate_policy": item.batch.duplicate_policy,
+                    "checksum_source": (
+                        "streamed_chunk_assembly"
+                        if assembled_digest_available
+                        else "validated_source_read"
+                    ),
                 }
                 item.save(update_fields=["preflight_summary", "updated_at"])
                 if duplicate and not item.asset_id:
@@ -1184,7 +1212,14 @@ def run_pipeline(item_id: str) -> UploadItem:
                 actor=item.batch.created_by,
             )
         else:
-            if edition.ocr_status != OcrStatus.DISABLED:
+            # Replacement activation queues its forced semantic rebuild after
+            # the new asset becomes current. Do not create a second job before
+            # activation, because a failed first attempt could invalidate the
+            # only active index target and make publication fail spuriously.
+            if (
+                not item.replacement_of_asset_id
+                and edition.ocr_status != OcrStatus.DISABLED
+            ):
                 queue_semantic_job(normalized, force=False, actor=item.batch.created_by)
             queue_page_label_job(
                 normalized,

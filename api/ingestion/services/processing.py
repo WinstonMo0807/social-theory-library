@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import timedelta
+from hashlib import sha256
 import uuid
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from kombu.exceptions import OperationalError as KombuOperationalError
 
@@ -18,6 +21,11 @@ from catalog.models import (
     SiteSetting,
 )
 from catalog.services.semantic_indexing import queue_semantic_job
+from catalog.services.query_lexicon.candidates import (
+    EXTRACTION_VERSION as QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
+    candidate_source_checksum,
+    scan_asset_for_query_lexicon_candidates,
+)
 from catalog.services.page_labels import infer_page_labels
 from catalog.services.publication_places import detect_publication_places
 from catalog.services.theory_suggestions import generate_theory_review_tasks
@@ -176,6 +184,169 @@ def resume_paused_workload(job_type: str, *, actor=None, limit: int = 500) -> in
 def _settings_version() -> str:
     setting = SiteSetting.objects.filter(key=OCR_RUNTIME_KEY).only("updated_at").first()
     return setting.updated_at.isoformat() if setting else "environment-default"
+
+
+@transaction.atomic
+def _claim_processing_job(
+    job_id: str,
+    *,
+    task_id: str = "",
+    ocr_batch: bool = False,
+    progress_floor: int = 5,
+) -> tuple[ProcessingJob, bool]:
+    """Claim one persisted job before any external or file side effect.
+
+    Celery delivery can be duplicated. The ProcessingJob row is the durable
+    ownership record, while task_id is the claim token changed by recovery.
+    """
+
+    job = ProcessingJob.objects.select_for_update(of=("self",)).get(pk=job_id)
+    if task_id and task_id != job.task_id:
+        return job, False
+    if job.status not in {ProcessingJob.Status.PENDING, ProcessingJob.Status.FAILED}:
+        return job, False
+    if job.status == ProcessingJob.Status.FAILED and job.attempt >= job.max_attempts:
+        return job, False
+
+    previous_status = job.status
+    stats = dict(job.stats or {})
+    if ocr_batch:
+        if not stats.get("batch_session_started") or previous_status == ProcessingJob.Status.FAILED:
+            job.attempt += 1
+        stats["batch_session_started"] = True
+        job.stats = stats
+    else:
+        job.attempt += 1
+    job.status = ProcessingJob.Status.RUNNING
+    job.progress = max(progress_floor, job.progress)
+    job.started_at = timezone.now()
+    job.finished_at = None
+    job.error_code = ""
+    job.error_message = ""
+    job.save(
+        update_fields=[
+            "status",
+            "attempt",
+            "progress",
+            "started_at",
+            "finished_at",
+            "error_code",
+            "error_message",
+            "stats",
+            "updated_at",
+        ]
+    )
+    return job, True
+
+
+def _processing_claim_is_current(job: ProcessingJob, task_id: str) -> bool:
+    return ProcessingJob.objects.filter(
+        pk=job.pk,
+        status=ProcessingJob.Status.RUNNING,
+        task_id=task_id,
+    ).exists()
+
+
+def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
+    if job_type == ProcessingJob.JobType.OCR:
+        return dispatch_ocr_job(job_id, task_id)
+    if job_type == ProcessingJob.JobType.EXTERNAL_ENRICHMENT:
+        return dispatch_external_enrichment_job(job_id, task_id)
+    if job_type == ProcessingJob.JobType.PAGE_LABELS:
+        return dispatch_page_label_job(job_id, task_id)
+    if job_type == ProcessingJob.JobType.QUERY_LEXICON_CANDIDATES:
+        return dispatch_query_lexicon_candidate_job(job_id, task_id)
+    if job_type == ProcessingJob.JobType.PROJECTION_REFRESH:
+        from catalog.services.projection_refresh import dispatch_projection_refresh_job
+
+        return dispatch_projection_refresh_job(job_id, task_id)
+    return False
+
+
+def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
+    """Redis messages are wakeups; stalled jobs are recovered from PostgreSQL."""
+
+    now = timezone.now()
+    queue_cutoff = now - timedelta(seconds=settings.INGESTION_QUEUE_STALLED_SECONDS)
+    stage_cutoff = now - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS)
+    supported_types = {
+        ProcessingJob.JobType.OCR,
+        ProcessingJob.JobType.EXTERNAL_ENRICHMENT,
+        ProcessingJob.JobType.PAGE_LABELS,
+        ProcessingJob.JobType.QUERY_LEXICON_CANDIDATES,
+        ProcessingJob.JobType.PROJECTION_REFRESH,
+    }
+    with transaction.atomic():
+        jobs = list(
+            ProcessingJob.objects.select_for_update(skip_locked=True, of=("self",))
+            .filter(job_type__in=supported_types)
+            .filter(
+                Q(status=ProcessingJob.Status.RUNNING, started_at__lte=stage_cutoff)
+                | Q(status=ProcessingJob.Status.PENDING, updated_at__lte=queue_cutoff)
+                | Q(status=ProcessingJob.Status.FAILED, error_code="queue_unavailable")
+            )
+            .order_by("updated_at", "created_at")[: max(1, min(limit, 500))]
+        )
+        requeued = 0
+        exhausted = 0
+        for job in jobs:
+            if job.attempt >= job.max_attempts:
+                job.status = ProcessingJob.Status.FAILED
+                job.error_code = "max_attempts_exhausted"
+                job.error_message = "后台任务已达到最大重试次数，需要管理员处理。"
+                job.finished_at = now
+                job.save(
+                    update_fields=[
+                        "status",
+                        "error_code",
+                        "error_message",
+                        "finished_at",
+                        "updated_at",
+                    ]
+                )
+                exhausted += 1
+                continue
+
+            recovery_reason = (
+                "worker_interrupted"
+                if job.status == ProcessingJob.Status.RUNNING
+                else "broker_notification_lost"
+            )
+            stats = dict(job.stats or {})
+            stats["recovery"] = {
+                "reason": recovery_reason,
+                "requeued_at": now.isoformat(),
+                "previous_task_id": job.task_id,
+            }
+            if job.job_type == ProcessingJob.JobType.OCR:
+                stats["batch_session_started"] = False
+            task_id = str(uuid.uuid4())
+            job.status = ProcessingJob.Status.PENDING
+            job.task_id = task_id
+            job.started_at = None
+            job.finished_at = None
+            job.error_code = ""
+            job.error_message = ""
+            job.stats = stats
+            job.save(
+                update_fields=[
+                    "status",
+                    "task_id",
+                    "started_at",
+                    "finished_at",
+                    "error_code",
+                    "error_message",
+                    "stats",
+                    "updated_at",
+                ]
+            )
+            transaction.on_commit(
+                lambda current_id=str(job.id), current_type=job.job_type, current_task_id=task_id: (
+                    _dispatch_processing_job(current_id, current_type, current_task_id)
+                )
+            )
+            requeued += 1
+    return {"candidates": len(jobs), "requeued": requeued, "exhausted": exhausted}
 
 
 def create_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = False) -> ProcessingJob:
@@ -348,6 +519,16 @@ def run_external_enrichment_job(
         return job
     if job.status == ProcessingJob.Status.CANCELED:
         return job
+    if job.status not in {ProcessingJob.Status.PENDING, ProcessingJob.Status.FAILED}:
+        return job
+    if _pause_requested(job):
+        return _mark_job_paused(job)
+
+    job, claimed = _claim_processing_job(job_id, task_id=task_id, progress_floor=5)
+    if not claimed:
+        return job
+    claim_task_id = job.task_id
+    job = ProcessingJob.objects.select_related("upload_item__edition__work").get(pk=job_id)
     if job.upload_item is None or job.upload_item.edition_id is None:
         job.status = ProcessingJob.Status.FAILED
         job.error_code = "missing_upload_item"
@@ -355,17 +536,6 @@ def run_external_enrichment_job(
         job.finished_at = timezone.now()
         job.save()
         return job
-    if _pause_requested(job):
-        return _mark_job_paused(job)
-
-    job.status = ProcessingJob.Status.RUNNING
-    job.attempt += 1
-    job.progress = max(5, job.progress)
-    job.started_at = job.started_at or timezone.now()
-    job.finished_at = None
-    job.error_code = ""
-    job.error_message = ""
-    job.save()
     try:
         candidates, warnings = (candidate_loader or refresh_remote_candidates)(
             job.upload_item.edition,
@@ -389,6 +559,8 @@ def run_external_enrichment_job(
             job.progress = min(95, max(job.progress, 10))
             job.save(update_fields=["progress", "stats", "updated_at"])
             return _mark_job_paused(job)
+        if not _processing_claim_is_current(job, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
         job.status = ProcessingJob.Status.SUCCEEDED
         job.progress = 100
         job.pause_requested_at = None
@@ -396,11 +568,17 @@ def run_external_enrichment_job(
         job.save()
         return job
     except Exception as exc:
-        job.status = ProcessingJob.Status.FAILED
-        job.error_code = exc.__class__.__name__
-        job.error_message = str(exc)[:4000]
-        job.finished_at = timezone.now()
-        job.save()
+        ProcessingJob.objects.filter(
+            pk=job.pk,
+            status=ProcessingJob.Status.RUNNING,
+            task_id=claim_task_id,
+        ).update(
+            status=ProcessingJob.Status.FAILED,
+            error_code=exc.__class__.__name__,
+            error_message=str(exc)[:4000],
+            finished_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
         raise
 
 
@@ -452,6 +630,15 @@ def run_page_label_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         return job
     if job.status == ProcessingJob.Status.CANCELED:
         return job
+    job, claimed = _claim_processing_job(
+        job_id,
+        task_id=task_id,
+        progress_floor=10,
+    )
+    if not claimed:
+        return job
+    claim_task_id = job.task_id
+    job = ProcessingJob.objects.select_related("asset__edition").get(pk=job_id)
     if job.asset is None:
         job.status = ProcessingJob.Status.FAILED
         job.error_code = "missing_asset"
@@ -459,13 +646,10 @@ def run_page_label_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         job.finished_at = timezone.now()
         job.save()
         return job
-    job.status = ProcessingJob.Status.RUNNING
-    job.attempt += 1
-    job.progress = 10
-    job.started_at = timezone.now()
-    job.save()
     try:
         result = infer_page_labels(job.asset)
+        if not _processing_claim_is_current(job, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
         job.status = ProcessingJob.Status.SUCCEEDED
         job.progress = 100
         job.stats = result
@@ -475,11 +659,192 @@ def run_page_label_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         job.save()
         return job
     except Exception as exc:
+        ProcessingJob.objects.filter(
+            pk=job.pk,
+            status=ProcessingJob.Status.RUNNING,
+            task_id=claim_task_id,
+        ).update(
+            status=ProcessingJob.Status.FAILED,
+            error_code=exc.__class__.__name__,
+            error_message=str(exc)[:4000],
+            finished_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        raise
+
+
+def _query_lexicon_candidate_job_key(asset: Asset, source_checksum: str) -> str:
+    digest = sha256(
+        (
+            f"{asset.id}:{QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION}:"
+            f"{source_checksum}"
+        ).encode("utf-8")
+    ).hexdigest()
+    return f"query-lexicon-candidates:{digest}"[:128]
+
+
+def create_query_lexicon_candidate_job(
+    asset: Asset,
+    *,
+    upload_item=None,
+    actor=None,
+    force: bool = False,
+) -> ProcessingJob:
+    asset = Asset.objects.select_related("edition").get(pk=asset.pk)
+    source_checksum = candidate_source_checksum(asset)
+    idempotency_key = _query_lexicon_candidate_job_key(asset, source_checksum)
+    existing = ProcessingJob.objects.filter(idempotency_key=idempotency_key).first()
+    if existing is not None:
+        if not force or existing.status in {
+            ProcessingJob.Status.PENDING,
+            ProcessingJob.Status.RUNNING,
+            ProcessingJob.Status.SUCCEEDED,
+        }:
+            return existing
+        stats = dict(existing.stats or {})
+        stats["manual_retry"] = {
+            "requested_at": timezone.now().isoformat(),
+            "previous_status": existing.status,
+            "previous_error_code": existing.error_code,
+        }
+        existing.status = ProcessingJob.Status.PENDING
+        existing.task_id = ""
+        existing.attempt = 0
+        existing.error_code = ""
+        existing.error_message = ""
+        existing.error_kind = ""
+        existing.started_at = None
+        existing.finished_at = None
+        existing.stats = stats
+        if actor is not None and existing.created_by_id is None:
+            existing.created_by = actor
+        existing.save()
+        return existing
+    return ProcessingJob.objects.create(
+        job_type=ProcessingJob.JobType.QUERY_LEXICON_CANDIDATES,
+        upload_item=upload_item,
+        edition=asset.edition,
+        asset=asset,
+        engine=QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
+        settings_version=QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
+        idempotency_key=idempotency_key,
+        created_by=actor,
+        stats={"source_checksum": source_checksum},
+    )
+
+
+def queue_query_lexicon_candidate_job(
+    asset: Asset,
+    *,
+    upload_item=None,
+    actor=None,
+    force: bool = False,
+) -> ProcessingJob:
+    job = create_query_lexicon_candidate_job(
+        asset,
+        upload_item=upload_item,
+        actor=actor,
+        force=force,
+    )
+    if job.task_id or job.status in {
+        ProcessingJob.Status.RUNNING,
+        ProcessingJob.Status.SUCCEEDED,
+    }:
+        return job
+    task_id = str(uuid.uuid4())
+    job.status = ProcessingJob.Status.PENDING
+    job.task_id = task_id
+    job.error_code = ""
+    job.error_message = ""
+    job.finished_at = None
+    job.save(
+        update_fields=[
+            "status",
+            "task_id",
+            "error_code",
+            "error_message",
+            "finished_at",
+            "updated_at",
+        ]
+    )
+    transaction.on_commit(
+        lambda: dispatch_query_lexicon_candidate_job(str(job.id), task_id)
+    )
+    return job
+
+
+def dispatch_query_lexicon_candidate_job(job_id: str, task_id: str) -> bool:
+    from ingestion.tasks import process_query_lexicon_candidate_job
+
+    try:
+        process_query_lexicon_candidate_job.apply_async(
+            args=[job_id],
+            task_id=task_id,
+            ignore_result=True,
+        )
+    except (KombuOperationalError, OSError, ConnectionError, TimeoutError) as exc:
+        ProcessingJob.objects.filter(pk=job_id, task_id=task_id).update(
+            status=ProcessingJob.Status.FAILED,
+            error_code="queue_unavailable",
+            error_message=f"术语候选任务未进入队列：{exc}"[:4000],
+            finished_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        return False
+    return True
+
+
+def run_query_lexicon_candidate_job(
+    job_id: str,
+    *,
+    task_id: str = "",
+) -> ProcessingJob:
+    job = ProcessingJob.objects.select_related("asset__edition__work").get(pk=job_id)
+    if task_id and task_id != job.task_id:
+        return job
+    if job.status == ProcessingJob.Status.CANCELED:
+        return job
+    job, claimed = _claim_processing_job(
+        job_id,
+        task_id=task_id,
+        progress_floor=10,
+    )
+    if not claimed:
+        return job
+    claim_task_id = job.task_id
+    job = ProcessingJob.objects.select_related("asset__edition__work").get(pk=job_id)
+    if job.asset is None:
         job.status = ProcessingJob.Status.FAILED
-        job.error_code = exc.__class__.__name__
-        job.error_message = str(exc)[:4000]
+        job.error_code = "missing_asset"
+        job.error_message = "术语候选提取目标文件已经不存在。"
         job.finished_at = timezone.now()
         job.save()
+        return job
+    try:
+        result = scan_asset_for_query_lexicon_candidates(job.asset, commit=True)
+        result.pop("_unique_pair_fingerprints", None)
+        if not _processing_claim_is_current(job, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
+        job.status = ProcessingJob.Status.SUCCEEDED
+        job.progress = 100
+        job.stats = {**(job.stats or {}), **result}
+        job.error_code = ""
+        job.error_message = ""
+        job.finished_at = timezone.now()
+        job.save()
+        return job
+    except Exception as exc:
+        ProcessingJob.objects.filter(
+            pk=job.pk,
+            status=ProcessingJob.Status.RUNNING,
+            task_id=claim_task_id,
+        ).update(
+            status=ProcessingJob.Status.FAILED,
+            error_code=exc.__class__.__name__,
+            error_message=str(exc)[:4000],
+            finished_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
         raise
 
 
@@ -518,6 +883,29 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         return job
     if job.status == ProcessingJob.Status.CANCELED:
         return job
+    if job.status not in {ProcessingJob.Status.PENDING, ProcessingJob.Status.FAILED}:
+        return job
+    if job.status == ProcessingJob.Status.FAILED and job.attempt >= job.max_attempts:
+        return job
+
+    if _pause_requested(job):
+        if job.asset_id:
+            Edition.objects.filter(pk=job.edition_id).update(
+                ocr_status=OcrStatus.PENDING,
+                updated_at=timezone.now(),
+            )
+        return _mark_job_paused(job)
+
+    job, claimed = _claim_processing_job(
+        job_id,
+        task_id=task_id,
+        ocr_batch=True,
+        progress_floor=5,
+    )
+    if not claimed:
+        return job
+    claim_task_id = job.task_id
+    job = ProcessingJob.objects.select_related("asset__edition").get(pk=job_id)
     if job.asset is None:
         job.status = ProcessingJob.Status.FAILED
         job.error_code = "missing_asset"
@@ -525,28 +913,9 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         job.finished_at = timezone.now()
         job.save()
         return job
-    if job.status == ProcessingJob.Status.FAILED and job.attempt >= job.max_attempts:
-        return job
-
     asset = job.asset
     edition = asset.edition
-    if _pause_requested(job):
-        edition.ocr_status = OcrStatus.PENDING
-        edition.save(update_fields=["ocr_status", "updated_at"])
-        return _mark_job_paused(job)
     stats = dict(job.stats or {})
-    retrying_failed_batch = job.status == ProcessingJob.Status.FAILED
-    if not stats.get("batch_session_started") or retrying_failed_batch:
-        job.attempt += 1
-    stats["batch_session_started"] = True
-    job.status = ProcessingJob.Status.RUNNING
-    job.started_at = job.started_at or timezone.now()
-    job.finished_at = None
-    job.progress = max(5, job.progress)
-    job.error_code = ""
-    job.error_message = ""
-    job.stats = stats
-    job.save()
     edition.ocr_status = OcrStatus.RUNNING
     edition.save(update_fields=["ocr_status", "updated_at"])
 
@@ -623,6 +992,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             return _mark_job_paused(job)
 
         if remaining:
+            if not _processing_claim_is_current(job, claim_task_id):
+                return ProcessingJob.objects.get(pk=job.pk)
             queued_task_id = str(uuid.uuid4())
             job.status = ProcessingJob.Status.PENDING
             job.task_id = queued_task_id
@@ -755,6 +1126,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             actor=job.created_by,
             force=True,
         )
+        if not _processing_claim_is_current(job, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
         job.status = ProcessingJob.Status.SUCCEEDED
         job.progress = 100
         stats.update(
@@ -770,13 +1143,20 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         job.save()
         return job
     except Exception as exc:
-        edition.ocr_status = OcrStatus.FAILED
-        edition.save(update_fields=["ocr_status", "updated_at"])
-        job.status = ProcessingJob.Status.FAILED
-        job.error_code = exc.__class__.__name__
-        job.error_message = str(exc)[:4000]
-        job.finished_at = timezone.now()
-        job.save()
+        if _processing_claim_is_current(job, claim_task_id):
+            edition.ocr_status = OcrStatus.FAILED
+            edition.save(update_fields=["ocr_status", "updated_at"])
+            ProcessingJob.objects.filter(
+                pk=job.pk,
+                status=ProcessingJob.Status.RUNNING,
+                task_id=claim_task_id,
+            ).update(
+                status=ProcessingJob.Status.FAILED,
+                error_code=exc.__class__.__name__,
+                error_message=str(exc)[:4000],
+                finished_at=timezone.now(),
+                updated_at=timezone.now(),
+            )
         raise
     finally:
         if cleanup:

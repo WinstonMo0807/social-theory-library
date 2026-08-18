@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsLibraryAdmin
+from common.capabilities import capability_snapshot
 
 from .cookies import clear_auth_cookies, expose_csrf_cookie, set_auth_cookies
 from .models import User
@@ -88,6 +89,13 @@ class CurrentUserView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class CurrentCapabilitiesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(capability_snapshot(request.user).as_dict())
 
 
 class PasswordResetRequestView(APIView):

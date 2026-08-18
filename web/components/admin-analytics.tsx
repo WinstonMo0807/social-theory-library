@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BarChart3, BookOpen, Download, Search } from "lucide-react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Analytics = {
   period_days: number;
@@ -18,7 +18,7 @@ export function AdminAnalytics() {
   const [data, setData] = useState<Analytics | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     void apiRequest<Analytics>("/catalog/admin/usage-analytics/?days=30", {}, token)
       .then(setData)

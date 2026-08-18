@@ -4341,6 +4341,30 @@ img {
   box-shadow: inset 0 0 0 1px var(--ink);
 }
 
+.ai-runtime-settings fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+
+.ai-runtime-settings legend {
+  padding: 0 6px;
+  font-size: calc(10px + var(--font-bump));
+  font-weight: 700;
+}
+
+.ai-runtime-settings fieldset > label:not(.switch-row) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-runtime-settings fieldset > .button {
+  justify-self: start;
+}
+
 .password-input {
   position: relative;
 }
@@ -9209,7 +9233,7 @@ img {
 
 .reader-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .reader-actions a,
@@ -10430,7 +10454,7 @@ img {
     width: 42px;
   }
 
-  .reader-actions button:nth-child(2) {
+  .reader-actions button:nth-child(3) {
     display: none;
   }
 

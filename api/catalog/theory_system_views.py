@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.capabilities import Capability, has_capability
 from common.permissions import IsKnowledgeEditor, IsKnowledgeReviewer, IsLibraryAdmin
 from ingestion.models import AuditEvent
 
@@ -30,8 +31,6 @@ from .models import (
     KnowledgeRelation,
     KnowledgeRelationVersion,
     Page,
-    Passage,
-    Person,
     PersonNodeRelation,
     PublicationState,
     ReadingPath,
@@ -48,6 +47,7 @@ from .services.knowledge_nodes import (
     record_node_version,
     rollback_merge,
 )
+from .services.scoped_search import SearchContext, SearchService
 from .theory_serializers import (
     AdminKnowledgeNodeSerializer,
     AdminKnowledgeRelationSerializer,
@@ -147,13 +147,10 @@ def _node_filter(queryset, params):
             )
         queryset = queryset.filter(discipline_query)
     if query:
-        queryset = queryset.filter(
-            Q(canonical_name_zh__icontains=query)
-            | Q(canonical_name_en__icontains=query)
-            | Q(summary__icontains=query)
-            | Q(definition__icontains=query)
-            | Q(aliases__alias__icontains=query)
-            | Q(aliases__normalized_alias__icontains=query.casefold())
+        queryset = SearchService().apply_query(
+            queryset,
+            SearchContext.THEORIES,
+            query,
         )
     return queryset.distinct()
 
@@ -265,106 +262,15 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
         )
 
 
-class TheorySystemSearchView(TheorySystemFeatureMixin, APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        query = request.query_params.get("q", "").strip()
-        if not query:
-            return Response({"query": "", "results": []})
-        limit = min(max(int(request.query_params.get("limit", 8)), 1), 24)
-        results = []
-
-        nodes = _published_node_queryset().filter(
-            Q(canonical_name_zh__icontains=query)
-            | Q(canonical_name_en__icontains=query)
-            | Q(aliases__alias__icontains=query)
-            | Q(summary__icontains=query)
-            | Q(definition__icontains=query)
-        ).distinct()[:limit]
-        results.extend(
-            {
-                "kind": "knowledge_node",
-                "id": str(node.id),
-                "title": node.canonical_name_zh,
-                "subtitle": node.canonical_name_en,
-                "description": node.summary,
-                "href": f"/theories/nodes/{node.slug}",
-                "node_type": node.node_type,
-            }
-            for node in nodes
-        )
-
-        scholars = Person.objects.filter(
-            Q(preferred_name__icontains=query)
-            | Q(original_name__icontains=query)
-            | Q(aliases__icontains=query),
-            scholar_profile__editorial_status="published",
-            node_relations__status="published",
-            node_relations__node__status="published",
-        ).select_related("scholar_profile").distinct()[:limit]
-        results.extend(
-            {
-                "kind": "scholar",
-                "id": str(person.id),
-                "title": person.preferred_name,
-                "subtitle": person.original_name,
-                "description": person.scholar_profile.short_description,
-                "href": f"/scholars/{person.scholar_profile.slug}",
-            }
-            for person in scholars
-        )
-
-        works = _published_work_queryset().filter(
-            Q(title__icontains=query)
-            | Q(subtitle__icontains=query)
-            | Q(search_aliases__icontains=query)
-            | Q(editions__contributions__person__preferred_name__icontains=query)
-        ).distinct()[:limit]
-        for work in works:
-            work_data = compact_work(work, request)
-            if not work_data:
-                continue
-            results.append(
-                {
-                    "kind": "work",
-                    **work_data,
-                    "description": work.abstract[:360],
-                    "href": work_data.get("detail_href"),
-                }
-            )
-
-        passages = Passage.objects.filter(
-            normalized_text__icontains=query.casefold(),
-            page__asset__edition__state=PublicationState.PUBLISHED,
-            page__asset__status=Asset.Status.READY,
-            page__asset__is_current=True,
-        ).select_related("page__asset__edition__work")[:limit]
-        results.extend(
-            {
-                "kind": "passage",
-                "id": str(passage.id),
-                "title": passage.page.asset.edition.work.title,
-                "subtitle": f"PDF 第 {passage.page.index} 页",
-                "description": passage.text,
-                "href": (
-                    f"/reader/{passage.page.asset_id}?page={passage.page.index}"
-                    f"&q={query}&passage={passage.id}"
-                ),
-            }
-            for passage in passages
-        )
-        return Response({"query": query, "results": results[: limit * 4]})
-
-
 class KnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = KnowledgeNodeListSerializer
 
     def get_queryset(self):
-        return _node_filter(_published_node_queryset(), self.request.query_params).order_by(
-            "sort_order", "canonical_name_zh"
-        )
+        queryset = _node_filter(_published_node_queryset(), self.request.query_params)
+        if self.request.query_params.get("q", "").strip():
+            return queryset.order_by("_search_rank", "sort_order", "canonical_name_zh")
+        return queryset.order_by("sort_order", "canonical_name_zh")
 
 
 class KnowledgeNodeDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
@@ -680,7 +586,15 @@ class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
         discipline = self.request.query_params.get("discipline", "").strip()
         if discipline:
             queryset = queryset.filter(primary_discipline__slug=discipline)
-        return queryset.order_by("sort_order", "title")
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        return SearchService(request=self.request).queryset(
+            SearchContext.READING_PATHS,
+            query,
+            base_queryset=queryset,
+        )
 
 
 class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
@@ -708,9 +622,10 @@ class AdminKnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListCreateAP
                 legacy_mappings__legacy_model="TheorySchool",
                 legacy_mappings__legacy_id=legacy_id,
             )
-        return _node_filter(queryset, self.request.query_params).distinct().order_by(
-            "sort_order", "canonical_name_zh"
-        )
+        queryset = _node_filter(queryset, self.request.query_params).distinct()
+        if self.request.query_params.get("q", "").strip():
+            return queryset.order_by("_search_rank", "sort_order", "canonical_name_zh")
+        return queryset.order_by("sort_order", "canonical_name_zh")
 
 
 class AdminKnowledgeNodeDetailView(
@@ -727,7 +642,7 @@ class AdminKnowledgeNodeDetailView(
 
     def destroy(self, request, *args, **kwargs):
         node = self.get_object()
-        if request.user.role != "admin":
+        if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
             return Response({"detail": "只有管理员可以下线理论节点。"}, status=403)
         node.status = "archived"
         node.published_at = None
@@ -1091,6 +1006,7 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
                         "alias": alias,
                         "language": "zh-CN",
                         "alias_type": KnowledgeNodeAlias.AliasType.ALIAS,
+                        "is_verified": True,
                         "created_by": request.user,
                     },
                 )

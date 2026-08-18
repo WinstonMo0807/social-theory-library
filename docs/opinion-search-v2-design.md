@@ -319,3 +319,21 @@ Reranker 单独失败不需要切回 V1。V2 会保留关键词、dense、RRF �
 - 断开 reranker 后，观点检索仍能返回可核对的降级结果。
 
 在这些数据出现前，最终 profile、模型和 Top K 均为 `待核实`。
+
+## 16.1 Task 2A 已实现的查询阶段边界
+
+Task 2A 已在 V2 查询路径加入 QueryLexicon search resolver。它保留 original query，并以有限 branch 运行规范名称、确认跨语言译名和确认别名。branch 数、匹配实体数、每实体术语数和补充字符数均有集中配置。legacy mixed alias 与 generated search variant 只作为低可信的内部检索提示，不能等同于人工译名。
+
+V2 的实体识别不再调用一套独立的 TheorySchool、Topic、Concept 字符串 matcher。它读取 QueryLexicon 的 canonical identity，并保留同词多实体的 ambiguity。孤立高歧义词不会强制收窄到某个理论对象。相关实体扩展和知识图谱扩展仍不在 Task 2A 范围内。
+
+规则重排现在把原文字面覆盖、同一 canonical entity 的确认术语覆盖和跨语言术语覆盖作为三个可解释特征。candidate 在 branch fusion 后去重，重复 alias 不会无限累加。新建 SemanticChunk 使用 passage-level language detector，旧 chunk 和旧 active index 不会自动重建。V1 继续走原有实现，V2 仍需人工 benchmark 后才适合启用为公共默认。
+
+## 16.2 Task 2B-0 评测边界
+
+Task 2B-0 冻结 Task 2A 参数为 `baseline_v2a`，没有调整 branch weight、profile 或 Top K。`explicit_rewrite` 来自调用者显式提交的 rewrite，不使用 LLM。`intent_rewrite` 来自固定问题类型和固定短语表，也不使用 LLM。两者都受统一 branch 数和字符预算限制，并进入 sparse 与 dense。评测调用可以独立关闭任一 supplemental branch，公开 API 的默认行为没有改变。
+
+正式候选池合并 V1、V2、纯 lexical 和纯 dense。人工页面以固定 seed 盲化顺序，默认折叠系统 rank 和 V2 branch provenance。任何 grade 都必须由人工核对 PDF 后填写。
+
+Task 2B-0 只修复了一个确定性实体覆盖错误。英文 term 现在需要拉丁词边界，`field` 不再命中 `midfield`，`structure` 不再命中 `infrastructure`。中文仍按至少两个字符的词项检查，可在没有分词边界的复合词中命中。权重没有变化。
+
+当前本地 SQLite 没有 SemanticChunk，也没有 QueryLexicon 表，因而不能形成真实跨语言质量结论。V2 feature flag 继续关闭。

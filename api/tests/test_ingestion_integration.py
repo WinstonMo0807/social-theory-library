@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+from uuid import uuid4
 
 import fitz
 import pytest
@@ -11,6 +12,7 @@ from catalog.models import (
     Discipline,
     Edition,
     OcrStatus,
+    Person,
     PublicationEvent,
     PublicationState,
     ScholarProfile,
@@ -20,10 +22,23 @@ from catalog.models import (
     WorkDisciplineRelation,
     WorkKnowledgeRelation,
     WorkSubdisciplineRelation,
+    SemanticIndexVersion,
 )
 from ingestion.models import UploadBatch, UploadItem
 from ingestion.services.pipeline import resume_reviewed_item_publication, run_pipeline
 from reading.models import Annotation
+
+
+@pytest.fixture(autouse=True)
+def active_semantic_index_version():
+    """Pipeline tests model the deployed invariant of one active write target."""
+
+    return SemanticIndexVersion.objects.create(
+        uid=f"ingestion-test-{uuid4()}",
+        provider="huggingFace",
+        model_repo_id="test-model",
+        status=SemanticIndexVersion.Status.ACTIVE,
+    )
 
 
 def build_test_pdf(path: Path, marker: str = "") -> bytes:
@@ -394,6 +409,8 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     # review alone must not make a new scholar public.
     scholar_profile.editorial_status = "published"
     scholar_profile.save(update_fields=["editorial_status", "updated_at"])
+    scholar_profile.person.authority_status = Person.AuthorityStatus.VERIFIED
+    scholar_profile.person.save(update_fields=["authority_status", "updated_at"])
 
     preflight_response = api_client.get(f"/api/ingestion/items/{item.id}/publish/")
     assert preflight_response.status_code == 200
@@ -650,6 +667,19 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     replacement_item = UploadItem.objects.get(pk=replace_response.data["id"])
     assert replacement_item.batch.source == "replacement"
 
+    # The first eager semantic attempt may mark its version failed when the
+    # offline model fixture is unavailable. A replacement still needs exactly
+    # one explicit active target, so create one only if the previous target was
+    # actually failed.
+    if not SemanticIndexVersion.objects.filter(
+        status=SemanticIndexVersion.Status.ACTIVE,
+    ).exists():
+        SemanticIndexVersion.objects.create(
+            uid=f"ingestion-replacement-{uuid4()}",
+            provider="huggingFace",
+            model_repo_id="test-model",
+            status=SemanticIndexVersion.Status.ACTIVE,
+        )
     replacement_item = run_pipeline(str(replacement_item.id))
     replacement_item.refresh_from_db()
     edition.refresh_from_db()

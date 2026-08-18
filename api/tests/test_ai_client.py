@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -8,6 +9,7 @@ from ingestion.services.ai_client import (
     AIConfiguration,
     AIConfigurationError,
     AIInvalidOutput,
+    AIProviderRateLimited,
     AIServiceUnavailable,
     current_ai_configuration,
 )
@@ -135,3 +137,50 @@ def test_invalid_extra_field_is_rejected():
             schema=SCHEMA,
             prompt_version="metadata-v1",
         )
+
+
+def test_openai_compatible_stream_uses_capability_model_and_retains_usage():
+    captured = {}
+
+    def handler(request: httpx.Request):
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"choices":[{"delta":{"content":"馆藏"}}]}\n\n'
+                'data: {"choices":[{"delta":{"content":"回答"}}]}\n\n'
+                'data: {"choices":[],"usage":{"completion_tokens":2}}\n\n'
+                "data: [DONE]\n\n"
+            ),
+            headers={"Content-Type": "text/event-stream"},
+        )
+
+    qa_config = replace(
+        config(),
+        capability="library_qa",
+        profile_key="library-default",
+        model="library-model",
+        temperature=0.25,
+        max_output_tokens=512,
+    )
+    client = AIClient(qa_config, transport=httpx.MockTransport(handler))
+
+    assert "".join(client.stream(messages=[{"role": "user", "content": "问题"}])) == "馆藏回答"
+    assert captured["payload"]["model"] == "library-model"
+    assert captured["payload"]["temperature"] == 0.25
+    assert captured["payload"]["max_tokens"] == 512
+    assert client.last_usage["completion_tokens"] == 2
+    assert client.last_usage["generation_latency_ms"] >= 0
+
+
+def test_stream_reports_provider_rate_limit_without_fallback_to_another_model():
+    def handler(_request: httpx.Request):
+        return httpx.Response(429, json={"detail": "rate limited"})
+
+    client = AIClient(
+        replace(config(), model="library-model", capability="library_qa"),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(AIProviderRateLimited):
+        list(client.stream(messages=[{"role": "user", "content": "问题"}]))

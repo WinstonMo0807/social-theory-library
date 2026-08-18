@@ -86,13 +86,42 @@ def worker_heartbeat_status(*, max_age_seconds: int = 180) -> dict:
 def _celery_worker_control_ping(*, timeout_seconds: float = 2.0) -> dict:
     """Probe the Celery worker main process without queueing another task."""
 
+    status = celery_worker_control_status(timeout_seconds=timeout_seconds)
+    return {
+        "online": status["online"],
+        "worker_count": status["worker_count"],
+    }
+
+
+def celery_worker_control_status(*, timeout_seconds: float = 2.0) -> dict:
+    """Return a secret-free inventory of Celery workers responding to control."""
+
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        return {
+            "online": True,
+            "worker_count": 1,
+            "workers": ["eager-test-runtime"],
+            "detail": "Celery eager mode",
+        }
+
     from config.celery import app as celery_app
 
-    replies = celery_app.control.inspect(timeout=timeout_seconds).ping() or {}
-    return {
-        "online": bool(replies),
-        "worker_count": len(replies),
-    }
+    try:
+        replies = celery_app.control.inspect(timeout=timeout_seconds).ping() or {}
+        workers = sorted(str(name)[:160] for name in replies)
+        return {
+            "online": bool(workers),
+            "worker_count": len(workers),
+            "workers": workers,
+            "detail": "worker 控制通道可响应" if workers else "没有 worker 响应控制探针",
+        }
+    except Exception as exc:
+        return {
+            "online": False,
+            "worker_count": 0,
+            "workers": [],
+            "detail": safe_service_error(exc),
+        }
 
 
 def worker_runtime_status(

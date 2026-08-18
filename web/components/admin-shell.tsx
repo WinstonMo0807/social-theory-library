@@ -8,7 +8,6 @@ import {
   Boxes,
   ChartNoAxesCombined,
   Cloud,
-  Compass,
   CircleDot,
   GitBranch,
   GitFork,
@@ -20,7 +19,6 @@ import {
   Search,
   ScanSearch,
   Send,
-  Settings,
   Sparkles,
   Tags,
   Upload,
@@ -30,52 +28,64 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { apiRequest, clearStoredSession, getStoredAccessToken, isAuthenticationError } from "@/lib/api";
+import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { Wordmark } from "./site-header";
 
 const navigation = [
-  ["概览", [
-    ["/admin", LayoutDashboard, "Dashboard"],
-    ["/admin/analytics", ChartNoAxesCombined, "阅读与搜索统计"],
+  ["Dashboard", [["/admin", LayoutDashboard, "今日工作"]]],
+  ["Library", [
+    ["/admin/uploads", Upload, "Upload"],
+    ["/admin/review", Boxes, "Intake / Review"],
+    ["/admin/library", BookOpen, "Works / Editions / Assets"],
+    ["/admin/publication", Send, "Publication"],
   ]],
-  ["上架", [
-    ["/admin/uploads", Upload, "批量上传"],
-    ["/admin/review", Boxes, "元数据复核"],
-    ["/admin/processing", ChartNoAxesCombined, "Processing Center"],
+  ["Knowledge", [
+    ["/admin/knowledge", CircleDot, "Knowledge Workspace"],
+    ["/admin/scholars", UserRound, "Scholars"],
+    ["/admin/disciplines", GraduationCap, "Disciplines"],
+    ["/admin/subdisciplines", GitBranch, "Subdisciplines"],
+    ["/admin/theory-nodes", CircleDot, "Theories"],
+    ["/admin/topics", Tags, "Topics"],
+    ["/admin/theory-relations", GitFork, "Relations / Timeline"],
+    ["/admin/reading-paths", BookOpen, "Reading Paths"],
   ]],
-  ["馆藏", [
-    ["/admin/library", BookOpen, "馆藏项目"],
-  ]],
-  ["学者与机构", [
-    ["/admin/scholars", UserRound, "学者"],
-  ]],
-  ["理论知识", [
-    ["/admin/disciplines", GraduationCap, "学科"],
-    ["/admin/subdisciplines", GitBranch, "子学科"],
-    ["/admin/theory-nodes", CircleDot, "理论节点"],
-    ["/admin/theory-relations", GitFork, "理论关系"],
-    ["/admin/theory-timeline", Compass, "理论时间轴"],
-    ["/admin/topics", Tags, "主题"],
-    ["/admin/reading-paths", BookOpen, "阅读路径"],
-  ]],
-  ["搜索与模型", [
+  ["Review", [["/admin/candidates", Boxes, "All Candidates"]]],
+  ["Search & Intelligence", [
+    ["/admin/query-lexicon", Search, "QueryLexicon"],
     ["/admin/semantic-index", ScanSearch, "Semantic Index"],
+    ["/admin/settings", Sparkles, "Ask Library / AI Runtime"],
   ]],
-  ["发布", [
-    ["/admin/publication", Send, "发布台"],
-    ["/admin/recommendations", Sparkles, "推荐管理"],
-    ["/admin/about", Info, "首页与关于"],
+  ["Operations", [
+    ["/admin/processing", ChartNoAxesCombined, "Processing Jobs"],
+    ["/admin/status", Activity, "System Status"],
+    ["/admin/distribution", Cloud, "Backup / Storage"],
+    ["/admin/analytics", ChartNoAxesCombined, "Audit / Analytics"],
   ]],
-  ["系统", [
-    ["/admin/system-health", Activity, "System Health"],
-    ["/admin/users", Users, "读者用户"],
-    ["/admin/distribution", Cloud, "Storage 与分发"],
-    ["/admin/settings", Settings, "运行设置"],
+  ["Administration", [
+    ["/admin/users", Users, "Users / Roles"],
+    ["/admin/about", Info, "Settings / Editorial"],
+    ["/admin/recommendations", Sparkles, "Recommendations"],
   ]],
 ] as const;
 
+const routeCapabilities: Record<string, string[]> = {
+  "/admin/status": ["can_view_system_status"],
+  "/admin/system-health": ["can_view_system_status"],
+  "/admin/query-lexicon": ["can_view_query_lexicon"],
+  "/admin/semantic-index": ["can_view_semantic_index"],
+  "/admin/analytics": ["can_view_audit_log"],
+  "/admin/users": ["can_manage_users"],
+  "/admin/distribution": ["can_run_backup"],
+  "/admin/settings": ["can_manage_ai", "can_manage_search_runtime"],
+};
+
+// Keep the route-level list explicit even though the server remains the
+// authority for every permission check.  It gives older session payloads a
+// safe, predictable fallback while newer payloads use the capability snapshot.
 const administratorOnlyRoutes = new Set([
+  "/admin/status",
   "/admin/system-health",
+  "/admin/query-lexicon",
   "/admin/semantic-index",
   "/admin/analytics",
   "/admin/users",
@@ -83,13 +93,13 @@ const administratorOnlyRoutes = new Set([
   "/admin/settings",
 ]);
 
+const staffRoles = ["admin", "editor", "reviewer"] as const;
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
-  const [user, setUser] = useState<{ display_name: string; role: string } | null>(null);
-  const [authError, setAuthError] = useState("");
-  const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -127,56 +137,55 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    let active = true;
-    const token = getStoredAccessToken();
-    if (!token) {
+    if (session.status === "unauthenticated") {
       window.location.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return () => {
-        active = false;
-      };
     }
-    const verify = async () => {
-      let lastError: unknown = null;
-      for (const wait of [0, 700, 1800]) {
-        if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
-        if (!active) return;
-        try {
-          const profile = await apiRequest<{ display_name: string; role: string }>("/auth/me/", {}, token);
-          if (!active) return;
-          if (!["admin", "editor", "reviewer"].includes(profile.role)) {
-            window.location.replace("/");
-            return;
-          }
-          setUser(profile);
-          return;
-        } catch (reason) {
-          lastError = reason;
-          if (isAuthenticationError(reason)) {
-            clearStoredSession();
-            window.location.replace(`/login?next=${encodeURIComponent(pathname)}`);
-            return;
-          }
-        }
-      }
-      if (!active) return;
-      setAuthError(lastError instanceof Error ? lastError.message : "管理服务暂时不可用，请重试。");
-    };
-    void verify();
-    return () => {
-      active = false;
-    };
-  }, [pathname, verificationAttempt]);
+  }, [pathname, session.status]);
 
-  if (!user) {
+  if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
       <div className="admin-auth-loading">
-        <strong>{authError ? "管理服务暂时不可用" : "正在验证管理权限……"}</strong>
-        {authError ? <><p>{authError}</p><button type="button" onClick={() => {
-          setAuthError("");
-          setVerificationAttempt((value) => value + 1);
-        }}><RefreshCw size={15} />保留会话并重试</button></> : null}
+        <strong>{session.status === "unauthenticated" ? "登录已过期" : "正在验证管理权限……"}</strong>
+        {session.status === "unauthenticated" ? <p>正在转到登录页面。</p> : null}
       </div>
     );
+  }
+
+  if (session.status === "forbidden") {
+    return (
+      <div className="admin-auth-loading" data-error-category={session.errorCategory}>
+        <strong>当前账户没有管理权限</strong>
+        <p>{session.message}</p>
+        <Link href="/account">返回读者中心</Link>
+      </div>
+    );
+  }
+
+  if (session.status === "temporary_error" || !session.user) {
+    return (
+      <div className="admin-auth-loading" data-error-category={session.errorCategory}>
+        <strong>认证服务暂时不可用</strong>
+        <p>{session.message}</p>
+        <button type="button" onClick={retrySession}><RefreshCw size={15} />保留会话并重试</button>
+      </div>
+    );
+  }
+
+  const user = session.user;
+  const capabilities = user.capabilities === undefined
+    ? null
+    : new Set(user.capabilities);
+
+  function canViewRoute(href: string) {
+    // A response from an older API may not contain capabilities yet.  This is
+    // only a display fallback; all mutations and page APIs still enforce the
+    // server-side capability checks.
+    if (capabilities === null) {
+      return user.role === "admin" || !administratorOnlyRoutes.has(href);
+    }
+    const required = routeCapabilities[href];
+    if (!required) return true;
+    return required.some((capability) => capabilities.has(capability));
   }
 
   return (
@@ -192,9 +201,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav>
           {navigation.map(([group, links]) => {
-            const visibleLinks = links.filter(([href]) => (
-              user.role === "admin" || !administratorOnlyRoutes.has(href)
-            ));
+            const visibleLinks = links.filter(([href]) => canViewRoute(href));
             if (!visibleLinks.length) return null;
             return (
             <section className="admin-nav-group" key={group}>
@@ -208,7 +215,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="system-status"><span /><small>当前会话</small><strong>API 已连接</strong></div>
-        <footer><strong>社会理论书库</strong><span>v2.6.1 连续入库与检索修复版</span></footer>
+        <footer><strong>社会理论书库</strong><span>v2.7 持续增长架构</span></footer>
       </aside>
       <div className="admin-main">
         <header className="admin-topbar">

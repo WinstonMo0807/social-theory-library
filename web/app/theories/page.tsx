@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CircleDot, Layers3, Network } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { ScopedSearchPagination } from "@/components/scoped-search";
 import {
   DisciplineCard,
   ReadingPathCard,
@@ -12,19 +13,23 @@ import {
   WorkCompactCard,
   nodeTypeLabels,
 } from "@/components/theory-system-ui";
-import { loadTheorySystemOverview, searchTheorySystem } from "@/lib/server-api";
+import { loadScopedSearch, loadTheorySystemOverview } from "@/lib/server-api";
+import { searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = {
   title: "探索理论流派",
   description: "从学科、理论传统、子学科、争论和馆藏证据进入社会理论世界。",
 };
 
-export default async function TheoriesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q = "" } = await searchParams;
-  const [overview, searchResults] = await Promise.all([
+export default async function TheoriesPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; context?: string }> }) {
+  const { q = "", page: rawPage } = await searchParams;
+  const page = searchPage(rawPage);
+  const [overview, searchEnvelope] = await Promise.all([
     loadTheorySystemOverview(),
-    q.trim() ? searchTheorySystem(q) : Promise.resolve([]),
+    q.trim() ? loadScopedSearch("theories", q, { page }) : Promise.resolve(null),
   ]);
+  const theoryGroup = searchEnvelope?.groups[0];
+  const searchResults = theoryGroup?.results ?? [];
   const browseCounts = overview ? Object.values(overview.browse) : [];
   const hasBrowseEntries = browseCounts.some((count) => (count ?? 0) > 0);
 
@@ -47,8 +52,8 @@ export default async function TheoriesPage({ searchParams }: { searchParams: Pro
             {searchResults.length ? (
               <div>
                 {searchResults.map((result) => (
-                  <Link href={result.href || "/theories"} key={`${result.kind}-${result.id}`}>
-                    <span>{result.kind === "knowledge_node" ? nodeTypeLabels[result.node_type || ""] || "知识节点" : result.kind === "scholar" ? "学者" : result.kind === "passage" ? "馆藏原文" : "馆藏文献"}</span>
+                  <Link href={result.url || "/theories"} key={`${result.entity_type}-${result.id}`}>
+                    <span>{result.entity_type === "knowledge_node" ? nodeTypeLabels[String(result.metadata.node_type || "")] || "知识节点" : "理论传统"}</span>
                     <strong>{result.title}</strong>
                     {result.subtitle ? <small>{result.subtitle}</small> : null}
                     {result.description ? <p>{result.description}</p> : null}
@@ -56,7 +61,8 @@ export default async function TheoriesPage({ searchParams }: { searchParams: Pro
                   </Link>
                 ))}
               </div>
-            ) : <TheoryEmpty title="没有找到公开结果" detail="可改用理论别名、学者姓名、核心概念或馆藏原文中的词句再次搜索。" />}
+            ) : <TheoryEmpty title="没有找到公开理论" detail="可改用理论规范名、别名、外文名或核心概念再次搜索。" />}
+            <ScopedSearchPagination path="/theories" context="theories" page={page} totalPages={searchEnvelope?.pagination.total_pages ?? 0} params={{ q }} />
           </section>
         ) : null}
 

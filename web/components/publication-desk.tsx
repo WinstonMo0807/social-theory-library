@@ -3,7 +3,7 @@
 import { AlertCircle, BookOpen, CheckCircle2, ExternalLink, FileText, LoaderCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiBlob, apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiBlob, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ItemPublicationControl, type PublicationPreflight } from "./item-publication-control";
 
 type ImpactItem = { label: string; href: string };
@@ -72,7 +72,7 @@ export function PublicationDesk() {
   const [previewUrl, setPreviewUrl] = useState("");
 
   const load = useCallback(async () => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) return;
     try {
       const payload = await apiRequest<Paginated<PublicationItem>>(
@@ -112,7 +112,7 @@ export function PublicationDesk() {
   const active = filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !active) {
       const timer = window.setTimeout(() => setPreviewUrl(""), 0);
       return () => window.clearTimeout(timer);

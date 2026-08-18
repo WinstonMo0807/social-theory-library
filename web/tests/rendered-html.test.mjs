@@ -149,7 +149,7 @@ function paginated(results) {
 
 function fixturePayload(pathname) {
   if (pathname === "/api/catalog/site-config/") return defaultSiteConfig;
-  if (pathname === "/api/catalog/site-stats/") return { documents: 1, scholars: 1, knowledge_objects: 2, last_updated: null, last_updated_label: "测试", version: "2.6.1" };
+  if (pathname === "/api/catalog/site-stats/") return { documents: 1, scholars: 1, knowledge_objects: 2, last_updated: null, last_updated_label: "测试", version: "2.7" };
   if (pathname === "/api/catalog/hot-searches/") return { period_days: 30, results: [] };
   if (pathname === "/api/catalog/works/") return paginated([sampleWork]);
   if (pathname === "/api/catalog/scholars/") return paginated([sampleScholar]);
@@ -196,12 +196,36 @@ function fixturePayload(pathname) {
   };
   if (pathname === "/api/catalog/about-blocks/") return { ...paginated([]), configured: false };
   if (pathname === "/api/catalog/search/") return {
+    implementation_version: "scoped-search-fixture",
+    context: "global",
+    visibility: "public",
+    query: "",
+    total: 1,
+    latency_ms: 1,
+    groups: [{
+      context: "theories",
+      label: "理论",
+      backend: "database",
+      count: 1,
+      results: [{
+        context: "theories",
+        entity_type: "knowledge_node",
+        id: "theory-node-fixture",
+        title: "实践理论",
+        subtitle: "Theory of Practice",
+        description: "测试理论节点",
+        url: "/theories/nodes/practice-theory",
+        match: { type: "exact", query: "实践理论", highlights: ["实践理论"] },
+        metadata: { slug: "practice-theory", node_type: "theory_tradition" },
+      }],
+      pagination: { page: 1, limit: 24, total: 1, total_pages: 1 },
+    }],
     counts: { works: 1, books: 1, articles: 0, theses: 0, reports: 0, scholars: 1, topics: 1, theories: 1, passages: 0 },
     works: [sampleWork], scholars: [sampleScholar],
     topics: [{ id: sampleTopic.id, name: sampleTopic.name, slug: sampleTopic.slug, description: sampleTopic.description, work_count: 1 }],
     theories: [{ id: sampleTheory.id, name: sampleTheory.name, slug: sampleTheory.slug, description: sampleTheory.description, work_count: 1 }],
     passages: [], facets: emptyFacets,
-    pagination: { page: 1, page_size: 24, total: 1, total_pages: 1 },
+    pagination: { page: 1, page_size: 24, limit: 24, total: 1, total_pages: 1 },
   };
   if (pathname === "/api/catalog/semantic-search/") return {
     query: "农业现代化与组织依赖", engine: "keyword_fallback", fallback_used: true,
@@ -277,10 +301,8 @@ test("server-renders the Chinese public home without starter artifacts", async (
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<html[^>]*lang="zh-CN"/i);
-  assert.match(html, /社会理论/);
-  assert.match(html, /如何被感知/);
-  assert.match(html, /阅读就是/);
-  assert.match(html, />方法</);
+  assert.match(html, /社会理论如何被感知/);
+  assert.match(html, /阅读就是方法/);
   assert.match(html, /精选馆藏/);
   assert.match(html, /理论流派/);
   assert.match(html, /推荐页外学者/);

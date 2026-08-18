@@ -2,14 +2,14 @@
 
 import { Bookmark } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiRequest, getStoredAccessToken } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export function SaveTopicButton({ topicId }: { topicId: string }) {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token || !topicId) return;
     let cancelled = false;
     apiRequest<{ results: { id: string }[] }>(
@@ -27,7 +27,7 @@ export function SaveTopicButton({ topicId }: { topicId: string }) {
   }, [topicId]);
 
   async function toggle() {
-    const token = getStoredAccessToken();
+    const token = getServerSessionCredential();
     if (!token) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
       return;

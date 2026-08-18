@@ -100,8 +100,9 @@ test("library assistant follows the authenticated status and SSE API contract", 
   assert.match(client, /apiStreamRequest/);
   assert.match(client, /disabled=\{!canGenerate\}/);
   assert.match(client, /\/login\?next=\/explore\/ask/);
-  assert.match(client, /\/auth\/me\//);
-  assert.match(client, /userRole === "admin"/);
+  assert.match(client, /useSessionBootstrap/);
+  assert.doesNotMatch(client, /apiRequest[^\n]*\/auth\/me\//);
+  assert.match(client, /capabilities\?\.includes\("can_manage_search_runtime"\)/);
   assert.match(client, /读者页不会接收、显示或长期保存任何 API 密钥/);
   assert.doesNotMatch(client, /type="password"/);
 });

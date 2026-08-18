@@ -65,6 +65,7 @@ from .services.recommendations import (
     ensure_default_policies,
     generate_snapshot,
 )
+from .services.scoped_search import SearchContext, SearchService
 
 
 class DisciplineListView(generics.ListAPIView):
@@ -73,15 +74,15 @@ class DisciplineListView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Discipline.objects.filter(editorial_status="published")
-        query = self.request.query_params.get("q", "").strip()
-        if query:
-            queryset = queryset.filter(
-                Q(name__icontains=query)
-                | Q(foreign_name__icontains=query)
-                | Q(description__icontains=query)
-                | Q(search_aliases__icontains=query)
-            )
-        return queryset.order_by("sort_order", "name")
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
+        return SearchService(request=self.request).queryset(
+            SearchContext.DISCIPLINES,
+            query,
+            base_queryset=queryset,
+        )
 
 
 class DisciplineDetailView(generics.RetrieveAPIView):
@@ -100,15 +101,11 @@ class SubdisciplineListView(generics.ListAPIView):
             "discipline",
             "parent",
         )
-        query = self.request.query_params.get("q", "").strip()
+        query = (
+            self.request.query_params.get("q", "").strip()
+            or self.request.query_params.get("search", "").strip()
+        )
         discipline = self.request.query_params.get("discipline", "").strip()
-        if query:
-            queryset = queryset.filter(
-                Q(name__icontains=query)
-                | Q(foreign_name__icontains=query)
-                | Q(description__icontains=query)
-                | Q(research_object__icontains=query)
-            )
         if discipline:
             queryset = filter_slug_or_uuid(
                 queryset,
@@ -116,7 +113,11 @@ class SubdisciplineListView(generics.ListAPIView):
                 slug_field="discipline__slug",
                 id_field="discipline_id",
             )
-        return queryset.order_by("discipline__sort_order", "name")
+        return SearchService(request=self.request).queryset(
+            SearchContext.SUBDISCIPLINES,
+            query,
+            base_queryset=queryset,
+        )
 
 
 class SubdisciplineDetailView(generics.RetrieveAPIView):
