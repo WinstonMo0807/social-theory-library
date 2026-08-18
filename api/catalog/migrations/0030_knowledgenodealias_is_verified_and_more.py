@@ -15,12 +15,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Existing aliases must enter the new safety boundary as unverified.
+        # A transient default=True would mark legacy aliases as trusted while
+        # PostgreSQL adds the column to existing rows.
         migrations.AddField(
-            model_name='knowledgenodealias',
-            name='is_verified',
-            field=models.BooleanField(db_index=True, default=True),
-        ),
-        migrations.AlterField(
             model_name='knowledgenodealias',
             name='is_verified',
             field=models.BooleanField(db_index=True, default=False),
