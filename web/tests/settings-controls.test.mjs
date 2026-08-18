@@ -210,6 +210,13 @@ test("query lexicon and semantic index keep ordinary admin views read-only", asy
   assert.match(semantic, /version\.status === "ready" && data\.permissions\.can_manage/);
 });
 
+test("web container installs dependencies before source-dependent lifecycle scripts", async () => {
+  const source = await readFile(new URL("../Dockerfile", import.meta.url), "utf8");
+  assert.match(source, /npm ci --ignore-scripts/);
+  assert.match(source, /COPY \. \./);
+  assert.match(source, /npm prune --omit=dev --ignore-scripts/);
+});
+
 test("shared admin UI primitives expose text states and keyboard-safe controls", async () => {
   const source = await readFile(
     new URL("../components/admin-ui.tsx", import.meta.url),
