@@ -197,6 +197,8 @@ Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，�
 
 状态为源码已修复，公网人工流程待核实。可见性切换和 pageshow 只做有界后台探测；临时网络/5xx 和单次后台 401 不再把已认证上传工作区卸载。跨标签 logout、明确 403 和后续受保护请求仍会执行服务器权限判断。拖拽上传增加键盘入口、拖拽深度处理、类型提示和现有分片恢复反馈。
 
+匿名浏览器在没有 refresh Cookie 时，SimpleJWT refresh endpoint 会返回 400。客户端过去把它当成认证服务故障；现在只对该 refresh endpoint 将 400/401 统一视为无可恢复会话，正常显示登录提示。其他 API 的 400 不受影响。
+
 ### Reader layout
 
 状态为源码已修复。纸本页码是可选工具栏单元，已从隐式网格列中分离并在窄屏隐藏。OCR 状态通知回到文档流，不再覆盖 PDF 页面。尚需在真实生产浏览器以不同缩放、侧栏组合和长标题做人工观察。

@@ -156,7 +156,11 @@ async function refreshAccessToken() {
       } catch {
         throw new ApiRequestError("暂时无法连接认证服务，请稍后重试。", 0);
       }
-      if (response.status === 401) {
+      // This endpoint is called with an empty JSON body because the refresh
+      // token lives in an HttpOnly cookie. DRF/SimpleJWT returns 400 when that
+      // cookie is missing and 401 when it is expired or invalid; both mean
+      // there is no recoverable browser session, not a service outage.
+      if (response.status === 400 || response.status === 401) {
         clearStoredSession();
         return null;
       }

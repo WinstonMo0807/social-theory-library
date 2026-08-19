@@ -327,3 +327,4 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - Candidate Review 明确为跨领域审核队列，不等同于自更新词典。QueryLexicon 页面改为派生词典说明；System Status、Intake、Knowledge、Semantic Index、System Health 和后台导航补充规范中文和可展开的结构化详情。候选 API 增加按类型准确计数和截断提示，联网来源错误显示 provider 分类、请求编号和部分结果，不再把 provider failure 伪装成空候选。
 - Intake Workspace 增加失败重试和单目标 Projection Refresh 入口，仍复用现有 ProcessingJob/Celery，不扫描全馆。新增 `reading.0007_reader_ai_connection` 仅创建读者连接表和索引，不联网、不生成候选、不改 authority 或 semantic index。
 - 本地最终门槛：后端全量 pytest 退出码 0；Django check、migration drift、compileall、TypeScript、Vinext build、ESLint、前端定向回归和 `git diff --check` 通过。`reading.0007` 尚未应用生产，需在下一次受控发布前完成 fresh backup、migration plan 和健康检查。
+- 第一次部署后匿名浏览器 smoke 发现无 refresh Cookie 时 token refresh 返回 400，前端误显示“认证服务暂时不可用”。客户端现将该 endpoint 的 400 与 401 都解释为没有可恢复会话，正常进入登录提示；真实 5xx、403 和网络错误仍保留会话并显示对应状态。新增回归已通过。

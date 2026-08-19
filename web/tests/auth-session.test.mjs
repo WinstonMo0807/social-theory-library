@@ -145,6 +145,19 @@ test("stale hint is cleared only after an unrecoverable 401", async (t) => {
   assert.equal(browser.values.has("library_session_active"), false);
 });
 
+test("missing refresh cookie 400 is an unauthenticated session, not an outage", async (t) => {
+  const browser = installBrowser(t);
+  browser.setFetch(async (url) => (
+    String(url).includes("/auth/token/refresh/") ? response(400, { detail: "missing refresh cookie" }) : response(401)
+  ));
+
+  const session = await bootstrapSession();
+
+  assert.equal(session.status, "unauthenticated");
+  assert.equal(session.errorCategory, "auth_401");
+  assert.equal(browser.values.has("library_session_active"), false);
+});
+
 for (const [name, fetchResult, expectedStatus, expectedCategory] of [
   ["auth 403", async () => response(403, { detail: "forbidden" }), "forbidden", "auth_403"],
   ["auth 500", async () => response(500), "temporary_error", "auth_5xx"],
