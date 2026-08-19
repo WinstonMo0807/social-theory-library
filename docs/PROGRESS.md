@@ -328,3 +328,4 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - Intake Workspace 增加失败重试和单目标 Projection Refresh 入口，仍复用现有 ProcessingJob/Celery，不扫描全馆。新增 `reading.0007_reader_ai_connection` 仅创建读者连接表和索引，不联网、不生成候选、不改 authority 或 semantic index。
 - 本地最终门槛：后端全量 pytest 退出码 0；Django check、migration drift、compileall、TypeScript、Vinext build、ESLint、前端定向回归和 `git diff --check` 通过。`reading.0007` 尚未应用生产，需在下一次受控发布前完成 fresh backup、migration plan 和健康检查。
 - 第一次部署后匿名浏览器 smoke 发现无 refresh Cookie 时 token refresh 返回 400，前端误显示“认证服务暂时不可用”。客户端现将该 endpoint 的 400 与 401 都解释为没有可恢复会话，正常进入登录提示；真实 5xx、403 和网络错误仍保留会话并显示对应状态。新增回归已通过。
+- Reader 公网 smoke 进一步发现匿名访客会请求批注、书签、进度和历史四类私有接口。Reader 现复用统一 session bootstrap，只在确认登录后读取或写入私人记录；退出登录后立即清理页面内的私人批注与书签。公开 PDF、引用、搜索和下载不受影响。

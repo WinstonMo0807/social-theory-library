@@ -199,6 +199,8 @@ Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，�
 
 匿名浏览器在没有 refresh Cookie 时，SimpleJWT refresh endpoint 会返回 400。客户端过去把它当成认证服务故障；现在只对该 refresh endpoint 将 400/401 统一视为无可恢复会话，正常显示登录提示。其他 API 的 400 不受影响。
 
+Reader 过去使用恒为真的 cookie credential 标记判断登录，导致匿名访客也请求批注、书签、进度与历史接口。它现在复用 session bootstrap，并在 session 确认为 authenticated 后才访问私人记录。退出登录后页面内已加载的私人批注与书签会清除。
+
 ### Reader layout
 
 状态为源码已修复。纸本页码是可选工具栏单元，已从隐式网格列中分离并在窄屏隐藏。OCR 状态通知回到文档流，不再覆盖 PDF 页面。尚需在真实生产浏览器以不同缩放、侧栏组合和长标题做人工观察。

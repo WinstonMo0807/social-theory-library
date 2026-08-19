@@ -36,6 +36,7 @@ import {
 } from "react";
 import type { Work } from "@/lib/data";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
+import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import type { CanonicalBlock } from "./pdf-canvas";
 import {
   PdfContinuousViewer,
@@ -200,6 +201,8 @@ export function ReaderShell({
   relatedTheories?: { name: string; slug: string }[];
   relatedTopics?: { name: string; slug: string }[];
 }) {
+  const { state: readerSession } = useSessionBootstrap();
+  const readerAuthenticated = readerSession.status === "authenticated";
   const [page, setPage] = useState(Math.min(Math.max(initialPage, 1), Math.max(work.pages, 1)));
   const [zoom, setZoom] = useState(100);
   const [query, setQuery] = useState(initialQuery);
@@ -325,6 +328,13 @@ export function ReaderShell({
   }, [work.id]);
 
   useEffect(() => {
+    if (!readerAuthenticated) {
+      queueMicrotask(() => {
+        setAnnotations([]);
+        setBookmarks([]);
+      });
+      return;
+    }
     const token = getServerSessionCredential();
     if (!token) return;
     let cancelled = false;
@@ -358,7 +368,7 @@ export function ReaderShell({
     return () => {
       cancelled = true;
     };
-  }, [initialFocus, jumpToPage, setLeftPanel, work.id]);
+  }, [initialFocus, jumpToPage, readerAuthenticated, setLeftPanel, work.id]);
 
   const requestPagePayload = useCallback((targetPage: number) => {
     if (
@@ -472,6 +482,7 @@ export function ReaderShell({
   }, [editionId, page]);
 
   useEffect(() => {
+    if (!readerAuthenticated) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const timer = window.setTimeout(() => {
@@ -506,7 +517,7 @@ export function ReaderShell({
       })();
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [page, totalPages, work.id]);
+  }, [page, readerAuthenticated, totalPages, work.id]);
 
   const progress = Math.round((page / totalPages) * 100);
   const pageOverlays = useMemo(() => {
@@ -598,7 +609,7 @@ export function ReaderShell({
   }, [page]);
 
   function protectedAction(label: string) {
-    if (!getServerSessionCredential()) {
+    if (!readerAuthenticated) {
       setGate(label);
       return;
     }
@@ -687,7 +698,7 @@ export function ReaderShell({
     kind: AnnotationDraft["kind"],
     snapshot: SelectionSnapshot | null = captureSelection(),
   ) {
-    if (!getServerSessionCredential()) {
+    if (!readerAuthenticated) {
       setGate(kind === "note" ? "笔记" : kind === "underline" ? "划线" : "高亮");
       return;
     }
@@ -713,6 +724,10 @@ export function ReaderShell({
   }
 
   async function persistAnnotation(draft: AnnotationDraft) {
+    if (!readerAuthenticated) {
+      setGate(draft.kind === "note" ? "笔记" : draft.kind === "underline" ? "划线" : "高亮");
+      return;
+    }
     const token = getServerSessionCredential();
     if (!token) return;
     try {
@@ -752,6 +767,7 @@ export function ReaderShell({
   }
 
   async function deleteAnnotation(annotationId: string) {
+    if (!readerAuthenticated) return;
     const annotation = annotations.find((item) => item.id === annotationId);
     if (!annotation || !window.confirm(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`)) {
       return;
@@ -769,6 +785,7 @@ export function ReaderShell({
   }
 
   async function deleteBookmark(bookmarkId: string) {
+    if (!readerAuthenticated) return;
     if (!window.confirm("确定删除这个书签吗？")) return;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -782,6 +799,10 @@ export function ReaderShell({
   }
 
   async function toggleBookmark(snapshot?: SelectionSnapshot | null) {
+    if (!readerAuthenticated) {
+      setGate("书签");
+      return;
+    }
     const token = getServerSessionCredential();
     if (!token) {
       setGate("书签");
@@ -914,7 +935,7 @@ export function ReaderShell({
   function showSidebarTab(tab: SidebarTab, label?: string) {
     if (
       label
-      && !getServerSessionCredential()
+      && !readerAuthenticated
       && ["highlights", "bookmarks", "notes"].includes(tab)
     ) {
       setGate(label);

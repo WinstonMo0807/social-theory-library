@@ -20,3 +20,12 @@ test("upload drop zone supports keyboard selection and drag depth", async () => 
   assert.match(source, /event\.key !== "Enter"/);
   assert.match(source, /event\.key !== " "/);
 });
+
+test("public reader loads private records only after shared session bootstrap", async () => {
+  const source = await readFile(new URL("../components/reader-shell.tsx", import.meta.url), "utf8");
+  assert.match(source, /useSessionBootstrap\(\)/);
+  assert.match(source, /readerSession\.status === "authenticated"/);
+  assert.match(source, /if \(!readerAuthenticated\) return/);
+  assert.match(source, /if \(!readerAuthenticated\) \{[\s\S]*setGate\("书签"\)/);
+  assert.doesNotMatch(source, /if \(!getServerSessionCredential\(\)\)/);
+});
