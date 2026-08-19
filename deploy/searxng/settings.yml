@@ -24,3 +24,7 @@ outgoing:
   max_request_timeout: 20.0
   pool_connections: 32
   pool_maxsize: 12
+
+engines:
+  - name: baidu
+    disabled: false

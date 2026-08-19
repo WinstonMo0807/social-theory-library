@@ -61,6 +61,7 @@ def test_public_compose_pins_internal_searxng_with_json_api():
     assert "formats:\n    - html\n    - json" in settings_text
     assert "limiter: false" in settings_text
     assert "keep_only:\n      - baidu" in settings_text
+    assert "name: baidu\n    disabled: false" in settings_text
 
 
 def _person(name="Pierre Bourdieu", *, birth_year=1930):
