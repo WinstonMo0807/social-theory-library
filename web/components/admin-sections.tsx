@@ -724,7 +724,7 @@ export function TaxonomyAdmin({
           <label><span>名称</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <AuthoritySuggestions
             entityType={draft.kind === "theory" ? "theory_tradition" : "topic"}
-            query={draft.name}
+            query={draft.foreignName.trim() || draft.name}
           />
           {draft.kind === "topic" ? <FieldEnrichmentControl
             targetType="topic"
@@ -1256,7 +1256,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <AuthoritySuggestions
             entityType="person"
-            query={draft.name}
+            query={draft.originalName.trim() || draft.name}
           />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />

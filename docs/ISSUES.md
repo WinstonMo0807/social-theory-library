@@ -213,6 +213,8 @@ Reader 过去使用恒为真的 cookie credential 标记判断登录，导致匿
 
 Person 字段补全过去只用列表中的第一个中文规范名，VIAF/LOC 经常因此无结果。现在只有首个查询完全没有结构化记录时，才以同一 authority 对象的已确认原文名再查一次。它不会使用生成拼音、unidecode 或低信任 alias，也不会绕过出生年份、标识符、机构和作品等身份条件。
 
+编辑器的身份发现按钮优先使用表单中的原文/外文名称，并显示当前实际检索词。该表单值只帮助管理员发现来源；没有保存和人工审核前，不会成为权威数据或检索词典条目。
+
 ### Candidate Review semantics
 
 状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。

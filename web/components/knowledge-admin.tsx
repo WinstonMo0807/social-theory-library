@@ -204,7 +204,7 @@ export function DisciplinesAdmin() {
             </div>
             <AuthoritySuggestions
               entityType="discipline"
-              query={draft.name}
+              query={draft.foreign_name.trim() || draft.name}
             />
             <FieldEnrichmentControl
               targetType="discipline"
@@ -365,7 +365,7 @@ export function SubdisciplinesAdmin() {
             </div>
             <AuthoritySuggestions
               entityType="subdiscipline"
-              query={draft.name}
+              query={draft.foreign_name.trim() || draft.name}
             />
             <FieldEnrichmentControl
               targetType="subdiscipline"
