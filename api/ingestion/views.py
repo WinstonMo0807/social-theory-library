@@ -113,6 +113,10 @@ from .services.provider_gateway import refresh_remote_candidates
 from .services.indexing import index_asset, remove_asset_from_index
 from .services.dispatch import schedule_upload_item
 from .services.pipeline import refresh_batch
+from .services.prerequisites import (
+    initial_ingestion_block_message,
+    initial_ingestion_block_reason,
+)
 from .services.r2_staging import (
     R2ConfigurationError,
     R2StagingError,
@@ -1234,6 +1238,38 @@ class RetryUploadItemView(APIView):
             UploadItem.Status.DELETED,
         }:
             return Response({"detail": "已发布、已下架或已删除记录不能从入库预检阶段重试。"}, status=409)
+        if item.staging_backend == UploadItem.StagingBackend.R2:
+            if item.staging_status == UploadItem.StagingStatus.IMPORT_FAILED:
+                try:
+                    job = retry_r2_import(item, actor=request.user)
+                except R2StagingError as exc:
+                    return Response(
+                        {
+                            "detail": str(exc),
+                            "error_code": getattr(exc, "error_code", "r2_staging_error"),
+                        },
+                        status=409,
+                    )
+                item.refresh_from_db()
+                return Response(
+                    {
+                        "detail": "PDF 已重新排队导入正式书库存储。",
+                        "action": "retry_import",
+                        "job_id": str(job.id),
+                        "staging_status": item.staging_status,
+                    },
+                    status=202,
+                )
+            block_reason = initial_ingestion_block_reason(item)
+            if block_reason:
+                return Response(
+                    {
+                        "detail": initial_ingestion_block_message(block_reason),
+                        "error_code": block_reason,
+                        "staging_status": item.staging_status,
+                    },
+                    status=409,
+                )
         stalled_seconds = max(
             0,
             int((timezone.now() - item.updated_at).total_seconds()),

@@ -1,6 +1,14 @@
 # 部署说明
 
-更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.8.0 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.8.1 生产发布快照。任何后续部署仍需重新检查实时状态。
+
+## Version 2.8.1 R2 ingestion hotfix, 2026-08-20
+
+- API、默认 Worker、Ingestion Worker、Beat 与 Web 使用 `2.8.1-hotfix-20e448a-20260820-055953` 镜像族。`/api/ready/` 返回 2.8.1，pending migrations 为 0。
+- 活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9`，数据库和 Meilisearch 均为 3,005。
+- UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 已完成 R2 import、正式 pipeline、Asset 建立和 staging cleanup。连续 12 个 Beat recovery 周期没有新增 handoff 错误或队列堆积。
+- 切换前 BackupJob 为 `a34b13a2-8c79-4bfd-bbd4-b1902c60d367`，回退目录为 `/volume2/library/docker/social-theory-library/storage/backups/pre-v281-cutover-20260820-060904`，归档 SHA-256 为 `03823151e83670f5d5747a0883c46e445ffe55b907b3f866a9a28f3399334451`。回退镜像标签为 `social-theory-library-api:pre-v281-hotfix-20260820-060904` 和 `social-theory-library-web:pre-v281-hotfix-20260820-060904`。
+- 普通非 superuser 管理员公网上传 E2E 按用户要求跳过。SSH 部署授权按用户要求继续保留。
 
 ## Version 2.8.0 production deployment, 2026-08-20
 

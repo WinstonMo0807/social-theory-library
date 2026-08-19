@@ -1,6 +1,17 @@
 # 开发进度
 
-更新日期为 2026-08-20。当前源码与公网应用版本均为 2.8.0。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-20。当前源码与公网应用版本均为 2.8.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+
+## 当前 2.8.1 R2 入库热修复状态
+
+- 生产 API、默认 Worker、Ingestion Worker、Beat 与 Web 使用 `2.8.1-hotfix-20e448a-20260820-055953` 镜像族。`/api/ready/` 返回 2.8.1，数据库正常，pending migrations 为 0。
+- 活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9`，数据库和 Meilisearch 均为 3,005；本次没有重建或切换索引。
+- UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 已由 recovery 正式恢复，file、R2 import、cleanup 和 dispatch 均完成，状态为 ready，并建立 Work、Edition、原始 Asset 与 normalized Asset。
+- 新 Worker 启动后的 12 个 Beat recovery 周期没有新的空 FileField、nullable join 锁错误或队列堆积。切换窗口中旧 Worker 留下的两条 ValueError 历史记录保留不变。
+- 普通非 superuser 管理员公网新上传 E2E 依用户要求跳过，因为没有李咏琴账户密码。没有创建账户，也没有提升权限。
+- 生产回退点为 `/volume2/library/docker/social-theory-library/storage/backups/pre-v281-cutover-20260820-060904`，BackupJob `a34b13a2-8c79-4bfd-bbd4-b1902c60d367`，归档 SHA-256 `03823151e83670f5d5747a0883c46e445ffe55b907b3f866a9a28f3399334451`。SSH 部署授权按用户要求继续保留。
+
+下一阶段“社科研究候选层”从已验证的 2.8.1 提交切出 v2.9，不在热修复分支上混入新的候选数据面。
 
 ## 当前 2.8.0 生产状态
 

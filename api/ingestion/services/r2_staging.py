@@ -200,6 +200,14 @@ def _parts_by_number(item: UploadItem) -> dict[int, dict]:
 
 def serialize_staging_session(item: UploadItem) -> dict:
     completed = sorted(_parts_by_number(item).values(), key=lambda row: row["part_number"])
+    staging_owns_status = item.staging_status in {
+        UploadItem.StagingStatus.UPLOADING,
+        UploadItem.StagingStatus.UPLOADED,
+        UploadItem.StagingStatus.IMPORTING,
+        UploadItem.StagingStatus.IMPORT_FAILED,
+        UploadItem.StagingStatus.ABORTED,
+        UploadItem.StagingStatus.EXPIRED,
+    }
     return {
         "upload_session_id": str(item.id),
         "batch_id": str(item.batch_id),
@@ -212,8 +220,16 @@ def serialize_staging_session(item: UploadItem) -> dict:
         "staging_status": item.staging_status,
         "ingestion_status": item.status,
         "stage_progress": item.stage_progress,
-        "error_code": item.staging_error_code or item.error_code,
-        "error_message": item.staging_error_message or item.error_message,
+        "error_code": (
+            item.staging_error_code
+            if staging_owns_status
+            else item.staging_error_code or item.error_code
+        ),
+        "error_message": (
+            item.staging_error_message
+            if staging_owns_status
+            else item.staging_error_message or item.error_message
+        ),
         "created_at": item.created_at,
         "updated_at": item.updated_at,
         "staging_completed_at": item.staging_completed_at,
@@ -910,7 +926,11 @@ def dispatch_r2_staging_job(job_id: str, task_id: str) -> bool:
 
 def run_r2_staging_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     with transaction.atomic():
-        job = ProcessingJob.objects.select_for_update().select_related("upload_item").get(pk=job_id)
+        job = (
+            ProcessingJob.objects.select_for_update(of=("self",))
+            .select_related("upload_item")
+            .get(pk=job_id)
+        )
         if task_id and job.task_id and task_id != job.task_id:
             return job
         if job.status == ProcessingJob.Status.SUCCEEDED:

@@ -12,10 +12,14 @@ from ingestion.services.r2_staging import (
     R2StagingError,
     apply_r2_cors_policy,
     cleanup_r2_staging_object,
+    complete_r2_upload,
     confirm_r2_part,
     import_r2_staging_object,
     recover_r2_staging_jobs,
+    run_r2_staging_job,
+    serialize_staging_session,
 )
+from ingestion.services.dispatch import recover_ingestion_dispatches
 
 
 MIB = 1024 * 1024
@@ -507,3 +511,110 @@ def test_lifecycle_deleted_object_is_reported_as_expired(
     item.refresh_from_db()
     assert item.staging_status == UploadItem.StagingStatus.EXPIRED
     assert item.staging_error_code == "staging_object_expired"
+
+
+@pytest.mark.django_db
+def test_complete_recovery_race_waits_for_import_then_dispatches_initial_once(
+    api_client,
+    admin_user,
+    r2_settings,
+    tmp_path,
+    django_capture_on_commit_callbacks,
+):
+    assert admin_user.role == User.Role.ADMIN
+    assert admin_user.is_superuser is False
+    r2_settings.MEDIA_ROOT = tmp_path
+    r2_settings.NAS_INCOMING_ROOT = tmp_path / "incoming"
+    fake = FakeR2Client()
+    batch = create_batch(admin_user)
+    payload = b"%PDF-r2-race-regression"
+
+    with patch("ingestion.services.r2_staging.r2_client", return_value=fake):
+        response = init_session(api_client, admin_user, batch, len(payload), token="race-token-v281")
+        assert response.status_code == 201
+        item = UploadItem.objects.get(pk=response.data["upload_session_id"])
+        etag = fake.put_part(item, 1, payload)
+        confirm_r2_part(item, part_number=1, etag=etag, size=len(payload))
+        item.refresh_from_db()
+
+        with patch("ingestion.services.r2_staging.queue_r2_staging_job") as queue_import:
+            with django_capture_on_commit_callbacks(execute=True):
+                completed, created = complete_r2_upload(
+                    item,
+                    [{"part_number": 1, "etag": etag}],
+                )
+        assert created is True
+        assert completed.staging_status == UploadItem.StagingStatus.UPLOADED
+        queue_import.assert_called_once()
+
+        with patch("ingestion.services.dispatch._task_for_kind") as task_factory:
+            before_import = recover_ingestion_dispatches()
+            assert before_import == {"candidates": 0, "scheduled": 0, "reset": 0}
+            task_factory.assert_not_called()
+
+            with django_capture_on_commit_callbacks(execute=True):
+                imported = import_r2_staging_object(item.id)
+            after_import = recover_ingestion_dispatches()
+
+    item.refresh_from_db()
+    assert imported["status"] == UploadItem.StagingStatus.IMPORTED
+    assert item.file
+    assert item.byte_size == len(payload)
+    assert item.dispatch_status == UploadItem.DispatchStatus.QUEUED
+    assert after_import == {"candidates": 0, "scheduled": 0, "reset": 0}
+    task_factory.return_value.apply_async.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_r2_staging_job_claim_executes_with_nullable_upload_relation(
+    admin_user,
+):
+    item = UploadItem.objects.create(
+        batch=create_batch(admin_user),
+        source_filename="nullable-lock-v281.pdf",
+        processing_token="nullable-lock-v281",
+        staging_backend=UploadItem.StagingBackend.R2,
+        staging_status=UploadItem.StagingStatus.UPLOADED,
+        staging_object_key="staging/nullable-lock-v281.pdf",
+        staging_upload_id="nullable-lock-v281",
+    )
+    job = ProcessingJob.objects.create(
+        job_type=ProcessingJob.JobType.R2_STAGING,
+        status=ProcessingJob.Status.PENDING,
+        upload_item=item,
+        task_id="nullable-lock-task-v281",
+        stats={"phase": "import"},
+    )
+
+    with patch(
+        "ingestion.services.r2_staging.import_r2_staging_object",
+        return_value={"id": str(item.id), "status": "imported"},
+    ) as import_object:
+        result = run_r2_staging_job(str(job.id), task_id=job.task_id)
+
+    result.refresh_from_db()
+    assert result.status == ProcessingJob.Status.SUCCEEDED
+    assert result.attempt == 1
+    import_object.assert_called_once_with(item.id)
+
+
+@pytest.mark.django_db
+def test_pre_import_serialization_does_not_surface_obsolete_pipeline_error(admin_user):
+    item = UploadItem.objects.create(
+        batch=create_batch(admin_user),
+        source_filename="old-value-error-v281.pdf",
+        processing_token="old-value-error-v281",
+        status=UploadItem.Status.RECEIVED,
+        error_code="ValueError",
+        error_message="The 'file' attribute has no file associated with it.",
+        staging_backend=UploadItem.StagingBackend.R2,
+        staging_status=UploadItem.StagingStatus.UPLOADED,
+        staging_object_key="staging/old-value-error-v281.pdf",
+        staging_upload_id="old-value-error-v281",
+    )
+
+    payload = serialize_staging_session(item)
+
+    assert payload["staging_status"] == UploadItem.StagingStatus.UPLOADED
+    assert payload["error_code"] == ""
+    assert payload["error_message"] == ""

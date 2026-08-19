@@ -17,6 +17,8 @@ from django.utils import timezone
 
 from ingestion.models import ProcessingAttempt, UploadItem
 
+from .prerequisites import initial_ingestion_ready, initial_ingestion_ready_query
+
 
 TERMINAL_STATUSES = {
     UploadItem.Status.PUBLISHED,
@@ -74,6 +76,9 @@ def dispatch_upload_item(item_id: str, task_id: str) -> bool:
     item = UploadItem.objects.filter(pk=item_id).first()
     if item is None or item.dispatch_task_id != task_id or item.status in TERMINAL_STATUSES:
         return False
+    if not initial_ingestion_ready(item, kind=item.dispatch_kind):
+        defer_initial_dispatch(item.id, task_id)
+        return False
     task = _task_for_kind(item.dispatch_kind)
     try:
         task.apply_async(args=[str(item.id)], task_id=task_id, ignore_result=True)
@@ -123,6 +128,8 @@ def schedule_upload_item(
         item = UploadItem.objects.select_for_update().filter(pk=item_id).first()
         if item is None or item.status in TERMINAL_STATUSES:
             return None
+        if not initial_ingestion_ready(item, kind=kind):
+            return None
         recent_cutoff = timezone.now() - timedelta(
             seconds=settings.INGESTION_QUEUE_STALLED_SECONDS
         )
@@ -167,6 +174,23 @@ def schedule_upload_item(
         return task_id
 
 
+def defer_initial_dispatch(item_id: str, task_id: str) -> bool:
+    """Release an obsolete INITIAL task without recording a queue failure."""
+
+    updated = UploadItem.objects.filter(
+        pk=item_id,
+        dispatch_kind=UploadItem.DispatchKind.INITIAL,
+        dispatch_task_id=task_id,
+    ).update(
+        dispatch_status=UploadItem.DispatchStatus.PENDING,
+        dispatch_task_id="",
+        dispatch_error="",
+        last_dispatched_at=None,
+        updated_at=timezone.now(),
+    )
+    return bool(updated)
+
+
 def mark_dispatch_running(item_id: str, task_id: str) -> bool:
     now = timezone.now()
     updated = UploadItem.objects.filter(
@@ -201,6 +225,11 @@ def recover_ingestion_dispatches(*, limit: int = 100) -> dict[str, int]:
 
     now = timezone.now()
     stage_cutoff = now - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS)
+    initial_ready = initial_ingestion_ready_query()
+    dispatch_ready = (
+        Q(dispatch_kind=UploadItem.DispatchKind.REVIEWED)
+        | (Q(dispatch_kind=UploadItem.DispatchKind.INITIAL) & initial_ready)
+    )
     candidates = list(
         UploadItem.objects.filter(
             Q(
@@ -210,10 +239,12 @@ def recover_ingestion_dispatches(*, limit: int = 100) -> dict[str, int]:
                     UploadItem.DispatchStatus.FAILED,
                 ],
             )
+            & dispatch_ready
             | Q(
                 status__in=ACTIVE_STATUSES,
                 updated_at__lte=stage_cutoff,
             )
+            & dispatch_ready
             | Q(
                 status=UploadItem.Status.READY,
                 dispatch_kind=UploadItem.DispatchKind.REVIEWED,
@@ -229,6 +260,8 @@ def recover_ingestion_dispatches(*, limit: int = 100) -> dict[str, int]:
     scheduled = 0
     reset = 0
     for item in candidates:
+        if not initial_ingestion_ready(item, kind=item.dispatch_kind):
+            continue
         if item.status in ACTIVE_STATUSES:
             UploadItem.objects.filter(pk=item.id, updated_at__lte=stage_cutoff).update(
                 status=UploadItem.Status.RECEIVED,

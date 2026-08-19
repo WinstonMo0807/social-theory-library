@@ -53,7 +53,7 @@ test("public PDF bytes use persistent R2 multipart sessions", async () => {
   assert.match(component, /r2MultipartUploadManager\.start/);
   assert.match(component, /r2MultipartUploadManager\.resume/);
   assert.match(component, /loadR2StagingSessions/);
-  assert.match(component, /上传完成，正在入库/);
+  assert.match(component, /浏览器上传完成，正在导入书库存储/);
   assert.match(component, /重新选择同一 PDF 后只上传未完成 part/);
   assert.match(component, /当前 \$\{formatUploadRate\(item\.speedBps\)\}/);
   assert.match(component, /平均 \$\{formatUploadRate\(item\.averageSpeedBps\)\}/);

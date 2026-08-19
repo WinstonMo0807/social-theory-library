@@ -47,6 +47,7 @@ from .files import (
     materialize_field_file,
     rename_normalized_asset,
     sha256_file,
+    SourceFileMissing,
     validate_pdf_structure,
 )
 from .indexing import index_asset, remove_asset_from_index
@@ -61,6 +62,12 @@ from .provider_gateway import enrich_candidates_with_gateway
 from .reconciliation import persist_resolution_candidates, propose_author_reconciliation
 from .publication import PublicationBlocked, publication_readiness, publish_edition
 from .processing import queue_ocr_job, queue_page_label_job
+from .prerequisites import (
+    InitialIngestionPrerequisiteNotReady,
+    initial_ingestion_block_message,
+    initial_ingestion_block_reason,
+    is_r2_pre_import_block,
+)
 from .taxonomy import controlled_vocabulary_candidates, suggest_relations
 from .workflow import idempotency_key_for_stage, legacy_workflow_state, transition_upload_item
 
@@ -800,8 +807,17 @@ def run_pipeline(item_id: str) -> UploadItem:
         and item.asset_id
     ):
         return item
-    source_path, cleanup_source = materialize_field_file(item.file)
+    cleanup_source = None
     try:
+        block_reason = initial_ingestion_block_reason(item)
+        if block_reason:
+            if is_r2_pre_import_block(block_reason):
+                raise InitialIngestionPrerequisiteNotReady(block_reason)
+            raise SourceFileMissing(
+                initial_ingestion_block_message(block_reason),
+                error_code=block_reason,
+            )
+        source_path, cleanup_source = materialize_field_file(item.file)
         set_stage(item, UploadItem.Status.VALIDATING, 5)
         with processing_attempt(
             item,
@@ -1297,9 +1313,11 @@ def run_pipeline(item_id: str) -> UploadItem:
             force=True,
         )
         return item
+    except InitialIngestionPrerequisiteNotReady:
+        raise
     except Exception as exc:
         item.status = UploadItem.Status.FAILED
-        item.error_code = exc.__class__.__name__
+        item.error_code = str(getattr(exc, "error_code", "") or exc.__class__.__name__)
         item.error_message = str(exc)[:4000]
         item.retry_count += 1
         item.save(

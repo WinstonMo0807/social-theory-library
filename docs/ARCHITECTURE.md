@@ -2,7 +2,7 @@
 
 更新日期为 2026-08-20。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-当前源码与生产应用版本均为 2.8.0。生产 migration head 为 catalog 0031、ingestion 0013 和 reading 0007。API、Worker、Ingestion Worker、Beat 与 Web 已使用 commit `2b1f91ef759b5642b299a5bc504f1f18d417c65e` 的统一镜像。R2 临时上传中转、公共观点检索 V2、Ask stable retrieval 和活动语义索引的既有边界不变。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前源码与生产应用版本为 2.8.1。生产 migration head 为 catalog 0031、ingestion 0013 和 reading 0007。API、Worker、Ingestion Worker、Beat 与 Web 已使用 commit `20e448a` 的 2.8.1 热修复镜像。R2 临时上传中转、公共观点检索 V2、Ask stable retrieval 和活动语义索引的既有边界不变。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 

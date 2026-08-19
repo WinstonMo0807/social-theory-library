@@ -611,6 +611,15 @@ class UploadItemSerializer(serializers.ModelSerializer):
         return self._stalled_seconds(obj)
 
     def get_is_stalled(self, obj):
+        if obj.staging_backend == UploadItem.StagingBackend.R2 and obj.staging_status in {
+            UploadItem.StagingStatus.UPLOADING,
+            UploadItem.StagingStatus.UPLOADED,
+            UploadItem.StagingStatus.IMPORTING,
+            UploadItem.StagingStatus.IMPORT_FAILED,
+            UploadItem.StagingStatus.ABORTED,
+            UploadItem.StagingStatus.EXPIRED,
+        }:
+            return False
         seconds = self._stalled_seconds(obj)
         threshold = (
             settings.INGESTION_QUEUE_STALLED_SECONDS
@@ -620,6 +629,20 @@ class UploadItemSerializer(serializers.ModelSerializer):
         return seconds >= threshold
 
     def get_suggested_action(self, obj):
+        if obj.staging_backend == UploadItem.StagingBackend.R2:
+            if obj.staging_status == UploadItem.StagingStatus.IMPORT_FAILED:
+                return "retry_import"
+            if obj.staging_status in {
+                UploadItem.StagingStatus.UPLOADING,
+                UploadItem.StagingStatus.UPLOADED,
+                UploadItem.StagingStatus.IMPORTING,
+            }:
+                return ""
+            if obj.staging_status in {
+                UploadItem.StagingStatus.ABORTED,
+                UploadItem.StagingStatus.EXPIRED,
+            }:
+                return "replace"
         if self.get_is_stalled(obj):
             return "retry"
         if obj.status in {

@@ -1,4 +1,5 @@
 import { apiRequest, getServerSessionCredential } from "./api";
+import { r2StagingStatusLabel } from "./ingestion-staging-status";
 import { UploadRateMeter } from "./upload-metrics";
 
 const PART_CONCURRENCY = 3;
@@ -585,18 +586,7 @@ export class R2MultipartUploadManager {
   }
 
   private sessionMessage(session: R2StagingSession) {
-    const labels: Record<string, string> = {
-      uploading: "等待继续上传",
-      uploaded: "上传完成，正在入库",
-      importing: "上传完成，正在入库",
-      imported: "PDF 已进入正式存储，正在处理",
-      import_failed: "PDF 已安全上传，入库失败，可重试",
-      cleanup_pending: "入库完成，等待清理 staging",
-      cleaned: "入库完成",
-      aborted: "上传已取消",
-      expired: "staging object 已过期，需要重新上传",
-    };
-    return labels[session.staging_status] || session.staging_status;
+    return r2StagingStatusLabel(session.staging_status);
   }
 }
 

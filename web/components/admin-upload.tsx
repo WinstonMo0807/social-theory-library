@@ -17,6 +17,12 @@ import {
   type R2StagingSession,
   type R2UploadSnapshot,
 } from "@/lib/r2-multipart-upload";
+import {
+  r2BrowserUploadComplete,
+  r2StagingOwnsPrimaryStatus,
+  r2StagingStatusLabel,
+  r2StagingWaitingAction,
+} from "@/lib/ingestion-staging-status";
 
 type UploadResponse = {
   accepted: string[];
@@ -127,6 +133,7 @@ type IngestionItem = {
   can_manage_publication: boolean;
   is_stalled: boolean;
   suggested_action: string;
+  staging: R2StagingSession | null;
   updated_at: string;
 };
 
@@ -164,18 +171,6 @@ const ingestionStatusLabels: Record<string, string> = {
   failed: "处理失败，需要检查",
   published: "已经发布",
   withdrawn: "已经下架",
-};
-
-const stagingStatusLabels: Record<string, string> = {
-  uploading: "等待或正在上传",
-  uploaded: "上传完成，正在入库",
-  importing: "上传完成，正在入库",
-  imported: "PDF 已进入正式存储，正在处理",
-  import_failed: "PDF 已安全上传，入库失败，可重试",
-  cleanup_pending: "入库完成，等待清理 staging",
-  cleaned: "入库完成",
-  aborted: "上传已取消",
-  expired: "staging object 已过期，需要重新上传",
 };
 
 const candidateFieldLabels: Record<string, string> = {
@@ -662,8 +657,8 @@ export function AdminUpload() {
               sessionId: session.upload_session_id,
               status: "accepted",
               message: metadataMessage.includes("元数据")
-                ? `上传完成，正在入库；${metadataMessage.replace(/^上传完成[；，]?/, "")}`
-                : "上传完成，正在入库",
+                ? `浏览器上传完成，正在导入书库存储；${metadataMessage.replace(/^上传完成[；，]?/, "")}`
+                : "浏览器上传完成，正在导入书库存储",
               progress: 100,
               uploadedBytes: item.file.size,
               speedBps: 0,
@@ -1122,7 +1117,7 @@ export function AdminUpload() {
               const uploadedBytes = live?.uploadedBytes ?? (session.staging_status === "uploading" ? persistedBytes : session.file_size);
               const progress = live?.progress ?? (session.file_size ? Math.min(100, Math.floor((uploadedBytes / session.file_size) * 100)) : 0);
               const waiting = live?.status === "connection_waiting";
-              const message = live?.message || stagingStatusLabels[session.staging_status] || session.staging_status;
+              const message = live?.message || r2StagingStatusLabel(session.staging_status);
               return (
                 <article className={`upload-staging-row status-${session.staging_status}${waiting ? " is-stalled" : ""}`} key={session.upload_session_id}>
                   <div className="upload-staging-copy">
@@ -1237,17 +1232,33 @@ export function AdminUpload() {
                 counts[candidate.field_name] = (counts[candidate.field_name] || 0) + 1;
                 return counts;
               }, {});
-              const canRetry = item.status === "failed" || item.is_stalled;
+              const stagingStatus = item.staging?.staging_status || "";
+              const stagingOwnsStatus = r2StagingOwnsPrimaryStatus(stagingStatus);
+              const canRetryImport = stagingStatus === "import_failed" && Boolean(item.staging?.can_retry_import);
+              const canRetry = !stagingOwnsStatus && (item.status === "failed" || item.is_stalled);
+              const primaryStatus = stagingOwnsStatus
+                ? r2StagingStatusLabel(stagingStatus)
+                : ingestionStatusLabels[item.status] ?? item.status;
+              const visibleErrorCode = stagingOwnsStatus ? item.staging?.error_code : item.error_code;
+              const visibleErrorMessage = stagingOwnsStatus ? item.staging?.error_message : item.error_message;
               return (
-                <article className={`ingestion-card status-${item.status}`} key={item.id}>
+                <article className={`ingestion-card status-${stagingOwnsStatus ? stagingStatus : item.status}`} key={item.id}>
                   <header>
                     <div><FileText size={18} /><span><strong>{title}</strong><small>{item.source_filename}</small></span></div>
-                    <b>{ingestionStatusLabels[item.status] ?? item.status}</b>
+                    <b>{primaryStatus}</b>
                   </header>
-                  <div className="ingestion-card-progress">
-                    <span><i style={{ width: `${Math.max(2, item.stage_progress)}%` }} /></span>
-                    <b>{item.stage_progress}%</b>
-                  </div>
+                  {stagingOwnsStatus ? (
+                    <p className="ingestion-item-note">
+                      {r2BrowserUploadComplete(stagingStatus)
+                        ? "浏览器到 R2 的上传已完成。正式书库存储导入完成后，系统才会开始 PDF 校验和书目识别。"
+                        : r2StagingStatusLabel(stagingStatus)}
+                    </p>
+                  ) : (
+                    <div className="ingestion-card-progress">
+                      <span><i style={{ width: `${Math.max(2, item.stage_progress)}%` }} /></span>
+                      <b>{item.stage_progress}%</b>
+                    </div>
+                  )}
                   <dl>
                     <div><dt>文献类型</dt><dd>{displayMetadataValue(item.review_data?.document_type ?? metadata.document_type)}</dd></div>
                     <div><dt>作者</dt><dd>{displayMetadataValue(item.review_data?.authors ?? metadata.authors)}</dd></div>
@@ -1256,7 +1267,7 @@ export function AdminUpload() {
                       item.review_data?.publisher ?? metadata.publisher,
                       item.review_data?.publication_year ?? metadata.publication_year,
                     ].filter(Boolean).map(String).join(" · ") || "待识别"}</dd></div>
-                    <div><dt>后台派发</dt><dd>{item.dispatch_status}{item.dispatch_attempts > 1 ? ` · ${item.dispatch_attempts} 次记录` : ""}</dd></div>
+                    <div><dt>后台派发</dt><dd>{stagingOwnsStatus ? "等待 R2 正式导入" : <>{item.dispatch_status}{item.dispatch_attempts > 1 ? ` · ${item.dispatch_attempts} 次记录` : ""}</>}</dd></div>
                     <div><dt>文件预检</dt><dd>{[
                       item.preflight_summary?.page_count ? `${item.preflight_summary.page_count} 页` : "",
                       textProfileLabels[item.preflight_summary?.text_profile || ""] || "",
@@ -1271,11 +1282,12 @@ export function AdminUpload() {
                       <span className={candidateCounts[field] ? "available" : ""} key={field}>{label}<b>{candidateCounts[field] || 0}</b></span>
                     ))}
                   </div>
-                  {item.error_message ? <p className="ingestion-item-error"><AlertCircle size={14} /><span><strong>{item.error_code || "处理错误"}</strong>{item.error_message}</span></p> : null}
-                  {!item.edition && !item.error_message ? <p className="ingestion-item-note">文件已安全保存。书目记录建立后，可直接进入候选复核；等待期间无需重复点击。</p> : null}
+                  {visibleErrorMessage ? <p className="ingestion-item-error"><AlertCircle size={14} /><span><strong>{visibleErrorCode || "处理错误"}</strong>{visibleErrorMessage}</span></p> : null}
+                  {!item.edition && !visibleErrorMessage && !stagingOwnsStatus ? <p className="ingestion-item-note">文件已安全保存。书目记录建立后，可直接进入候选复核；等待期间无需重复点击。</p> : null}
                   <footer>
+                    {canRetryImport ? <button className="button secondary" type="button" disabled={stagingAction === item.id} onClick={() => void retryStagingImport(item.id)}>{stagingAction === item.id ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}重新导入</button> : null}
                     {canRetry ? <button className="button secondary" type="button" disabled={retryingItem === item.id} onClick={() => void retryIngestionItem(item.id)}>{retryingItem === item.id ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}重新处理</button> : null}
-                    {item.edition ? <Link className="button secondary" href={`/admin/intake/${item.id}#bibliography`}>继续馆藏工作 <ArrowRight size={14} /></Link> : <span className="ingestion-waiting-action">等待书目识别</span>}
+                    {item.edition ? <Link className="button secondary" href={`/admin/intake/${item.id}#bibliography`}>继续馆藏工作 <ArrowRight size={14} /></Link> : <span className="ingestion-waiting-action">{r2StagingWaitingAction(stagingStatus)}</span>}
                     {item.edition && item.can_manage_publication ? <Link className="button" href={`/admin/intake/${item.id}#publication`}>进入发布检查 <ArrowRight size={14} /></Link> : null}
                   </footer>
                 </article>

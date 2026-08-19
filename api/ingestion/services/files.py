@@ -17,6 +17,14 @@ INVALID_FILENAME_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 SPACE_RE = re.compile(r"\s+")
 
 
+class SourceFileMissing(RuntimeError):
+    """The database names an intake source that is not available in storage."""
+
+    def __init__(self, message: str, *, error_code: str = "source_file_missing"):
+        self.error_code = error_code
+        super().__init__(message)
+
+
 def sha256_file(path: str | Path, chunk_size: int = 1024 * 1024) -> tuple[str, int]:
     digest = hashlib.sha256()
     size = 0
@@ -34,10 +42,22 @@ def is_pdf(path: str | Path) -> bool:
 
 def materialize_field_file(field_file) -> tuple[Path, Callable[[], None] | None]:
     """Return a local path for either filesystem or private object storage uploads."""
+    name = str(getattr(field_file, "name", "") or "").strip()
+    if not name:
+        raise SourceFileMissing("入库记录没有关联正式 PDF。")
     try:
-        return Path(field_file.path), None
+        local_path = Path(field_file.path)
     except (AttributeError, NotImplementedError):
-        suffix = Path(field_file.name).suffix or ".pdf"
+        local_path = None
+    if local_path is not None:
+        try:
+            if not local_path.is_file():
+                raise SourceFileMissing("正式书库存储中的 PDF 不存在。")
+        except FileNotFoundError as exc:
+            raise SourceFileMissing("正式书库存储中的 PDF 不存在。") from exc
+        return local_path, None
+    try:
+        suffix = Path(name).suffix or ".pdf"
         temporary = tempfile.NamedTemporaryFile(
             prefix="library-intake-",
             suffix=suffix,
@@ -51,6 +71,8 @@ def materialize_field_file(field_file) -> tuple[Path, Callable[[], None] | None]
             temporary_path.unlink(missing_ok=True)
             raise
         return temporary_path, lambda: temporary_path.unlink(missing_ok=True)
+    except FileNotFoundError as exc:
+        raise SourceFileMissing("正式书库存储中的 PDF 不存在。") from exc
 
 
 def store_path_in_file_field(instance, field_name: str, source_path: str | Path, original_name: str) -> str:

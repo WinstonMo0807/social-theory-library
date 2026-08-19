@@ -8,10 +8,12 @@ import uuid
 
 from .models import ProcessingAttempt, UploadItem
 from .services.dispatch import (
+    defer_initial_dispatch,
     mark_dispatch_finished,
     mark_dispatch_running,
     recover_ingestion_dispatches,
 )
+from .services.prerequisites import InitialIngestionPrerequisiteNotReady
 from .services.pipeline import resume_reviewed_item_publication, run_pipeline
 from .services.ocr_provider import OCRServiceUnavailable
 from .services.processing import (
@@ -128,6 +130,24 @@ def _run_tracked(task, item_id: str, processor):
         mark_dispatch_running(str(item_id), task_id)
     try:
         item = processor(str(item_id))
+    except InitialIngestionPrerequisiteNotReady as exc:
+        if execution_attempt:
+            execution_attempt.status = "completed"
+            execution_attempt.finished_at = timezone.now()
+            execution_attempt.output_summary = {
+                "outcome": "prerequisite_not_ready",
+                "reason": exc.reason,
+            }
+            execution_attempt.save(
+                update_fields=["status", "finished_at", "output_summary", "updated_at"]
+            )
+        if task_id:
+            defer_initial_dispatch(str(item_id), task_id)
+        return {
+            "id": str(item_id),
+            "status": "prerequisite_not_ready",
+            "reason": exc.reason,
+        }
     except Exception as exc:
         if execution_attempt:
             execution_attempt.status = "failed"

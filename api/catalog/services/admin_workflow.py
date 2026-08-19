@@ -22,6 +22,11 @@ from catalog.models import (
     WorkKnowledgeRelation,
 )
 from ingestion.models import EntityResolutionCandidate, MetadataCandidate, UploadItem
+from ingestion.services.prerequisites import (
+    initial_ingestion_block_message,
+    initial_ingestion_block_reason,
+    is_r2_pre_import_block,
+)
 
 
 WORKFLOW_STEPS = (
@@ -357,7 +362,22 @@ def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
             "查看当前文件",
         )
     issues: list[dict[str, Any]] = []
-    if item.status == UploadItem.Status.FAILED:
+    block_reason = (
+        ""
+        if item.asset_id and item.status not in ACTIVE_UPLOAD_STATUSES
+        else initial_ingestion_block_reason(item)
+    )
+    staging_waiting = is_r2_pre_import_block(block_reason)
+    if block_reason and block_reason != "staging_not_ready":
+        issues.append(
+            _issue(
+                block_reason,
+                initial_ingestion_block_message(block_reason),
+                "file",
+                severity="blocker",
+            )
+        )
+    if item.status == UploadItem.Status.FAILED and not staging_waiting:
         issues.append(
             _issue(
                 item.error_code or "upload_failed",
@@ -376,11 +396,16 @@ def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
         issues.append(_issue("normalized_asset_missing", "规范阅读文件尚未建立。", "file", severity="blocker"))
     if any(row["severity"] == "blocker" for row in issues):
         status = "blocked"
-    elif item.status in ACTIVE_UPLOAD_STATUSES:
+    elif item.status in ACTIVE_UPLOAD_STATUSES or block_reason == "staging_not_ready":
         status = "working"
     else:
         status = "complete"
-    summary = f"{item.source_filename} · {item.get_status_display()}"
+    summary_status = (
+        item.get_staging_status_display()
+        if staging_waiting
+        else item.get_status_display()
+    )
+    summary = f"{item.source_filename} · {summary_status}"
     return _step_payload("file", "文件与识别", status, issues, summary, "处理文件问题")
 
 
@@ -738,7 +763,18 @@ def build_intake_workflow(item: UploadItem) -> dict[str, Any]:
     item = UploadItem.objects.select_related("edition__work").get(pk=item.pk)
     if item.edition_id is None:
         file_issues = []
-        if item.status == UploadItem.Status.FAILED:
+        block_reason = initial_ingestion_block_reason(item)
+        staging_waiting = is_r2_pre_import_block(block_reason)
+        if block_reason and block_reason != "staging_not_ready":
+            file_issues.append(
+                _issue(
+                    block_reason,
+                    initial_ingestion_block_message(block_reason),
+                    "file",
+                    severity="blocker",
+                )
+            )
+        if item.status == UploadItem.Status.FAILED and not staging_waiting:
             file_issues.append(
                 _issue(
                     item.error_code or "upload_failed",
@@ -748,8 +784,13 @@ def build_intake_workflow(item: UploadItem) -> dict[str, Any]:
                 )
             )
         file_status = "blocked" if file_issues else "working"
+        file_summary = (
+            f"{item.source_filename} · {item.get_staging_status_display()}"
+            if staging_waiting
+            else item.source_filename
+        )
         steps = [
-            _step_payload("file", "文件与识别", file_status, file_issues, item.source_filename, "等待或重试文件处理")
+            _step_payload("file", "文件与识别", file_status, file_issues, file_summary, "等待或重试文件处理")
         ]
         steps.extend(
             _step_payload(key, label, "pending", [], "等待建立作品与版本记录。", "查看前置条件")
@@ -894,6 +935,43 @@ def _serialize_candidates(edition: Edition) -> dict[str, Any]:
     }
 
 
+def _serialize_upload_file(item: UploadItem) -> dict[str, Any]:
+    preflight = dict(item.preflight_summary or {})
+    block_reason = initial_ingestion_block_reason(item)
+    staging_owns_status = is_r2_pre_import_block(block_reason)
+    can_retry = block_reason == "staging_import_failed" or (
+        not staging_owns_status and item.status == UploadItem.Status.FAILED
+    )
+    return {
+        "id": str(item.id),
+        "source_filename": item.source_filename,
+        "filename": item.source_filename,
+        "status": item.staging_status if staging_owns_status else item.status,
+        "ingestion_status": item.status,
+        "workflow_state": item.workflow_state,
+        "stage_progress": item.stage_progress,
+        "error_code": (
+            item.staging_error_code if staging_owns_status else item.error_code
+        ),
+        "error_message": (
+            item.staging_error_message if staging_owns_status else item.error_message
+        ),
+        "preflight_summary": preflight,
+        "validation": preflight.get("mime_type") or "pending",
+        "page_count": preflight.get("page_count") or 0,
+        "text_profile": preflight.get("text_profile") or "",
+        "ocr_strategy": preflight.get("ocr_strategy") or item.batch.ocr_strategy,
+        "exact_duplicate": bool(preflight.get("exact_duplicate")),
+        "staging_backend": item.staging_backend,
+        "staging_status": item.staging_status,
+        "staging_block_reason": block_reason,
+        "can_retry": can_retry,
+        "retry_label": "重新导入" if block_reason == "staging_import_failed" else "重试",
+        "can_resume": False,
+        "can_replace": False,
+    }
+
+
 def _workspace_data(edition: Edition, item: UploadItem | None, workflow: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     contributions = list(
@@ -1031,21 +1109,7 @@ def _workspace_data(edition: Edition, item: UploadItem | None, workflow: dict[st
     )
     return {
         "file": {
-            "item": (
-                {
-                    "id": str(item.id),
-                    "source_filename": item.source_filename,
-                    "status": item.status,
-                    "workflow_state": item.workflow_state,
-                    "stage_progress": item.stage_progress,
-                    "error_code": item.error_code,
-                    "error_message": item.error_message,
-                    "preflight_summary": item.preflight_summary,
-                    "staging_status": item.staging_status,
-                }
-                if item
-                else None
-            ),
+            "item": _serialize_upload_file(item) if item else None,
             "assets": assets,
         },
         "work": _serialize_work(edition),
@@ -1163,17 +1227,7 @@ def build_intake_workspace_payload(
             "workflow": build_intake_workflow(item),
             "data": {
                 "file": {
-                    "item": {
-                        "id": str(item.id),
-                        "source_filename": item.source_filename,
-                        "status": item.status,
-                        "workflow_state": item.workflow_state,
-                        "stage_progress": item.stage_progress,
-                        "error_code": item.error_code,
-                        "error_message": item.error_message,
-                        "preflight_summary": item.preflight_summary,
-                        "staging_status": item.staging_status,
-                    },
+                    "item": _serialize_upload_file(item),
                     "assets": [],
                 }
             },

@@ -20,6 +20,7 @@ def test_ingestion_dispatch_survives_broker_failure_and_recovers(
     item = UploadItem.objects.create(
         batch=batch,
         source_filename="待恢复.pdf",
+        file="incoming/待恢复.pdf",
         byte_size=2048,
     )
 

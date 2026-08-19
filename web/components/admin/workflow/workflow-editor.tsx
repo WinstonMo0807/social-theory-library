@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Eye, FileCheck2, LoaderCircle, RefreshCw, Save, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { r2StagingStatusLabel } from "@/lib/ingestion-staging-status";
 import {
   CanonicalField,
   ConditionalFieldGroup,
@@ -201,13 +202,14 @@ function normalizeItems(value: unknown, fallbackKey: string): Record<string, unk
 
 function draftsFromPayload(payload: WorkflowPayload): WorkflowDrafts {
   const data = payload.data;
+  const fileGroup = asRecord(data.file);
   const work = { document_type: payload.context.document_type ?? "book", ...asRecord(data.work) };
   const bibliography = { ...asRecord(data.edition), ...asRecord(data.bibliography) };
   const contributors = asRecord(data.contributors);
   const classification = asRecord(data.classification);
   const knowledge = asRecord(data.knowledge);
   return {
-    file: { ...asRecord(data.file) },
+    file: { ...asRecord(fileGroup.item), assets: asArray(fileGroup.assets) },
     work,
     bibliography,
     contributors: { ...contributors, items: normalizeItems(contributors.items ?? data.contributors, "display_name") },
@@ -313,7 +315,8 @@ function KnowledgeBody({ draft, candidates, canEdit, errors, update, inspectFiel
 }
 
 function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction }: BodyProps) {
-  return <div className="workflow-file-summary"><dl><div><dt>文件</dt><dd>{asString(draft.filename ?? context.filename, "未建立")}</dd></div><div><dt>处理状态</dt><dd>{asString(draft.status, "pending")}</dd></div><div><dt>PDF 校验</dt><dd>{asString(draft.validation, "pending")}</dd></div><div><dt>页数</dt><dd>{asNumber(draft.page_count)}</dd></div><div><dt>文字类型</dt><dd>{asString(draft.text_profile, "待识别")}</dd></div><div><dt>OCR 策略</dt><dd>{asString(draft.ocr_strategy, "auto")}</dd></div><div><dt>重复判断</dt><dd>{draft.exact_duplicate ? "发现完全重复文件" : asString(draft.duplicate_status, "未发现完全重复")}</dd></div></dl>{errors.map((error) => <QualityIssue message={error.message} tone="blocker" key={`${error.field}-${error.message}`} />)}<div className="workflow-file-actions"><button type="button" onClick={inspectPdf}><Eye size={14} />检查 PDF</button>{draft.can_retry ? <button type="button" disabled={!canEdit} onClick={() => fileAction("retry")}><RefreshCw size={14} />重试</button> : null}{draft.can_resume ? <button type="button" disabled={!canEdit} onClick={() => fileAction("resume")}><Upload size={14} />继续处理</button> : null}{draft.can_replace ? <label className="button secondary"><span>替换 PDF</span><input className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction("replace", file); event.currentTarget.value = ""; }} /></label> : null}</div>{draft.error_message ? <details open><summary>技术错误</summary><pre>{asString(draft.error_code)} {asString(draft.error_message)}</pre></details> : null}</div>;
+  const status = asString(draft.status, "pending");
+  return <div className="workflow-file-summary"><dl><div><dt>文件</dt><dd>{asString(draft.filename ?? context.filename, "未建立")}</dd></div><div><dt>处理状态</dt><dd>{r2StagingStatusLabel(status)}</dd></div><div><dt>PDF 校验</dt><dd>{asString(draft.validation, "pending")}</dd></div><div><dt>页数</dt><dd>{asNumber(draft.page_count)}</dd></div><div><dt>文字类型</dt><dd>{asString(draft.text_profile, "待识别")}</dd></div><div><dt>OCR 策略</dt><dd>{asString(draft.ocr_strategy, "auto")}</dd></div><div><dt>重复判断</dt><dd>{draft.exact_duplicate ? "发现完全重复文件" : asString(draft.duplicate_status, "未发现完全重复")}</dd></div></dl>{errors.map((error) => <QualityIssue message={error.message} tone="blocker" key={`${error.field}-${error.message}`} />)}<div className="workflow-file-actions"><button type="button" onClick={inspectPdf}><Eye size={14} />检查 PDF</button>{draft.can_retry ? <button type="button" disabled={!canEdit} onClick={() => fileAction("retry")}><RefreshCw size={14} />{asString(draft.retry_label, "重试")}</button> : null}{draft.can_resume ? <button type="button" disabled={!canEdit} onClick={() => fileAction("resume")}><Upload size={14} />继续处理</button> : null}{draft.can_replace ? <label className="button secondary"><span>替换 PDF</span><input className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction("replace", file); event.currentTarget.value = ""; }} /></label> : null}</div>{draft.error_message ? <details open><summary>技术错误</summary><pre>{asString(draft.error_code)} {asString(draft.error_message)}</pre></details> : null}</div>;
 }
 
 function ReaderBody({ draft, canEdit, update, inspectPdf }: BodyProps) {

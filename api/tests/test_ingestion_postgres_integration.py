@@ -31,6 +31,7 @@ from ingestion.services.processing import (
     recover_stalled_processing_jobs,
     run_external_enrichment_job,
 )
+from ingestion.services.r2_staging import run_r2_staging_job
 from ingestion.tasks import _run_tracked
 
 from .test_ingestion_integration import build_test_pdf
@@ -57,6 +58,7 @@ def _item(admin_user, *, edition=None, status=UploadItem.Status.RECEIVED):
     return UploadItem.objects.create(
         batch=batch,
         source_filename="postgres-locking.pdf",
+        file="incoming/postgres-locking.pdf",
         edition=edition,
         status=status,
     )
@@ -516,6 +518,27 @@ def test_postgres_processing_job_claim_crash_recovery_and_duplicate_retry(
     assert first.status == repeated.status == ProcessingJob.Status.SUCCEEDED
     assert loader_calls == 1
     assert first.attempt == 2
+
+
+def test_postgres_r2_job_locks_only_processing_row_with_nullable_upload_join(admin_user):
+    item = _item(admin_user)
+    job = ProcessingJob.objects.create(
+        job_type=ProcessingJob.JobType.R2_STAGING,
+        status=ProcessingJob.Status.PENDING,
+        upload_item=item,
+        task_id="postgres-r2-lock-v281",
+        stats={"phase": "import"},
+    )
+
+    with patch(
+        "ingestion.services.r2_staging.import_r2_staging_object",
+        return_value={"id": str(item.id), "status": "imported"},
+    ):
+        result = run_r2_staging_job(str(job.id), task_id=job.task_id)
+
+    result.refresh_from_db()
+    assert result.status == ProcessingJob.Status.SUCCEEDED
+    assert result.attempt == 1
 
 
 def test_postgres_processing_recovery_skip_locked_uses_independent_connections(
