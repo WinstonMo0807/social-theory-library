@@ -1,6 +1,18 @@
 # 部署说明
 
-更新日期为 2026-08-19。本文件记录源码中的部署入口和安全要求，不是当前生产环境的实时状态证明。
+更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.8.0 生产发布快照。任何后续部署仍需重新检查实时状态。
+
+## Version 2.8.0 production deployment, 2026-08-20
+
+- release commit 为 `2b1f91ef759b5642b299a5bc504f1f18d417c65e`。源码包 SHA-256 为 `8863b9e28a10ed7762e4e897831c20ee882d605f552915c19f8edb8e98eb9d48`，Web dist 包为 `e7b03d53c239db4b4af1490f36646e980325ad0d2208f9a2fac9b7960cfb309d`。本地与 NAS 暂存副本一致。
+- API、Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.8.0-2b1f91e-20260820-035701`。Web 使用 `social-theory-library-web:2.8.0-2b1f91e-20260820-035701`。
+- Fresh BackupJob 为 `1bb75e2d-a411-448f-9553-25f605c5e0cd`。归档位于 `/data/backups/pre-v280-20260820-035701/library-backup-20260819-195838-1bb75e2d.tar.gz`，SHA-256 为 `824f455fc340bfa69ab70f82c68a8f37dbfbc3d423c0233222e1182b4bf21e05`。同一归档已在 disposable PostgreSQL 完成恢复和 catalog 0031 演练。
+- 正式 migration 只把 catalog 从 0030 推进到 `0031_admin_workflow_v280`。ingestion 保持 0013，reading 保持 0007。Work、Edition、Asset、Page、SemanticChunk 的迁移前后 ID 集合哈希一致，生产没有 Reading Path、Stage 或 placement 记录需要转换。
+- 第一次切换因 Web 尚未监听而自动恢复 2.7.1。第二次切换因 readiness 错把登录后版本文字当成匿名 HTML 门槛而自动恢复。两次回退都没有删除 volume 或反向迁移。第三次使用真实 Web HTTP 与 bundle 标记分别验收后成功。
+- 成功切换记录位于 `/volume2/library/docker/social-theory-library/storage/backups/pre-v280-cutover-20260820-041502`。旧 2.7.1 应用镜像和 additive 0031 schema 可作为应用级回退入口；不得自行 down migration 或删除新表。
+- 公网 ready/health、公开路由、登录 Admin、Intake Focus Mode、Work-centric Library、Maintenance Mode、旧 review/publication redirect、顺序观点检索和真实 PDF Range 206 已通过。活动语义 UID 保持 `semantic_passages_20260818210650_4cf87bc9`，没有重建索引。
+- 已发现但未在本次发布中修复的入库事件：UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 为 R2 uploaded 且本地 file 为空；关联 pending R2 job 每分钟恢复时遇到 nullable outer join `FOR UPDATE` 错误。不得把 2.8 发布成功写成 R2 入库问题已解决。
+- 发布暂存目录 `/tmp/social-theory-library-v280-2b1f91e-20260820-1945`、专用 sudoers 和两条本轮公钥记录已删除，本地临时私钥与公钥也已删除。使用该身份的新 SSH 连接返回 `Permission denied`。撤权后的 ready、health、Maintenance Mode、V2 semantic 和 PDF Range 206 仍通过。
 
 ## 部署文件
 

@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-19。当前源码版本为 2.8.0，生产仍为最后核实的 2.7.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-20。当前源码与生产应用版本均为 2.8.0。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -11,19 +11,19 @@
 5. [`ISSUES.md`](ISSUES.md)，查看仍需处理的问题和不能自动修复的数据缺口。
 6. 只有涉及部署时才读取 [`DEPLOYMENT.md`](DEPLOYMENT.md)。
 
-任何会变化的生产状态都要重新检查。文档中的生产信息是 2026-08-19 的已验证快照，不能代替下一次发布前的实时检查。
+任何会变化的生产状态都要重新检查。文档中的生产信息是 2026-08-20 的已验证快照，不能代替下一次发布前的实时检查。
 
 ## 当前结论
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.8.0 馆藏与策展工作流。本地实现和预览已通过，未部署生产 |
-| Git 工作分支 | 当前 checkout 为 `main`；实际 commit 和工作树以 `git status`、`git rev-parse HEAD` 为准 |
+| 源码版本 | 2.8.0 馆藏与策展工作流，已部署生产 |
+| Git 工作分支 | `codex/v2.8-workflow`，release commit `2b1f91ef759b5642b299a5bc504f1f18d417c65e` |
 | GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
-| 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7.1-5d432f7` image family |
-| 生产 migration head | catalog 0030、ingestion 0013、reading 0007 |
-| 2.8 源码 migration head | catalog 0031；只在独立本地 SQLite 应用，生产待 fresh backup 与 PostgreSQL rehearsal |
+| 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.8.0-2b1f91e-20260820-035701` revision |
+| 生产 migration head | catalog 0031、ingestion 0013、reading 0007，pending migration 0 |
+| 2.8 数据迁移 | Fresh BackupJob 与 disposable PostgreSQL restore rehearsal 已完成；正式迁移已应用 |
 | QueryLexicon | revision 1，generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` |
 | 语义索引 | active UID `semantic_passages_20260818210650_4cf87bc9`，3,005 个已核对文档 |
 | 观点检索 | 公共 V2 已在有限真实对照后启用。Ask Library 仍固定 stable retrieval |
@@ -31,9 +31,13 @@
 | General Web | 内网 SearXNG 只发现 URL，实际证据必须由 SafeWebFetcher 取得正文 |
 | PDF upload staging | Cloudflare R2 已启用，只做临时中转；永久 PDF 仍进入 NAS |
 | Candidate | 只产生待审核记录。没有自动发布 authority，也没有自动 Accept |
-| 当前发布判断 | `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION` |
+| 当前发布判断 | `2.8 PUBLIC DEPLOYED / UI READY / INGESTION INCIDENT OPEN` |
 
-生产快照中的主要数量为 Work 5、Edition 5、Asset 10、Page 1,989、SemanticChunk 3,881、Person 6、KnowledgeNode 2。它们是时间点数据，下一次部署前必须重新读取。
+生产快照中的主要数量为 Work 6、Edition 6、Asset 12、Page 2,585、SemanticChunk 3,881。活动语义索引仍有 3,005 个 ready 文档。它们是时间点数据，下一次部署前必须重新读取。
+
+本轮已用正常 Winston 管理员会话检查五组导航、Intake Focus Mode、step rail、共享 Inspector、Work-centric Library、Maintenance Mode、当前 Work 策展区、发布后管理和旧 URL redirect。没有对真实馆藏执行保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
+
+当前最重要的运行风险是一个旧 R2 uploaded 项没有本地 file。Beat recovery 会交替触发 FileField 缺失和 R2 import 的 nullable outer join `FOR UPDATE` 错误。页面部署、现有已发布馆藏和公开 Reader 仍可用，但新入库不能据此视为健康。后续应先做源码和工作流诊断，再决定修复；不要直接清空记录、删除 R2 object 或放宽事务锁。
 
 ## 系统总图
 
@@ -178,14 +182,15 @@ flowchart TD
 
 ## 已发现的剩余风险
 
-1. Authority coverage 仍偏低。公开 QueryLexicon 中 Person coverage 低，导致跨语言扩展和 PDF 术语候选数量受限。这是数据治理问题，不能通过自动发布 draft 或放宽 identity gate 解决。
-2. 生产 Person 数据存在待人工复核的异常。例如 George Herbert Mead 的生卒年顺序不可能成立，另有疑似 OCR 噪声姓名。只记录问题，不自动改 authority。
-3. 公共 V2 尚未完成盲化人工 qrels。当前 enable 基于有限真实 smoke，必须保留 V1 回退。
-4. General Web 的当前生产出口只验证了 Baidu discovery。上游限流、页面变化和地区网络仍会形成 partial failure。
-5. 注册读者的个人 AI 连接已部署，但不同模型的流式格式、超时和引用遵从仍需真实用户配置后的人工验证。
-6. 大 PDF 拖放、后台标签页和弱网恢复需要继续做长期浏览器测试。源码已有非破坏 session probe 和 chunk resume，但这不是所有浏览器环境的最终证明。
-7. 前端依赖审计仍报告 3 个 high severity 项。没有使用强制升级破坏 Vinext/Next runtime，需要独立兼容性处理。
-8. 历史文档包含旧 2.6.1、SSH blocker、V2 disabled 等时间点结论。读取时必须以本文件和各文档顶部的当前状态为准。
+1. R2 uploaded 项到 NAS intake 的恢复存在生产阻断。FileField 为空和 PostgreSQL nullable-join lock 错误会被 Beat 每分钟再次触发。本轮没有修复。
+2. Authority coverage 仍偏低。公开 QueryLexicon 中 Person coverage 低，导致跨语言扩展和 PDF 术语候选数量受限。这是数据治理问题，不能通过自动发布 draft 或放宽 identity gate 解决。
+3. 生产 Person 数据存在待人工复核的异常。例如 George Herbert Mead 的生卒年顺序不可能成立，另有疑似 OCR 噪声姓名。只记录问题，不自动改 authority。
+4. 公共 V2 尚未完成盲化人工 qrels。当前 enable 基于有限真实 smoke，必须保留 V1 回退。
+5. General Web 的当前生产出口只验证了 Baidu discovery。上游限流、页面变化和地区网络仍会形成 partial failure。
+6. 注册读者的个人 AI 连接已部署，但不同模型的流式格式、超时和引用遵从仍需真实用户配置后的人工验证。
+7. 大 PDF 拖放、后台标签页和弱网恢复需要继续做长期浏览器测试。源码已有非破坏 session probe 和 chunk resume，但这不是所有浏览器环境的最终证明。
+8. 前端依赖审计仍报告 3 个 high severity 项。没有使用强制升级破坏 Vinext/Next runtime，需要独立兼容性处理。
+9. 历史文档包含旧 2.6.1、SSH blocker、V2 disabled 等时间点结论。读取时必须以本文件和各文档顶部的当前状态为准。
 
 ## 下一位 GPT 的工作约束
 

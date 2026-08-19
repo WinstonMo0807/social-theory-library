@@ -1,14 +1,15 @@
 # 当前问题
 
-更新日期为 2026-08-19。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
+更新日期为 2026-08-20。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
 
-## 当前 2.8 本地边界
+## 当前 2.8 生产边界
 
-- 2.8.0 馆藏与策展工作流已在源码和独立本地 SQLite 预览中实现。它尚未部署生产，不能把本地页面、SQLite migration 或 mock/preview PDF 当成 DX4600、PostgreSQL、R2、NAS、Worker、Meilisearch 或 Cloudflare 验收。
-- catalog 0031 新增 EditionWorkflowDecision、ReadingPathStage 和 ReadingPathItem stage/position。历史 Item 会逐条转换为独立 Stage，不按同名自动合并；生产迁移前需 fresh BackupJob，并应在 PostgreSQL 副本核查无效 target、重复 Work placement 和阶段排序。当前只完成 SQLite 从零迁移与 0030 至 0031 数据迁移回归。
-- 单 Work Reading Path 和 RecommendationOverride mutation 已有权限、锁、冲突与审计测试。真实多管理员 PostgreSQL 竞争、现有生产 Reading Path 的人工阶段合并和长期推荐刷新仍为 `待核实`。
-- 本地浏览器已验证 book、journal_article、Focus Mode、Inspector、自动下一步、dirty preservation、单项策展、warning publication 和 Maintenance Mode。真实大 PDF、R2 multipart、OCR/页码 Worker、生产 search/index 和登录后公网角色矩阵不在本轮本地预览结论内。
+- 2.8.0 馆藏与策展工作流已经部署生产。catalog 0031 已在 fresh BackupJob 的 disposable PostgreSQL 恢复副本演练，正式迁移后 pending migration 为 0。
+- catalog 0031 新增 EditionWorkflowDecision、ReadingPathStage 和 ReadingPathItem stage/position。生产原有 Reading Path、Stage 和 placement 均为 0，因此没有历史路径阶段需要人工合并。迁移前后核心馆藏 ID 集合哈希一致。
+- 单 Work Reading Path 和 RecommendationOverride mutation 已有权限、锁、冲突与审计测试。生产页面已只读验收 contextual editor，但没有对真实 Reading Path、RecommendationOverride 或馆藏执行测试 mutation。真实多管理员并发仍为 `待核实`。
+- 登录管理员浏览器已验证 Focus Mode、step rail、Inspector、Work-centric Library、Maintenance Mode、策展跳过语义、发布后管理和旧 URL 兼容。book 与 journal_article 的完整写入流程仍以本地自动化和隔离浏览器测试为证；本轮没有在生产创建测试期刊或改动现有书。
 - 2.8 没有开发新的互联网 Research & Curation Discovery。Field Enrichment 仍使用既有 structured/web Candidate 和 Evidence；失败继续显式显示，不会自动写 canonical knowledge。
+- 当前仍有一个会阻断 R2 正式导入的生产事件，详见 STL-005 与 STL-007。2.8 页面部署成功不等于该入库问题已解决。
 
 ## 当前 2.7 总览
 
@@ -102,7 +103,9 @@ Task 6 已让 LibraryConversation scope 复用本节的 plural context contract�
 
 ## STL-005 PostgreSQL nullable-join FOR UPDATE failure
 
-状态为源码已修复并通过一次性 PostgreSQL 16.15 验证，生产部署待核实。
+状态重新打开。原 metadata/entity resolution 锁点已修复并通过 PostgreSQL 验证，但 2.8 上线后的真实 R2 staging recovery 仍触发同类数据库错误。
+
+2026-08-20 的生产只读检查发现，`process_r2_staging_job` 在恢复 UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 时反复报 `FOR UPDATE cannot be applied to the nullable side of an outer join`。关联 ProcessingJob 为 `ca68dde3-f1b4-4e0b-872d-45fc1e3ba261`。这证明先前审计没有覆盖 R2 import/recovery 的全部锁查询。当前尚未完成源码定位，也没有修改生产记录。
 
 历史错误为 PostgreSQL 不允许对可空外连接一侧执行 `FOR UPDATE`。2026-08-16 的 P0 修复审计了 `api/ingestion` 中全部锁点。实体消歧、候选持久化、OCR PDF 和后台 backfill 现在都明确限定主表，元数据复核则依次锁 UploadItem、Edition 和 Work。候选持久化还以 UploadItem 父行为并发协调点，能够覆盖当前候选集合为空的情况。没有删除必要锁，也没有捕获后忽略数据库异常。
 
@@ -136,7 +139,9 @@ Task 6 已让 LibraryConversation scope 复用本节的 plural context contract�
 
 ## STL-007 resumable large PDF upload
 
-状态为 2.7.1 已部署并进入观察。
+状态为 R2 multipart 已部署，但正式导入存在生产阻断项。
+
+2026-08-20 的部署验收发现一个 `staging_status=uploaded` 项仍没有本地 FileField。Beat 每分钟恢复时，旧 `process_upload_item` 路径报 `The 'file' attribute has no file associated with it`，R2 staging job 又遇到 STL-005 的 PostgreSQL 锁错误。Celery active、reserved、scheduled 在抽样时为空，但数据库 pending job 会继续被 Beat 唤醒。本轮按用户要求不修复或重置任务，R2 object 也未删除。
 
 旧公网实现把 2 MiB PDF chunk 逐片发送到 Django，XHR `timeout=0`，current speed 只在 progress event 更新，ETA 优先累计平均速度。连接半开时没有新事件，旧速度不会下降，也没有 stall abort，因此会长期显示正常速度和短 ETA。页面状态又主要位于 React 与 localStorage，切页或刷新后可见进度丢失。
 
