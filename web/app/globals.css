@@ -6469,6 +6469,103 @@ img {
   transition: width 160ms ease-out;
 }
 
+.upload-file-progress.is-stalled {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--line-dark) 16%, transparent) 0 8px,
+    transparent 8px 16px
+  );
+  background-size: 24px 24px;
+  animation: upload-stall-flow 900ms linear infinite;
+}
+
+@keyframes upload-stall-flow {
+  to { background-position: 24px 0; }
+}
+
+.upload-staging-sessions {
+  margin-top: 14px;
+}
+
+.upload-staging-sessions > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.upload-staging-sessions > header h2,
+.upload-staging-sessions > header p {
+  margin: 0;
+}
+
+.upload-staging-sessions > header p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.upload-staging-list {
+  display: grid;
+}
+
+.upload-staging-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 13px;
+  border-top: 1px solid var(--line);
+}
+
+.upload-staging-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.upload-staging-copy strong,
+.upload-staging-copy span,
+.upload-staging-copy small {
+  overflow-wrap: anywhere;
+}
+
+.upload-staging-copy span,
+.upload-staging-copy small,
+.upload-staging-actions span {
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.upload-staging-row > .upload-file-progress {
+  display: block;
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid var(--line-dark);
+  background-color: var(--wash);
+}
+
+.upload-staging-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.upload-staging-actions button {
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid var(--line-dark);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.upload-staging-row > .ingestion-item-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .upload-queue > div button {
   cursor: pointer;
 }
@@ -6746,6 +6843,20 @@ img {
 
   .upload-policy-grid > :nth-child(n) {
     border-right: 0;
+  }
+
+  .upload-staging-row {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-staging-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-file-progress.is-stalled {
+    animation: none;
   }
 }
 

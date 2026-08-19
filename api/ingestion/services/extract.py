@@ -6,7 +6,7 @@ import fitz
 from django.db import transaction
 
 from catalog.models import Asset, Page, Passage, TextBlock
-from catalog.services.text import clean_page_label, normalize_search_text
+from catalog.services.text import clean_page_label, normalize_search_text, sanitize_unicode
 from .ocr_provider import (
     OCRConfigurationError,
     OCRServiceUnavailable,
@@ -110,7 +110,7 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
         chapter_by_page = {}
         for _level, title, page_number, *_rest in document.get_toc(simple=True):
             if page_number > 0 and title:
-                chapter_by_page.setdefault(page_number, title.strip())
+                chapter_by_page.setdefault(page_number, sanitize_unicode(title).strip())
         pages: list[ExtractedPage] = []
         for page_index, page in enumerate(document, start=1):
             printed_label, label_source, label_confidence = _page_label(
@@ -124,7 +124,10 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
                     continue
                 line_texts = []
                 for line in raw_block.get("lines", []):
-                    span_text = "".join(span.get("text", "") for span in line.get("spans", []))
+                    span_text = "".join(
+                        sanitize_unicode(span.get("text", ""))
+                        for span in line.get("spans", [])
+                    )
                     if span_text.strip():
                         line_texts.append(span_text.strip())
                 text = "\n".join(line_texts).strip()
@@ -214,7 +217,7 @@ def _ocr_pages(
     chapter_by_page = {}
     for _level, title, page_number, *_rest in source_document.get_toc(simple=True):
         if page_number > 0 and title:
-            chapter_by_page.setdefault(page_number, title.strip())
+            chapter_by_page.setdefault(page_number, sanitize_unicode(title).strip())
     pages = []
     for raw_page in payload.get("pages", []):
         page_index = int(raw_page["index"])
@@ -226,7 +229,7 @@ def _ocr_pages(
         blocks = [
             ExtractedBlock(
                 order=index,
-                text=block.get("text", ""),
+                text=sanitize_unicode(block.get("text", "")),
                 bbox=block.get("bbox", []),
                 block_type=block.get("type", "paragraph"),
                 confidence=float(block.get("confidence", 0)),
@@ -361,6 +364,11 @@ def persist_pages(
     page_indexes = {page.index for page in pages}
     persisted = {}
     for extracted in pages:
+        extracted.printed_label = clean_page_label(extracted.printed_label)
+        extracted.chapter_title = sanitize_unicode(extracted.chapter_title)
+        extracted.text = sanitize_unicode(extracted.text)
+        for block in extracted.blocks:
+            block.text = sanitize_unicode(block.text)
         existing = Page.objects.filter(asset=asset, index=extracted.index).first()
         preserve_label = bool(
             existing

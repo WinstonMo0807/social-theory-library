@@ -286,6 +286,8 @@ def _backup_status() -> dict[str, Any]:
 
 
 def system_status_snapshot() -> dict[str, Any]:
+    from ingestion.services.r2_staging import r2_staging_status
+
     semantic_runtime = current_semantic_runtime()
     embedding_health = semantic_model_health(semantic_runtime)
     return {
@@ -293,7 +295,7 @@ def system_status_snapshot() -> dict[str, Any]:
         "database": _database_status(),
         "redis": _redis_status(),
         "celery": _celery_status(),
-        "storage": {"nas": _nas_status()},
+        "storage": {"nas": _nas_status(), "r2_upload_staging": r2_staging_status()},
         "query_lexicon": _query_lexicon_status(),
         "semantic": _semantic_status(),
         "embedding": {

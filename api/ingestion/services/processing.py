@@ -260,6 +260,10 @@ def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
         from catalog.services.projection_refresh import dispatch_projection_refresh_job
 
         return dispatch_projection_refresh_job(job_id, task_id)
+    if job_type == ProcessingJob.JobType.R2_STAGING:
+        from ingestion.services.r2_staging import dispatch_r2_staging_job
+
+        return dispatch_r2_staging_job(job_id, task_id)
     return False
 
 
@@ -275,6 +279,7 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
         ProcessingJob.JobType.PAGE_LABELS,
         ProcessingJob.JobType.QUERY_LEXICON_CANDIDATES,
         ProcessingJob.JobType.PROJECTION_REFRESH,
+        ProcessingJob.JobType.R2_STAGING,
     }
     with transaction.atomic():
         jobs = list(

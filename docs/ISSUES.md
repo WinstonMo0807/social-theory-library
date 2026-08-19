@@ -128,13 +128,21 @@ Task 6 已让 LibraryConversation scope 复用本节的 plural context contract�
 
 ## STL-007 resumable large PDF upload
 
-状态为核心续传已实现，跨设备与完整性能力仍有限。
+状态为 2.7.1 源码已重构，生产发布后进入观察。
 
-后端已有分片状态查询、原子分片写入、manifest 冲突检查、原子合并、大小与 PDF 头校验。前端使用 2 MiB 分片、三次重试、已接收分片跳过和 localStorage 恢复。组装阶段现在同步计算最终 SHA-256 与 byte size，后续 pipeline 可复用摘要，避免 NAS 上再次无意义地完整读取。现有恢复信息仍依赖同一浏览器，换设备或清理 localStorage 后不能继续。
+旧公网实现把 2 MiB PDF chunk 逐片发送到 Django，XHR `timeout=0`，current speed 只在 progress event 更新，ETA 优先累计平均速度。连接半开时没有新事件，旧速度不会下降，也没有 stall abort，因此会长期显示正常速度和短 ETA。页面状态又主要位于 React 与 localStorage，切页或刷新后可见进度丢失。
 
-仍需在最终真实环境核验服务端可恢复会话、过期清理、跨浏览器恢复和超大文件的公网超时。验收应使用隔离测试 PDF，不上传馆藏原件，也不能把本地小样本结果写成当前大文件生产验收。
+2.7.1 Web 只通过 presigned UploadPart URL 把 PDF 发送到 R2 staging。默认 part 8 MiB、每文件 3 并发、全局 6 连接、18 秒 stall abort、每 part 最多 3 次退避重试。近期 5 秒速度窗口在停顿时归零，ETA 不再使用旧累计平均值。UploadItem 数据库存 owner、part 与 ETag；站内切页由全局 manager 保持 XHR，刷新后页面从服务端恢复任务并明确要求重新选择同一 File。
 
-证据位置包括 `api/ingestion/views.py`、`api/ingestion/urls.py`、`api/tests/test_admin_configuration.py`、`web/components/admin-upload.tsx` 和 `web/tests/upload-metrics.test.mjs`。
+R2 完成后由 Ingestion Worker 流式导入原有 intake/NAS storage并继续既有 pipeline。R2 不作为永久书库。正式入库失败保留 object，cleanup 失败不撤销 ready，Beat 可恢复。3 天 Lifecycle 和 1 天 incomplete abort 只作兜底。
+
+仍需观察真实慢速网络、浏览器后台节流和 R2 上游错误率。浏览器刷新无法保留 File 对象，这是浏览器安全边界；系统不会伪装为能够无文件继续读取本地磁盘。
+
+证据位置包括 `api/ingestion/services/r2_staging.py`、`api/ingestion/views.py`、`api/ingestion/migrations/0013_uploaditem_staging_backend_and_more.py`、`api/tests/test_r2_staging_upload.py`、`web/lib/r2-multipart-upload.ts`、`web/components/admin-upload.tsx` 和 `web/tests/upload-metrics.test.mjs`。
+
+### 2.7.1 PDF illegal Unicode repair
+
+生产失败项 `9ce0b150-eca4-4872-9baf-d0a09cf08704` 已确认在 text extraction 第 32% 失败。PyMuPDF 从 PDF 字体返回 `封面` 后跟两个孤立 low surrogate，psycopg 无法把该 Python 字符串编码成 UTF-8。2.7.1 在 PDF/OCR extraction boundary 与 persistence defense 两层把孤立 surrogate 替换为 Unicode repair mark。原始 PDF、人工元数据和已保存字段不被改写。
 
 ## STL-008 BackupJob PostgreSQL client compatibility
 

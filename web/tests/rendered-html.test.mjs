@@ -149,7 +149,7 @@ function paginated(results) {
 
 function fixturePayload(pathname) {
   if (pathname === "/api/catalog/site-config/") return defaultSiteConfig;
-  if (pathname === "/api/catalog/site-stats/") return { documents: 1, scholars: 1, knowledge_objects: 2, last_updated: null, last_updated_label: "测试", version: "2.7" };
+  if (pathname === "/api/catalog/site-stats/") return { documents: 1, scholars: 1, knowledge_objects: 2, last_updated: null, last_updated_label: "测试", version: "2.7.1" };
   if (pathname === "/api/catalog/hot-searches/") return { period_days: 30, results: [] };
   if (pathname === "/api/catalog/works/") return paginated([sampleWork]);
   if (pathname === "/api/catalog/scholars/") return paginated([sampleScholar]);

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from hashlib import sha256
 import json
-import os
+import logging
 from pathlib import Path
 import re
 import shutil
@@ -11,8 +11,6 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.files import File
-from django.core.files.storage import FileSystemStorage
 from django.core.cache import cache
 from django.db import transaction
 from django.http import FileResponse
@@ -62,7 +60,7 @@ from catalog.services.publication_places import (
     record_manual_publication_places,
     serialize_publication_place_evidence,
 )
-from common.permissions import IsCatalogEditor, IsLibraryAdmin, IsLibraryStaff
+from common.permissions import CanUpload, IsCatalogEditor, IsLibraryAdmin, IsLibraryStaff
 from common.capabilities import Capability, has_capability
 
 from .models import (
@@ -83,6 +81,11 @@ from .serializers import (
     MetadataImportRequestSerializer,
     MetadataCandidateSerializer,
     MetadataReviewSerializer,
+    R2CompleteSerializer,
+    R2PartConfirmSerializer,
+    R2PartFailureSerializer,
+    R2PartSignSerializer,
+    R2StagingInitSerializer,
     ReviewTaskActionSerializer,
     ReviewTaskSerializer,
     UploadBatchCreateSerializer,
@@ -90,7 +93,7 @@ from .serializers import (
     UploadItemSerializer,
     WithdrawSerializer,
 )
-from .services.files import canonical_pdf_filename
+from .services.files import canonical_pdf_filename, store_path_in_file_field
 from .services.candidate_decisions import accept_candidates_from_review, set_candidate_decision
 from .services.entity_resolution_decisions import (
     ResolutionDecisionError,
@@ -104,6 +107,21 @@ from .services.provider_gateway import refresh_remote_candidates
 from .services.indexing import index_asset, remove_asset_from_index
 from .services.dispatch import schedule_upload_item
 from .services.pipeline import refresh_batch
+from .services.r2_staging import (
+    R2ConfigurationError,
+    R2StagingError,
+    R2StagingExpired,
+    abort_r2_upload,
+    complete_r2_upload,
+    confirm_r2_part,
+    create_r2_upload,
+    list_user_staging_sessions,
+    queue_r2_staging_job,
+    reconcile_r2_parts,
+    retry_r2_import,
+    serialize_staging_session,
+    sign_r2_parts,
+)
 from .services.processing import (
     PROCESSING_PAUSE_KEYS,
     create_external_enrichment_job,
@@ -128,6 +146,9 @@ from .services.publication import (
     withdraw_edition,
 )
 from .services.workflow import transition_upload_item
+
+
+logger = logging.getLogger(__name__)
 
 
 def _request_ip(request):
@@ -287,30 +308,7 @@ def _assemble_uploaded_chunks(
 
 
 def _store_assembled_upload(item: UploadItem, assembled_path: Path, original_name: str) -> str:
-    """Use a same-filesystem hard link for NAS intake, with storage fallback."""
-
-    storage = item.file.storage
-    field = item._meta.get_field("file")
-    if isinstance(storage, FileSystemStorage):
-        generated_name = field.generate_filename(item, original_name)
-        available_name = storage.get_available_name(
-            generated_name,
-            max_length=field.max_length,
-        )
-        try:
-            destination = Path(storage.path(available_name))
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            os.link(assembled_path, destination)
-            item.file.name = available_name
-            return "filesystem_hardlink"
-        except (AttributeError, NotImplementedError, OSError):
-            # Object storage, a cross-device mount, or a filesystem that does
-            # not support hard links continues through Django's safe backend.
-            pass
-
-    with assembled_path.open("rb") as assembled:
-        item.file.save(original_name, File(assembled), save=False)
-    return "storage_copy"
+    return store_path_in_file_field(item, "file", assembled_path, original_name)
 
 
 def _enqueue_review_processing(item_id: str) -> bool:
@@ -442,6 +440,231 @@ class BatchCreateView(APIView):
             request_ip=_request_ip(request),
         )
         return Response(UploadBatchSerializer(batch).data, status=201)
+
+
+def _owned_r2_upload(user, session_id, *, lock: bool = False) -> UploadItem:
+    queryset = UploadItem.objects.select_related("batch")
+    if lock:
+        queryset = queryset.select_for_update()
+    return get_object_or_404(
+        queryset,
+        pk=session_id,
+        batch__created_by=user,
+        staging_backend=UploadItem.StagingBackend.R2,
+    )
+
+
+def _r2_error_response(exc: Exception, *, stage: str, session_id: str = "", part_number=None):
+    request_id = uuid.uuid4().hex[:12]
+    logger.warning(
+        "r2_upload_error request_id=%s upload_session_id=%s part_number=%s stage=%s category=%s",
+        request_id,
+        session_id or "unassigned",
+        part_number if part_number is not None else "none",
+        stage,
+        exc.__class__.__name__,
+    )
+    if isinstance(exc, R2StagingExpired):
+        status_code = status.HTTP_410_GONE
+    elif isinstance(exc, R2ConfigurationError):
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    elif isinstance(exc, R2StagingError):
+        status_code = status.HTTP_409_CONFLICT
+    else:
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return Response(
+        {
+            "detail": str(exc) if isinstance(exc, R2StagingError) else "R2 上传服务暂时不可用。",
+            "error_code": getattr(exc, "error_code", exc.__class__.__name__),
+            "request_id": request_id,
+        },
+        status=status_code,
+    )
+
+
+class R2StagingUploadListView(APIView):
+    permission_classes = [CanUpload]
+
+    def get(self, request):
+        return Response(
+            {
+                "results": [
+                    serialize_staging_session(item)
+                    for item in list_user_staging_sessions(request.user)
+                ]
+            }
+        )
+
+
+class R2StagingUploadInitView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request):
+        serializer = R2StagingInitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        try:
+            item, created = create_r2_upload(
+                batch_id=values["batch_id"],
+                user=request.user,
+                source_filename=values["source_filename"],
+                file_size=values["file_size"],
+                file_last_modified=values["file_last_modified"],
+                client_token=values["client_token"],
+                request_ip=_request_ip(request),
+            )
+        except Exception as exc:
+            return _r2_error_response(exc, stage="init")
+        return Response(
+            serialize_staging_session(item),
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class R2StagingUploadDetailView(APIView):
+    permission_classes = [CanUpload]
+
+    def get(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        if item.staging_status == UploadItem.StagingStatus.UPLOADING:
+            try:
+                item = reconcile_r2_parts(item)
+            except Exception as exc:
+                return _r2_error_response(
+                    exc,
+                    stage="list_parts",
+                    session_id=str(item.id),
+                )
+        return Response(serialize_staging_session(item))
+
+
+class R2StagingPartSignView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        serializer = R2PartSignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            parts = sign_r2_parts(item, serializer.validated_data["part_numbers"])
+        except Exception as exc:
+            return _r2_error_response(
+                exc,
+                stage="sign_parts",
+                session_id=str(item.id),
+            )
+        return Response({"parts": parts})
+
+
+class R2StagingPartConfirmView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        serializer = R2PartConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        try:
+            item = confirm_r2_part(
+                item,
+                part_number=values["part_number"],
+                etag=values["etag"],
+                size=values["size"],
+            )
+        except Exception as exc:
+            return _r2_error_response(
+                exc,
+                stage="confirm_part",
+                session_id=str(item.id),
+                part_number=values.get("part_number"),
+            )
+        return Response(serialize_staging_session(item))
+
+
+class R2StagingPartFailureView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        serializer = R2PartFailureSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="r2_staging_part_failed",
+            object_type="UploadItem",
+            object_id=str(item.id),
+            after={
+                "part_number": values["part_number"],
+                "attempt": values["attempt"],
+                "http_status": values["http_status"],
+                "error_code": values["error_code"],
+                "stage": "browser_upload_part",
+            },
+            request_ip=_request_ip(request),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class R2StagingUploadCompleteView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        serializer = R2CompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            item, completed = complete_r2_upload(item, serializer.validated_data["parts"])
+        except Exception as exc:
+            return _r2_error_response(
+                exc,
+                stage="complete",
+                session_id=str(item.id),
+            )
+        return Response(
+            {**serialize_staging_session(item), "completed": completed},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class R2StagingUploadAbortView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        try:
+            item = abort_r2_upload(
+                item,
+                actor=request.user,
+                request_ip=_request_ip(request),
+            )
+        except Exception as exc:
+            return _r2_error_response(
+                exc,
+                stage="abort",
+                session_id=str(item.id),
+            )
+        return Response(serialize_staging_session(item))
+
+
+class R2StagingRetryImportView(APIView):
+    permission_classes = [CanUpload]
+
+    def post(self, request, session_id):
+        item = _owned_r2_upload(request.user, session_id)
+        try:
+            job = retry_r2_import(item, actor=request.user)
+        except Exception as exc:
+            return _r2_error_response(
+                exc,
+                stage="retry_import",
+                session_id=str(item.id),
+            )
+        item.refresh_from_db()
+        return Response(
+            {**serialize_staging_session(item), "job_id": str(job.id)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class BatchItemUploadView(APIView):
@@ -2673,6 +2896,25 @@ class ProcessingCenterView(APIView):
                     actor=request.user,
                     force=True,
                 )
+            elif (
+                job.job_type == ProcessingJob.JobType.R2_STAGING
+                and job.upload_item_id
+            ):
+                phase = str((job.stats or {}).get("phase") or "")
+                if (
+                    phase == "import"
+                    and job.upload_item.staging_status == UploadItem.StagingStatus.IMPORT_FAILED
+                ):
+                    replacement = retry_r2_import(job.upload_item, actor=request.user)
+                elif phase in {"import", "cleanup"}:
+                    replacement = queue_r2_staging_job(
+                        job.upload_item,
+                        phase=phase,
+                        actor=request.user,
+                        force=True,
+                    )
+                else:
+                    return Response({"detail": "R2 staging 任务缺少有效阶段。"}, status=409)
             else:
                 return Response({"detail": "该任务类型尚不支持人工重试。"}, status=409)
             return Response({"job_id": str(replacement.id), "status": replacement.status}, status=202)

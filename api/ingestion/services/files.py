@@ -1,6 +1,7 @@
 from pathlib import Path
 from pathlib import PurePosixPath
 import hashlib
+import os
 import re
 import shutil
 import tempfile
@@ -8,6 +9,8 @@ from typing import Callable
 import unicodedata
 
 import fitz
+from django.core.files import File
+from django.core.files.storage import FileSystemStorage
 
 
 INVALID_FILENAME_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -48,6 +51,33 @@ def materialize_field_file(field_file) -> tuple[Path, Callable[[], None] | None]
             temporary_path.unlink(missing_ok=True)
             raise
         return temporary_path, lambda: temporary_path.unlink(missing_ok=True)
+
+
+def store_path_in_file_field(instance, field_name: str, source_path: str | Path, original_name: str) -> str:
+    """Persist a local path through an existing Django FileField without loading it into memory."""
+
+    source_path = Path(source_path)
+    field_file = getattr(instance, field_name)
+    storage = field_file.storage
+    field = instance._meta.get_field(field_name)
+    if isinstance(storage, FileSystemStorage):
+        generated_name = field.generate_filename(instance, original_name)
+        available_name = storage.get_available_name(
+            generated_name,
+            max_length=field.max_length,
+        )
+        try:
+            destination = Path(storage.path(available_name))
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.link(source_path, destination)
+            field_file.name = available_name
+            return "filesystem_hardlink"
+        except (AttributeError, NotImplementedError, OSError):
+            pass
+
+    with source_path.open("rb") as source:
+        field_file.save(original_name, File(source), save=False)
+    return "storage_copy"
 
 
 def validate_pdf_structure(path: str | Path, max_pages: int) -> int:

@@ -862,7 +862,7 @@ export async function loadSiteStats(): Promise<SiteStats> {
       knowledge_objects: 0,
       last_updated: null,
       last_updated_label: "尚未发布",
-      version: "2.7",
+      version: "2.7.1",
     };
   }
 }

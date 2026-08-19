@@ -1,6 +1,14 @@
 # 开发进度
 
-更新日期为 2026-08-19。当前源码版本为 2.7。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-19。当前源码版本为 2.7.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+
+## 当前 2.7.1 状态
+
+- R2 只作为浏览器 PDF staging。正式 PDF 仍由原 ingestion pipeline 写入 NAS Asset storage，Reader 与公开下载路径不变。
+- UploadItem 新增 owner-scoped multipart、part/ETag、import 和 cleanup 状态；ProcessingJob 新增 `r2_staging` 类型。对应 additive migration 是 `ingestion.0013_uploaditem_staging_backend_and_more`。
+- 前端使用 8 MiB part、每文件 3 并发、全局 6 连接、5 秒速度窗口、18 秒 stall abort 和每 part 最多 3 次退避重试。切页继续，刷新后从数据库恢复可见 session并要求重新选择 File。
+- PyMuPDF/OCR 派生文本中的孤立 surrogate 会在 persistence 前替换，生产截图对应的 `UnicodeEncodeError` 根因已覆盖回归。原始 PDF 不改变。
+- 完整后端回归、Django check、migration drift、前端 build、68+19 测试、TypeScript 与 ESLint 已通过。生产 2.7.1 发布证据记录在本文末尾。
 
 ## 当前 2.7 状态
 
@@ -360,3 +368,10 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - README、Architecture、Issues、管理员指南和最终综合验收中的当前状态已经对齐。旧 2.6.1、SSH blocker 和 V2 disabled 内容继续作为历史证据保留，不再冒充当前状态。
 - 后端完整 pytest、Django check、migration drift 与 compileall 均退出成功。前端 production build、68 项通用 Node 测试、19 项 Auth / Scoped Search 测试、TypeScript 和 ESLint 均通过。
 - 本轮没有新增 migration，没有连接或修改生产环境。Git 安全审计未发现被跟踪的 PDF、数据库、备份、Secret、私钥、模型或索引。
+
+### 2026-08-19 2.7.1 R2 staging upload implementation
+
+- 当前旧公网上传的卡顿根因已确认。XHR timeout 为 0，current speed 只在 progress event 更新，ETA 优先累计平均速度；半开连接因此会保留旧速度并无限等待。2 MiB chunk 还需要反复经过 Cloudflare、Edge、Django 和 NAS 临时目录。
+- 新 R2 API 包含 session list、init、part sign、part confirm、part failure telemetry、complete、abort 和 retry import。bucket、object key 与 upload ID 都由服务端 UploadItem 决定，浏览器不能提交任意 key。
+- Ingestion Worker 流式读取完整 R2 object，写现有 intake storage 时计算 SHA-256，并复用原 pipeline。正式导入失败保留 object；cleanup 失败保持书籍 ready 并由 Beat 恢复。
+- Fresh BackupJob `61bdce15-c4a2-4c1b-9161-6923fe03b6a7` 在生产变更前完成，artifact 为 10,634,361 bytes，SHA-256 `0ebc6b1519f5ce7eba2e7a6ad7e1b526ee304474b6fc36432f6826f498728b30`，PostgreSQL server 16.14 与 pg_dump/pg_restore 16.15 兼容。

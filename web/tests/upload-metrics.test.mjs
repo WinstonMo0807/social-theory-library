@@ -21,7 +21,15 @@ test("upload meter separates current network rate from effective average rate", 
   assert.equal(retry.logicalBytes, 4_000);
   assert.ok(retry.currentSpeedBps > retry.averageSpeedBps);
   assert.equal(retry.averageSpeedBps, 1_000);
-  assert.equal(retry.etaSeconds, 6);
+  assert.equal(retry.etaSeconds, 4);
+
+  const stalled = meter.snapshot(4_000, 9_000);
+  assert.equal(stalled.currentSpeedBps, 0);
+  assert.equal(stalled.etaSeconds, null);
+
+  const resetAttempt = meter.sample(3_000, 0, 9_100);
+  assert.equal(resetAttempt.logicalBytes, 3_000);
+  assert.ok(resetAttempt.logicalBytes <= 10_000);
 });
 
 test("upload display formats capacity, rate and remaining time", () => {
@@ -29,20 +37,35 @@ test("upload display formats capacity, rate and remaining time", () => {
   assert.equal(formatUploadRate(2 * 1024 * 1024), "2.0 MB/s");
   assert.equal(formatUploadEta(61), "约 2 分钟");
   assert.equal(formatUploadEta(0), "即将完成");
+  assert.equal(formatUploadEta(null), "等待网络");
 });
 
-test("public upload keeps legacy sessions while using larger chunks for new files", async () => {
-  const source = await readFile(
+test("public PDF bytes use persistent R2 multipart sessions", async () => {
+  const component = await readFile(
     new URL("../components/admin-upload.tsx", import.meta.url),
     "utf8",
   );
+  const manager = await readFile(
+    new URL("../lib/r2-multipart-upload.ts", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(source, /const LEGACY_CHUNK_SIZE = MEBIBYTE/);
-  assert.match(source, /const CHUNK_SIZE = 2 \* MEBIBYTE/);
-  assert.match(source, /resume\.chunkSize \|\| LEGACY_CHUNK_SIZE/);
-  assert.match(source, /服务器正在合并和校验/);
-  assert.match(source, /当前 \$\{formatUploadRate\(item\.speedBps\)\}/);
-  assert.match(source, /平均 \$\{formatUploadRate\(item\.averageSpeedBps\)\}/);
+  assert.match(component, /r2MultipartUploadManager\.start/);
+  assert.match(component, /r2MultipartUploadManager\.resume/);
+  assert.match(component, /loadR2StagingSessions/);
+  assert.match(component, /上传完成，正在入库/);
+  assert.match(component, /重新选择同一 PDF 后只上传未完成 part/);
+  assert.match(component, /当前 \$\{formatUploadRate\(item\.speedBps\)\}/);
+  assert.match(component, /平均 \$\{formatUploadRate\(item\.averageSpeedBps\)\}/);
+  assert.match(manager, /const PART_CONCURRENCY = 3/);
+  assert.match(manager, /const GLOBAL_PART_CONCURRENCY = 6/);
+  assert.match(manager, /const STALL_ABORT_MS = 18_000/);
+  assert.match(manager, /const MAX_PART_ATTEMPTS = 3/);
+  assert.match(manager, /new XMLHttpRequest\(\)/);
+  assert.match(manager, /request\.upload\.onprogress/);
+  assert.match(manager, /getResponseHeader\("ETag"\)/);
+  assert.match(manager, /parts\/confirm/);
+  assert.match(manager, /parts\/failure/);
 });
 
 test("accepted uploads continue into live identification and publication actions", async () => {
@@ -80,8 +103,8 @@ test("new upload batches submit explicit intake policies without rewriting resum
   assert.match(source, /ai_suggestions_enabled: aiSuggestionsEnabled/);
   assert.match(source, /自动检测（推荐）/);
   assert.match(source, /仅在模型服务已配置时产生候选。候选不会自动采用/);
-  assert.match(source, /恢复文件继续使用原批次策略/);
-  assert.match(source, /targetBatchId = useChunks && item\.resumeBatchId/);
+  assert.match(source, /原批次策略不会被改写/);
+  assert.match(source, /freshItems = waiting\.filter\(\(item\) => !item\.sessionId\)/);
 });
 
 test("one-stop upload pairs same-name structured metadata without blocking the PDF", async () => {

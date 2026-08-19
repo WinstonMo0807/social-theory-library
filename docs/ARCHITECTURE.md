@@ -2,7 +2,7 @@
 
 更新日期为 2026-08-19。本文件描述当前源码结构。生产状态引用历史 NAS 与公网只读验收，仍属于有时间边界的运行快照。
 
-当前 2.7 生产快照已经完成 catalog 0030、ingestion 0012 和 reading 0007。公共观点检索 V2 已在有限生产对照后启用，Ask Library 继续固定 stable retrieval。完整的当前入口和联动审计见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。后文保留的 2.6.1、V2 disabled 和 SSH blocker 均是明确日期下的历史记录。
+当前源码版本为 2.7.1。2.7 生产快照已经完成 catalog 0030、ingestion 0012 和 reading 0007；2.7.1 增加 R2 临时上传中转与非法 PDF Unicode 清理，migration 为 ingestion 0013。公共观点检索 V2 与 Ask stable retrieval 的边界不变。完整入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 
@@ -38,7 +38,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-API、Web 与 OCR service 的源码版本为 2.7。历史镜像版本只在部署记录中保留，不代表当前源码状态。
+API、Web 与 OCR service 的源码版本为 2.7.1。历史镜像版本只在部署记录中保留，不代表当前源码状态。
 
 ## 后端模块
 
@@ -64,11 +64,17 @@ API、Web 与 OCR service 的源码版本为 2.7。历史镜像版本只在部�
 
 ## 入库与上传
 
-浏览器先创建 `UploadBatch`，再为每个 PDF 建立独立 `UploadItem`。上传项保存客户端幂等标识、状态、错误、派发状态和处理尝试。单个文件失败不应回滚同批次其他文件。
+浏览器先创建 `UploadBatch`，再为每个 PDF 建立独立 `UploadItem`。上传项保存客户端幂等标识、owner、状态、错误、派发状态和处理尝试。单个文件失败不应回滚同批次其他文件。
 
-大文件支持查询已接收分片、原子写入临时分片、manifest 冲突检查和原子合并。前端默认使用 2 MiB 分片，保存本地恢复信息，并对失败分片重试。当前恢复信息依赖同一浏览器的 localStorage，逐分片哈希也尚未实现，详见 [ISSUES.md](ISSUES.md)。
+2.7.1 的正式浏览器上传使用 Cloudflare R2 staging。服务端为 owner-scoped UploadItem 创建 multipart upload，object key 固定为 `staging/<upload-item-uuid>.pdf`，默认 part 为 8 MiB，签名有效期 15 分钟。浏览器每文件同时上传 3 个 part，全局最多 6 个连接；PDF 字节直接发送到 R2 S3 API。旧 Django chunk endpoint 仅保留兼容，当前 Web 不再调用。
 
-合并完成后，流水线依次执行 PDF 校验、原生文本提取或 OCR、元数据候选、实体关系、逐页文本、全文索引、语义准备和发布预检。原始 PDF 不被 OCR、规范命名或元数据写入覆盖。人工锁定字段和人工确认关系优先于自动结果。
+每个 part 使用 XHR `upload.onprogress` 记录本次 attempt 的真实 loaded bytes。最近 5 秒窗口计算当前速度，累计有效字节计算平均速度，ETA 只使用近期速度。5 秒无新字节显示连接等待，18 秒无新字节 abort 当前 XHR，仅重试该 part，最多 3 次并退避。完成 part 的 ETag 来自 R2 响应头并持久化，最终 ETag 不作为 SHA-256。
+
+UploadItem 是服务端可信恢复来源。站内路由切换后进程内 upload manager 继续工作；浏览器完整刷新后数据库仍展示会话和已完成 part，但用户必须重新选择相同文件才能恢复 File 对象。localStorage 不是上传状态事实。
+
+CompleteMultipartUpload 只把 staging 状态改为 uploaded。现有 Ingestion Worker 随后从 R2 流式写入原 `intake` FileField/NAS storage，同时校验大小、PDF magic 并计算 SHA-256，再派发原有 pipeline。导入失败保留 R2 object 并允许 retry。只有 pipeline 已建立正式 Asset 且状态为 needs review、ready 或 published 后才进入 cleanup；DeleteObject 失败不会回滚馆藏，只保留 cleanup pending 并由现有 Beat 恢复。R2 3 天 object Lifecycle 与 1 天 incomplete multipart abort 只是最终兜底。
+
+正式 intake 写入完成后，流水线依次执行 PDF 校验、原生文本提取或 OCR、元数据候选、实体关系、逐页文本、全文索引、语义准备和发布预检。原始 PDF 不被 OCR、规范命名或元数据写入覆盖。PyMuPDF 或 OCR 返回的孤立 UTF-16 surrogate 只在派生文本边界替换为 Unicode repair mark，避免 PostgreSQL UTF-8 写入失败，不修改 PDF。人工锁定字段和人工确认关系优先于自动结果。
 
 ## OCR 与后台任务
 
@@ -155,6 +161,8 @@ Task 1.5 已在仓库外的一次性 PostgreSQL 16.15、Redis 7.4.3 和 Celery 5
 ## 数据职责
 
 PostgreSQL 是书目、用户、权限、任务、人工决定、阅读数据和索引版本记录的权威来源。Redis 只承担缓存与队列，不是业务记录的唯一副本。Meilisearch 保存可重建索引，不代替 PostgreSQL。NAS 保存原始 PDF、派生文件、模型和备份。对象存储保存 intake 或公开阅读副本。
+
+Cloudflare R2 `library-upload-staging` 只保存浏览器上传完成但尚未可靠进入永久 NAS pipeline 的临时 PDF。它不保存唯一书目事实，不替代 UploadItem、Asset 或 NAS original，也不承担公开 Reader 文件分发。
 
 BackupJob manifest 保存 artifact 名称、创建时间、大小、SHA-256、PostgreSQL server 版本、pg_dump/pg_restore 版本和数据库 applied migration heads。`rehearse_database_restore` 只允许恢复到名称明确且没有业务表的 disposable PostgreSQL，目标数据库名还需由命令参数再次确认。它不会清理或覆盖现有数据库。
 

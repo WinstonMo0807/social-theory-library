@@ -1,6 +1,6 @@
 {
   "name": "social-theory-library-web",
-  "version": "2.7",
+  "version": "2.7.1",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

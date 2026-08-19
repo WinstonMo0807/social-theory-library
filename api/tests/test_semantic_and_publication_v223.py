@@ -303,7 +303,7 @@ def test_site_stats_are_dynamic_and_include_version(api_client):
     assert response.data["documents"] == 1
     assert response.data["scholars"] == 1
     assert response.data["knowledge_objects"] == 2
-    assert response.data["version"] == "2.7"
+    assert response.data["version"] == "2.7.1"
     assert "年" in response.data["last_updated_label"]
 
 

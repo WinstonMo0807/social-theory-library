@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
-import { ChangeEvent, DragEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
 import {
   formatUploadBytes,
@@ -10,6 +10,13 @@ import {
   formatUploadRate,
   UploadRateMeter,
 } from "@/lib/upload-metrics";
+import {
+  loadR2StagingSessions,
+  r2MultipartUploadManager,
+  retryR2Import,
+  type R2StagingSession,
+  type R2UploadSnapshot,
+} from "@/lib/r2-multipart-upload";
 
 type UploadResponse = {
   accepted: string[];
@@ -27,6 +34,7 @@ type QueuedFile = {
   speedBps: number;
   averageSpeedBps: number;
   etaSeconds: number | null;
+  sessionId?: string;
   resumeBatchId?: string;
   chunkSize: number;
 };
@@ -127,9 +135,6 @@ type OcrStrategy = "auto" | "force" | "skip";
 type DuplicatePolicy = "review" | "block_exact" | "allow";
 
 const MEBIBYTE = 1024 * 1024;
-const LEGACY_CHUNK_SIZE = MEBIBYTE;
-// Keep every public request below the observed reverse-proxy request window
-// on slow uplinks.  The API still accepts larger chunks for future clients.
 const CHUNK_SIZE = 2 * MEBIBYTE;
 const PUBLIC_CHUNK_THRESHOLD = 4 * MEBIBYTE;
 const RESUME_STORAGE_KEY = "library_chunk_upload_sessions_v1";
@@ -161,6 +166,18 @@ const ingestionStatusLabels: Record<string, string> = {
   withdrawn: "已经下架",
 };
 
+const stagingStatusLabels: Record<string, string> = {
+  uploading: "等待或正在上传",
+  uploaded: "上传完成，正在入库",
+  importing: "上传完成，正在入库",
+  imported: "PDF 已进入正式存储，正在处理",
+  import_failed: "PDF 已安全上传，入库失败，可重试",
+  cleanup_pending: "入库完成，等待清理 staging",
+  cleaned: "入库完成",
+  aborted: "上传已取消",
+  expired: "staging object 已过期，需要重新上传",
+};
+
 const candidateFieldLabels: Record<string, string> = {
   title: "题名",
   authors: "作者",
@@ -184,6 +201,10 @@ function displayMetadataValue(value: unknown) {
   return String(value);
 }
 
+function fileFingerprint(file: File) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
 type ResumeSession = {
   batchId: string;
   token: string;
@@ -194,21 +215,11 @@ type ResumeSession = {
   chunkSize?: number;
 };
 
-function fileFingerprint(file: File) {
-  return `${file.name}:${file.size}:${file.lastModified}`;
-}
-
 function loadResumeSessions(): Record<string, ResumeSession> {
   if (typeof window === "undefined") return {};
   try {
     const parsed = JSON.parse(window.localStorage.getItem(RESUME_STORAGE_KEY) || "{}");
-    if (!parsed || typeof parsed !== "object") return {};
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return Object.fromEntries(
-      Object.entries(parsed as Record<string, ResumeSession>).filter(
-        ([, session]) => session && Number(session.updatedAt) >= cutoff,
-      ),
-    );
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
@@ -243,6 +254,7 @@ function chunkByteLength(totalBytes: number, chunkSize: number, chunkIndex: numb
   const start = chunkIndex * chunkSize;
   return Math.max(0, Math.min(chunkSize, totalBytes - start));
 }
+
 
 function normalizedFileStem(filename: string, kind: "pdf" | "metadata") {
   let value = filename.normalize("NFKC").trim().toLocaleLowerCase();
@@ -314,6 +326,10 @@ export function AdminUpload() {
   const [ingestionItems, setIngestionItems] = useState<IngestionItem[]>([]);
   const [ingestionError, setIngestionError] = useState("");
   const [retryingItem, setRetryingItem] = useState("");
+  const [stagingSessions, setStagingSessions] = useState<R2StagingSession[]>([]);
+  const [uploadSnapshots, setUploadSnapshots] = useState<R2UploadSnapshot[]>([]);
+  const [stagingError, setStagingError] = useState("");
+  const [stagingAction, setStagingAction] = useState("");
   const metadataPairings = useMemo(
     () => buildMetadataPairings(files, metadataFiles),
     [files, metadataFiles],
@@ -326,6 +342,55 @@ export function AdminUpload() {
     ),
     [metadataPairings],
   );
+
+  const refreshStagingSessions = useCallback(async () => {
+    const token = getServerSessionCredential();
+    if (!token) return;
+    try {
+      const sessions = await loadR2StagingSessions();
+      setStagingSessions(sessions);
+      r2MultipartUploadManager.hydrateSessions(sessions);
+      setStagingError("");
+    } catch (reason) {
+      setStagingError(reason instanceof Error ? reason.message : "暂时无法读取上传会话。");
+    }
+  }, []);
+
+  useEffect(() => r2MultipartUploadManager.subscribe((snapshots) => {
+    setUploadSnapshots(snapshots);
+    setFiles((current) => current.map((item) => {
+      const snapshot = snapshots.find(
+        (value) => value.filename === item.file.name
+          && value.fileSize === item.file.size
+          && value.fileLastModified === item.file.lastModified,
+      );
+      if (!snapshot) return item;
+      return {
+        ...item,
+        sessionId: snapshot.sessionId || item.sessionId,
+        status: snapshot.status === "uploaded"
+          ? "accepted"
+          : snapshot.status === "failed" || snapshot.status === "aborted"
+            ? "failed"
+            : "uploading",
+        message: snapshot.message,
+        progress: snapshot.progress,
+        uploadedBytes: snapshot.uploadedBytes,
+        speedBps: snapshot.currentSpeedBps,
+        averageSpeedBps: snapshot.averageSpeedBps,
+        etaSeconds: snapshot.etaSeconds,
+      };
+    }));
+  }), []);
+
+  useEffect(() => {
+    const initial = setTimeout(() => void refreshStagingSessions(), 0);
+    const timer = setInterval(() => void refreshStagingSessions(), 3_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
+  }, [refreshStagingSessions]);
 
   useEffect(() => {
     const accepted = result?.accepted ?? [];
@@ -376,7 +441,6 @@ export function AdminUpload() {
         ).slice(0, 100);
       });
     }
-    const resumeSessions = loadResumeSessions();
     const pdfCount = incoming.filter((file) => file.name.toLocaleLowerCase().endsWith(".pdf")).length;
     if (!pdfCount && !incomingMetadata.length) {
       setError("拖入的文件中没有可识别的 PDF 或配套元数据文件。");
@@ -391,21 +455,24 @@ export function AdminUpload() {
             file.name.toLocaleLowerCase().endsWith(".pdf") &&
             !identities.has(`${file.name}:${file.size}`),
         ).map((file) => {
-          const resume = resumeSessions[fileFingerprint(file)];
+          const resume = stagingSessions.find(
+            (session) => session.staging_status === "uploading"
+              && session.source_filename === file.name
+              && session.file_size === file.size
+              && (!session.file_last_modified || session.file_last_modified === file.lastModified),
+          );
           return {
             file,
-            token: resume?.token || uploadToken(),
+            token: uploadToken(),
             status: "waiting" as const,
-            message: resume ? "发现可恢复的公网上传记录" : "",
+            message: resume ? "发现服务端可恢复上传，请继续未完成 part" : "",
             progress: 0,
             uploadedBytes: 0,
             speedBps: 0,
             averageSpeedBps: 0,
             etaSeconds: null,
-            resumeBatchId: resume?.batchId,
-            chunkSize: resume?.batchId
-              ? (resume.chunkSize || LEGACY_CHUNK_SIZE)
-              : CHUNK_SIZE,
+            sessionId: resume?.upload_session_id,
+            chunkSize: CHUNK_SIZE,
           };
         }),
       ).slice(0, 100);
@@ -442,6 +509,32 @@ export function AdminUpload() {
     }
   }
 
+  async function abortStagingSession(sessionId: string) {
+    setStagingAction(sessionId);
+    setStagingError("");
+    try {
+      await r2MultipartUploadManager.abort(sessionId);
+      await refreshStagingSessions();
+    } catch (reason) {
+      setStagingError(reason instanceof Error ? reason.message : "取消上传失败。");
+    } finally {
+      setStagingAction("");
+    }
+  }
+
+  async function retryStagingImport(sessionId: string) {
+    setStagingAction(sessionId);
+    setStagingError("");
+    try {
+      await retryR2Import(sessionId);
+      await refreshStagingSessions();
+    } catch (reason) {
+      setStagingError(reason instanceof Error ? reason.message : "重新入库失败。");
+    } finally {
+      setStagingAction("");
+    }
+  }
+
   async function upload() {
     const token = getServerSessionCredential();
     if (!token) {
@@ -458,7 +551,7 @@ export function AdminUpload() {
     try {
       const shouldUseChunkUpload = (item: QueuedFile) => item.file.size >= PUBLIC_CHUNK_THRESHOLD
         && !isPrivateNetworkHost(window.location.hostname);
-      const freshItems = waiting.filter((item) => !shouldUseChunkUpload(item) || !item.resumeBatchId);
+      const freshItems = waiting.filter((item) => !item.sessionId);
       const freshBatch = freshItems.length
         ? await apiRequest<{ id: string; status: string }>(
           "/ingestion/batches/create/",
@@ -477,8 +570,11 @@ export function AdminUpload() {
           token,
         )
         : null;
+      const resumedSession = stagingSessions.find(
+        (session) => session.upload_session_id === waiting[0].sessionId,
+      );
       const displayBatch = freshBatch || {
-        id: waiting[0].resumeBatchId as string,
+        id: resumedSession?.batch_id || "existing-r2-session",
         status: "resuming",
       };
       const accepted: string[] = [];
@@ -534,6 +630,66 @@ export function AdminUpload() {
           }));
           return `PDF 已上传；配套元数据未导入：${message}`;
         }
+      }
+
+      // Every normal browser origin uses R2 staging. The legacy Django chunk
+      // implementation below remains readable for historical in-flight
+      // sessions, but the 2.7.1 upload page never sends PDF bytes to it.
+      if (window.location.protocol === "https:" || window.location.protocol === "http:") {
+        async function sendR2File(item: QueuedFile) {
+          updateFile(item.token, {
+            status: "uploading",
+            message: item.sessionId ? "正在恢复 R2 multipart upload" : "正在建立 R2 multipart upload",
+            progress: 0,
+            uploadedBytes: 0,
+            speedBps: 0,
+            averageSpeedBps: 0,
+            etaSeconds: null,
+          });
+          try {
+            const existing = item.sessionId
+              ? stagingSessions.find((session) => session.upload_session_id === item.sessionId)
+              : undefined;
+            if (!existing && !freshBatch) {
+              throw new Error("没有可用的上传批次，请重新选择 PDF。")
+            }
+            const session = existing
+              ? await r2MultipartUploadManager.resume(item.file, existing)
+              : await r2MultipartUploadManager.start(item.file, freshBatch!.id, item.token);
+            accepted.push(session.upload_session_id);
+            const metadataMessage = await importMatchedMetadata(session.upload_session_id, item);
+            updateFile(item.token, {
+              sessionId: session.upload_session_id,
+              status: "accepted",
+              message: metadataMessage.includes("元数据")
+                ? `上传完成，正在入库；${metadataMessage.replace(/^上传完成[；，]?/, "")}`
+                : "上传完成，正在入库",
+              progress: 100,
+              uploadedBytes: item.file.size,
+              speedBps: 0,
+              etaSeconds: 0,
+            });
+          } catch (reason) {
+            const message = reason instanceof Error ? reason.message : "上传中断";
+            rejected.push({ filename: item.file.name, reason: message });
+            updateFile(item.token, { status: "failed", message, speedBps: 0, etaSeconds: null });
+          }
+        }
+
+        async function r2Worker() {
+          while (cursor < waiting.length) {
+            const item = waiting[cursor];
+            cursor += 1;
+            await sendR2File(item);
+          }
+        }
+
+        await Promise.all(
+          Array.from({ length: Math.min(2, waiting.length) }, () => r2Worker()),
+        );
+        setResult({ accepted, rejected, batch: displayBatch });
+        await refreshStagingSessions();
+        return;
       }
 
       async function sendChunks(item: QueuedFile, targetBatchId: string) {
@@ -891,9 +1047,9 @@ export function AdminUpload() {
             <span><strong>AI 候选建议</strong><small>仅在模型服务已配置时产生候选。候选不会自动采用，仍需管理员复核。</small></span>
           </label>
         </div>
-        {files.some((item) => item.resumeBatchId) ? (
+        {files.some((item) => item.sessionId) ? (
           <p className="upload-resume-policy-note" role="status">
-            已发现可恢复的公网上传记录。恢复文件继续使用原批次策略；上面的选项只会用于本次新建的批次，不会改写旧记录。
+            已发现服务端 R2 上传会话。重新选择同一 PDF 后只上传未完成 part；原批次策略不会被改写。
           </p>
         ) : null}
       </section>
@@ -936,8 +1092,62 @@ export function AdminUpload() {
         <h2>拖入 PDF 和配套元数据</h2>
         <p>支持 PDF，以及同名的 RIS、BibTeX、CSL-JSON、sidecar JSON 或 YAML。配套文件只生成待审候选，不会直接覆盖馆藏。</p>
         <button className="button secondary" type="button" onClick={() => input.current?.click()}>选择文件</button>
-        <input ref={input} type="file" accept="application/pdf,.pdf,.ris,.bib,.bibtex,.json,.yaml,.yml" multiple hidden onChange={(event: ChangeEvent<HTMLInputElement>) => addFiles(event.target.files)} />
+        <input
+          ref={input}
+          type="file"
+          accept="application/pdf,.pdf,.ris,.bib,.bibtex,.json,.yaml,.yml"
+          multiple
+          hidden
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            addFiles(event.target.files);
+            event.currentTarget.value = "";
+          }}
+        />
       </section>
+
+      {stagingSessions.length || uploadSnapshots.length ? (
+        <section className="upload-staging-sessions admin-panel" aria-live="polite">
+          <header>
+            <div><h2>持续上传与入库</h2><p>切换站内页面后上传继续运行；浏览器刷新后请重新选择同一个本地 PDF 继续未完成 part。</p></div>
+            <button className="button secondary" type="button" onClick={() => void refreshStagingSessions()}><RefreshCw size={14} />刷新状态</button>
+          </header>
+          {stagingError ? <p className="form-message error" role="alert">{stagingError}</p> : null}
+          <div className="upload-staging-list">
+            {stagingSessions.slice(0, 20).map((session) => {
+              const live = uploadSnapshots.find((snapshot) => snapshot.sessionId === session.upload_session_id);
+              const persistedBytes = Math.min(
+                session.file_size,
+                session.completed_parts.reduce((total, part) => total + part.size, 0),
+              );
+              const uploadedBytes = live?.uploadedBytes ?? (session.staging_status === "uploading" ? persistedBytes : session.file_size);
+              const progress = live?.progress ?? (session.file_size ? Math.min(100, Math.floor((uploadedBytes / session.file_size) * 100)) : 0);
+              const waiting = live?.status === "connection_waiting";
+              const message = live?.message || stagingStatusLabels[session.staging_status] || session.staging_status;
+              return (
+                <article className={`upload-staging-row status-${session.staging_status}${waiting ? " is-stalled" : ""}`} key={session.upload_session_id}>
+                  <div className="upload-staging-copy">
+                    <strong>{session.source_filename}</strong>
+                    <span>{message}</span>
+                    <small>
+                      {formatUploadBytes(uploadedBytes)} / {formatUploadBytes(session.file_size)} · {progress}%
+                      {live && live.status !== "uploaded" ? ` · 当前 ${formatUploadRate(live.currentSpeedBps)} · 平均 ${formatUploadRate(live.averageSpeedBps)} · 剩余 ${formatUploadEta(live.etaSeconds)}` : ""}
+                    </small>
+                  </div>
+                  <span className={`upload-file-progress${waiting ? " is-stalled" : ""}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <i style={{ width: `${progress}%` }} />
+                  </span>
+                  <div className="upload-staging-actions">
+                    {session.can_resume_upload && !live ? <span>重新选择同一 PDF 继续</span> : null}
+                    {session.can_abort ? <button type="button" disabled={stagingAction === session.upload_session_id} onClick={() => void abortStagingSession(session.upload_session_id)}>取消上传</button> : null}
+                    {session.can_retry_import ? <button type="button" disabled={stagingAction === session.upload_session_id} onClick={() => void retryStagingImport(session.upload_session_id)}>重新入库</button> : null}
+                  </div>
+                  {session.error_message ? <p className="ingestion-item-error"><AlertCircle size={14} />{session.error_message}</p> : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="upload-queue admin-panel">
         <header><h2>待上传文件</h2><span>{files.length} 个 PDF · {metadataFiles.length} 个元数据文件</span></header>
@@ -989,7 +1199,7 @@ export function AdminUpload() {
             </div>
             {item.status === "uploading" || item.status === "accepted" ? (
               <span
-                className="upload-file-progress"
+                className={`upload-file-progress${item.message.includes("连接等待中") ? " is-stalled" : ""}`}
                 role="progressbar"
                 aria-label={`${item.file.name} 上传进度`}
                 aria-valuemin={0}

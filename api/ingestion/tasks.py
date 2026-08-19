@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
+import logging
 import uuid
 
 from .models import ProcessingAttempt, UploadItem
@@ -20,6 +21,14 @@ from .services.processing import (
     run_page_label_job,
     run_query_lexicon_candidate_job,
 )
+from .services.r2_staging import (
+    mark_r2_cleanup_ready,
+    recover_r2_staging_jobs,
+    run_r2_staging_job,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 def _request_task_id(task, item_id: str) -> str:
@@ -140,6 +149,14 @@ def _run_tracked(task, item_id: str, processor):
             mark_dispatch_finished(str(item_id), task_id, error=exc)
         raise
     else:
+        try:
+            mark_r2_cleanup_ready(item)
+        except Exception as cleanup_exc:
+            logger.warning(
+                "r2_cleanup_queue_failed upload_session_id=%s stage=pipeline_finalize category=%s",
+                item.id,
+                cleanup_exc.__class__.__name__,
+            )
         if execution_attempt:
             execution_attempt.status = "completed"
             execution_attempt.finished_at = timezone.now()
@@ -233,11 +250,21 @@ def process_query_lexicon_candidate_job(self, job_id):
     return {"id": str(job.id), "status": job.status, "attempt": job.attempt}
 
 
+@shared_task(bind=True, ignore_result=True)
+def process_r2_staging_job(self, job_id):
+    job = run_r2_staging_job(
+        str(job_id),
+        task_id=str(self.request.id or ""),
+    )
+    return {"id": str(job.id), "status": job.status, "attempt": job.attempt}
+
+
 @shared_task(ignore_result=True)
 def recover_ingestion_queue():
     return {
         "uploads": recover_ingestion_dispatches(limit=100),
         "processing_jobs": recover_stalled_processing_jobs(limit=100),
+        "r2_staging": recover_r2_staging_jobs(limit=100),
     }
 
 

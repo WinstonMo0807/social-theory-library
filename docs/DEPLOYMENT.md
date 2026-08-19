@@ -182,3 +182,39 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 The production adapter timeout is 20 seconds and SearXNG gives upstream engines 10 seconds with a 20-second hard maximum. Provider timeout remains a partial-result error and must not be hidden as an empty candidate set.
 
 The NAS egress smoke showed Baidu returning JSON results while the default Western engines timed out without a configured container proxy. Production therefore keeps only the verified Baidu engine. Re-test engine reachability before changing this list; do not enable an engine merely because its adapter exists.
+
+## Version 2.7.1 R2 upload staging
+
+R2 只承接浏览器到正式入库之间的临时 PDF。`INTAKE_STORAGE_BACKEND`、NAS archive/public/incoming、Asset FileField、Reader Range 和公开下载继续使用原有实现。不得把 `R2_BUCKET` 设置成公开馆藏 bucket，也不得把 staging object URL 保存为 Asset URL。
+
+生产 API、Worker、Ingestion Worker 和 Beat 需要同一组服务端变量：
+
+```text
+R2_UPLOAD_STAGING_ENABLED=true
+R2_ACCOUNT_ID=<server secret environment>
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_BUCKET=library-upload-staging
+R2_ACCESS_KEY_ID=<server secret environment>
+R2_SECRET_ACCESS_KEY=<server secret environment>
+R2_REGION=auto
+R2_UPLOAD_PART_SIZE=8388608
+R2_PRESIGNED_URL_TTL_SECONDS=900
+R2_MAX_ACTIVE_UPLOADS_PER_USER=5
+R2_SIGN_PART_BATCH_SIZE=12
+R2_IMPORT_CHUNK_BYTES=8388608
+R2_CLEANUP_MAX_ATTEMPTS=12
+R2_UPLOAD_CORS_ALLOWED_ORIGINS=https://books.winstonmo.com,http://localhost:3000,http://127.0.0.1:3000,http://192.168.5.6:3000,http://192.168.5.6:18080,http://192.168.5.6:18082
+```
+
+Access Key、Secret 与 Cloudflare Token 不进入 Compose、数据库、浏览器、manifest、日志或 Git。S3 multipart 数据面不需要 Cloudflare API Token。若 Token 曾出现在聊天或截图，发布后应轮换并撤销。
+
+本地 Vinext 与 Compose Web 的实际端口是 3000，本地完整 Edge 默认 8080。生产 LAN Edge 当前使用 3000、18080 和 18082。R2 bucket CORS 必须按实际浏览器 Origin 配置，至少允许 PUT 与 Content-Type，并 expose ETag。应用提供以下无 Secret 命令：
+
+```text
+python manage.py configure_r2_upload_cors --dry-run
+python manage.py configure_r2_upload_cors
+```
+
+`ingestion.0013_uploaditem_staging_backend_and_more` 只增加 UploadItem staging 字段、索引、namespace constraint 与 ProcessingJob choice。它不连接 R2、不扫描 PDF、不搬移 NAS 文件、不生成任务。发布前仍需 fresh BackupJob、`migrate --plan`、空队列窗口、统一 2.7.1 image 和 additive PostgreSQL rehearsal。
+
+应用回退优先切回 2.7 image。0013 字段可以保留，旧代码会忽略；不要反向删除含未完成 upload session 的字段。回退后新浏览器上传入口不可用，但已经进入 NAS 的 PDF、已有馆藏和活动索引不受影响。R2 Lifecycle 会处理遗留 incomplete multipart 和 staging object。

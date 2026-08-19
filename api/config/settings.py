@@ -253,6 +253,7 @@ CELERY_TASK_ROUTES = {
     "ingestion.tasks.process_query_lexicon_candidate_job": {
         "queue": INGESTION_TASK_QUEUE
     },
+    "ingestion.tasks.process_r2_staging_job": {"queue": INGESTION_TASK_QUEUE},
     "catalog.tasks.run_search_evaluation": {"queue": SEARCH_EVALUATION_TASK_QUEUE},
     "catalog.tasks.process_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
     "catalog.tasks.recover_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
@@ -719,6 +720,54 @@ MAX_UPLOAD_CHUNK_BYTES = max(
     1024 * 1024,
     min(int(os.getenv("MAX_UPLOAD_CHUNK_BYTES", str(8 * 1024 * 1024))), 32 * 1024 * 1024),
 )
+R2_UPLOAD_STAGING_ENABLED = env_bool("R2_UPLOAD_STAGING_ENABLED", False)
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "").strip()
+R2_ENDPOINT = os.getenv(
+    "R2_ENDPOINT",
+    f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else "",
+).strip().rstrip("/")
+R2_BUCKET = os.getenv("R2_BUCKET", "").strip()
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
+R2_REGION = os.getenv("R2_REGION", "auto").strip() or "auto"
+R2_UPLOAD_PART_SIZE = max(
+    5 * 1024 * 1024,
+    min(int(os.getenv("R2_UPLOAD_PART_SIZE", str(8 * 1024 * 1024))), 512 * 1024 * 1024),
+)
+R2_PRESIGNED_URL_TTL_SECONDS = max(
+    300,
+    min(int(os.getenv("R2_PRESIGNED_URL_TTL_SECONDS", "900")), 3600),
+)
+R2_MAX_ACTIVE_UPLOADS_PER_USER = max(
+    1,
+    min(int(os.getenv("R2_MAX_ACTIVE_UPLOADS_PER_USER", "5")), 20),
+)
+R2_SIGN_PART_BATCH_SIZE = max(
+    1,
+    min(int(os.getenv("R2_SIGN_PART_BATCH_SIZE", "12")), 24),
+)
+R2_IMPORT_CHUNK_BYTES = max(
+    1024 * 1024,
+    min(int(os.getenv("R2_IMPORT_CHUNK_BYTES", str(8 * 1024 * 1024))), 64 * 1024 * 1024),
+)
+R2_CLEANUP_MAX_ATTEMPTS = max(
+    1,
+    min(int(os.getenv("R2_CLEANUP_MAX_ATTEMPTS", "12")), 48),
+)
+R2_UPLOAD_CORS_ALLOWED_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "R2_UPLOAD_CORS_ALLOWED_ORIGINS",
+        ",".join(
+            [
+                os.getenv("PUBLIC_WEB_URL", "http://localhost:3000"),
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+            ]
+        ),
+    ).split(",")
+    if origin.strip()
+]
 FILE_UPLOAD_MAX_MEMORY_SIZE = min(
     max(
         int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024))),

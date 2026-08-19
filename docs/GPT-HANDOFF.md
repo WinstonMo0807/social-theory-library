@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-19。当前源码版本为 2.7。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-19。当前源码版本为 2.7.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -17,7 +17,7 @@
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.7 |
+| 源码版本 | 2.7.1 |
 | Git 工作分支 | `codex/release-2.7`。实际 commit 以 `git rev-parse HEAD` 为准 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
 | 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7-87251cb` image family |
@@ -95,12 +95,16 @@ flowchart TD
 ### PDF 上传、处理、复核与出版
 
 - 浏览器建立 UploadBatch，再为每个文件建立 UploadItem。文件选择和拖放进入同一分片上传实现。
+- 2.7.1 公网 PDF 二进制通过 presigned UploadPart URL 直接进入 Cloudflare R2 staging，不再先经过 Django、Nginx 或 NAS 临时 chunk 目录。R2 不是永久书库存储。
+- UploadItem 保存 owner、multipart upload ID、固定 `staging/<uuid>.pdf` key、part size、已完成 ETag 和 staging 状态。普通 serializer 不返回 object key 或 upload ID。
+- CompleteMultipartUpload 后，Ingestion Worker 从 R2 流式写入原有 intake/NAS storage并计算 SHA-256。后续 OCR、书目、Asset、索引与发布流程不变。
+- 只有正式 Asset、数据库状态和 pipeline 结果可靠保存后才删除 staging object。删除失败保持书籍 ready，记录 cleanup pending 并由现有 Beat/ProcessingJob 恢复。
 - 上传完成后由 ingestion pipeline 进行校验、文本提取或 OCR、页码、元数据候选和发布预检。
 - MetadataCandidate 只进入人工复核。FieldLock 和人工决定优先于自动值。
 - publish transaction 写入正式 Work、Edition、Asset 关系。后续语义索引和候选发现是独立派生任务。
 - 单文件失败不回滚整个 batch。OCR、semantic、candidate 或 provider 失败不得把已出版 Work 标为失败。
 
-主要入口是 `api/ingestion/services`、`api/ingestion/views.py`、`web/app/admin/uploads` 和 `web/app/admin/review`。完整流程回归位于 `api/tests/test_complete_ingestion_workflow.py`、`test_ingestion_workflow.py` 和 `web/tests/reader-upload-layout.test.mjs`。
+主要入口是 `api/ingestion/services/r2_staging.py`、`api/ingestion/views.py`、`web/lib/r2-multipart-upload.ts`、`web/app/admin/uploads` 和 `web/app/admin/review`。完整流程回归位于 `api/tests/test_r2_staging_upload.py`、`test_complete_ingestion_workflow.py`、`test_ingestion_workflow.py` 和 `web/tests/upload-metrics.test.mjs`。
 
 ### Authority、QueryLexicon 与 Scoped Search
 

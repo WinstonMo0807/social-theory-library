@@ -109,6 +109,20 @@ class UploadItem(UUIDTimeStampedModel):
         CANCELLED = "cancelled", "已取消"
         ARCHIVED = "archived", "已归档"
 
+    class StagingBackend(models.TextChoices):
+        R2 = "r2", "Cloudflare R2 staging"
+
+    class StagingStatus(models.TextChoices):
+        UPLOADING = "uploading", "浏览器正在上传"
+        UPLOADED = "uploaded", "R2 上传完成"
+        IMPORTING = "importing", "正在导入正式存储"
+        IMPORTED = "imported", "正式存储导入完成"
+        IMPORT_FAILED = "import_failed", "正式存储导入失败"
+        CLEANUP_PENDING = "cleanup_pending", "等待清理 R2"
+        CLEANED = "cleaned", "R2 已清理"
+        ABORTED = "aborted", "上传已取消"
+        EXPIRED = "expired", "R2 staging 已过期"
+
     batch = models.ForeignKey(UploadBatch, on_delete=models.CASCADE, related_name="items")
     source_filename = models.CharField(max_length=800)
     file = models.FileField(
@@ -160,14 +174,53 @@ class UploadItem(UUIDTimeStampedModel):
     priority = models.PositiveSmallIntegerField(default=0, db_index=True)
     preflight_summary = models.JSONField(default=dict, blank=True)
     workflow_updated_at = models.DateTimeField(default=timezone.now, db_index=True)
+    staging_backend = models.CharField(
+        max_length=20,
+        choices=StagingBackend.choices,
+        blank=True,
+        db_index=True,
+    )
+    staging_status = models.CharField(
+        max_length=24,
+        choices=StagingStatus.choices,
+        blank=True,
+        db_index=True,
+    )
+    staging_object_key = models.CharField(max_length=500, blank=True)
+    staging_upload_id = models.CharField(max_length=500, blank=True)
+    staging_file_size = models.BigIntegerField(default=0)
+    staging_file_last_modified = models.BigIntegerField(default=0)
+    staging_part_size = models.BigIntegerField(default=0)
+    staging_total_parts = models.PositiveIntegerField(default=0)
+    staging_parts = models.JSONField(default=list, blank=True)
+    staging_import_attempts = models.PositiveSmallIntegerField(default=0)
+    staging_cleanup_attempts = models.PositiveSmallIntegerField(default=0)
+    staging_error_code = models.CharField(max_length=120, blank=True)
+    staging_error_message = models.TextField(blank=True)
+    staging_completed_at = models.DateTimeField(null=True, blank=True)
+    staging_imported_at = models.DateTimeField(null=True, blank=True)
+    staging_cleanup_completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["batch", "status"])]
+        indexes = [
+            models.Index(fields=["batch", "status"]),
+            models.Index(fields=["staging_status", "updated_at"]),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["batch", "processing_token"],
                 condition=~models.Q(processing_token=""),
                 name="unique_batch_processing_token",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(staging_backend="")
+                    | models.Q(
+                        staging_backend="r2",
+                        staging_object_key__startswith="staging/",
+                    )
+                ),
+                name="r2_staging_key_namespace",
             ),
         ]
 
@@ -240,6 +293,7 @@ class ProcessingJob(UUIDTimeStampedModel):
         PROJECTION_REFRESH = "projection_refresh", "公开投影刷新"
         THUMBNAIL = "thumbnail", "缩略图"
         CACHE_REFRESH = "cache_refresh", "公开目录刷新"
+        R2_STAGING = "r2_staging", "R2 上传中转"
 
     class Status(models.TextChoices):
         PENDING = "pending", "等待处理"

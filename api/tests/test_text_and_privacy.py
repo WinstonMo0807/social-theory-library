@@ -4,6 +4,8 @@ import pytest
 
 from catalog.models import Asset, Edition, Page, PublicationState, Work
 from catalog.services.search_geometry import estimate_block_highlights
+from catalog.services.text import normalize_search_text, sanitize_unicode
+from ingestion.services.extract import ExtractedBlock, ExtractedPage, persist_pages
 from ingestion.services.files import materialize_field_file
 from ingestion.services.metadata import extract_text_candidates, select_best
 from reading.models import Annotation
@@ -23,6 +25,52 @@ def test_ocr_text_can_refine_book_metadata_without_using_filename():
     assert selected["publisher"] == "测试出版社"
     assert selected["publication_year"] == 2026
     assert selected["language"] == "zh-CN"
+
+
+def test_illegal_pdf_surrogates_are_repaired_before_utf8_persistence():
+    damaged = "封面\udcc0\udc80"
+    assert sanitize_unicode(damaged) == "封面\ufffd\ufffd"
+    assert "\udcc0" not in normalize_search_text(damaged)
+
+
+@pytest.mark.django_db
+def test_persist_pages_repairs_surrogates_without_changing_the_pdf():
+    work = Work.objects.create(document_type="book", title="非法 Unicode 测试")
+    edition = Edition.objects.create(work=work)
+    asset = Asset.objects.create(
+        edition=edition,
+        kind=Asset.Kind.NORMALIZED,
+        file="public/surrogate-test.pdf",
+        sha256="e" * 64,
+        status=Asset.Status.PROCESSING,
+    )
+    persist_pages(
+        asset,
+        [
+            ExtractedPage(
+                index=1,
+                printed_label="1\udc80",
+                chapter_title="封面\udcc0\udc80",
+                width=100,
+                height=200,
+                text="封面\udcc0\udc80",
+                source=Page.TextSource.EMBEDDED,
+                confidence=1,
+                blocks=[
+                    ExtractedBlock(
+                        order=0,
+                        text="封面\udcc0\udc80",
+                        bbox=[0, 0, 10, 10],
+                    )
+                ],
+            )
+        ],
+    )
+    page = asset.pages.get(index=1)
+    assert page.text == "封面\ufffd\ufffd"
+    assert page.chapter_title == "封面\ufffd\ufffd"
+    assert page.printed_label == "1\ufffd"
+    assert page.blocks.get().text == "封面\ufffd\ufffd"
 
 
 def test_ocr_search_highlight_is_narrower_than_the_paragraph_block():

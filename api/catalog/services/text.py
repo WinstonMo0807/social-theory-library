@@ -11,10 +11,23 @@ CJK_LINE_BREAK_RE = re.compile(r"(?<=[\u3400-\u9fff，。！？；：、）】�
 LATIN_LINE_BREAK_RE = re.compile(r"(?<=[A-Za-z0-9,;:])\s*\n\s*(?=[A-Za-z0-9])")
 MULTI_BREAK_RE = re.compile(r"\n{3,}")
 HEX_PAGE_LABEL_RE = re.compile(r"^<FEFF((?:[0-9A-Fa-f]{4})+)>$")
+SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
+
+
+def sanitize_unicode(value: str) -> str:
+    """Replace isolated UTF-16 surrogate code points with visible Unicode repair marks.
+
+    Some PDF fonts expose undecodable bytes through PyMuPDF as surrogate code
+    points. PostgreSQL correctly rejects those values because they cannot be
+    encoded as UTF-8. The original PDF remains untouched; only derived text is
+    repaired before it enters search, metadata, or reader records.
+    """
+
+    return SURROGATE_RE.sub("\ufffd", str(value or ""))
 
 
 def normalize_search_text(value: str) -> str:
-    value = unicodedata.normalize("NFKC", value or "")
+    value = unicodedata.normalize("NFKC", sanitize_unicode(value))
     value = value.replace("\u200b", "").replace("\ufeff", "")
     value = WHITESPACE_RE.sub(" ", value)
     return value.strip().casefold()
@@ -22,7 +35,7 @@ def normalize_search_text(value: str) -> str:
 
 def clean_page_label(value: str) -> str:
     """Normalize malformed PDF page labels without changing ordinary labels."""
-    value = (value or "").strip().replace("\ufeff", "")
+    value = sanitize_unicode(value).strip().replace("\ufeff", "")
     match = HEX_PAGE_LABEL_RE.fullmatch(value)
     if not match:
         return value
@@ -36,7 +49,7 @@ def clean_page_label(value: str) -> str:
 
 
 def clean_copied_text(value: str) -> str:
-    value = fix_text(value or "")
+    value = fix_text(sanitize_unicode(value))
     value = unicodedata.normalize("NFKC", value)
     value = value.replace("\r\n", "\n").replace("\r", "\n")
     value = LATIN_HYPHEN_BREAK_RE.sub("", value)
@@ -62,7 +75,7 @@ def clipboard_payload(value: str) -> dict:
 
 
 def passage_snippet(value: str, query: str, radius: int = 90) -> str:
-    value = fix_text(value or "")
+    value = fix_text(sanitize_unicode(value))
     folded = normalize_search_text(value)
     needle = normalize_search_text(query)
     position = folded.find(needle)

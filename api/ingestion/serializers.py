@@ -260,6 +260,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
     stalled_seconds = serializers.SerializerMethodField()
     suggested_action = serializers.SerializerMethodField()
     queue_mode = serializers.SerializerMethodField()
+    staging = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadItem
@@ -300,6 +301,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
             "stalled_seconds",
             "suggested_action",
             "queue_mode",
+            "staging",
             "attempts",
             "metadata_candidates",
             "entity_resolution_candidates",
@@ -634,6 +636,13 @@ class UploadItemSerializer(serializers.ModelSerializer):
             else "worker"
         )
 
+    def get_staging(self, obj):
+        if obj.staging_backend != UploadItem.StagingBackend.R2:
+            return None
+        from ingestion.services.r2_staging import serialize_staging_session
+
+        return serialize_staging_session(obj)
+
 
 class UploadBatchSerializer(serializers.ModelSerializer):
     items = UploadItemSerializer(many=True, read_only=True)
@@ -683,6 +692,60 @@ class UploadBatchCreateSerializer(serializers.Serializer):
     )
     external_enrichment_enabled = serializers.BooleanField(required=False, default=True)
     ai_suggestions_enabled = serializers.BooleanField(required=False, default=False)
+
+
+class R2StagingInitSerializer(serializers.Serializer):
+    batch_id = serializers.UUIDField()
+    source_filename = serializers.CharField(max_length=800)
+    file_size = serializers.IntegerField(min_value=5)
+    file_last_modified = serializers.IntegerField(min_value=0, required=False, default=0)
+    content_type = serializers.CharField(max_length=120, required=False, default="application/pdf")
+    client_token = serializers.RegexField(r"^[A-Za-z0-9-]{8,80}$")
+
+    def validate_source_filename(self, value):
+        if not value.casefold().endswith(".pdf"):
+            raise serializers.ValidationError("只允许上传 PDF。")
+        return value
+
+    def validate_file_size(self, value):
+        if value > settings.MAX_UPLOAD_BYTES:
+            raise serializers.ValidationError("PDF 超过单文件上限。")
+        return value
+
+    def validate_content_type(self, value):
+        if value.casefold() not in {"application/pdf", "application/octet-stream", ""}:
+            raise serializers.ValidationError("只允许 PDF content type。")
+        return value
+
+
+class R2PartSignSerializer(serializers.Serializer):
+    part_numbers = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+        max_length=24,
+    )
+
+
+class R2PartRecordSerializer(serializers.Serializer):
+    part_number = serializers.IntegerField(min_value=1)
+    etag = serializers.CharField(max_length=202)
+    size = serializers.IntegerField(min_value=1, required=False)
+
+
+class R2PartConfirmSerializer(R2PartRecordSerializer):
+    size = serializers.IntegerField(min_value=1)
+    attempt = serializers.IntegerField(min_value=1, max_value=3, required=False, default=1)
+
+
+class R2PartFailureSerializer(serializers.Serializer):
+    part_number = serializers.IntegerField(min_value=1)
+    attempt = serializers.IntegerField(min_value=1, max_value=3)
+    http_status = serializers.IntegerField(min_value=0, max_value=599, required=False, default=0)
+    error_code = serializers.CharField(max_length=120, required=False, allow_blank=True, default="network_error")
+
+
+class R2CompleteSerializer(serializers.Serializer):
+    parts = R2PartRecordSerializer(many=True, allow_empty=False)
 
 
 class DisciplineAssignmentSerializer(serializers.Serializer):
