@@ -1,6 +1,15 @@
 # Final Integrated Architecture Acceptance
 
-更新日期为 2026-08-19。本文件是最终综合验收的唯一工作报告。它区分当前源码证据、真实运行证据和待人工 checkpoint。没有 `FINAL CUTOVER APPROVED` 时，不执行生产 migration、应用部署、活动语义索引切换或公开 V2 enable。
+更新日期为 2026-08-19。本文件记录最终综合验收的架构决定与历史证据。最初的 `FINAL CUTOVER APPROVED` 门槛已经在后续授权发布中满足。当前状态以本节、文末 Final status 和 [GPT-HANDOFF.md](GPT-HANDOFF.md) 为准；中间保留的 SSH blocker 与本地未验证内容是发布前历史快照。
+
+## Current verified state
+
+- 2.7 已部署，API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7-87251cb` image family。
+- 生产 migration heads 为 catalog 0030、ingestion 0012、reading 0007。
+- fresh BackupJob、PostgreSQL 16 migration、QueryLexicon reconciliation、clean semantic index audit 和 active UID switch 已完成。
+- 公共观点检索 V2 已在五条真实馆藏对照查询无 fallback 后启用。V1 保留为环境开关回退，Ask Library 继续使用 stable retrieval。
+- 内网 SearXNG discovery、VIAF partial result 和实际网页 SafeWebFetcher 已做生产 smoke。外部结果仍只形成 pending Candidate，没有自动 Accept 或 authority publish。
+- 当前结论为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。盲化人工 qrels、真实读者模型、长时间后台上传和 Authority 数据质量仍需继续验证。
 
 ## Current to final architecture map
 
@@ -42,7 +51,7 @@ The final application has one PostgreSQL authority/data source, one Redis/Celery
 | PDF term discovery | Existing authority plus PDF evidence | QueryLexiconCandidate/Evidence review workflow | Independent enrichment job; failure does not fail ingestion/publication |
 | Authority | Person, PersonNameVariant, KnowledgeNode, aliases and approved relations | QueryLexicon is a derived generation | Durable ChangeEvent plus Celery notification; reconciliation failure preserves authority and active generation |
 | Entity search | PostgreSQL authority/catalog | Search response/cache only | Request path; context constrains retrieval before ranking |
-| Viewpoint search | SemanticChunk/catalog visibility and active SemanticIndexVersion | Meilisearch result set | Request path; V1 remains public until human quality gate approves V2 |
+| Viewpoint search | SemanticChunk/catalog visibility and active SemanticIndexVersion | Meilisearch result set | Request path; public V2 is enabled and V1 remains the immediate environment rollback |
 | Web enrichment | Existing target object and accepted authority fields | SourceRecord cache plus EnrichmentCandidate/Evidence | Provider partial failure preserves other evidence and never auto-accepts |
 | Reader data | PostgreSQL user-owned progress, notes and annotations | Browser state only | Resource failure does not invalidate session |
 | Ask Library | User conversation plus persisted LibraryMessageSource evidence | Model answer is derived text, never evidence | AI failure preserves session and retrieved evidence |
@@ -129,11 +138,11 @@ At the time of the initial acceptance draft, production read-only inventory was 
 
 ## Human checkpoints
 
-- Relevance judgments for the final blind V1/V2 pilot. Without sufficient judgments, public V2 stays disabled.
+- Relevance judgments for the final blind V1/V2 pilot. Public V2 is currently enabled after bounded smoke, but must remain reversible until sufficient human judgments exist.
 - Any authority or enrichment Candidate Accept. Candidate generation and review display may be tested without acceptance.
 - Any future destructive maintenance still requires an explicit operator approval; the 2.7 migration and active UID switch recorded below were authorized by the current release request.
 
-## Local consolidation evidence 2026-08-19
+## Historical local consolidation evidence before production access
 
 The local source and regression gates currently pass:
 
@@ -144,41 +153,41 @@ The local source and regression gates currently pass:
 - Replacement ingestion now queues one forced semantic job after the new asset is current. It no longer queues an extra pre-activation job.
 - When no unique active semantic version exists, the direct job-creation API remains fail-closed, while the asynchronous enqueue records an independent `INDEX_VERSION_REQUIRED` failure and leaves upload/publication source state unchanged.
 
-The remaining gates are environment-dependent. This workstation has no Docker, PostgreSQL client/server, or PostgreSQL 16 disposable runtime. SSH to `Winston@192.168.5.6` with the supplied temporary RSA identity still returns `Permission denied (publickey,password)`. Therefore the production inventory, fresh backup, PostgreSQL 16 migration rehearsal, clean Meilisearch index, real provider/model checks, and browser/NAS acceptance remain unverified. The final status is still `BLOCKED`; no production migration, deployment, active UID switch, or public V2 enable was performed during this final acceptance.
+At that point the workstation had no Docker or PostgreSQL 16 disposable runtime, and the temporary RSA identity was rejected. The production inventory and release were therefore blocked in this historical snapshot. SSH access was subsequently restored and the gated production sequence recorded in Current verified state was completed.
 
 ## Original six product issues
 
 | Issue | Current verdict | Evidence available now | Remaining gap |
 | --- | --- | --- | --- |
-| 1. 中英文跨语言观点检索 | `IMPLEMENTED_NOT_ENABLED` | QueryLexicon public/admin boundaries, V1/V2 separation, passage language and scoped retrieval are covered by source review and local regression. | No final blind human qrels, clean production index, latency evidence, or real 10–15 question RAG/search set. Public V2 remains disabled. |
-| 2. 字段级联网补全与多源证据 | `IMPLEMENTED_NOT_VALIDATED` | Field policy registry, structured adapters, fetch/evidence provenance, conflict handling, mutation registry and pending-only review are implemented and tested with deterministic fixtures. | No controlled real provider fetch or production source selection has been completed. No Candidate was auto-accepted. |
-| 3. Ask Library / social-science RAG | `IMPLEMENTED_NOT_VALIDATED` | Capability runtime, strict scope, persisted Evidence, citation validation, Reader URL contract and failure semantics pass local tests. | No real model health/generation or real-corpus question set can be checked until production/model access is restored. |
-| 4. Unified scoped search | `IMPLEMENTED_NOT_VALIDATED` | SearchContext/SearchService, retrieval-time scope, explicit global mode, URL state and public/admin visibility pass targeted tests and frontend build. | Real production counts, legacy access logs and browser behavior remain unverified. |
-| 5. PostgreSQL ingestion locking | `IMPLEMENTED` | Nullable outer-join locking fix and ingestion regression suite pass; semantic enqueue failures are now isolated from source publication. | Full current-production ingestion chain still requires the real database and worker runtime. |
-| 6. Auth / Reader Center session bootstrap | `IMPLEMENTED_NOT_VALIDATED` | Cookie-first bootstrap, error-state separation and multi-tab refresh tests pass; no client uses the local hint as auth truth. | Real admin/reader browser sessions on the NAS/public deployment remain unverified. |
+| 1. 中英文跨语言观点检索 | `DEPLOYED_BOUNDED_VALIDATION` | Public/admin QueryLexicon boundaries, clean production UID, V1/V2 separation and five real V2 queries without fallback were verified. | Blind human qrels and a broader bilingual quality set remain incomplete. |
+| 2. 字段级联网补全与多源证据 | `DEPLOYED_PARTIAL_VALIDATION` | Field policy, structured adapter, SearXNG discovery, SafeWebFetcher, provenance, conflicts and pending-only review were exercised. | Provider coverage and authority identity quality remain limited; no Candidate was auto-accepted. |
+| 3. Ask Library / social-science RAG | `DEPLOYED_MANUAL_MODEL_VALIDATION` | Registered readers can configure an encrypted personal model connection; stable retrieval, evidence persistence and Reader URLs pass regression. | Real model streaming and citation behavior depend on the reader's configured provider and need user validation. |
+| 4. Unified scoped search | `DEPLOYED` | Retrieval-time contexts, explicit global mode, URL state and public/admin visibility pass backend and frontend regression. | Legacy no-context access logs should be observed before adapter removal. |
+| 5. PostgreSQL ingestion locking | `DEPLOYED` | PostgreSQL locking fix and ingestion regression pass; semantic enqueue failure is isolated from source publication. | Large-file and worker interruption behavior still benefits from continued operational observation. |
+| 6. Auth / Reader Center session bootstrap | `DEPLOYED_MANUAL_STRESS_PENDING` | Cookie-first bootstrap, error separation, multi-tab refresh and anonymous Reader private-request suppression pass regression and public smoke. | Long background-tab uploads and weak-network recovery need continued authenticated browser testing. |
 
 ## Migration and data rehearsal
 
-The source migration graph inspected locally ends at `catalog.0029_field_enrichment`, `ingestion.0011_query_lexicon_candidate_job_type`, and `reading.0006_final_scope_normalization`, with the expected dependencies through catalog 0027/0028 and reading 0005. Local `showmigrations` and `migrate --plan` are source-graph evidence only; the local SQLite database is behind the current heads. Static review found no network, PDF scan, semantic reindex or authority mutation in the new catalog/reading operations. A disposable PostgreSQL 16 rehearsal could not be run because this workstation has no Docker or PostgreSQL server/client, and the NAS SSH identity is rejected. No production migration was executed during this final acceptance; current production heads remain unverified.
+The current source and production migration graph ends at `catalog.0030_knowledgenodealias_is_verified_and_more`, `ingestion.0012_alter_processingjob_job_type`, and `reading.0007_reader_ai_connection`. The production migrations were applied through reviewed `migrate --plan` after a fresh BackupJob. They did not scan PDFs, call a Provider, rebuild a semantic index or publish authority.
 
-QueryLexicon remains a derived object. The local rebuild/registry tests cover revision and visibility semantics, but the final production revision, generation, entity counts and authority coverage are `UNVERIFIED` until the production database or a fresh authorized copy can be read. No draft authority was published.
+QueryLexicon remains a derived object. Production reconciliation kept revision 1 and generation `af302b64-1b3f-447d-88ca-5ed505bc87e9`; public and admin visibility remained separate. No draft authority was published.
 
 ## Semantic index and V1/V2 state
 
-The source disposition is `REBUILD` for the historical drifted active UID. Local code now requires an explicit or uniquely resolved active `SemanticIndexVersion`, reports `INDEX_VERSION_REQUIRED` or `MODEL_UNAVAILABLE`, and preserves SemanticChunk/Page data on derived-index failure. A clean non-active Meilisearch index, document-count reconciliation, model RSS measurement and final active UID switch were not possible in this environment. V2 therefore remains `KEEP DISABLED`; no model-generated relevance gold was used.
+The historical drifted UID was replaced through the versioned lifecycle. The current active UID is `semantic_passages_20260818210650_4cf87bc9`, validated against 3,005 ready chunks and 3,005 Meilisearch documents before activation. Public V2 is enabled with V1 as an environment rollback. Ask Library remains on stable retrieval. No model-generated relevance gold was used.
 
 ## External enrichment and Ask runtime
 
-No real web page or model response is represented as evidence in this acceptance. Structured/web adapters and the shared candidate review route were exercised with deterministic test doubles only. The production general-web provider, `library_qa` model, source fetch checks, 10–15 question set, cross-language RAG behavior and Reader-to-citation browser path remain `UNVERIFIED`. AI remains optional and never becomes a source.
+Production smoke covered VIAF structured results, internal SearXNG discovery and a bounded public university-page fetch with checksum. SearXNG snippets remained discovery-only. One external-identifier Candidate was produced and left pending. Reader-owned model connections are deployed, but no universal model result is claimed because each reader supplies a provider. AI remains optional and never becomes a source.
 
 ## Release, rollback and post-cutover backlog
 
 The 2.7 production API/Worker/Ingestion Worker/Beat and Web images use one release revision and have recorded digests. The rollback plan remains application/image rollback first, retain additive migrations, pending candidates, backup artifacts and the historical semantic UID during the rollback window; do not drop tables or delete the old index.
 
-Post-cutover work is limited to user-led authenticated manual validation, controlled real provider/model checks when credentials are intentionally configured, and later human V1/V2 judgments. V2 remains disabled until those judgments exist.
+Post-cutover work is limited to user-led authenticated manual validation, controlled real provider/model checks when credentials are intentionally configured, later human V1/V2 judgments, authority cleanup and observation of compatibility adapters. V2 is enabled but remains immediately reversible.
 
 ## Final status
 
 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`
 
-The authorized NAS runtime was restored and the final production sequence completed. Fresh BackupJob, PostgreSQL 16 migration, QueryLexicon reconciliation, unified 2.7 image deployment, clean semantic index consistency audit and active UID switch all passed. Public V2 remains disabled, AI/Web providers remain explicitly not configured when credentials are absent, and no authority was published or Candidate accepted automatically. The remaining work is user-led authenticated Admin, Reader Center, Candidate Review and Ask Library manual validation.
+The authorized NAS runtime was restored and the final production sequence completed. Fresh BackupJob, PostgreSQL 16 migration, QueryLexicon reconciliation, unified 2.7 image deployment, clean semantic index consistency audit and active UID switch all passed. Public V2 is enabled with a V1 rollback, Ask stays stable, and internal SearXNG only performs source discovery. No authority was published or Candidate accepted automatically. The remaining work is user-led authenticated Admin, long-running upload, Reader Center, Candidate Review, reader-configured Ask and authority-quality validation.

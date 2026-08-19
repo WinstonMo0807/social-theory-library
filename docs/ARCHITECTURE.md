@@ -2,6 +2,8 @@
 
 更新日期为 2026-08-19。本文件描述当前源码结构。生产状态引用历史 NAS 与公网只读验收，仍属于有时间边界的运行快照。
 
+当前 2.7 生产快照已经完成 catalog 0030、ingestion 0012 和 reading 0007。公共观点检索 V2 已在有限生产对照后启用，Ask Library 继续固定 stable retrieval。完整的当前入口和联动审计见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。后文保留的 2.6.1、V2 disabled 和 SSH blocker 均是明确日期下的历史记录。
+
 ## 总体结构
 
 ```mermaid
@@ -134,11 +136,11 @@ Task 5 schema 位于 `catalog.0029_field_enrichment`。该 migration 只创建 C
 
 ## QueryLexicon
 
-QueryLexicon Core 与 Candidate schema 已于 2026-08-17 应用到生产，migration heads 为 catalog 0028 与 ingestion 0011。authority 写入与 durable ChangeEvent 在同一数据库事务提交。提交后的回调只唤醒 Celery，消费者按 canonical entity 合并事件并更新活动 generation。ChangeEvent 表是持久恢复依据，Celery message 只是通知。Beat 默认每 60 秒扫描 pending 或 retryable event。公开 V2 flag 仍关闭，V1 不读取 QueryLexicon。
+QueryLexicon Core 与 Candidate schema 已于 2026-08-17 应用到生产，当时的 migration heads 为 catalog 0028 与 ingestion 0011。authority 写入与 durable ChangeEvent 在同一数据库事务提交。提交后的回调只唤醒 Celery，消费者按 canonical entity 合并事件并更新活动 generation。ChangeEvent 表是持久恢复依据，Celery message 只是通知。Beat 默认每 60 秒扫描 pending 或 retryable event。V1 不读取 QueryLexicon；当前公共 V2 使用 public scope，后台 enrichment 使用 admin scope。
 
 全量、单类型和单实体 reconciliation 都先构建 staging generation。完整构建与 event replay 成功后，State 指针和 revision 才原子切换。失败或无变化时继续读取原 active generation。retired、failed、discarded generation 和 ChangeEvent 当前都不自动清理。
 
-内部 resolver 支持 `public_active` 与 `admin_resolvable`。Task 2A 增加了只供 V2 使用的 search resolver 和有界 expansion；Task 3 PDF enrichment 使用 `admin_resolvable`；Task 6 LibraryQuery 使用 `public_active` 做 query understanding 和 entity anchors。V1 公开搜索仍不读取 QueryLexicon，V2 也仍未作为公共默认启用。
+内部 resolver 支持 `public_active` 与 `admin_resolvable`。Task 2A 增加了只供 V2 使用的 search resolver 和有界 expansion；Task 3 PDF enrichment 使用 `admin_resolvable`；Task 6 LibraryQuery 使用 `public_active` 做 query understanding 和 entity anchors。V1 公开搜索仍不读取 QueryLexicon。公共 V2 当前已经启用，但仍只读取 `public_active`，也不改变 Ask 的 stable retrieval profile。
 
 QueryLexiconState 表示查询阶段词表状态。SemanticIndexVersion 表示 embedding 与远程索引产物。两者保持独立。本次没有改变 semantic document template、Meilisearch 索引字段或活动语义索引。
 
@@ -196,7 +198,7 @@ The deployment statements above were historical evidence while the initial accep
 
 统一 Candidate Review Shell 只统一展示证据、状态和权限语义。MetadataCandidate、QueryLexiconCandidate、EnrichmentCandidate、TheoryReviewTask 和 NewAuthorityCandidate 仍由各自 mutation service 写入各自 source-of-truth。外部网页 snippet 不是证据，只有抓取页面中的 supporting passage 才能保存为 Evidence。
 
-System Status Center 只读汇总 PostgreSQL、migration head、Redis、Celery broker、default/ingestion worker、Beat heartbeat、NAS、QueryLexicon、SemanticIndex、embedding、AI、web provider 和 BackupJob 状态，不显示 secret。Celery control 与现有 heartbeat 只提供可解释的运行证据，无法区分的 worker 或未收到 Beat heartbeat 会显示 `unknown`。AI 与 general web 未配置时报告 `NOT_CONFIGURED`，不伪装为没有结果；结构化 provider 的 enabled 状态与尚未探测的网络 health 分开显示。公开 viewpoint 默认继续使用 stable_v1，experimental_v2 只在显式管理员诊断请求中使用。
+System Status Center 只读汇总 PostgreSQL、migration head、Redis、Celery broker、default/ingestion worker、Beat heartbeat、NAS、QueryLexicon、SemanticIndex、embedding、AI、web provider 和 BackupJob 状态，不显示 secret。Celery control 与现有 heartbeat 只提供可解释的运行证据，无法区分的 worker 或未收到 Beat heartbeat 会显示 `unknown`。AI 与 general web 未配置时报告 `NOT_CONFIGURED`，不伪装为没有结果；结构化 provider 的 enabled 状态与尚未探测的网络 health 分开显示。生产公共 viewpoint 当前使用 V2，V1 保留为环境开关回退。Ask Library 继续强制 stable retrieval，管理员才可显式请求 experimental profile。
 
 QueryLexicon 与 Semantic Index 页面对普通 Admin 提供只读状态。QueryLexicon reconciliation、语义索引构建、清理和激活由对应 manage capability 保护；有限的语义失败任务 retry 使用 `can_retry_jobs`。前端 capability 只控制展示，API 仍在服务端重新检查权限。
 
@@ -204,7 +206,7 @@ Projection Refresh 复用 `ProcessingJob` 和现有 Celery recovery。它接收�
 
 ### Live 2.7 deployment update, 2026-08-19
 
-The authorized NAS runtime has now been verified. Production heads are catalog `0030_knowledgenodealias_is_verified_and_more`, ingestion `0012_alter_processingjob_job_type`, and reading `0006_final_scope_normalization`. API, Worker, Ingestion Worker, Beat and Web use the same 2.7 release revision. QueryLexicon remains revision 1 with the prior active generation. A clean semantic UID was validated against 3,005 ready chunks and 3,005 Meilisearch documents before activation; the historical UID remains retired for rollback. Public V2 is still disabled, Ask uses stable retrieval, AI/Web providers report not configured when credentials are absent, and no authority or candidate decision was automated.
+The authorized NAS runtime has now been verified. Production heads are catalog `0030_knowledgenodealias_is_verified_and_more`, ingestion `0012_alter_processingjob_job_type`, and reading `0007_reader_ai_connection`. API, Worker, Ingestion Worker, Beat and Web use the same 2.7 release revision. QueryLexicon remains revision 1 with the prior active generation. A clean semantic UID was validated against 3,005 ready chunks and 3,005 Meilisearch documents before activation; the historical UID remains retired for rollback. Public V2 is enabled with a V1 environment rollback, Ask uses stable retrieval, internal SearXNG source discovery is configured, and no authority or candidate decision was automated.
 
 ## 2.7 post-cutover usability architecture, 2026-08-19
 

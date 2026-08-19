@@ -2,6 +2,15 @@
 
 更新日期为 2026-08-19。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
 
+## 当前 2.7 总览
+
+- 六项 master issue 的源码均已进入 2.7，P0 ingestion locking、session bootstrap 和 PostgreSQL 16 BackupJob 已部署。
+- 公共观点检索 V2 当前已启用，但只完成有限真实 smoke，盲化人工 qrels 仍未完成。V1 必须继续保留为回退。
+- Field Enrichment 已验证结构化 Provider、内网 SearXNG discovery、SafeWebFetcher 和 pending Candidate。未达到 identity 或 evidence 门槛时返回 0 Candidate 是安全结果。
+- Ask Library 对注册读者开放个人模型连接，检索仍使用 stable published-library scope。个人模型不能扩大可见范围。
+- 当前发布判断为 `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION`。需要继续观察大 PDF、后台标签页、真实读者模型和 Authority 数据质量。
+- 当前结论和联动关系以 [GPT-HANDOFF.md](GPT-HANDOFF.md) 为首要入口。下文保留的 V2 disabled、SSH blocked 和 2.6.1 状态属于对应日期的历史证据。
+
 ## Six master issues
 
 1. STL-001　中英文跨语言观点检索质量。
@@ -15,13 +24,13 @@ STL-007 以后记录的是支撑性产品或运维 follow-up，不替代这六�
 
 ## STL-001 bilingual viewpoint retrieval
 
-状态为部分实现。Task 2A 结构性接入和 Task 2B-0 评测工具已完成。Task 2B-0.5 的隔离数据面已经在真实馆藏备份上运行，人工 benchmark 尚未完成。
+状态为源码实现并已有限启用。Task 2A 结构性接入和 Task 2B-0 评测工具已完成，Task 2B-0.5 的隔离数据面已经在真实馆藏备份上运行。公共 V2 已启用，但人工 benchmark 尚未完成，因此质量结论仍需保守。
 
 默认语义模型为多语种 MiniLM，查询切词同时处理拉丁字符和中文，观点检索也支持语言过滤。现有测试能证明同语种查询的基础行为，但没有发现中文问题检索英文材料、英文问题检索中文材料的专项回归，也没有显式翻译模块。关键词降级不具备可靠的跨语言能力。
 
 QueryLexicon 是本问题与 STL-002 的共享基础能力。2026-08-16 已完成 Task 1 核心源码和 Task 1.5 一次性环境验证，见 [query-lexicon-design.md](query-lexicon-design.md)。Task 2A 增加了只供 V2 使用的 search resolver、有界 bilingual branches、ambiguity 保留、entity/cross-language coverage、passage-level language detector 和 evaluation config snapshot。Task 2B-0 又增加了稳定 benchmark schema、V1/V2/lexical/dense 四路 pooling、盲化人工标注包、固定 diagnostic/dev/test split、分组指标、历史 language 审计和 QueryLexicon 双语覆盖审计。英文 entity coverage 的 substring 误命中已经改为拉丁词边界。Task 2B-0.5 新增 search-only bundle、evaluation namespace guard、QueryLexicon 重建、独立 Meilisearch build、snapshot manifest 和 pilot candidate 工具，详细边界见 [semantic-search-evaluation-environment.md](semantic-search-evaluation-environment.md)。
 
-V2 feature flag 仍关闭，尚未作为读者默认检索，也没有执行生产 historical semantic reindex。真实 corpus repair 使用 PostgreSQL 16.14 副本，并在隔离 Meilisearch 1.37.0 中建立 3,881 文档的 repaired shadow UID `semantic_passages_eval_real_corpus_repaired_20260817_r63`。目标 QueryLexicon revision 为 1，shadow SemanticIndexVersion 状态为 ready，没有 activate。生产 migration、生产 QueryLexicon 和公开 V1 index 均未改变。
+以下是 Task 2B 隔离评测时的历史快照。当时 V2 feature flag 仍关闭，也没有执行生产 historical semantic reindex。真实 corpus repair 使用 PostgreSQL 16.14 副本，并在隔离 Meilisearch 1.37.0 中建立 3,881 文档的 repaired shadow UID `semantic_passages_eval_real_corpus_repaired_20260817_r63`。目标 QueryLexicon revision 为 1，shadow SemanticIndexVersion 状态为 ready，没有 activate。后续 2.7 发布已经建立新的 clean production UID，并在有限对照后启用公共 V2。
 
 公开 V1 的索引版本元数据存在既有漂移。数据库中的 active SemanticIndexVersion 记录 2,543 个文档，而同 UID 的生产 Meilisearch 实测为 3,005 个文档。历史 job 已证明 2,543 是最初两个 Asset 的建立数，后来第三个 Asset 的 462 个文档通过没有 index version 的 active incremental path 写入同一 UID，旧代码没有更新版本记录。公开索引 record ID 与 3,005 个 current ready chunk 完全对应，missing 与 extra 都是 0。旧文档缺少新的 `document_id` 字段，另有 schema drift。生产版本记录仍未修改。源码已移除继续制造该漂移的模糊写入路径；新的 job/直接写入必须绑定唯一 active version，历史 null-version job 无法安全回填时以 `INDEX_VERSION_REQUIRED` 失败。
 
@@ -159,7 +168,7 @@ QueryLexicon active revision 为 1。public_active 是 5 entity/23 entry，admin
 
 ## STL-010 QueryLexicon Candidate review surface
 
-状态为源码已补齐，生产 2.7 部署待核实。Next Admin 已有 Candidate review 页面，Django Admin 继续保留低层维护入口。
+状态为已部署。Next Admin 已有 Candidate review 页面，Django Admin 继续保留低层维护入口。统一页面已经明确显示这是跨领域审核队列，不是自更新词典。
 
 生产 API 内部使用真实管理员权限渲染 Candidate 与 Evidence changelist 均为 HTTP 200。status、linking、candidate type、term type、language、extraction version filters，Evidence inline，Accept/Reject actions 和 Asset discovery action 都存在。公网 `/admin/catalog/querylexiconcandidate` 由 Next 管理前端接管并返回 404；当前 Nginx 也没有把 Django `/admin/` 暴露到公网或LAN Edge。
 
@@ -169,7 +178,7 @@ QueryLexicon active revision 为 1。public_active 是 5 entity/23 entry，admin
 
 ## Version 2.7 architecture follow-up
 
-状态为源码已补齐、生产待验证。旧后台入口已整理为统一信息架构，新增 capability contract、Knowledge Workspace、QueryLexicon Workspace、Projection Status 和 System Status Center。Unknown Entity 不再只落入 rejection funnel，而是保留可审计观察并聚合为 NewAuthorityCandidate。Candidate Review 对 field/query lexicon 只允许 accept/reject，对 New Authority 只允许 Match Existing/Create Draft/Reject；统一 envelope 显示标准审核状态并保留领域子状态。Provider 状态页区分 configured、not_configured 与尚未探测的 health unknown。
+状态为已部署并进入人工观察。旧后台入口已整理为统一信息架构，新增 capability contract、Knowledge Workspace、QueryLexicon Workspace、Projection Status 和 System Status Center。Unknown Entity 不再只落入 rejection funnel，而是保留可审计观察并聚合为 NewAuthorityCandidate。Candidate Review 对 field/query lexicon 只允许 accept/reject，对 New Authority 只允许 Match Existing/Create Draft/Reject；统一 envelope 显示标准审核状态并保留领域子状态。Provider 状态页区分 configured、not_configured 与尚未探测的 health unknown。
 
 Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，不建立第二套队列。单目标刷新只协调既有 QueryLexicon event、semantic job 和 PDF candidate job，并保持幂等、可重试和非阻断。
 

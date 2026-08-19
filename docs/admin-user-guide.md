@@ -1,12 +1,12 @@
 # 后台管理员使用指南
 
-更新日期：2026-08-15
-适用版本：当前源码快照
+更新日期：2026-08-19
+适用版本：2.7
 
 ## 1. 使用边界
 
 - [SOURCE] 本指南只描述当前代码中已经存在的页面、权限和操作。
-- [USER] 本轮没有部署生产环境。下列页面是否已出现在 NAS 或公网仍为待核实。
+- [LIVE] 2.7 已部署。下列页面仍需在每次发布后用真实角色重新核对，不能用历史截图代替当前权限验证。
 - [SOURCE] 上传、元数据复核、发布、OCR、页码和语义索引使用同一套馆藏记录。保存元数据不会自动发布。
 - [SOURCE] 原始 PDF、人工锁定字段、已确认关系、读者笔记和数据卷不得因日常操作被覆盖或删除。
 
@@ -19,7 +19,7 @@
 | 审核者 `reviewer` | 查看上架记录和处理状态；执行当前 API 允许的元数据与知识审核 | 不能上传、重试、替换、发布、下架或移除入库记录；管理员专用页面不显示 |
 | 读者 `reader` | 使用公开站点和本人阅读中心 | 不能进入后台 |
 
-后台前端会隐藏管理员专用入口，服务端仍会再次校验角色。不要只依赖按钮是否显示来判断权限。
+后台前端会按 capability 隐藏无权限入口，服务端仍会再次校验。角色只用于组织一组 capability，不要只依赖按钮是否显示或直接比较角色名称。
 
 ## 3. 当前后台导航
 
@@ -27,16 +27,15 @@
 
 | 分组 | 页面 |
 | --- | --- |
-| 概览 | Dashboard、阅读与搜索统计 |
-| 上架 | 批量上传、元数据复核、Processing Center |
-| 馆藏 | 馆藏项目 |
-| 学者与机构 | 学者 |
-| 理论知识 | 学科、子学科、理论节点、理论关系、理论时间轴、主题、阅读路径 |
-| 搜索与模型 | Semantic Index |
-| 发布 | 发布台、推荐管理、首页与关于 |
-| 系统 | System Health、读者用户、Storage 与分发、运行设置 |
+| 今日工作 | 待办、失败任务、候选和发布状态摘要 |
+| 馆藏 | Upload、Intake / Review、Works / Editions / Assets、Publication |
+| 知识 | Knowledge Workspace、Scholars、Disciplines、Subdisciplines、Theories、Topics、Relations / Timeline、Reading Paths |
+| 审核 | 候选审核中心 |
+| 搜索与智能 | QueryLexicon、Semantic Index、Ask Library / AI Runtime |
+| 运维 | Processing Jobs、System Status、Backup / Storage、Audit / Analytics |
+| 管理 | Users / Roles |
 
-作品、版本、数字文件、机构、出版者、地点、模型注册、检索评估等独立管理页尚未全部建立。当前仍通过馆藏项目、元数据复核和现有实体页维护，不能把目标导航写成已经完成。
+各入口的日常职责、source-of-truth 与兼容情况见 [back-office-function-matrix.md](back-office-function-matrix.md)。页面存在不等于当前角色有 mutation 权限，QueryLexicon 和 Semantic Index 对普通 Admin 可以只读。
 
 ## 4. 推荐上架流程
 
@@ -261,9 +260,9 @@ Reader 仍用 PDF 第 48 页定位，页面显示和引用生成使用第 32 页
 
 Semantic Index 页面已经接入馆内检索评估。管理员可以建立评估集、添加中文或英文查询与人工相关性判断，先做预检，再交给 Celery 异步计算 Recall@20、nDCG@10、MRR、零结果率和 p50/p95 延迟。页面显示进度与历史运行。评估不会下载模型，也不会切换活动索引。
 
-## 11. System Health
+## 11. System Status
 
-System Health 为管理员专用页。当前检查 Database、storage、worker、队列、PaddleOCR、Remote OCR、Meilisearch、embedding model 和公开目录新鲜度等组件。
+System Status 为受 capability 保护的只读页。当前检查 Database、migration、storage、Worker、队列、Beat、QueryLexicon、Semantic Index、embedding、AI、Web Provider 和 BackupJob 等组件。旧 System Health route 只保留为兼容诊断入口。
 
 每个组件应区分：
 
@@ -299,7 +298,9 @@ System Health 为管理员专用页。当前检查 Database、storage、worker�
 
 Reader 选择文字后出现的操作顺序为：复制、高亮、划线、笔记、书签。在线阅读、下载、复制、搜索和引用对访客开放；个人高亮、笔记、书签、收藏和进度需要登录。
 
-## 14. 当前未完成项
+## 14. 2026-08-15 历史未完成项
+
+本节保留旧版本审计，不能作为 2.7 当前清单。当前问题见 [ISSUES.md](ISSUES.md) 和 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 - 作品、版本、数字文件和 Authority Profile 的独立完整后台页面。
 - 单条实体决定可以撤销且不会删除草稿对象，但跨实体批量合并仍缺完整字段对比、依赖预览与统一回滚界面。
@@ -318,9 +319,9 @@ Reader 选择文字后出现的操作顺序为：复制、高亮、划线、笔�
 
 [SOURCE] 元数据复核已把题名、副题名、文献类型、语言、版次、出版年、出版地、出版社、ISBN、期刊项、学位项、报告项、DOI、责任者、学科、理论流派、子学科、主题和摘要候选显示在对应字段下方。每个字段先显示最多三条，管理员可就地采用、查看证据或拒绝，不再必须把右侧来源区滚到对应位置。完整候选和证据记录仍保留，便于处理冲突。
 
-[SOURCE] 学者、学科、子学科、理论节点、理论流派与主题表单在名称稳定 650 ms 后自动请求权威候选。新输入会取消过时请求。采用候选只把名称、原文名、别名、生卒年、简介或权威标识写入当前表单草稿，不自动发布。如候选显示同名、年代、机构或权威 ID 冲突，应保留原输入并人工决定。
+[SOURCE] 学者、学科、子学科、理论节点、理论流派与主题表单先使用本地或 scoped entity search。管理员显式点击后才查询结构化权威来源或执行联网核对，不会在每次输入停顿后发起完整 Web 搜索。AuthoritySuggestions 只做 identity discovery；Field Enrichment 只形成带 Evidence 的 pending Candidate。任何采用或接受都不会自动发布 draft。
 
-候选来源已包含本馆权威库、Wikidata、VIAF、LOC 与 OpenAlex 的可配置接口。因此第 14 节“VIAF、LOC 尚未接入”是 2026-08-14 时的历史清单，不再代表当前源码。真实外网可用性与候选质量仍为待核实。
+候选来源已包含本馆权威库、Wikidata、VIAF、LOC 与 OpenAlex 的可配置接口。General Web 通过内网 SearXNG 发现 URL，再由 SafeWebFetcher 取得真实页面。搜索 snippet 不是 Evidence。第 14 节的 Provider 清单是历史记录，不代表当前源码；实时可用性仍应从 System Status 和请求的 partial-result 状态判断。
 
 ### 15.2 结构化重复项
 

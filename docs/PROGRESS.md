@@ -2,6 +2,15 @@
 
 更新日期为 2026-08-19。当前源码版本为 2.7。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
 
+## 当前 2.7 状态
+
+- 2.7 已部署到公网。API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7-87251cb` image family。
+- 生产 migration heads 为 catalog 0030、ingestion 0012、reading 0007。QueryLexicon revision 为 1，活动语义 UID 为 `semantic_passages_20260818210650_4cf87bc9`。
+- 公共观点检索 V2 已在五条真实馆藏对照查询无 fallback 后启用。V1 保留为环境开关回退，Ask Library 继续固定 stable retrieval。
+- 注册读者可以配置个人 OpenAI-compatible、Ollama 或 vLLM 连接。General Web 使用内网固定版本 SearXNG 做 URL discovery，实际 Evidence 仍需 SafeWebFetcher 的正文 supporting passage。
+- 没有自动发布 draft authority，没有自动 Accept Candidate，没有改变 semantic ranking，也没有全馆运行 Web 或 AI enrichment。
+- 新会话应先阅读 [GPT-HANDOFF.md](GPT-HANDOFF.md)。其中汇总当前生产快照、功能联动、数据职责和剩余风险。
+
 ## 已实现
 
 - Django/DRF API、Next/Vinext Web、PostgreSQL、Redis/Celery、Meilisearch 和独立 PaddleOCR 服务已经形成完整源码结构。
@@ -14,7 +23,7 @@
 - 非 Explore 页面已采用黑、白、暖灰的出版型界面，并完成 Compact Editorial Density Pass。Explore 保持独立冻结范围。
 - 当前迁移保存在各 Django app 的 `migrations` 目录，schema 修改继续通过 migration 管理。
 
-## r61 当前生产验收
+## 历史记录：r61 生产验收
 
 - 当前 API 为 `social-theory-library-api:2.6.1-r60-20260816-012052`，Web 为 `social-theory-library-web:2.6.1-r61-20260816-051351`。r61 只替换 Web，并刷新 Edge 和 Cloudflared，没有数据库迁移。
 - r61 成功包 SHA-256 为 `fdf095df6ed8f8f1b2affb193a3b47ab6a6b95741ea6fb1c02c6a567db7654cb`。成功备份为 `/volume2/library/docker/social-theory-library/storage/backups/pre-compact-density-2.6.1-r61-20260816-051351`。
@@ -29,9 +38,10 @@
 
 ## 当前版本管理状态
 
-- 2026-08-16 已在 GitHub 账号 `WinstonMo0807` 下创建 `social-theory-library` 私有仓库，并将安全源码快照推送到 `main`。
-- 本地 `main` 正在跟踪 `origin/main`。首次 commit 为 `2c0bcb8b2f568dcbc17ef86d3c3197e1198f6560`。
-- 首次快照包含 486 个源码、测试、配置、文档和前端素材文件，总大小约 5.82 MiB。馆藏与运行数据继续只保留在服务器或本地受控目录。
+- GitHub 仓库为 `WinstonMo0807/social-theory-library`，必须保持 Private。2026-08-19 同步前已重新核对并恢复为 `PRIVATE`。
+- 2.7 发布源码在 `codex/release-2.7` 汇总，GitHub `main` 只允许非强制 fast-forward 更新。实际 revision 以本地和远端 `git rev-parse` 核对结果为准。
+- 首次 commit 为 `2c0bcb8b2f568dcbc17ef86d3c3197e1198f6560`，仅是历史起点，不代表当前源码。
+- 馆藏与运行数据继续只保留在服务器或本地受控目录。Git 不包含 PDF、OCR、数据库、备份、模型、embedding、索引、日志、cache、Secret 或真实 `.env`。
 - 七项产品问题的状态、证据和验收要求集中记录在 [ISSUES.md](ISSUES.md)。
 
 ## QueryLexicon Task 1 源码状态
@@ -343,3 +353,10 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 五条真实 V1/V2 对照查询均返回 V2 结果，engine 为 `v2_hybrid` 且 fallback false。按用户明确授权启用公开 V2 后，公网两条 smoke 仍为 V2、fallback false。没有 semantic reindex；Ask retrieval 继续 stable。
 - 一般网页来源补充采用内网 SearXNG `2026.8.4-c63835bd2`，只向 backend network expose 8080，不向公网发布。配置启用 JSON API，API 仍负责 URL 安全校验、实际页面抓取和 supporting passage 提取；search snippet 不能成为 Evidence。
 - 真实 SearXNG smoke 以 Baidu engine 返回 9 条结果且无 unresponsive engine。正式 adapter 保存 5 条 discovery 结果并标记 `snippet_is_discovery_only`；SafeWebFetcher 跳过 1 个无效来源后成功读取 1 个 university HTML 页面，HTTP 200、正文 1,744 字符并保存 checksum。一次 affiliation 页面核对抓取 4 个 source document，但证据仍不足，因此 Candidate 为 0。
+
+### 2026-08-19 GitHub 2.7 源码交接与联动复核
+
+- 新增 [GPT-HANDOFF.md](GPT-HANDOFF.md)，集中记录当前生产快照、source-of-truth、功能联动、失败隔离、剩余风险和下一位 GPT 的阅读顺序。
+- README、Architecture、Issues、管理员指南和最终综合验收中的当前状态已经对齐。旧 2.6.1、SSH blocker 和 V2 disabled 内容继续作为历史证据保留，不再冒充当前状态。
+- 后端完整 pytest、Django check、migration drift 与 compileall 均退出成功。前端 production build、68 项通用 Node 测试、19 项 Auth / Scoped Search 测试、TypeScript 和 ESLint 均通过。
+- 本轮没有新增 migration，没有连接或修改生产环境。Git 安全审计未发现被跟踪的 PDF、数据库、备份、Secret、私钥、模型或索引。
