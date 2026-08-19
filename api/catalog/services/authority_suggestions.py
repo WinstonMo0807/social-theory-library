@@ -242,6 +242,20 @@ def _payload_list(payload: object, key: str) -> list:
     return value if isinstance(value, list) else []
 
 
+def _personal_heading(value: str) -> tuple[str, int | None, int | None]:
+    """Read an explicit life-year range from a VIAF personal heading."""
+
+    heading = " ".join(str(value or "").split()).strip()
+    match = re.search(r"(?<!\d)(\d{4})\s*[-–—]\s*(\d{4})(?!\d)\.?$", heading)
+    if not match:
+        return heading, None, None
+    birth_year, death_year = int(match.group(1)), int(match.group(2))
+    if not (0 < birth_year <= death_year <= timezone.now().year + 1):
+        return heading, None, None
+    label = re.sub(r"[,，\s]*\d{4}\s*[-–—]\s*\d{4}\.?$", "", heading).strip(" ,，")
+    return label or heading, birth_year, death_year
+
+
 def _local_candidates(entity_type: str, query: str) -> list[dict]:
     if entity_type == "person":
         rows = Person.objects.filter(
@@ -454,8 +468,12 @@ def _viaf_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRe
     for item in results[:6]:
         if not isinstance(item, dict):
             continue
+        name_type = str(item.get("nametype") or "").strip().casefold()
+        if entity_type == "person" and name_type not in {"", "personal"}:
+            continue
         viaf_id = str(item.get("viafid") or "").strip()
-        label = str(item.get("displayForm") or item.get("term") or "").strip()
+        raw_label = str(item.get("displayForm") or item.get("term") or "").strip()
+        label, birth_year, death_year = _personal_heading(raw_label) if entity_type == "person" else (raw_label, None, None)
         if not viaf_id or not label:
             continue
         rows.append(
@@ -465,8 +483,8 @@ def _viaf_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRe
                 "original_name": label if not CJK_RE.search(label) else "",
                 "aliases": [],
                 "description": str(item.get("nametype") or "VIAF 权威名称")[:240],
-                "birth_year": None,
-                "death_year": None,
+                "birth_year": birth_year,
+                "death_year": death_year,
                 "external_ids": {"viaf": viaf_id},
                 "source": "VIAF",
                 "provider": "viaf",

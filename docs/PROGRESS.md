@@ -332,3 +332,4 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 生产权威候选 smoke 复现 VIAF 的合法 `result: null` 响应。旧解析器因此抛出 TypeError，并让单一 Provider 失败清空本地和其他来源结果。Provider 列表字段现统一做类型规范化，并在每个来源边界隔离解析失败；本地候选和其他成功来源继续返回，失败来源进入 warning/request-id 诊断。新增两项回归通过。
 - 字段补全第一次以中文规范名查询外部 authority，若没有任何结构化记录，现在会有界地再查一次已确认的原文名。只使用 canonical/original/verified 名称，最多两个 query，不使用生成拼音或低信任别名。该回退让中文学者可使用 VIAF 等原文名来源，同时保持同名身份和证据门槛。
 - 学者、学科、子学科、主题和理论节点编辑器的只读身份发现现在优先使用管理员已填写的原文/外文规范名，并在控件内显示实际检索词。未保存的原名只用于发现候选，不会自动变成 authority 或字段值；Field Enrichment 仍要求先保存并通过身份门槛。
+- VIAF Person adapter 现在只接受 personal heading，不再把 uniform-title work 当成人物。若 personal heading 明确含有合法生卒年区间，会保留规范姓名并把日期作为身份证据。双语规范名最多各查一次，所有 observation 仍逐条通过 Person identity gate。

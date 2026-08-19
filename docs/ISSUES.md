@@ -215,6 +215,8 @@ Person 字段补全过去只用列表中的第一个中文规范名，VIAF/LOC �
 
 编辑器的身份发现按钮优先使用表单中的原文/外文名称，并显示当前实际检索词。该表单值只帮助管理员发现来源；没有保存和人工审核前，不会成为权威数据或检索词典条目。
 
+VIAF AutoSuggest 同时返回人物和统一题名记录。Person adapter 现只接收 `personal` heading，并仅从 heading 末尾明确的四位年份区间提取生卒年。统一题名不会再伪装成人物证据，日期不合法时仍按缺失处理。
+
 ### Candidate Review semantics
 
 状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。

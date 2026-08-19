@@ -154,15 +154,18 @@ class AuthorityStructuredAdapter:
             return [], [EnrichmentError(code="identity_query_missing", detail="目标缺少可查询规范名。")]
         rows: list[dict] = []
         errors: list[EnrichmentError] = []
-        # Chinese authority lookups can legitimately return no VIAF/LOC rows.
-        # Retry at most one verified canonical original-language term; never
-        # broaden to generated transliterations or arbitrary aliases.
+        # Chinese authority headings often omit identity attributes that are
+        # present in the original-language heading. Query at most two verified
+        # canonical terms and let the identity gate judge each observation;
+        # never broaden to generated transliterations or arbitrary aliases.
         for query in queries:
             query_rows, query_errors = _authority_rows(entity_type, query)
             rows.extend(query_rows)
             errors.extend(query_errors)
-            if rows:
-                break
+        deduplicated_errors: dict[tuple[str, str, str], EnrichmentError] = {}
+        for error in errors:
+            deduplicated_errors[(error.provider, error.code, error.detail)] = error
+        errors = list(deduplicated_errors.values())
         observations: list[FieldObservation] = []
         canonical = {str(value).strip().casefold() for value in context.get("canonical_terms") or [] if str(value).strip()}
         for row in rows:

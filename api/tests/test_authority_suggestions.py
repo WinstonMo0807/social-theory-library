@@ -116,6 +116,39 @@ def test_viaf_null_result_is_an_empty_provider_result(monkeypatch):
 
 
 @override_settings(
+    AUTHORITY_PROVIDER_ENABLED="viaf",
+    AUTHORITY_PROVIDER_VERIFY_DNS=False,
+    AI_AUTHORITY_RERANK_ENABLED=False,
+)
+def test_viaf_person_heading_provides_explicit_dates_and_filters_work_titles(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "_request_json",
+        lambda *args, **kwargs: {
+            "result": [
+                {
+                    "viafid": "71387829",
+                    "displayForm": "Pierre Bourdieu, 1930-2002",
+                    "nametype": "personal",
+                },
+                {
+                    "viafid": "work-1",
+                    "displayForm": "Pierre Bourdieu, 1930-2002. Distinction",
+                    "nametype": "uniformtitlework",
+                },
+            ]
+        },
+    )
+
+    rows, _record = service._viaf_candidates("person", "Pierre Bourdieu parser fixture")
+
+    assert len(rows) == 1
+    assert rows[0]["label"] == "Pierre Bourdieu"
+    assert rows[0]["birth_year"] == 1930
+    assert rows[0]["death_year"] == 2002
+
+
+@override_settings(
     AUTHORITY_PROVIDER_ENABLED="wikidata,viaf",
     AI_AUTHORITY_RERANK_ENABLED=False,
 )
