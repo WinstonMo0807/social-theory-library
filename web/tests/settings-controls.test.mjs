@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("admin footer uses the shared 2.7.1 application version", async () => {
+  const [shell, version] = await Promise.all([
+    readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(version, /WEB_APP_VERSION = "2\.7\.1"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = `v\$\{WEB_APP_VERSION\} 持续增长架构`/);
+  assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
+  assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
+  assert.doesNotMatch(shell, /v2\.7 持续增长架构/);
+});
+
 test("hybrid search weight copy preserves the semantic_ratio API contract", async () => {
   const source = await readFile(
     new URL("../components/admin-sections.tsx", import.meta.url),

@@ -29,6 +29,7 @@ import {
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
+import { ADMIN_VERSION_LABEL } from "@/lib/version";
 import { Wordmark } from "./site-header";
 
 const navigation = [
@@ -215,7 +216,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="system-status"><span /><small>当前会话</small><strong>API 已连接</strong></div>
-        <footer><strong>社会理论书库</strong><span>v2.7 持续增长架构</span></footer>
+        <footer><strong>社会理论书库</strong><span>{ADMIN_VERSION_LABEL}</span></footer>
       </aside>
       <div className="admin-main">
         <header className="admin-topbar">

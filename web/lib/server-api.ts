@@ -9,6 +9,7 @@ import {
 } from "./data";
 import { defaultSiteConfig, type SiteConfig } from "./site-config";
 import type { SearchContext } from "./search-context";
+import { WEB_APP_VERSION } from "./version";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -862,7 +863,7 @@ export async function loadSiteStats(): Promise<SiteStats> {
       knowledge_objects: 0,
       last_updated: null,
       last_updated_label: "尚未发布",
-      version: "2.7.1",
+      version: WEB_APP_VERSION,
     };
   }
 }

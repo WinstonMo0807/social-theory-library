@@ -46,7 +46,7 @@
 
 ## 当前版本管理状态
 
-- GitHub 仓库为 `WinstonMo0807/social-theory-library`，必须保持 Private。2026-08-19 同步前已重新核对并恢复为 `PRIVATE`。
+- GitHub 仓库为 `WinstonMo0807/social-theory-library`。Owner 于 2026-08-19 明确将 visibility 调整为 Public；后续不得自动改回 Private。Public 仓库仍不包含 Secret、PDF、数据库、备份、用户数据、模型、索引或真实 `.env`。
 - 2.7 发布源码在 `codex/release-2.7` 汇总，GitHub `main` 只允许非强制 fast-forward 更新。实际 revision 以本地和远端 `git rev-parse` 核对结果为准。
 - 首次 commit 为 `2c0bcb8b2f568dcbc17ef86d3c3197e1198f6560`，仅是历史起点，不代表当前源码。
 - 馆藏与运行数据继续只保留在服务器或本地受控目录。Git 不包含 PDF、OCR、数据库、备份、模型、embedding、索引、日志、cache、Secret 或真实 `.env`。

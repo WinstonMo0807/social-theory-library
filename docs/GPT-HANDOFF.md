@@ -19,6 +19,7 @@
 | --- | --- |
 | 源码版本 | 2.7.1 |
 | Git 工作分支 | `codex/release-2.7`。实际 commit 以 `git rev-parse HEAD` 为准 |
+| GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
 | 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7.1-5d432f7` image family |
 | 生产 migration head | catalog 0030、ingestion 0013、reading 0007 |
