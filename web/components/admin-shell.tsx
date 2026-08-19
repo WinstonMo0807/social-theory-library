@@ -32,14 +32,14 @@ import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { Wordmark } from "./site-header";
 
 const navigation = [
-  ["Dashboard", [["/admin", LayoutDashboard, "今日工作"]]],
-  ["Library", [
+  ["工作台", [["/admin", LayoutDashboard, "今日工作"]]],
+  ["馆藏", [
     ["/admin/uploads", Upload, "上传文件"],
     ["/admin/review", Boxes, "上架与复核"],
     ["/admin/library", BookOpen, "馆藏 / 版本 / 文件"],
     ["/admin/publication", Send, "发布确认"],
   ]],
-  ["Knowledge", [
+  ["知识", [
     ["/admin/knowledge", CircleDot, "知识工作台"],
     ["/admin/scholars", UserRound, "学者"],
     ["/admin/disciplines", GraduationCap, "学科"],

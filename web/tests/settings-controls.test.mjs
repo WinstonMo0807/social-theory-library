@@ -95,9 +95,9 @@ test("admin navigation uses the approved groups and only real routes", async () 
   const navigationSource = source.slice(navigationStart, navigationEnd);
 
   const expectedGroups = [
-    ["Dashboard", ["/admin"]],
-    ["Library", ["/admin/uploads", "/admin/review", "/admin/library", "/admin/publication"]],
-    ["Knowledge", [
+    ["工作台", ["/admin"]],
+    ["馆藏", ["/admin/uploads", "/admin/review", "/admin/library", "/admin/publication"]],
+    ["知识", [
       "/admin/knowledge",
       "/admin/scholars",
       "/admin/disciplines",
@@ -107,15 +107,15 @@ test("admin navigation uses the approved groups and only real routes", async () 
       "/admin/theory-relations",
       "/admin/reading-paths",
     ]],
-    ["Review", ["/admin/candidates"]],
-    ["Search & Intelligence", ["/admin/query-lexicon", "/admin/semantic-index", "/admin/settings"]],
-    ["Operations", [
+    ["审核", ["/admin/candidates"]],
+    ["搜索与智能", ["/admin/query-lexicon", "/admin/semantic-index", "/admin/settings"]],
+    ["运营", [
       "/admin/processing",
       "/admin/status",
       "/admin/distribution",
       "/admin/analytics",
     ]],
-    ["Administration", ["/admin/users", "/admin/about", "/admin/recommendations"]],
+    ["管理", ["/admin/users", "/admin/about", "/admin/recommendations"]],
   ];
 
   const groupPositions = expectedGroups.map(([group]) => {
@@ -204,7 +204,7 @@ test("query lexicon and semantic index keep ordinary admin views read-only", asy
   ]);
 
   assert.match(lexicon, /payload\?\.permissions\?\.can_manage/);
-  assert.match(lexicon, /Reconcile 由超级管理员执行/);
+  assert.match(lexicon, /正式同步由超级管理员执行/);
   assert.match(semantic, /data\?\.permissions\.can_manage/);
   assert.match(semantic, /索引构建与切换由超级管理员执行/);
   assert.match(semantic, /version\.status === "ready" && data\.permissions\.can_manage/);
@@ -277,7 +277,7 @@ test("authority identity suggestions require an explicit request and never fill 
   assert.match(shared, /setRequest\(\{ query: normalizedQuery, nonce:/);
   assert.doesNotMatch(shared, /\}, 650\)/);
   assert.match(shared, /\.slice\(0, 3\)/);
-  assert.match(shared, /只用于确认“查的是谁”。字段写入必须进入候选审核/);
+  assert.match(shared, /只用于确认“查的是谁”。[\s\S]*字段写入必须进入候选审核/);
   assert.match(shared, /result\.source_url/);
   assert.doesNotMatch(shared, /onApply/);
   assert.match(shared, /typeof entry === "string"/);

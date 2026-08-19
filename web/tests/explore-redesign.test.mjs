@@ -102,9 +102,11 @@ test("library assistant follows the authenticated status and SSE API contract", 
   assert.match(client, /\/login\?next=\/explore\/ask/);
   assert.match(client, /useSessionBootstrap/);
   assert.doesNotMatch(client, /apiRequest[^\n]*\/auth\/me\//);
-  assert.match(client, /capabilities\?\.includes\("can_manage_search_runtime"\)/);
-  assert.match(client, /读者页不会接收、显示或长期保存任何 API 密钥/);
-  assert.doesNotMatch(client, /type="password"/);
+  assert.match(client, /\/reading\/library-assistant\/connection\//);
+  assert.match(client, /type="password"/);
+  assert.match(client, /密钥只会在本次请求中提交给书库服务器/);
+  assert.doesNotMatch(client, /localStorage/);
+  assert.doesNotMatch(client, /experimental_v2/);
 });
 
 test("explore workspaces use the reference-aligned responsive three-column composition", async () => {
