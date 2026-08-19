@@ -341,3 +341,4 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 核心计数仍为 Work 5、Edition 5、Asset 10、Page 1,989、SemanticChunk 3,881、Person 6、KnowledgeNode 2。活动 UID 仍为 `semantic_passages_20260818210650_4cf87bc9`，document count 3,005；QueryLexicon revision 1、generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` 均未改变。
 - 真实 Provider smoke 中，英文 `Emile Durkheim` 返回 6 条 VIAF 结果；Wikidata timeout 与未配置 OpenAlex 只形成 partial warning。布迪厄字段核对生成 1 条 pending external-identifier candidate、1 条 Evidence，identity confirmed。没有自动 Accept 或 authority mutation。
 - 五条真实 V1/V2 对照查询均返回 V2 结果，engine 为 `v2_hybrid` 且 fallback false。按用户明确授权启用公开 V2 后，公网两条 smoke 仍为 V2、fallback false。没有 semantic reindex；Ask retrieval 继续 stable。
+- 一般网页来源补充采用内网 SearXNG `2026.8.4-c63835bd2`，只向 backend network expose 8080，不向公网发布。配置启用 JSON API，API 仍负责 URL 安全校验、实际页面抓取和 supporting passage 提取；search snippet 不能成为 Evidence。

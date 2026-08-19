@@ -174,3 +174,7 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 - Fresh BackupJob `14a78648-8b26-44c0-a450-24acc3d594f7` completed and its artifact checksum was recomputed before migration.
 - `reading.0007_reader_ai_connection` was the only planned operation and applied in 6 seconds. Final application image family is `2.7-7294225`; the pre-release `.env` backup is `.env.pre-usability-6d9848a-20260819-124834`.
 - Public viewpoint V2 is enabled after bounded production comparison. Rollback is an environment change to `SEMANTIC_SEARCH_V2_ENABLED=false` plus API/Edge refresh; it does not change the active UID. Ask Library continues to use stable retrieval.
+
+### Internal SearXNG source discovery
+
+`compose.public.yaml` pins `docker.io/searxng/searxng:2026.8.4-c63835bd2` and mounts `deploy/searxng/settings.yml`. Set a random `SEARXNG_SECRET`, `FIELD_ENRICHMENT_SEARXNG_URL=http://searxng:8080`, and `FIELD_ENRICHMENT_SEARCH_ALLOWED_HOSTS=searxng` in the private production environment. The service has no host port and must remain on the backend network. Its JSON result is discovery metadata, not evidence; do not bypass `SafeWebFetcher` or the field policy registry.

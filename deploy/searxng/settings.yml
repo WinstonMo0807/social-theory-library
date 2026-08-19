@@ -1,0 +1,23 @@
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Social Theory Library source discovery"
+
+search:
+  safe_search: 1
+  autocomplete: ""
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "overridden-by-SEARXNG_SECRET"
+  limiter: false
+  image_proxy: false
+
+outgoing:
+  request_timeout: 4.0
+  max_request_timeout: 8.0
+  pool_connections: 32
+  pool_maxsize: 12

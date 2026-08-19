@@ -224,3 +224,5 @@ VIAF AutoSuggest 同时返回人物和统一题名记录。Person adapter 现只
 ### Release gate result
 
 Fresh BackupJob、`reading.0007` migration plan/migration、统一镜像发布、公开 Reader/Ask/Range smoke 和真实 Provider smoke 已完成。布迪厄产生的 1 条真实字段候选保持 pending，未自动接受。没有发布 draft authority、改 ranking 或 semantic reindex。公开 V2 在五条生产对照查询无 fallback 后按用户授权启用，Ask 仍固定 stable retrieval。
+
+General web 的运行缺口已用固定版本、内网专用的 SearXNG service 收敛。它不暴露公网，也不直接写 Candidate；只有后续 SafeWebFetcher 取得真实页面和 supporting passage 后才可能形成 Evidence。真实搜索引擎上游的限流或阻断仍会按 provider partial failure 展示。

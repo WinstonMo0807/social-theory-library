@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -43,6 +44,22 @@ from ingestion.models import FieldLock, SourceRecord
 
 
 pytestmark = pytest.mark.django_db
+
+
+def test_public_compose_pins_internal_searxng_with_json_api():
+    root = Path(__file__).resolve().parents[2]
+    compose = (root / "compose.public.yaml").read_text(encoding="utf-8")
+    start = compose.index("  searxng:")
+    end = compose.index("\n  api:", start)
+    service = compose[start:end]
+    settings_text = (root / "deploy" / "searxng" / "settings.yml").read_text(encoding="utf-8")
+
+    assert "docker.io/searxng/searxng:2026.8.4-c63835bd2" in service
+    assert 'expose:\n      - "8080"' in service
+    assert "ports:" not in service
+    assert "SEARXNG_SECRET" in service
+    assert "formats:\n    - html\n    - json" in settings_text
+    assert "limiter: false" in settings_text
 
 
 def _person(name="Pierre Bourdieu", *, birth_year=1930):

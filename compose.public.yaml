@@ -83,6 +83,32 @@ services:
       retries: 10
       start_period: 20s
 
+  searxng:
+    <<: *service-hardening
+    image: docker.io/searxng/searxng:2026.8.4-c63835bd2
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?请设置 SEARXNG_SECRET}
+      SEARXNG_BASE_URL: http://searxng:8080/
+      HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,searxng,api,worker,beat,paddleocr,web,edge}
+    expose:
+      - "8080"
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   api:
     <<: *service-hardening
     image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7}
