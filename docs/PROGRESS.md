@@ -326,10 +326,18 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - Reader toolbar 修复带纸本页码控件的隐式网格溢出，OCR 状态条改为正文流内的可换行提示，不再覆盖 PDF 内容。
 - Candidate Review 明确为跨领域审核队列，不等同于自更新词典。QueryLexicon 页面改为派生词典说明；System Status、Intake、Knowledge、Semantic Index、System Health 和后台导航补充规范中文和可展开的结构化详情。候选 API 增加按类型准确计数和截断提示，联网来源错误显示 provider 分类、请求编号和部分结果，不再把 provider failure 伪装成空候选。
 - Intake Workspace 增加失败重试和单目标 Projection Refresh 入口，仍复用现有 ProcessingJob/Celery，不扫描全馆。新增 `reading.0007_reader_ai_connection` 仅创建读者连接表和索引，不联网、不生成候选、不改 authority 或 semantic index。
-- 本地最终门槛：后端全量 pytest 退出码 0；Django check、migration drift、compileall、TypeScript、Vinext build、ESLint、前端定向回归和 `git diff --check` 通过。`reading.0007` 尚未应用生产，需在下一次受控发布前完成 fresh backup、migration plan 和健康检查。
+- 本地最终门槛：后端全量 pytest 退出码 0；Django check、migration drift、compileall、TypeScript、Vinext build、ESLint、前端完整 68+19 项回归和 `git diff --check` 通过。`reading.0007` 已在 fresh backup 和 migration plan 门槛后应用生产。
 - 第一次部署后匿名浏览器 smoke 发现无 refresh Cookie 时 token refresh 返回 400，前端误显示“认证服务暂时不可用”。客户端现将该 endpoint 的 400 与 401 都解释为没有可恢复会话，正常进入登录提示；真实 5xx、403 和网络错误仍保留会话并显示对应状态。新增回归已通过。
 - Reader 公网 smoke 进一步发现匿名访客会请求批注、书签、进度和历史四类私有接口。Reader 现复用统一 session bootstrap，只在确认登录后读取或写入私人记录；退出登录后立即清理页面内的私人批注与书签。公开 PDF、引用、搜索和下载不受影响。
 - 生产权威候选 smoke 复现 VIAF 的合法 `result: null` 响应。旧解析器因此抛出 TypeError，并让单一 Provider 失败清空本地和其他来源结果。Provider 列表字段现统一做类型规范化，并在每个来源边界隔离解析失败；本地候选和其他成功来源继续返回，失败来源进入 warning/request-id 诊断。新增两项回归通过。
 - 字段补全第一次以中文规范名查询外部 authority，若没有任何结构化记录，现在会有界地再查一次已确认的原文名。只使用 canonical/original/verified 名称，最多两个 query，不使用生成拼音或低信任别名。该回退让中文学者可使用 VIAF 等原文名来源，同时保持同名身份和证据门槛。
 - 学者、学科、子学科、主题和理论节点编辑器的只读身份发现现在优先使用管理员已填写的原文/外文规范名，并在控件内显示实际检索词。未保存的原名只用于发现候选，不会自动变成 authority 或字段值；Field Enrichment 仍要求先保存并通过身份门槛。
 - VIAF Person adapter 现在只接受 personal heading，不再把 uniform-title work 当成人物。若 personal heading 明确含有合法生卒年区间，会保留规范姓名并把日期作为身份证据。双语规范名最多各查一次，所有 observation 仍逐条通过 Person identity gate。
+
+### 2026-08-19 post-cutover production result
+
+- Fresh BackupJob `14a78648-8b26-44c0-a450-24acc3d594f7` completed。归档大小 10,533,832 bytes，SHA-256 `e47cd7ed75b5df09e0eb47e5652ee5d8d3353fadd634e75e9ee6be39bc62950e`，内部 database.dump SHA-256 `ce5e27f532e60dcd6780b873be76bb9451214b12f04af21c2a7ef8a9166d0a28`。
+- 新镜像 migration plan 只有 `reading.0007_reader_ai_connection`。Worker 和 Beat 在空队列窗口停止，migration 用时 6 秒并通过 Django check。最终 API、Worker、Ingestion Worker、Beat 和 Web 使用统一 `2.7-7294225` image family，Edge 已刷新。
+- 核心计数仍为 Work 5、Edition 5、Asset 10、Page 1,989、SemanticChunk 3,881、Person 6、KnowledgeNode 2。活动 UID 仍为 `semantic_passages_20260818210650_4cf87bc9`，document count 3,005；QueryLexicon revision 1、generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` 均未改变。
+- 真实 Provider smoke 中，英文 `Emile Durkheim` 返回 6 条 VIAF 结果；Wikidata timeout 与未配置 OpenAlex 只形成 partial warning。布迪厄字段核对生成 1 条 pending external-identifier candidate、1 条 Evidence，identity confirmed。没有自动 Accept 或 authority mutation。
+- 五条真实 V1/V2 对照查询均返回 V2 结果，engine 为 `v2_hybrid` 且 fallback false。按用户明确授权启用公开 V2 后，公网两条 smoke 仍为 V2、fallback false。没有 semantic reindex；Ask retrieval 继续 stable。

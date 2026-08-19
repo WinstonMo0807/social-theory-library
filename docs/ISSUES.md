@@ -191,7 +191,7 @@ Projection Refresh 复用现有 `ProcessingJob`、Celery worker 和 recovery，�
 
 ### Reader-owned Ask provider
 
-状态为源码已修复，生产 migration 待核实。读者可以在 Ask 页面配置自己的 OpenAI-compatible、Ollama 或 vLLM 服务。凭据加密保存，不进入浏览器存储、日志或 API response。没有个人连接时，若服务器默认 profile 可用则使用默认服务；两者都不可用时明确显示配置入口和证据边界。`reading.0007_reader_ai_connection` 只创建连接表和索引，不会联网或改馆藏。
+状态为已部署。读者可以在 Ask 页面配置自己的 OpenAI-compatible、Ollama 或 vLLM 服务。凭据加密保存，不进入浏览器存储、日志或 API response。没有个人连接时，若服务器默认 profile 可用则使用默认服务；两者都不可用时明确显示配置入口和证据边界。`reading.0007_reader_ai_connection` 只创建连接表和索引，不会联网或改馆藏。
 
 ### Admin session and upload disappearance
 
@@ -221,6 +221,6 @@ VIAF AutoSuggest 同时返回人物和统一题名记录。Person adapter 现只
 
 状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。
 
-### Remaining release gate
+### Release gate result
 
-生产当前仍需为本轮 `reading.0007` 做一次受控 backup、migration plan、migration、统一镜像发布和登录后 smoke。未完成之前不得把读者自助模型配置报告为公网可用，也不切换 semantic index、修改 ranking、发布 draft authority、Accept Candidate 或开启公开 V2。
+Fresh BackupJob、`reading.0007` migration plan/migration、统一镜像发布、公开 Reader/Ask/Range smoke 和真实 Provider smoke 已完成。布迪厄产生的 1 条真实字段候选保持 pending，未自动接受。没有发布 draft authority、改 ranking 或 semantic reindex。公开 V2 在五条生产对照查询无 fallback 后按用户授权启用，Ask 仍固定 stable retrieval。

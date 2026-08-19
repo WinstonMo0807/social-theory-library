@@ -168,3 +168,9 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 ### 2.7 reader-owned Ask connection follow-up
 
 `reading.0007_reader_ai_connection` is an additive migration for the authenticated reader-owned Ask connection. It creates only the encrypted connection record, status fields and lookup index. It does not call a provider, scan a PDF, create a Candidate, change authority, or touch a semantic index. Apply it only after a fresh BackupJob and a reviewed `migrate --plan`; deploy the same API, Worker, Ingestion Worker, Beat and Web revision afterward. A server-side AI profile remains optional. Do not put reader API keys in `.env`, manifests, logs, browser storage or screenshots.
+
+### 2026-08-19 post-cutover usability release
+
+- Fresh BackupJob `14a78648-8b26-44c0-a450-24acc3d594f7` completed and its artifact checksum was recomputed before migration.
+- `reading.0007_reader_ai_connection` was the only planned operation and applied in 6 seconds. Final application image family is `2.7-7294225`; the pre-release `.env` backup is `.env.pre-usability-6d9848a-20260819-124834`.
+- Public viewpoint V2 is enabled after bounded production comparison. Rollback is an environment change to `SEMANTIC_SEARCH_V2_ENABLED=false` plus API/Edge refresh; it does not change the active UID. Ask Library continues to use stable retrieval.
