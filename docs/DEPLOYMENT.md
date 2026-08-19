@@ -172,7 +172,7 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 ### 2026-08-19 post-cutover usability release
 
 - Fresh BackupJob `14a78648-8b26-44c0-a450-24acc3d594f7` completed and its artifact checksum was recomputed before migration.
-- `reading.0007_reader_ai_connection` was the only planned operation and applied in 6 seconds. Final application image family is `2.7-7294225`; the pre-release `.env` backup is `.env.pre-usability-6d9848a-20260819-124834`.
+- `reading.0007_reader_ai_connection` was the only planned operation and applied in 6 seconds. Final application image family is `2.7-87251cb`; the pre-release `.env` backup is `.env.pre-usability-6d9848a-20260819-124834`.
 - Public viewpoint V2 is enabled after bounded production comparison. Rollback is an environment change to `SEMANTIC_SEARCH_V2_ENABLED=false` plus API/Edge refresh; it does not change the active UID. Ask Library continues to use stable retrieval.
 
 ### Internal SearXNG source discovery
