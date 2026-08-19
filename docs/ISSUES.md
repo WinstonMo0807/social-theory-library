@@ -211,6 +211,8 @@ Reader 过去使用恒为真的 cookie credential 标记判断登录，导致匿
 
 生产 smoke 发现 VIAF 会返回 `result: null`。旧解析器对 null 切片导致 TypeError，且并发聚合器让这一家来源的失败清空全部结果。列表字段现先做类型规范化，单个 Provider 的网络或解析失败只形成 warning，本地及其他来源结果继续保留。
 
+Person 字段补全过去只用列表中的第一个中文规范名，VIAF/LOC 经常因此无结果。现在只有首个查询完全没有结构化记录时，才以同一 authority 对象的已确认原文名再查一次。它不会使用生成拼音、unidecode 或低信任 alias，也不会绕过出生年份、标识符、机构和作品等身份条件。
+
 ### Candidate Review semantics
 
 状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。

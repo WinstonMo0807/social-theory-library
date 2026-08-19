@@ -204,6 +204,46 @@ def test_authority_structured_adapter_normalizes_person_fields_without_ai(monkey
     assert all(row.identity_status == EnrichmentCandidate.IdentityStatus.CONFIRMED for row in result.candidates)
 
 
+@override_settings(AI_AUTHORITY_RERANK_ENABLED=False)
+def test_authority_adapter_uses_verified_original_name_after_empty_chinese_lookup(monkeypatch, admin_user):
+    person = _person("埃米尔·杜尔凯姆", birth_year=1858)
+    person.original_name = "Émile Durkheim"
+    person.save(update_fields=["original_name", "updated_at"])
+    queries = []
+
+    def authority_rows(entity_type, query):
+        queries.append(query)
+        if query == "埃米尔·杜尔凯姆":
+            return [], []
+        return [{
+            "id": "viaf:100189183",
+            "label": "Émile Durkheim",
+            "original_name": "Émile Durkheim",
+            "aliases": [],
+            "birth_year": 1858,
+            "death_year": 1917,
+            "external_ids": {"viaf": "100189183"},
+            "source": "VIAF",
+            "provider": "viaf",
+            "source_url": "https://viaf.org/viaf/100189183/",
+            "source_record_id": "",
+        }], []
+
+    monkeypatch.setattr(
+        "catalog.services.field_enrichment.structured._authority_rows",
+        authority_rows,
+    )
+    result = FieldEnrichmentService().enrich(
+        _request("person", person.id, ["external_identifier"]),
+        actor=admin_user,
+    )
+
+    assert queries == ["埃米尔·杜尔凯姆", "Émile Durkheim"]
+    assert len(result.candidates) == 1
+    assert result.candidates[0].proposed_value == {"scheme": "viaf", "value": "100189183"}
+    assert result.candidates[0].status == EnrichmentCandidate.Status.PENDING
+
+
 def test_search_snippet_can_never_become_final_evidence(admin_user):
     person = _person()
     adapter = FakeStructuredAdapter(

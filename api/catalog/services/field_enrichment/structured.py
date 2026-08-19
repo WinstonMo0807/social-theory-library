@@ -4,7 +4,6 @@ from collections import defaultdict
 from hashlib import sha256
 from uuid import UUID
 
-import httpx
 from django.utils import timezone
 
 from catalog.models import EnrichmentSourceClass, KnowledgeNode
@@ -86,7 +85,7 @@ def _authority_rows(entity_type: str, query: str) -> tuple[list[dict], list[Enri
     for provider in providers:
         try:
             rows.extend(authority_service._fetch_provider_with_policy(provider, entity_type, query))
-        except (httpx.HTTPError, ValueError, OSError) as exc:
+        except authority_service.PROVIDER_RESULT_ERRORS as exc:
             errors.append(
                 EnrichmentError(
                     code="provider_unavailable",
@@ -146,10 +145,24 @@ class AuthorityStructuredAdapter:
 
     def collect(self, *, target_type: str, target, policies: tuple[FieldPolicy, ...], context: dict):
         entity_type = _authority_entity_type(target_type, target)
-        query = next(iter(context.get("canonical_terms") or []), "")
-        if len(query.strip()) < 2:
+        queries = [
+            str(value).strip()
+            for value in context.get("canonical_terms") or []
+            if len(str(value).strip()) >= 2
+        ][:2]
+        if not queries:
             return [], [EnrichmentError(code="identity_query_missing", detail="目标缺少可查询规范名。")]
-        rows, errors = _authority_rows(entity_type, query)
+        rows: list[dict] = []
+        errors: list[EnrichmentError] = []
+        # Chinese authority lookups can legitimately return no VIAF/LOC rows.
+        # Retry at most one verified canonical original-language term; never
+        # broaden to generated transliterations or arbitrary aliases.
+        for query in queries:
+            query_rows, query_errors = _authority_rows(entity_type, query)
+            rows.extend(query_rows)
+            errors.extend(query_errors)
+            if rows:
+                break
         observations: list[FieldObservation] = []
         canonical = {str(value).strip().casefold() for value in context.get("canonical_terms") or [] if str(value).strip()}
         for row in rows:
