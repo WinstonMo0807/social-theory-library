@@ -209,6 +209,8 @@ Reader 过去使用恒为真的 cookie credential 标记判断登录，导致匿
 
 状态为源码已修复。结构化来源和网页来源现在返回部分结果、provider/error 分类和 request id；snippet 仍不被当作证据。没有达到 identity/evidence 门槛时，页面展示拒绝原因和统计，而不是只显示“没有候选”。真实 provider 可用性、条款和内容质量仍需单独核实，不应通过降低身份阈值解决。
 
+生产 smoke 发现 VIAF 会返回 `result: null`。旧解析器对 null 切片导致 TypeError，且并发聚合器让这一家来源的失败清空全部结果。列表字段现先做类型规范化，单个 Provider 的网络或解析失败只形成 warning，本地及其他来源结果继续保留。
+
 ### Candidate Review semantics
 
 状态为源码已修复。All Candidates 已改名为候选审核中心，明确它是跨领域 review queue，不是自更新社会科学词典。Metadata、QueryLexicon、Field Enrichment、New Authority 和 Theory task 继续各自写入 source-of-truth；QueryLexicon 仍是 derived projection。统一列表支持准确总数和截断提示。

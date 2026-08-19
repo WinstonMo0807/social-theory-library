@@ -101,6 +101,65 @@ def test_authority_provider_reuses_source_record_cache(monkeypatch, api_client, 
     assert second.data["results"][0]["source_record_id"] == first.data["results"][0]["source_record_id"]
 
 
+@override_settings(
+    AUTHORITY_PROVIDER_ENABLED="viaf",
+    AUTHORITY_PROVIDER_VERIFY_DNS=False,
+    AI_AUTHORITY_RERANK_ENABLED=False,
+)
+def test_viaf_null_result_is_an_empty_provider_result(monkeypatch):
+    monkeypatch.setattr(service, "_request_json", lambda *args, **kwargs: {"result": None})
+
+    rows, record = service._viaf_candidates("person", "Emile Durkheim")
+
+    assert rows == []
+    assert record.provider == "authority:viaf"
+
+
+@override_settings(
+    AUTHORITY_PROVIDER_ENABLED="wikidata,viaf",
+    AI_AUTHORITY_RERANK_ENABLED=False,
+)
+def test_one_provider_parse_failure_preserves_local_and_other_results(
+    monkeypatch,
+    api_client,
+    admin_user,
+):
+    local = Person.objects.create(preferred_name="埃米尔·杜尔凯姆", original_name="Émile Durkheim")
+
+    def provider(provider, entity_type, query):
+        if provider == "viaf":
+            raise TypeError("provider returned null result")
+        return [{
+            "id": "wikidata:Q15948",
+            "label": "埃米尔·杜尔凯姆",
+            "original_name": "Émile Durkheim",
+            "aliases": [],
+            "description": "法国社会学家",
+            "birth_year": 1858,
+            "death_year": 1917,
+            "external_ids": {"wikidata": "Q15948"},
+            "source": "Wikidata",
+            "provider": "wikidata",
+            "source_url": "https://www.wikidata.org/wiki/Q15948",
+            "source_record_id": "fixture",
+            "match_reasons": ["规范名命中"],
+            "conflicts": [],
+        }]
+
+    monkeypatch.setattr(service, "_fetch_provider_with_policy", provider)
+    api_client.force_authenticate(admin_user)
+    response = api_client.get(
+        "/api/catalog/admin/authority-suggestions/",
+        {"entity_type": "person", "q": "埃米尔·杜尔凯姆"},
+    )
+
+    assert response.status_code == 200
+    identifiers = {row["id"] for row in response.data["results"]}
+    assert f"local:person:{local.id}" in identifiers
+    assert "wikidata:Q15948" in identifiers
+    assert any("viaf" in warning for warning in response.data["warnings"])
+
+
 def test_authority_suggestions_require_catalog_editor(api_client, reader_user):
     api_client.force_authenticate(reader_user)
     response = api_client.get(

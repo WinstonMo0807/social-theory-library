@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 import ipaddress
 import json
+import logging
 import re
 import socket
 import threading
@@ -34,6 +35,16 @@ KNOWLEDGE_TYPES = {
 }
 SUPPORTED_TYPES = PERSON_TYPES | KNOWLEDGE_TYPES
 _SOURCE_RECORD_LOCK = threading.Lock()
+logger = logging.getLogger(__name__)
+PROVIDER_RESULT_ERRORS = (
+    httpx.HTTPError,
+    ValueError,
+    OSError,
+    TypeError,
+    KeyError,
+    AttributeError,
+    IndexError,
+)
 
 
 AUTHORITY_FILTER_SCHEMA = {
@@ -222,6 +233,15 @@ def _aliases(values, *, language: str = "") -> list[dict]:
     return rows[:24]
 
 
+def _payload_list(payload: object, key: str) -> list:
+    """Normalize provider JSON fields that may legally be null or malformed."""
+
+    if not isinstance(payload, dict):
+        return []
+    value = payload.get(key)
+    return value if isinstance(value, list) else []
+
+
 def _local_candidates(entity_type: str, query: str) -> list[dict]:
     if entity_type == "person":
         rows = Person.objects.filter(
@@ -328,7 +348,7 @@ def _wikidata_candidates(entity_type: str, query: str) -> tuple[list[dict], Sour
             },
         )
         details: object = {}
-    results = payload.get("search", []) if isinstance(payload, dict) else []
+    results = _payload_list(payload, "search")
     identifiers = [str(item.get("id") or "") for item in results[:6] if isinstance(item, dict) and item.get("id")]
     if identifiers and record is None:
         details = _request_json(
@@ -429,7 +449,7 @@ def _viaf_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRe
             params={"query": query},
         )
     record = record or _source_record("viaf", entity_type, query, payload)
-    results = payload.get("result", []) if isinstance(payload, dict) else []
+    results = _payload_list(payload, "result")
     rows = []
     for item in results[:6]:
         if not isinstance(item, dict):
@@ -509,7 +529,7 @@ def _openalex_candidates(query: str) -> tuple[list[dict], SourceRecord]:
             params={"search": query, "per-page": 6, "api_key": api_key},
         )
     record = record or _source_record("openalex", "person", query, payload)
-    results = payload.get("results", []) if isinstance(payload, dict) else []
+    results = _payload_list(payload, "results")
     rows = []
     for item in results[:6]:
         if not isinstance(item, dict):
@@ -692,7 +712,12 @@ def authority_suggestions(entity_type: str, query: str) -> dict:
             for provider in providers:
                 try:
                     completed[provider] = _fetch_provider_with_policy(provider, entity_type, query)
-                except (httpx.HTTPError, ValueError, OSError) as exc:
+                except PROVIDER_RESULT_ERRORS as exc:
+                    logger.warning(
+                        "authority provider partial failure provider=%s error=%s",
+                        provider,
+                        exc.__class__.__name__,
+                    )
                     warnings.append(f"{provider}：{str(exc)[:240]}")
         else:
             with ThreadPoolExecutor(max_workers=min(4, len(providers))) as executor:
@@ -704,7 +729,12 @@ def authority_suggestions(entity_type: str, query: str) -> dict:
                     provider = futures[future]
                     try:
                         completed[provider] = future.result()
-                    except (httpx.HTTPError, ValueError, OSError) as exc:
+                    except PROVIDER_RESULT_ERRORS as exc:
+                        logger.warning(
+                            "authority provider partial failure provider=%s error=%s",
+                            provider,
+                            exc.__class__.__name__,
+                        )
                         warnings.append(f"{provider}：{str(exc)[:240]}")
         for provider in providers:
             rows.extend(completed.get(provider, []))
