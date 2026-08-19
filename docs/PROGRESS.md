@@ -387,3 +387,11 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 原 Unicode 失败 UploadItem `9ce0b150-eca4-4872-9baf-d0a09cf08704` 通过正式 retry API 越过 text extraction 并达到 ready 100%。规范 Asset 已保存 596 Page；后续 OCR 为独立 running job，没有自动发布。
 - 新容器 20 分钟窗口未发现 schema、migration、Traceback 或 fatal 错误，日志未发现 R2 credential、Authorization 或 presigned signature pattern。
 - 真实 owner-scoped API smoke 在外层数据库回滚事务内完成 init 201、sign 200、presigned PUT 200、ETag confirm 200 和 abort 200；结束后 UploadItem row 不存在，multipart 已 abort，没有测试数据或 object 残留。
+
+### 2026-08-19 2.7.1 admin version display correction
+
+- 公网 API、migration、R2、Worker、Unicode item、active semantic UID 和 QueryLexicon 均已确认是正确 2.7.1 状态。左下角仍显示 2.7 的唯一原因是 `admin-shell.tsx` 遗留独立硬编码。
+- Web 版本现在由 `web/lib/version.ts` 的共享常量提供，Admin footer 和 server fallback 不再分别维护字符串。21 项后台定向测试、TypeScript 与目标 ESLint 通过。
+- Web image 已替换为 `social-theory-library-web:2.7.1-adb06b2`，API/Worker 保持 `2.7.1-5d432f7`，数据库没有再次迁移。Edge 已刷新。
+- 公网 version asset 实测返回 `v2.7.1 持续增长架构`；生产 Web bundle 的旧 `v2.7 持续增长架构` 命中为 0，新 literal 命中为 2。readiness 继续为 2.7.1、pending migrations 0，Web/Edge 新日志错误为 0。
+- GitHub visibility 已按 owner 明确决定恢复为 Public。仓库安全扫描仍未发现 Secret 或运行数据；后续不得再自动改回 Private。
