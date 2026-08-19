@@ -142,7 +142,7 @@ def _link_existing(candidate: EntityResolutionCandidate, *, target_id: str, conf
 
     item = candidate.upload_item
     if candidate.target_type == "person" and item.edition_id:
-        Contribution.objects.update_or_create(
+        contribution, created = Contribution.objects.get_or_create(
             edition_id=item.edition_id,
             person=entity,
             role=Contribution.Role.AUTHOR,
@@ -152,6 +152,10 @@ def _link_existing(candidate: EntityResolutionCandidate, *, target_id: str, conf
                 "approved": False,
             },
         )
+        if not created and not contribution.approved:
+            contribution.source = "entity_resolution"
+            contribution.confidence = 1
+            contribution.save(update_fields=["source", "confidence", "updated_at"])
     elif candidate.target_type == "work" and item.edition_id:
         edition = item.edition
         if edition.state == PublicationState.PUBLISHED:

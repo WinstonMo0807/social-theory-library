@@ -578,11 +578,13 @@ class UploadItemSerializer(serializers.ModelSerializer):
         return not self.get_publication_reasons(obj)
 
     def get_can_manage_publication(self, obj):
+        from common.capabilities import Capability, has_capability
+
         request = self.context.get("request")
         return bool(
             request
             and request.user.is_authenticated
-            and getattr(request.user, "role", "") == "admin"
+            and has_capability(request.user, Capability.PUBLISH_WORK)
         )
 
     def _stalled_seconds(self, obj):

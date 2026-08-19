@@ -17,6 +17,7 @@ from catalog.models import (
     KnowledgeRelation,
     PersonNameVariant,
     ReadingPathItem,
+    ReadingPathStage,
     RelationReviewStatus,
     TimelineEventRelation,
     TheoryTimelineEvent,
@@ -366,13 +367,26 @@ def _reading_path_item(*, target, value, candidate, actor):
     if existing:
         return MutationResult("catalog.ReadingPathItem", existing.id, False, False)
     next_order = (target.items.aggregate(value=Max("reading_order"))["value"] or 0) + 1
+    stage_name = value["stage_name"]
+    stage = target.stages.filter(name=stage_name).order_by("position", "created_at").first()
+    if stage is None:
+        next_stage_position = (target.stages.aggregate(value=Max("position"))["value"] or -1) + 1
+        stage = ReadingPathStage.objects.create(
+            reading_path=target,
+            name=stage_name,
+            description=value.get("stage_description", ""),
+            position=next_stage_position,
+        )
+    next_position = (stage.items.aggregate(value=Max("position"))["value"] or -1) + 1
     item = ReadingPathItem.objects.create(
         reading_path=target,
-        stage_name=value["stage_name"],
-        stage_description=value.get("stage_description", ""),
+        stage=stage,
+        stage_name=stage.name,
+        stage_description=stage.description,
         node=node,
         work=work,
         recommendation_reason=value.get("recommendation_reason", ""),
+        position=next_position,
         reading_order=next_order,
         is_required=value.get("is_required", False),
         editorial_note=f"来源候选 {candidate.id}",

@@ -1316,7 +1316,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
               <strong>{isPublished ? "这里保存的修改会更新公开元数据" : "保存复核内容不会自动发布"}</strong>
               <p>{isPublished ? "需要下架或重新检查发布影响时，请进入发布台。" : "完成需要的复核后，到发布台预览馆藏、核对警告，并由管理员最终确认发布。"}</p>
             </div>
-            <Link className="button" href={`/admin/publication?item=${itemId}`}><Send size={15} />进入发布台</Link>
+            <Link className="button" href={`/admin/intake/${itemId}#publication`}><Send size={15} />进入发布检查</Link>
           </section>
           <form onSubmit={submit}>
           <section className="review-form admin-panel">

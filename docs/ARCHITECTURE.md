@@ -2,7 +2,7 @@
 
 更新日期为 2026-08-19。本文件描述当前源码结构。生产状态引用历史 NAS 与公网只读验收，仍属于有时间边界的运行快照。
 
-当前源码与生产版本为 2.7.1。生产 heads 为 catalog 0030、ingestion 0013 和 reading 0007；R2 临时上传中转与非法 PDF Unicode 清理已经部署。公共观点检索 V2 与 Ask stable retrieval 的边界不变。完整入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前源码版本为 2.8.0，catalog 源码 head 为 0031；生产仍保持最后核实的 2.7.1、catalog 0030、ingestion 0013 和 reading 0007。本轮 2.8 只完成本地实现与预览，没有连接或部署生产。R2 临时上传中转、公共观点检索 V2 与 Ask stable retrieval 的既有边界不变。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 
@@ -38,7 +38,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-API、Web 与 OCR service 的源码版本为 2.7.1。历史镜像版本只在部署记录中保留，不代表当前源码状态。
+API、Web 与 OCR service 的源码版本为 2.8.0。历史镜像版本只在部署记录中保留，不代表当前源码状态；当前公网仍未部署 2.8。
 
 ## 后端模块
 
@@ -61,6 +61,20 @@ API、Web 与 OCR service 的源码版本为 2.7.1。历史镜像版本只在部
 `web/app` 使用 App Router，包含公开网站、Explore、Reader、账户中心和管理后台。`web/components` 保存阅读器、上传、元数据复核、发布、检索和后台工作区组件。`web/lib/server-api.ts` 供服务端渲染访问 Django，`web/lib/runtime-api.ts` 和 `web/lib/api.ts` 负责浏览器同源请求与认证刷新。
 
 生产 Compose 把 `ALLOW_DEMO_FALLBACK` 固定为 `false`。正式页面应读取真实 API 数据，不得以静态示例掩盖服务失败。
+
+## 2.8 馆藏与策展工作流
+
+`/admin/intake/<itemId>` 是 Intake Mode 的唯一单项工作入口。`/admin/library/works/<workId>` 使用相同 `WorkflowEditor` 进入 Maintenance Mode，不要求 UploadItem 存在。两个入口共享 Work、Edition、责任者、分类、知识、Reader、策展和发布组件；Intake 额外显示文件、上传、重复判断与 retry/resume/replace。
+
+九步顺序固定为 file、work、bibliography、contributors、classification、knowledge、reader、curation、publication。`catalog.services.admin_workflow` 是只读 evaluator，返回 current step、建议下一步、step status、issues、summary 和 action target。publication step 直接调用现有 `publication_preflight()`，不复制规则。React 只保存展开、dirty、Inspector 和 hash 状态，不重算完整业务条件。
+
+`EditionWorkflowDecision` 保存 Edition 级 section confirmation 或 curation skip，并记录 actor、时间和内容 fingerprint。Work、Edition、关系或文件状态变化后，旧 fingerprint 会显示为需要重新确认。UploadItem 原技术状态机继续只负责 parsing、enrichment、resolution、indexing 等处理状态，两类 workflow 不混用。
+
+分节 mutation 位于 `catalog.services.work_editor`。它锁 Edition/Work 和相关关系，校验客户端看到的 updated_at，保存后写 FieldLock、匹配的 MetadataCandidate decision 与 section decision。责任者继续写 Contribution；分类继续写 WorkDisciplineRelation/WorkSubdisciplineRelation；理论与主题继续复用 WorkKnowledgeRelation 和 `WorkTheoryRole`；KnowledgeNode 关系继续写 WorkNodeRelation。
+
+单项策展只通过 Work contextual API 修改当前 Work。Reading Path placement 锁路径和 item，并验证 stage 所属关系；Recommendation placement 复用 RecommendationOverride。高级 Reading Path 工作台使用独立 ReadingPathStage 和 stage_groups，一阶段可含多个作品或节点，整条路径更新带 expected_updated_at。公开 serializer 只输出已发布 Work 和 published KnowledgeNode，发布前 placement 不会泄露草稿目标。
+
+管理导航压缩为工作、馆藏、知识、策展、系统五组。Focus Mode 隐藏全局 sidebar，由当前馆藏 step rail、共享 Inspector 和移动端 compact progress 接管。旧 review item 和 publication item URL 只作 redirect/wrapper，不再渲染平行编辑器。
 
 ## 入库与上传
 

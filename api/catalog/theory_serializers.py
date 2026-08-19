@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 from common.capabilities import Capability, has_capability
 
@@ -24,6 +25,7 @@ from catalog.models import (
     PublicationState,
     ReadingPath,
     ReadingPathItem,
+    ReadingPathStage,
     RelationReviewStatus,
     TheoryReviewTask,
     TheoryTimelineEvent,
@@ -669,14 +671,24 @@ class TheoryReviewTaskSerializer(serializers.ModelSerializer):
         return f"/reader/{obj.file_id}?page={page}" if obj.file_id else None
 
 
+class ReadingPathStageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReadingPathStage
+        fields = ("id", "name", "description", "position", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
 class ReadingPathItemSerializer(serializers.ModelSerializer):
     node_data = KnowledgeNodeListSerializer(source="node", read_only=True)
     work_data = serializers.SerializerMethodField()
+    stage_data = ReadingPathStageSerializer(source="stage", read_only=True)
 
     class Meta:
         model = ReadingPathItem
         fields = (
             "id",
+            "stage",
+            "stage_data",
             "stage_name",
             "stage_description",
             "node",
@@ -684,6 +696,7 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             "work",
             "work_data",
             "recommendation_reason",
+            "position",
             "reading_order",
             "is_required",
             "editorial_note",
@@ -696,7 +709,10 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
 class ReadingPathSerializer(serializers.ModelSerializer):
     primary_discipline_data = DisciplineCompactSerializer(source="primary_discipline", read_only=True)
     items = ReadingPathItemSerializer(many=True, required=False)
+    stages = ReadingPathStageSerializer(many=True, read_only=True)
     cover_url = serializers.SerializerMethodField()
+    expected_updated_at = serializers.DateTimeField(write_only=True, required=False)
+    stage_groups = serializers.JSONField(write_only=True, required=False)
 
     class Meta:
         model = ReadingPath
@@ -714,10 +730,13 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             "cover_url",
             "status",
             "sort_order",
+            "stages",
             "items",
             "published_at",
             "created_at",
             "updated_at",
+            "expected_updated_at",
+            "stage_groups",
         )
         read_only_fields = ("published_at", "created_at", "updated_at")
 
@@ -733,11 +752,146 @@ class ReadingPathSerializer(serializers.ModelSerializer):
 
     def _sync_items(self, path, items):
         path.items.all().delete()
-        for row in items:
+        has_explicit_stage = any(row.get("stage") is not None for row in items)
+        if not has_explicit_stage:
+            path.stages.all().delete()
+        for fallback_position, source_row in enumerate(items):
+            row = dict(source_row)
+            if int(row.get("node") is not None) + int(row.get("work") is not None) != 1:
+                raise serializers.ValidationError(
+                    {"items": ["每个路径项目必须且只能关联一个理论节点或馆藏作品。"]}
+                )
+            stage = row.get("stage")
+            if stage is not None and stage.reading_path_id != path.id:
+                raise serializers.ValidationError(
+                    {"items": ["阅读阶段必须属于当前阅读路径。"]}
+                )
+            if stage is None:
+                stage = ReadingPathStage.objects.create(
+                    reading_path=path,
+                    name=row.get("stage_name") or f"第 {fallback_position + 1} 阶段",
+                    description=row.get("stage_description", ""),
+                    position=row.get("reading_order", fallback_position),
+                )
+                row["stage"] = stage
+            row["stage_name"] = stage.name
+            row["stage_description"] = stage.description
+            row.setdefault("position", 0)
             ReadingPathItem.objects.create(reading_path=path, **row)
+
+    def _sync_stage_groups(self, path, groups):
+        existing_stages = {str(stage.id): stage for stage in path.stages.select_for_update()}
+        normalized_groups = []
+        work_ids = []
+        for stage_position, source_group in enumerate(groups):
+            group = dict(source_group or {})
+            name = str(group.get("name") or "").strip()
+            if not name:
+                raise serializers.ValidationError({"stage_groups": ["每个阶段都需要名称。"]})
+            items = list(group.get("items") or [])
+            normalized_items = []
+            for item_position, source_item in enumerate(items):
+                item = dict(source_item or {})
+                node_id = item.get("node") or None
+                work_id = item.get("work") or None
+                if int(bool(node_id)) + int(bool(work_id)) != 1:
+                    raise serializers.ValidationError(
+                        {"stage_groups": ["每个路径项目必须且只能关联一个理论节点或馆藏作品。"]}
+                    )
+                if work_id:
+                    work_ids.append(str(work_id))
+                normalized_items.append(
+                    {
+                        "node_id": node_id,
+                        "work_id": work_id,
+                        "recommendation_reason": str(item.get("recommendation_reason") or ""),
+                        "position": int(item.get("position", item_position)),
+                        "is_required": bool(item.get("is_required")),
+                        "editorial_note": str(item.get("editorial_note") or ""),
+                    }
+                )
+            normalized_groups.append(
+                {
+                    "id": str(group.get("id") or ""),
+                    "name": name,
+                    "description": str(group.get("description") or ""),
+                    "position": int(group.get("position", stage_position)),
+                    "items": normalized_items,
+                }
+            )
+        if len(work_ids) != len(set(work_ids)):
+            raise serializers.ValidationError(
+                {"stage_groups": ["同一作品在一条阅读路径中只能出现一次。"]}
+            )
+
+        path.items.all().delete()
+        retained_stage_ids = []
+        reading_order = 0
+        for group in normalized_groups:
+            stage = existing_stages.get(group["id"])
+            if group["id"] and stage is None:
+                raise serializers.ValidationError(
+                    {"stage_groups": ["阶段已被其他管理员删除，请刷新后重试。"]}
+                )
+            if stage is None:
+                stage = ReadingPathStage.objects.create(
+                    reading_path=path,
+                    name=group["name"],
+                    description=group["description"],
+                    position=group["position"],
+                )
+            else:
+                stage.name = group["name"]
+                stage.description = group["description"]
+                stage.position = group["position"]
+                stage.save(update_fields=["name", "description", "position", "updated_at"])
+            retained_stage_ids.append(stage.id)
+            for item in sorted(group["items"], key=lambda row: row["position"]):
+                ReadingPathItem.objects.create(
+                    reading_path=path,
+                    stage=stage,
+                    stage_name=stage.name,
+                    stage_description=stage.description,
+                    node_id=item["node_id"],
+                    work_id=item["work_id"],
+                    recommendation_reason=item["recommendation_reason"],
+                    position=item["position"],
+                    reading_order=reading_order,
+                    is_required=item["is_required"],
+                    editorial_note=item["editorial_note"],
+                )
+                reading_order += 1
+        path.stages.exclude(pk__in=retained_stage_ids).delete()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.context.get("include_unpublished_items"):
+            return data
+        public_items = []
+        public_stage_ids = set()
+        for row in data.get("items", []):
+            work_is_public = bool(row.get("work") and row.get("work_data"))
+            node_data = row.get("node_data") or {}
+            node_is_public = bool(
+                row.get("node") and node_data.get("status") == "published"
+            )
+            if not (work_is_public or node_is_public):
+                continue
+            public_items.append(row)
+            if row.get("stage"):
+                public_stage_ids.add(str(row["stage"]))
+        data["items"] = public_items
+        data["stages"] = [
+            stage
+            for stage in data.get("stages", [])
+            if str(stage.get("id")) in public_stage_ids
+        ]
+        return data
 
     @transaction.atomic
     def create(self, validated_data):
+        validated_data.pop("expected_updated_at", None)
+        stage_groups = validated_data.pop("stage_groups", None)
         items = validated_data.pop("items", [])
         actor = getattr(self.context.get("request"), "user", None)
         validated_data["created_by"] = actor
@@ -745,18 +899,36 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             validated_data["reviewed_by"] = actor
             validated_data["published_at"] = timezone.now()
         path = super().create(validated_data)
-        self._sync_items(path, items)
+        if stage_groups is not None:
+            self._sync_stage_groups(path, stage_groups)
+        else:
+            self._sync_items(path, items)
         return path
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        expected_updated_at = validated_data.pop("expected_updated_at", None)
+        stage_groups = validated_data.pop("stage_groups", None)
+        instance = ReadingPath.objects.select_for_update().get(pk=instance.pk)
+        request = self.context.get("request")
+        if instance.status in {"published", "archived"} and not has_capability(
+            getattr(request, "user", None),
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise PermissionDenied("修改已发布或归档阅读路径需要 authority 发布权限。")
+        if expected_updated_at is not None and instance.updated_at != expected_updated_at:
+            raise serializers.ValidationError(
+                {"expected_updated_at": "阅读路径已被其他管理员更新，请刷新后重试。"}
+            )
         items = validated_data.pop("items", None)
         actor = getattr(self.context.get("request"), "user", None)
         if validated_data.get("status") == "published" and instance.status != "published":
             validated_data["reviewed_by"] = actor
             validated_data["published_at"] = timezone.now()
         path = super().update(instance, validated_data)
-        if items is not None:
+        if stage_groups is not None:
+            self._sync_stage_groups(path, stage_groups)
+        elif items is not None:
             self._sync_items(path, items)
         return path
 

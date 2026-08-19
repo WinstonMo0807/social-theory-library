@@ -2,17 +2,17 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("admin footer uses the shared 2.7.1 application version", async () => {
+test("admin footer uses the shared 2.8 collection workflow version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "2\.7\.1"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = `v\$\{WEB_APP_VERSION\} 持续增长架构`/);
+  assert.match(version, /WEB_APP_VERSION = "2\.8\.0"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v2\.8 馆藏与策展工作流"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
-  assert.doesNotMatch(shell, /v2\.7 持续增长架构/);
+  assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
 });
 
 test("hybrid search weight copy preserves the semantic_ratio API contract", async () => {
@@ -108,27 +108,27 @@ test("admin navigation uses the approved groups and only real routes", async () 
   const navigationSource = source.slice(navigationStart, navigationEnd);
 
   const expectedGroups = [
-    ["工作台", ["/admin"]],
-    ["馆藏", ["/admin/uploads", "/admin/review", "/admin/library", "/admin/publication"]],
+    ["工作", ["/admin", "/admin/uploads", "/admin/review", "/admin/publication", "/admin/candidates"]],
+    ["馆藏", ["/admin/library", "/admin/library?view=editions", "/admin/library?view=quality"]],
     ["知识", [
-      "/admin/knowledge",
       "/admin/scholars",
       "/admin/disciplines",
       "/admin/subdisciplines",
       "/admin/theory-nodes",
       "/admin/topics",
       "/admin/theory-relations",
-      "/admin/reading-paths",
+      "/admin/query-lexicon",
+      "/admin/semantic-index",
     ]],
-    ["审核", ["/admin/candidates"]],
-    ["搜索与智能", ["/admin/query-lexicon", "/admin/semantic-index", "/admin/settings"]],
-    ["运营", [
+    ["策展", ["/admin/reading-paths", "/admin/recommendations"]],
+    ["系统", [
       "/admin/processing",
       "/admin/status",
       "/admin/distribution",
       "/admin/analytics",
+      "/admin/users",
+      "/admin/settings",
     ]],
-    ["管理", ["/admin/users", "/admin/about", "/admin/recommendations"]],
   ];
 
   const groupPositions = expectedGroups.map(([group]) => {
@@ -154,10 +154,13 @@ test("admin navigation uses the approved groups and only real routes", async () 
   });
 
   assert.equal(new Set(allRoutes).size, allRoutes.length, "navigation routes are unique");
-  await Promise.all(allRoutes.map((href) => access(new URL(
-    href === "/admin" ? "../app/admin/page.tsx" : `../app${href}/page.tsx`,
+  await Promise.all(allRoutes.map((href) => {
+    const pathname = href.split("?")[0];
+    return access(new URL(
+    pathname === "/admin" ? "../app/admin/page.tsx" : `../app${pathname}/page.tsx`,
     import.meta.url,
-  ))));
+  ));
+  }));
 });
 
 test("admin navigation does not prefetch every management page at once", async () => {

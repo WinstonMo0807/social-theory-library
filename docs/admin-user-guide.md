@@ -1,12 +1,12 @@
 # 后台管理员使用指南
 
 更新日期：2026-08-19
-适用版本：2.7
+适用版本：2.8.0 源码与本地预览；生产仍为 2.7.1
 
 ## 1. 使用边界
 
 - [SOURCE] 本指南只描述当前代码中已经存在的页面、权限和操作。
-- [LIVE] 2.7 已部署。下列页面仍需在每次发布后用真实角色重新核对，不能用历史截图代替当前权限验证。
+- [LIVE] 2.8 尚未部署。下列页面已通过本地真实浏览器，生产仍需在每次发布后用真实角色重新核对，不能用本地截图代替公网权限验证。
 - [SOURCE] 上传、元数据复核、发布、OCR、页码和语义索引使用同一套馆藏记录。保存元数据不会自动发布。
 - [SOURCE] 原始 PDF、人工锁定字段、已确认关系、读者笔记和数据卷不得因日常操作被覆盖或删除。
 
@@ -27,17 +27,21 @@
 
 | 分组 | 页面 |
 | --- | --- |
-| 今日工作 | 待办、失败任务、候选和发布状态摘要 |
-| 馆藏 | Upload、Intake / Review、Works / Editions / Assets、Publication |
-| 知识 | Knowledge Workspace、Scholars、Disciplines、Subdisciplines、Theories、Topics、Relations / Timeline、Reading Paths |
-| 审核 | 候选审核中心 |
-| 搜索与智能 | QueryLexicon、Semantic Index、Ask Library / AI Runtime |
-| 运维 | Processing Jobs、System Status、Backup / Storage、Audit / Analytics |
-| 管理 | Users / Roles |
+| 工作 | 今日工作、上传与批次、待处理、发布准备、候选审核 |
+| 馆藏 | 作品、版本与文件、馆藏质量 |
+| 知识 | 学者、学科、子学科、理论与概念、主题、关系与时间轴、QueryLexicon、语义索引 |
+| 策展 | 阅读路径、推荐 |
+| 系统 | Processing、System Status、Backup / Storage、Audit、Users / Permissions、Runtime Settings。无 capability 的入口不显示 |
 
 各入口的日常职责、source-of-truth 与兼容情况见 [back-office-function-matrix.md](back-office-function-matrix.md)。页面存在不等于当前角色有 mutation 权限，QueryLexicon 和 Semantic Index 对普通 Admin 可以只读。
 
 ## 4. 推荐上架流程
+
+上传完成并建立 Work / Edition 后，进入 `/admin/intake/<itemId>`。正常操作不再跳转 Scholar、Theory、Reading Path 或 Publication 页面。左侧 step rail 可回到任何步骤，当前步骤展开，已完成步骤折叠，下一步骤显示提示。保存并继续会重新读取后端 workflow；存在 blocker 时留在原步骤并定位问题。
+
+固定顺序为文件与识别、作品、书目与出版、责任者、社科分类、理论与主题、阅读文件、策展、发布。策展可以选择“暂不策展并继续”，不构成发布 blocker。发布可选择处理下一项或留在当前项；留在当前项会进入 `/admin/library/works/<workId>`，继续使用同一 Editor Engine。
+
+候选和 evidence 通过右侧 Inspector 核对。正式 Person、Discipline、Theory、Topic、KnowledgeNode 与解释性关系仍需人工决定；置信度不会自动变成 canonical knowledge。Canonical 字段保存前显示未保存计数，Ctrl/Cmd+S 可保存，离开未保存工作会提示。
 
 ### 4.1 创建上传批次
 

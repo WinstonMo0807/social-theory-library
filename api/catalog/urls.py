@@ -45,6 +45,20 @@ from .backoffice_views import (
     AdminQueryLexiconWorkspaceView,
     AdminSystemStatusView,
 )
+from .curation_views import (
+    WorkCurationSummaryView,
+    WorkReadingPathPlacementDetailView,
+    WorkReadingPathPlacementListView,
+    WorkRecommendationOverrideView,
+)
+from .workflow_views import (
+    IntakeWorkflowSectionView,
+    WorkflowQueueView,
+    WorkLibraryListView,
+    WorkMaintenancePublicationView,
+    WorkMaintenanceSectionView,
+    WorkMaintenanceWorkspaceView,
+)
 from .search_evaluation_views import (
     SearchEvaluationRunDetailView,
     SearchEvaluationRunListCreateView,
@@ -127,6 +141,56 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path(
+        "admin/workflows/queue/",
+        WorkflowQueueView.as_view(),
+        name="admin-workflow-queue",
+    ),
+    path(
+        "admin/library/works/",
+        WorkLibraryListView.as_view(),
+        name="admin-work-library-list",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/",
+        WorkMaintenanceWorkspaceView.as_view(),
+        name="admin-work-maintenance-workspace",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/sections/<str:step_key>/",
+        WorkMaintenanceSectionView.as_view(),
+        name="admin-work-maintenance-section",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/publication/",
+        WorkMaintenancePublicationView.as_view(),
+        name="admin-work-maintenance-publication",
+    ),
+    path(
+        "admin/intake/<uuid:item_id>/sections/<str:step_key>/",
+        IntakeWorkflowSectionView.as_view(),
+        name="admin-intake-workflow-section",
+    ),
+    path(
+        "admin/works/<uuid:work_id>/curation/",
+        WorkCurationSummaryView.as_view(),
+        name="admin-work-curation-summary",
+    ),
+    path(
+        "admin/works/<uuid:work_id>/reading-path-placements/",
+        WorkReadingPathPlacementListView.as_view(),
+        name="admin-work-reading-path-placement-list",
+    ),
+    path(
+        "admin/works/<uuid:work_id>/reading-path-placements/<uuid:item_id>/",
+        WorkReadingPathPlacementDetailView.as_view(),
+        name="admin-work-reading-path-placement-detail",
+    ),
+    path(
+        "admin/works/<uuid:work_id>/recommendation-overrides/<str:placement>/",
+        WorkRecommendationOverrideView.as_view(),
+        name="admin-work-recommendation-override",
+    ),
     path(
         "admin/query-lexicon/",
         AdminQueryLexiconWorkspaceView.as_view(),

@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-19。当前源码版本为 2.7.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-19。当前源码版本为 2.8.0，生产仍为最后核实的 2.7.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -17,12 +17,13 @@
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.7.1 |
-| Git 工作分支 | `codex/release-2.7`。实际 commit 以 `git rev-parse HEAD` 为准 |
+| 源码版本 | 2.8.0 馆藏与策展工作流。本地实现和预览已通过，未部署生产 |
+| Git 工作分支 | 当前 checkout 为 `main`；实际 commit 和工作树以 `git status`、`git rev-parse HEAD` 为准 |
 | GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
 | 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7.1-5d432f7` image family |
 | 生产 migration head | catalog 0030、ingestion 0013、reading 0007 |
+| 2.8 源码 migration head | catalog 0031；只在独立本地 SQLite 应用，生产待 fresh backup 与 PostgreSQL rehearsal |
 | QueryLexicon | revision 1，generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` |
 | 语义索引 | active UID `semantic_passages_20260818210650_4cf87bc9`，3,005 个已核对文档 |
 | 观点检索 | 公共 V2 已在有限真实对照后启用。Ask Library 仍固定 stable retrieval |

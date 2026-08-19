@@ -224,9 +224,9 @@ export function LibraryAdmin({ initialQuery = "" }: { initialQuery?: string }) {
                 <span>{metadata?.publication_year || "—"}</span>
                 <b className={`status-${item.status}`}><CheckCircle2 size={13} />{uploadStatusLabels[item.status] ?? item.status} {item.stage_progress}%{metadata ? <small>OCR {metadata.ocr_status} · 页码 {metadata.page_label_status} · 语义 {metadata.semantic_index_status}</small> : null}</b>
                 <span className="admin-row-actions">
-                  {published ? <Link href={`/works/${metadata.public_slug}`}>查看 <ArrowRight size={13} /></Link> : <Link href={`/admin/review/${item.id}`}>复核内容 <ArrowRight size={13} /></Link>}
-                  {!published && metadata ? <Link href={`/admin/publication?item=${item.id}`}>{withdrawn ? "重新发布" : "发布确认"} <ArrowRight size={13} /></Link> : null}
-                  {published ? <Link href={`/admin/review/${item.id}?mode=edit`}><Pencil size={13} /> 编辑</Link> : null}
+                  {published ? <Link href={`/works/${metadata.public_slug}`}>查看 <ArrowRight size={13} /></Link> : <Link href={`/admin/intake/${item.id}#bibliography`}>继续处理 <ArrowRight size={13} /></Link>}
+                  {!published && metadata ? <Link href={`/admin/intake/${item.id}#publication`}>{withdrawn ? "重新发布" : "发布检查"} <ArrowRight size={13} /></Link> : null}
+                  {published ? <Link href={`/admin/intake/${item.id}#work`}><Pencil size={13} /> 编辑</Link> : null}
                   {published ? (
                     <label className={`admin-inline-file ${replacing === item.id ? "disabled" : ""}`}>
                       {replacing === item.id ? "上传中" : "替换 PDF"}

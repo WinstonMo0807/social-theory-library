@@ -1165,6 +1165,7 @@ export function ReadingPathsAdmin() {
     if (!token) return;
     const payload = {
       ...draft,
+      expected_updated_at: editing?.updated_at,
       primary_discipline: draft.primary_discipline || null,
       items: items.map((item, index) => ({
         stage_name: item.stage_name,

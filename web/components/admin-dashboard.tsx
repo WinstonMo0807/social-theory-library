@@ -54,6 +54,30 @@ type HotSearchPayload = {
   results: { query: string; search_count: number; unique_sessions: number; click_count: number; zero_result_count: number }[];
 };
 
+type WorkflowQueueItem = {
+  item_id: string;
+  title: string;
+  source_filename?: string;
+  document_type?: string;
+  current_step: string;
+  current_step_label?: string;
+  overall_status: string;
+  unresolved_count: number;
+  warnings_count: number;
+  blockers_count: number;
+  updated_at: string;
+};
+
+type WorkflowQueuePayload = {
+  continue_items: WorkflowQueueItem[];
+  attention_items: WorkflowQueueItem[];
+  exception_items?: WorkflowQueueItem[];
+  exceptions?: WorkflowQueueItem[];
+  publication_ready: WorkflowQueueItem[];
+  recent_items: WorkflowQueueItem[];
+  candidate_review_count: number;
+};
+
 const statusLabels: Record<string, string> = {
   received: "已接收",
   validating: "校验中",
@@ -97,6 +121,7 @@ export function AdminDashboard() {
   const [error, setError] = useState("");
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [hotSearches, setHotSearches] = useState<HotSearchPayload["results"]>([]);
+  const [workflowQueue, setWorkflowQueue] = useState<WorkflowQueuePayload | null>(null);
 
   useEffect(() => {
     const token = getServerSessionCredential();
@@ -104,6 +129,9 @@ export function AdminDashboard() {
     apiRequest<DashboardData>("/ingestion/dashboard/", {}, token)
       .then(setLive)
       .catch((reason) => setError(reason instanceof Error ? reason.message : "仪表盘读取失败。"));
+    apiRequest<WorkflowQueuePayload>("/catalog/admin/workflows/queue/", {}, token)
+      .then(setWorkflowQueue)
+      .catch(() => undefined);
     apiRequest<UsageSummary>("/catalog/admin/usage-analytics/?days=30", {}, token).then(setUsage).catch(() => undefined);
     apiRequest<HotSearchPayload>("/catalog/hot-searches/?days=30&limit=8", {}, token).then((payload) => setHotSearches(payload.results)).catch(() => undefined);
   }, []);
@@ -146,9 +174,9 @@ export function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <PageHeader
-        eyebrow="概览"
-        title="管理概览"
-        description="查看馆藏处理、人工复核、读者使用和系统状态。"
+        eyebrow="工作"
+        title="今日工作"
+        description="继续当前馆藏，优先解决异常和人工确认，再处理发布准备。"
         actions={(
           <Link className="admin-outline-button" href="/admin/uploads">
             <Plus size={14} />
@@ -157,6 +185,20 @@ export function AdminDashboard() {
         )}
       />
       {error ? <p className="admin-error" role="alert">{error}</p> : null}
+      <section className="admin-work-entry-grid" aria-label="今日工作入口">
+        <WorkflowQueuePanel title="继续处理" items={workflowQueue?.continue_items ?? []} empty="当前没有中断的馆藏工作。" />
+        <WorkflowQueuePanel title="待人工确认" items={workflowQueue?.attention_items ?? []} empty="当前没有待确认项目。" />
+        <WorkflowQueuePanel title="异常" items={workflowQueue?.exception_items ?? workflowQueue?.exceptions ?? []} empty="当前没有处理异常。" tone="danger" />
+        <WorkflowQueuePanel title="待发布" items={workflowQueue?.publication_ready ?? []} empty="当前没有完成发布准备的项目。" step="publication" />
+        <section className="admin-panel admin-work-queue-panel">
+          <header><h2>待候选审核</h2><Link href="/admin/candidates">打开队列 <ArrowRight size={13} /></Link></header>
+          <strong className="admin-work-queue-count">{workflowQueue?.candidate_review_count ?? 0}</strong>
+          <p>候选保持待审核，不会因置信度高自动写入正式知识。</p>
+        </section>
+        <WorkflowQueuePanel title="最近处理" items={workflowQueue?.recent_items ?? []} empty="尚无最近处理记录。" />
+      </section>
+
+      <header className="admin-dashboard-section-heading"><p>概况</p><h2>馆藏与运行摘要</h2></header>
       <section className="metric-grid">
         {displayCards.map(([label, value, detail]) => (
           <article key={label}>
@@ -227,7 +269,7 @@ export function AdminDashboard() {
                 <span>{item.source_filename}</span>
                 <span>{item.error_message || "元数据需要确认"}</span>
                 <span>{item.stage_progress}%</span>
-                <Link href={`/admin/review/${item.id}`}>复核 <ArrowRight size={13} /></Link>
+                <Link href={`/admin/intake/${item.id}#bibliography`}>继续 <ArrowRight size={13} /></Link>
               </p>
             ))}
             {live && !reviewItems.length ? <p className="empty-state">当前没有需要人工处理的项目。</p> : null}
@@ -242,7 +284,7 @@ export function AdminDashboard() {
               <span>{candidate.field_name}</span>
               <p><strong>{displayCandidate(candidate.value)}</strong><small>{item.source_filename} · {candidate.source}</small></p>
               <b>{Math.round(candidate.confidence * 100)}%</b>
-              <Link href={`/admin/review/${item.id}`}>复核 <ArrowRight size={13} /></Link>
+              <Link href={`/admin/intake/${item.id}#bibliography`}>审核 <ArrowRight size={13} /></Link>
             </div>
           ))}
           {live && !candidates.length ? <p className="empty-state">最近项目没有待展示的识别候选。</p> : null}
@@ -276,12 +318,12 @@ export function AdminDashboard() {
             <p className="health-row" key={service}><i /><strong>{service}</strong><span>{state}</span></p>
           ))}
         </AdminPanel>
-        <AdminPanel title="元数据编辑器" href={selectedReview ? `/admin/review/${selectedReview.id}` : "/admin/review"} className="metadata-editor-preview">
+        <AdminPanel title="馆藏编辑器" href={selectedReview ? `/admin/intake/${selectedReview.id}#bibliography` : "/admin/review"} className="metadata-editor-preview">
           {selectedReview ? Object.entries(selectedReview.recognized_metadata).slice(0, 6).map(([label, value]) => (
             <label key={label}><span>{label}</span><input value={displayCandidate(value)} readOnly /></label>
           )) : <p className="empty-state">待复核项目会在这里显示识别结果。</p>}
         </AdminPanel>
-        <AdminPanel title="PDF 预览" href={selectedReview ? `/admin/review/${selectedReview.id}` : "/admin/review"} className="pdf-admin-preview">
+        <AdminPanel title="PDF 预览" href={selectedReview ? `/admin/intake/${selectedReview.id}#reader` : "/admin/review"} className="pdf-admin-preview">
           <div>
             <small>{selectedReview ? `${selectedReview.stage_progress}%` : "暂无文档"}</small>
             <h2>{selectedReview?.title || selectedReview?.source_filename || "等待上传"}</h2>
@@ -299,6 +341,37 @@ export function AdminDashboard() {
         </AdminPanel>
       </div>
     </div>
+  );
+}
+
+function WorkflowQueuePanel({
+  title,
+  items,
+  empty,
+  tone = "neutral",
+  step,
+}: {
+  title: string;
+  items: WorkflowQueueItem[];
+  empty: string;
+  tone?: "neutral" | "danger";
+  step?: string;
+}) {
+  return (
+    <section className={`admin-panel admin-work-queue-panel tone-${tone}`}>
+      <header><h2>{title}</h2><span>{items.length}</span></header>
+      {items.slice(0, 4).map((item) => {
+        const targetStep = step ?? item.current_step ?? "file";
+        const issueCount = item.blockers_count + item.unresolved_count;
+        return (
+          <Link className="admin-work-queue-item" href={`/admin/intake/${item.item_id}#${targetStep}`} key={item.item_id}>
+            <span><strong>{item.title || item.source_filename || "未命名馆藏"}</strong><small>{item.current_step_label || targetStep}</small></span>
+            <b>{issueCount ? `${issueCount} 项` : "继续"}<ArrowRight size={13} /></b>
+          </Link>
+        );
+      })}
+      {!items.length ? <p className="empty-state">{empty}</p> : null}
+    </section>
   );
 }
 

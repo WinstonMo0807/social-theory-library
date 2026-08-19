@@ -60,7 +60,13 @@ from catalog.services.publication_places import (
     record_manual_publication_places,
     serialize_publication_place_evidence,
 )
-from common.permissions import CanUpload, IsCatalogEditor, IsLibraryAdmin, IsLibraryStaff
+from common.permissions import (
+    CanEditMetadata,
+    CanUpload,
+    IsCatalogEditor,
+    IsLibraryAdmin,
+    IsLibraryStaff,
+)
 from common.capabilities import Capability, has_capability
 
 from .models import (
@@ -1597,7 +1603,7 @@ class ReplaceUploadItemView(APIView):
 
 
 class MetadataReviewView(APIView):
-    permission_classes = [IsLibraryStaff]
+    permission_classes = [CanEditMetadata]
 
     @transaction.atomic
     def put(self, request, item_id):
@@ -2276,7 +2282,7 @@ class MetadataSuggestionRefreshView(APIView):
 
 
 class MetadataCandidateDecisionView(APIView):
-    permission_classes = [IsLibraryStaff]
+    permission_classes = [CanEditMetadata]
 
     def post(self, request, item_id, candidate_id):
         candidate = get_object_or_404(

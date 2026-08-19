@@ -12,7 +12,6 @@ import {
   GitBranch,
   GitFork,
   GraduationCap,
-  Info,
   LayoutDashboard,
   Menu,
   RefreshCw,
@@ -26,46 +25,46 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ADMIN_VERSION_LABEL } from "@/lib/version";
 import { Wordmark } from "./site-header";
 
 const navigation = [
-  ["工作台", [["/admin", LayoutDashboard, "今日工作"]]],
+  ["工作", [
+    ["/admin", LayoutDashboard, "今日工作"],
+    ["/admin/uploads", Upload, "上传与批次"],
+    ["/admin/review", Boxes, "待处理"],
+    ["/admin/publication", Send, "发布准备"],
+    ["/admin/candidates", CircleDot, "待候选审核"],
+  ]],
   ["馆藏", [
-    ["/admin/uploads", Upload, "上传文件"],
-    ["/admin/review", Boxes, "上架与复核"],
-    ["/admin/library", BookOpen, "馆藏 / 版本 / 文件"],
-    ["/admin/publication", Send, "发布确认"],
+    ["/admin/library", BookOpen, "作品"],
+    ["/admin/library?view=editions", Boxes, "版本与文件"],
+    ["/admin/library?view=quality", Activity, "馆藏质量"],
   ]],
   ["知识", [
-    ["/admin/knowledge", CircleDot, "知识工作台"],
     ["/admin/scholars", UserRound, "学者"],
     ["/admin/disciplines", GraduationCap, "学科"],
     ["/admin/subdisciplines", GitBranch, "子学科"],
-    ["/admin/theory-nodes", CircleDot, "理论"],
+    ["/admin/theory-nodes", CircleDot, "理论与概念"],
     ["/admin/topics", Tags, "主题"],
     ["/admin/theory-relations", GitFork, "关系与时间轴"],
-    ["/admin/reading-paths", BookOpen, "阅读路径"],
-  ]],
-  ["审核", [["/admin/candidates", Boxes, "候选审核中心"]]],
-  ["搜索与智能", [
     ["/admin/query-lexicon", Search, "QueryLexicon"],
     ["/admin/semantic-index", ScanSearch, "语义索引"],
-    ["/admin/settings", Sparkles, "书库问答与模型"],
   ]],
-  ["运营", [
+  ["策展", [
+    ["/admin/reading-paths", BookOpen, "阅读路径"],
+    ["/admin/recommendations", Sparkles, "推荐"],
+  ]],
+  ["系统", [
     ["/admin/processing", ChartNoAxesCombined, "处理任务"],
     ["/admin/status", Activity, "系统状态"],
     ["/admin/distribution", Cloud, "备份与存储"],
     ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
-  ]],
-  ["管理", [
-    ["/admin/users", Users, "用户与角色"],
-    ["/admin/about", Info, "设置与编辑"],
-    ["/admin/recommendations", Sparkles, "推荐"],
+    ["/admin/users", Users, "用户与权限"],
+    ["/admin/settings", Sparkles, "运行设置"],
   ]],
 ] as const;
 
@@ -98,6 +97,8 @@ const staffRoles = ["admin", "editor", "reviewer"] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const focusMode = /^\/admin\/(?:intake\/[^/]+|library\/works\/[^/]+)\/?$/.test(pathname);
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
@@ -190,8 +191,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="admin-shell">
-      <aside
+    <div className={`admin-shell ${focusMode ? "focus-mode" : ""}`}>
+      {!focusMode ? <aside
         id="admin-navigation"
         className={`admin-sidebar ${open ? "open" : ""}`}
         aria-label="后台导航"
@@ -208,7 +209,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <section className="admin-nav-group" key={group}>
               <p>{group}</p>
               {visibleLinks.map(([href, Icon, label]) => {
-                const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+                const [hrefPath, hrefQuery = ""] = href.split("?");
+                const requestedView = new URLSearchParams(hrefQuery).get("view");
+                const currentView = searchParams.get("view");
+                const active = hrefPath === "/admin"
+                  ? pathname === hrefPath
+                  : pathname.startsWith(hrefPath)
+                    && (requestedView ? currentView === requestedView : hrefPath !== "/admin/library" || !currentView);
                 return <Link className={active ? "active" : ""} href={href} key={href} prefetch={false} onClick={closeNavigation}><Icon size={17} />{label}</Link>;
               })}
             </section>
@@ -217,9 +224,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="system-status"><span /><small>当前会话</small><strong>API 已连接</strong></div>
         <footer><strong>社会理论书库</strong><span>{ADMIN_VERSION_LABEL}</span></footer>
-      </aside>
+      </aside> : null}
       <div className="admin-main">
-        <header className="admin-topbar">
+        {!focusMode ? <header className="admin-topbar">
           <button
             ref={menuButtonRef}
             className="admin-menu-button"
@@ -236,7 +243,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </form>
           <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link>
           <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : user.role === "reviewer" ? "审核者" : "编辑"}</small></p></div>
-        </header>
+        </header> : null}
         <div className="admin-content">{children}</div>
       </div>
     </div>

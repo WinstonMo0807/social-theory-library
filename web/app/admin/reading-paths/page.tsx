@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ReadingPathsAdmin } from "@/components/theory-system-admin";
+import { ReadingPathWorkbench } from "@/components/admin/curation/reading-path-workbench";
 
 export const metadata: Metadata = { title: "阅读路径管理" };
 
 export default function Page() {
-  return <ReadingPathsAdmin />;
+  return <ReadingPathWorkbench />;
 }

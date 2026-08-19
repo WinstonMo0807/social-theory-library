@@ -634,7 +634,7 @@ export function AdminUpload() {
 
       // Every normal browser origin uses R2 staging. The legacy Django chunk
       // implementation below remains readable for historical in-flight
-      // sessions, but the 2.7.1 upload page never sends PDF bytes to it.
+      // sessions, but the current upload page never sends PDF bytes to it.
       if (window.location.protocol === "https:" || window.location.protocol === "http:") {
         async function sendR2File(item: QueuedFile) {
           updateFile(item.token, {
@@ -1275,8 +1275,8 @@ export function AdminUpload() {
                   {!item.edition && !item.error_message ? <p className="ingestion-item-note">文件已安全保存。书目记录建立后，可直接进入候选复核；等待期间无需重复点击。</p> : null}
                   <footer>
                     {canRetry ? <button className="button secondary" type="button" disabled={retryingItem === item.id} onClick={() => void retryIngestionItem(item.id)}>{retryingItem === item.id ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}重新处理</button> : null}
-                    {item.edition ? <Link className="button secondary" href={`/admin/review/${item.id}`}>复核识别候选 <ArrowRight size={14} /></Link> : <span className="ingestion-waiting-action">等待书目识别</span>}
-                    {item.edition && item.can_manage_publication ? <Link className="button" href={`/admin/publication?item=${item.id}`}>进入发布确认 <ArrowRight size={14} /></Link> : null}
+                    {item.edition ? <Link className="button secondary" href={`/admin/intake/${item.id}#bibliography`}>继续馆藏工作 <ArrowRight size={14} /></Link> : <span className="ingestion-waiting-action">等待书目识别</span>}
+                    {item.edition && item.can_manage_publication ? <Link className="button" href={`/admin/intake/${item.id}#publication`}>进入发布检查 <ArrowRight size={14} /></Link> : null}
                   </footer>
                 </article>
               );

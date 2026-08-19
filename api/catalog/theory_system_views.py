@@ -582,7 +582,7 @@ class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
     def get_queryset(self):
         queryset = ReadingPath.objects.filter(status="published").select_related(
             "primary_discipline"
-        ).prefetch_related("items__node", "items__work")
+        ).prefetch_related("stages", "items__stage", "items__node", "items__work")
         discipline = self.request.query_params.get("discipline", "").strip()
         if discipline:
             queryset = queryset.filter(primary_discipline__slug=discipline)
@@ -603,7 +603,7 @@ class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
     lookup_field = "slug"
     queryset = ReadingPath.objects.filter(status="published").select_related(
         "primary_discipline"
-    ).prefetch_related("items__node", "items__work")
+    ).prefetch_related("stages", "items__stage", "items__node", "items__work")
 
 
 class AdminKnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
@@ -1086,7 +1086,7 @@ class AdminReadingPathListView(TheorySystemFeatureMixin, generics.ListCreateAPIV
 
     def get_queryset(self):
         queryset = ReadingPath.objects.select_related("primary_discipline").prefetch_related(
-            "items__node", "items__work"
+            "stages", "items__stage", "items__node", "items__work"
         )
         status_value = self.request.query_params.get("status", "").strip()
         discipline = self.request.query_params.get("discipline", "").strip()
@@ -1099,6 +1099,11 @@ class AdminReadingPathListView(TheorySystemFeatureMixin, generics.ListCreateAPIV
             queryset = queryset.filter(Q(title__icontains=query) | Q(introduction__icontains=query))
         return queryset.order_by("sort_order", "title")
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_unpublished_items"] = True
+        return context
+
 
 class AdminReadingPathDetailView(
     TheorySystemFeatureMixin,
@@ -1108,5 +1113,18 @@ class AdminReadingPathDetailView(
     serializer_class = ReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = ReadingPath.objects.select_related("primary_discipline").prefetch_related(
-        "items__node", "items__work"
+        "stages", "items__stage", "items__node", "items__work"
     )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_unpublished_items"] = True
+        return context
+
+    def perform_destroy(self, instance):
+        if instance.status == "published" and not has_capability(
+            self.request.user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise PermissionDenied("删除已发布阅读路径需要 authority 发布权限。")
+        return super().perform_destroy(instance)

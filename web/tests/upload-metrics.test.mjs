@@ -80,8 +80,8 @@ test("accepted uploads continue into live identification and publication actions
   assert.match(source, /disciplines: "学科"/);
   assert.match(source, /theory_schools: "理论流派"/);
   assert.match(source, /subdisciplines: "子学科"/);
-  assert.match(source, /\/admin\/review\/\$\{item\.id\}/);
-  assert.match(source, /\/admin\/publication\?item=\$\{item\.id\}/);
+  assert.match(source, /\/admin\/intake\/\$\{item\.id\}#bibliography/);
+  assert.match(source, /\/admin\/intake\/\$\{item\.id\}#publication/);
 });
 
 test("new upload batches submit explicit intake policies without rewriting resumed sessions", async () => {

@@ -471,7 +471,7 @@ export function ProcessingCenter() {
                 <div><dt>截止</dt><dd>{timeLabel(task.due_at)}</dd></div>
               </dl>
               <footer>
-                {task.upload_item ? <Link href={`/admin/review/${task.upload_item}`}>进入审校</Link> : null}
+                {task.upload_item ? <Link href={`/admin/intake/${task.upload_item}#bibliography`}>进入工作流</Link> : null}
                 {canManageReviewTasks && task.status === "pending" ? <button type="button" onClick={() => void reviewTaskAction(task, "assign_self")}>领取任务</button> : null}
                 {canManageReviewTasks && task.status === "in_progress" && task.task_type !== "entity_resolution" ? <button type="button" onClick={() => void reviewTaskAction(task, "complete")}>标记完成</button> : null}
                 {canManageReviewTasks && (task.status === "completed" || task.status === "cancelled") ? <button type="button" onClick={() => void reviewTaskAction(task, "reopen")}>恢复待办</button> : null}
@@ -495,7 +495,7 @@ export function ProcessingCenter() {
           {filteredJobs.map((job) => (
             <article className={`processing-job-card ${job.status}`} key={`${job.source}-${job.id}`}>
               <header><span>{jobLabels[job.job_type] ?? job.job_type}</span><b>{statusLabels[job.status] ?? job.status}</b></header>
-              <div className="processing-job-title"><div><strong>{job.title || "全库任务"}</strong><small>{job.item_id ? <Link href={`/admin/review/${job.item_id}`}>打开馆藏</Link> : job.asset_id ? "资产级任务" : "系统任务"}</small></div><strong>{job.progress}%</strong></div>
+              <div className="processing-job-title"><div><strong>{job.title || "全库任务"}</strong><small>{job.item_id ? <Link href={`/admin/intake/${job.item_id}#file`}>打开馆藏</Link> : job.asset_id ? "资产级任务" : "系统任务"}</small></div><strong>{job.progress}%</strong></div>
               <div className="processing-job-progress" aria-label={`进度 ${job.progress}%`}><i style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }} /></div>
               <dl><div><dt>引擎</dt><dd>{job.engine || "未记录"}</dd></div><div><dt>配置</dt><dd>{job.settings_version || "环境默认"}</dd></div><div><dt>尝试</dt><dd>{job.attempt}/{job.max_attempts}</dd></div><div><dt>耗时</dt><dd>{durationLabel(job.duration_seconds)}</dd></div><div><dt>开始</dt><dd>{timeLabel(job.started_at || job.created_at)}</dd></div><div><dt>结束</dt><dd>{timeLabel(job.finished_at)}</dd></div></dl>
               {job.last_error ? <details className="processing-job-error" open={job.status === "failed"}><summary>{job.error_code || "查看错误"}</summary><p>{job.last_error}</p></details> : null}
@@ -520,7 +520,7 @@ export function ProcessingCenter() {
             <article key={item.id}>
               <div className="processing-item-heading"><FileText size={17} /><p><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></p><b>{stageLabels[item.status] ?? item.status}</b><span>{item.stage_progress}%</span></div>
               <div className="processing-bar"><i style={{ width: `${item.stage_progress}%` }} /></div>
-              <div className="processing-item-detail"><span>{item.is_stalled ? `已停滞 ${Math.max(1, Math.floor(item.stalled_seconds / 60))} 分钟` : latest ? `${latest.stage} · ${latest.status}` : "尚无处理日志"}</span><span>{item.error_message || item.dispatch_error || latest?.error_message || new Date(item.updated_at).toLocaleString("zh-CN")}</span><span><Link href={`/admin/review/${item.id}`}>查看详情</Link>{item.edition ? <Link href={`/admin/publication?item=${item.id}`}>发布台</Link> : null}{item.suggested_action === "retry" || item.suggested_action === "resume" ? <button type="button" onClick={() => void retry(item)}><RotateCcw size={13} />重新处理</button> : null}<button className="danger-link" type="button" onClick={() => setRemoveTarget(item)}><Trash2 size={13} />移除</button></span></div>
+              <div className="processing-item-detail"><span>{item.is_stalled ? `已停滞 ${Math.max(1, Math.floor(item.stalled_seconds / 60))} 分钟` : latest ? `${latest.stage} · ${latest.status}` : "尚无处理日志"}</span><span>{item.error_message || item.dispatch_error || latest?.error_message || new Date(item.updated_at).toLocaleString("zh-CN")}</span><span><Link href={`/admin/intake/${item.id}#file`}>查看详情</Link>{item.edition ? <Link href={`/admin/intake/${item.id}#publication`}>发布检查</Link> : null}{item.suggested_action === "retry" || item.suggested_action === "resume" ? <button type="button" onClick={() => void retry(item)}><RotateCcw size={13} />重新处理</button> : null}<button className="danger-link" type="button" onClick={() => setRemoveTarget(item)}><Trash2 size={13} />移除</button></span></div>
             </article>
           );
         })}

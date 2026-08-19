@@ -150,7 +150,7 @@ export function ReviewQueue() {
               <span>{statusLabels[item.status] ?? item.status} · {item.stage_progress}%</span>
               <b>{candidate ? `${Math.round(candidate.confidence * 100)}%` : "人工值"}</b>
               <span title={reason}>{reason}</span>
-              <Link href={`/admin/review/${item.id}`}>开始复核 <ArrowRight size={14} /></Link>
+              <Link href={`/admin/intake/${item.id}#bibliography`}>继续处理 <ArrowRight size={14} /></Link>
             </article>
           );
         })}

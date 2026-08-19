@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ingestion.models import ProcessingJob
+from ingestion.models import ProcessingJob, UploadItem
 
 from common.permissions import (
     CanAccessBackOffice,
@@ -17,12 +17,12 @@ from common.permissions import (
 )
 
 from catalog.services.backoffice import (
-    intake_workspace,
     knowledge_workspace,
     projection_status,
     query_lexicon_term_inspector,
     system_status_snapshot,
 )
+from catalog.services.admin_workspace import build_admin_workspace
 from catalog.services.query_lexicon.operations import (
     enqueue_query_lexicon_reconciliation,
     reconcile_preview,
@@ -115,10 +115,44 @@ class AdminIntakeWorkspaceView(APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, item_id):
-        payload = intake_workspace(item_id=str(item_id))
-        if not payload.get("exists"):
+        item = UploadItem.objects.select_related("edition__work").filter(pk=item_id).first()
+        if item is None:
             return Response({"detail": "上架项目不存在。"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(payload)
+        if item.edition_id is None:
+            from catalog.services.admin_workflow import build_intake_workflow
+
+            legacy = {
+                "mode": "intake",
+                "context": {
+                    "item_id": str(item.id),
+                    "title": item.source_filename,
+                    "filename": item.source_filename,
+                    "return_href": "/admin/review",
+                },
+                "workflow": build_intake_workflow(item),
+                "data": {
+                    "file": {
+                        "filename": item.source_filename,
+                        "status": item.status,
+                        "workflow_state": item.workflow_state,
+                        "error_code": item.error_code,
+                        "error_message": item.error_message,
+                        "can_retry": item.status == UploadItem.Status.FAILED,
+                    }
+                },
+                "candidates": {},
+                "permissions": {"can_edit": True, "can_publish": False},
+                "queue": {"return_href": "/admin/review"},
+            }
+            return Response(legacy)
+        return Response(
+            build_admin_workspace(
+                item.edition,
+                user=request.user,
+                mode="intake",
+                item=item,
+            )
+        )
 
 
 class AdminProjectionRefreshView(APIView):

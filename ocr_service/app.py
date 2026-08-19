@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from paddleocr import PaddleOCR, PPStructureV3
 
 
-app = FastAPI(title="Social Theory Library OCR", version="2.7.1")
+app = FastAPI(title="Social Theory Library OCR", version="2.8.0")
 PRIMARY_LANGUAGE = os.getenv("OCR_PRIMARY_LANGUAGE", "ch")
 FALLBACK_LANGUAGE = os.getenv("OCR_FALLBACK_LANGUAGE", "chinese_cht")
 RENDER_DPI = int(os.getenv("OCR_RENDER_DPI", "180"))

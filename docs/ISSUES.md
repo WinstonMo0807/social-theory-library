@@ -2,6 +2,14 @@
 
 更新日期为 2026-08-19。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
 
+## 当前 2.8 本地边界
+
+- 2.8.0 馆藏与策展工作流已在源码和独立本地 SQLite 预览中实现。它尚未部署生产，不能把本地页面、SQLite migration 或 mock/preview PDF 当成 DX4600、PostgreSQL、R2、NAS、Worker、Meilisearch 或 Cloudflare 验收。
+- catalog 0031 新增 EditionWorkflowDecision、ReadingPathStage 和 ReadingPathItem stage/position。历史 Item 会逐条转换为独立 Stage，不按同名自动合并；生产迁移前需 fresh BackupJob，并应在 PostgreSQL 副本核查无效 target、重复 Work placement 和阶段排序。当前只完成 SQLite 从零迁移与 0030 至 0031 数据迁移回归。
+- 单 Work Reading Path 和 RecommendationOverride mutation 已有权限、锁、冲突与审计测试。真实多管理员 PostgreSQL 竞争、现有生产 Reading Path 的人工阶段合并和长期推荐刷新仍为 `待核实`。
+- 本地浏览器已验证 book、journal_article、Focus Mode、Inspector、自动下一步、dirty preservation、单项策展、warning publication 和 Maintenance Mode。真实大 PDF、R2 multipart、OCR/页码 Worker、生产 search/index 和登录后公网角色矩阵不在本轮本地预览结论内。
+- 2.8 没有开发新的互联网 Research & Curation Discovery。Field Enrichment 仍使用既有 structured/web Candidate 和 Evidence；失败继续显式显示，不会自动写 canonical knowledge。
+
 ## 当前 2.7 总览
 
 - 六项 master issue 的源码均已进入 2.7，P0 ingestion locking、session bootstrap 和 PostgreSQL 16 BackupJob 已部署。

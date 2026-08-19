@@ -198,7 +198,7 @@ export function PublicationDesk() {
                     <div><dt>人工复核</dt><dd>{active.review_data.review_progress}%</dd></div>
                   </dl>
                   <div className="publication-preview-actions">
-                    <Link className="button secondary" href={`/admin/review/${active.id}`}>编辑复核内容</Link>
+                    <Link className="button secondary" href={`/admin/intake/${active.id}#publication`}>打开馆藏工作流</Link>
                     {active.review_data.public_slug && active.review_data.publication_state === "published" ? <Link className="button secondary" href={`/works/${active.review_data.public_slug}`} target="_blank">查看公网 <ExternalLink size={14} /></Link> : null}
                   </div>
                 </div>

@@ -1,6 +1,16 @@
 # 开发进度
 
-更新日期为 2026-08-19。当前源码版本为 2.7.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-19。当前源码版本为 2.8.0；公网仍保持最后核实的 2.7.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+
+## 当前 2.8.0 本地状态
+
+- 已把 `/admin/intake/<itemId>` 重构为九步 Hybrid Progressive Workflow。保存并继续、step rail 回跳、hash replaceState、dirty merge、Ctrl/Cmd+S、离开提示、共享 Inspector 和移动端 drawer 已接入。
+- 已新增 `/admin/library/works/<workId>` Maintenance Mode 和 Work-centric `/admin/library`。发布后留在当前项会进入同一 Editor Engine；UploadItem 不再充当正式馆藏身份。
+- 后端新增只读 workflow evaluator、EditionWorkflowDecision、分节事务保存、Work-centric list/queue/workspace、maintenance publication 和 action target。publication 仍只调用现有 preflight/publish/withdraw service。
+- Reading Path 新增显式 Stage。单 Work contextual placement 不覆盖整条路径；高级工作台支持阶段和阶段内项目分别排序，并带 updated_at 并发检查。Recommendation 继续使用 Override，没有新增平行模型。
+- book 与 journal_article 均通过后端 workflow 测试。真实本地浏览器又完成 journal title、authors、volume/issue/page/DOI、classification、theory/topic、Reading Path placement、RecommendationOverride、warning confirmation、publish 和 Maintenance Mode。
+- 本地验证包括后端完整 pytest 退出 0，收集 584 项；Django check、migration drift、0030 至 0031 数据迁移测试、compileall、前端 production build、Node 75 项、Auth/Scoped Search 19 项、Workflow Playwright 3 项、TypeScript、完整 ESLint 和 diff check 均通过。
+- 独立本地 SQLite 从零应用 catalog 0031，readiness 为 2.8.0、pending migrations 0。本地预览通过 `http://localhost:3100` 提供。没有连接生产、执行生产 migration、部署公网、修改活动索引或运行真实 Provider。
 
 ## 当前 2.7.1 状态
 

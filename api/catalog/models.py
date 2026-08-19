@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from common.models import UUIDTimeStampedModel
 
@@ -266,6 +267,59 @@ class Edition(UUIDTimeStampedModel):
     @publication_place_verbatim.setter
     def publication_place_verbatim(self, value):
         self.publication_place = value
+
+
+class EditionWorkflowDecision(UUIDTimeStampedModel):
+    class Step(models.TextChoices):
+        WORK = "work", "作品识别"
+        BIBLIOGRAPHY = "bibliography", "书目与出版"
+        CONTRIBUTORS = "contributors", "责任者与身份"
+        CLASSIFICATION = "classification", "社科分类"
+        KNOWLEDGE = "knowledge", "理论、主题与知识关系"
+        READER = "reader", "文本与阅读文件"
+        CURATION = "curation", "策展定位"
+
+    class Decision(models.TextChoices):
+        CONFIRMED = "confirmed", "已确认"
+        SKIPPED = "skipped", "已跳过"
+
+    edition = models.ForeignKey(
+        Edition,
+        on_delete=models.CASCADE,
+        related_name="workflow_decisions",
+    )
+    step_key = models.CharField(max_length=24, choices=Step.choices)
+    decision = models.CharField(
+        max_length=16,
+        choices=Decision.choices,
+        default=Decision.CONFIRMED,
+    )
+    content_fingerprint = models.CharField(max_length=64)
+    note = models.TextField(blank=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="confirmed_edition_workflow_steps",
+    )
+    confirmed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["edition_id", "step_key"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["edition", "step_key"],
+                name="unique_edition_workflow_step",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(step_key="curation")
+                    | models.Q(decision="confirmed")
+                ),
+                name="workflow_skip_only_curation",
+            ),
+        ]
 
 
 def asset_upload_path(instance, filename):
@@ -2592,13 +2646,36 @@ class ReadingPath(UUIDTimeStampedModel):
         indexes = [models.Index(fields=["status", "sort_order"])]
 
 
+class ReadingPathStage(UUIDTimeStampedModel):
+    reading_path = models.ForeignKey(
+        ReadingPath,
+        on_delete=models.CASCADE,
+        related_name="stages",
+    )
+    name = models.CharField(max_length=160)
+    description = models.TextField(blank=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "created_at"]
+        indexes = [models.Index(fields=["reading_path", "position"])]
+
+
 class ReadingPathItem(UUIDTimeStampedModel):
     reading_path = models.ForeignKey(ReadingPath, on_delete=models.CASCADE, related_name="items")
+    stage = models.ForeignKey(
+        ReadingPathStage,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="items",
+    )
     stage_name = models.CharField(max_length=160)
     stage_description = models.TextField(blank=True)
     node = models.ForeignKey(KnowledgeNode, null=True, blank=True, on_delete=models.SET_NULL, related_name="reading_path_items")
     work = models.ForeignKey(Work, null=True, blank=True, on_delete=models.SET_NULL, related_name="reading_path_items")
     recommendation_reason = models.TextField(blank=True)
+    position = models.PositiveIntegerField(default=0)
     reading_order = models.PositiveIntegerField(default=0)
     is_required = models.BooleanField(default=False)
     editorial_note = models.TextField(blank=True)
