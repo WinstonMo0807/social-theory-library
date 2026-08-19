@@ -54,7 +54,7 @@ def test_public_compose_pins_internal_searxng_with_json_api():
     service = compose[start:end]
     settings_text = (root / "deploy" / "searxng" / "settings.yml").read_text(encoding="utf-8")
 
-    assert "docker.io/searxng/searxng:2026.8.4-c63835bd2" in service
+    assert "ghcr.io/searxng/searxng:2026.8.4-c63835bd2" in service
     assert 'expose:\n      - "8080"' in service
     assert "ports:" not in service
     assert "SEARXNG_SECRET" in service

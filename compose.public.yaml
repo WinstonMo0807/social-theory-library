@@ -85,7 +85,7 @@ services:
 
   searxng:
     <<: *service-hardening
-    image: docker.io/searxng/searxng:2026.8.4-c63835bd2
+    image: ghcr.io/searxng/searxng:2026.8.4-c63835bd2
     environment:
       SEARXNG_SECRET: ${SEARXNG_SECRET:?请设置 SEARXNG_SECRET}
       SEARXNG_BASE_URL: http://searxng:8080/
