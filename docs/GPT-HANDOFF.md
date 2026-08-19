@@ -20,13 +20,14 @@
 | 源码版本 | 2.7.1 |
 | Git 工作分支 | `codex/release-2.7`。实际 commit 以 `git rev-parse HEAD` 为准 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
-| 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7-87251cb` image family |
-| 生产 migration head | catalog 0030、ingestion 0012、reading 0007 |
+| 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7.1-5d432f7` image family |
+| 生产 migration head | catalog 0030、ingestion 0013、reading 0007 |
 | QueryLexicon | revision 1，generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` |
 | 语义索引 | active UID `semantic_passages_20260818210650_4cf87bc9`，3,005 个已核对文档 |
 | 观点检索 | 公共 V2 已在有限真实对照后启用。Ask Library 仍固定 stable retrieval |
 | Ask Library | 对注册读者开放。读者自行配置 OpenAI-compatible、Ollama 或 vLLM；服务器 profile 只是可选后备 |
 | General Web | 内网 SearXNG 只发现 URL，实际证据必须由 SafeWebFetcher 取得正文 |
+| PDF upload staging | Cloudflare R2 已启用，只做临时中转；永久 PDF 仍进入 NAS |
 | Candidate | 只产生待审核记录。没有自动发布 authority，也没有自动 Accept |
 | 当前发布判断 | `PUBLIC DEPLOYED / READY FOR MANUAL VALIDATION` |
 

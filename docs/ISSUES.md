@@ -128,7 +128,7 @@ Task 6 已让 LibraryConversation scope 复用本节的 plural context contract�
 
 ## STL-007 resumable large PDF upload
 
-状态为 2.7.1 源码已重构，生产发布后进入观察。
+状态为 2.7.1 已部署并进入观察。
 
 旧公网实现把 2 MiB PDF chunk 逐片发送到 Django，XHR `timeout=0`，current speed 只在 progress event 更新，ETA 优先累计平均速度。连接半开时没有新事件，旧速度不会下降，也没有 stall abort，因此会长期显示正常速度和短 ETA。页面状态又主要位于 React 与 localStorage，切页或刷新后可见进度丢失。
 
@@ -142,7 +142,7 @@ R2 完成后由 Ingestion Worker 流式导入原有 intake/NAS storage并继续�
 
 ### 2.7.1 PDF illegal Unicode repair
 
-生产失败项 `9ce0b150-eca4-4872-9baf-d0a09cf08704` 已确认在 text extraction 第 32% 失败。PyMuPDF 从 PDF 字体返回 `封面` 后跟两个孤立 low surrogate，psycopg 无法把该 Python 字符串编码成 UTF-8。2.7.1 在 PDF/OCR extraction boundary 与 persistence defense 两层把孤立 surrogate 替换为 Unicode repair mark。原始 PDF、人工元数据和已保存字段不被改写。
+生产失败项 `9ce0b150-eca4-4872-9baf-d0a09cf08704` 已确认在 text extraction 第 32% 失败。PyMuPDF 从 PDF 字体返回 `封面` 后跟两个孤立 low surrogate，psycopg 无法把该 Python 字符串编码成 UTF-8。2.7.1 在 PDF/OCR extraction boundary 与 persistence defense 两层把孤立 surrogate 替换为 Unicode repair mark。正式重试已越过该阶段并达到 ready 100%，规范 Asset 保存 596 Page。原始 PDF、人工元数据和已保存字段未被改写，也没有自动发布。
 
 ## STL-008 BackupJob PostgreSQL client compatibility
 

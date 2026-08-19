@@ -2,7 +2,7 @@
 
 更新日期为 2026-08-19。本文件描述当前源码结构。生产状态引用历史 NAS 与公网只读验收，仍属于有时间边界的运行快照。
 
-当前源码版本为 2.7.1。2.7 生产快照已经完成 catalog 0030、ingestion 0012 和 reading 0007；2.7.1 增加 R2 临时上传中转与非法 PDF Unicode 清理，migration 为 ingestion 0013。公共观点检索 V2 与 Ask stable retrieval 的边界不变。完整入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前源码与生产版本为 2.7.1。生产 heads 为 catalog 0030、ingestion 0013 和 reading 0007；R2 临时上传中转与非法 PDF Unicode 清理已经部署。公共观点检索 V2 与 Ask stable retrieval 的边界不变。完整入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 

@@ -4,8 +4,9 @@
 
 ## Current verified state
 
-- 2.7 已部署，API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7-87251cb` image family。
-- 生产 migration heads 为 catalog 0030、ingestion 0012、reading 0007。
+- 2.7.1 已部署，API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.7.1-5d432f7` image family。
+- 生产 migration heads 为 catalog 0030、ingestion 0013、reading 0007。
+- R2 只作为浏览器 PDF staging，真实 multipart、CORS、ETag、abort 和 owner-scoped API 已验证。永久 PDF storage 仍是既有 NAS/Asset pipeline。
 - fresh BackupJob、PostgreSQL 16 migration、QueryLexicon reconciliation、clean semantic index audit 和 active UID switch 已完成。
 - 公共观点检索 V2 已在五条真实馆藏对照查询无 fallback 后启用。V1 保留为环境开关回退，Ask Library 继续使用 stable retrieval。
 - 内网 SearXNG discovery、VIAF partial result 和实际网页 SafeWebFetcher 已做生产 smoke。外部结果仍只形成 pending Candidate，没有自动 Accept 或 authority publish。

@@ -375,3 +375,15 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - 新 R2 API 包含 session list、init、part sign、part confirm、part failure telemetry、complete、abort 和 retry import。bucket、object key 与 upload ID 都由服务端 UploadItem 决定，浏览器不能提交任意 key。
 - Ingestion Worker 流式读取完整 R2 object，写现有 intake storage 时计算 SHA-256，并复用原 pipeline。正式导入失败保留 object；cleanup 失败保持书籍 ready 并由 Beat 恢复。
 - Fresh BackupJob `61bdce15-c4a2-4c1b-9161-6923fe03b6a7` 在生产变更前完成，artifact 为 10,634,361 bytes，SHA-256 `0ebc6b1519f5ce7eba2e7a6ad7e1b526ee304474b6fc36432f6826f498728b30`，PostgreSQL server 16.14 与 pg_dump/pg_restore 16.15 兼容。
+
+### 2026-08-19 2.7.1 production deployment result
+
+- 新 bucket-scoped R2 S3 credential 只写入生产 `.env`，权限保持 600，不进入 Git、数据库、日志或 API response。Cloudflare API Token 不进入 runtime。
+- 真实 R2 preflight 通过 list、CreateMultipartUpload、presigned UploadPart PUT、ETag 读取和 AbortMultipartUpload。正式 Origin 的 OPTIONS 为 204、PUT 为 200，Allow-Origin 为实际书库域名，Expose-Headers 包含 ETag；测试 multipart 已 abort。
+- 0013 在 PostgreSQL 16.14 disposable clone 完成应用、回退和重应用。生产 `migrate --plan` 只有 0013，正式 migration 用时 8 秒。Work、Edition、Asset、Person、KnowledgeNode、QueryLexicon revision/generation 和 active semantic UID 均未被 migration 改写。
+- API、Worker、Ingestion Worker、Beat 与 Web 已统一切换到 `2.7.1-5d432f7`。Edge 已强制刷新；API、两个 Worker、Redis、PostgreSQL、Meilisearch、SearXNG 和 Edge 健康，应用容器 RestartCount 为 0。
+- 公网 readiness/health 返回 2.7.1 且 pending migrations 为 0。未登录 R2 session API 返回 401，管理员只读 session API 返回 200，R2 状态为 enabled/configured 且不暴露 secret。PDF Range 继续返回 206、`application/pdf` 和 Content-Range。
+- 观点检索在 Meilisearch 已于发布前重启后的第一次请求短暂走 sparse fallback，随后恢复 `v2_hybrid`、fallback false。未修改 ranking、embedding、活动 UID 或执行 full reindex。
+- 原 Unicode 失败 UploadItem `9ce0b150-eca4-4872-9baf-d0a09cf08704` 通过正式 retry API 越过 text extraction 并达到 ready 100%。规范 Asset 已保存 596 Page；后续 OCR 为独立 running job，没有自动发布。
+- 新容器 20 分钟窗口未发现 schema、migration、Traceback 或 fatal 错误，日志未发现 R2 credential、Authorization 或 presigned signature pattern。
+- 真实 owner-scoped API smoke 在外层数据库回滚事务内完成 init 201、sign 200、presigned PUT 200、ETag confirm 200 和 abort 200；结束后 UploadItem row 不存在，multipart 已 abort，没有测试数据或 object 残留。

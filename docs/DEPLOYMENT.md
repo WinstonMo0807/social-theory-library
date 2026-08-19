@@ -208,12 +208,14 @@ R2_UPLOAD_CORS_ALLOWED_ORIGINS=https://books.winstonmo.com,http://localhost:3000
 
 Access Key、Secret 与 Cloudflare Token 不进入 Compose、数据库、浏览器、manifest、日志或 Git。S3 multipart 数据面不需要 Cloudflare API Token。若 Token 曾出现在聊天或截图，发布后应轮换并撤销。
 
-本地 Vinext 与 Compose Web 的实际端口是 3000，本地完整 Edge 默认 8080。生产 LAN Edge 当前使用 3000、18080 和 18082。R2 bucket CORS 必须按实际浏览器 Origin 配置，至少允许 PUT 与 Content-Type，并 expose ETag。应用提供以下无 Secret 命令：
+本地 Vinext 与 Compose Web 的实际端口是 3000，本地完整 Edge 默认 8080。生产 LAN Edge 当前使用 3000、18080 和 18082。R2 bucket CORS 必须按实际浏览器 Origin 配置，至少允许 PUT 与 Content-Type，并 expose ETag。应用提供以下无 Secret dry-run。只有临时运维 credential 具备 bucket CORS 管理权限时，第二条命令才会成功；正式 object-scoped runtime credential 应保持最小权限，生产 CORS 通常由 Cloudflare Dashboard 或独立运维 Token 写入。
 
 ```text
 python manage.py configure_r2_upload_cors --dry-run
 python manage.py configure_r2_upload_cors
 ```
+
+本次生产 object-scoped credential 对 `PutBucketCors` 正确返回 AccessDenied。管理员已在 Bucket Settings 保存同一最小策略，随后通过真实 OPTIONS、PUT 与 ETag response 验证。应用运行不需要 Cloudflare API Token。
 
 `ingestion.0013_uploaditem_staging_backend_and_more` 只增加 UploadItem staging 字段、索引、namespace constraint 与 ProcessingJob choice。它不连接 R2、不扫描 PDF、不搬移 NAS 文件、不生成任务。发布前仍需 fresh BackupJob、`migrate --plan`、空队列窗口、统一 2.7.1 image 和 additive PostgreSQL rehearsal。
 
