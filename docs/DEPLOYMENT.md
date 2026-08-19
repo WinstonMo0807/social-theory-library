@@ -178,3 +178,5 @@ docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-d
 ### Internal SearXNG source discovery
 
 `compose.public.yaml` pins the official GHCR mirror `ghcr.io/searxng/searxng:2026.8.4-c63835bd2` and mounts `deploy/searxng/settings.yml`. Set a random `SEARXNG_SECRET`, `FIELD_ENRICHMENT_SEARXNG_URL=http://searxng:8080`, and `FIELD_ENRICHMENT_SEARCH_ALLOWED_HOSTS=searxng` in the private production environment. The service has no host port and must remain on the backend network. Its JSON result is discovery metadata, not evidence; do not bypass `SafeWebFetcher` or the field policy registry.
+
+The production adapter timeout is 20 seconds and SearXNG gives upstream engines 10 seconds with a 20-second hard maximum. Provider timeout remains a partial-result error and must not be hidden as an empty candidate set.
