@@ -1,20 +1,25 @@
 # 开发进度
 
-更新日期为 2026-08-20。当前源码目标版本为 2.9.0，公网应用在本轮切换前仍为 2.8.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-20。当前源码与公网应用版本均为 2.9.0。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
 
 ## 当前 2.9.0 社科研究候选层状态
 
-- 分支为 `codex/v2.9-research-candidates`，基于已验证的 2.8.1 R2 热修复提交 `5dbbf6d`。2.9 源码已实现，生产部署与公网验收仍需以本轮实时证据确认。
+- 分支为 `codex/v2.9-research-candidates`，release commit 为 `e318ec8268e7ff4321b7474cba184b92d3a92ad5`，已推送同名远端分支并部署生产，没有合并 main。
 - 已新增只读 WorkflowSuggestionAggregator、步骤与字段策略注册表、来源画像注册表，以及 Intake 和 Maintenance suggestion API。没有新增 Candidate 表或 migration。
 - 已复用 MetadataCandidate、EntityResolutionCandidate、EnrichmentCandidate、TheoryReviewTask、QueryLexiconCandidate、QueryLexicon、SemanticChunk、SearXNG 和 SafeWebFetcher。搜索摘要只作线索，实际原页才可成为 Evidence。
 - Work、书目、责任者、分类、知识和策展步骤已接入按需加载的研究候选。Knowledge 不再要求管理员手工填写 UUID；学科接受复用已有 Work 关系；正式 Candidate 决定仍使用原 mutation 和 capability permission。
 - 图书和期刊共享同一策略。期刊字段覆盖 journal title、year、volume、issue、page range 和 DOI。网页内容不会直接写正式 RAG，联网词汇不会直接写 QueryLexiconEntry。
-- 本轮本地发布门槛已通过。后端完整 pytest 收集 617 项并以退出码 0 完成，Django check、migration drift 和 compileall 通过。前端 production build、通用 Node 84 项、Auth 与 Scoped Search 19 项、Workflow Playwright 3 项、TypeScript、完整 ESLint 和 diff check 均退出 0。生产镜像与公网验收仍需以本轮实时证据确认。
+- 本轮本地发布门槛已通过。后端完整 pytest 收集 617 项并以退出码 0 完成，Django check、migration drift 和 compileall 通过。前端 production build、通用 Node 84 项、Auth 与 Scoped Search 19 项、Workflow Playwright 3 项、TypeScript、完整 ESLint 和 diff check 均退出 0。
+- 生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.0-e318ec8-20260820-225905`，Web 使用 `social-theory-library-web:2.9.0-e318ec8-20260820-225905`。新应用容器 RestartCount 均为 0。
+- Fresh BackupJob `cde45824-844a-45d9-94ac-db0eaae750be` 已完成，归档 SHA-256 为 `68ff2e685c25afd1bbc5a467b1d416746d0e285947741e1ab37fa9b55a3666f4`，内部 database.dump 已通过 `pg_restore --list`。
+- 生产没有 pending migration。Work 7、Edition 7、Asset 14、Page 2,706、SemanticChunk 3,881。活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9`，记录与实测均为 3,005，切换前后核心对象 ID 哈希一致。
+- 公网 ready、health、主要公开路由、三条顺序 V2 观点检索、真实 PDF Range 206 与公网 2.9 bundle 已通过。SearXNG 生产发现器返回 200 和 8 条结果。
+- 正常 Winston 管理员会话已只读检查 Focus Mode、step rail、候选分组、Inspector、classification、knowledge、curation、publication、Maintenance Mode 和旧 URL redirect。没有保存、联网研究、Candidate decision、发布、下架或策展 mutation。
 - 普通非 superuser 管理员公网上传 E2E 继续按用户要求跳过。该项目仍标记为 `待核实`，不能写成权限路径已经由真实账户证明。
 
-## 当前 2.8.1 R2 入库热修复状态
+## 2.8.1 R2 入库热修复历史状态
 
-- 生产 API、默认 Worker、Ingestion Worker、Beat 与 Web 使用 `2.8.1-hotfix-20e448a-20260820-055953` 镜像族。`/api/ready/` 返回 2.8.1，数据库正常，pending migrations 为 0。
+- 2.9 切换前，生产 API、默认 Worker、Ingestion Worker、Beat 与 Web 使用 `2.8.1-hotfix-20e448a-20260820-055953` 镜像族。当时 `/api/ready/` 返回 2.8.1，数据库正常，pending migrations 为 0。
 - 活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9`，数据库和 Meilisearch 均为 3,005；本次没有重建或切换索引。
 - UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 已由 recovery 正式恢复，file、R2 import、cleanup 和 dispatch 均完成，状态为 ready，并建立 Work、Edition、原始 Asset 与 normalized Asset。
 - 新 Worker 启动后的 12 个 Beat recovery 周期没有新的空 FileField、nullable join 锁错误或队列堆积。切换窗口中旧 Worker 留下的两条 ValueError 历史记录保留不变。
@@ -23,7 +28,7 @@
 
 “社科研究候选层”已经从已验证的 2.8.1 提交切出独立 v2.9 分支，没有混入热修复分支。
 
-## 当前 2.8.0 生产状态
+## 2.8.0 生产历史状态
 
 - release commit 为 `2b1f91ef759b5642b299a5bc504f1f18d417c65e`。API、Worker、Ingestion Worker、Beat 使用 `social-theory-library-api:2.8.0-2b1f91e-20260820-035701`，Web 使用同 revision 的 2.8.0 镜像。
 - Fresh BackupJob `1bb75e2d-a411-448f-9553-25f605c5e0cd` 已完成。归档 SHA-256 为 `824f455fc340bfa69ab70f82c68a8f37dbfbc3d423c0233222e1182b4bf21e05`，同一归档已在 disposable PostgreSQL 中完成恢复和 catalog 0031 演练。

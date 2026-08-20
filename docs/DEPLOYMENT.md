@@ -1,15 +1,19 @@
 # 部署说明
 
-更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求、2.9 发布范围和最近一次 2.8.1 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.9.0 生产发布快照。任何后续部署仍需重新检查实时状态。
 
-## Version 2.9.0 release scope
+## Version 2.9.0 production deployment, 2026-08-20
 
-- 2.9 增加社科研究候选聚合、步骤级研究 API、Workflow Inspector 集成，以及 Work、Edition、分类和期刊字段的 FieldPolicy 覆盖。
-- 本次没有数据库 migration。不得修改 PostgreSQL、Redis、Meilisearch、PDF、模型或活动语义索引，也不重建独立 PaddleOCR 镜像。
-- API、默认 Worker、Ingestion Worker、Beat 和 Web 必须使用同一 2.9 revision。切换前创建 fresh BackupJob，并保留 2.8.1 API 与 Web 回退镜像和生产环境副本。
-- 切换门槛包括完整后端回归、Django check、migration drift、前端 TypeScript、ESLint、Node 回归和 production build。容器必须以真实 HTTP readiness 为准，不能只看 running。
-- 上线后除 ready、health、队列、活动索引、顺序观点检索和 PDF Range 206 外，还要检查 Intake Focus Mode、Maintenance Mode、候选分组、Inspector、classification、knowledge、curation 与保存并继续。普通非 superuser 真实上传继续按用户要求跳过并标记 `待核实`。
-- 生产镜像、BackupJob、包 SHA-256、回退目录和公网验收结果在切换完成后补入本节，不预先写成已通过。
+- release commit 为 `e318ec8268e7ff4321b7474cba184b92d3a92ad5`。源码归档 SHA-256 为 `c6ad9494bdd1ad6fbc7c34dd1b300c9d0a3f82fc93755ad37ec7403a91f67e67`，Web dist 归档为 `082f525c802414c4f431267b4c37d55d317e06ffed33d00c2c215c07523d32f2`。本地与 NAS 上传副本一致。
+- API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.0-e318ec8-20260820-225905`，镜像 ID 为 `sha256:063a3fcaa715cef3380b928cebf82821b6741612accf794e8216b8951b1d7d78`。Web 使用 `social-theory-library-web:2.9.0-e318ec8-20260820-225905`，镜像 ID 为 `sha256:8e0b6ac3f131d49de9707ae23445c1725c1de9c414e97220c6016cad05728551`。
+- 本次没有数据库 migration。production migrate plan 为空，catalog 保持 0031、ingestion 保持 0013、reading 保持 0007。PostgreSQL、Redis、Meilisearch、PDF、模型和 PaddleOCR 镜像没有替换或重建。
+- Fresh BackupJob 为 `cde45824-844a-45d9-94ac-db0eaae750be`。归档位于 `/data/backups/pre-v290-cutover-20260820-230321/library-backup-20260820-150405-cde45824.tar.gz`，SHA-256 为 `68ff2e685c25afd1bbc5a467b1d416746d0e285947741e1ab37fa9b55a3666f4`。内部 database.dump 已通过 `pg_restore --list`。
+- 切换记录与环境、Compose、核心对象和活动索引快照位于 `/volume2/library/docker/social-theory-library/storage/backups/pre-v290-cutover-20260820-230321/deploy-record`。2.8.1 回退标签为 `social-theory-library-api:pre-v290-20260820-230321` 与 `social-theory-library-web:pre-v290-20260820-230321`。应用回退只恢复环境和镜像，不反向迁移、不恢复数据库、不修改索引。
+- Work、Edition、Asset、Page、SemanticChunk、Person、KnowledgeNode、ReadingPath、UploadItem 与 ProcessingJob 的 ID 集合哈希在切换前后相同。活动索引保持 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。
+- 公网 ready、health、主要公开路由、三条顺序 `v2_hybrid` 查询、真实 PDF Range 206、公开版本 bundle 和新容器日志均通过。两个 Worker 与 Redis 队列为空，应用容器 RestartCount 均为 0。SearXNG 返回 200 和 8 条真实发现结果。
+- Winston 管理员会话只读检查了 Intake Focus Mode、step rail、候选 Inspector、classification、knowledge、curation、publication、Maintenance Mode 和旧 review/publication URL。没有执行保存、联网研究、Candidate decision、Reading Path、发布或下架 mutation。
+- 普通非 superuser 管理员公网上传与发布 E2E 按用户要求跳过，继续标记为 `待核实`。SSH 部署授权按用户要求保留，不能在后续任务完成前撤销。
+- `/tmp/social-theory-library-v290-e318ec8-20260820-225044` 发布暂存已经精确删除。部署脚本与 SHA 清单已复制到上述 deploy-record；成功镜像、fresh backup、回退标签和 SSH 授权均保留。
 
 ## Version 2.8.1 R2 ingestion hotfix, 2026-08-20
 

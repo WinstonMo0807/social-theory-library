@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-20。当前源码目标版本为 2.9.0，生产应用在本轮切换前仍为 2.8.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-20。当前源码与生产应用版本均为 2.9.0。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -17,25 +17,25 @@
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.9.0 社科研究候选层，生产发布前验证中 |
-| Git 工作分支 | `codex/v2.9-research-candidates`，基线提交 `5dbbf6d` |
+| 源码版本 | 2.9.0 社科研究候选层，已部署生产 |
+| Git 工作分支 | `codex/v2.9-research-candidates`，release commit `e318ec8268e7ff4321b7474cba184b92d3a92ad5` |
 | GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
-| 生产应用 | 本轮切换前仍为统一 2.8.1 热修复镜像；2.9 镜像与 release commit 待发布后记录 |
+| 生产应用 | API、Worker、Ingestion Worker 与 Beat 使用 `2.9.0-e318ec8-20260820-225905`，Web 使用同 revision 镜像 |
 | 生产 migration head | catalog 0031、ingestion 0013、reading 0007，pending migration 0 |
 | 2.8 数据迁移 | Fresh BackupJob 与 disposable PostgreSQL restore rehearsal 已完成；正式迁移已应用 |
-| QueryLexicon | revision 1，generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` |
+| QueryLexicon | revision 3，生产候选聚合只读使用现有 active generation |
 | 语义索引 | active UID `semantic_passages_20260818210650_4cf87bc9`，3,005 个已核对文档 |
 | 观点检索 | 公共 V2 已在有限真实对照后启用。Ask Library 仍固定 stable retrieval |
 | Ask Library | 对注册读者开放。读者自行配置 OpenAI-compatible、Ollama 或 vLLM；服务器 profile 只是可选后备 |
 | General Web | 内网 SearXNG 只发现 URL，实际证据必须由 SafeWebFetcher 取得正文 |
 | PDF upload staging | Cloudflare R2 已启用，只做临时中转；永久 PDF 仍进入 NAS |
 | Candidate | 2.9 在现有工作流内聚合既有候选与证据。没有自动发布 authority，也没有自动 Accept |
-| 当前发布判断 | `2.9 SOURCE VALIDATION IN PROGRESS / PRODUCTION 2.8.1 VERIFIED` |
+| 当前发布判断 | `2.9 PUBLIC DEPLOYED / READY / ADMIN READ-ONLY ACCEPTED` |
 
-生产快照中的主要数量为 Work 6、Edition 6、Asset 12、Page 2,585、SemanticChunk 3,881。活动语义索引仍有 3,005 个 ready 文档。它们是时间点数据，下一次部署前必须重新读取。
+生产快照中的主要数量为 Work 7、Edition 7、Asset 14、Page 2,706、SemanticChunk 3,881。活动语义索引有 3,005 个 ready 文档，数据库记录与 Meilisearch 实测一致。它们是时间点数据，下一次部署前必须重新读取。
 
-本轮已用正常 Winston 管理员会话检查五组导航、Intake Focus Mode、step rail、共享 Inspector、Work-centric Library、Maintenance Mode、当前 Work 策展区、发布后管理和旧 URL redirect。没有对真实馆藏执行保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
+本轮已用正常 Winston 管理员会话检查 Intake Focus Mode、step rail、共享 Inspector、分类、知识、策展、发布区、Maintenance Mode 和旧 URL redirect。生产候选 GET 与共享 Inspector 正常，浏览器控制台无错误。没有对真实馆藏执行联网研究、Candidate decision、保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
 
 旧 R2 uploaded 项已经由 2.8.1 recovery 完成导入、正式 pipeline、Asset 建立和 staging cleanup。新 Worker 的 12 个 Beat 周期没有再次出现同类错误。普通非 superuser 管理员公网上传与发布仍因用户明确跳过账户密码测试而属于 `待核实`，不得把 recovery 结果写成该权限路径已经完成真实 E2E。
 

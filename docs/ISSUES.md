@@ -2,12 +2,13 @@
 
 更新日期为 2026-08-20。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
 
-## 2.9 社科研究候选层待核实项
+## 2.9 社科研究候选层状态与剩余验证
 
 - 2.9 源码已建立统一候选 DTO、字段策略、来源画像和当前工作流内的 Inspector 交互。没有新增数据库 migration，也没有建立第二套 Candidate 或联网 RAG。
-- 本地完整后端与前端回归、production build 和三项 Workflow Playwright 已通过。生产镜像切换和公网浏览器验收仍需在本轮完成后更新状态。
-- SearXNG 和外部站点的真实结果质量、超时与页面解析会随外部环境变化。失败必须继续显示为来源不可用，不能表现成没有候选。普通 Web snippet 仍只能作为研究线索。
+- 本地完整后端与前端回归、production build 和三项 Workflow Playwright 已通过。统一 2.9 镜像已经部署，公网与正常 Winston 管理员只读浏览器验收通过。
+- 生产 SearXNG 发现器返回 200 和 8 条结果。外部站点的长期结果质量、超时与页面解析仍会随环境变化；失败必须继续显示为来源不可用，不能表现成没有候选。普通 Web snippet 仍只能作为研究线索。
 - 普通非 superuser 管理员公网上传与发布 E2E 按用户要求跳过，仍为 `待核实`。2.9 部署不能被用作该账户权限路径的证明。
+- 本轮没有在生产创建或修改期刊论文，也没有执行 Candidate accept、Reading Path placement、保存、发布或下架。book 与 journal_article 的字段和工作流写入继续以本地自动化为证。
 
 ## 2.8.1 R2 入库问题状态
 
@@ -16,14 +17,14 @@
 - 普通非 superuser 公网上传与发布的真实账户 E2E 仍为 `待核实`，原因是用户明确跳过李咏琴账户密码测试。该状态不等同于已证明权限路径完整。
 - 研究候选层已作为 v2.9 增量实现，并继续复用现有 Candidate、Evidence、QueryLexicon 和 Field Enrichment 权限，没有放宽服务端 mutation 权限。
 
-## 当前 2.8 生产边界
+## 2.8 生产基线历史边界
 
 - 2.8.0 馆藏与策展工作流已经部署生产。catalog 0031 已在 fresh BackupJob 的 disposable PostgreSQL 恢复副本演练，正式迁移后 pending migration 为 0。
 - catalog 0031 新增 EditionWorkflowDecision、ReadingPathStage 和 ReadingPathItem stage/position。生产原有 Reading Path、Stage 和 placement 均为 0，因此没有历史路径阶段需要人工合并。迁移前后核心馆藏 ID 集合哈希一致。
 - 单 Work Reading Path 和 RecommendationOverride mutation 已有权限、锁、冲突与审计测试。生产页面已只读验收 contextual editor，但没有对真实 Reading Path、RecommendationOverride 或馆藏执行测试 mutation。真实多管理员并发仍为 `待核实`。
 - 登录管理员浏览器已验证 Focus Mode、step rail、Inspector、Work-centric Library、Maintenance Mode、策展跳过语义、发布后管理和旧 URL 兼容。book 与 journal_article 的完整写入流程仍以本地自动化和隔离浏览器测试为证；本轮没有在生产创建测试期刊或改动现有书。
 - 2.8 没有开发新的互联网 Research & Curation Discovery。Field Enrichment 仍使用既有 structured/web Candidate 和 Evidence；失败继续显式显示，不会自动写 canonical knowledge。
-- 当前仍有一个会阻断 R2 正式导入的生产事件，详见 STL-005 与 STL-007。2.8 页面部署成功不等于该入库问题已解决。
+- 2.8.0 时记录的 R2 正式导入事件已经由 2.8.1 recovery 修复并完成正式 Asset 建立。普通非 superuser 真实账户 E2E 仍按上文标记为 `待核实`。
 
 ## 当前 2.7 总览
 
