@@ -2,7 +2,7 @@
 
 更新日期为 2026-08-20。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-当前源码与生产应用版本为 2.8.1。生产 migration head 为 catalog 0031、ingestion 0013 和 reading 0007。API、Worker、Ingestion Worker、Beat 与 Web 已使用 commit `20e448a` 的 2.8.1 热修复镜像。R2 临时上传中转、公共观点检索 V2、Ask stable retrieval 和活动语义索引的既有边界不变。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前源码目标版本为 2.9.0，生产最近一次已验证版本仍为 2.8.1，直到本轮切换与公网验收完成。生产 migration head 为 catalog 0031、ingestion 0013 和 reading 0007。2.9 没有新增模型或 migration，也不改变 R2 临时上传、公共观点检索 V2、Ask stable retrieval 和活动语义索引。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 
@@ -38,7 +38,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-API、Web 与 OCR service 的源码版本为 2.8.0。公网 API、Web 和 Celery 应用已经部署 2.8；独立 PaddleOCR 镜像没有因本次后台重构而重建。历史镜像版本只在部署记录中保留，不代表当前源码状态。
+API 与 Web 的源码版本为 2.9.0。公网 API、Web 和 Celery 应用在本轮切换前仍运行 2.8.1；独立 PaddleOCR 镜像不在 2.9 的重建范围。历史镜像版本只在部署记录中保留，不代表当前源码状态。
 
 ## 后端模块
 
@@ -61,6 +61,18 @@ API、Web 与 OCR service 的源码版本为 2.8.0。公网 API、Web 和 Celery
 `web/app` 使用 App Router，包含公开网站、Explore、Reader、账户中心和管理后台。`web/components` 保存阅读器、上传、元数据复核、发布、检索和后台工作区组件。`web/lib/server-api.ts` 供服务端渲染访问 Django，`web/lib/runtime-api.ts` 和 `web/lib/api.ts` 负责浏览器同源请求与认证刷新。
 
 生产 Compose 把 `ALLOW_DEMO_FALLBACK` 固定为 `false`。正式页面应读取真实 API 数据，不得以静态示例掩盖服务失败。
+
+## 2.9 社科研究候选层
+
+`WorkflowSuggestionAggregator` 以当前 Edition 和 Work 为上下文，在 Intake Mode 中额外读取 UploadItem。它把现有 MetadataCandidate、EntityResolutionCandidate、EnrichmentCandidate、TheoryReviewTask、QueryLexiconCandidate、QueryLexicon 解析结果和当前 Work 的 SemanticChunk 转换为统一的只读 DTO。聚合器不保存 Work、Edition、关系或词典数据。
+
+`WorkflowSuggestionPolicyRegistry` 为工作流步骤和字段声明本馆实体、QueryLexicon、当前语料、结构化来源与 Web 的可用范围。`SourceProfileRegistry` 把馆内条目、词典匹配、PDF、书目或 authority、大学课程大纲、学术来源和普通 Web 分开。原 `FieldPolicyRegistry` 仍是持久候选、证据门槛和接受 mutation 的唯一规则来源，没有建立第二套 Candidate 表。
+
+Intake 和 Maintenance 分别提供 `/api/catalog/admin/intake/<itemId>/suggestions/` 与 `/api/catalog/admin/library/works/<workId>/suggestions/`。GET 只读取快速候选。POST 以步骤为单位运行一次有界研究，并复用 Field Enrichment。SearXNG 摘要始终只是线索；只有 SafeWebFetcher 打开的原页且命中当前作品上下文时才显示为 Evidence。普通 Web 线索不能接受为正式知识，也不会写入 QueryLexicon 或馆藏 RAG。
+
+前端在现有 `WorkflowEditor` 中按当前展开步骤加载 `ResearchSuggestionPanel`。`ResearchEntityPicker` 将馆内、QueryLexicon、PDF、学术来源和普通 Web 分组显示。已有词典映射或没有待审决策的馆内实体可以直接选择；实体消歧、PDF、结构化和联网候选先进入共享 Inspector。正式接受仍调用各 Candidate 原有 decision endpoint，并继续要求人工确认分类和知识关系。
+
+2.9 扩展了 Work 与 Edition 的 FieldPolicy 覆盖，包含图书字段以及期刊名、卷、期、页码和 DOI。接受学科候选复用 WorkDisciplineRelation 与 WorkSubdisciplineRelation。接受名称候选后仍由既有 authority mutation 和 QueryLexicon outbox 同步，不从网页直接创建词典条目。2.9 不创建 Web research index，不把网页全文写入 SemanticChunk，也不改变 publication 规则。
 
 ## 2.8 馆藏与策展工作流
 

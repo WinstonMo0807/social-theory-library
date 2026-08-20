@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-20。当前源码与生产应用版本均为 2.8.0。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-20。当前源码目标版本为 2.9.0，生产应用在本轮切换前仍为 2.8.1。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -17,11 +17,11 @@
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.8.0 馆藏与策展工作流，已部署生产 |
-| Git 工作分支 | `codex/v2.8-workflow`，release commit `2b1f91ef759b5642b299a5bc504f1f18d417c65e` |
+| 源码版本 | 2.9.0 社科研究候选层，生产发布前验证中 |
+| Git 工作分支 | `codex/v2.9-research-candidates`，基线提交 `5dbbf6d` |
 | GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
-| 生产应用 | API、Worker、Ingestion Worker、Beat 和 Web 使用同一 `2.8.0-2b1f91e-20260820-035701` revision |
+| 生产应用 | 本轮切换前仍为统一 2.8.1 热修复镜像；2.9 镜像与 release commit 待发布后记录 |
 | 生产 migration head | catalog 0031、ingestion 0013、reading 0007，pending migration 0 |
 | 2.8 数据迁移 | Fresh BackupJob 与 disposable PostgreSQL restore rehearsal 已完成；正式迁移已应用 |
 | QueryLexicon | revision 1，generation `af302b64-1b3f-447d-88ca-5ed505bc87e9` |
@@ -30,14 +30,16 @@
 | Ask Library | 对注册读者开放。读者自行配置 OpenAI-compatible、Ollama 或 vLLM；服务器 profile 只是可选后备 |
 | General Web | 内网 SearXNG 只发现 URL，实际证据必须由 SafeWebFetcher 取得正文 |
 | PDF upload staging | Cloudflare R2 已启用，只做临时中转；永久 PDF 仍进入 NAS |
-| Candidate | 只产生待审核记录。没有自动发布 authority，也没有自动 Accept |
-| 当前发布判断 | `2.8 PUBLIC DEPLOYED / UI READY / INGESTION INCIDENT OPEN` |
+| Candidate | 2.9 在现有工作流内聚合既有候选与证据。没有自动发布 authority，也没有自动 Accept |
+| 当前发布判断 | `2.9 SOURCE VALIDATION IN PROGRESS / PRODUCTION 2.8.1 VERIFIED` |
 
 生产快照中的主要数量为 Work 6、Edition 6、Asset 12、Page 2,585、SemanticChunk 3,881。活动语义索引仍有 3,005 个 ready 文档。它们是时间点数据，下一次部署前必须重新读取。
 
 本轮已用正常 Winston 管理员会话检查五组导航、Intake Focus Mode、step rail、共享 Inspector、Work-centric Library、Maintenance Mode、当前 Work 策展区、发布后管理和旧 URL redirect。没有对真实馆藏执行保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
 
-当前最重要的运行风险是一个旧 R2 uploaded 项没有本地 file。Beat recovery 会交替触发 FileField 缺失和 R2 import 的 nullable outer join `FOR UPDATE` 错误。页面部署、现有已发布馆藏和公开 Reader 仍可用，但新入库不能据此视为健康。后续应先做源码和工作流诊断，再决定修复；不要直接清空记录、删除 R2 object 或放宽事务锁。
+旧 R2 uploaded 项已经由 2.8.1 recovery 完成导入、正式 pipeline、Asset 建立和 staging cleanup。新 Worker 的 12 个 Beat 周期没有再次出现同类错误。普通非 superuser 管理员公网上传与发布仍因用户明确跳过账户密码测试而属于 `待核实`，不得把 recovery 结果写成该权限路径已经完成真实 E2E。
+
+2.9 在现有九步工作流旁增加社科研究候选层。它只读聚合既有 Candidate、Evidence、QueryLexicon 和当前 PDF 语料；外部研究继续通过 Field Enrichment、SearXNG 和 SafeWebFetcher。搜索摘要不是 Evidence，正式分类、人物和知识关系仍需人工确认。2.9 没有新增 Candidate 表、migration 或互联网 RAG。
 
 ## 系统总图
 

@@ -127,6 +127,13 @@ def _isbn(value):
     return text.upper()
 
 
+def _doi(value):
+    text = normalize_text(value).removeprefix("https://doi.org/").removeprefix("http://doi.org/")
+    if not re.fullmatch(r"10\.\d{4,9}/\S+", text, re.I):
+        raise ValueError("DOI 格式无效。")
+    return text
+
+
 def _date(value):
     try:
         parsed = date.fromisoformat(normalize_text(value))
@@ -231,6 +238,30 @@ VALUE_NORMALIZERS = {
     "edition_publication_year": _publication_year,
     "edition_publisher": lambda value: _short_text(value, "出版社", 300),
     "edition_isbn": _isbn,
+    "edition_isbn10": _isbn,
+    "edition_isbn13": _isbn,
+    "edition_doi": _doi,
+    "edition_version_label": lambda value: _short_text(value, "版本说明", 120),
+    "edition_publication_place": lambda value: _short_text(value, "出版地", 200),
+    "edition_journal_title": lambda value: _short_text(value, "期刊名", 300),
+    "edition_volume": lambda value: _short_text(value, "卷", 40),
+    "edition_issue": lambda value: _short_text(value, "期", 40),
+    "edition_page_range": lambda value: _short_text(value, "页码范围", 80),
+    "edition_series": lambda value: _short_text(value, "丛书", 300),
+    "edition_extent": lambda value: _short_text(value, "载体范围", 160),
+    "edition_responsibility_statement": lambda value: _short_text(value, "责任说明", 4000),
+    "edition_degree_institution": lambda value: _short_text(value, "学位授予单位", 300),
+    "edition_degree_type": lambda value: _short_text(value, "学位类型", 120),
+    "edition_report_institution": lambda value: _short_text(value, "报告责任机构", 300),
+    "work_title": lambda value: _short_text(value, "作品题名", 600),
+    "work_subtitle": lambda value: _short_text(value, "副题名", 600),
+    "work_original_title": lambda value: _short_text(value, "原题名", 600),
+    "work_uniform_title": lambda value: _short_text(value, "规范题名", 600),
+    "work_language": lambda value: _short_text(value, "作品语言", 32),
+    "work_original_language": lambda value: _short_text(value, "原作语言", 32),
+    "work_abstract": lambda value: _short_text(value, "作品摘要", 20000),
+    "work_discipline": _discipline,
+    "work_subdiscipline": _subdiscipline,
     "work_first_publication_date": _date,
     "discipline_foreign_name": lambda value: _short_text(value, "外文名称", 240),
     "subdiscipline_foreign_name": lambda value: _short_text(value, "外文名称", 240),

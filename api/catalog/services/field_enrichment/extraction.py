@@ -21,6 +21,7 @@ WIKIDATA_RE = re.compile(r"\b(Q\d{2,})\b", re.I)
 VIAF_RE = re.compile(r"(?:VIAF\s*(?:ID)?\s*[:：]?\s*)(\d{3,})", re.I)
 OPENALEX_RE = re.compile(r"\b(A\d{5,})\b", re.I)
 LOC_RE = re.compile(r"(?:LCCN|LOC)\s*[:：]?\s*([a-z]{0,3}\d{4,})", re.I)
+DOI_RE = re.compile(r"\b(10\.\d{4,9}/[-._;()/:A-Z0-9]+)\b", re.I)
 
 
 RELATION_PHRASES = {
@@ -289,17 +290,79 @@ def extract_web_observations(
                     context=context,
                 )
             )
-    elif policy.field_name == "isbn":
+    elif policy.field_name in {"isbn", "isbn10", "isbn13"}:
         for match in ISBN_RE.finditer(document.text):
             if "ISBN" not in document.text[max(0, match.start() - 20):match.start() + 8].upper():
+                continue
+            value = re.sub(r"[^0-9Xx]", "", match.group(1)).upper()
+            if policy.field_name == "isbn10" and len(value) != 10:
+                continue
+            if policy.field_name == "isbn13" and len(value) != 13:
                 continue
             output.append(
                 _observation(
                     document=document,
                     policy=policy,
-                    value=match.group(1),
+                    value=value,
                     supporting_text=document.text[max(0, match.start() - 80):min(len(document.text), match.end() + 80)],
                     locator={"start": match.start(), "end": match.end(), "pattern": "isbn"},
+                    context=context,
+                )
+            )
+    elif policy.field_name == "doi":
+        for match in DOI_RE.finditer(document.text):
+            output.append(
+                _observation(
+                    document=document,
+                    policy=policy,
+                    value=match.group(1).rstrip(".,;)]}"),
+                    supporting_text=document.text[max(0, match.start() - 120):min(len(document.text), match.end() + 120)],
+                    locator={"start": match.start(), "end": match.end(), "pattern": "doi"},
+                    context=context,
+                )
+            )
+    elif policy.field_name in {
+        "journal_title",
+        "volume",
+        "issue",
+        "page_range",
+        "publication_place",
+        "series",
+        "degree_institution",
+        "degree_type",
+        "report_institution",
+    }:
+        labels = {
+            "journal_title": ("journal", "期刊", "刊名"),
+            "volume": ("volume", "vol.", "卷"),
+            "issue": ("issue", "no.", "期"),
+            "page_range": ("pages", "pp.", "页码"),
+            "publication_place": ("place of publication", "出版地"),
+            "series": ("series", "丛书"),
+            "degree_institution": ("institution", "university", "学位授予单位"),
+            "degree_type": ("degree", "学位类型"),
+            "report_institution": ("issuing institution", "研究机构", "报告机构"),
+        }[policy.field_name]
+        pattern = re.compile(
+            rf"(?:{'|'.join(re.escape(label) for label in labels)})\s*[:：]?\s*([^。；;\n]{{1,180}})",
+            re.I,
+        )
+        for match in pattern.finditer(document.text):
+            value = " ".join(match.group(1).split()).strip(" ,，。")
+            if policy.field_name in {"volume", "issue"}:
+                value = value.split()[0][:40]
+            elif policy.field_name == "page_range":
+                page_match = re.search(r"\d+\s*[-–—]\s*\d+", value)
+                if not page_match:
+                    continue
+                value = page_match.group(0)
+            output.append(
+                _observation(
+                    document=document,
+                    policy=policy,
+                    value=value,
+                    supporting_text=document.text[max(0, match.start() - 100):min(len(document.text), match.end() + 100)],
+                    locator={"start": match.start(), "end": match.end(), "pattern": policy.field_name},
                     context=context,
                 )
             )

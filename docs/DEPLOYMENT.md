@@ -1,6 +1,15 @@
 # 部署说明
 
-更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.8.1 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求、2.9 发布范围和最近一次 2.8.1 生产发布快照。任何后续部署仍需重新检查实时状态。
+
+## Version 2.9.0 release scope
+
+- 2.9 增加社科研究候选聚合、步骤级研究 API、Workflow Inspector 集成，以及 Work、Edition、分类和期刊字段的 FieldPolicy 覆盖。
+- 本次没有数据库 migration。不得修改 PostgreSQL、Redis、Meilisearch、PDF、模型或活动语义索引，也不重建独立 PaddleOCR 镜像。
+- API、默认 Worker、Ingestion Worker、Beat 和 Web 必须使用同一 2.9 revision。切换前创建 fresh BackupJob，并保留 2.8.1 API 与 Web 回退镜像和生产环境副本。
+- 切换门槛包括完整后端回归、Django check、migration drift、前端 TypeScript、ESLint、Node 回归和 production build。容器必须以真实 HTTP readiness 为准，不能只看 running。
+- 上线后除 ready、health、队列、活动索引、顺序观点检索和 PDF Range 206 外，还要检查 Intake Focus Mode、Maintenance Mode、候选分组、Inspector、classification、knowledge、curation 与保存并继续。普通非 superuser 真实上传继续按用户要求跳过并标记 `待核实`。
+- 生产镜像、BackupJob、包 SHA-256、回退目录和公网验收结果在切换完成后补入本节，不预先写成已通过。
 
 ## Version 2.8.1 R2 ingestion hotfix, 2026-08-20
 

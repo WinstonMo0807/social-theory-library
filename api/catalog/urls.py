@@ -59,6 +59,11 @@ from .workflow_views import (
     WorkMaintenanceSectionView,
     WorkMaintenanceWorkspaceView,
 )
+from .workflow_suggestion_views import (
+    IntakeWorkflowSuggestionView,
+    MaintenanceWorkflowSuggestionView,
+    WorkflowSuggestionPolicyView,
+)
 from .search_evaluation_views import (
     SearchEvaluationRunDetailView,
     SearchEvaluationRunListCreateView,
@@ -170,6 +175,21 @@ urlpatterns = [
         "admin/intake/<uuid:item_id>/sections/<str:step_key>/",
         IntakeWorkflowSectionView.as_view(),
         name="admin-intake-workflow-section",
+    ),
+    path(
+        "admin/intake/<uuid:item_id>/suggestions/",
+        IntakeWorkflowSuggestionView.as_view(),
+        name="admin-intake-workflow-suggestions",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/suggestions/",
+        MaintenanceWorkflowSuggestionView.as_view(),
+        name="admin-work-maintenance-suggestions",
+    ),
+    path(
+        "admin/workflow-suggestion-policies/",
+        WorkflowSuggestionPolicyView.as_view(),
+        name="admin-workflow-suggestion-policies",
     ),
     path(
         "admin/works/<uuid:work_id>/curation/",

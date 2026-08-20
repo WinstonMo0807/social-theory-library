@@ -19,6 +19,8 @@ from catalog.models import (
     ReadingPathItem,
     ReadingPathStage,
     RelationReviewStatus,
+    WorkDisciplineRelation,
+    WorkSubdisciplineRelation,
     TimelineEventRelation,
     TheoryTimelineEvent,
     TopicDisciplineRelation,
@@ -177,6 +179,31 @@ def _edition_field(target, field_name: str, value) -> MutationResult:
     return MutationResult("catalog.Edition", target.id, False, True)
 
 
+def _work_field(target, field_name: str, value) -> MutationResult:
+    lock = target.editions.filter(field_locks__field_name=field_name).values_list(
+        "field_locks__locked_value", flat=True
+    ).first()
+    if lock is not None and stable_json(lock) != stable_json(value):
+        raise ValueError("该作品字段已人工锁定，研究候选不能覆盖。")
+    if getattr(target, field_name) == value:
+        return MutationResult("catalog.Work", target.id, False, False)
+    setattr(target, field_name, value)
+    target.save(update_fields=[field_name, "updated_at"])
+    return MutationResult("catalog.Work", target.id, False, True)
+
+
+def _register_edition_field(adapter: str, field_name: str) -> None:
+    @FIELD_MUTATIONS.register(adapter)
+    def mutate(*, target, value, candidate, actor, _field=field_name):
+        return _edition_field(target, _field, value)
+
+
+def _register_work_field(adapter: str, field_name: str) -> None:
+    @FIELD_MUTATIONS.register(adapter)
+    def mutate(*, target, value, candidate, actor, _field=field_name):
+        return _work_field(target, _field, value)
+
+
 @FIELD_MUTATIONS.register("edition_publication_year")
 def _edition_publication_year(*, target, value, candidate, actor):
     return _edition_field(target, "publication_year", value)
@@ -192,6 +219,38 @@ def _edition_isbn(*, target, value, candidate, actor):
     return _edition_field(target, "isbn", value)
 
 
+for _field_name in (
+    "version_label",
+    "publication_place",
+    "isbn10",
+    "isbn13",
+    "doi",
+    "journal_title",
+    "volume",
+    "issue",
+    "page_range",
+    "series",
+    "extent",
+    "responsibility_statement",
+    "degree_institution",
+    "degree_type",
+    "report_institution",
+):
+    _register_edition_field(f"edition_{_field_name}", _field_name)
+
+
+for _field_name in (
+    "title",
+    "subtitle",
+    "original_title",
+    "uniform_title",
+    "language",
+    "original_language",
+    "abstract",
+):
+    _register_work_field(f"work_{_field_name}", _field_name)
+
+
 @FIELD_MUTATIONS.register("work_first_publication_date")
 def _work_first_publication_date(*, target, value, candidate, actor):
     from datetime import date
@@ -202,6 +261,45 @@ def _work_first_publication_date(*, target, value, candidate, actor):
     target.first_publication_date = parsed
     target.save(update_fields=["first_publication_date", "updated_at"])
     return MutationResult("catalog.Work", target.id, False, True)
+
+
+@FIELD_MUTATIONS.register("work_discipline")
+def _work_discipline(*, target, value, candidate, actor):
+    discipline = Discipline.objects.get(pk=value["discipline_id"])
+    is_primary = value["relation_type"] == "primary"
+    relation, created = WorkDisciplineRelation.objects.get_or_create(
+        work=target,
+        discipline=discipline,
+        defaults={
+            "is_primary": is_primary,
+            "source": f"field_enrichment:{candidate.id}",
+            "confidence": candidate.confidence,
+            "review_status": RelationReviewStatus.APPROVED,
+            "reviewed_by": actor,
+            "reviewed_at": timezone.now(),
+        },
+    )
+    return MutationResult("catalog.WorkDisciplineRelation", relation.id, created, created)
+
+
+@FIELD_MUTATIONS.register("work_subdiscipline")
+def _work_subdiscipline(*, target, value, candidate, actor):
+    from catalog.models import Subdiscipline
+
+    subdiscipline = Subdiscipline.objects.get(pk=value["subdiscipline_node_id"])
+    relation, created = WorkSubdisciplineRelation.objects.get_or_create(
+        work=target,
+        subdiscipline=subdiscipline,
+        defaults={
+            "is_primary": False,
+            "source": f"field_enrichment:{candidate.id}",
+            "confidence": candidate.confidence,
+            "review_status": RelationReviewStatus.APPROVED,
+            "reviewed_by": actor,
+            "reviewed_at": timezone.now(),
+        },
+    )
+    return MutationResult("catalog.WorkSubdisciplineRelation", relation.id, created, created)
 
 
 def _named_foreign_name(target, value, model_label):

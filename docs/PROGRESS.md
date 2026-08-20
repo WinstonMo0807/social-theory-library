@@ -1,6 +1,16 @@
 # 开发进度
 
-更新日期为 2026-08-20。当前源码与公网应用版本均为 2.8.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-20。当前源码目标版本为 2.9.0，公网应用在本轮切换前仍为 2.8.1。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+
+## 当前 2.9.0 社科研究候选层状态
+
+- 分支为 `codex/v2.9-research-candidates`，基于已验证的 2.8.1 R2 热修复提交 `5dbbf6d`。2.9 源码已实现，生产部署与公网验收仍需以本轮实时证据确认。
+- 已新增只读 WorkflowSuggestionAggregator、步骤与字段策略注册表、来源画像注册表，以及 Intake 和 Maintenance suggestion API。没有新增 Candidate 表或 migration。
+- 已复用 MetadataCandidate、EntityResolutionCandidate、EnrichmentCandidate、TheoryReviewTask、QueryLexiconCandidate、QueryLexicon、SemanticChunk、SearXNG 和 SafeWebFetcher。搜索摘要只作线索，实际原页才可成为 Evidence。
+- Work、书目、责任者、分类、知识和策展步骤已接入按需加载的研究候选。Knowledge 不再要求管理员手工填写 UUID；学科接受复用已有 Work 关系；正式 Candidate 决定仍使用原 mutation 和 capability permission。
+- 图书和期刊共享同一策略。期刊字段覆盖 journal title、year、volume、issue、page range 和 DOI。网页内容不会直接写正式 RAG，联网词汇不会直接写 QueryLexiconEntry。
+- 本轮本地发布门槛已通过。后端完整 pytest 收集 617 项并以退出码 0 完成，Django check、migration drift 和 compileall 通过。前端 production build、通用 Node 84 项、Auth 与 Scoped Search 19 项、Workflow Playwright 3 项、TypeScript、完整 ESLint 和 diff check 均退出 0。生产镜像与公网验收仍需以本轮实时证据确认。
+- 普通非 superuser 管理员公网上传 E2E 继续按用户要求跳过。该项目仍标记为 `待核实`，不能写成权限路径已经由真实账户证明。
 
 ## 当前 2.8.1 R2 入库热修复状态
 
@@ -11,7 +21,7 @@
 - 普通非 superuser 管理员公网新上传 E2E 依用户要求跳过，因为没有李咏琴账户密码。没有创建账户，也没有提升权限。
 - 生产回退点为 `/volume2/library/docker/social-theory-library/storage/backups/pre-v281-cutover-20260820-060904`，BackupJob `a34b13a2-8c79-4bfd-bbd4-b1902c60d367`，归档 SHA-256 `03823151e83670f5d5747a0883c46e445ffe55b907b3f866a9a28f3399334451`。SSH 部署授权按用户要求继续保留。
 
-下一阶段“社科研究候选层”从已验证的 2.8.1 提交切出 v2.9，不在热修复分支上混入新的候选数据面。
+“社科研究候选层”已经从已验证的 2.8.1 提交切出独立 v2.9 分支，没有混入热修复分支。
 
 ## 当前 2.8.0 生产状态
 

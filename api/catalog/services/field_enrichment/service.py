@@ -18,6 +18,7 @@ from catalog.models import (
     EnrichmentEvidence,
     EnrichmentSourceClass,
     KnowledgeNode,
+    Subdiscipline,
 )
 
 from .extraction import extract_web_observations
@@ -82,6 +83,19 @@ def _value_exists(current, value, field_name: str) -> bool:
             for row in current
             if isinstance(row, dict)
         )
+    if field_name == "discipline" and isinstance(current, list) and isinstance(value, dict):
+        return any(
+            str(row.get("discipline_id") or "") == str(value.get("discipline_id") or "")
+            for row in current
+            if isinstance(row, dict)
+        )
+    if field_name == "subdiscipline" and isinstance(current, list) and isinstance(value, dict):
+        target_id = value.get("subdiscipline_node_id")
+        return any(
+            str(row.get("subdiscipline_id") or row.get("subdiscipline_node_id") or "") == str(target_id or "")
+            for row in current
+            if isinstance(row, dict)
+        )
     if isinstance(current, list):
         return any(stable_json(row) == stable_json(value) for row in current)
     return stable_json(current) == stable_json(value)
@@ -123,9 +137,14 @@ def _candidate_conflict_group(target_type: str, target_id, field_name: str) -> s
 
 def _enrich_form_context(target_type: str, form_context: dict) -> dict:
     context = dict(form_context or {})
-    if target_type in {"knowledge_node", "topic"}:
+    if target_type in {"work", "knowledge_node", "topic"}:
         context["discipline_options"] = list(
             Discipline.objects.exclude(editorial_status="archived")
+            .values("id", "name")[:200]
+        )
+    if target_type == "work":
+        context["subdiscipline_options"] = list(
+            Subdiscipline.objects.exclude(editorial_status="archived")
             .values("id", "name")[:200]
         )
     if target_type == "knowledge_node":

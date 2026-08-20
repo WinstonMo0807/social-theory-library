@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export type SelectOption = { value: string; label: string };
@@ -154,6 +154,7 @@ export function EntityPicker({
   endpoint,
   values,
   onChange,
+  idField = "id",
   nameField = "name",
   placeholder = "搜索已有条目",
   allowUnresolved = false,
@@ -162,6 +163,7 @@ export function EntityPicker({
   endpoint: string;
   values: EntityValue[];
   onChange: (values: EntityValue[]) => void;
+  idField?: string;
   nameField?: string;
   placeholder?: string;
   allowUnresolved?: boolean;
@@ -186,14 +188,15 @@ export function EntityPicker({
           const rows = Array.isArray(payload) ? payload : payload.results ?? [];
           setOptions(rows.flatMap((row) => {
             const name = String(row[nameField] ?? row.preferred_name ?? row.canonical_name_zh ?? row.title ?? "").trim();
-            return name ? [{ id: String(row.id), name, status: String(row.status ?? row.editorial_status ?? "") }] : [];
+            const id = row[idField] ?? row.id;
+            return name && id ? [{ id: String(id), name, status: String(row.status ?? row.editorial_status ?? "") }] : [];
           }));
         })
         .catch(() => { if (active) setOptions([]); })
         .finally(() => { if (active) setLoading(false); });
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [endpoint, nameField, open, query]);
+  }, [endpoint, idField, nameField, open, query]);
 
   const select = (value: EntityValue) => {
     if (!values.some((entry) => entry.id === value.id || entry.name.toLocaleLowerCase() === value.name.toLocaleLowerCase())) {
@@ -202,6 +205,23 @@ export function EntityPicker({
     setQuery("");
     setOpen(false);
   };
+  const onComboboxKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      window.requestAnimationFrame(() => document.getElementById(listboxId)?.querySelector<HTMLButtonElement>("button")?.focus());
+      return;
+    }
+    if (event.key === "Enter" && open && options.length) {
+      event.preventDefault();
+      select(options[0]);
+    }
+  };
+  const statusLabel = (value?: string) => ({ published: "已发布", draft: "草稿", pending: "待审核", verified: "已核验", needs_review: "待审核", suggested: "建议" } as Record<string, string>)[String(value ?? "")] ?? value ?? "馆内条目";
   return (
     <div className="workflow-entity-picker">
       <strong>{label}</strong>
@@ -212,11 +232,11 @@ export function EntityPicker({
       ))}</div>
       <div className="workflow-entity-combobox">
         <Search size={14} />
-        <input value={query} placeholder={placeholder} role="combobox" aria-expanded={open} aria-controls={listboxId} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setOpen(true); }} />
-        <button type="button" aria-label="显示候选" onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} /></button>
+        <input value={query} placeholder={placeholder} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setOpen(true); }} />
+        <button type="button" aria-label="显示候选" aria-haspopup="listbox" onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} /></button>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox">
           {loading ? <small>正在搜索……</small> : null}
-          {!loading ? options.map((option) => <button type="button" role="option" aria-selected={false} key={option.id} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{option.status || "已有条目"}</small></span><Check size={13} /></button>) : null}
+          {!loading ? options.map((option) => { const selected = values.some((value) => value.id === option.id); return <button type="button" role="option" aria-selected={selected} key={option.id} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
           {!loading && allowUnresolved && query.trim() ? <button type="button" onClick={() => select({ id: null, name: query.trim(), status: "unresolved" })}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
           {!loading && !options.length && !allowUnresolved ? <small>没有匹配的正式条目。</small> : null}
         </div> : null}

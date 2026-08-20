@@ -92,13 +92,43 @@ def current_field_value(target_type: str, target, field_name: str) -> Any:
                 )
             )
     if target_type == "edition" and field_name in {
+        "version_label",
         "publication_year",
         "publisher",
+        "publication_place",
+        "journal_title",
+        "volume",
+        "issue",
+        "page_range",
+        "degree_institution",
+        "degree_type",
+        "report_institution",
         "isbn",
+        "isbn10",
+        "isbn13",
+        "doi",
+        "series",
+        "extent",
+        "responsibility_statement",
     }:
         return getattr(target, field_name)
-    if target_type == "work" and field_name == "first_publication_date":
-        return target.first_publication_date.isoformat() if target.first_publication_date else ""
+    if target_type == "work":
+        if field_name == "first_publication_date":
+            return target.first_publication_date.isoformat() if target.first_publication_date else ""
+        if field_name in {
+            "title",
+            "subtitle",
+            "original_title",
+            "uniform_title",
+            "language",
+            "original_language",
+            "abstract",
+        }:
+            return getattr(target, field_name)
+        if field_name == "discipline":
+            return list(target.discipline_relations.values("discipline_id", "is_primary", "review_status"))
+        if field_name == "subdiscipline":
+            return list(target.subdiscipline_relations.values("subdiscipline_id", "is_primary", "review_status"))
     if target_type in {"discipline", "subdiscipline"} and field_name == "foreign_name":
         return target.foreign_name
     if target_type == "knowledge_node":

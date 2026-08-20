@@ -2,12 +2,19 @@
 
 更新日期为 2026-08-20。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
 
+## 2.9 社科研究候选层待核实项
+
+- 2.9 源码已建立统一候选 DTO、字段策略、来源画像和当前工作流内的 Inspector 交互。没有新增数据库 migration，也没有建立第二套 Candidate 或联网 RAG。
+- 本地完整后端与前端回归、production build 和三项 Workflow Playwright 已通过。生产镜像切换和公网浏览器验收仍需在本轮完成后更新状态。
+- SearXNG 和外部站点的真实结果质量、超时与页面解析会随外部环境变化。失败必须继续显示为来源不可用，不能表现成没有候选。普通 Web snippet 仍只能作为研究线索。
+- 普通非 superuser 管理员公网上传与发布 E2E 按用户要求跳过，仍为 `待核实`。2.9 部署不能被用作该账户权限路径的证明。
+
 ## 2.8.1 R2 入库问题状态
 
 - 2.8.1 已部署并完成 R2 到 NAS ingestion handoff recovery。原异常 UploadItem `92ea5bc2-904b-49cd-848f-67accff9639d` 已恢复为 ready，正式 Asset、Work 和 Edition 均已建立。
 - 新 Worker 的 12 个 Beat recovery 周期未再出现空文件、nullable join 锁错误或队列堆积。旧 2.8.0 Worker 切换窗口中的两条 ValueError 仅作历史记录保留。
 - 普通非 superuser 公网上传与发布的真实账户 E2E 仍为 `待核实`，原因是用户明确跳过李咏琴账户密码测试。该状态不等同于已证明权限路径完整。
-- 研究候选层计划作为 v2.9 增量实现，必须继续复用现有 Candidate、Evidence、QueryLexicon 和 Field Enrichment 权限，不能通过放宽权限掩盖入库异常。
+- 研究候选层已作为 v2.9 增量实现，并继续复用现有 Candidate、Evidence、QueryLexicon 和 Field Enrichment 权限，没有放宽服务端 mutation 权限。
 
 ## 当前 2.8 生产边界
 

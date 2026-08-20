@@ -197,10 +197,63 @@ for field_name, adapter in (
         schema={"type": "integer" if field_name == "publication_year" else "string"},
     )
 
+for field_name in (
+    "version_label",
+    "publication_place",
+    "isbn10",
+    "isbn13",
+    "doi",
+    "journal_title",
+    "volume",
+    "issue",
+    "page_range",
+    "series",
+    "extent",
+    "responsibility_statement",
+    "degree_institution",
+    "degree_type",
+    "report_institution",
+):
+    _register(
+        "edition", field_name, FACTUAL, BIBLIOGRAPHIC_PRIORITY,
+        structured=("bibliographic",), web=True,
+        mutation=f"edition_{field_name}", refresh=86400 * 365,
+        schema={"type": "string"},
+    )
+
+for field_name in (
+    "title",
+    "subtitle",
+    "original_title",
+    "uniform_title",
+    "language",
+    "original_language",
+    "abstract",
+):
+    _register(
+        "work", field_name, FACTUAL, BIBLIOGRAPHIC_PRIORITY,
+        structured=("bibliographic",), web=True,
+        mutation=f"work_{field_name}", refresh=86400 * 365,
+        schema={"type": "string"},
+    )
+
 _register(
     "work", "first_publication_date", FACTUAL, BIBLIOGRAPHIC_PRIORITY,
     structured=("bibliographic",), web=True, mutation="work_first_publication_date",
     refresh=86400 * 365, schema={"type": "string", "format": "date"},
+)
+
+_register(
+    "work", "discipline", CLASSIFICATION, SCHOLARLY_PRIORITY,
+    web=True, mutation="work_discipline",
+    conflict=ConflictPolicy.CREATE_PENDING_RELATION,
+    schema={"type": "object", "required": ["discipline_id", "relation_type"]},
+)
+_register(
+    "work", "subdiscipline", CLASSIFICATION, SCHOLARLY_PRIORITY,
+    web=True, mutation="work_subdiscipline",
+    conflict=ConflictPolicy.CREATE_PENDING_RELATION,
+    schema={"type": "object", "required": ["subdiscipline_node_id"]},
 )
 
 for target_type in ("discipline", "subdiscipline"):
