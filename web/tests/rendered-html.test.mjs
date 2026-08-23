@@ -476,7 +476,9 @@ test("reader selection menu puts clean copy first without removing reading tools
   const menuSource = source.slice(menuStart, menuEnd);
   const orderedActions = ["复制", "高亮", "划线", "笔记", "书签"];
   const actionPositions = orderedActions.map((label) => {
-    const position = menuSource.indexOf(`/>${label}</button>`);
+    const nativePosition = menuSource.indexOf(`/>${label}</button>`);
+    const actionButtonPosition = menuSource.indexOf(`/>${label}</ActionButton>`);
+    const position = Math.max(nativePosition, actionButtonPosition);
     assert.ok(position >= 0, `${label} action remains available`);
     return position;
   });

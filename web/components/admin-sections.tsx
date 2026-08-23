@@ -25,6 +25,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -92,7 +94,10 @@ function useAdminResource<T>(path: string | null) {
     data,
     error,
     loading,
-    refresh: () => setRevision((value) => value + 1),
+    refresh: () => {
+      setLoading(true);
+      setRevision((value) => value + 1);
+    },
   };
 }
 
@@ -1867,6 +1872,8 @@ export function SettingsAdmin() {
   const [backupPath, setBackupPath] = useState("/data/backups");
   const [includeOriginals, setIncludeOriginals] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageState, setMessageState] = useState<ActionState>("idle");
+  const { pendingAction, startAction, finishAction } = useActionGuard();
   const config = draft ?? configResource.data ?? defaultSiteConfig;
   const submissionEmail = submissionEmailDraft
     ?? submissionResource.data?.email
@@ -1882,27 +1889,45 @@ export function SettingsAdmin() {
     setDraft({ ...config, ...patch });
   }
 
+  async function runSettingsAction(
+    key: string,
+    pendingMessage: string,
+    fallbackError: string,
+    operation: () => Promise<string>,
+  ) {
+    if (!startAction(key)) return;
+    setMessage(pendingMessage);
+    setMessageState("pending");
+    try {
+      setMessage(await operation());
+      setMessageState("success");
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : fallbackError);
+      setMessageState("error");
+    } finally {
+      finishAction(key);
+    }
+  }
+
   async function saveConfig(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction("save-site-config", "正在保存网站内容……", "内容保存失败。", async () => {
       const saved = await apiRequest<SiteConfig>(
         "/catalog/site-config/",
         { method: "PUT", body: JSON.stringify(config) },
         token,
       );
       setDraft(saved);
-      setMessage("网站名称、首页文字、导航和区块标题已经保存并立即生效。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "内容保存失败。");
-    }
+      return "网站名称、首页文字、导航和区块标题已经保存并立即生效。";
+    });
   }
 
   async function createBackup() {
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction("create-backup", "正在提交手动备份……", "备份创建失败。", async () => {
       await apiRequest(
         "/distribution/backups/",
         {
@@ -1914,18 +1939,16 @@ export function SettingsAdmin() {
         },
         token,
       );
-      setMessage("手动备份已经进入任务队列。可以刷新下方记录查看归档路径和校验值。");
       backups.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "备份创建失败。");
-    }
+      return "手动备份已经进入任务队列。可以刷新下方记录查看归档路径和校验值。";
+    });
   }
 
   async function saveSubmissionEmail(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction("save-submission-email", "正在保存投稿邮箱……", "投稿邮箱保存失败。", async () => {
       const saved = await apiRequest<{ email: string }>(
         "/catalog/admin/reader-submission/",
         {
@@ -1935,17 +1958,15 @@ export function SettingsAdmin() {
         token,
       );
       setSubmissionEmail(saved.email);
-      setMessage("读者中心投稿邮箱已经保存。荐书时会打开读者自己的邮件应用。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "投稿邮箱保存失败。");
-    }
+      return "读者中心投稿邮箱已经保存。荐书时会打开读者自己的邮件应用。";
+    });
   }
 
   async function saveOcrRuntime(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction("save-ocr-runtime", "正在保存 OCR 设置……", "OCR 设置保存失败。", async () => {
       const saved = await apiRequest<OcrRuntime>(
         "/catalog/admin/ocr-runtime/",
         {
@@ -1959,26 +1980,22 @@ export function SettingsAdmin() {
         token,
       );
       setOcrDraft(saved);
-      setMessage("OCR 运行方式已经保存。新上传的扫描 PDF 将使用该设置。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "OCR 设置保存失败。");
-    }
+      return "OCR 运行方式已经保存。新上传的扫描 PDF 将使用该设置。";
+    });
   }
 
   async function testOcrRuntime(action: "test_nas" | "test_remote") {
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction(`test-ocr:${action}`, "正在测试 OCR 连通性……", "OCR 连通性测试失败。", async () => {
       const result = await apiRequest<{ reachable: boolean; detail: string; target: string }>(
         "/catalog/admin/ocr-runtime/",
         { method: "POST", body: JSON.stringify({ action }) },
         token,
       );
-      setMessage(`${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 测试结果：${result.reachable ? "可连接" : "不可用"}。${result.detail || ""}`);
       ocrResource.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "OCR 连通性测试失败。");
-    }
+      return `${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 测试结果：${result.reachable ? "可连接" : "不可用"}。${result.detail || ""}`;
+    });
   }
 
   async function saveSemanticRuntime(event: FormEvent) {
@@ -1986,9 +2003,10 @@ export function SettingsAdmin() {
     const token = getServerSessionCredential();
     if (!token || !semanticRuntimeReady) {
       setMessage("尚未读取服务器上的观点检索配置，未执行保存。");
+      setMessageState("error");
       return;
     }
-    try {
+    await runSettingsAction("save-semantic-runtime", "正在保存观点检索设置……", "观点检索设置保存失败。", async () => {
       const saved = await apiRequest<SemanticRuntime>(
         "/catalog/admin/semantic-runtime/",
         {
@@ -2014,16 +2032,12 @@ export function SettingsAdmin() {
         token,
       );
       setSemanticDraft(saved);
-      setMessage(
-        saved.task?.version_id
+      return saved.task?.version_id
           ? `新索引版本 ${saved.task.index_uid || saved.task.version_id} 正在后台构建；验证和人工切换前，当前生产配置保持不变。`
           : saved.engine === "meilisearch_hybrid"
           ? `向量混合检索设置已提交${saved.task?.taskUid ? `，索引任务 ${saved.task.taskUid} 正在后台运行` : ""}。`
-          : "已启用关键词回退检索，不会额外加载嵌入模型。",
-      );
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "观点检索设置保存失败。");
-    }
+          : "已启用关键词回退检索，不会额外加载嵌入模型。";
+    });
   }
 
   function updateAiProfile(profileKey: string, patch: Partial<AIRuntimeProfile>) {
@@ -2041,9 +2055,10 @@ export function SettingsAdmin() {
     const token = getServerSessionCredential();
     if (!token || !aiRuntime) {
       setMessage("尚未读取服务器上的 AI Runtime 配置，未执行保存。");
+      setMessageState("error");
       return;
     }
-    try {
+    await runSettingsAction("save-ai-runtime", "正在保存 AI Runtime……", "AI Runtime 设置保存失败。", async () => {
       const saved = await apiRequest<AIRuntimeDocument>(
         "/reading/admin/ai-runtime-profiles/",
         {
@@ -2060,16 +2075,14 @@ export function SettingsAdmin() {
         token,
       );
       setAiRuntimeDraft(saved);
-      setMessage("AI Runtime profiles 已保存。非密钥参数会在下一次任务或问答时读取。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "AI Runtime 设置保存失败。");
-    }
+      return "AI Runtime profiles 已保存。非密钥参数会在下一次任务或问答时读取。";
+    });
   }
 
   async function testAiRuntime(profileKey: string) {
     const token = getServerSessionCredential();
     if (!token) return;
-    try {
+    await runSettingsAction(`test-ai-runtime:${profileKey}`, "正在测试 AI Runtime……", "AI Runtime 连通性测试失败。", async () => {
       const result = await apiRequest<{
         available: boolean;
         detail: string;
@@ -2079,10 +2092,8 @@ export function SettingsAdmin() {
         { method: "POST", body: JSON.stringify({ profile_key: profileKey }) },
         token,
       );
-      setMessage(`${result.profile_key}：${result.available ? "模型服务可用" : "模型服务不可用"}。${result.detail}`);
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "AI Runtime 连通性测试失败。");
-    }
+      return `${result.profile_key}：${result.available ? "模型服务可用" : "模型服务不可用"}。${result.detail}`;
+    });
   }
 
   return (
@@ -2123,13 +2134,13 @@ export function SettingsAdmin() {
             {Object.entries(config.navigation).map(([key, value]) => <label key={key}><span>导航 {key}</span><input value={value} onChange={(event) => updateConfig({ navigation: { ...config.navigation, [key]: event.target.value } })} /></label>)}
             {Object.entries(config.sections).map(([key, value]) => <label key={key}><span>首页区块 {key}</span><input value={value} onChange={(event) => updateConfig({ sections: { ...config.sections, [key]: event.target.value } })} /></label>)}
           </div>
-          <button className="button" type="submit"><Save size={15} />保存内容</button>
+          <ActionButton className="button" type="submit" state={pendingAction === "save-site-config" ? "pending" : "idle"} pendingLabel="正在保存内容" disabled={Boolean(pendingAction) && pendingAction !== "save-site-config"}><Save size={15} />保存内容</ActionButton>
         </form>
         <form className="admin-panel submission-email-settings" onSubmit={saveSubmissionEmail}>
           <header><h2>读者荐书投稿</h2></header>
           <p>网站不直接接收 PDF，也不依赖 SMTP。读者填写荐书信息后会打开自己的邮件应用。</p>
           <label><span>投稿邮箱</span><input type="email" value={submissionEmail} onChange={(event) => setSubmissionEmail(event.target.value)} required /></label>
-          <button className="button secondary" type="submit"><Save size={15} />保存投稿邮箱</button>
+          <ActionButton className="button secondary" type="submit" state={pendingAction === "save-submission-email" ? "pending" : "idle"} pendingLabel="正在保存邮箱" disabled={Boolean(pendingAction) && pendingAction !== "save-submission-email"}><Save size={15} />保存投稿邮箱</ActionButton>
         </form>
         <form className="admin-panel ocr-runtime-settings" onSubmit={saveOcrRuntime}>
           <header><h2>OCR 资源</h2></header>
@@ -2160,7 +2171,7 @@ export function SettingsAdmin() {
           </dl>
           {ocrRuntime.last_job?.error ? <p className="attempt-error">最近错误：{ocrRuntime.last_job.error}</p> : null}
           <small>远程密钥只写入服务器的 <code>OCR_REMOTE_API_KEY</code> 环境变量，后台页面不会读取或显示密钥原文。</small>
-          <div className="admin-action-row"><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</button><button className="button secondary" type="button" onClick={() => void testOcrRuntime("test_remote")} disabled={!ocrRuntime.remote_fallback_available}>测试远程 OCR</button><button className="button" type="submit"><Save size={15} />保存 OCR 设置</button></div>
+          <div className="admin-action-row"><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_nas" ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== "test-ocr:test_nas"} onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</ActionButton><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_remote" ? "pending" : "idle"} pendingLabel="测试中" disabled={!ocrRuntime.remote_fallback_available || (Boolean(pendingAction) && pendingAction !== "test-ocr:test_remote")} onClick={() => void testOcrRuntime("test_remote")}>测试远程 OCR</ActionButton><ActionButton className="button" type="submit" state={pendingAction === "save-ocr-runtime" ? "pending" : "idle"} pendingLabel="正在保存 OCR" disabled={Boolean(pendingAction) && pendingAction !== "save-ocr-runtime"}><Save size={15} />保存 OCR 设置</ActionButton></div>
         </form>
         <form className="admin-panel ai-runtime-settings" onSubmit={saveAiRuntime}>
           <header><h2>服务器 AI 能力（可选）</h2></header>
@@ -2184,11 +2195,11 @@ export function SettingsAdmin() {
                   <div><dt>凭据</dt><dd>{profile.environment?.credential_configured ? "服务器已配置或不需要" : "服务器未配置"}</dd></div>
                   <div><dt>生效方式</dt><dd>模型参数热读取；密钥和 endpoint 需部署环境变更</dd></div>
                 </dl>
-                <button className="button secondary" type="button" onClick={() => void testAiRuntime(profile.key)}>测试配置</button>
+                <ActionButton className="button secondary" type="button" state={pendingAction === `test-ai-runtime:${profile.key}` ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== `test-ai-runtime:${profile.key}`} onClick={() => void testAiRuntime(profile.key)}>测试配置</ActionButton>
               </fieldset>
             ))}
             <small>当前配置来源：{aiRuntime.source}。健康检查失败不会自动停用 profile。</small>
-            <button className="button" type="submit"><Save size={15} />保存 AI Runtime</button>
+            <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存 AI Runtime" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存 AI Runtime</ActionButton>
           </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
         <form className="admin-panel semantic-runtime-settings" onSubmit={saveSemanticRuntime}>
@@ -2255,7 +2266,7 @@ export function SettingsAdmin() {
           {semanticRuntime.engine === "meilisearch_hybrid" && semanticRuntime.model_health?.available === false ? <small className="attempt-error">混合检索权重当前不会生效。安装完整本地模型后，请运行测试查询验证关键词回退与混合检索，再建立新版本索引。</small> : null}
           {semanticRuntime.apply_error ? <p className="attempt-error">设置已保存，但运行配置应用失败：{semanticRuntime.apply_error}</p> : null}
           <small>本地多语种模型会占用 NAS 的 CPU、内存和索引空间。建议先用轻量模式试运行。远程密钥只写入 <code>SEMANTIC_EMBEDDING_API_KEY</code>，后台不会显示原文。</small>
-          <button className="button secondary" type="submit"><Save size={15} />保存观点检索设置</button>
+          <ActionButton className="button secondary" type="submit" state={pendingAction === "save-semantic-runtime" ? "pending" : "idle"} pendingLabel="正在保存检索设置" disabled={Boolean(pendingAction) && pendingAction !== "save-semantic-runtime"}><Save size={15} />保存观点检索设置</ActionButton>
           </> : (
             <p className={semanticResource.error ? "attempt-error" : "admin-help"} role={semanticResource.error ? "alert" : "status"}>
               {semanticResource.error || "正在读取服务器上的有效配置。载入完成前不会显示或保存默认值。"}
@@ -2263,12 +2274,12 @@ export function SettingsAdmin() {
           )}
         </form>
         <section className="admin-panel backup-settings">
-          <header><h2>手动备份</h2><button type="button" onClick={backups.refresh}><RefreshCw size={14} />刷新</button></header>
+          <header><h2>手动备份</h2><ActionButton type="button" state={backups.loading ? "pending" : "idle"} pendingLabel="刷新中" disabled={Boolean(pendingAction)} onClick={backups.refresh}><RefreshCw size={14} />刷新</ActionButton></header>
           <Download size={28} />
           <p>备份写入指定 NAS 目录，并生成数据库、文件清单和 SHA-256 校验值。不会自动安排每日任务。</p>
           <label><span>容器内备份目录</span><input value={backupPath} onChange={(event) => setBackupPath(event.target.value)} /></label>
           <label className="switch-row"><input type="checkbox" checked={includeOriginals} onChange={(event) => setIncludeOriginals(event.target.checked)} /><span>归档内再包含原始 PDF</span></label>
-          <button className="button secondary" type="button" onClick={createBackup}>立即创建备份</button>
+          <ActionButton className="button secondary" type="button" state={pendingAction === "create-backup" ? "pending" : "idle"} pendingLabel="正在提交备份" disabled={Boolean(pendingAction) && pendingAction !== "create-backup"} onClick={() => void createBackup()}>立即创建备份</ActionButton>
           <small>同一台 NAS 上的备份可恢复误操作，但不能替代异地灾难备份。</small>
           <div className="backup-history">
             {backups.data?.results.slice(0, 6).map((job) => <article key={job.id}><header><strong>{job.status}</strong><time>{new Date(job.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></header><p>{job.archive_path || job.destination_path}</p>{job.checksum ? <small>SHA-256 {job.checksum}</small> : null}{job.error_message ? <small className="attempt-error">{job.error_message}</small> : null}</article>)}
@@ -2276,7 +2287,7 @@ export function SettingsAdmin() {
           </div>
         </section>
       </section>
-      {message ? <p className="form-message" role="status">{message}</p> : null}
+      {message ? <AsyncStatus state={messageState} message={message} /> : null}
     </AdminPageFrame>
   );
 }

@@ -15,6 +15,7 @@ type WorkRow = {
   contributors: string[];
   edition_count: number;
   primary_edition: string;
+  primary_edition_id?: string;
   publication_state: string;
   asset_state: string;
   knowledge_status: string;
@@ -72,6 +73,7 @@ function normalizeRow(value: unknown): WorkRow | null {
     contributors,
     edition_count: Number(row.edition_count ?? 0),
     primary_edition: asString(primaryEdition.label ?? primaryEdition.version_label ?? row.primary_edition_label, "未指定"),
+    primary_edition_id: asString(primaryEdition.id) || undefined,
     publication_state: asString(row.publication_state, "draft"),
     asset_state: asString(row.asset_state, "pending"),
     knowledge_status: asString(row.knowledge_status, "pending"),
@@ -137,7 +139,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
       {error ? <p className="admin-list-state review-error" role="alert">{error}</p> : null}
       {loading ? <p className="admin-list-state">正在读取作品馆藏……</p> : null}
       {!loading && !error && !page?.results.length ? <EmptyState title="没有匹配的作品" description="上传形成 Work 后会显示在这里。" icon={<BookOpen size={21} />} /> : null}
-      {page?.results.length ? <section className="work-library-table admin-panel"><header><span>作品</span><span>版本</span><span>发布</span><span>文件</span><span>知识</span><span>策展</span><span>更新时间</span><span>操作</span></header>{page.results.map((work) => <article key={work.id}><div><strong>{work.title}</strong><small>{documentLabels[work.document_type] ?? work.document_type} · {work.language} · {work.contributors.join("、") || "责任者待确认"}</small></div><span><strong>{work.edition_count}</strong><small>{work.primary_edition}</small></span><StatusBadge label={statusLabels[work.publication_state] ?? work.publication_state} tone={toneByStatus[work.publication_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.asset_state] ?? work.asset_state} tone={toneByStatus[work.asset_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.knowledge_status] ?? work.knowledge_status} tone={toneByStatus[work.knowledge_status] ?? "neutral"} /><StatusBadge label={statusLabels[work.curation_status] ?? work.curation_status} tone={toneByStatus[work.curation_status] ?? "neutral"} /><time>{work.updated_at ? new Date(work.updated_at).toLocaleString("zh-CN") : "—"}</time><Link href={`/admin/library/works/${work.id}#work`}>打开作品 <ArrowRight size={13} /></Link></article>)}<footer>共 {page.count} 项作品。上传历史不会取代 Work 身份。</footer></section> : null}
+      {page?.results.length ? <section className="work-library-table admin-panel"><header><span>作品</span><span>版本</span><span>发布</span><span>文件</span><span>知识</span><span>策展</span><span>更新时间</span><span>操作</span></header>{page.results.map((work) => <article key={work.id}><div><strong>{work.title}</strong><small>{documentLabels[work.document_type] ?? work.document_type} · {work.language} · {work.contributors.join("、") || "责任者待确认"}</small></div><span><strong>{work.edition_count}</strong><small>{work.primary_edition}</small></span><StatusBadge label={statusLabels[work.publication_state] ?? work.publication_state} tone={toneByStatus[work.publication_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.asset_state] ?? work.asset_state} tone={toneByStatus[work.asset_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.knowledge_status] ?? work.knowledge_status} tone={toneByStatus[work.knowledge_status] ?? "neutral"} /><StatusBadge label={statusLabels[work.curation_status] ?? work.curation_status} tone={toneByStatus[work.curation_status] ?? "neutral"} /><time>{work.updated_at ? new Date(work.updated_at).toLocaleString("zh-CN") : "—"}</time><Link href={`/admin/library/works/${work.id}${work.primary_edition_id ? `?edition=${encodeURIComponent(work.primary_edition_id)}` : ""}#work`}>打开作品 <ArrowRight size={13} /></Link></article>)}<footer>共 {page.count} 项作品。上传历史不会取代 Work 身份。</footer></section> : null}
     </div>
   );
 }

@@ -121,7 +121,8 @@ export function WorkflowInspector({
           {(selection.items ?? []).map((candidate) => {
             const proposed = candidate.proposed_value ?? candidate.value;
             const evidence = evidenceRows(candidate);
-            const reasons = stringRows(candidate.reasons);
+            const reasons = stringRows(candidate.match_reasons ?? candidate.reasons);
+            const conflicts = stringRows(candidate.conflicts);
             const actions = (candidate.available_actions ?? []).filter((action) => action !== "inspect");
             const leadOnly = candidate.evidence_status === "lead_only" || candidate.source_tier === "research_lead";
             return (
@@ -136,6 +137,7 @@ export function WorkflowInspector({
                   {candidate.evidence_count !== undefined ? <div><dt>证据</dt><dd>{String(candidate.evidence_count)} 条</dd></div> : null}
                 </dl>
                 {reasons.length ? <details open><summary>匹配依据</summary><ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
+                {conflicts.length ? <details open className="workflow-inspector-conflicts"><summary>冲突</summary><ul>{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul></details> : null}
                 {evidence.length ? <h3>证据</h3> : null}
                 {evidence.map((entry, index) => {
                   const row = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};

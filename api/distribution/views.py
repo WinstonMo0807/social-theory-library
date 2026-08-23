@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Asset, OcrStatus, PublicationState, ReaderRenditionPolicy
-from common.permissions import IsLibraryAdmin
+from common.permissions import CanViewEvidence, IsLibraryAdmin
 
 from .models import BackupJob, CloudBudgetPolicy, CloudObject, CloudProvider, CloudUsageSnapshot
 from .serializers import BackupJobSerializer, CloudProviderSerializer, CloudUsageSnapshotSerializer
@@ -300,9 +300,13 @@ class AssetAccessView(APIView):
 class AssetFileView(APIView):
     permission_classes = [AllowAny]
 
-    def head(self, request, asset_id):
-        if settings.REQUIRE_CLOUD_FOR_PUBLICATION or not settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS:
-            return Response({"detail": "本地阅读副本未开放。"}, status=404)
+    def _local_file_available(self) -> bool:
+        return bool(
+            settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS
+            and not settings.REQUIRE_CLOUD_FOR_PUBLICATION
+        )
+
+    def _resolve_file_assets(self, request, asset_id) -> tuple[Asset, Asset, str]:
         anchor = _public_asset(asset_id, request)
         download_mode = _download_mode(request)
         asset, _fallback_reason = (
@@ -312,6 +316,16 @@ class AssetFileView(APIView):
             if download_mode == "preferred"
             else _reader_file_asset(anchor)
         )
+        return anchor, asset, download_mode
+
+    def _response_access_status(self, anchor: Asset) -> str:
+        return anchor.access_status
+
+    def head(self, request, asset_id):
+        if not self._local_file_available():
+            return Response({"detail": "本地阅读副本未开放。"}, status=404)
+        anchor, asset, download_mode = self._resolve_file_assets(request, asset_id)
+        access_status = self._response_access_status(anchor)
         try:
             path = Path(asset.file.path)
         except (NotImplementedError, ValueError):
@@ -323,7 +337,7 @@ class AssetFileView(APIView):
         _asset_file_headers(
             response,
             sha256=asset.sha256,
-            access_status=anchor.access_status,
+            access_status=access_status,
         )
         disposition = content_disposition_header(
             bool(download_mode),
@@ -334,17 +348,10 @@ class AssetFileView(APIView):
         return response
 
     def get(self, request, asset_id):
-        if settings.REQUIRE_CLOUD_FOR_PUBLICATION or not settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS:
+        if not self._local_file_available():
             return Response({"detail": "本地阅读副本未开放。"}, status=404)
-        anchor = _public_asset(asset_id, request)
-        download_mode = _download_mode(request)
-        asset, _fallback_reason = (
-            (anchor, "")
-            if download_mode == "original"
-            else _download_file_asset(anchor)
-            if download_mode == "preferred"
-            else _reader_file_asset(anchor)
-        )
+        anchor, asset, download_mode = self._resolve_file_assets(request, asset_id)
+        access_status = self._response_access_status(anchor)
         try:
             path = Path(asset.file.path)
         except (NotImplementedError, ValueError):
@@ -363,7 +370,7 @@ class AssetFileView(APIView):
                 filename=filename,
                 as_attachment=as_attachment,
                 sha256=asset.sha256,
-                access_status=anchor.access_status,
+                access_status=access_status,
             )
             if response is None:
                 return Response({"detail": "本地阅读副本路径不在允许目录内。"}, status=503)
@@ -387,7 +394,7 @@ class AssetFileView(APIView):
             return _asset_file_headers(
                 response,
                 sha256=asset.sha256,
-                access_status=anchor.access_status,
+                access_status=access_status,
             )
 
         bounds = _range_bounds(range_value, size)
@@ -409,8 +416,35 @@ class AssetFileView(APIView):
         return _asset_file_headers(
             response,
             sha256=asset.sha256,
-            access_status=anchor.access_status,
+            access_status=access_status,
         )
+
+
+class AdminAssetPreviewView(AssetFileView):
+    """Serve one current normalized PDF to authenticated back-office staff.
+
+    This endpoint deliberately bypasses only the publication-state filter. It
+    keeps the existing file-path, X-Accel and Range safeguards, and forces
+    private no-store caching so draft assets never enter a shared cache.
+    """
+
+    permission_classes = [CanViewEvidence]
+
+    def _local_file_available(self) -> bool:
+        return True
+
+    def _resolve_file_assets(self, request, asset_id) -> tuple[Asset, Asset, str]:
+        asset = get_object_or_404(
+            Asset.objects.select_related("edition__work"),
+            pk=asset_id,
+            kind=Asset.Kind.NORMALIZED,
+            status=Asset.Status.READY,
+            is_current=True,
+        )
+        return asset, asset, _download_mode(request)
+
+    def _response_access_status(self, anchor: Asset) -> str:
+        return Asset.AccessStatus.PRIVATE
 
 
 class CloudProviderListView(generics.ListCreateAPIView):

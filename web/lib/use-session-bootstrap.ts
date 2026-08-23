@@ -9,7 +9,7 @@ import {
 
 const initialState: SessionState = { status: "loading" };
 
-export function useSessionBootstrap(allowedRoles?: readonly string[]) {
+export function useSessionBootstrap(allowedRoles?: readonly string[], enabled = true) {
   const [state, setState] = useState<SessionState>(initialState);
   const [attempt, setAttempt] = useState(0);
   const stateRef = useRef<SessionState>(initialState);
@@ -26,6 +26,7 @@ export function useSessionBootstrap(allowedRoles?: readonly string[]) {
   }, [state]);
 
   const scheduleValidation = useCallback((background: boolean) => {
+    if (!enabled) return;
     const now = Date.now();
     // Focus/pageshow can fire repeatedly while a user is dragging a file or
     // switching between browser windows. Avoid turning that normal browser
@@ -35,13 +36,14 @@ export function useSessionBootstrap(allowedRoles?: readonly string[]) {
     backgroundRefreshRef.current = background;
     if (!background) setState({ status: "loading" });
     setAttempt((value) => value + 1);
-  }, []);
+  }, [enabled]);
 
   const retry = useCallback(() => {
     scheduleValidation(false);
   }, [scheduleValidation]);
 
   useEffect(() => {
+    if (!enabled) return;
     // A storage change is an explicit cross-tab session event (including
     // logout), so it is authoritative. Visibility/pageshow checks remain
     // background probes and are deliberately non-destructive to uploads.
@@ -56,9 +58,10 @@ export function useSessionBootstrap(allowedRoles?: readonly string[]) {
       document.removeEventListener("visibilitychange", revalidateVisibleSession);
       window.removeEventListener("pageshow", revalidateVisibleSession);
     };
-  }, [retry, scheduleValidation]);
+  }, [enabled, retry, scheduleValidation]);
 
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
     const background = backgroundRefreshRef.current;
     backgroundRefreshRef.current = false;
@@ -82,7 +85,7 @@ export function useSessionBootstrap(allowedRoles?: readonly string[]) {
     return () => {
       active = false;
     };
-  }, [attempt, stableRoles]);
+  }, [attempt, enabled, stableRoles]);
 
   return { state, retry };
 }

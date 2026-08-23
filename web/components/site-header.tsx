@@ -14,10 +14,12 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { getServerSessionCredential, logoutCurrentSession, subscribeToSessionChanges } from "@/lib/api";
-import { bootstrapSession } from "@/lib/session";
+import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, AsyncStatus } from "./action-feedback";
 import { DisplayPreferences } from "./display-preferences";
+import { usePublicSession } from "./public-session-provider";
 
 export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
   return (
@@ -34,7 +36,10 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<{ display_name: string; role: string } | null>(null);
+  const [logoutError, setLogoutError] = useState("");
+  const { pendingAction, startAction, finishAction } = useActionGuard();
+  const { state: session } = usePublicSession();
+  const user = session.status === "authenticated" && session.user ? session.user : null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLElement>(null);
@@ -46,26 +51,6 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
     ["/scholars", config.navigation.scholars],
     ["/topics", config.navigation.topics],
   ] as const;
-
-  useEffect(() => {
-    let active = true;
-    const verify = async (force = false) => {
-      if (!force && !getServerSessionCredential()) return;
-      const session = await bootstrapSession();
-      if (!active) return;
-      if (session.status === "authenticated" && session.user) {
-        setUser(session.user);
-      } else if (["unauthenticated", "forbidden"].includes(session.status)) {
-        setUser(null);
-      }
-    };
-    void verify();
-    const unsubscribe = subscribeToSessionChanges(() => void verify(true));
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
@@ -119,9 +104,17 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
   }
 
   async function logout() {
-    await logoutCurrentSession();
-    setUser(null);
-    closeMenu();
+    const actionKey = "logout";
+    if (!startAction(actionKey)) return;
+    setLogoutError("");
+    try {
+      await logoutCurrentSession();
+      closeMenu();
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : "退出登录失败，请重试。");
+    } finally {
+      finishAction(actionKey);
+    }
   }
 
   if (pathname.startsWith("/reader/") || pathname.startsWith("/admin") || authRoute) {
@@ -220,13 +213,21 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
                     </Link>
                   </>
                 ) : (
-                  <button type="button" onClick={logout}>
+                  <ActionButton
+                    type="button"
+                    state={pendingAction === "logout" ? "pending" : logoutError ? "error" : "idle"}
+                    pendingLabel="正在退出"
+                    errorLabel="退出失败，请重试"
+                    onClick={() => void logout()}
+                  >
                     <LogOut size={18} />
                     <span><strong>退出登录</strong><small>{user.display_name}</small></span>
-                  </button>
+                  </ActionButton>
                 )}
               </div>
             </div>
+
+            {logoutError ? <AsyncStatus state="error" message={logoutError} /> : null}
 
             <DisplayPreferences />
 

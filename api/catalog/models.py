@@ -3775,6 +3775,194 @@ class SearchQueryAggregate(UUIDTimeStampedModel):
         ]
 
 
+class ResearchRun(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "等待外部研究"
+        RUNNING = "running", "研究中"
+        COMPLETED = "completed", "完成"
+        DEGRADED = "degraded", "部分来源不可用"
+        FAILED = "failed", "失败"
+        CANCELED = "canceled", "已取消"
+
+    class Trigger(models.TextChoices):
+        AUTO_LOAD = "auto_load", "页面自动研究"
+        FIELD_CHANGE = "field_change", "字段变化"
+        MANUAL = "manual", "人工重新研究"
+        HEALTH = "health", "健康探测"
+
+    work = models.ForeignKey(Work, on_delete=models.CASCADE, related_name="research_runs")
+    edition = models.ForeignKey(Edition, on_delete=models.CASCADE, related_name="research_runs")
+    upload_item_id = models.UUIDField(null=True, blank=True, db_index=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="research_runs",
+    )
+    trigger = models.CharField(max_length=24, choices=Trigger.choices, default=Trigger.AUTO_LOAD)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    idempotency_key = models.CharField(max_length=128, unique=True)
+    context_fingerprint = models.CharField(max_length=64, db_index=True)
+    context_version = models.CharField(max_length=80)
+    contract_version = models.CharField(max_length=80)
+    planner_version = models.CharField(max_length=80)
+    active_step = models.CharField(max_length=40, db_index=True)
+    changed_fields = models.JSONField(default=list, blank=True)
+    context_snapshot = models.JSONField(default=dict)
+    plan = models.JSONField(default=list)
+    local_results = models.JSONField(default=dict)
+    external_results = models.JSONField(default=dict)
+    diagnostics = models.JSONField(default=dict)
+    error_code = models.CharField(max_length=120, blank=True)
+    error_message = models.TextField(blank=True)
+    task_id = models.CharField(max_length=255, blank=True, db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["work", "active_step", "created_at"]),
+            models.Index(fields=["context_fingerprint", "created_at"]),
+        ]
+
+
+class HealthCheckRun(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        HEALTHY = "healthy", "正常"
+        DEGRADED = "degraded", "降级"
+        FAILED = "failed", "故障"
+        RECOVERING = "recovering", "恢复中"
+        PAUSED = "paused", "已暂停"
+        UNKNOWN = "unknown", "未知"
+
+    class Source(models.TextChoices):
+        SCHEDULED = "scheduled", "定时检查"
+        MANUAL = "manual", "人工检查"
+        RECOVERY = "recovery", "恢复复核"
+
+    probe_key = models.CharField(max_length=120, db_index=True)
+    capability = models.CharField(max_length=120, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.UNKNOWN, db_index=True)
+    source = models.CharField(max_length=20, choices=Source.choices, default=Source.SCHEDULED)
+    configured = models.BooleanField(null=True)
+    reachable = models.BooleanField(null=True)
+    functional = models.BooleanField(null=True)
+    productive = models.BooleanField(null=True)
+    summary = models.CharField(max_length=500, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    error_code = models.CharField(max_length=120, blank=True, db_index=True)
+    error_category = models.CharField(max_length=120, blank=True)
+    started_at = models.DateTimeField(default=timezone.now)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    initiated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="health_check_runs",
+    )
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["probe_key", "started_at"]),
+            models.Index(fields=["capability", "status", "started_at"]),
+        ]
+
+
+class HealthIncident(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        OPEN = "open", "待处理"
+        RECOVERING = "recovering", "恢复中"
+        RESOLVED = "resolved", "已恢复"
+
+    class Severity(models.TextChoices):
+        INFO = "info", "提示"
+        WARNING = "warning", "警告"
+        CRITICAL = "critical", "严重"
+
+    incident_key = models.CharField(max_length=160, unique=True)
+    capability = models.CharField(max_length=120, db_index=True)
+    probe_key = models.CharField(max_length=120, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
+    severity = models.CharField(max_length=20, choices=Severity.choices, default=Severity.WARNING)
+    error_code = models.CharField(max_length=120, blank=True, db_index=True)
+    error_category = models.CharField(max_length=120, blank=True)
+    error_message = models.TextField(blank=True)
+    first_seen_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(default=timezone.now, db_index=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    occurrence_count = models.PositiveIntegerField(default=1)
+    recovery_attempt_count = models.PositiveIntegerField(default=0)
+    affected_features = models.JSONField(default=list, blank=True)
+    probable_causes = models.JSONField(default=list, blank=True)
+    safe_recovery_actions = models.JSONField(default=list, blank=True)
+    manual_guidance = models.TextField(blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    latest_run = models.ForeignKey(
+        HealthCheckRun,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="incidents",
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="resolved_health_incidents",
+    )
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+        indexes = [
+            models.Index(fields=["status", "severity", "last_seen_at"]),
+            models.Index(fields=["capability", "status"]),
+        ]
+
+
+class RecoveryAction(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "等待"
+        RUNNING = "running", "执行中"
+        SUCCEEDED = "succeeded", "成功"
+        FAILED = "failed", "失败"
+        CANCELED = "canceled", "取消"
+
+    incident = models.ForeignKey(HealthIncident, on_delete=models.CASCADE, related_name="recovery_actions")
+    action = models.CharField(max_length=120, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    idempotency_key = models.CharField(max_length=160, unique=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="recovery_actions",
+    )
+    attempt = models.PositiveIntegerField(default=0)
+    max_attempts = models.PositiveIntegerField(default=3)
+    next_retry_at = models.DateTimeField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    error_code = models.CharField(max_length=120, blank=True)
+    error_message = models.TextField(blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["incident", "status"]),
+        ]
+
+
 class SiteSetting(UUIDTimeStampedModel):
     key = models.CharField(max_length=120, unique=True)
     value = models.JSONField(default=dict)

@@ -6,6 +6,7 @@ let activeRefresh: Promise<string | null> | null = null;
 const COOKIE_SESSION = "cookie-session";
 const SESSION_HINT_KEY = "library_session_active";
 const REFRESH_REVISION_KEY = "library_session_refresh_revision";
+const SESSION_CHANGE_EVENT = "social-theory-library:session-change";
 const LEGACY_SESSION_KEYS = [
   "library_access_token",
   "library_refresh_token",
@@ -79,9 +80,16 @@ function clearLegacyStoredTokens() {
 }
 
 export function clearStoredSession() {
+  const hadStoredSession = Boolean(
+    readStorage(SESSION_HINT_KEY)
+    || LEGACY_SESSION_KEYS.some((key) => readStorage(key)),
+  );
   clearLegacyStoredTokens();
   removeStorage(SESSION_HINT_KEY);
   removeStorage(REFRESH_REVISION_KEY);
+  if (hadStoredSession && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+  }
 }
 
 export function markSessionActive() {
@@ -95,8 +103,13 @@ export function subscribeToSessionChanges(listener: () => void) {
     if (event.key !== null && event.key !== SESSION_HINT_KEY) return;
     listener();
   };
+  const handleSameTabChange = () => listener();
   window.addEventListener("storage", handleStorage);
-  return () => window.removeEventListener("storage", handleStorage);
+  window.addEventListener(SESSION_CHANGE_EVENT, handleSameTabChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(SESSION_CHANGE_EVENT, handleSameTabChange);
+  };
 }
 
 function csrfToken() {
@@ -394,6 +407,7 @@ export function getServerSessionCredential() {
 
 export async function logoutCurrentSession() {
   if (typeof window === "undefined") return;
+  let failure: unknown;
   try {
     await apiRequest<void>(
       "/auth/logout/",
@@ -403,9 +417,10 @@ export async function logoutCurrentSession() {
       },
       COOKIE_SESSION,
     );
-  } catch {
-    // Local cleanup must still happen when the server or network is unavailable.
+  } catch (reason) {
+    failure = reason;
   } finally {
     clearStoredSession();
   }
+  if (failure) throw failure;
 }

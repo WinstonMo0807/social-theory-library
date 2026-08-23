@@ -6,6 +6,7 @@ import "./editorial-workspaces.css";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteConfig } from "@/lib/server-api";
 import { RouteTransition } from "@/components/route-transition";
+import { PublicSessionProvider } from "@/components/public-session-provider";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await loadSiteConfig();
@@ -44,11 +45,13 @@ export default async function RootLayout({
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
       </head>
       <body>
-        <a className="skip-link" href="#main-content">
-          跳到主要内容
-        </a>
-        <SiteHeader config={config} />
-        <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
+        <PublicSessionProvider>
+          <a className="skip-link" href="#main-content">
+            跳到主要内容
+          </a>
+          <SiteHeader config={config} />
+          <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
+        </PublicSessionProvider>
       </body>
     </html>
   );

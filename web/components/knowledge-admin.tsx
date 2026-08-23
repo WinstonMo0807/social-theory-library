@@ -17,11 +17,20 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
+import { ResearchEntityPicker } from "@/components/admin/research/research-entity-picker";
+import type { EntityValue } from "@/components/admin/forms/workflow-fields";
 import { AuthoritySuggestions, StringListEditor } from "@/components/structured-editors";
 import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Page<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
+function onePickerValue(id: string, name: string): EntityValue[] {
+  return id ? [{ id, name: name || "已选择实体" }] : [];
+}
+
+function pickerLabels(values: EntityValue[]): Record<string, string> {
+  return Object.fromEntries(values.flatMap((value) => value.id ? [[value.id, value.name]] : []));
+}
 
 function useResource<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
@@ -294,6 +303,7 @@ export function SubdisciplinesAdmin() {
   const [draft, setDraft] = useState<SubdisciplineDraft>(emptySubdiscipline());
   const [image, setImage] = useState<File | null>(null);
   const [message, setMessage] = useState("");
+  const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
   const editorRef = useRef<HTMLFormElement | null>(null);
 
   function start(row?: SubdisciplineRow) {
@@ -301,6 +311,7 @@ export function SubdisciplinesAdmin() {
     setDraft(row ? subdisciplineToDraft(row) : emptySubdiscipline(disciplines.data?.results[0]?.id ?? ""));
     setImage(null);
     setMessage("");
+    setEntityLabels({});
     window.requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: motionAwareScrollBehavior(), block: "start" }));
   }
 
@@ -347,6 +358,7 @@ export function SubdisciplinesAdmin() {
   }
 
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || "未归类";
+  const subdisciplineName = (id: string) => rows.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择子学科";
   return (
     <Frame eyebrow="知识矩阵" title="子学科" description="子学科属于学科，但不作为理论传统的上下级。理论与子学科通过经过审核的关系表连接。">
       <div className="knowledge-admin-layout knowledge-admin-workspace">
@@ -359,8 +371,8 @@ export function SubdisciplinesAdmin() {
               <label><span>标准名称</span><input autoComplete="off" required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
               <label><span>外文名称</span><input value={draft.foreign_name} onChange={(event) => setDraft({ ...draft, foreign_name: event.target.value })} /></label>
               <label><span>固定链接</span><input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="留空自动生成" /></label>
-              <label><span>所属学科</span><select required value={draft.discipline} onChange={(event) => setDraft({ ...draft, discipline: event.target.value, parent: "" })}><option value="">请选择</option>{disciplines.data?.results.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-              <label><span>上级子学科</span><select value={draft.parent} onChange={(event) => setDraft({ ...draft, parent: event.target.value })}><option value="">无</option>{rows.data?.results.filter((item) => item.id !== editing?.id && item.discipline === draft.discipline).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+              <ResearchEntityPicker label="所属学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_subdisciplines" field="discipline" values={onePickerValue(draft.discipline, entityLabels[draft.discipline] || disciplineName(draft.discipline))} onChange={(next) => { const selected = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, discipline: selected?.id ?? "", parent: "" }); }} />
+              <ResearchEntityPicker label="上级子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="maintenance_subdisciplines" field="parent" values={onePickerValue(draft.parent, subdisciplineName(draft.parent))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing?.id) return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, parent: selected?.id ?? "" }); }} />
               <label><span>形成时期</span><input value={draft.formation_period} onChange={(event) => setDraft({ ...draft, formation_period: event.target.value })} /></label>
             </div>
             <AuthoritySuggestions

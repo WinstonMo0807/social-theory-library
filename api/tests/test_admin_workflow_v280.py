@@ -7,6 +7,7 @@ from catalog.models import (
     Asset,
     Contribution,
     DocumentType,
+    Edition,
     EditionWorkflowDecision,
     PublicationState,
 )
@@ -214,6 +215,52 @@ def test_maintenance_mode_work_library_and_permissions(
 
 
 @pytest.mark.django_db
+def test_maintenance_workspace_and_mutation_stay_on_requested_edition(
+    api_client,
+    admin_user,
+    settings,
+    tmp_path,
+):
+    work, primary, _original, _normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="多版本精确维护",
+    )
+    primary.publisher = "主版本出版社"
+    primary.is_primary = True
+    primary.save(update_fields=["publisher", "is_primary", "updated_at"])
+    selected = Edition.objects.create(
+        work=work,
+        version_label="待维护的第二版",
+        publication_year=2025,
+        publisher="第二版原出版社",
+        is_primary=False,
+    )
+    api_client.force_authenticate(admin_user)
+
+    loaded = api_client.get(
+        f"/api/catalog/admin/library/works/{work.id}/?edition={selected.id}"
+    )
+    assert loaded.status_code == 200
+    assert loaded.data["context"]["edition_id"] == str(selected.id)
+
+    saved = api_client.patch(
+        (
+            f"/api/catalog/admin/library/works/{work.id}/sections/bibliography/"
+            f"?edition={selected.id}"
+        ),
+        {"data": {"publisher": "第二版核定出版社"}},
+        format="json",
+    )
+    assert saved.status_code == 200
+    assert saved.data["context"]["edition_id"] == str(selected.id)
+    primary.refresh_from_db()
+    selected.refresh_from_db()
+    assert primary.publisher == "主版本出版社"
+    assert selected.publisher == "第二版核定出版社"
+
+
+@pytest.mark.django_db
 def test_workflow_stale_confirmation_and_publication_blocker(settings, tmp_path, admin_user):
     work, edition, _original, normalized = create_item_with_files(
         settings,
@@ -282,7 +329,9 @@ def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     )
     assert published.status_code == 200
     assert published.data["mode"] == "maintenance"
-    assert published.data["maintenance_url"].endswith(f"/{work.id}#publication")
+    assert published.data["maintenance_url"].endswith(
+        f"/{work.id}?edition={edition.id}#publication"
+    )
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
 

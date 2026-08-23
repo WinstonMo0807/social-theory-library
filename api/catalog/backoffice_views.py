@@ -6,15 +6,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ingestion.models import ProcessingJob, UploadItem
+from catalog.models import HealthIncident
 
 from common.permissions import (
     CanAccessBackOffice,
     CanManageQueryLexicon,
+    CanRetryJobs,
     CanViewQueryLexicon,
     CanViewEvidence,
     CanViewSystemStatus,
     IsCatalogEditor,
 )
+from common.capabilities import Capability, has_capability
 
 from catalog.services.backoffice import (
     knowledge_workspace,
@@ -23,6 +26,7 @@ from catalog.services.backoffice import (
     system_status_snapshot,
 )
 from catalog.services.admin_workspace import build_admin_workspace
+from catalog.serializers import AdminWorkPagePreviewSerializer
 from catalog.services.query_lexicon.operations import (
     enqueue_query_lexicon_reconciliation,
     reconcile_preview,
@@ -111,6 +115,73 @@ class AdminSystemStatusView(APIView):
         return Response(system_status_snapshot())
 
 
+class AdminFunctionalHealthView(APIView):
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [CanViewSystemStatus(), CanRetryJobs()]
+        return [CanViewSystemStatus()]
+
+    def get(self, request):
+        from catalog.services.system_health import functional_health_snapshot
+
+        return Response(functional_health_snapshot())
+
+    def post(self, request):
+        from catalog.services.system_health import (
+            functional_health_snapshot,
+            request_recovery,
+            run_health_probe,
+        )
+
+        action = str(request.data.get("action") or "").strip().casefold()
+        if action == "run_probe":
+            try:
+                run = run_health_probe(
+                    str(request.data.get("probe_key") or ""),
+                    source="manual",
+                    actor=request.user,
+                )
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "id": str(run.id),
+                "probe_key": run.probe_key,
+                "status": run.status,
+                "snapshot": functional_health_snapshot(),
+            })
+        if action == "recover":
+            recovery_action = str(request.data.get("recovery_action") or "").strip().casefold()
+            elevated_capability = {
+                "recover_query_lexicon": Capability.MANAGE_QUERY_LEXICON,
+                "recover_semantic_queue": Capability.MANAGE_SEMANTIC_INDEX,
+            }.get(recovery_action)
+            if elevated_capability and not has_capability(request.user, elevated_capability):
+                return Response(
+                    {"detail": "当前账户不能执行该系统恢复动作。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            incident = get_object_or_404(HealthIncident, pk=request.data.get("incident_id"))
+            try:
+                recovery, created = request_recovery(
+                    incident,
+                    action=recovery_action,
+                    actor=request.user,
+                    request_key=str(request.data.get("idempotency_key") or ""),
+                )
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "id": str(recovery.id),
+                "status": recovery.status,
+                "action": recovery.action,
+                "created": created,
+            }, status=status.HTTP_202_ACCEPTED if created else status.HTTP_200_OK)
+        return Response(
+            {"detail": "action 必须是 run_probe 或 recover。"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class AdminIntakeWorkspaceView(APIView):
     permission_classes = [CanAccessBackOffice]
 
@@ -153,6 +224,43 @@ class AdminIntakeWorkspaceView(APIView):
                 item=item,
             )
         )
+
+
+class AdminWorkPagePreviewView(APIView):
+    permission_classes = [CanViewEvidence]
+
+    def get(self, request, edition_id):
+        from catalog.models import Edition
+
+        edition = get_object_or_404(
+            Edition.objects.select_related("work").prefetch_related(
+                "assets__pages",
+                "contributions__person",
+                "work__editions",
+                "work__knowledge_relations",
+                "work__discipline_relations__discipline",
+                "work__subdiscipline_relations__subdiscipline",
+                "work__node_relations__node",
+                "work__node_relations__evidence",
+            ),
+            pk=edition_id,
+        )
+        normalized = edition.assets.filter(
+            kind="normalized",
+            is_current=True,
+            status="ready",
+        ).order_by("-version").first()
+        data = AdminWorkPagePreviewSerializer(
+            edition.work,
+            context={"request": request, "preview_edition": edition},
+        ).data
+        return Response({
+            "preview_mode": True,
+            "publication_state": edition.state,
+            "public_url": f"/works/{edition.public_slug}" if edition.state == "published" and edition.public_slug else "",
+            "pdf_preview_url": f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else "",
+            "work": data,
+        })
 
 
 class AdminProjectionRefreshView(APIView):

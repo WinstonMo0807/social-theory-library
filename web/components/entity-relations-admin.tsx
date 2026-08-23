@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 
 type Page<T> = { results: T[] };
 type Named = { id: string; name: string; slug?: string; foreign_name?: string; discipline?: string };
@@ -59,6 +61,8 @@ function RelationEditor({
   const [target, setTarget] = useState("");
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [messageState, setMessageState] = useState<ActionState>("idle");
+  const { pendingAction, startAction, finishAction } = useActionGuard();
   const used = new Set(existing.map((row) => String(row[targetField] ?? "")));
 
   async function add(event: FormEvent) {
@@ -66,6 +70,10 @@ function RelationEditor({
     if (!target) return;
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = `add-relation:${resource}`;
+    if (!startAction(actionKey)) return;
+    setMessage("正在确认关系……");
+    setMessageState("pending");
     try {
       await apiRequest(`/catalog/admin/knowledge-relations/${resource}/`, {
         method: "POST",
@@ -80,17 +88,34 @@ function RelationEditor({
       setTarget("");
       setDraft({});
       setMessage("关系已经确认并同步前台。");
+      setMessageState("success");
       refresh();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "保存失败");
+      setMessageState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
   async function remove(id: string) {
     const token = getServerSessionCredential();
     if (!token || !window.confirm("删除这条已确认关系吗？相关前台模块会同步更新。")) return;
-    await apiRequest(`/catalog/admin/knowledge-relations/${resource}/${id}/`, { method: "DELETE" }, token);
-    refresh();
+    const actionKey = `delete-relation:${id}`;
+    if (!startAction(actionKey)) return;
+    setMessage("正在删除关系……");
+    setMessageState("pending");
+    try {
+      await apiRequest(`/catalog/admin/knowledge-relations/${resource}/${id}/`, { method: "DELETE" }, token);
+      setMessage("关系已删除，相关前台页面会同步更新。");
+      setMessageState("success");
+      refresh();
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "关系删除失败");
+      setMessageState("error");
+    } finally {
+      finishAction(actionKey);
+    }
   }
 
   return (
@@ -99,16 +124,16 @@ function RelationEditor({
       <div className="entity-relation-existing">
         {existing.map((row) => {
           const candidate = candidates.find((item) => item.id === String(row[targetField] ?? ""));
-          return <div key={row.id}><Check size={14} /><span><strong>{candidate?.name || "已关联对象"}</strong><small>{String(row.role || row.relation_label || row.relation_type || "已确认")}</small></span><button type="button" onClick={() => void remove(row.id)} aria-label="删除关系"><Trash2 size={14} /></button></div>;
+          return <div key={row.id}><Check size={14} /><span><strong>{candidate?.name || "已关联对象"}</strong><small>{String(row.role || row.relation_label || row.relation_type || "已确认")}</small></span><ActionButton type="button" state={pendingAction === `delete-relation:${row.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-relation:${row.id}`} onClick={() => void remove(row.id)} aria-label="删除关系"><Trash2 size={14} /></ActionButton></div>;
         })}
         {!existing.length ? <p>暂无已确认关系。</p> : null}
       </div>
       <form onSubmit={add}>
         <select value={target} onChange={(event) => setTarget(event.target.value)} required><option value="">选择已有对象</option>{candidates.filter((item) => !used.has(item.id)).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select>
         {children?.(draft, setDraft)}
-        <button type="submit"><Plus size={14} />确认关系</button>
+        <ActionButton type="submit" state={pendingAction === `add-relation:${resource}` ? "pending" : "idle"} pendingLabel="确认中" disabled={Boolean(pendingAction) && pendingAction !== `add-relation:${resource}`}><Plus size={14} />确认关系</ActionButton>
       </form>
-      {message ? <small className="form-message">{message}</small> : null}
+      {message ? <AsyncStatus state={messageState} message={message} /> : null}
     </section>
   );
 }

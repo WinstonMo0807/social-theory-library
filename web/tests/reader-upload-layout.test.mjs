@@ -29,3 +29,18 @@ test("public reader loads private records only after shared session bootstrap", 
   assert.match(source, /if \(!readerAuthenticated\) \{[\s\S]*setGate\("书签"\)/);
   assert.doesNotMatch(source, /if \(!getServerSessionCredential\(\)\)/);
 });
+
+test("public save buttons wait for one shared authenticated session", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const provider = await readFile(new URL("../components/public-session-provider.tsx", import.meta.url), "utf8");
+  const header = await readFile(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const saveButton = await readFile(new URL("../components/save-work-button.tsx", import.meta.url), "utf8");
+  const bootstrap = await readFile(new URL("../lib/use-session-bootstrap.ts", import.meta.url), "utf8");
+  assert.match(layout, /<PublicSessionProvider>/);
+  assert.match(provider, /useSessionBootstrap\(undefined, isPublicSessionRoute\(pathname\)\)/);
+  assert.match(header, /usePublicSession\(\)/);
+  assert.doesNotMatch(header, /bootstrapSession|subscribeToSessionChanges/);
+  assert.match(saveButton, /if \(session\.status !== "authenticated"\) return/);
+  assert.match(saveButton, /\/reading\/saved\/\?work=/);
+  assert.match(bootstrap, /if \(!enabled\) return/);
+});

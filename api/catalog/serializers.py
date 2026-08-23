@@ -610,6 +610,45 @@ class WorkDetailSerializer(WorkCardSerializer):
         ]
 
 
+class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
+    """Render one selected Edition without weakening any public queryset."""
+
+    def _preview_edition(self):
+        return self.context["preview_edition"]
+
+    def get_edition(self, obj):
+        return EditionCompactSerializer(self._preview_edition(), context=self.context).data
+
+    def get_editions(self, obj):
+        return [EditionCompactSerializer(self._preview_edition(), context=self.context).data]
+
+    def get_outline(self, obj):
+        edition = self._preview_edition()
+        asset = edition.assets.filter(
+            kind=Asset.Kind.NORMALIZED,
+            status=Asset.Status.READY,
+            is_current=True,
+        ).first()
+        if not asset:
+            return []
+        return [
+            {
+                "index": page.index,
+                "printed_label": clean_page_label(page.printed_label),
+                "chapter_title": page.chapter_title,
+            }
+            for page in asset.pages.exclude(chapter_title="").order_by("index")
+        ]
+
+    def get_cover(self, obj):
+        if not obj.recommendation_image and not obj.cover:
+            return ""
+        return reverse("admin-work-recommendation-image", kwargs={"work_id": obj.id})
+
+    def get_recommendation_image(self, obj):
+        return self.get_cover(obj)
+
+
 class TheorySchoolSerializer(serializers.ModelSerializer):
     work_count = serializers.IntegerField(read_only=True)
     scholar_count = serializers.SerializerMethodField()

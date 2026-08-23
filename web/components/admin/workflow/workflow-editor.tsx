@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Eye, FileCheck2, LoaderCircle, RefreshCw, Save, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActionButton, ActionLink, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { r2StagingStatusLabel } from "@/lib/ingestion-staging-status";
 import {
@@ -16,7 +16,12 @@ import {
 import { WorkCurationEditor } from "../curation/work-curation-editor";
 import { WorkflowInspector, type InspectorSelection } from "../inspector/workflow-inspector";
 import { ResearchEntityPicker } from "../research/research-entity-picker";
-import { ResearchSuggestionPanel } from "../research/research-suggestion-panel";
+import {
+  ResearchSuggestionCapabilityContext,
+  ResearchSuggestionPanel,
+} from "../research/research-suggestion-panel";
+import { RESEARCH_SUGGESTION_REFRESH_EVENT } from "../research/research-suggestion-state";
+import { ResearchWorkspaceContext } from "../research/research-workspace-context";
 import {
   WORKFLOW_STEP_KEYS,
   WORKFLOW_STEP_LABELS,
@@ -256,6 +261,13 @@ function statusLabel(status: string) {
   return ({ pending: "待处理", available: "可处理", working: "处理中", attention: "需注意", blocked: "被阻止", complete: "已完成", skipped: "已跳过" } as Record<string, string>)[status] ?? status;
 }
 
+function workflowMessageState(message: string): ActionState {
+  if (!message) return "idle";
+  return /(失败|无法|不能|错误|缺少|仍有|请先|未完成|没有提供)/.test(message)
+    ? "error"
+    : "success";
+}
+
 type BodyProps = {
   step: WorkflowStepKey;
   draft: Record<string, unknown>;
@@ -269,20 +281,21 @@ type BodyProps = {
   inspectField: (field: string, title?: string) => void;
   inspectPdf: () => void;
   fileAction: (action: "retry" | "resume" | "replace", file?: File) => void;
-  curationChange: (value: Record<string, unknown>) => void;
-  curationConfirm: () => void;
-  curationSkip: () => void;
-  refresh: () => void;
+  curationConfirm: () => Promise<void>;
+  curationSkip: () => Promise<void>;
+  refresh: () => Promise<boolean>;
   message: (value: string) => void;
   goToIssue: (issue: WorkflowIssue) => void;
   publish: (intent: "next" | "stay") => void;
   withdraw: () => void;
   publishing: boolean;
+  busy: string;
   research: {
     mode: EditorMode;
     itemId?: string;
     workId?: string;
     token: string | null;
+    canRun?: boolean;
     suggestions: WorkflowCandidate[];
     onInspect: (items: WorkflowCandidate[], title: string) => void;
     onUpdated: () => void;
@@ -301,37 +314,49 @@ function candidateCount(candidates: WorkflowCandidate[], field: string) {
 function WorkBody({ draft, candidates, canEdit, errors, update, inspectField, research }: BodyProps) {
   const value = (field: string, next: string) => update("work", field, next);
   const identityCandidates = candidateCount(candidates, "work");
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="work" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} />{identityCandidates ? <button className="workflow-work-identity" type="button" onClick={() => inspectField("work", "作品身份与版本判断")}><AlertTriangle size={15} /><span><strong>发现 {identityCandidates} 项馆内作品候选</strong><small>请明确选择关联现有 Work，或保留当前新 Work。系统不会按高置信度静默合并。</small></span><ChevronRight size={14} /></button> : null}<div className="workflow-field-grid"><CanonicalField name="title" label="作品题名" value={fieldValue(draft, "title")} onChange={(next) => value("title", next)} required disabled={!canEdit} error={errorFor(errors, "title")} candidateCount={candidateCount(candidates, "title")} onInspect={() => inspectField("title", "题名候选")} /><CanonicalField name="subtitle" label="副题名" value={fieldValue(draft, "subtitle")} onChange={(next) => value("subtitle", next)} disabled={!canEdit} candidateCount={candidateCount(candidates, "subtitle")} onInspect={() => inspectField("subtitle")} /><MultilingualField primary={{ name: "original_title", label: "原题名", value: fieldValue(draft, "original_title"), onChange: (next) => value("original_title", next), disabled: !canEdit }} original={{ name: "uniform_title", label: "规范题名", value: fieldValue(draft, "uniform_title"), onChange: (next) => value("uniform_title", next), disabled: !canEdit }} /><CanonicalField name="document_type" label="文献类型" value={fieldValue(draft, "document_type") || "book"} onChange={(next) => value("document_type", next)} options={documentTypeOptions} required disabled={!canEdit} error={errorFor(errors, "document_type")} /><CanonicalField name="language" label="作品语言" value={fieldValue(draft, "language") || "zh-CN"} onChange={(next) => value("language", next)} options={languageOptions} required disabled={!canEdit} error={errorFor(errors, "language")} /><CanonicalField name="original_language" label="原作语言" value={fieldValue(draft, "original_language")} onChange={(next) => value("original_language", next)} disabled={!canEdit} /><CanonicalField name="first_publication_date" label="首次发表日期" value={fieldValue(draft, "first_publication_date")} onChange={(next) => value("first_publication_date", next)} type="date" disabled={!canEdit} /><CanonicalField name="translation_of" label="译自作品" value={fieldValue(draft, "translation_of")} onChange={(next) => value("translation_of", next)} disabled={!canEdit} help="填写或选择原作关系，不能用版本出版信息替代。" /><CanonicalField name="abstract" label="作品摘要" value={fieldValue(draft, "abstract")} onChange={(next) => value("abstract", next)} multiline rows={6} disabled={!canEdit} candidateCount={candidateCount(candidates, "abstract")} onInspect={() => inspectField("abstract")} /></div></>;
+  const translationId = fieldValue(draft, "translation_of");
+  const translationSuggestions = candidates.filter((candidate) => candidateMatches(candidate, "translation_of"));
+  const translationName = fieldValue(draft, "translation_of_title") || asString(
+    translationSuggestions.find((candidate) => asString(candidate.entity_id ?? candidate.candidate_entity_id ?? asRecord(candidate.proposed_value).id) === translationId)?.label,
+    translationId ? "已关联原作" : "",
+  );
+  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="work" token={research.token} canRun={research.canRun} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} />{identityCandidates ? <button className="workflow-work-identity" type="button" onClick={() => inspectField("work", "作品身份与版本判断")}><AlertTriangle size={15} /><span><strong>发现 {identityCandidates} 项馆内作品候选</strong><small>请明确选择关联现有 Work，或保留当前新 Work。系统不会按高置信度静默合并。</small></span><ChevronRight size={14} /></button> : null}<div className="workflow-field-grid"><CanonicalField name="title" label="作品题名" value={fieldValue(draft, "title")} onChange={(next) => value("title", next)} required disabled={!canEdit} error={errorFor(errors, "title")} candidateCount={candidateCount(candidates, "title")} onInspect={() => inspectField("title", "题名候选")} /><CanonicalField name="subtitle" label="副题名" value={fieldValue(draft, "subtitle")} onChange={(next) => value("subtitle", next)} disabled={!canEdit} candidateCount={candidateCount(candidates, "subtitle")} onInspect={() => inspectField("subtitle")} /><MultilingualField primary={{ name: "original_title", label: "原题名", value: fieldValue(draft, "original_title"), onChange: (next) => value("original_title", next), disabled: !canEdit }} original={{ name: "uniform_title", label: "规范题名", value: fieldValue(draft, "uniform_title"), onChange: (next) => value("uniform_title", next), disabled: !canEdit }} /><CanonicalField name="document_type" label="文献类型" value={fieldValue(draft, "document_type") || "book"} onChange={(next) => value("document_type", next)} options={documentTypeOptions} required disabled={!canEdit} error={errorFor(errors, "document_type")} /><CanonicalField name="language" label="作品语言" value={fieldValue(draft, "language") || "zh-CN"} onChange={(next) => value("language", next)} options={languageOptions} required disabled={!canEdit} error={errorFor(errors, "language")} /><CanonicalField name="original_language" label="原作语言" value={fieldValue(draft, "original_language")} onChange={(next) => value("original_language", next)} disabled={!canEdit} /><CanonicalField name="first_publication_date" label="首次发表日期" value={fieldValue(draft, "first_publication_date")} onChange={(next) => value("first_publication_date", next)} type="date" disabled={!canEdit} /><ResearchEntityPicker label="译自作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" entityType="work" step="work" field="translation_of" queryHint={fieldValue(draft, "original_title")} values={translationId ? [{ id: translationId, name: translationName }] : []} suggestions={translationSuggestions} disabled={!canEdit} onInspect={(candidate) => research.onInspect([candidate], "原作关系候选")} onChange={(next) => update("work", "translation_of", next.at(-1)?.id ?? null)} /><CanonicalField name="abstract" label="作品摘要" value={fieldValue(draft, "abstract")} onChange={(next) => value("abstract", next)} multiline rows={6} disabled={!canEdit} candidateCount={candidateCount(candidates, "abstract")} onInspect={() => inspectField("abstract")} /></div></>;
 }
 
 function BibliographyBody({ draft, documentType, candidates, canEdit, errors, update, inspectField, research }: BodyProps) {
   const value = (field: string, next: string) => update("bibliography", field, next);
   const fields = new Set(bibliographyFields(documentType));
   const render = (name: string, label: string, options: Partial<Parameters<typeof CanonicalField>[0]> = {}) => fields.has(name) ? <CanonicalField name={name} label={label} value={fieldValue(draft, name)} onChange={(next) => value(name, next)} disabled={!canEdit} error={errorFor(errors, name)} candidateCount={candidateCount(candidates, name)} onInspect={() => inspectField(name, `${label}候选`)} {...options} /> : null;
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="bibliography" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><ConditionalFieldGroup title={({ book: "图书版本", journal_article: "期刊论文出处", thesis: "学位论文信息", report: "研究报告信息" } as Record<string, string>)[documentType] ?? "版本信息"} description="这里保存 Edition-level metadata，与作品题名和首次发表信息分开。"><div className="workflow-field-grid">{render("version_label", "版本说明")}{render("publication_year", "出版年份", { type: "number" })}{render("publisher", "出版者")}{render("publication_place", "出版地")}{render("isbn10", "ISBN-10")}{render("isbn13", "ISBN-13")}{render("series", "丛书")}{render("extent", "载体范围")}{render("responsibility_statement", "责任说明")}{render("journal_title", "期刊名", { required: documentType === "journal_article" })}{render("volume", "卷")}{render("issue", "期")}{render("page_range", "页码范围")}{render("doi", "DOI")}{render("degree_institution", "学位授予单位", { required: documentType === "thesis" })}{render("degree_type", "学位类型")}{render("report_institution", "报告责任机构", { required: documentType === "report" })}</div></ConditionalFieldGroup></>;
+  const renderEntityText = (name: "publisher" | "journal_title" | "degree_institution" | "report_institution", label: string, entityType: "publisher" | "journal" | "organization", options: Partial<Parameters<typeof CanonicalField>[0]> = {}) => {
+    if (!fields.has(name)) return null;
+    const currentValue = fieldValue(draft, name);
+    const suggestions = candidates.filter((candidate) => candidateMatches(candidate, name));
+    return <div className="workflow-entity-text-field"><CanonicalField name={name} label={label} value={currentValue} onChange={(next) => { value(name, next); if (name === "publisher" && next !== currentValue) update("bibliography", "publisher_authority_id", null); }} disabled={!canEdit} error={errorFor(errors, name)} candidateCount={candidateCount(candidates, name)} onInspect={() => inspectField(name, `${label}候选`)} {...options} /><ResearchEntityPicker label={`${label}规范候选`} endpoint="/catalog/admin/research/entity-discovery/" entityType={entityType} step="bibliography" field={name} queryHint={currentValue} textValue={currentValue} values={[]} suggestions={suggestions} disabled={!canEdit} onInspect={(candidate) => research.onInspect([candidate], `${label}实体候选`)} onUseValue={(next, candidate) => { value(name, next); if (name === "publisher") update("bibliography", "publisher_authority_id", candidate.entity_id ? String(candidate.entity_id) : null); }} onChange={() => undefined} /></div>;
+  };
+  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="bibliography" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><ConditionalFieldGroup title={({ book: "图书版本", journal_article: "期刊论文出处", thesis: "学位论文信息", report: "研究报告信息" } as Record<string, string>)[documentType] ?? "版本信息"} description="这里保存 Edition-level metadata，与作品题名和首次发表信息分开。"><div className="workflow-field-grid">{render("version_label", "版本说明")}{render("publication_year", "出版年份", { type: "number" })}{renderEntityText("publisher", "出版者", "publisher")}{render("publication_place", "出版地")}{render("isbn10", "ISBN-10")}{render("isbn13", "ISBN-13")}{render("series", "丛书")}{render("extent", "载体范围")}{render("responsibility_statement", "责任说明")}{renderEntityText("journal_title", "期刊名", "journal", { required: documentType === "journal_article" })}{render("volume", "卷")}{render("issue", "期")}{render("page_range", "页码范围")}{render("doi", "DOI")}{renderEntityText("degree_institution", "学位授予单位", "organization", { required: documentType === "thesis" })}{render("degree_type", "学位类型")}{renderEntityText("report_institution", "报告责任机构", "organization", { required: documentType === "report" })}</div></ConditionalFieldGroup></>;
 }
 
 function ContributorsBody({ draft, canEdit, errors, update, research }: BodyProps) {
   const items = normalizeItems(draft.items, "display_name");
   const suggestions = research.suggestions.filter((candidate) => asString(candidate.field_name ?? candidate.field) === "contributors");
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="contributors" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><RepeatableField label="责任者与身份" values={items} create={() => ({ id: null, display_name: "", role: "author", person_id: null, resolution_state: "unresolved", candidate_count: 0 })} onChange={(next) => update("contributors", "items", next)} addLabel="添加责任者" render={(item, index, setItem) => { const name = asString(item.display_name); const rowSuggestions = suggestions.filter((candidate) => !candidate.source_name || asString(candidate.source_name) === name); const linked = item.person_id ? [{ id: asString(item.person_id), name }] : []; return <div className="workflow-contributor-row"><CanonicalField name={`items.${index}.display_name`} label="显示名称" value={name} onChange={(next) => setItem({ ...item, display_name: next })} required disabled={!canEdit} error={errorFor(errors, `items.${index}.display_name`)} /><CanonicalField name={`items.${index}.role`} label="角色" value={asString(item.role, "author")} onChange={(next) => setItem({ ...item, role: next })} options={contributorRoleOptions} required disabled={!canEdit} error={errorFor(errors, `items.${index}.role`)} /><ResearchEntityPicker label="正式 Person 关联" endpoint="/catalog/admin/scholars/" idField="person_id" nameField="preferred_name" values={linked} suggestions={rowSuggestions} onInspect={(candidate) => research.onInspect([candidate], `${name || "责任者"}的身份候选`)} onChange={(next) => { const person = next[0]; setItem({ ...item, person_id: person?.id ?? null, display_name: name || person?.name || "", resolution_state: person?.id ? "selected" : "unresolved" }); }} /></div>; }} /></>;
+  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="contributors" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><RepeatableField disabled={!canEdit} label="责任者与身份" values={items} create={() => ({ id: null, display_name: "", role: "author", person_id: null, resolution_state: "unresolved", candidate_count: 0 })} onChange={(next) => update("contributors", "items", next)} addLabel="添加责任者" render={(item, index, setItem) => { const name = asString(item.display_name); const rowSuggestions = suggestions.filter((candidate) => !candidate.source_name || asString(candidate.source_name) === name); const linked = item.person_id ? [{ id: asString(item.person_id), name }] : []; return <div className="workflow-contributor-row"><CanonicalField name={`items.${index}.display_name`} label="显示名称" value={name} onChange={(next) => setItem({ ...item, display_name: next })} required disabled={!canEdit} error={errorFor(errors, `items.${index}.display_name`)} /><CanonicalField name={`items.${index}.role`} label="角色" value={asString(item.role, "author")} onChange={(next) => setItem({ ...item, role: next })} options={contributorRoleOptions} required disabled={!canEdit} error={errorFor(errors, `items.${index}.role`)} /><ResearchEntityPicker disabled={!canEdit} label="正式 Person 关联" endpoint="/catalog/admin/scholars/" entityType="person" step="contributors" field="contributors" queryHint={name} idField="person_id" nameField="preferred_name" values={linked} suggestions={rowSuggestions} onInspect={(candidate) => research.onInspect([candidate], `${name || "责任者"}的身份候选`)} onChange={(next) => { const person = next[0]; setItem({ ...item, person_id: person?.id ?? null, display_name: name || person?.name || "", resolution_state: person?.id ? "selected" : asString(person?.status, "unresolved") }); }} /></div>; }} /></>;
 }
 
 function ClassificationBody({ draft, canEdit, errors, update, research }: BodyProps) {
   const suggestions = research.suggestions.filter((candidate) => ["primary_disciplines", "related_disciplines", "subdisciplines", "classification"].includes(asString(candidate.field_name ?? candidate.field)));
   const inspect = (candidate: WorkflowCandidate) => research.onInspect([candidate], `${asString(candidate.label, "分类建议")} · 来源检查`);
-  return <div className="workflow-classification"><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="classification" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><ResearchEntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.primary_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "primary_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "primary_disciplines", next.slice(0, 1))} /><ResearchEntityPicker label="相关学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.related_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "related_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "related_disciplines", next)} /><ResearchEntityPicker label="子学科" endpoint="/catalog/admin/subdisciplines/" values={entities(draft.subdisciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "subdisciplines")} onInspect={inspect} onChange={(next) => update("classification", "subdisciplines", next)} /><label className="workflow-section-confirmation" data-field="confirmed"><input type="checkbox" checked={asBoolean(draft.confirmed)} disabled={!canEdit} onChange={(event) => update("classification", "confirmed", event.target.checked)} /><span>我已核对主要学科、相关学科与子学科的区别</span></label>{errorFor(errors, "confirmed") ? <QualityIssue message={errorFor(errors, "confirmed")!} tone="blocker" /> : null}</div>;
+  return <div className="workflow-classification"><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="classification" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><ResearchEntityPicker disabled={!canEdit} label="主要学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="classification" field="primary_disciplines" values={entities(draft.primary_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "primary_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "primary_disciplines", next.slice(0, 1))} /><ResearchEntityPicker multiple disabled={!canEdit} label="相关学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="classification" field="related_disciplines" values={entities(draft.related_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "related_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "related_disciplines", next)} /><ResearchEntityPicker multiple disabled={!canEdit} label="子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="classification" field="subdisciplines" values={entities(draft.subdisciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "subdisciplines")} onInspect={inspect} onChange={(next) => update("classification", "subdisciplines", next)} /><label className="workflow-section-confirmation" data-field="confirmed"><input type="checkbox" checked={asBoolean(draft.confirmed)} disabled={!canEdit} onChange={(event) => update("classification", "confirmed", event.target.checked)} /><span>我已核对主要学科、相关学科与子学科的区别</span></label>{errorFor(errors, "confirmed") ? <QualityIssue message={errorFor(errors, "confirmed")!} tone="blocker" /> : null}</div>;
 }
 
 function KnowledgeBody({ draft, canEdit, errors, update, research }: BodyProps) {
   const relations = normalizeItems(draft.relations, "name");
   const relationSuggestions = research.suggestions.filter((candidate) => ["relations", "relation", "knowledge_node"].includes(asString(candidate.field_name ?? candidate.field)));
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="knowledge" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><RepeatableField label="正式知识关系" values={relations} create={() => ({ id: null, target_type: "theory", target_id: null, name: "", role: "local_mention", strength: "medium", is_primary: false, review_status: "pending", evidence_summary: "" })} onChange={(next) => update("knowledge", "relations", next)} addLabel="添加理论或主题关系" render={(relation, index, setRelation) => { const targetType = asString(relation.target_type, "theory"); const relationRoleOptions = targetType === "knowledge_node" ? nodeRoleOptions : theoryRoleOptions; const defaultRole = targetType === "knowledge_node" ? "general_mention" : "local_mention"; const endpoint = targetType === "topic" ? "/catalog/admin/topics/" : targetType === "theory" ? "/catalog/admin/theory-schools/" : "/catalog/admin/theory-system/nodes/"; const picked = relation.target_id ? [{ id: asString(relation.target_id), name: asString(relation.name) }] : []; const acceptsType = (candidate: WorkflowCandidate) => { const entityType = asString(candidate.entity_type); if (!entityType) return true; if (targetType === "theory") return entityType === "theory" || entityType === "theory_school"; return entityType === targetType; }; return <div className="workflow-knowledge-relation"><CanonicalField name={`relations.${index}.target_type`} label="关联对象类型" value={targetType} onChange={(next) => setRelation({ ...relation, target_type: next, target_id: null, name: "", role: next === "knowledge_node" ? "general_mention" : "local_mention" })} options={[{ value: "theory", label: "理论" }, { value: "topic", label: "主题" }, { value: "knowledge_node", label: "知识节点" }]} disabled={!canEdit} /><ResearchEntityPicker label="关联对象" endpoint={endpoint} values={picked} suggestions={relationSuggestions.filter(acceptsType)} onInspect={(candidate) => research.onInspect([candidate], "知识关系候选与证据")} onChange={(next) => { const value = next[0]; setRelation({ ...relation, target_id: value?.id ?? null, name: value?.name ?? "" }); }} allowUnresolved /><CanonicalField name={`relations.${index}.role`} label="作品角色" value={asString(relation.role, defaultRole)} onChange={(next) => setRelation({ ...relation, role: next })} options={relationRoleOptions} disabled={!canEdit || targetType === "topic"} /><CanonicalField name={`relations.${index}.strength`} label="关联强度" value={asString(relation.strength, "medium")} onChange={(next) => setRelation({ ...relation, strength: next })} options={strengthOptions} disabled={!canEdit} /><label className="workflow-checkbox"><input type="checkbox" checked={asBoolean(relation.is_primary)} disabled={!canEdit} onChange={(event) => setRelation({ ...relation, is_primary: event.target.checked })} /><span>主要关系</span></label><CanonicalField name={`relations.${index}.evidence_summary`} label="证据摘要" value={asString(relation.evidence_summary ?? relation.evidence_text)} onChange={(next) => setRelation({ ...relation, evidence_summary: next })} multiline rows={3} disabled={!canEdit} help={`审核状态 ${asString(relation.review_status, "pending")}`} /></div>; }} /><label className="workflow-section-confirmation" data-field="confirmed"><input type="checkbox" checked={asBoolean(draft.confirmed)} disabled={!canEdit} onChange={(event) => update("knowledge", "confirmed", event.target.checked)} /><span>我已核对正式 Theory、Topic 与 KnowledgeNode 关系</span></label>{errorFor(errors, "confirmed") ? <QualityIssue message={errorFor(errors, "confirmed")!} tone="blocker" /> : null}</>;
+  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="knowledge" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><RepeatableField disabled={!canEdit} label="正式知识关系" values={relations} create={() => ({ id: null, target_type: "theory", target_id: null, name: "", role: "local_mention", strength: "medium", is_primary: false, review_status: "pending", evidence_summary: "" })} onChange={(next) => update("knowledge", "relations", next)} addLabel="添加理论或主题关系" render={(relation, index, setRelation) => { const targetType = asString(relation.target_type, "theory"); const relationRoleOptions = targetType === "knowledge_node" ? nodeRoleOptions : theoryRoleOptions; const defaultRole = targetType === "knowledge_node" ? "general_mention" : "local_mention"; const endpoint = targetType === "topic" ? "/catalog/admin/topics/" : targetType === "theory" ? "/catalog/admin/theory-schools/" : "/catalog/admin/theory-system/nodes/"; const picked = relation.target_id ? [{ id: asString(relation.target_id), name: asString(relation.name) }] : []; const acceptsType = (candidate: WorkflowCandidate) => { const entityType = asString(candidate.entity_type); if (!entityType) return true; if (targetType === "theory") return entityType === "theory" || entityType === "theory_school"; return entityType === targetType; }; return <div className="workflow-knowledge-relation"><CanonicalField name={`relations.${index}.target_type`} label="关联对象类型" value={targetType} onChange={(next) => setRelation({ ...relation, target_type: next, target_id: null, name: "", role: next === "knowledge_node" ? "general_mention" : "local_mention" })} options={[{ value: "theory", label: "理论" }, { value: "topic", label: "主题" }, { value: "knowledge_node", label: "知识节点" }]} disabled={!canEdit} /><ResearchEntityPicker disabled={!canEdit} label="关联对象" endpoint={endpoint} entityType={targetType} step="knowledge" field="relations" queryHint={asString(relation.name)} values={picked} suggestions={relationSuggestions.filter(acceptsType)} onInspect={(candidate) => research.onInspect([candidate], "知识关系候选与证据")} onChange={(next) => { const value = next[0]; setRelation({ ...relation, target_id: value?.id ?? null, name: value?.name ?? "", resolution_state: asString(value?.status, "unresolved") }); }} allowUnresolved /><CanonicalField name={`relations.${index}.role`} label="作品角色" value={asString(relation.role, defaultRole)} onChange={(next) => setRelation({ ...relation, role: next })} options={relationRoleOptions} disabled={!canEdit || targetType === "topic"} /><CanonicalField name={`relations.${index}.strength`} label="关联强度" value={asString(relation.strength, "medium")} onChange={(next) => setRelation({ ...relation, strength: next })} options={strengthOptions} disabled={!canEdit} /><label className="workflow-checkbox"><input type="checkbox" checked={asBoolean(relation.is_primary)} disabled={!canEdit} onChange={(event) => setRelation({ ...relation, is_primary: event.target.checked })} /><span>主要关系</span></label><CanonicalField name={`relations.${index}.evidence_summary`} label="证据摘要" value={asString(relation.evidence_summary ?? relation.evidence_text)} onChange={(next) => setRelation({ ...relation, evidence_summary: next })} multiline rows={3} disabled={!canEdit} help={`审核状态 ${asString(relation.review_status, "pending")}`} /></div>; }} /><label className="workflow-section-confirmation" data-field="confirmed"><input type="checkbox" checked={asBoolean(draft.confirmed)} disabled={!canEdit} onChange={(event) => update("knowledge", "confirmed", event.target.checked)} /><span>我已核对正式 Theory、Topic 与 KnowledgeNode 关系</span></label>{errorFor(errors, "confirmed") ? <QualityIssue message={errorFor(errors, "confirmed")!} tone="blocker" /> : null}</>;
 }
 
-function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction }: BodyProps) {
+function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, busy }: BodyProps) {
   const status = asString(draft.status, "pending");
-  return <div className="workflow-file-summary"><dl><div><dt>文件</dt><dd>{asString(draft.filename ?? context.filename, "未建立")}</dd></div><div><dt>处理状态</dt><dd>{r2StagingStatusLabel(status)}</dd></div><div><dt>PDF 校验</dt><dd>{asString(draft.validation, "pending")}</dd></div><div><dt>页数</dt><dd>{asNumber(draft.page_count)}</dd></div><div><dt>文字类型</dt><dd>{asString(draft.text_profile, "待识别")}</dd></div><div><dt>OCR 策略</dt><dd>{asString(draft.ocr_strategy, "auto")}</dd></div><div><dt>重复判断</dt><dd>{draft.exact_duplicate ? "发现完全重复文件" : asString(draft.duplicate_status, "未发现完全重复")}</dd></div></dl>{errors.map((error) => <QualityIssue message={error.message} tone="blocker" key={`${error.field}-${error.message}`} />)}<div className="workflow-file-actions"><button type="button" onClick={inspectPdf}><Eye size={14} />检查 PDF</button>{draft.can_retry ? <button type="button" disabled={!canEdit} onClick={() => fileAction("retry")}><RefreshCw size={14} />{asString(draft.retry_label, "重试")}</button> : null}{draft.can_resume ? <button type="button" disabled={!canEdit} onClick={() => fileAction("resume")}><Upload size={14} />继续处理</button> : null}{draft.can_replace ? <label className="button secondary"><span>替换 PDF</span><input className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction("replace", file); event.currentTarget.value = ""; }} /></label> : null}</div>{draft.error_message ? <details open><summary>技术错误</summary><pre>{asString(draft.error_code)} {asString(draft.error_message)}</pre></details> : null}</div>;
+  return <div className="workflow-file-summary"><dl><div><dt>文件</dt><dd>{asString(draft.filename ?? context.filename, "未建立")}</dd></div><div><dt>处理状态</dt><dd>{r2StagingStatusLabel(status)}</dd></div><div><dt>PDF 校验</dt><dd>{asString(draft.validation, "pending")}</dd></div><div><dt>页数</dt><dd>{asNumber(draft.page_count)}</dd></div><div><dt>文字类型</dt><dd>{asString(draft.text_profile, "待识别")}</dd></div><div><dt>OCR 策略</dt><dd>{asString(draft.ocr_strategy, "auto")}</dd></div><div><dt>重复判断</dt><dd>{draft.exact_duplicate ? "发现完全重复文件" : asString(draft.duplicate_status, "未发现完全重复")}</dd></div></dl>{errors.map((error) => <QualityIssue message={error.message} tone="blocker" key={`${error.field}-${error.message}`} />)}<div className="workflow-file-actions"><ActionButton onClick={inspectPdf}><Eye size={14} />检查 PDF</ActionButton>{draft.can_retry ? <ActionButton state={busy === "file-retry" ? "pending" : "idle"} pendingLabel="正在重试" disabled={!canEdit || Boolean(busy)} onClick={() => fileAction("retry")}><RefreshCw size={14} />{asString(draft.retry_label, "重试")}</ActionButton> : null}{draft.can_resume ? <ActionButton state={busy === "file-resume" ? "pending" : "idle"} pendingLabel="正在继续" disabled={!canEdit || Boolean(busy)} onClick={() => fileAction("resume")}><Upload size={14} />继续处理</ActionButton> : null}{draft.can_replace ? <label className="button secondary"><span>{busy === "file-replace" ? "正在替换" : "替换 PDF"}</span><input className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit || Boolean(busy)} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction("replace", file); event.currentTarget.value = ""; }} /></label> : null}</div>{draft.error_message ? <details open><summary>技术错误</summary><pre>{asString(draft.error_code)} {asString(draft.error_message)}</pre></details> : null}</div>;
 }
 
 function ReaderBody({ draft, canEdit, update, inspectPdf }: BodyProps) {
@@ -346,7 +371,7 @@ function PublicationBody({ draft, context, permissions, goToIssue, publish, with
   const tasks = asArray(preflight.background_tasks).map((entry) => normalizeIssue(entry, "publication"));
   const canPublish = permissions.can_manage_publication !== false && permissions.can_publish !== false;
   const publicationState = asString(draft.publication_state ?? context.publication_state, "draft");
-  return <div className="workflow-publication"><div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{publicationState}</span></article><article><strong>阅读文件</strong><span>{asString(draft.reader_state, "待检查")}</span></article><article><strong>策展</strong><span>{asString(draft.curation_summary, "可选，未策展不阻止发布")}</span></article></div><div className="workflow-preflight-groups"><section className="blockers"><h3>必须解决</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>没有发布阻止项。</p> : null}</section><section className="warnings"><h3>建议处理</h3>{warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}{!warnings.length ? <p>没有发布警告。</p> : null}</section><section className="tasks"><h3>发布后继续处理</h3>{tasks.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="info" onActivate={() => goToIssue(issue)} />)}{!tasks.length ? <p>没有后台任务。</p> : null}</section></div><div className="workflow-publication-actions">{publicationState === "published" ? <><span>当前版本已公开。后续元数据、知识和策展维护继续使用本编辑器。</span><button className="button secondary" type="button" disabled={!canPublish || publishing} onClick={withdraw}>下架当前版本</button></> : <><button className="button" type="button" disabled={!canPublish || blockers.length > 0 || publishing} onClick={() => publish("next")}>{publishing ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}发布并处理下一项</button><button className="button secondary" type="button" disabled={!canPublish || blockers.length > 0 || publishing} onClick={() => publish("stay")}>发布并留在当前项</button></>}</div>{!canPublish ? <p>当前账户可以查看检查结果，但最终发布由具有对应 capability 的管理员完成。</p> : null}</div>;
+  return <div className="workflow-publication"><div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{publicationState}</span></article><article><strong>阅读文件</strong><span>{asString(draft.reader_state, "待检查")}</span></article><article><strong>策展</strong><span>{asString(draft.curation_summary, "可选，未策展不阻止发布")}</span></article></div><div className="workflow-preflight-groups"><section className="blockers"><h3>必须解决</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>没有发布阻止项。</p> : null}</section><section className="warnings"><h3>建议处理</h3>{warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}{!warnings.length ? <p>没有发布警告。</p> : null}</section><section className="tasks"><h3>发布后继续处理</h3>{tasks.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="info" onActivate={() => goToIssue(issue)} />)}{!tasks.length ? <p>没有后台任务。</p> : null}</section></div><div className="workflow-publication-actions">{publicationState === "published" ? <><span>当前版本已公开。后续元数据、知识和策展维护继续使用本编辑器。</span><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在下架" disabled={!canPublish} onClick={withdraw}>下架当前版本</ActionButton></> : <><ActionButton className="button" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("next")}><Check size={14} />发布并处理下一项</ActionButton><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("stay")}>发布并留在当前项</ActionButton></>}</div>{!canPublish ? <p>当前账户可以查看检查结果，但最终发布由具有对应 capability 的管理员完成。</p> : null}</div>;
 }
 
 function WorkflowSectionBody(props: BodyProps) {
@@ -357,11 +382,11 @@ function WorkflowSectionBody(props: BodyProps) {
   if (props.step === "classification") return <ClassificationBody {...props} />;
   if (props.step === "knowledge") return <KnowledgeBody {...props} />;
   if (props.step === "reader") return <ReaderBody {...props} />;
-  if (props.step === "curation") return <><ResearchSuggestionPanel mode={props.research.mode} itemId={props.research.itemId} workId={props.research.workId} step="curation" token={props.research.token} onInspect={props.research.onInspect} onUpdated={props.research.onUpdated} onMessage={props.research.onMessage} /><WorkCurationEditor workId={asString(props.context.work_id)} value={props.draft} canManage={props.permissions.can_manage_curation !== false} onChange={props.curationChange} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} /></>;
+  if (props.step === "curation") return <><ResearchSuggestionPanel mode={props.research.mode} itemId={props.research.itemId} workId={props.research.workId} step="curation" token={props.research.token} onInspect={props.research.onInspect} onUpdated={props.research.onUpdated} onMessage={props.research.onMessage} /><WorkCurationEditor workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions.filter((candidate) => candidateMatches(candidate, "reading_path_placements"))} onInspect={(candidate) => props.research.onInspect([candidate], "阅读路径候选")} /></>;
   return <PublicationBody {...props} />;
 }
 
-export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; itemId?: string; workId?: string }) {
+export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId }: { mode: EditorMode; itemId?: string; workId?: string; editionId?: string }) {
   const endpoint = mode === "intake"
     ? `/catalog/admin/intake/${encodeURIComponent(itemId ?? "")}/`
     : `/catalog/admin/library/works/${encodeURIComponent(workId ?? "")}/`;
@@ -378,8 +403,30 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
   const [publishConfirmation, setPublishConfirmation] = useState<"next" | "stay" | null>(null);
   const draftsRef = useRef<WorkflowDrafts | null>(null);
   const dirtyRef = useRef<DirtyFields>({});
+  const operationRef = useRef("");
   const token = getServerSessionCredential();
+  const maintenanceEditionId = mode === "maintenance"
+    ? requestedEditionId || asString(payload?.context.edition_id)
+    : "";
+  const maintenanceQuery = maintenanceEditionId
+    ? `?edition=${encodeURIComponent(maintenanceEditionId)}`
+    : "";
+  const scopedEndpoint = mode === "maintenance"
+    ? `${endpoint}${maintenanceQuery}`
+    : endpoint;
   const currentDirtyCount = dirtyFieldCount(dirty);
+
+  const beginOperation = useCallback((key: string) => {
+    if (operationRef.current) return false;
+    operationRef.current = key;
+    setBusy(key);
+    return true;
+  }, []);
+  const finishOperation = useCallback((key: string) => {
+    if (operationRef.current !== key) return;
+    operationRef.current = "";
+    setBusy("");
+  }, []);
 
   useEffect(() => { draftsRef.current = drafts; }, [drafts]);
   useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
@@ -410,16 +457,29 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
   }, [itemId, mode, workId]);
 
   const refresh = useCallback(async (preserveDirty = true) => {
-    if (!token || (mode === "intake" ? !itemId : !workId)) return;
+    if (!token || (mode === "intake" ? !itemId : !workId)) return false;
     try {
-      const result = await apiRequest(endpoint, {}, token);
+      const result = await apiRequest(scopedEndpoint, {}, token);
       applyRemote(result, preserveDirty);
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "馆藏工作读取失败。");
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [applyRemote, endpoint, itemId, mode, token, workId]);
+  }, [applyRemote, itemId, mode, scopedEndpoint, token, workId]);
+
+  const manualRefresh = useCallback(async () => {
+    const key = "refresh";
+    if (!beginOperation(key)) return;
+    setMessage("");
+    try {
+      if (await refresh(true)) setMessage("已按服务器最新状态刷新，未保存字段仍保留。");
+    } finally {
+      finishOperation(key);
+    }
+  }, [beginOperation, finishOperation, refresh]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void refresh(false), 0);
@@ -476,9 +536,9 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
   }, []);
 
   const inspectPdf = useCallback(() => {
-    const previewUrl = asString(payload?.context.preview_url) || (itemId ? `/ingestion/items/${itemId}/preview/` : "");
+    const previewUrl = asString(payload?.context.pdf_preview_url) || asString(payload?.context.preview_url) || (itemId ? `/ingestion/items/${itemId}/preview/` : "");
     setInspector({ kind: "pdf", title: "PDF 与阅读文件检查", pdfUrl: previewUrl });
-  }, [itemId, payload?.context.preview_url]);
+  }, [itemId, payload?.context.pdf_preview_url, payload?.context.preview_url]);
 
   const focusFirstIssue = useCallback((step: WorkflowStepKey, issues: ValidationIssue[]) => {
     const first = issues[0];
@@ -501,9 +561,10 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
       focusFirstIssue(step, issues);
       return;
     }
-    setBusy(`save-${step}`);
+    const operationKey = `save-${step}`;
+    if (!beginOperation(operationKey)) return;
     try {
-      const result = await apiRequest(`${endpoint}sections/${step}/`, { method: "PATCH", body: JSON.stringify({ data: draft, confirm_section: true }) }, token);
+      const result = await apiRequest(`${endpoint}sections/${step}/${maintenanceQuery}`, { method: "PATCH", body: JSON.stringify({ data: draft, confirm_section: true }) }, token);
       const nextPayload = normalizePayload(result, mode, itemId, workId);
       setDirty((current) => ({ ...current, [step]: [] }));
       dirtyRef.current = { ...dirtyRef.current, [step]: [] };
@@ -527,9 +588,9 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
       setMessage(reason instanceof Error ? reason.message : "本节保存失败。");
       goToStep(step);
     } finally {
-      setBusy("");
+      finishOperation(operationKey);
     }
-  }, [applyRemote, endpoint, focusFirstIssue, goToStep, itemId, mode, payload, token, workId]);
+  }, [applyRemote, beginOperation, endpoint, finishOperation, focusFirstIssue, goToStep, itemId, maintenanceQuery, mode, payload, token, workId]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -551,7 +612,8 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
 
   const fileAction = useCallback(async (action: "retry" | "resume" | "replace", file?: File) => {
     if (!token || !itemId) return;
-    setBusy(`file-${action}`);
+    const operationKey = `file-${action}`;
+    if (!beginOperation(operationKey)) return;
     try {
       const options: RequestInit = { method: "POST" };
       if (file) { const body = new FormData(); body.append("file", file); options.body = body; }
@@ -560,14 +622,15 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
       await refresh(true);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "文件操作失败。");
-    } finally { setBusy(""); }
-  }, [itemId, refresh, token]);
+    } finally { finishOperation(operationKey); }
+  }, [beginOperation, finishOperation, itemId, refresh, token]);
 
   const skipCuration = useCallback(async () => {
     if (!token || !draftsRef.current) return;
-    setBusy("skip-curation");
+    const operationKey = "skip-curation";
+    if (!beginOperation(operationKey)) return;
     try {
-      const result = await apiRequest(`${endpoint}sections/curation/`, { method: "PATCH", body: JSON.stringify({ data: { ...draftsRef.current.curation, skipped: true }, skip: true, confirm_section: true }) }, token);
+      const result = await apiRequest(`${endpoint}sections/curation/${maintenanceQuery}`, { method: "PATCH", body: JSON.stringify({ data: { ...draftsRef.current.curation, skipped: true }, skip: true, confirm_section: true }) }, token);
       setDirty((current) => ({ ...current, curation: [] }));
       dirtyRef.current = { ...dirtyRef.current, curation: [] };
       const nextPayload = normalizePayload(result, mode, itemId, workId);
@@ -580,8 +643,8 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
       );
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "暂不策展操作失败。");
-    } finally { setBusy(""); }
-  }, [applyRemote, endpoint, goToStep, itemId, mode, token, workId]);
+    } finally { finishOperation(operationKey); }
+  }, [applyRemote, beginOperation, endpoint, finishOperation, goToStep, itemId, maintenanceQuery, mode, token, workId]);
 
   const goToIssue = useCallback((issue: WorkflowIssue) => {
     let step = issue.step;
@@ -610,37 +673,41 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
       setPublishConfirmation(intent);
       return;
     }
-    setBusy("publish");
+    const operationKey = "publish";
+    if (!beginOperation(operationKey)) return;
     try {
       const publishEndpoint = mode === "intake"
         ? `/ingestion/items/${encodeURIComponent(asString(payload.context.item_id ?? itemId))}/publish/`
-        : `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/`;
-      const result = asRecord(await apiRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, after_publish: intent }) }, token));
+        : `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/${maintenanceQuery}`;
+      const result = asRecord(await apiRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, after_publish: intent, ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) }, token));
       setPublishConfirmation(null);
       const nextTarget = asRecord(result.next_target);
       if (intent === "next") {
         const nextItem = asString(nextTarget.item_id ?? result.next_item_id ?? payload.queue.next_item_id);
         const nextWork = asString(nextTarget.work_id ?? result.next_work_id ?? payload.queue.next_work_id);
+        const nextEdition = asString(nextTarget.edition_id ?? result.next_edition_id);
         if (nextItem) { window.location.assign(`/admin/intake/${nextItem}#file`); return; }
-        if (nextWork) { window.location.assign(`/admin/library/works/${nextWork}#work`); return; }
+        if (nextWork) { window.location.assign(`/admin/library/works/${nextWork}${nextEdition ? `?edition=${encodeURIComponent(nextEdition)}` : ""}#work`); return; }
         window.location.assign(asString(payload.queue.return_href ?? payload.context.return_href, "/admin/review"));
         return;
       }
       const maintenanceUrl = asString(result.maintenance_url);
       const publishedWorkId = asString(asRecord(result.context).work_id ?? result.work_id ?? payload.context.work_id ?? workId);
+      const publishedEditionId = asString(asRecord(result.context).edition_id ?? result.edition_id ?? payload.context.edition_id);
       if (maintenanceUrl) { window.location.replace(maintenanceUrl); return; }
-      if (mode === "intake" && publishedWorkId) { window.location.replace(`/admin/library/works/${publishedWorkId}#publication`); return; }
+      if (mode === "intake" && publishedWorkId) { window.location.replace(`/admin/library/works/${publishedWorkId}${publishedEditionId ? `?edition=${encodeURIComponent(publishedEditionId)}` : ""}#publication`); return; }
       applyRemote(result, true);
       setMessage("馆藏已发布，当前编辑器已切换为发布后维护状态。");
       goToStep("publication");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "发布失败。");
-    } finally { setBusy(""); }
-  }, [applyRemote, goToStep, itemId, mode, payload, token, workId]);
+    } finally { finishOperation(operationKey); }
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, token, workId]);
 
   const performWithdraw = useCallback(async () => {
     if (!payload || !token || !window.confirm("确认下架当前版本吗？文件、审核记录和历史版本会继续保留。")) return;
-    setBusy("publish");
+    const operationKey = "publish";
+    if (!beginOperation(operationKey)) return;
     try {
       if (mode === "intake") {
         await apiRequest(
@@ -651,8 +718,8 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
         await refresh(true);
       } else {
         const result = await apiRequest(
-          `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/`,
-          { method: "POST", body: JSON.stringify({ action: "withdraw", reason: "管理员在 2.8 馆藏工作流中下架" }) },
+          `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/${maintenanceQuery}`,
+          { method: "POST", body: JSON.stringify({ action: "withdraw", reason: "管理员在 2.8 馆藏工作流中下架", ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) },
           token,
         );
         applyRemote(result, true);
@@ -662,16 +729,20 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "下架失败。");
     } finally {
-      setBusy("");
+      finishOperation(operationKey);
     }
-  }, [applyRemote, goToStep, itemId, mode, payload, refresh, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, refresh, token, workId]);
 
   const decideCandidate = useCallback(async (candidate: WorkflowCandidate, action: string) => {
     if (!candidate.decision_url || !token) {
       setMessage("该候选没有提供安全的决定入口，请刷新后重试。");
-      return;
+      return false;
     }
-    setBusy(`candidate-${candidate.id}`);
+    const operationKey = `candidate-${candidate.id}`;
+    if (!beginOperation(operationKey)) {
+      setMessage("另一个后台操作仍在进行，候选决定尚未提交。");
+      return false;
+    }
     try {
       const entityTargetType = asString(candidate.target_type ?? candidate.candidate_entity_type ?? candidate.entity_type);
       const entityTargetId = asString(candidate.candidate_entity_id ?? candidate.entity_id);
@@ -685,17 +756,45 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
           }
         : { action };
       await apiRequest(candidate.decision_url, { method: "POST", body: JSON.stringify(body) }, token);
+      setResearchSuggestions((current) => {
+        const next = { ...current };
+        for (const stepKey of WORKFLOW_STEP_KEYS) {
+          const rows = next[stepKey];
+          if (rows) next[stepKey] = rows.filter((row) => String(row.id) !== String(candidate.id));
+        }
+        return next;
+      });
+      setInspector(null);
       setMessage("候选决定已写入审计记录。");
       await refresh(true);
+      window.dispatchEvent(new Event(RESEARCH_SUGGESTION_REFRESH_EVENT));
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "候选决定失败。");
-    } finally { setBusy(""); }
-  }, [refresh, token]);
+      return false;
+    } finally { finishOperation(operationKey); }
+  }, [beginOperation, finishOperation, refresh, token]);
 
   const exit = useCallback((href: string) => {
     if (dirtyFieldCount(dirtyRef.current) && !window.confirm("当前工作仍有未保存修改。确认离开吗？")) return;
     window.location.assign(href);
   }, []);
+
+  const canRunResearch = payload?.permissions.capabilities?.includes("can_run_enrichment") === true;
+  const editionId = asString(payload?.context.edition_id) || undefined;
+  const researchWorkspace = useMemo(() => ({
+    mode,
+    itemId,
+    workId,
+    editionId,
+    token,
+    canRun: canRunResearch,
+    draftData: drafts ?? ({} as WorkflowDrafts),
+    changedFields: dirty,
+    onCandidateDecision: decideCandidate,
+    onUpdated: () => { void refresh(true); },
+    onMessage: setMessage,
+  }), [canRunResearch, decideCandidate, dirty, drafts, editionId, itemId, mode, refresh, token, workId]);
 
   if (loading && !payload) return <div className="admin-page admin-loading"><LoaderCircle className="spin" size={24} /><strong>正在建立馆藏工作上下文……</strong></div>;
   if (!payload || !drafts) return <div className="admin-page workflow-load-error"><h1>无法打开馆藏工作</h1><p>{message || "没有返回可编辑数据。"}</p><button type="button" onClick={() => void refresh(false)}>重试</button></div>;
@@ -706,23 +805,28 @@ export function WorkflowEditor({ mode, itemId, workId }: { mode: EditorMode; ite
   const returnHref = asString(payload.queue.return_href ?? payload.context.return_href, mode === "intake" ? "/admin/review" : "/admin/library");
   const canEdit = payload.permissions.can_edit !== false;
   return (
+    <ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
+    <ResearchWorkspaceContext.Provider value={researchWorkspace}>
     <div className="workflow-editor" data-workflow-mode={payload.mode}>
       <WorkflowStepRail title={asString(payload.context.title)} filename={asString(payload.context.filename)} steps={payload.workflow.steps} active={active} unresolvedCount={payload.workflow.unresolved_count} dirtyCount={currentDirtyCount} returnHref={returnHref} onStep={goToStep} onExit={exit} />
       <main className="workflow-editor-main">
-        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>{asString(payload.context.title, "未命名馆藏")}</h1><span>{payload.workflow.blockers_count} 个必须解决 · {payload.workflow.warnings_count} 个建议 · {currentDirtyCount} 项未保存</span></div><div><button type="button" onClick={() => void refresh(true)} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</button><button type="button" onClick={() => void saveStep(active, false)} disabled={Boolean(busy) || !canEdit || activeStepPending}><Save size={14} />保存</button><button type="button" onClick={inspectPdf}><Eye size={14} />PDF</button>{payload.context.public_url ? <Link className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开预览</Link> : null}</div></header>
-        {message ? <p className="workflow-editor-message" role="status">{message}</p> : null}
+        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>{asString(payload.context.title, "未命名馆藏")}</h1><span>{payload.workflow.blockers_count} 个必须解决 · {payload.workflow.warnings_count} 个建议 · {currentDirtyCount} 项未保存</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveStep(active, false)} disabled={Boolean(busy) || !canEdit || activeStepPending}><Save size={14} />保存</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{payload.context.page_preview_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.page_preview_url)} target="_blank">页面预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
+        {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
+        {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
         <div className="workflow-sections">{payload.workflow.steps.map((step) => {
           const presentation = presentations[step.key];
           const expanded = presentation === "current";
           const localErrors = validation[step.key] ?? [];
           const sectionCanEdit = canEdit && step.status !== "pending";
-          return <section className={`workflow-section presentation-${presentation} status-${step.status}`} id={`workflow-section-${step.key}`} key={step.key} data-step={step.key}><button className="workflow-section-heading" type="button" aria-expanded={expanded} onClick={() => goToStep(step.key)}><span>{step.status === "complete" || step.status === "skipped" ? <Check size={15} /> : expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><div><small>{statusLabel(step.status)}</small><h2>{step.label}</h2>{presentation === "summary" ? <p>{typeof step.summary === "string" ? step.summary : summaryFor(step.key, drafts[step.key])}</p> : presentation === "preview" ? <p>{step.next_action || "完成当前步骤后继续处理。"}</p> : null}</div><b>{step.issues.length ? `${step.issues.length} 项` : ""}</b></button>{expanded ? <div className="workflow-section-content">{step.key !== "publication" ? <div className="workflow-backend-issues">{step.issues.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone={issue.severity === "blocker" ? "blocker" : issue.severity === "info" ? "info" : "warning"} onActivate={() => goToIssue(issue)} />)}</div> : null}<WorkflowSectionBody step={step.key} draft={drafts[step.key]} documentType={documentType} candidates={allCandidates} canEdit={sectionCanEdit} context={payload.context} permissions={payload.permissions} errors={localErrors} update={update} inspectField={inspectField} inspectPdf={inspectPdf} fileAction={fileAction} curationChange={(value) => setDrafts((current) => current ? { ...current, curation: value } : current)} curationConfirm={() => void saveStep("curation", true)} curationSkip={() => void skipCuration()} refresh={() => void refresh(true)} message={setMessage} goToIssue={goToIssue} publish={(intent) => void performPublish(intent, false)} withdraw={() => void performWithdraw()} publishing={busy === "publish"} research={{ mode, itemId, workId, token, suggestions: allCandidates, onInspect: inspectSuggestions, onUpdated: () => void refresh(true), onMessage: setMessage }} />{step.key !== "publication" && step.key !== "curation" ? <footer className="workflow-section-actions"><button className="button secondary" type="button" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, false)}><Save size={14} />保存</button><button className="button" type="button" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, true)}>{busy === `save-${step.key}` ? <LoaderCircle className="spin" size={14} /> : <FileCheck2 size={14} />}保存并继续</button></footer> : null}</div> : null}</section>;
+          return <section className={`workflow-section presentation-${presentation} status-${step.status}`} id={`workflow-section-${step.key}`} key={step.key} data-step={step.key}><button className="workflow-section-heading" type="button" aria-expanded={expanded} onClick={() => goToStep(step.key)}><span>{step.status === "complete" || step.status === "skipped" ? <Check size={15} /> : expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><div><small>{statusLabel(step.status)}</small><h2>{step.label}</h2>{presentation === "summary" ? <p>{typeof step.summary === "string" ? step.summary : summaryFor(step.key, drafts[step.key])}</p> : presentation === "preview" ? <p>{step.next_action || "完成当前步骤后继续处理。"}</p> : null}</div><b>{step.issues.length ? `${step.issues.length} 项` : ""}</b></button>{expanded ? <div className="workflow-section-content">{step.key !== "publication" ? <div className="workflow-backend-issues">{step.issues.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone={issue.severity === "blocker" ? "blocker" : issue.severity === "info" ? "info" : "warning"} onActivate={() => goToIssue(issue)} />)}</div> : null}<WorkflowSectionBody step={step.key} draft={drafts[step.key]} documentType={documentType} candidates={allCandidates} canEdit={sectionCanEdit} context={payload.context} permissions={payload.permissions} errors={localErrors} update={update} inspectField={inspectField} inspectPdf={inspectPdf} fileAction={fileAction} curationConfirm={() => saveStep("curation", true)} curationSkip={() => skipCuration()} refresh={() => refresh(true)} message={setMessage} goToIssue={goToIssue} publish={(intent) => void performPublish(intent, false)} withdraw={() => void performWithdraw()} publishing={busy === "publish"} busy={busy} research={{ mode, itemId, workId, token, suggestions: allCandidates, onInspect: inspectSuggestions, onUpdated: () => void refresh(true), onMessage: setMessage }} />{step.key !== "publication" && step.key !== "curation" ? <footer className="workflow-section-actions"><ActionButton className="button secondary" state={busy === `save-${step.key}` ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, false)}><Save size={14} />保存</ActionButton><ActionButton className="button" state={busy === `save-${step.key}` ? "pending" : "idle"} pendingLabel="正在保存并继续" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, true)}><FileCheck2 size={14} />保存并继续</ActionButton></footer> : null}</div> : null}</section>;
         })}</div>
       </main>
       <WorkflowInspector selection={inspector} token={token} onClose={() => setInspector(null)} onDecision={(candidate, action) => void decideCandidate(candidate, action)} />
-      {publishConfirmation ? <div className="workflow-modal-backdrop"><div className="workflow-publication-confirmation" role="dialog" aria-modal="true" aria-labelledby="workflow-publish-confirm-title"><AlertTriangle size={21} /><div><h2 id="workflow-publish-confirm-title">确认带警告发布</h2><p>警告不会阻止发布。OCR、页码和语义索引等后台任务会继续处理，原始 PDF 不会被覆盖。</p></div><footer><button className="button secondary" type="button" onClick={() => setPublishConfirmation(null)}>取消</button><button className="button" type="button" onClick={() => void performPublish(publishConfirmation, true)}>确认发布</button></footer></div></div> : null}
+      {publishConfirmation ? <div className="workflow-modal-backdrop"><div className="workflow-publication-confirmation" role="dialog" aria-modal="true" aria-labelledby="workflow-publish-confirm-title"><AlertTriangle size={21} /><div><h2 id="workflow-publish-confirm-title">确认带警告发布</h2><p>警告不会阻止发布。OCR、页码和语义索引等后台任务会继续处理，原始 PDF 不会被覆盖。</p></div><footer><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={() => setPublishConfirmation(null)}>取消</ActionButton><ActionButton className="button" state={busy === "publish" ? "pending" : "idle"} pendingLabel="正在发布" disabled={Boolean(busy)} onClick={() => void performPublish(publishConfirmation, true)}>确认发布</ActionButton></footer></div></div> : null}
       {busy === "skip-curation" ? <span className="sr-only" aria-live="polite">正在保存暂不策展决定</span> : null}
       <span className="sr-only" aria-live="polite">{currentDirtyCount ? `${currentDirtyCount} 项未保存` : "所有修改已保存"}</span>
     </div>
+    </ResearchWorkspaceContext.Provider>
+    </ResearchSuggestionCapabilityContext.Provider>
   );
 }

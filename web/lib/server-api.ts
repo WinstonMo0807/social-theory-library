@@ -816,6 +816,18 @@ export type SemanticSearchPayload = {
   results: SemanticSearchResult[];
 };
 
+export class ServerApiError extends Error {
+  readonly status: number;
+  readonly path: string;
+
+  constructor(status: number, path: string) {
+    super(`API ${status}: ${path}`);
+    this.name = "ServerApiError";
+    this.status = status;
+    this.path = path;
+  }
+}
+
 async function serverRequest<T>(path: string): Promise<T> {
   const response = await fetch(`${SERVER_API}${path}`, {
     cache: "no-store",
@@ -829,7 +841,7 @@ async function serverRequest<T>(path: string): Promise<T> {
     },
   });
   if (!response.ok) {
-    throw new Error(`API ${response.status}: ${path}`);
+    throw new ServerApiError(response.status, path);
   }
   return response.json() as Promise<T>;
 }
@@ -1307,6 +1319,7 @@ export async function loadWork(slug: string): Promise<Work | null> {
   try {
     return adaptWork(await serverRequest<ApiWork>(`/catalog/works/${encodeURIComponent(slug)}/`));
   } catch (error) {
+    if (error instanceof ServerApiError && error.status === 404) return null;
     if (!allowDemoFallback) throw error;
     return demoWorks.find((item) => item.slug === slug) ?? null;
   }

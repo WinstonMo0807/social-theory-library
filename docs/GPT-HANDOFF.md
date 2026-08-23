@@ -1,6 +1,6 @@
 # GPT 项目交接与联动审计
 
-更新日期为 2026-08-20。当前源码与生产应用版本均为 2.9.0。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
+更新日期为 2026-08-24。当前源码与公网生产应用均为 2.9.2。本文件是新 GPT 或 Codex 会话进入项目时的首要入口。它只记录当前结论和继续工作的边界。历史过程仍保留在其他文档中，但不得覆盖这里的较新状态。
 
 ## 阅读顺序
 
@@ -11,18 +11,19 @@
 5. [`ISSUES.md`](ISSUES.md)，查看仍需处理的问题和不能自动修复的数据缺口。
 6. 只有涉及部署时才读取 [`DEPLOYMENT.md`](DEPLOYMENT.md)。
 
-任何会变化的生产状态都要重新检查。文档中的生产信息是 2026-08-20 的已验证快照，不能代替下一次发布前的实时检查。
+任何会变化的生产状态都要重新检查。文档中的生产信息是 2026-08-24 的已验证快照，不能代替下一次发布前的实时检查。
 
 ## 当前结论
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 源码版本 | 2.9.0 社科研究候选层，已部署生产 |
-| Git 工作分支 | `codex/v2.9-research-candidates`，release commit `e318ec8268e7ff4321b7474cba184b92d3a92ad5` |
+| 源码版本 | 2.9.2，完整本地门槛和生产部署已完成 |
+| Git 工作分支 | `codex/v2.9-research-candidates`；基准 HEAD/upstream 为 `1053ff1`，2.9.2 发布树仍未提交，不得 reset 或覆盖 |
 | GitHub visibility | Public，是 owner 明确决定；仓库只包含安全源码，不包含 Secret 或运行数据 |
 | 正式后台 | Next Admin 是日常编辑入口，Django Admin 是维护后备入口 |
-| 生产应用 | API、Worker、Ingestion Worker 与 Beat 使用 `2.9.0-e318ec8-20260820-225905`，Web 使用同 revision 镜像 |
-| 生产 migration head | catalog 0031、ingestion 0013、reading 0007，pending migration 0 |
+| 生产应用 | API、Worker、Ingestion Worker 与 Beat 使用 `2.9.2-final-3a4733aa-20260824-014228`；Web 使用 `2.9.2-final-34e8e016-20260824-014512` |
+| 生产 migration head | catalog 0032、ingestion 0013、reading 0007，pending migration 0 |
+| 2.9.2 migration | `catalog.0032_healthcheckrun_healthincident_recoveryaction_and_more` 已完成 rehearsal 并正式应用 |
 | 2.8 数据迁移 | Fresh BackupJob 与 disposable PostgreSQL restore rehearsal 已完成；正式迁移已应用 |
 | QueryLexicon | revision 3，生产候选聚合只读使用现有 active generation |
 | 语义索引 | active UID `semantic_passages_20260818210650_4cf87bc9`，3,005 个已核对文档 |
@@ -31,15 +32,37 @@
 | General Web | 内网 SearXNG 只发现 URL，实际证据必须由 SafeWebFetcher 取得正文 |
 | PDF upload staging | Cloudflare R2 已启用，只做临时中转；永久 PDF 仍进入 NAS |
 | Candidate | 2.9 在现有工作流内聚合既有候选与证据。没有自动发布 authority，也没有自动 Accept |
-| 当前发布判断 | `2.9 PUBLIC DEPLOYED / READY / ADMIN READ-ONLY ACCEPTED` |
+| 当前发布判断 | `2.9.2 PUBLIC DEPLOYED / PRODUCTION ACCEPTED` |
 
-生产快照中的主要数量为 Work 7、Edition 7、Asset 14、Page 2,706、SemanticChunk 3,881。活动语义索引有 3,005 个 ready 文档，数据库记录与 Meilisearch 实测一致。它们是时间点数据，下一次部署前必须重新读取。
+生产快照中的主要数量为 Work 8、Edition 8、Asset 16、Page 3,135、SemanticChunk 3,881、Person 7、KnowledgeNode 2。活动语义索引有 3,005 个 ready 文档，数据库记录与 Meilisearch 实测一致。它们是 2026-08-24 的时间点数据，下一次部署前必须重新读取。
 
-本轮已用正常 Winston 管理员会话检查 Intake Focus Mode、step rail、共享 Inspector、分类、知识、策展、发布区、Maintenance Mode 和旧 URL redirect。生产候选 GET 与共享 Inspector 正常，浏览器控制台无错误。没有对真实馆藏执行联网研究、Candidate decision、保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
+本轮已用正常 Winston 管理员会话检查 Maintenance workflow、自动研究、宽版 Entity Picker、共享 Inspector、管理员页面预览和 Processing Center。未保存 Person 值进入了真实生产 ResearchContext 与外部 Provider；没有执行 Candidate decision、保存、发布、下架、Reading Path placement 或 RecommendationOverride mutation。
 
 旧 R2 uploaded 项已经由 2.8.1 recovery 完成导入、正式 pipeline、Asset 建立和 staging cleanup。新 Worker 的 12 个 Beat 周期没有再次出现同类错误。普通非 superuser 管理员公网上传与发布仍因用户明确跳过账户密码测试而属于 `待核实`，不得把 recovery 结果写成该权限路径已经完成真实 E2E。
 
 2.9 在现有九步工作流旁增加社科研究候选层。它只读聚合既有 Candidate、Evidence、QueryLexicon 和当前 PDF 语料；外部研究继续通过 Field Enrichment、SearXNG 和 SafeWebFetcher。搜索摘要不是 Evidence，正式分类、人物和知识关系仍需人工确认。2.9 没有新增 Candidate 表、migration 或互联网 RAG。
+
+2026-08-21 的窄范围续作已部署。非 Person 实体消歧候选按业务对象进入正确步骤，研究按钮读取现有 capability，候选决定后会失效旧 pending 状态，可选 research query 进入有界服务调用。最终 Web 又收敛了匿名 SaveWorkButton 的私人 API 请求。生产证据、备份与回退入口记录在 DEPLOYMENT 和 PROGRESS 顶部。
+
+## 2.9.2 生产实现与验收结果
+
+2.9.2 在现有馆藏策展工作流内增加独立 Research Orchestrator。ResearchContext 同时携带已保存数据、未保存 draft、实体、Candidate decision、FieldLock、PDF/OCR 状态、workflow gap 与 fingerprint。唯一 Research Field Contract Registry 约束字段、实体类型、来源、Evidence 和 mutation；WorkflowGapAnalyzer 只做确定性规划。Universal Entity Discovery 覆盖人、作品、理论、主题、知识节点、学科、子学科、组织、出版社、期刊与 Reading Path，并保留 local、local_draft、authority、external_web 和 unresolved 分组。SearXNG snippet 仍然只是 lead。
+
+ResearchRun 保存幂等键、context revision、计划、结果、诊断与 Celery 状态。HealthCheckRun、HealthIncident 和 RecoveryAction 保存功能探测、事故与安全恢复记录。Processing Center 读取持久化快照，不在页面 GET 时遍历访问外部 Provider。健康调度有全局租约和单批限制，恢复动作复用现有任务服务并写 AuditEvent。
+
+管理员页面预览与公开页面已经分开。`pdf_preview_url`、受保护的 `page_preview_url` 和 published-only `public_url` 各有独立语义。公开 Work queryset 没有放宽。公开作品页与管理员预览复用展示组件，管理员预览不暴露收藏、公共下载、引用或公共 Reader mutation。
+
+前端候选区支持页面加载自动研究、未保存 draft、800ms debounce、依赖字段增量重规划、手动刷新、宽版分组 Entity Picker、显式外部候选动作、键盘和 ARIA。共享操作反馈覆盖 workflow、research、preview、Processing Center 和主要后台任务。
+
+完整后端 pytest 为 678 passed、32 skipped，退出码 0。前端完整 Node 为 118/118，Auth 与 Scoped Search 为 21/21；TypeScript、完整 ESLint、production build、Python compileall、migration drift 和 diff check 通过。catalog 0032 的 PostgreSQL 16 restore rehearsal、2.9.1 compatibility、正式 migration、统一镜像和公网 smoke 已完成。
+
+catalog 0032 只新增 ResearchRun、HealthCheckRun、HealthIncident、RecoveryAction 及索引，没有数据回填、PDF 操作、authority mutation 或索引切换。follow-up BackupJob、最终镜像、deploy-record、回退标签和完整验收见 [DEPLOYMENT.md](DEPLOYMENT.md) 顶部。
+
+最终镜像上的 fresh ResearchRun `e285af7a-4949-4567-b765-60739c44df17` 使用未保存“马克斯·韦伯”，精确绑定 Edition `aaf54876-f563-402f-b244-b14af54614fa`，生成同名 query，以预分配 task ID 调用 Celery 和 SearXNG，并返回 VIAF 与 unresolved 多候选。表单随后被丢弃，没有建立关系、接受候选或覆盖 FieldLock。部署代码探针确认 external_web 与 SearXNG 结果保持 `research_lead`、`lead_only` 且不生成 Evidence。Processing Center 在 2026-08-24 02:09 的 Research Orchestrator 四层状态均为通过。
+
+生产发现 8 条旧 ResearchRun orphan。RecoveryAction `119e7f98-f74b-4a35-9b80-2c05ad3d36a5` 通过完整 ownership inventory 将其安全转为 canceled，并写 8 条 orphan recovery 与 1 条 recovery completed 审计。incident `30d9597f-4f55-4326-9a6e-96640fc53bf3` 已 resolved，当前 nonterminal ResearchRun 为 0。
+
+公开预览的 React #482 根因是客户端预览间接导入异步 Server `SiteFooter`，现由两个 Server page 传入 footer slot。API 404 只转换为不存在，5xx 与网络错误继续抛出。生产浏览器又发现 Entity Picker 右对齐会在责任者两栏表单中被左侧裁切；最终 Web 采用按表单列对齐并解除活动 section 裁切。最终生产页 560px 面板完整位于 1265px 视口内，键盘和 ARIA 状态均通过。
 
 ## 系统总图
 
@@ -184,15 +207,31 @@ flowchart TD
 
 ## 已发现的剩余风险
 
-1. R2 uploaded 项到 NAS intake 的恢复存在生产阻断。FileField 为空和 PostgreSQL nullable-join lock 错误会被 Beat 每分钟再次触发。本轮没有修复。
-2. Authority coverage 仍偏低。公开 QueryLexicon 中 Person coverage 低，导致跨语言扩展和 PDF 术语候选数量受限。这是数据治理问题，不能通过自动发布 draft 或放宽 identity gate 解决。
-3. 生产 Person 数据存在待人工复核的异常。例如 George Herbert Mead 的生卒年顺序不可能成立，另有疑似 OCR 噪声姓名。只记录问题，不自动改 authority。
-4. 公共 V2 尚未完成盲化人工 qrels。当前 enable 基于有限真实 smoke，必须保留 V1 回退。
-5. General Web 的当前生产出口只验证了 Baidu discovery。上游限流、页面变化和地区网络仍会形成 partial failure。
-6. 注册读者的个人 AI 连接已部署，但不同模型的流式格式、超时和引用遵从仍需真实用户配置后的人工验证。
-7. 大 PDF 拖放、后台标签页和弱网恢复需要继续做长期浏览器测试。源码已有非破坏 session probe 和 chunk resume，但这不是所有浏览器环境的最终证明。
-8. 前端依赖审计仍报告 3 个 high severity 项。没有使用强制升级破坏 Vinext/Next runtime，需要独立兼容性处理。
-9. 历史文档包含旧 2.6.1、SSH blocker、V2 disabled 等时间点结论。读取时必须以本文件和各文档顶部的当前状态为准。
+1. 普通 non-superuser 管理员公网上传与发布没有正常账户，仍为 `待核实`。本轮没有创建账户、提升权限或绕过登录。
+2. fresh SearXNG 确认被调用，但两次一般 Web 查询均为零结果。VIAF 返回真实 structured 候选；本轮不能写成 fresh SafeWebFetcher supporting passage 已通过。Processing Center 当前把 OpenAlex 未配置、Wikidata timeout、SafeWebFetcher 与部分 metadata provider 记录为外部来源降级。
+3. Universal Entity Discovery 后端支持 12 类，共享 Picker 已进入九步 workflow 和当前实际维护输入。没有 canonical 模型的类型仍不能写成拥有独立创建编辑器，创建与关联继续受原模型和权限限制。
+4. Interaction Feedback 已覆盖本轮关键 workflow、research、preview、Processing Center 和 health 动作，但没有逐一重写全站所有普通导航、同步按钮和文本链接。
+5. Authority coverage 仍偏低。公开 QueryLexicon 中 Person coverage 低，导致跨语言扩展和 PDF 术语候选数量受限。这是数据治理问题，不能通过自动发布 draft 或放宽 identity gate 解决。
+6. 生产 Person 数据存在待人工复核的异常与疑似 OCR 噪声。只记录问题，不自动改 authority。
+7. 公共 V2 尚未完成盲化人工 qrels。当前 enable 基于有限真实 smoke，必须保留 V1 回退。
+8. 注册读者的个人 AI 连接、弱网大 PDF、后台标签页和不同模型流式格式仍需长期真实用户观察。
+9. 前端依赖审计仍有高风险依赖项。没有使用强制升级破坏 Vinext/Next runtime，需要独立兼容性处理。
+10. 无状态匿名浏览器会用 `/api/auth/me/` 401 和缺少 refresh cookie 的 400 判断没有登录，因此 Chromium 控制台存在预期资源状态；没有 pageerror、requestfailed 或主要功能失效。后续可增加返回 200 的专用匿名会话探测接口。
+11. 历史文档包含旧 2.6.1、SSH blocker、V2 disabled 与 2.9.2 NOT DEPLOYED 等时间点结论。读取时必须以本文件和各文档顶部的当前状态为准。
+
+## 2.9.2 下一轮 review 入口
+
+本节供 2.9.2 完成部署和安全 Git 交接后的下一轮 GPT 使用。公网 ready、最终镜像和远端分支都属于可变化状态，下一轮仍需实时复核，不能只沿用本文件。
+
+1. 先执行 `git status --short --branch`，核对本地 HEAD、远端分支 SHA、Public visibility 与工作树。再实时读取公网 ready、生产镜像、migration heads、队列和活动语义 UID。四类证据分别标记为源码已实现、本地已验证、生产已验证、设计或待核实。
+2. 按顺序阅读 `docs/v2.9.2-requirements-matrix.md`、`docs/PROGRESS.md`、`docs/ISSUES.md`、`docs/ARCHITECTURE.md` 和 `docs/DEPLOYMENT.md` 顶部。`task_plan.md`、`findings.md` 与 `progress.md` 只补充执行过程，不能覆盖较新的源码和生产证据。
+3. Research review 从 `api/catalog/services/research/`、`api/catalog/research_views.py`、`api/catalog/tasks.py`、`web/components/admin/research/` 和 `web/components/admin/workflow/workflow-editor.tsx` 进入。重点检查 draft fingerprint、deterministic plan、contract coverage、local-first、幂等、partial failure、显式实体决定、FieldLock 和人工确认边界。
+4. Functional Health review 从 `api/catalog/services/system_health.py`、catalog 0032 migration、Beat 配置、`web/components/functional-health-panel.tsx` 和 Processing Center 进入。重点检查持久化 snapshot、租约、probe 批量限制、incident 生命周期、恢复次数、退避、AuditEvent 和页面 GET 不做实时 Provider 扫描。
+5. Preview 与交互 review 从 `admin_workspace`、preview serializer/view、`web/app/admin/preview/`、`work-detail-view.tsx` 和 `action-feedback.tsx` 进入。证明 draft/ready public 404、管理员 preview 有权限、published 页面不回归，并核对 pending、success、error、disabled、键盘、ARIA 和 reduced motion。
+6. 对核心书库做回归审计。范围包括登录与权限、R2 staging 到 NAS、OCR 与入库失败隔离、Candidate 与 Evidence、QueryLexicon、公开搜索和观点检索、Reader Range、引用、下载、私人阅读数据、Ask、策展、发布、备份和恢复。2.9.2 不应建立平行数据源，也不应改变活动索引或公开访问边界。
+7. 最后核对 release record。当前 API image ID 是 `235d9906...`，最终 Web image ID 是 `bcc0f0c7...`，catalog 0032 与 pending 0、BackupJob `965c6431-5d45-4ba2-b4a1-e7f7b263ddde`、`pre-v292-final` 标签、核心对象 hash、公网 smoke 和 `final-verification-20260824-021518` 均有记录。Git 的精确远端 SHA 必须从实时分支读取。
+
+下一轮 review 不得为了取得正数候选而降低 identity 或 Evidence 门槛，不得用静态 mock 掩盖 Provider/API 故障，也不得对真实馆藏做试探性 merge、发布、下架、索引重建或直接数据库修改。Public GitHub 是 owner 的决定，但 Public 不允许 Secret、运行环境、PDF、数据库、备份、用户数据、日志、模型、embedding 或索引进入仓库。
 
 ## 下一位 GPT 的工作约束
 
@@ -233,13 +272,13 @@ git status --short --branch
 
 环境型 PostgreSQL、Redis/Celery、Provider、OCR、NAS、Meilisearch 和公网检查只有在真实运行后才能记为通过。
 
-## 本次仓库交接验证
+## 历史仓库交接验证
 
-2026-08-19 在当前 2.7 工作树重新执行了完整本地门槛：
+2026-08-19 曾在当时的 2.7 工作树执行完整本地门槛。以下是历史证据，不代表 2.9.2 当前结果：
 
 - 后端完整 pytest 退出码为 0。
 - `manage.py check` 通过，migration drift 检查显示 `No changes detected`，compileall 通过。
 - 前端 Vinext production build 通过，68 项通用 Node 测试和 19 项 Auth / Scoped Search 测试通过。
 - TypeScript 与 ESLint 通过。
 - `git diff --check` 通过。
-- 本次交接只修改文档，没有新增 migration，也没有连接或修改生产环境。
+- 当次交接只修改文档，没有新增 migration，也没有连接或修改生产环境。

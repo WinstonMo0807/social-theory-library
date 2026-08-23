@@ -1,11 +1,14 @@
 import uuid
 
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery import shared_task
+from django.db import transaction
+from django.utils import timezone
 
 from catalog.services.semantic_indexing import recover_semantic_index_jobs, run_semantic_index_job
 from catalog.services.recommendations import current_snapshot, ensure_default_policies
 from catalog.services.analytics import aggregate_search_queries
-from catalog.models import SearchEvaluationRun
+from catalog.models import ResearchRun, SearchEvaluationRun
 from catalog.services.search_evaluation import (
     SearchEvaluationExecutionError,
     SearchEvaluationValidationError,
@@ -13,6 +16,156 @@ from catalog.services.search_evaluation import (
 )
 from catalog.services.query_lexicon.sync import process_pending_events
 from catalog.services.query_lexicon.operations import run_query_lexicon_reconciliation as run_ql_reconciliation
+
+
+def _claim_research_task(run_id, task_id: str) -> tuple[bool, str]:
+    """Bind legacy blank rows and verify the preassigned Celery owner."""
+
+    task_id = str(task_id or "").strip()
+    if not task_id:
+        run = ResearchRun.objects.only("status").get(pk=run_id)
+        return False, run.status
+    now = timezone.now()
+    with transaction.atomic():
+        run = ResearchRun.objects.select_for_update(of=("self",)).get(pk=run_id)
+        if (
+            run.status == ResearchRun.Status.QUEUED
+            and not str(run.task_id or "").strip()
+        ):
+            run.task_id = task_id
+        if run.status == ResearchRun.Status.QUEUED and str(run.task_id or "").strip() == task_id:
+            # Refresh the row at the moment the Worker actually claims it. A
+            # legitimately queued task may have waited longer than the stale
+            # threshold while still being owned by Celery.
+            run.updated_at = now
+            run.save(update_fields=["task_id", "updated_at"])
+        return str(run.task_id or "").strip() == task_id, run.status
+
+
+def _write_research_task_terminal(
+    run_id,
+    task_id: str,
+    *,
+    status_value: str,
+    error_code: str,
+    error_message: str,
+    diagnostic_detail: str,
+) -> str | None:
+    now = timezone.now()
+    with transaction.atomic():
+        run = ResearchRun.objects.select_for_update(of=("self",)).filter(pk=run_id).first()
+        if run is None:
+            return None
+        if (
+            run.status not in {ResearchRun.Status.QUEUED, ResearchRun.Status.RUNNING}
+            or str(run.task_id or "").strip() != task_id
+        ):
+            return run.status
+        diagnostics = dict(run.diagnostics or {})
+        errors = list(diagnostics.get("errors") or [])
+        errors.append(
+            {
+                "code": error_code,
+                "detail": diagnostic_detail,
+                "provider": "research_orchestrator",
+            }
+        )
+        diagnostics["errors"] = errors
+        run.status = status_value
+        run.diagnostics = diagnostics
+        run.error_code = error_code
+        run.error_message = error_message[:2000]
+        run.finished_at = now
+        run.save(
+            update_fields=[
+                "status",
+                "diagnostics",
+                "error_code",
+                "error_message",
+                "finished_at",
+                "updated_at",
+            ]
+        )
+        return run.status
+
+
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(OSError, ConnectionError, TimeoutError),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=2,
+    soft_time_limit=40,
+    time_limit=50,
+)
+def execute_research_run(self, run_id):
+    from catalog.services.research.orchestrator import ResearchOrchestrator
+
+    task_id = str(self.request.id or "")
+    owned, current_status = _claim_research_task(run_id, task_id)
+    if not owned:
+        return {
+            "id": str(run_id),
+            "status": current_status,
+            "ignored": "owner_mismatch",
+        }
+    try:
+        run = ResearchOrchestrator().execute(str(run_id), task_id=task_id)
+    except SoftTimeLimitExceeded:
+        current_status = _write_research_task_terminal(
+            run_id,
+            task_id,
+            status_value=ResearchRun.Status.DEGRADED,
+            error_code="research_timeout",
+            error_message="外部研究超过 40 秒预算。",
+            diagnostic_detail="外部研究超过 40 秒预算，已保留馆内候选并进入降级状态。",
+        )
+        return {"id": str(run_id), "status": current_status}
+    except Exception as exc:
+        _write_research_task_terminal(
+            run_id,
+            task_id,
+            status_value=ResearchRun.Status.FAILED,
+            error_code="research_task_failed",
+            error_message=str(exc)[:2000],
+            diagnostic_detail="Research Worker 在进入或执行研究服务时失败。",
+        )
+        raise
+    return {"id": str(run.id), "status": run.status}
+
+
+@shared_task(ignore_result=True, soft_time_limit=20, time_limit=25)
+def run_scheduled_health_probes():
+    from catalog.services.system_health import run_due_health_probes
+
+    try:
+        return run_due_health_probes()
+    except SoftTimeLimitExceeded:
+        return {
+            "due": None,
+            "executed": None,
+            "runs": [],
+            "skipped": "time_budget",
+        }
+
+
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(OSError, ConnectionError, TimeoutError),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=2,
+)
+def execute_health_recovery(self, recovery_id):
+    from catalog.services.system_health import execute_recovery
+
+    recovery = execute_recovery(
+        str(recovery_id),
+        task_id=str(self.request.id or ""),
+    )
+    return {"id": str(recovery.id), "status": recovery.status, "attempt": recovery.attempt}
 
 
 @shared_task(

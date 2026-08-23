@@ -29,6 +29,8 @@ import {
 } from "@/lib/api";
 import { adaptWork, type ApiWork } from "@/lib/server-api";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 import { BookCard, BookCover, SectionHeading } from "./ui";
 import { DisplayPreferences } from "./display-preferences";
 
@@ -147,8 +149,23 @@ export function ReaderCenter() {
   const [submissionTitle, setSubmissionTitle] = useState("");
   const [submissionNote, setSubmissionNote] = useState("");
   const [message, setMessage] = useState("");
+  const [messageState, setMessageState] = useState<ActionState>("idle");
   const [newListTitle, setNewListTitle] = useState("");
   const [profileName, setProfileName] = useState("");
+  const { pendingAction, startAction, finishAction } = useActionGuard();
+
+  function beginReaderAction(key: string, pendingMessage: string) {
+    if (!startAction(key)) return false;
+    setMessage(pendingMessage);
+    setMessageState("pending");
+    return true;
+  }
+
+  function finishReaderAction(key: string, state: Exclude<ActionState, "idle" | "pending">, nextMessage: string) {
+    setMessage(nextMessage);
+    setMessageState(state);
+    finishAction(key);
+  }
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
@@ -274,15 +291,23 @@ export function ReaderCenter() {
   const savedWorks = readerData.saved.map((item, index) => adaptWork(item.work_data, index));
 
   async function logout() {
-    await logoutCurrentSession();
-    window.location.href = "/";
+    const actionKey = "logout";
+    if (!beginReaderAction(actionKey, "正在退出登录……")) return;
+    try {
+      await logoutCurrentSession();
+      finishReaderAction(actionKey, "success", "已退出登录，正在返回书库首页……");
+      window.location.href = "/";
+    } catch (error) {
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "退出登录失败。");
+    }
   }
 
   async function submitRecommendation(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
-    setMessage("");
+    const actionKey = "submit-recommendation";
+    if (!beginReaderAction(actionKey, "正在准备投稿邮件……")) return;
     try {
       const result = await apiRequest<{ detail: string; mailto: string; email: string }>(
         "/reading/submit/",
@@ -292,32 +317,41 @@ export function ReaderCenter() {
         },
         token,
       );
-      setMessage(result.detail);
+      finishReaderAction(actionKey, "success", result.detail);
       window.location.href = result.mailto;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "投稿邮件发送失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "投稿邮件发送失败。");
     }
   }
 
   async function exportReaderData() {
     const token = getServerSessionCredential();
     if (!token) return;
-    const payload = await apiRequest<Record<string, unknown>>("/reading/export/", {}, token);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `社会理论书库-个人数据-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const actionKey = "export-reader-data";
+    if (!beginReaderAction(actionKey, "正在导出个人数据……")) return;
+    try {
+      const payload = await apiRequest<Record<string, unknown>>("/reading/export/", {}, token);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `社会理论书库-个人数据-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      finishReaderAction(actionKey, "success", "个人数据已导出。");
+    } catch (error) {
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "个人数据导出失败。");
+    }
   }
 
   async function deleteRecord(kind: "saved" | "saved-topics" | "annotations" | "bookmarks", id: string) {
     const token = getServerSessionCredential();
     if (!token) return;
     if (!window.confirm("确定删除这条个人阅读记录吗？")) return;
+    const actionKey = `delete-record:${kind}:${id}`;
+    if (!beginReaderAction(actionKey, "正在删除个人阅读记录……")) return;
     try {
       await apiRequest(`/reading/${kind}/${id}/`, { method: "DELETE" }, token);
       setReaderData((current) => ({
@@ -335,9 +369,9 @@ export function ReaderCenter() {
         );
         setNoteGroups(groups.results);
       }
-      setMessage("个人阅读记录已删除。");
+      finishReaderAction(actionKey, "success", "个人阅读记录已删除。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "删除失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "删除失败。");
     }
   }
 
@@ -345,6 +379,8 @@ export function ReaderCenter() {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token || !newListTitle.trim()) return;
+    const actionKey = "create-reading-list";
+    if (!beginReaderAction(actionKey, "正在创建书单……")) return;
     try {
       const created = await apiRequest<ReadingListRow>(
         "/reading/lists/",
@@ -356,15 +392,17 @@ export function ReaderCenter() {
       );
       setReaderData((current) => ({ ...current, lists: [created, ...current.lists] }));
       setNewListTitle("");
-      setMessage("书单已创建。");
+      finishReaderAction(actionKey, "success", "书单已创建。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "书单创建失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "书单创建失败。");
     }
   }
 
   async function addSavedWorkToList(listId: string, workId: string) {
     const token = getServerSessionCredential();
     if (!token || !workId) return;
+    const actionKey = `add-to-list:${listId}:${workId}`;
+    if (!beginReaderAction(actionKey, "正在加入书单……")) return;
     try {
       const item = await apiRequest<{ id: string; work: string; title: string }>(
         `/reading/lists/${listId}/add_item/`,
@@ -379,21 +417,23 @@ export function ReaderCenter() {
             : list
         )),
       }));
-      setMessage("文献已加入书单。");
+      finishReaderAction(actionKey, "success", "文献已加入书单。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "加入书单失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "加入书单失败。");
     }
   }
 
   async function deleteReadingList(id: string) {
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = `delete-reading-list:${id}`;
+    if (!beginReaderAction(actionKey, "正在删除书单……")) return;
     try {
       await apiRequest(`/reading/lists/${id}/`, { method: "DELETE" }, token);
       setReaderData((current) => ({ ...current, lists: current.lists.filter((list) => list.id !== id) }));
-      setMessage("书单已删除。");
+      finishReaderAction(actionKey, "success", "书单已删除。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "书单删除失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "书单删除失败。");
     }
   }
 
@@ -401,6 +441,8 @@ export function ReaderCenter() {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = "update-profile";
+    if (!beginReaderAction(actionKey, "正在保存显示名称……")) return;
     try {
       const updated = await apiRequest<{ display_name: string; email: string }>(
         "/auth/me/",
@@ -408,9 +450,9 @@ export function ReaderCenter() {
         token,
       );
       setProfile(updated);
-      setMessage("显示名称已更新。");
+      finishReaderAction(actionKey, "success", "显示名称已更新。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "账户更新失败。");
+      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "账户更新失败。");
     }
   }
 
@@ -461,7 +503,7 @@ export function ReaderCenter() {
             </button>
           ))}
         </nav>
-        <button className="logout-button" type="button" onClick={logout}><LogOut size={16} /> 退出登录</button>
+        <ActionButton className="logout-button" type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={16} /> 退出登录</ActionButton>
       </aside>
       <main className="account-content">
         <header>
@@ -549,7 +591,7 @@ export function ReaderCenter() {
                         第 {progress.current_page} 页继续 <ArrowRight size={14} />
                       </Link>
                     ) : null}
-                    <button type="button" onClick={() => deleteRecord("saved", saved.id)}>移除收藏</button>
+                    <ActionButton type="button" state={pendingAction === `delete-record:saved:${saved.id}` ? "pending" : "idle"} pendingLabel="移除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:saved:${saved.id}`} onClick={() => void deleteRecord("saved", saved.id)}>移除收藏</ActionButton>
                   </span>
                 </div>
               );
@@ -560,7 +602,7 @@ export function ReaderCenter() {
                 <div><strong>{topic.name}</strong><p>{topic.description || "馆藏主题"}</p></div>
                 <span className="reader-data-actions">
                   <Link href={`/topics/${topic.slug}`}>打开 <ArrowRight size={14} /></Link>
-                  <button type="button" onClick={() => deleteRecord("saved-topics", topic.id)}>移除收藏</button>
+                  <ActionButton type="button" state={pendingAction === `delete-record:saved-topics:${topic.id}` ? "pending" : "idle"} pendingLabel="移除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:saved-topics:${topic.id}`} onClick={() => void deleteRecord("saved-topics", topic.id)}>移除收藏</ActionButton>
                 </span>
               </article>
             ))}
@@ -574,7 +616,7 @@ export function ReaderCenter() {
               <article className="reader-data-row" key={item.id}>
                 <Bookmark size={17} />
                 <div><strong>{adaptWork(item.work).title}</strong><p>{item.label || "页面书签"}</p></div>
-                <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.page_index}`}>打开 <ArrowRight size={14} /></Link><button type="button" onClick={() => deleteRecord("bookmarks", item.id)}>删除</button></span>
+                <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.page_index}`}>打开 <ArrowRight size={14} /></Link><ActionButton type="button" state={pendingAction === `delete-record:bookmarks:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:bookmarks:${item.id}`} onClick={() => void deleteRecord("bookmarks", item.id)}>删除</ActionButton></span>
               </article>
             ))}
             {!readerData.bookmarks.length ? <p className="empty-state">你还没有保存书签。</p> : null}
@@ -589,7 +631,7 @@ export function ReaderCenter() {
                 <article className="reader-data-row" key={item.id}>
                   <Highlighter size={17} />
                   <div><strong>{adaptWork(item.work).title}</strong><blockquote>{item.quote || "未保存引文"}</blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
-                  <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></Link><button type="button" onClick={() => deleteRecord("annotations", item.id)}>删除</button></span>
+                  <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></Link><ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton></span>
                 </article>
               ))}
           </DataPanel>
@@ -618,7 +660,7 @@ export function ReaderCenter() {
                         <p>{item.body_text || "这条笔记没有补充文字。"}</p>
                         <span className="reader-data-actions">
                           <Link href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开原页 <ArrowRight size={13} /></Link>
-                          <button type="button" onClick={() => deleteRecord("annotations", item.id)}>删除</button>
+                          <ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton>
                         </span>
                       </article>
                     ))}
@@ -632,13 +674,13 @@ export function ReaderCenter() {
 
         {active === "书单" ? (
           <DataPanel title="书单">
-            <form className="reading-list-create" onSubmit={createReadingList}><input value={newListTitle} onChange={(event) => setNewListTitle(event.target.value)} placeholder="新书单名称" required /><button className="button secondary" type="submit">创建书单</button></form>
+            <form className="reading-list-create" onSubmit={createReadingList}><input value={newListTitle} onChange={(event) => setNewListTitle(event.target.value)} placeholder="新书单名称" required /><ActionButton className="button secondary" type="submit" state={pendingAction === "create-reading-list" ? "pending" : "idle"} pendingLabel="正在创建" disabled={Boolean(pendingAction) && pendingAction !== "create-reading-list"}>创建书单</ActionButton></form>
             {readerData.lists.map((list) => (
               <article className="reader-data-row" key={list.id}>
                 <List size={17} /><div><strong>{list.title}</strong><p>{list.description}</p><small>{list.items.length} 部文献</small>{list.items.map((item) => <span className="reading-list-item" key={item.id}>{item.title}</span>)}</div>
                 <span className="reader-data-actions">
-                  {readerData.saved[0] ? <button type="button" onClick={() => addSavedWorkToList(list.id, readerData.saved[0].work_data.id)}>加入最近收藏</button> : null}
-                  <button type="button" onClick={() => deleteReadingList(list.id)}>删除</button>
+                  {readerData.saved[0] ? <ActionButton type="button" state={pendingAction === `add-to-list:${list.id}:${readerData.saved[0].work_data.id}` ? "pending" : "idle"} pendingLabel="加入中" disabled={Boolean(pendingAction) && pendingAction !== `add-to-list:${list.id}:${readerData.saved[0].work_data.id}`} onClick={() => void addSavedWorkToList(list.id, readerData.saved[0].work_data.id)}>加入最近收藏</ActionButton> : null}
+                  <ActionButton type="button" state={pendingAction === `delete-reading-list:${list.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-list:${list.id}`} onClick={() => void deleteReadingList(list.id)}>删除</ActionButton>
                 </span>
               </article>
             ))}
@@ -665,21 +707,20 @@ export function ReaderCenter() {
             <p>这里不直接上传 PDF。填写信息后会打开你的邮件应用，由你确认后发送给管理员。</p>
             <label><span>文献题名</span><input value={submissionTitle} onChange={(event) => setSubmissionTitle(event.target.value)} required /></label>
             <label><span>推荐说明与合法来源</span><textarea rows={7} value={submissionNote} onChange={(event) => setSubmissionNote(event.target.value)} /></label>
-            <button className="button" type="submit"><Mail size={16} /> 发送投稿邮件</button>
-            {message ? <p className="form-message" aria-live="polite">{message}</p> : null}
+            <ActionButton className="button" type="submit" state={pendingAction === "submit-recommendation" ? "pending" : "idle"} pendingLabel="正在准备邮件" disabled={Boolean(pendingAction) && pendingAction !== "submit-recommendation"}><Mail size={16} /> 发送投稿邮件</ActionButton>
           </form>
         ) : null}
 
         {active === "账户设置" ? (
           <DataPanel title="账户与数据">
             <article className="reader-data-row"><Settings size={17} /><div><strong>{user.display_name}</strong><p>{user.email}</p></div></article>
-            <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><button className="button secondary" type="submit">保存名称</button></form>
+            <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "update-profile"}>保存名称</ActionButton></form>
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>
-            <button className="button secondary" type="button" onClick={exportReaderData}><Download size={16} /> 导出个人数据</button>
+            <ActionButton className="button secondary" type="button" state={pendingAction === "export-reader-data" ? "pending" : "idle"} pendingLabel="正在导出" disabled={Boolean(pendingAction) && pendingAction !== "export-reader-data"} onClick={() => void exportReaderData()}><Download size={16} /> 导出个人数据</ActionButton>
           </DataPanel>
         ) : null}
-        {message ? <p className="form-message reader-center-message" role="status">{message}</p> : null}
+        {message ? <AsyncStatus className="reader-center-message" state={messageState} message={message} /> : null}
       </main>
     </div>
   );

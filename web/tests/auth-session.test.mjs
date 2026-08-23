@@ -13,7 +13,7 @@ import {
 import { bootstrapSession } from "../lib/session.ts";
 
 function response(status, payload = {}) {
-  return new Response(JSON.stringify(payload), {
+  return new Response(status === 204 ? null : JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
@@ -25,7 +25,7 @@ function installBrowser(t, { hint = false, storageThrows = false, locks } = {}) 
     originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
   }
   const values = new Map(hint ? [["library_session_active", "1"]] : []);
-  const storageListeners = new Set();
+  const listeners = new Map();
   const localStorage = {
     getItem(key) {
       if (storageThrows) throw new Error("storage disabled");
@@ -52,10 +52,16 @@ function installBrowser(t, { hint = false, storageThrows = false, locks } = {}) 
       },
       localStorage,
       addEventListener(type, listener) {
-        if (type === "storage") storageListeners.add(listener);
+        const values = listeners.get(type) ?? new Set();
+        values.add(listener);
+        listeners.set(type, values);
       },
       removeEventListener(type, listener) {
-        if (type === "storage") storageListeners.delete(listener);
+        listeners.get(type)?.delete(listener);
+      },
+      dispatchEvent(event) {
+        for (const listener of listeners.get(event.type) ?? []) listener(event);
+        return true;
       },
     },
   });
@@ -92,7 +98,7 @@ function installBrowser(t, { hint = false, storageThrows = false, locks } = {}) 
       });
     },
     emitStorage(key, newValue) {
-      for (const listener of storageListeners) listener({ key, newValue });
+      for (const listener of listeners.get("storage") ?? []) listener({ key, newValue });
     },
   };
 }
@@ -271,6 +277,20 @@ test("storage changes notify mounted pages to revalidate server state", (t) => {
   assert.equal(notifications, 1);
 });
 
+test("same-tab session clearing notifies mounted providers immediately", (t) => {
+  installBrowser(t, { hint: true });
+  let notifications = 0;
+  const unsubscribe = subscribeToSessionChanges(() => {
+    notifications += 1;
+  });
+
+  clearStoredSession();
+  unsubscribe();
+  clearStoredSession();
+
+  assert.equal(notifications, 1);
+});
+
 test("logout contacts the server even when the local hint is absent", async (t) => {
   const browser = installBrowser(t);
   let logoutCalls = 0;
@@ -282,6 +302,19 @@ test("logout contacts the server even when the local hint is absent", async (t) 
   await logoutCurrentSession();
 
   assert.equal(logoutCalls, 1);
+});
+
+test("logout clears local state but reports a server failure", async (t) => {
+  const browser = installBrowser(t, { hint: true });
+  browser.setFetch(async () => {
+    throw new Error("network unavailable");
+  });
+
+  await assert.rejects(
+    logoutCurrentSession(),
+    /无法连接书库服务/,
+  );
+  assert.equal(browser.values.has("library_session_active"), false);
 });
 
 test("Admin and Reader protected surfaces use the shared bootstrap", () => {

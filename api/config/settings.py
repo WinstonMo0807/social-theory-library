@@ -295,6 +295,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "catalog.tasks.aggregate_anonymous_searches",
         "schedule": 60 * 60,
     },
+    "run-functional-health-probes-every-minute": {
+        "task": "catalog.tasks.run_scheduled_health_probes",
+        "schedule": 60,
+    },
 }
 PROCESS_INGESTION_INLINE = env_bool("PROCESS_INGESTION_INLINE", DEBUG)
 CELERY_TASK_ALWAYS_EAGER = env_bool(
@@ -334,6 +338,17 @@ INGESTION_QUEUE_STALLED_SECONDS = int(
 )
 INGESTION_STAGE_STALLED_SECONDS = int(
     os.getenv("INGESTION_STAGE_STALLED_SECONDS", "1800")
+)
+RESEARCH_RUN_STALE_SECONDS = max(
+    300,
+    int(os.getenv("RESEARCH_RUN_STALE_SECONDS", "900")),
+)
+RESEARCH_RUN_OWNERSHIP_INSPECT_TIMEOUT_SECONDS = max(
+    0.2,
+    min(
+        5.0,
+        float(os.getenv("RESEARCH_RUN_OWNERSHIP_INSPECT_TIMEOUT_SECONDS", "1.0")),
+    ),
 )
 INGESTION_TASK_LOCK_SECONDS = max(
     300,
@@ -614,6 +629,7 @@ METADATA_PROVIDER_ALLOWED_HOSTS = os.getenv(
     "METADATA_PROVIDER_ALLOWED_HOSTS",
     "api.crossref.org,openlibrary.org,www.googleapis.com,api.openalex.org",
 )
+CROSSREF_MAILTO = os.getenv("CROSSREF_MAILTO", "").strip()
 FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER = os.getenv(
     "FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER",
     "searxng",

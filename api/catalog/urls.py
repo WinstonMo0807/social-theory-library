@@ -37,6 +37,7 @@ from .enrichment_views import (
     AdminNewAuthorityCandidateView,
 )
 from .backoffice_views import (
+    AdminFunctionalHealthView,
     AdminIntakeWorkspaceView,
     AdminKnowledgeWorkspaceView,
     AdminProjectionRefreshView,
@@ -44,6 +45,7 @@ from .backoffice_views import (
     AdminQueryLexiconTermInspectorView,
     AdminQueryLexiconWorkspaceView,
     AdminSystemStatusView,
+    AdminWorkPagePreviewView,
 )
 from .curation_views import (
     WorkCurationSummaryView,
@@ -63,6 +65,14 @@ from .workflow_suggestion_views import (
     IntakeWorkflowSuggestionView,
     MaintenanceWorkflowSuggestionView,
     WorkflowSuggestionPolicyView,
+)
+from .research_views import (
+    IntakeResearchView,
+    ResearchContractView,
+    ResearchEntityDecisionView,
+    ResearchEntityDiscoveryView,
+    ResearchRunDetailView,
+    WorkResearchView,
 )
 from .search_evaluation_views import (
     SearchEvaluationRunDetailView,
@@ -192,6 +202,36 @@ urlpatterns = [
         name="admin-workflow-suggestion-policies",
     ),
     path(
+        "admin/intake/<uuid:item_id>/research/",
+        IntakeResearchView.as_view(),
+        name="admin-intake-research",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/research/",
+        WorkResearchView.as_view(),
+        name="admin-work-research",
+    ),
+    path(
+        "admin/research/runs/<uuid:run_id>/",
+        ResearchRunDetailView.as_view(),
+        name="admin-research-run-detail",
+    ),
+    path(
+        "admin/research/entity-discovery/",
+        ResearchEntityDiscoveryView.as_view(),
+        name="admin-research-entity-discovery",
+    ),
+    path(
+        "admin/research/entity-decisions/",
+        ResearchEntityDecisionView.as_view(),
+        name="admin-research-entity-decisions",
+    ),
+    path(
+        "admin/research/contracts/",
+        ResearchContractView.as_view(),
+        name="admin-research-contracts",
+    ),
+    path(
         "admin/works/<uuid:work_id>/curation/",
         WorkCurationSummaryView.as_view(),
         name="admin-work-curation-summary",
@@ -230,6 +270,16 @@ urlpatterns = [
         "admin/system-status/",
         AdminSystemStatusView.as_view(),
         name="admin-system-status",
+    ),
+    path(
+        "admin/functional-health/",
+        AdminFunctionalHealthView.as_view(),
+        name="admin-functional-health",
+    ),
+    path(
+        "admin/page-preview/editions/<uuid:edition_id>/",
+        AdminWorkPagePreviewView.as_view(),
+        name="admin-work-page-preview",
     ),
     path(
         "admin/projection-status/<str:target_type>/<uuid:target_id>/",

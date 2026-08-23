@@ -1,14 +1,30 @@
 # 当前问题
 
-更新日期为 2026-08-20。状态依据当前源码、已有测试和本轮可重复的环境检查。`待核实` 表示本轮没有运行对应环境或生产验收。
+更新日期为 2026-08-24。状态依据当前源码、已有测试和本轮可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
 
-## 2.9 社科研究候选层状态与剩余验证
+## 2.9.2 已解决项与剩余限制
+
+- 2.9.2 已部署公网。catalog 0032 的 PostgreSQL 16 rehearsal、正式 migration、统一 API/Worker/Beat、Web、容器内 HTTP readiness、Cloudflare、队列、日志、顺序语义检索、Reader Range、公网页面和稳定性观察均已有生产证据。该发布门槛已关闭。
+- Research Orchestrator、ResearchContext、44 个 Field Contract、确定性 Planner、12 类 Universal Entity Discovery、自动研究和功能健康已真实运行。后端全量为 678 passed、32 skipped；前端为 Node 118/118、Auth/Scoped Search 21/21、build、TypeScript 和完整 ESLint 通过。32 个环境型 skipped 仍不能写成已执行。
+- draft/ready Public API 与页面继续 404，管理员 page preview 正常。React #482 和 API 404/5xx 语义已修复。公开 queryset 没有放宽，PDF preview 与 published Work 未回归。
+- 8 条 orphan ResearchRun 已通过有界 RecoveryAction 安全取消并审计。新任务会在保存时预分配 Celery owner UUID，再用同一 task ID 派发，排队任务不会因 Worker 尚未启动而被误判为 orphan。Research productive probe 当前 healthy，相关 incident 已 resolved。
+- 最终 fresh 未保存 Person E2E `e285af7a-4949-4567-b765-60739c44df17` 已证明姓名进入 query、精确 Edition、预分配 task ID、VIAF 与 unresolved 多候选、SearXNG 实际调用、FieldLock 与正式关系不变。部署边界探针确认 external_web/SearXNG 始终为 `lead_only` 且 Evidence 数为 0。本次 fresh SearXNG 为零条一般 Web 结果，因此不能写成 fresh SafeWebFetcher 正向 passage 已验证。
+- Processing Center 当前准确显示外部来源降级。SearXNG 与 VIAF 正常；OpenAlex 未配置，Wikidata timeout，SafeWebFetcher 和部分 metadata provider 有可见 incident。这些是外部研究质量限制，不影响本馆候选、编辑、公共搜索、Reader 或发布数据安全，也不得靠降低 identity/Evidence 门槛消除。
+- Universal Entity Discovery 后端支持 12 类，共享 Picker 已进入九步 workflow 和当前实际维护页中的学者、学科、子学科、理论节点、主题、关系、时间轴与 Reading Path 输入。部分类型仍没有独立 canonical 创建模型，不能把统一发现控件写成绕过原权限和模型的创建编辑器。
+- 共享 Interaction Feedback 已覆盖 workflow、research、preview、Processing Center、health 及本轮关键异步动作。全站其余普通 button、`onClick`、`apiRequest`、`window.location` 和 button-like link 尚未形成逐项生产记录，不能据此声称所有普通导航与同步控件都已统一重写。
+- Entity Picker 的首个生产版本在责任者两栏表单中向左裁切。最终 Web 改为按列对齐，并让活动 section 在 Picker 打开时使用 visible overflow。最终生产页的 560px 面板完整位于 1265px 视口内，分组、Arrow Up/Down、Escape 与 ARIA 已验证。390、720、1440px 由同版源码自动化与前序浏览器检查覆盖；浏览器原生 Tab 焦点移动仍没有独立生产证据，源码与 Node 回归覆盖 Tab 不拦截。
+- 无状态匿名浏览器会用 `/api/auth/me/` 401 和缺少 refresh cookie 的 400 判定未登录，Chromium 因此记录预期资源状态。没有 pageerror、requestfailed 或公共功能失效。若后续要求匿名页面控制台完全无 4xx，可新增返回 200 的只读会话探测接口，不能用吞错或放宽认证解决。
+- 普通 non-superuser 管理员公网上传与发布 E2E 没有正常账户，继续标记为 `待核实`。本轮没有创建账户、提升权限或绕过认证。
+- 生产测试没有保存、发布、接受 Candidate、建立 Person 关系、自动 merge、覆盖 FieldLock、切换索引或修改 authority。安全结论来自只读状态、审计与前后 hash；真实正常账户的业务 mutation 仍由既有自动化和后续人工操作承担。
+
+## 2.9.1 馆藏策展续作状态与剩余验证
 
 - 2.9 源码已建立统一候选 DTO、字段策略、来源画像和当前工作流内的 Inspector 交互。没有新增数据库 migration，也没有建立第二套 Candidate 或联网 RAG。
-- 本地完整后端与前端回归、production build 和三项 Workflow Playwright 已通过。统一 2.9 镜像已经部署，公网与正常 Winston 管理员只读浏览器验收通过。
+- 本地完整后端与前端回归、production build 和 Workflow Playwright 已通过。2.9.1 API/Worker 与最终 Web session-fix 镜像已经部署，公网与正常 Winston 管理员只读浏览器验收通过。
 - 生产 SearXNG 发现器返回 200 和 8 条结果。外部站点的长期结果质量、超时与页面解析仍会随环境变化；失败必须继续显示为来源不可用，不能表现成没有候选。普通 Web snippet 仍只能作为研究线索。
 - 普通非 superuser 管理员公网上传与发布 E2E 按用户要求跳过，仍为 `待核实`。2.9 部署不能被用作该账户权限路径的证明。
 - 本轮没有在生产创建或修改期刊论文，也没有执行 Candidate accept、Reading Path placement、保存、发布或下架。book 与 journal_article 的字段和工作流写入继续以本地自动化为证。
+- 2026-08-21 续作已修复并部署。非 Person 实体消歧候选现在进入正确工作步骤；研究按钮遵守 `can_run_enrichment`；Candidate decision 后旧 pending 行会失效并重新读取；可选研究 query 设定 500 字符门槛。匿名 SaveWorkButton 也只在共享 session 确认 authenticated 后读取私人收藏。
 
 ## 2.8.1 R2 入库问题状态
 

@@ -41,7 +41,13 @@ class _WorkflowSuggestionBase(WorkflowSuggestionPermissionMixin, APIView):
         aggregator = WorkflowSuggestionAggregator(edition, item=item)
         try:
             if request.method == "POST":
-                payload = aggregator.run_step(step=step or "work", fields=fields or ([field] if field else None), mode=mode, actor=request.user)
+                payload = aggregator.run_step(
+                    step=step or "work",
+                    fields=fields or ([field] if field else None),
+                    mode=mode,
+                    query=query,
+                    actor=request.user,
+                )
             else:
                 payload = aggregator.aggregate(step=step, field=field, query=query)
         except ValueError as exc:

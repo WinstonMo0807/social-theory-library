@@ -17,6 +17,7 @@ import re
 from typing import Any
 from uuid import UUID, uuid4
 
+from billiard.exceptions import SoftTimeLimitExceeded
 from django.db.models import Q
 
 from catalog.models import (
@@ -35,8 +36,10 @@ from catalog.services.field_enrichment.web import SafeWebFetcher, WebSearchError
 from catalog.services.query_lexicon.resolver import ADMIN_RESOLVABLE
 from catalog.services.query_lexicon.search import resolve_search_query
 from ingestion.models import EntityResolutionCandidate, MetadataCandidate, UploadItem
+from ingestion.services.entity_resolution_decisions import available_resolution_actions
 
 from .query_lexicon.registry import EntityKey, describe_entity
+from .research.contracts import WORKFLOW_FIELDS
 from .workflow_suggestion_policies import (
     SOURCE_PROFILES,
     SOURCE_PROFILE_VERSION,
@@ -50,16 +53,7 @@ from .workflow_suggestion_policies import (
 
 logger = logging.getLogger(__name__)
 
-STEP_FIELD_ALIASES = {
-    "work": ("title", "subtitle", "original_title", "uniform_title", "language", "original_language", "first_publication_date", "abstract"),
-    "bibliography": ("version_label", "publication_year", "publisher", "publication_place", "isbn", "isbn10", "isbn13", "series", "extent", "responsibility_statement", "journal_title", "volume", "issue", "page_range", "doi", "degree_institution", "degree_type", "report_institution"),
-    "contributors": ("contributors", "display_name", "person"),
-    "classification": ("primary_disciplines", "related_disciplines", "subdisciplines", "disciplines"),
-    "knowledge": ("relations", "theory", "topic", "knowledge_node"),
-    "reader": ("reader_rendition_policy", "text_layer_status", "page_label_status", "semantic_index_status"),
-    "curation": ("reading_path_placements", "recommendation_reason"),
-    "publication": ("preflight",),
-}
+STEP_FIELD_ALIASES = WORKFLOW_FIELDS
 
 SOURCE_TIER_LABELS = {
     "in_library": "本馆正式条目",
@@ -126,6 +120,58 @@ def _source_profile(source_class: str, *, structured: bool = False):
     if structured:
         return SOURCE_PROFILES.get("structured")
     return SOURCE_PROFILES.for_source_class(source_class)
+
+
+def _entity_candidate_location(candidate: EntityResolutionCandidate) -> tuple[str, str] | None:
+    research_field = str(
+        (candidate.supporting_properties or {}).get("research_field") or ""
+    ).strip()
+    if "." in research_field:
+        research_step, field_name = research_field.split(".", 1)
+        research_step = research_step.strip().casefold()
+        field_name = field_name.strip()
+        if field_name in WORKFLOW_FIELDS.get(research_step, ()):
+            return research_step, field_name
+    target_type = str(candidate.target_type or "").strip().casefold()
+    if target_type == "person":
+        return "contributors", "contributors"
+    if target_type == "work":
+        return "work", "work"
+    if target_type == "publisher":
+        return "bibliography", "publisher"
+    if target_type == "organization":
+        role = str((candidate.supporting_properties or {}).get("organization_role") or "").strip().casefold()
+        if role == "degree_granting":
+            return "bibliography", "degree_institution"
+        if role == "report_issuer":
+            return "bibliography", "report_institution"
+        return "bibliography", "responsibility_statement"
+    if target_type == "knowledge_node":
+        return "knowledge", "relations"
+    return None
+
+
+def _entity_candidate_provenance(
+    candidate: EntityResolutionCandidate,
+) -> tuple[str, str, str, bool]:
+    properties = dict(candidate.supporting_properties or {})
+    candidate_group = str(properties.get("candidate_group") or "").strip().casefold()
+    persisted_evidence_status = str(properties.get("evidence_status") or "").strip().casefold()
+    provider = str(properties.get("provider") or "entity_resolution").strip()
+    provider_key = provider.casefold()
+    if candidate_group in {"external_web", "unresolved"} or persisted_evidence_status in {
+        "lead_only",
+        "none",
+    } or provider_key in {"searxng", "web_search"}:
+        return "research_lead", provider, "lead_only", False
+    if candidate_group == "authority":
+        return (
+            "structured_source",
+            provider,
+            persisted_evidence_status or "structured_evidence",
+            True,
+        )
+    return "in_library", "entity_resolution", "evidence", True
 
 
 def _evidence_payload(rows, *, limit: int = 8) -> list[dict[str, Any]]:
@@ -254,44 +300,68 @@ class WorkflowSuggestionAggregator:
             return []
         rows = []
         for candidate in EntityResolutionCandidate.objects.filter(upload_item=self.item).order_by("target_type", "source_name", "-match_score", "created_at")[:300]:
-            candidate_field = "contributors" if candidate.target_type == "person" else candidate.target_type
-            if step and step != "contributors" and candidate_field != step:
+            location = _entity_candidate_location(candidate)
+            if location is None:
                 continue
-            if field and field not in {candidate_field, "contributors", "person", "display_name"}:
+            candidate_step, candidate_field = location
+            if step and candidate_step != step:
                 continue
-            evidence = [
+            field_aliases = {candidate_field}
+            if candidate_step == "work":
+                field_aliases.update({"title", "work"})
+            elif candidate_step == "contributors":
+                field_aliases.update({"person", "display_name"})
+            elif candidate_step == "knowledge":
+                field_aliases.update({"theory", "topic", "knowledge_node"})
+            if field and field not in field_aliases:
+                continue
+            source_tier, source_class, evidence_status, include_evidence = _entity_candidate_provenance(candidate)
+            evidence = (
+                [
+                    {
+                        "match_reasons": candidate.match_reasons,
+                        "conflicts": candidate.conflicts,
+                        "preview": candidate.preview_data,
+                        "supporting_properties": candidate.supporting_properties,
+                    }
+                ]
+                if include_evidence
+                else []
+            )
+            status = "pending" if candidate.status == EntityResolutionCandidate.Status.PROPOSED else candidate.status
+            row = _dto(
+                identifier=candidate.id,
+                step=candidate_step,
+                field=candidate_field,
+                kind="entity",
+                label=candidate.label,
+                value={"id": candidate.candidate_entity_id or None, "name": candidate.label},
+                source_tier=source_tier,
+                source_class=source_class,
+                confidence=candidate.match_score,
+                reasons=list(candidate.match_reasons or []) or ["实体消歧候选"],
+                evidence=evidence,
+                entity_type=candidate.candidate_entity_type,
+                entity_id=candidate.candidate_entity_id,
+                status=status,
+                decision_url=f"/ingestion/items/{self.item.id}/entity-resolution-candidates/{candidate.id}/decision/",
+                available_actions=["inspect", *available_resolution_actions(candidate)],
+                evidence_status=evidence_status,
+            )
+            row.update(
                 {
-                    "match_reasons": candidate.match_reasons,
-                    "conflicts": candidate.conflicts,
-                    "preview": candidate.preview_data,
+                    "target_type": candidate.target_type,
+                    "candidate_entity_type": candidate.candidate_entity_type,
+                    "candidate_entity_id": candidate.candidate_entity_id or None,
+                    "source_name": candidate.source_name,
+                    "candidate_group": (candidate.supporting_properties or {}).get("candidate_group"),
+                    "source_url": (candidate.supporting_properties or {}).get("source_url")
+                    or (candidate.preview_data or {}).get("source_url"),
+                    "preview_data": candidate.preview_data,
                     "supporting_properties": candidate.supporting_properties,
                 }
-            ]
-            status = "pending" if candidate.status == EntityResolutionCandidate.Status.PROPOSED else candidate.status
-            rows.append(
-                _dto(
-                    identifier=candidate.id,
-                    step="contributors",
-                    field="contributors",
-                    kind="entity",
-                    label=candidate.label,
-                    value={"id": candidate.candidate_entity_id or None, "name": candidate.label},
-                    source_tier="in_library",
-                    source_class="entity_resolution",
-                    confidence=candidate.match_score,
-                    reasons=list(candidate.match_reasons or []) or ["实体消歧候选"],
-                    evidence=evidence,
-                    entity_type=candidate.candidate_entity_type,
-                    entity_id=candidate.candidate_entity_id,
-                    status=status,
-                    decision_url=f"/ingestion/items/{self.item.id}/entity-resolution-candidates/{candidate.id}/decision/",
-                    available_actions=(
-                        ["inspect", "link_existing", "create_draft", "keep_unresolved", "reject"]
-                        if candidate.status == EntityResolutionCandidate.Status.PROPOSED
-                        else ["inspect"]
-                    ),
-                )
             )
+            rows.append(row)
         return rows
 
     def _enrichment_rows(self, step: str | None, field: str | None) -> list[dict]:
@@ -459,6 +529,8 @@ class WorkflowSuggestionAggregator:
             for term in terms:
                 try:
                     resolved = resolve_search_query(term, scope=ADMIN_RESOLVABLE, entity_types=list(policy.query_lexicon_entity_types), expansion_limit=8)
+                except SoftTimeLimitExceeded:
+                    raise
                 except Exception as exc:
                     logger.info("workflow QueryLexicon suggestion unavailable: %s", exc.__class__.__name__)
                     continue
@@ -564,9 +636,15 @@ class WorkflowSuggestionAggregator:
             "source_profiles": source_profile_payload(),
         }
 
-    def _research_context(self, step: str, fields: list[str]) -> dict[str, Any]:
+    def _research_context(
+        self,
+        step: str,
+        fields: list[str],
+        *,
+        form_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         contributions = list(self.edition.contributions.select_related("person").values_list("person__preferred_name", flat=True)[:8])
-        return {
+        context = {
             "title": self.work.title,
             "original_title": self.work.original_title,
             "canonical_terms": [value for value in (self.work.title, self.work.original_title, self.work.uniform_title) if value],
@@ -579,8 +657,22 @@ class WorkflowSuggestionAggregator:
             "step": step,
             "fields": fields,
         }
+        if form_context:
+            # Unpersisted admin input is research context only. It is never
+            # copied into an authority model by this merge.
+            context["submitted_form"] = _json_value(form_context)
+        return context
 
-    def run_step(self, *, step: str, fields: list[str] | None = None, mode: str = "full", actor=None) -> dict[str, Any]:
+    def run_step(
+        self,
+        *,
+        step: str,
+        fields: list[str] | None = None,
+        mode: str = "full",
+        query: str | None = None,
+        actor=None,
+        form_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         if step not in STEP_FIELD_ALIASES:
             raise ValueError("未知工作流步骤。")
         selected = list(dict.fromkeys(fields or list(STEP_FIELD_ALIASES[step])))
@@ -592,6 +684,9 @@ class WorkflowSuggestionAggregator:
         mode = str(mode or "full").strip().casefold()
         if mode not in {"structured", "web", "full"}:
             raise ValueError("研究模式必须是 structured、web 或 full。")
+        query = str(query or "").strip() or None
+        if query and len(query) > 500:
+            raise ValueError("研究查询最多 500 个字符。")
         request_id = uuid4()
         errors = []
         stats: dict[str, Any] = {
@@ -608,7 +703,9 @@ class WorkflowSuggestionAggregator:
                 {"key": "web", "label": "学术网页与课程大纲", "status": "pending" if mode in {"web", "full"} else "skipped"},
             ],
         }
-        context = self._research_context(step, selected)
+        context = self._research_context(step, selected, form_context=form_context)
+        if query:
+            context["research_query"] = query
         # Existing FieldPolicy remains the only persistence/mutation path.
         # Group supported fields by target so a step makes at most one bounded
         # source run per Work or Edition, instead of one Web search per input.
@@ -644,6 +741,8 @@ class WorkflowSuggestionAggregator:
                 )
                 stats["enrichment_runs"] += 1
                 stats.setdefault("enrichment", []).append({"fields": [row[0] for row in rows], "candidate_count": len(result.candidates), "errors": [asdict(row) for row in result.errors]})
+            except SoftTimeLimitExceeded:
+                raise
             except Exception as exc:
                 logger.info("workflow step enrichment failed for %s: %s", step, exc.__class__.__name__)
                 errors.append({"code": "enrichment_unavailable", "field": step, "detail": "本节部分来源暂时不可用，已有候选未受影响。"})
@@ -654,7 +753,7 @@ class WorkflowSuggestionAggregator:
                 fetcher = SafeWebFetcher()
                 fetched_urls: set[str] = set()
                 fetch_budget = 6
-                queries = [self.work.title]
+                queries = [query, self.work.title]
                 if self.work.original_title and self.work.original_title not in queries:
                     queries.append(self.work.original_title)
                 if step == "classification":
@@ -665,8 +764,13 @@ class WorkflowSuggestionAggregator:
                     queries.append(f"{self.work.title} university syllabus reading list")
                 elif step == "bibliography" and self.work.document_type == "journal_article":
                     queries.append(f"{self.work.title} {self.edition.journal_title} DOI")
-                for query in list(dict.fromkeys(value.strip() for value in queries if value.strip()))[:3]:
-                    results, _record = adapter.search(query, limit=5)
+                research_queries = [
+                    str(value).strip()
+                    for value in queries
+                    if str(value or "").strip()
+                ]
+                for research_query in list(dict.fromkeys(research_queries))[:3]:
+                    results, _record = adapter.search(research_query, limit=5)
                     stats["web_queries"] += 1
                     for result in results[:5]:
                         profile = SOURCE_PROFILES.for_source_class(result.source_class)
@@ -694,6 +798,8 @@ class WorkflowSuggestionAggregator:
                                             "retrieved_at": document.retrieved_at,
                                         }
                                     ]
+                            except SoftTimeLimitExceeded:
+                                raise
                             except Exception as exc:
                                 logger.info("workflow research fetch failed: %s", exc.__class__.__name__)
                         stats.setdefault("web_suggestions", []).append(
@@ -703,7 +809,7 @@ class WorkflowSuggestionAggregator:
                                 field=selected[0] if selected else step,
                                 kind="research_lead",
                                 label=result.title,
-                                value={"url": result.url, "query": query, "snippet": result.snippet},
+                                value={"url": result.url, "query": research_query, "snippet": result.snippet},
                                 source_tier=source_tier,
                                 source_class=result.source_class,
                                 confidence=0.66 if evidence else 0.38,
@@ -713,13 +819,15 @@ class WorkflowSuggestionAggregator:
                                 evidence_status="evidence" if evidence else "lead_only",
                             )
                         )
+            except SoftTimeLimitExceeded:
+                raise
             except (WebSearchError, OSError, TimeoutError) as exc:
                 errors.append({"code": getattr(exc, "code", "provider_unavailable"), "field": step, "detail": "联网研究来源暂时不可用。"})
             except Exception as exc:
                 logger.info("workflow web suggestion failed: %s", exc.__class__.__name__)
                 errors.append({"code": "provider_unavailable", "field": step, "detail": "联网研究来源暂时不可用。"})
 
-        payload = self.aggregate(step=step)
+        payload = self.aggregate(step=step, query=query)
         for layer in stats["layers"]:
             if layer["key"] == "web" and layer["status"] == "pending":
                 layer["status"] = "attention" if any(row["code"] in {"provider_unavailable", "timeout", "rate_limited"} for row in errors) else "complete"

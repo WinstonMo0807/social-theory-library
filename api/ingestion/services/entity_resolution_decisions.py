@@ -84,6 +84,15 @@ def available_resolution_actions(candidate: EntityResolutionCandidate) -> list[s
     if is_draft_choice:
         actions.append("keep_unresolved")
     actions.append("reject")
+    properties = candidate.supporting_properties or {}
+    policy_key = "research_allowed_resolution_actions"
+    if policy_key in properties:
+        allowed = {
+            str(value).strip()
+            for value in properties.get(policy_key) or []
+            if str(value).strip()
+        }
+        actions = [action for action in actions if action in allowed]
     return actions
 
 

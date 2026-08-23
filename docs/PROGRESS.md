@@ -1,8 +1,51 @@
 # 开发进度
 
-更新日期为 2026-08-20。当前源码与公网应用版本均为 2.9.0。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-24。当前源码与公网应用均为 2.9.2。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
 
-## 当前 2.9.0 社科研究候选层状态
+## 2.9.2 生产完成状态，2026-08-24
+
+- 独立 Research Orchestrator、ResearchContext、44 个 Research Field Contract、确定性 WorkflowGapAnalyzer、12 类 Universal Entity Discovery、ResearchRun 诊断、功能健康、Incident、Recovery、管理员页面预览、共享操作反馈和宽版 Entity Picker 已进入生产代码。
+- 后端全量为 678 passed、32 个显式环境型 skipped、退出码 0。Django check、migration drift、compileall 和 `git diff --check` 通过。前端 production build、通用 Node 118/118、Auth 与 Scoped Search 21/21、TypeScript 和完整 ESLint 通过。
+- catalog 0032 已在 disposable PostgreSQL 16 完成恢复与迁移演练，并正式应用。生产 head 为 catalog 0032、ingestion 0013、reading 0007，pending migration 为 0。
+- 最终 BackupJob `965c6431-5d45-4ba2-b4a1-e7f7b263ddde` 的归档 SHA-256 为 `b126ace3aadb66374b79a975360cace81236dae92ca68afefd3d4bceddd6d75e`，已复算并通过 `pg_restore --list`。活动索引保持 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。
+- API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，image ID `sha256:235d990637ba6e9e5bf3c18011110caa436eb24e47aa4e39b8ab57baf4f2c662`。最终 Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`，image ID `sha256:bcc0f0c7f89f76358f08a491094b5a965f72aa9d06faad3698a5e952f3080fac`。
+- 管理员页面预览的 React #482 根因是客户端模块间接导入异步 Server `SiteFooter`。两个 Server page 现在通过 footer slot 传入，公开作品页与管理员 preview 共用纯展示组件。`ServerApiError` 只将 API 404 转为不存在，5xx 和网络错误继续抛出。
+- ResearchRun recovery 已收敛到 `research/recovery.py`。新 run 在数据库事务中预分配 Celery task UUID，再以同一 task ID 派发。恢复使用完整 ownership inventory、15 分钟 stale 门槛、fail closed、`select_for_update`、二次读取、幂等取消与 AuditEvent，Worker 终态不会覆盖并发 cancel。
+- RecoveryAction `119e7f98-f74b-4a35-9b80-2c05ad3d36a5` 已把 8 条 orphan ResearchRun 安全转为 canceled，留下 8 条 `research_run_orphan_recovered` 与 1 条 `health_recovery_completed` 审计。nonterminal ResearchRun 随后为 0。
+- 最终镜像 fresh run `e285af7a-4949-4567-b765-60739c44df17` 证明未保存“马克斯·韦伯”进入 context 与 query，精确 Edition、预分配 task ID、SearXNG 调用、VIAF 与 unresolved 多候选均已记录。表单随后被丢弃，正式责任者、FieldLock、Candidate decision 和馆藏关系均未改变。部署边界探针确认 external_web/SearXNG 仍为 `lead_only` 且 Evidence 数为 0。
+- Research productive probe `7747b1c9-d0f0-4662-85e7-252b28ada86f` 为 healthy，configured、reachable、functional、productive 均为 true；orphan incident 已 resolved。外部 Provider 的 OpenAlex 未配置、Wikidata timeout 与 SafeWebFetcher 故障继续作为可见降级，不阻断本馆搜索和编辑。
+- 公网首页、Explore、已发布 Work、Reader、公共原文检索、draft 404、管理员 workflow、页面预览和 Processing Center 已验收。完整动态路由矩阵的 136 个宽屏组合通过，移动端和平板无破图或横向溢出。三条顺序语义查询均为 `v2_hybrid`、无 fallback、有结果，Reader Range 为 206、正确 Content-Range、PDF MIME 和 `%PDF-`。
+- 生产浏览器发现第一版 Entity Picker 右对齐会在责任者两栏表单中越出左侧约 131px。最终 Web 使用按表单列方向对齐的面板，并解除活动 section 裁切；最终生产测得 560px 面板完整位于 1265px 视口内，VIAF、未解析、降级保留、Arrow、Escape 与 ARIA 状态已复测。
+- 切换后二十分钟以上的两轮完整验证没有持续 500、Traceback、CRITICAL、unhandled exception、应用重启或队列增长。12 个 Compose 服务 running；应用容器 RestartCount 为 0。Work 8、Edition 8、Asset 16、Page 3135、SemanticChunk 3881、Person 7、KnowledgeNode 2 的 ID hash 与切换记录一致，没有删除馆藏、PDF、volume、模型或活动索引。末次记录为 `final-verification-20260824-021518`。
+- 两个旧 staging 和三个本轮 `/tmp` staging 已在验收后按白名单删除，约释放 96.5 MB。镜像、`pre-v292-final` 标签、fresh backup、deploy-record、清理审计和 SSH 权限均保留；清理后公网 ready 仍正常。
+- 当前限制是普通 non-superuser 上传/发布 E2E、fresh SafeWebFetcher 正向 passage、全站普通交互的长期人工覆盖，以及匿名会话探测在 Chromium 中产生预期 401/400 资源状态。无 pageerror 或公共功能失效。上述限制不通过放宽权限、自动发布 authority、吞错或降低 Evidence 门槛处理。
+
+## 2.9.2 部署前源码状态，2026-08-21，历史
+
+- 已新增独立 `catalog.services.research` 包。ResearchContext 支持持久数据、未保存 draft、实体、Candidate 决定、FieldLock、PDF/OCR、工作流状态和稳定 fingerprint。44 个 Research Field Contract 已覆盖全部声明字段，并在运行时核对既有 FieldPolicy 实现。
+- 确定性 WorkflowGapAnalyzer 和 ResearchPlanner 已按 changed fields 只规划受影响依赖。ResearchRun 保存幂等键、计划、local/external 结果和分类诊断，外部失败降级而不阻断编辑。Universal Entity Discovery 覆盖 12 类实体、五组候选和五项评分，不自动合并 authority 或覆盖人工锁。
+- 工作流已接入首次展开自动研究、未保存 draft、800ms debounce、dependency-scoped changed fields、最长 45 秒轮询和手动强制重跑。通用 Entity Picker 提供 420 至 560px 响应式面板、五组来源、显式外部决定、部分失败展示、键盘与 ARIA 状态。异步 request revision 会丢弃关闭、缩短查询或草稿变化前的旧响应。
+- 显式实体决定 API 会重新核验 discovery 候选，再复用既有 EntityResolutionCandidate 决定服务。create draft、keep unresolved 和 reject 均保留人工确认、权限、幂等和 AuditEvent。针对 Entity Decision、Research Orchestrator 与 FieldLock 的后端集中回归已通过。
+- catalog 0032 新增 ResearchRun、HealthCheckRun、HealthIncident 和 RecoveryAction。21 个功能 probe 保存 configured、reachable、functional 和 productive。Beat 使用全局 cache lease，单批默认 12、硬上限 24。恢复动作有 allowlist、幂等键、三次上限、30/60 秒退避和 AuditEvent，成功与最终失败的 incident 状态已有专项覆盖。
+- Processing Center 已把功能健康、依赖详情、incident 和恢复记录置于任务列表之前。页面 GET 只读持久化快照。无凭据、请求重叠、轮询卸载、probe 与 recovery 重复点击均有前端保护。
+- workspace 已拆分 `pdf_preview_url`、管理员 `page_preview_url` 和 published-only `public_url`。draft 与 ready 的公共作品 API 继续返回 404，管理员预览复用公开作品页展示组件，但不开放收藏、公共下载、引用或公共 Reader 动作。
+- 共享 Interaction Feedback 已接入 Workflow Editor、Research 面板、管理员预览、Processing Center 和功能健康操作。保存、文件重试或恢复、发布或下架、研究刷新和安全恢复都有受控 pending、success、error、pressed 和 disabled 状态，并保留 reduced-motion。
+- 后端 Research、Entity Decision 与 Health 专项合计 31 项通过。完整 pytest 为 610 项通过、32 项按显式环境条件跳过、退出码 0。跳过项不替代 PostgreSQL、Redis、Celery 和生产验收。
+- 完整前端门槛已通过。production build 成功，新管理员预览路由进入构建清单；通用 Node 108/108、Auth 与 Scoped Search 19/19、TypeScript 和完整 ESLint 均退出 0。Django check、migration drift、compileall 与 `git diff --check` 也通过。
+- 电脑重启后已重新确认 deployment-series SSH、`sudo -n`、Docker Compose 和生产目录可用。公网 ready/health 仍为 2.9.1，database true、pending migrations 0。2.9.2 尚未执行 fresh BackupJob、PostgreSQL restore rehearsal、catalog 0032 生产 migration、镜像切换、公网真实联网研究或稳定性观察。
+
+## 当前 2.9.1 馆藏策展续作状态
+
+- 2.9.1 已部署。API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.1-wfpatch-2ce32c4-20260821-013518`，image ID `sha256:889d3eeb08e3480993189a223cc3a37522892ac1cb5f3e5d4d2fafe9ec688988`。Web 使用 `social-theory-library-web:2.9.1-sessionfix-6e7fe2c-20260821-020442`，image ID `sha256:6456ab938c52b163de03d5ada1bfbe616100cff14c18ce60e6c3cf4d18c9fce6`。
+- release 以 base HEAD `1053ff1` 加 API archive SHA `2ce32c44bce7dbe78ed927309e06b7725c202b08409771ad4b217e1f4eb657c9` 与最终 Web archive SHA `6e7fe2c94338b6f87605b4ee63081020657220452dae340f11d8c768eb673dae` 标识。本轮没有 commit 或 push。
+- Fresh BackupJob `7b3d4d6b-3c6d-402b-a2d1-a28ae40a99b3` completed。artifact 为 14,823,744 bytes，SHA-256 `3ab91485f375bd2e7760bb60071151f82b3b83791d024ec3e2f85cf5729d9aff`，database dump SHA-256 `460d6cf5802953f568022b49d5c648c4387018e57325826e0538d71b41064003`。同一归档已在 disposable PostgreSQL 16 完整恢复并通过 Django check。
+- production migration plan 为空。catalog 0031、ingestion 0013、reading 0007 保持不变。活动语义 UID `semantic_passages_20260818210650_4cf87bc9` 仍为数据库和 Meilisearch 3005/3005。
+- 核心 postdeploy 通过。全部服务正常，应用 RestartCount 为 0；两个 Worker active/reserved/scheduled、ProcessingJob、R2 staging 和 Redis 两队列均为空；三条顺序观点检索为 v2_hybrid 且 fallback false；PDF Range 返回 206、Content-Range、application/pdf 和 `%PDF-`。
+- 1440px 与 390px 公网浏览器验收覆盖首页、Explore 实际检索、理论、主题、Reader、登录和 Admin 登录跳转，横向溢出为 0。Reader 完成真实 canvas 渲染。匿名 SaveWorkButton 不再请求私人 saved API。
+- Edge 既有 Winston 管理员会话只读验证 Dashboard、2.9.1 标签、Intake Focus Mode、九步 rail、Inspector、研究候选面板和 capability 按钮。没有执行联网、保存、Candidate decision、发布、下架或策展 mutation。
+- 回退入口为 `pre-v291-20260821-013826` API/Web 标签和 Web session-fix 标签 `pre-v291-sessionfix-20260821-020442`。记录目录位于 `storage/backups/pre-v291-cutover-20260821-013826/deploy-record`。
+
+## 2.9.0 社科研究候选层历史状态
 
 - 分支为 `codex/v2.9-research-candidates`，release commit 为 `e318ec8268e7ff4321b7474cba184b92d3a92ad5`，已推送同名远端分支并部署生产，没有合并 main。
 - 已新增只读 WorkflowSuggestionAggregator、步骤与字段策略注册表、来源画像注册表，以及 Intake 和 Maintenance suggestion API。没有新增 Candidate 表或 migration。
@@ -16,6 +59,15 @@
 - 公网 ready、health、主要公开路由、三条顺序 V2 观点检索、真实 PDF Range 206 与公网 2.9 bundle 已通过。SearXNG 生产发现器返回 200 和 8 条结果。
 - 正常 Winston 管理员会话已只读检查 Focus Mode、step rail、候选分组、Inspector、classification、knowledge、curation、publication、Maintenance Mode 和旧 URL redirect。没有保存、联网研究、Candidate decision、发布、下架或策展 mutation。
 - 普通非 superuser 管理员公网上传 E2E 继续按用户要求跳过。该项目仍标记为 `待核实`，不能写成权限路径已经由真实账户证明。
+
+## 2026-08-21 馆藏策展研究候选续作
+
+- 从当前分支、2.9 提交、正式文档和源码重新核对后，确认 2.9 主体功能与生产只读验收已经完成。遗留的源码问题集中在候选步骤映射、前端 capability 和决定后的旧状态，不需要新增表或 migration。
+- EntityResolutionCandidate 现在按 Work、Person、Publisher、Organization 和 KnowledgeNode 分配到作品、责任者、书目或知识步骤，并复用 `available_resolution_actions()`。聚合层不再为不支持的对象显示虚假的 create draft 动作。
+- 分节研究 POST 的可选 query 已进入有界 Web 查询与快速聚合，并限制为 500 字符。没有 query 时继续使用当前 Work/Edition 上下文。
+- 前端研究按钮使用 `can_run_enrichment` capability。候选决定成功后会关闭旧 Inspector、移除本地旧行并重新读取当前研究面板，避免已处理候选继续显示 pending。
+- 最终验证通过。后端完整 pytest 收集 619 项并以退出码 0 完成；Django check、migration drift、compileall 通过。前端 production build、通用 Node 85 项、Auth 与 Scoped Search 19 项、TypeScript、目标 ESLint 和 diff check 均退出 0。
+- 本轮只修改本地源码、测试和文档，没有连接生产、执行 migration、运行联网研究、接受 Candidate、修改馆藏或部署公网。生产仍是 2026-08-20 的 2.9.0 release 快照，本轮改动待后续独立发布。
 
 ## 2.8.1 R2 入库热修复历史状态
 

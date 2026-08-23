@@ -45,8 +45,8 @@ test("research leads cannot be selected or treated as evidence", () => {
 test("classification and knowledge use the research picker without manual UUID fields", async () => {
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
   assert.match(editor, /ResearchSuggestionPanel[\s\S]*step="classification"/);
-  assert.match(editor, /ResearchEntityPicker label="主要学科"/);
-  assert.match(editor, /ResearchEntityPicker label="关联对象"/);
+  assert.match(editor, /ResearchEntityPicker[\s\S]*?label="主要学科"/);
+  assert.match(editor, /ResearchEntityPicker[\s\S]*?label="关联对象"/);
   assert.doesNotMatch(editor, /label="正式对象 ID"/);
   assert.match(editor, /step="curation"/);
   assert.match(editor, /step="bibliography"/);
@@ -76,4 +76,16 @@ test("step research is a shared action and does not navigate away from workflow"
   assert.match(panel, /method: "POST"/);
   assert.match(panel, /建议不会自动写入正式字段/);
   assert.doesNotMatch(panel, /window\.location|router\.push/);
+});
+
+test("research actions respect capability and refresh after a candidate decision", async () => {
+  const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
+  const panel = await readFile(new URL("../components/admin/research/research-suggestion-panel.tsx", import.meta.url), "utf8");
+  assert.match(editor, /capabilities\?\.includes\("can_run_enrichment"\)/);
+  assert.match(editor, /ResearchSuggestionCapabilityContext\.Provider value=\{canRunResearch\}/);
+  assert.match(panel, /disabled=\{!canRunResearch \|\| loading \|\| running \|\| nonTerminalRun \|\| !credential\}/);
+  assert.match(editor, /rows\.filter\(\(row\) => String\(row\.id\) !== String\(candidate\.id\)\)/);
+  assert.match(editor, /setInspector\(null\)/);
+  assert.match(editor, /RESEARCH_SUGGESTION_REFRESH_EVENT/);
+  assert.match(panel, /addEventListener\(RESEARCH_SUGGESTION_REFRESH_EVENT, reload\)/);
 });

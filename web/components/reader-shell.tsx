@@ -37,6 +37,8 @@ import {
 import type { Work } from "@/lib/data";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, type ActionState } from "./action-feedback";
 import type { CanonicalBlock } from "./pdf-canvas";
 import {
   PdfContinuousViewer,
@@ -234,7 +236,9 @@ export function ReaderShell({
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
   const [gate, setGate] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
+  const [copyStatusState, setCopyStatusState] = useState<ActionState>("idle");
   const [selectionTools, setSelectionTools] = useState<SelectionSnapshot | null>(null);
+  const { pendingAction, startAction, finishAction } = useActionGuard();
   const [scrollRequest, setScrollRequest] = useState<PdfScrollRequest>({
     page: Math.min(Math.max(initialPage, 1), Math.max(work.pages, 1)),
     sequence: 0,
@@ -642,6 +646,7 @@ export function ReaderShell({
     if (!stage || !targetPagePayload) {
       requestPagePayload(targetPage);
       setCopyStatus("该页规范文字层尚未就绪，请稍后再试");
+      setCopyStatusState("idle");
       return null;
     }
     const range = selection.getRangeAt(0);
@@ -704,6 +709,7 @@ export function ReaderShell({
     }
     if (!snapshot) {
       setCopyStatus("请先在 PDF 页面选择文字");
+      setCopyStatusState("idle");
       return;
     }
     setPage(snapshot.pageIndex);
@@ -730,6 +736,10 @@ export function ReaderShell({
     }
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = "save-annotation";
+    if (!startAction(actionKey)) return;
+    setCopyStatus(draft.kind === "note" ? "正在保存笔记……" : draft.kind === "underline" ? "正在保存划线……" : "正在保存高亮……");
+    setCopyStatusState("pending");
     try {
       const created = await apiRequest<ReaderAnnotation>(
         "/reading/annotations/",
@@ -756,9 +766,13 @@ export function ReaderShell({
       setAnnotationDraft(null);
       setFocusedAnnotationId(created.id);
       setCopyStatus(draft.kind === "note" ? "笔记已保存" : draft.kind === "underline" ? "划线已保存" : "高亮已保存");
+      setCopyStatusState("success");
       window.getSelection()?.removeAllRanges();
     } catch (error) {
       setCopyStatus(error instanceof Error ? error.message : "批注保存失败");
+      setCopyStatusState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
@@ -774,13 +788,21 @@ export function ReaderShell({
     }
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = `delete-annotation:${annotationId}`;
+    if (!startAction(actionKey)) return;
+    setCopyStatus("正在删除个人阅读记录……");
+    setCopyStatusState("pending");
     try {
       await apiRequest(`/reading/annotations/${annotationId}/`, { method: "DELETE" }, token);
       setAnnotations((items) => items.filter((item) => item.id !== annotationId));
       if (focusedAnnotationId === annotationId) setFocusedAnnotationId("");
       setCopyStatus("个人阅读记录已删除");
+      setCopyStatusState("success");
     } catch (error) {
       setCopyStatus(error instanceof Error ? error.message : "删除失败");
+      setCopyStatusState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
@@ -789,12 +811,20 @@ export function ReaderShell({
     if (!window.confirm("确定删除这个书签吗？")) return;
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = `delete-bookmark:${bookmarkId}`;
+    if (!startAction(actionKey)) return;
+    setCopyStatus("正在删除书签……");
+    setCopyStatusState("pending");
     try {
       await apiRequest(`/reading/bookmarks/${bookmarkId}/`, { method: "DELETE" }, token);
       setBookmarks((items) => items.filter((item) => item.id !== bookmarkId));
       setCopyStatus("书签已删除");
+      setCopyStatusState("success");
     } catch (error) {
       setCopyStatus(error instanceof Error ? error.message : "书签删除失败");
+      setCopyStatusState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
@@ -814,9 +844,14 @@ export function ReaderShell({
     const targetPageIndex = snapshot?.pageIndex ?? page;
     if (!targetPagePayload) {
       setCopyStatus("页面信息尚未就绪");
+      setCopyStatusState("idle");
       return;
     }
     const existing = bookmarks.find((bookmark) => bookmark.page === targetPagePayload.page_id);
+    const actionKey = `toggle-bookmark:${targetPagePayload.page_id}`;
+    if (!startAction(actionKey)) return;
+    setCopyStatus(existing ? "正在移除书签……" : "正在保存书签……");
+    setCopyStatusState("pending");
     try {
       if (existing) {
         await apiRequest(
@@ -826,6 +861,7 @@ export function ReaderShell({
         );
         setBookmarks((items) => items.filter((bookmark) => bookmark.id !== existing.id));
         setCopyStatus("书签已移除");
+        setCopyStatusState("success");
       } else {
         const created = await apiRequest<ReaderBookmark>(
           "/reading/bookmarks/",
@@ -841,10 +877,14 @@ export function ReaderShell({
         );
         setBookmarks((items) => [created, ...items]);
         setCopyStatus("书签已保存");
+        setCopyStatusState("success");
       }
       setSelectionTools(null);
     } catch (error) {
       setCopyStatus(error instanceof Error ? error.message : "书签操作失败");
+      setCopyStatusState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
@@ -869,12 +909,14 @@ export function ReaderShell({
     event.preventDefault();
     event.clipboardData.setData("text/plain", cleanTextLocally(selected));
     setCopyStatus("已自动清理复制格式");
+    setCopyStatusState("success");
   }
 
   async function cleanCopy(selectedText?: string) {
     const selected = selectedText?.trim() || window.getSelection()?.toString().trim();
     if (!selected) {
       setCopyStatus("请先选择正文");
+      setCopyStatusState("idle");
       return;
     }
     try {
@@ -893,9 +935,11 @@ export function ReaderShell({
         await navigator.clipboard.writeText(payload.text);
       }
       setCopyStatus("已清理并复制");
+      setCopyStatusState("success");
     } catch {
       await navigator.clipboard.writeText(cleanTextLocally(selected));
       setCopyStatus("已在浏览器中清理并复制");
+      setCopyStatusState("success");
     }
     setSelectionTools(null);
     window.getSelection()?.removeAllRanges();
@@ -905,10 +949,12 @@ export function ReaderShell({
     const text = citations?.[citationStyle];
     if (!text) {
       setCopyStatus("引用数据尚未就绪");
+      setCopyStatusState("idle");
       return;
     }
     await navigator.clipboard.writeText(text);
     setCopyStatus("引用已复制");
+    setCopyStatusState("success");
   }
 
   function jumpToFirstSearchMatch() {
@@ -1048,7 +1094,7 @@ export function ReaderShell({
           />
           {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={() => { void apiRequest("/catalog/usage-events/", { method: "POST", body: JSON.stringify({ event_type: "download", asset_id: work.id, work_id: work.workId, source: "reader" }) }).catch(() => undefined); }}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
           <button type="button" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
-          <button className={bookmarkedPage ? "active" : ""} type="button" onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></button>
+          <ActionButton className={bookmarkedPage ? "active" : ""} type="button" state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} pressed={bookmarkedPage} onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></ActionButton>
         </div>
         <div className="reader-progress-top"><span>阅读进度</span><div><i style={{ width: `${progress}%` }} /></div><b>{progress}%</b></div>
       </header>
@@ -1099,7 +1145,7 @@ export function ReaderShell({
                   <small>第 {annotation.selector.page_index || 1} 页 · {annotation.kind === "underline" ? "划线" : "高亮"}</small>
                   <span>{annotation.quote || "页面批注"}</span>
                 </button>
-                <button className="reader-library-delete" type="button" aria-label={`删除第 ${annotation.selector.page_index || 1} 页${annotation.kind === "underline" ? "划线" : "高亮"}`} onClick={() => void deleteAnnotation(annotation.id)}><Trash2 size={14} /></button>
+                <ActionButton className="reader-library-delete" type="button" state={pendingAction === `delete-annotation:${annotation.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-annotation:${annotation.id}`} aria-label={`删除第 ${annotation.selector.page_index || 1} 页${annotation.kind === "underline" ? "划线" : "高亮"}`} onClick={() => void deleteAnnotation(annotation.id)}><Trash2 size={14} /></ActionButton>
               </article>
             ))}
             {!annotations.some((item) => item.kind !== "note") ? <p className="reader-empty-list">还没有保存高亮或划线。</p> : null}
@@ -1113,7 +1159,7 @@ export function ReaderShell({
                   <small>第 {bookmark.page_index || 1} 页</small>
                   <span>{bookmark.label}</span>
                 </button>
-                <button className="reader-library-delete" type="button" aria-label={`删除第 ${bookmark.page_index || 1} 页书签`} onClick={() => void deleteBookmark(bookmark.id)}><Trash2 size={14} /></button>
+                <ActionButton className="reader-library-delete" type="button" state={pendingAction === `delete-bookmark:${bookmark.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-bookmark:${bookmark.id}`} aria-label={`删除第 ${bookmark.page_index || 1} 页书签`} onClick={() => void deleteBookmark(bookmark.id)}><Trash2 size={14} /></ActionButton>
               </article>
             ))}
             {!bookmarks.length ? <p className="reader-empty-list">还没有保存书签。</p> : null}
@@ -1127,7 +1173,7 @@ export function ReaderShell({
                   <small>第 {annotation.selector.page_index || 1} 页 · {formatReaderTimestamp(annotation.created_at)}</small>
                   <span>{annotation.body_text || annotation.quote || "页面笔记"}</span>
                 </button>
-                <button className="reader-library-delete" type="button" aria-label={`删除第 ${annotation.selector.page_index || 1} 页笔记`} onClick={() => void deleteAnnotation(annotation.id)}><Trash2 size={14} /></button>
+                <ActionButton className="reader-library-delete" type="button" state={pendingAction === `delete-annotation:${annotation.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-annotation:${annotation.id}`} aria-label={`删除第 ${annotation.selector.page_index || 1} 页笔记`} onClick={() => void deleteAnnotation(annotation.id)}><Trash2 size={14} /></ActionButton>
               </article>
             ))}
             {!annotations.some((item) => item.kind === "note") ? <p className="reader-empty-list">还没有保存笔记。</p> : null}
@@ -1179,7 +1225,7 @@ export function ReaderShell({
             <Link href={`/works/${work.slug}`}>返回文献详情</Link>
           </div>
         )}
-        <span className="reader-copy-status" aria-live="polite">{copyStatus}</span>
+        <span className={`reader-copy-status ${copyStatusState}`} role={copyStatusState === "error" ? "alert" : "status"} aria-live={copyStatusState === "error" ? "assertive" : "polite"} aria-busy={copyStatusState === "pending"}>{copyStatus}</span>
       </section>
 
       {selectionTools ? (
@@ -1194,7 +1240,7 @@ export function ReaderShell({
           <button type="button" onClick={() => beginAnnotation("highlight", selectionTools)}><Highlighter size={15} />高亮</button>
           <button type="button" onClick={() => beginAnnotation("underline", selectionTools)}><Underline size={15} />划线</button>
           <button type="button" onClick={() => beginAnnotation("note", selectionTools)}><StickyNote size={15} />笔记</button>
-          <button type="button" onClick={() => void toggleBookmark(selectionTools)}><Bookmark size={15} />书签</button>
+          <ActionButton type="button" state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} onClick={() => void toggleBookmark(selectionTools)}><Bookmark size={15} />书签</ActionButton>
           <button className="close" type="button" aria-label="关闭所选文字菜单" onClick={() => setSelectionTools(null)}><X size={14} /></button>
         </div>
       ) : null}
@@ -1288,7 +1334,7 @@ export function ReaderShell({
                 placeholder="可选。正文会加密保存，仅你本人可以通过读者接口读取。"
               />
             </label>
-            <button className="button" type="submit">保存笔记</button>
+            <ActionButton className="button" type="submit" state={pendingAction === "save-annotation" ? "pending" : "idle"} pendingLabel="正在保存笔记" disabled={Boolean(pendingAction) && pendingAction !== "save-annotation"}>保存笔记</ActionButton>
           </form>
         </div>
       ) : null}

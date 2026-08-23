@@ -16,6 +16,7 @@ from catalog.models import (
     KnowledgeNode,
     KnowledgePublicationStatus,
     Person,
+    PublisherAuthority,
     RelationReviewStatus,
     ReviewStatus,
     Subdiscipline,
@@ -146,8 +147,12 @@ def _refresh_edition_metadata(edition: Edition) -> None:
 def _save_work(edition: Edition, values: dict[str, Any]) -> None:
     work = edition.work
     translation_marker = object()
-    translation_id = values.pop("translation_of", translation_marker)
-    editable = {field for field in WORK_FIELDS if not field.endswith("_id")}
+    translation_id = values.get("translation_of", translation_marker)
+    editable = {
+        field
+        for field in WORK_FIELDS
+        if not field.endswith("_id") and field != "translation_of"
+    }
     for field in editable:
         if field in values:
             setattr(work, field, values[field])
@@ -170,9 +175,26 @@ def _save_work(edition: Edition, values: dict[str, Any]) -> None:
 
 
 def _save_bibliography(edition: Edition, values: dict[str, Any]) -> None:
+    publisher_authority_marker = object()
+    publisher_authority_id = values.get(
+        "publisher_authority_id",
+        publisher_authority_marker,
+    )
     for field in BIBLIOGRAPHY_FIELDS:
-        if field in values:
+        if field in values and field != "publisher_authority_id":
             setattr(edition, field, values[field])
+    if publisher_authority_id is not publisher_authority_marker:
+        if publisher_authority_id is None:
+            edition.publisher_authority = None
+        else:
+            publisher_authority = PublisherAuthority.objects.select_for_update().filter(
+                pk=publisher_authority_id,
+            ).first()
+            if publisher_authority is None:
+                raise WorkflowEditError("出版社 authority 不存在。")
+            edition.publisher_authority = publisher_authority
+            if not str(edition.publisher or "").strip():
+                edition.publisher = publisher_authority.canonical_name
     _refresh_edition_metadata(edition)
 
 

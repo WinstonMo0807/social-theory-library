@@ -11,6 +11,8 @@ import {
 } from "@/lib/api";
 import { adaptWork, type ApiWork } from "@/lib/server-api";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
+import { useActionGuard } from "@/lib/use-action-guard";
+import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 import { BookCover } from "./ui";
 
 type AnnotationRow = {
@@ -53,7 +55,9 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
   const [notes, setNotes] = useState<AnnotationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageState, setMessageState] = useState<ActionState>("idle");
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const { pendingAction, startAction, finishAction } = useActionGuard();
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
@@ -70,10 +74,14 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
       if (!mounted) return;
       setLoading(true);
       setMessage("");
+      setMessageState("pending");
     });
     loadAllBookNotes(assetId, credential)
       .then((rows) => {
-        if (mounted) setNotes(rows);
+        if (mounted) {
+          setNotes(rows);
+          setMessageState("idle");
+        }
       })
       .catch((error: unknown) => {
         if (!mounted) return;
@@ -83,6 +91,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
           return;
         }
         setMessage(error instanceof Error ? error.message : "笔记读取失败。");
+        setMessageState("error");
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -96,12 +105,20 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     if (!window.confirm("确定删除这条笔记吗？")) return;
     const token = getServerSessionCredential();
     if (!token) return;
+    const actionKey = `delete-note:${id}`;
+    if (!startAction(actionKey)) return;
+    setMessage("正在删除笔记……");
+    setMessageState("pending");
     try {
       await apiRequest(`/reading/annotations/${id}/`, { method: "DELETE" }, token);
       setNotes((current) => current.filter((item) => item.id !== id));
       setMessage("笔记已删除。");
+      setMessageState("success");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "笔记删除失败。");
+      setMessageState("error");
+    } finally {
+      finishAction(actionKey);
     }
   }
 
@@ -147,16 +164,22 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
             </div>
             <span className="reader-data-actions">
               <Link href={`/reader/${note.asset}?page=${note.selector.page_index ?? 1}&focus=${note.id}`}>打开原页 <ArrowRight size={14} /></Link>
-              <button type="button" onClick={() => void deleteNote(note.id)}><Trash2 size={13} /> 删除</button>
+              <ActionButton
+                type="button"
+                state={pendingAction === `delete-note:${note.id}` ? "pending" : "idle"}
+                disabled={Boolean(pendingAction) && pendingAction !== `delete-note:${note.id}`}
+                pendingLabel="删除中"
+                onClick={() => void deleteNote(note.id)}
+              ><Trash2 size={13} /> 删除</ActionButton>
             </span>
           </article>
         ))}
         {!notes.length ? <p className="empty-state">这本书目前没有笔记，可能已经被删除。</p> : null}
       </section>
-      {message ? <p className="form-message error" role="status">{message} <button type="button" onClick={() => {
+      {message ? <div className="reader-book-notes-feedback"><AsyncStatus state={messageState} message={message} />{messageState === "error" ? <button type="button" onClick={() => {
         setLoading(true);
         setLoadAttempt((value) => value + 1);
-      }}><RefreshCw size={14} />重试</button></p> : null}
+      }}><RefreshCw size={14} />重试</button> : null}</div> : null}
     </main>
   );
 }

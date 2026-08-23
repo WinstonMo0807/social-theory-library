@@ -35,6 +35,7 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
     publication_year = serializers.IntegerField(min_value=1000, max_value=2100, required=False, allow_null=True)
     publisher = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    publisher_authority_id = serializers.UUIDField(required=False, allow_null=True)
     publication_place = serializers.CharField(max_length=200, required=False, allow_blank=True)
     journal_title = serializers.CharField(max_length=300, required=False, allow_blank=True)
     volume = serializers.CharField(max_length=40, required=False, allow_blank=True)

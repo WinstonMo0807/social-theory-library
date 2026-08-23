@@ -128,9 +128,11 @@ class FakeSearchAdapter:
     def __init__(self, result):
         self.result = result
         self.calls = 0
+        self.queries = []
 
     def search(self, query, *, limit):
         self.calls += 1
+        self.queries.append(query)
         return [self.result], None
 
 
@@ -302,6 +304,133 @@ def test_entity_reconciliation_stays_in_contributor_context(admin_user):
     assert row["human_confirmation_required"] is True
 
 
+def test_entity_reconciliation_candidates_follow_domain_steps_and_real_actions(admin_user):
+    _work, edition = _edition(document_type=DocumentType.THESIS)
+    item = _item(admin_user, edition)
+    candidates = {
+        "work": EntityResolutionCandidate.objects.create(
+            upload_item=item,
+            target_type="work",
+            source_name="候选研究作品",
+            candidate_entity_type="work",
+            candidate_entity_id=str(uuid4()),
+            label="馆内同题名作品",
+            match_score=0.91,
+        ),
+        "publisher": EntityResolutionCandidate.objects.create(
+            upload_item=item,
+            target_type="publisher",
+            source_name="测试出版社",
+            candidate_entity_type="publisher_authority",
+            candidate_entity_id=str(uuid4()),
+            label="测试出版社权威记录",
+            match_score=0.89,
+        ),
+        "organization": EntityResolutionCandidate.objects.create(
+            upload_item=item,
+            target_type="organization",
+            source_name="测试大学",
+            candidate_entity_type="organization_authority",
+            candidate_entity_id=str(uuid4()),
+            label="测试大学权威记录",
+            match_score=0.87,
+            supporting_properties={"organization_role": "degree_granting"},
+        ),
+        "knowledge": EntityResolutionCandidate.objects.create(
+            upload_item=item,
+            target_type="knowledge_node",
+            source_name="历史社会学",
+            candidate_entity_type="knowledge_node",
+            candidate_entity_id=str(uuid4()),
+            label="历史社会学知识节点",
+            match_score=0.85,
+        ),
+    }
+
+    expected = {
+        "work": ("work", "work"),
+        "publisher": ("bibliography", "publisher"),
+        "organization": ("bibliography", "degree_institution"),
+        "knowledge": ("knowledge", "relations"),
+    }
+    for key, candidate in candidates.items():
+        step, field = expected[key]
+        payload = WorkflowSuggestionAggregator(edition, item=item).aggregate(step=step)
+        row = next(item for item in payload["suggestions"] if item["id"] == str(candidate.id))
+        assert row["step"] == step
+        assert row["field"] == field
+        assert row["target_type"] == candidate.target_type
+        assert row["candidate_entity_type"] == candidate.candidate_entity_type
+        assert row["available_actions"] == ["inspect", "link_existing", "reject"]
+
+    contributor_ids = {
+        row["id"]
+        for row in WorkflowSuggestionAggregator(edition, item=item).aggregate(step="contributors")["suggestions"]
+    }
+    assert contributor_ids.isdisjoint({str(candidate.id) for candidate in candidates.values()})
+
+
+def test_persisted_external_web_entity_remains_lead_only_without_evidence(admin_user):
+    _work, edition = _edition()
+    item = _item(admin_user, edition)
+    candidate = EntityResolutionCandidate.objects.create(
+        upload_item=item,
+        target_type="person",
+        source_name="SearXNG result",
+        candidate_entity_type="person_draft",
+        label="External web person",
+        match_score=0.71,
+        match_reasons=["搜索摘要名称匹配"],
+        preview_data={
+            "source_url": "https://example.org/person",
+            "evidence": [{"supporting_text": "search snippet"}],
+        },
+        supporting_properties={
+            "candidate_group": "external_web",
+            "provider": "searxng",
+            "evidence_status": "lead_only",
+            "source_url": "https://example.org/person",
+        },
+    )
+
+    payload = WorkflowSuggestionAggregator(edition, item=item).aggregate(
+        step="contributors",
+        field="contributors",
+    )
+    row = next(value for value in payload["suggestions"] if value["id"] == str(candidate.id))
+
+    assert row["source_tier"] == "research_lead"
+    assert row["source_class"] == "searxng"
+    assert row["evidence_status"] == "lead_only"
+    assert row["evidence_records"] == []
+
+
+def test_persisted_entity_uses_exact_research_field_contract(admin_user):
+    _work, edition = _edition()
+    item = _item(admin_user, edition)
+    candidate = EntityResolutionCandidate.objects.create(
+        upload_item=item,
+        target_type="work",
+        source_name="Original Work Candidate",
+        candidate_entity_type="work_draft",
+        label="Original Work Candidate",
+        supporting_properties={
+            "research_field": "work.translation_of",
+            "candidate_group": "external_web",
+            "provider": "searxng",
+            "evidence_status": "lead_only",
+        },
+    )
+
+    payload = WorkflowSuggestionAggregator(edition, item=item).aggregate(
+        step="work",
+        field="translation_of",
+    )
+    row = next(value for value in payload["suggestions"] if value["id"] == str(candidate.id))
+    assert row["step"] == "work"
+    assert row["field"] == "translation_of"
+
+
 def test_syllabus_page_is_evidence_but_search_snippet_is_not(monkeypatch):
     work, edition = _edition()
     result = SearchResult(
@@ -327,8 +456,13 @@ def test_syllabus_page_is_evidence_but_search_snippet_is_not(monkeypatch):
     monkeypatch.setattr("catalog.services.workflow_suggestions.configured_web_search_adapter", lambda: search)
     monkeypatch.setattr("catalog.services.workflow_suggestions.SafeWebFetcher", lambda: fetcher)
 
-    payload = WorkflowSuggestionAggregator(edition).run_step(step="curation", mode="web")
+    payload = WorkflowSuggestionAggregator(edition).run_step(
+        step="curation",
+        mode="web",
+        query="social theory syllabus",
+    )
     row = next(item for item in payload["suggestions"] if item["source_tier"] == "web_evidence")
+    assert search.queries[0] == "social theory syllabus"
     assert row["source_class"] == EnrichmentSourceClass.SYLLABUS
     assert row["evidence_status"] == "evidence"
     assert "第二周必读" in row["evidence_records"][0]["supporting_text"]
@@ -465,10 +599,11 @@ def test_policy_registry_preserves_theory_threshold_and_source_profiles():
 def test_workflow_suggestion_api_permissions(api_client, admin_user, monkeypatch):
     _work, edition = _edition()
     item = _item(admin_user, edition)
+    calls = []
     monkeypatch.setattr(
         WorkflowSuggestionAggregator,
         "run_step",
-        lambda self, **kwargs: {"suggestions": [], "groups": [], "stats": {}, "errors": []},
+        lambda self, **kwargs: calls.append(kwargs) or {"suggestions": [], "groups": [], "stats": {}, "errors": []},
     )
 
     reader = User.objects.create_user(
@@ -484,4 +619,20 @@ def test_workflow_suggestion_api_permissions(api_client, admin_user, monkeypatch
 
     api_client.force_authenticate(admin_user)
     assert api_client.get(url, {"step": "classification"}).status_code == 200
-    assert api_client.post(url, {"step": "classification"}, format="json").status_code == 200
+    assert api_client.post(
+        url,
+        {"step": "classification", "query": "historical sociology syllabus"},
+        format="json",
+    ).status_code == 200
+    assert calls[0]["query"] == "historical sociology syllabus"
+
+
+def test_step_research_rejects_unbounded_custom_query(admin_user):
+    _work, edition = _edition()
+    with pytest.raises(ValueError, match="最多 500 个字符"):
+        WorkflowSuggestionAggregator(edition).run_step(
+            step="work",
+            mode="structured",
+            query="x" * 501,
+            actor=admin_user,
+        )

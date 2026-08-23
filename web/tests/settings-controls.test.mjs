@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("admin footer uses the shared 2.9 research candidate version", async () => {
+test("admin footer uses the shared 2.9.2 research orchestrator version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "2\.9\.0"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v2\.9 社科研究候选层"/);
+  assert.match(version, /WEB_APP_VERSION = "2\.9\.2"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v2\.9\.2 研究编排与功能健康"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);

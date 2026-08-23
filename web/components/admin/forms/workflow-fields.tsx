@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export type SelectOption = { value: string; label: string };
@@ -128,6 +128,7 @@ export function RepeatableField<T>({
   render,
   onChange,
   addLabel = "添加一项",
+  disabled = false,
 }: {
   label: string;
   values: T[];
@@ -135,14 +136,15 @@ export function RepeatableField<T>({
   render: (value: T, index: number, update: (value: T) => void) => ReactNode;
   onChange: (values: T[]) => void;
   addLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <section className="workflow-repeatable-field">
-      <header><strong>{label}</strong><button type="button" onClick={() => onChange([...values, create()])}><Plus size={14} />{addLabel}</button></header>
+      <header><strong>{label}</strong><button type="button" disabled={disabled} onClick={() => onChange([...values, create()])}><Plus size={14} />{addLabel}</button></header>
       <div>{values.map((value, index) => (
         <article key={index}>
           {render(value, index, (next) => onChange(values.map((entry, entryIndex) => entryIndex === index ? next : entry)))}
-          <button className="workflow-repeatable-remove" type="button" aria-label={`移除${label} ${index + 1}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}><Trash2 size={14} /></button>
+          <button className="workflow-repeatable-remove" type="button" disabled={disabled} aria-label={`移除${label} ${index + 1}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}><Trash2 size={14} /></button>
         </article>
       ))}</div>
     </section>
@@ -156,6 +158,7 @@ export function EntityPicker({
   onChange,
   idField = "id",
   nameField = "name",
+  queryParam = "search",
   placeholder = "搜索已有条目",
   allowUnresolved = false,
 }: {
@@ -165,14 +168,18 @@ export function EntityPicker({
   onChange: (values: EntityValue[]) => void;
   idField?: string;
   nameField?: string;
+  queryParam?: string;
   placeholder?: string;
   allowUnresolved?: boolean;
 }) {
+  const inputId = useId();
   const listboxId = useId();
+  const liveId = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<EntityValue[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -181,7 +188,7 @@ export function EntityPicker({
     let active = true;
     const timer = window.setTimeout(() => {
       setLoading(true);
-      const suffix = query.trim() ? `${endpoint.includes("?") ? "&" : "?"}search=${encodeURIComponent(query.trim())}` : "";
+      const suffix = query.trim() && queryParam ? `${endpoint.includes("?") ? "&" : "?"}${encodeURIComponent(queryParam)}=${encodeURIComponent(query.trim())}` : "";
       void apiRequest<{ results?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>(`${endpoint}${suffix}`, {}, token)
         .then((payload) => {
           if (!active) return;
@@ -191,12 +198,27 @@ export function EntityPicker({
             const id = row[idField] ?? row.id;
             return name && id ? [{ id: String(id), name, status: String(row.status ?? row.editorial_status ?? "") }] : [];
           }));
+          setActiveIndex(0);
         })
         .catch(() => { if (active) setOptions([]); })
         .finally(() => { if (active) setLoading(false); });
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [endpoint, idField, nameField, open, query]);
+  }, [endpoint, idField, nameField, open, query, queryParam]);
+
+  const unresolvedOption = allowUnresolved && query.trim()
+    ? { id: null, name: query.trim(), status: "unresolved" } satisfies EntityValue
+    : null;
+  const visibleOptions = useMemo(
+    () => !queryParam && query.trim()
+      ? options.filter((option) => option.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+      : options,
+    [options, query, queryParam],
+  );
+  const keyboardOptions = useMemo(
+    () => unresolvedOption ? [...visibleOptions, unresolvedOption] : visibleOptions,
+    [unresolvedOption, visibleOptions],
+  );
 
   const select = (value: EntityValue) => {
     if (!values.some((entry) => entry.id === value.id || entry.name.toLocaleLowerCase() === value.name.toLocaleLowerCase())) {
@@ -213,32 +235,43 @@ export function EntityPicker({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
-      window.requestAnimationFrame(() => document.getElementById(listboxId)?.querySelector<HTMLButtonElement>("button")?.focus());
+      setActiveIndex((current) => Math.min(current + 1, Math.max(keyboardOptions.length - 1, 0)));
       return;
     }
-    if (event.key === "Enter" && open && options.length) {
+    if (event.key === "ArrowUp") {
       event.preventDefault();
-      select(options[0]);
+      setOpen(true);
+      setActiveIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+    if (event.key === "Enter" && open && keyboardOptions.length) {
+      event.preventDefault();
+      select(keyboardOptions[Math.min(activeIndex, keyboardOptions.length - 1)]);
+      return;
+    }
+    if (event.key === "Tab") {
+      setOpen(false);
     }
   };
   const statusLabel = (value?: string) => ({ published: "已发布", draft: "草稿", pending: "待审核", verified: "已核验", needs_review: "待审核", suggested: "建议" } as Record<string, string>)[String(value ?? "")] ?? value ?? "馆内条目";
   return (
     <div className="workflow-entity-picker">
-      <strong>{label}</strong>
+      <label htmlFor={inputId}>{label}</label>
       <div className="workflow-entity-values">{values.map((value, index) => (
-        <button type="button" key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}>
+        <button type="button" aria-label={`移除${value.name}`} key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}>
           {value.name}{value.id ? "" : " · 未解析"} ×
         </button>
       ))}</div>
       <div className="workflow-entity-combobox">
         <Search size={14} />
-        <input value={query} placeholder={placeholder} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setOpen(true); }} />
-        <button type="button" aria-label="显示候选" aria-haspopup="listbox" onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} /></button>
-        {open ? <div className="workflow-entity-options" id={listboxId} role="listbox">
+        <input id={inputId} value={query} placeholder={placeholder} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-describedby={liveId} aria-activedescendant={open && keyboardOptions.length ? `${listboxId}-option-${activeIndex}` : undefined} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} />
+        <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} /></button>
+        <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
+        {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>
           {loading ? <small>正在搜索……</small> : null}
-          {!loading ? options.map((option) => { const selected = values.some((value) => value.id === option.id); return <button type="button" role="option" aria-selected={selected} key={option.id} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
-          {!loading && allowUnresolved && query.trim() ? <button type="button" onClick={() => select({ id: null, name: query.trim(), status: "unresolved" })}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
-          {!loading && !options.length && !allowUnresolved ? <small>没有匹配的正式条目。</small> : null}
+          {!loading ? visibleOptions.map((option, index) => { const selected = values.some((value) => value.id === option.id); return <button id={`${listboxId}-option-${index}`} type="button" role="option" aria-selected={selected} tabIndex={index === activeIndex ? 0 : -1} key={option.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
+          {!loading && unresolvedOption ? <button id={`${listboxId}-option-${visibleOptions.length}`} type="button" role="option" aria-selected={false} tabIndex={visibleOptions.length === activeIndex ? 0 : -1} onMouseEnter={() => setActiveIndex(visibleOptions.length)} onClick={() => select(unresolvedOption)}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
+          {!loading && !visibleOptions.length && !allowUnresolved ? <small>没有匹配的正式条目。</small> : null}
         </div> : null}
       </div>
     </div>

@@ -1,6 +1,130 @@
 # 部署说明
 
-更新日期为 2026-08-20。本文件记录源码中的部署入口、安全要求和最近一次 2.9.0 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-24。本文件记录源码中的部署入口、安全要求和最近一次 2.9.2 生产发布快照。任何后续部署仍需重新检查实时状态。
+
+## Version 2.9.2 production deployment, 2026-08-24
+
+当前判断为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED`。公网 [https://books.winstonmo.com](https://books.winstonmo.com) 的 `/api/ready/` 返回 2.9.2、database true、pending migrations 0。生产仍使用 `social-science-library` Compose project、`compose.public.yaml` 与 `compose.cloudflare.yaml`，没有建立第二套部署体系。
+
+### 最终应用镜像与服务
+
+- API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，image ID 为 `sha256:235d990637ba6e9e5bf3c18011110caa436eb24e47aa4e39b8ab57baf4f2c662`。API 发布归档 SHA-256 为 `3a4733aa550cf04af09b9d55a4ec4ed678a480df1d1c8fcd034febd6a8ebb92a`。
+- 最终 Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`，image ID 为 `sha256:bcc0f0c7f89f76358f08a491094b5a965f72aa9d06faad3698a5e952f3080fac`。Web 发布归档 SHA-256 为 `34e8e01616183a390600a583d420b9b729cd51edf888f17352db8b6518a27d64`。
+- 这次最终统一切换包含 ResearchRun owner、Evidence 边界、健康权限、管理员 PDF preview、Picker 降级保留、活动 section overflow 和全部实际维护输入接入。没有重建数据库、PDF、模型或活动索引。
+- 最终检查中 API、两个 Worker、Beat、Web 与 Edge 均 running，应用 RestartCount 为 0。PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 与 Cloudflared 保持原状态服务；Cloudflared 使用 HTTP/2 并注册四条连接。
+
+### Migration、备份和回退
+
+- catalog 0032 是 additive migration，只新增 `ResearchRun`、`HealthCheckRun`、`HealthIncident`、`RecoveryAction` 及索引。它没有数据回填、外部请求、PDF 操作、authority mutation 或索引切换。
+- 同一切换前 BackupJob 已恢复到 disposable PostgreSQL 16.14。`pg_dump` 与 `pg_restore` 为 16.15，恢复状态、0031 到 0032 migration、Django check、新表、空 migration plan，以及保留 0032 schema 时 2.9.1 核心读取均有 deploy-record 证据。
+- 正式 migration head 为 catalog 0032、ingestion 0013、reading 0007，pending count 为 0。
+- 最终切换前 fresh BackupJob 为 `965c6431-5d45-4ba2-b4a1-e7f7b263ddde`。归档位于 `/data/backups/pre-v292-followup-20260824-013956/library-backup-20260823-174701-965c6431.tar.gz`，SHA-256 为 `b126ace3aadb66374b79a975360cace81236dae92ca68afefd3d4bceddd6d75e`，已复算并通过 `pg_restore --list`。此前同版本备份的 PostgreSQL 16 restore、0032 migration 和保留 schema 的 2.9.1 compatibility rehearsal 仍保存在 deploy-record。
+- API 回退标签为 `social-theory-library-api:pre-v292-final-20260824-014723`。最终 Web 回退标签为 `social-theory-library-web:pre-v292-final-20260824-015006`。应用回退不反向 migration、不恢复覆盖数据库、不修改活动索引。
+- API 切换记录位于 `storage/backups/pre-v292-cutover-20260821-174610/deploy-record/final-api-20260824-014723`。Web 记录为同一根目录下的 `final-web-20260824-015006`，最终备份记录为 `final-followup-20260824-013956`，末次稳定性验收记录为 `final-verification-20260824-021518`。
+- 验收成功后，两个旧 staging 和三个本轮 staging 已按显式 `/tmp` 白名单删除，清理记录位于末次 verification 目录的 `staging-cleanup.env`。发布镜像、回退标签、backup、deploy-record 与 SSH 权限均保留。
+
+### 生产验收结果
+
+- 12 个 Compose 服务均 running。两个 Celery Worker 可 ping，active、reserved、scheduled 均为 0；Redis 的 celery、ingestion、query_lexicon、unacked 与 unacked_index 均为 0。Beat 持续调度健康、ingestion、semantic 与 QueryLexicon recovery。
+- 活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。国家、实践、社会学三条公网请求均返回 `v2_hybrid`、`fallback_used=false` 和非空结果。
+- 已发布 normalized Reader Asset 的 Range 请求返回 206、`Content-Range: bytes 0-1023/7426650`、`application/pdf` 和 `%PDF-`。
+- 首页、Explore、已发布 Work、Reader 和公共原文检索正常。完整动态路由矩阵在 1440、1920、2560、3840px 的 136 个 route-width 组合通过，移动端和平板组也没有破图或横向溢出。核心首屏布局断言全部通过；匿名会话探测产生预期的 `/api/auth/me/` 401 和无 refresh cookie 的 400 控制台资源消息，单独记录为非功能性限制。draft `/works/work-aaf54876` 与对应 Public API 均为 404。
+- 管理员 draft 页面预览真实渲染，Reader、保存、下载和引用动作保持关闭。匿名打开管理员预览会转到登录页，受保护 PDF endpoint 匿名返回 401；登录管理员可打开 preview 与 PDF。React #482 不再复现。
+- 最终镜像上的 ResearchRun `e285af7a-4949-4567-b765-60739c44df17` 使用未保存的“马克斯·韦伯”，精确绑定 Edition `aaf54876-f563-402f-b244-b14af54614fa`，预分配 task ID，query 同名，实际调用 SearXNG，并返回 VIAF 与 unresolved 两个候选。未保存表单随后被丢弃，没有建立关系、接受候选或覆盖 FieldLock。部署代码探针确认 SearXNG external_web 候选保持 `research_lead`、`lead_only` 且不包含 Evidence。
+- 8 条 orphan ResearchRun 由 RecoveryAction `119e7f98-f74b-4a35-9b80-2c05ad3d36a5` 安全转为 canceled，并分别写入审计。最新 Research productive probe `7747b1c9-d0f0-4662-85e7-252b28ada86f` 为 healthy，configured、reachable、functional、productive 均为 true，相关 incident 已 resolved。
+- 最终 Entity Picker 在生产页测得 left 343.39、right 903.39、width 560、viewport 1265、document scrollWidth 1265，活动 section overflow 为 visible。VIAF 与未解析分组、降级提示、Arrow Up/Down、Escape、ARIA expanded/controls/active descendant 均在最终生产浏览器核对；390、720、1440px 规则有同版源码的自动化与前序生产浏览器证据。
+- 切换后二十分钟以上的两轮完整验证没有应用容器重启、队列积压、持续 HTTP 500、Traceback、CRITICAL 或 unhandled exception。OpenAlex 未配置、Wikidata timeout、SafeWebFetcher 与部分 metadata provider 故障由 Processing Center 如实显示为外部来源降级，不阻断 SearXNG、VIAF、本馆候选、编辑或公共书库。
+- Work 8、Edition 8、Asset 16、Page 3135、SemanticChunk 3881、Person 7 与 KnowledgeNode 2 的 ID hash 同切换记录一致。没有删除或重建馆藏、PDF、volume、模型或活动索引。
+
+### 已知但不阻止 2.9.2 的限制
+
+- 普通 non-superuser 管理员上传和发布 E2E 没有正常账户，继续标记为 `待核实`。本轮没有通过绕过登录或提升权限取得该证据。
+- 最终 fresh SearXNG 查询实际发出但返回零条一般 Web 结果；VIAF structured provider 已返回真实候选。当前运行不能写成 fresh SafeWebFetcher 正向 passage 已通过。
+- 外部功能健康当前有六个待处理事件。SearXNG、VIAF、Crossref 正常；OpenAlex 未配置，Wikidata 握手超时，LOC 零候选，SafeWebFetcher 与部分 metadata provider 没有产出。Research Orchestrator、核心服务、OCR、公开目录、Reader、任务与站内检索均 healthy。
+- 新的无状态浏览器访问公共页面时，PublicSessionProvider 会用 401/400 判断没有可恢复登录，会在 Chromium 控制台留下预期资源状态；没有 pageerror、requestfailed 或功能失效。后续可以增加 200 响应的专用匿名会话探测接口，但它不阻止 2.9.2 运行。
+- 共享 Interaction Feedback 已覆盖本轮关键 workflow、research、preview、Processing Center 和 health 动作；这不等于已经逐一重写全站所有普通按钮和文本导航。
+
+GitHub repository 的 Public visibility 是 owner 的当前决定。最终 Git 交接只能包含安全源码、测试和文档。真实 `.env`、Secret、Token、SSH key、PDF、OCR 数据、数据库、备份、用户数据、日志、模型、embedding、Meilisearch 数据和其他活动索引不得进入 commit 或远端树。SSH 部署权限按用户要求继续保留。
+
+## Version 2.9.2 pre-cutover plan, 2026-08-21, historical
+
+以下内容是部署前计划，只用于解释当时的保护门槛。当前状态以上一节 2026-08-24 的生产快照为准。当时的判断为 `SOURCE CANDIDATE / LOCAL GATES IN PROGRESS / NOT DEPLOYED`，不再代表当前公网。
+
+部署身份、TCP 22、BatchMode SSH、`sudo -n`、Docker Compose 与生产目录已经重新验证可用。私钥目录继续由 `.gitignore` 排除。部署权限可用不等于发布门槛已经通过，也不得把私钥、sudo 配置或任何生产凭据写入发布包、文档或 Git。
+
+### 当前源码与本地门槛
+
+2.9.2 候选源码已包含独立 Research Orchestrator、未保存 draft context、Research Field Contract、Universal Entity Discovery、ResearchRun 诊断、功能健康与事故恢复、管理员页面预览、统一操作反馈，以及自动研究和宽版 Entity Picker。已有兼容 API 继续复用 Candidate、Evidence、QueryLexicon、FieldLock、ProcessingJob、AuditEvent、公开 queryset 和原有决定服务，没有建立第二套馆藏或 authority。
+
+截至本节写入时，完整后端 pytest 为 610 passed、32 skipped，退出码 0。后端 Research、Entity Decision 与 Health 定向测试 31 项通过；前端定向 Node 测试 29 项、完整 Node 108 项、Auth 与 Scoped Search 19 项、TypeScript、完整 ESLint、production build、Python compileall 和 `git diff --check` 已通过。migration drift、`sqlmigrate` 审查、PostgreSQL 16 恢复演练、Celery/Redis 环境检查和生产 smoke 仍是硬门槛。任一项未完成时不得标记 `READY FOR CUTOVER`。
+
+### 目标 migration
+
+2.9.2 的目标 migration 是 `catalog.0032_healthcheckrun_healthincident_recoveryaction_and_more`。它依赖 catalog 0031 和当前用户模型，新增 `ResearchRun`、`HealthCheckRun`、`HealthIncident`、`RecoveryAction` 及其索引。源码中没有数据回填、外部请求、PDF 操作、authority mutation 或索引切换。这个判断来自 migration 源码审查，仍需在生产备份恢复出的 disposable PostgreSQL 16 上证明。
+
+目标生产 head 为 catalog 0032、ingestion 0013、reading 0007。迁移必须由待发布的统一 API 镜像显式执行。新 Beat 或 Worker 不能在 0032 应用前启动，因为 2.9.2 的研究运行与健康任务会读取新增表。正式窗口至少执行并保存以下无 Secret 证据：
+
+```text
+python manage.py showmigrations catalog ingestion reading
+python manage.py sqlmigrate catalog 0032
+python manage.py migrate --plan
+python manage.py check
+python manage.py migrate --noinput
+python manage.py showmigrations catalog ingestion reading
+```
+
+生产应用 0032 前必须完成 fresh BackupJob，复算归档与 `database.dump` checksum，并把同一 artifact 恢复到 disposable PostgreSQL 16。演练需要覆盖 0031 到 0032、Django check、空 migration plan、2.9.2 核心 ORM 读取，以及保留 0032 schema 时 2.9.1 应用的回退兼容性。
+
+### 切换顺序与保护边界
+
+1. 固定候选源码清单和 SHA，完成 API、Web 统一 2.9.2 镜像构建及镜像内检查。API、默认 Worker、Ingestion Worker 与 Beat 必须使用同一 API image revision。
+2. 重新读取生产 Compose 拓扑、磁盘、容器、RestartCount、migration、队列、ProcessingJob、活动语义 UID、核心对象数量与 ID 集合。不得沿用 2.9.1 历史快照代替实时值。
+3. 生成 fresh BackupJob，校验归档并完成恢复演练。保存当前环境和 Compose 副本，为正在运行的 2.9.1 API 与 Web 建立不可变 `pre-v292` 回退标签。
+4. 等待业务队列为空，暂停 Beat、默认 Worker 与 Ingestion Worker。保持旧 API/Web 提供服务，使用新 API 镜像先检查 migration plan，再显式应用 catalog 0032。
+5. 依次切换 API、默认 Worker、Ingestion Worker、Beat 与 Web。刷新 Edge，使其指向新的 API/Web 容器。`running` 不是 readiness，必须取得容器内真实 HTTP 响应。
+6. 完成下节生产验收和稳定性观察后，才可标记 2.9.2 已部署。随后才能做 Git 安全扫描、commit 和 push。
+
+整个过程不得运行 `docker compose down -v`，不得删除或重建 PostgreSQL、Redis、Meilisearch、馆藏、模型、备份或活动索引 volume。不得覆盖 ORIGINAL PDF、人工锁、人工确认关系、authority 或读者数据。不得自动 merge Person、自动发布 draft authority、自动 Accept Candidate，也不得把 SearXNG snippet 提升为 Evidence。不得放宽 public Work queryset，管理员预览只能使用受保护的 preview API。
+
+### 2.9.2 回退
+
+发布前要在当前 2.9.1 镜像上创建新的 `pre-v292` API/Web 标签，并保存环境、Compose、源码清单、镜像 ID、migration plan、核心对象快照和活动索引 UID。此前 `pre-v291` 标签是历史回退点，不能替代本轮发布前快照。
+
+catalog 0032 从源码看是 additive schema。只有 disposable PostgreSQL 演练证明 2.9.1 能在保留 0032 四张表的数据库上启动和读取核心对象后，应用故障时才可以暂停 2.9.2 Beat/Worker，切回完整的 2.9.1 API/Worker/Beat/Web 镜像族并刷新 Edge。回退时不自动 down migration，不 DROP 新表，不恢复覆盖生产数据库，也不修改活动索引。若 migration 中途失败或 schema 状态不明确，应维持旧应用、停止继续切换并人工审查，不能用自动 restore 掩盖问题。
+
+回退后重新检查 ready/health、pending migration、队列、公开目录、登录后台、Research 入口的兼容降级、PDF Range 206、活动索引和日志。只有这些检查通过，才可把回退记为成功。
+
+### 2.9.2 生产验收清单
+
+- 公网与容器内 `/api/ready/` 均报告 2.9.2、database true、pending migrations 0；catalog 0032、ingestion 0013、reading 0007 已应用。
+- API、两个 Worker、Beat 与 Web 使用记录一致的 2.9.2 revision。Web 容器内真实 HTTP、Edge、Cloudflare 入口和主要静态 bundle 正常，应用容器没有重启增长。
+- 首页、Explore、作品页、理论、主题、学者、登录、账户与后台主要路由正常。顺序执行观点检索，避免触发 Edge 的同 IP 并发限制。
+- 真实公开 PDF 返回 206、`Content-Range`、`application/pdf` 和正确字节；Reader 能渲染，复制、引用和下载保持原权限。
+- draft 与 ready Edition 不产生 `public_url`，匿名公共接口和 `/works/<slug>` 继续 404。授权管理员页面预览可读，published 作品页仍正常。
+- 正常管理员会话打开 Intake 与 Maintenance workflow。页面加载自动研究，未保存 Person 文本进入 context 和 query；800ms debounce 只重规划受影响字段，手动刷新不会形成请求风暴。
+- Universal Entity Discovery 返回 local、local_draft、authority、external_web 和 unresolved 分组，保留多个候选及评分、原因、冲突和 provenance。外部失败时本地结果仍可用。
+- 真实 SearXNG、SafeWebFetcher 与至少一个适用 structured/authority provider 产生可区分的诊断。snippet 只作 lead，只有受支持的结构化记录或实际抓取 passage 可以成为 Evidence。
+- 实体动作继续由显式决定服务处理。生产 smoke 不自动 merge 或覆盖 authority；create draft 只在经确认的测试对象和授权下执行。FieldLock 与人工确认结果保持优先。
+- Processing Center 先显示功能健康，再显示依赖。持久化 probe 能区分 configured、reachable、functional、productive，页面 GET 不临时访问全部 Provider。
+- Beat 健康探测租约能阻止重叠批次。Incident 与 RecoveryAction 持久化、幂等、次数限制、退避和 AuditEvent 可核验，恢复动作不直接改数据库、主机或防火墙。
+- 保存、刷新、文件 retry/resume、发布/下架、健康恢复、页面/PDF 预览均显示 pending、success、error 与 disabled 状态。桌面和窄屏 Entity Picker 无横向溢出，键盘和 ARIA 状态可用。
+- Redis 与 Celery active/reserved/scheduled、ProcessingJob、ResearchRun、HealthCheckRun、Incident、失败任务和日志无持续异常。OCR、Provider 或索引单项失败只能形成可解释降级，不能回滚已确认馆藏。
+- 切换前后 Work、Edition、Asset、Page、SemanticChunk、Person、KnowledgeNode 的数量和 ID 集合无意外变化，活动语义 UID 与 Meilisearch 文档计数保持一致，除 catalog 0032 新表外没有未授权的数据变化。
+- 在稳定观察窗口结束后重新执行 ready、主要路由、真实联网 research、Processing Center、队列、日志、Range 和容器重启检查，并保存时间、命令、退出码与脱敏证据。
+
+GitHub repository 的 Public visibility 是 owner 的当前决定，不得根据旧文档改回 Private。生产验收完成后的 Git 交接只能包含安全源码、测试和文档。真实 `.env`、Secret、Token、SSH key、PDF、OCR 数据、数据库、备份、用户数据、日志、模型、embedding、Meilisearch 数据和其他活动索引不得进入 commit 或远端树。
+
+## Version 2.9.1 workflow follow-up, 2026-08-21
+
+- release identity 为 base HEAD `1053ff1`、API archive SHA-256 `2ce32c44bce7dbe78ed927309e06b7725c202b08409771ad4b217e1f4eb657c9` 和最终 Web archive SHA-256 `6e7fe2c94338b6f87605b4ee63081020657220452dae340f11d8c768eb673dae`。本轮没有 commit 或 push。
+- API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.1-wfpatch-2ce32c4-20260821-013518`，image ID `sha256:889d3eeb08e3480993189a223cc3a37522892ac1cb5f3e5d4d2fafe9ec688988`。Web 使用 `social-theory-library-web:2.9.1-sessionfix-6e7fe2c-20260821-020442`，image ID `sha256:6456ab938c52b163de03d5ada1bfbe616100cff14c18ce60e6c3cf4d18c9fce6`。
+- Fresh BackupJob `7b3d4d6b-3c6d-402b-a2d1-a28ae40a99b3` completed。artifact 为 `/data/backups/pre-v291-cutover-20260821-013826/library-backup-20260820-173909-7b3d4d6b.tar.gz`，14,823,744 bytes，SHA-256 `3ab91485f375bd2e7760bb60071151f82b3b83791d024ec3e2f85cf5729d9aff`。database dump SHA-256 为 `460d6cf5802953f568022b49d5c648c4387018e57325826e0538d71b41064003`。
+- 同一 backup 已在 isolated PostgreSQL 16.14 完整恢复。pg_dump/pg_restore 为 16.15，restore 后 Django check 通过。disposable container 使用 tmpfs、没有 host port，验收后已精确删除。
+- production migration plan 为空。catalog 0031、ingestion 0013、reading 0007 不变。Work、Edition、Asset、Page、SemanticChunk 等核心 ID 集合和活动语义索引在切换前后不变；active UID 继续为 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。
+- 公网 ready/health、主要路由、三条顺序 v2_hybrid、PDF Range 206、真实 Reader canvas、1440px/390px 响应式和 Web bundle markers 通过。匿名页面不再请求私人 saved API。
+- 正常 Winston 管理员会话只读验证 Dashboard、2.9.1 标签、Intake Focus Mode、九步 workflow、Inspector、研究候选面板与 capability 按钮。没有执行联网研究、保存、Candidate decision、Reading Path、发布或下架 mutation。
+- 核心回退标签为 `social-theory-library-api:pre-v291-20260821-013826` 与 `social-theory-library-web:pre-v291-20260821-013826`。最终 Web 回退标签为 `social-theory-library-web:pre-v291-sessionfix-20260821-020442`。部署记录位于 `/volume2/library/docker/social-theory-library/storage/backups/pre-v291-cutover-20260821-013826/deploy-record`。
+- Meilisearch、PostgreSQL、Redis、PaddleOCR、PDF、模型和活动索引均未替换或重建。普通非 superuser 管理员公网上传与发布 E2E 仍因没有正常账户凭据而标记为 `待核实`。
 
 ## Version 2.9.0 production deployment, 2026-08-20
 

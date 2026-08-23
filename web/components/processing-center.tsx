@@ -9,7 +9,6 @@ import {
   Clock3,
   Cpu,
   FileText,
-  LoaderCircle,
   PauseCircle,
   Play,
   RefreshCw,
@@ -18,9 +17,17 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import {
+  ActionButton,
+  ActionLink,
+  AsyncStatus,
+  ToastHost,
+  type ActionState,
+} from "./action-feedback";
 import { ConfirmDialog } from "./confirm-dialog";
+import { FunctionalHealthPanel } from "./functional-health-panel";
 
 type Attempt = {
   id: string;
@@ -127,6 +134,14 @@ type SemanticHealthPayload = {
   documents: { eligible: number; indexed: number; pending: number; failed: number };
 };
 
+type ProcessingFeedback = {
+  state: ActionState;
+  message: string;
+  actionKey: string;
+};
+
+const EMPTY_PROCESSING_FEEDBACK: ProcessingFeedback = { state: "idle", message: "", actionKey: "" };
+
 const jobLabels: Record<string, string> = {
   ocr: "OCR",
   external_enrichment: "联网补充",
@@ -190,7 +205,7 @@ export function ProcessingCenter() {
   const [items, setItems] = useState<ProcessingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState<ProcessingFeedback>(EMPTY_PROCESSING_FEEDBACK);
   const [queueHealth, setQueueHealth] = useState<QueueHealth | null>(null);
   const [semanticHealth, setSemanticHealth] = useState<SemanticHealthPayload | null>(null);
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
@@ -205,11 +220,20 @@ export function ProcessingCenter() {
   const [revision, setRevision] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<ProcessingItem | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [pendingOperation, setPendingOperation] = useState("");
+  const operationInFlightRef = useRef("");
+  const loadRequestRef = useRef<Promise<boolean> | null>(null);
 
-  const load = useCallback(async () => {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    try {
+  const load = useCallback((): Promise<boolean> => {
+    if (loadRequestRef.current) return loadRequestRef.current;
+    const request = (async () => {
+      const token = getServerSessionCredential();
+      if (!token) {
+        setLoading(false);
+        setError("登录状态尚未就绪，请重新登录后再试。");
+        return false;
+      }
+      try {
       const [itemsResult, healthResult, jobsResult, semanticResult, reviewResult] = await Promise.allSettled([
         apiRequest<Paginated<ProcessingItem>>(
           "/ingestion/items/?scope=processing&ordering=-updated_at&page_size=100",
@@ -242,12 +266,38 @@ export function ProcessingCenter() {
       } else {
         setReviewTasks([]);
       }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "处理中心加载失败。");
-    } finally {
-      setLoading(false);
-    }
+        return true;
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "处理中心加载失败。");
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    })();
+    loadRequestRef.current = request;
+    void request.finally(() => {
+      if (loadRequestRef.current === request) loadRequestRef.current = null;
+    });
+    return request;
   }, [reviewStatus]);
+
+  function beginOperation(actionKey: string, pendingMessage: string) {
+    if (operationInFlightRef.current) return false;
+    operationInFlightRef.current = actionKey;
+    setPendingOperation(actionKey);
+    setFeedback({ state: "pending", message: pendingMessage, actionKey });
+    return true;
+  }
+
+  function finishOperation(actionKey: string) {
+    if (operationInFlightRef.current === actionKey) operationInFlightRef.current = "";
+    setPendingOperation((current) => current === actionKey ? "" : current);
+  }
+
+  function operationState(actionKey: string): ActionState {
+    if (pendingOperation === actionKey) return "pending";
+    return feedback.actionKey === actionKey ? feedback.state : "idle";
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -278,23 +328,51 @@ export function ProcessingCenter() {
     };
   }, [load, revision]);
 
+  async function refreshNow() {
+    const actionKey = "refresh";
+    if (!beginOperation(actionKey, "正在刷新处理中心。")) return;
+    setLoading(true);
+    try {
+      const succeeded = await load();
+      setFeedback({
+        state: succeeded ? "success" : "error",
+        message: succeeded ? "处理中心已刷新。" : "处理中心刷新失败，请查看页面错误。",
+        actionKey,
+      });
+    } finally {
+      finishOperation(actionKey);
+    }
+  }
+
   async function retry(item: ProcessingItem) {
     const token = getServerSessionCredential();
-    if (!token) return;
-    setMessage("");
+    const actionKey = `item-retry:${item.id}`;
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法重新处理。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, `正在重新处理${item.source_filename}。`)) return;
     try {
       const action = item.suggested_action === "resume" && item.edition ? "resume" : "retry";
       await apiRequest(`/ingestion/items/${item.id}/${action}/`, { method: "POST" }, token);
-      setMessage(`${item.source_filename} 已重新进入处理队列。`);
+      setFeedback({ state: "success", message: `${item.source_filename} 已重新进入处理队列。`, actionKey });
       setRevision((value) => value + 1);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "重试失败。");
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "重试失败。", actionKey });
+    } finally {
+      finishOperation(actionKey);
     }
   }
 
   async function removeConfirmed() {
     const token = getServerSessionCredential();
-    if (!token || !removeTarget) return;
+    if (!removeTarget) return;
+    const actionKey = `remove:${removeTarget.id}`;
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法移除处理记录。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, `正在移除${removeTarget.source_filename}的处理记录。`)) return;
     const label = removeTarget.review_data?.title || removeTarget.source_filename;
     setActionPending(true);
     try {
@@ -302,41 +380,54 @@ export function ProcessingCenter() {
         method: "POST",
         body: JSON.stringify({ confirmed: true }),
       }, token);
-      setMessage(`${label} 已从处理队列移除。NAS 原文件和审计记录仍保留。`);
+      setFeedback({ state: "success", message: `${label} 已从处理队列移除。NAS 原文件和审计记录仍保留。`, actionKey });
       setRemoveTarget(null);
       setRevision((value) => value + 1);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "移除失败。");
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "移除失败。", actionKey });
     } finally {
       setActionPending(false);
+      finishOperation(actionKey);
     }
   }
 
   async function jobAction(job: ProcessingJob, action: "retry" | "cancel" | "pause" | "resume") {
     const token = getServerSessionCredential();
-    if (!token) return;
-    setMessage("");
+    const actionKey = `job:${action}:${job.source}:${job.id}`;
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法操作任务。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, "正在提交任务操作。")) return;
     try {
       await apiRequest("/ingestion/processing-center/", {
         method: "POST",
         body: JSON.stringify({ action, source: job.source, job_id: job.id }),
       }, token);
-      setMessage(
-        action === "retry" ? "处理任务已经重新排队。"
+      setFeedback({
+        state: "success",
+        message: action === "retry" ? "处理任务已经重新排队。"
           : action === "pause" ? "暂停请求已记录，运行中的任务会在安全检查点暂停。"
             : action === "resume" ? "已暂停任务从保存进度恢复。"
               : "等待中的任务已经取消。",
-      );
+        actionKey,
+      });
       setRevision((value) => value + 1);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "任务操作失败。");
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "任务操作失败。", actionKey });
+    } finally {
+      finishOperation(actionKey);
     }
   }
 
   async function workloadAction(type: "ocr" | "external_enrichment", paused: boolean) {
     const token = getServerSessionCredential();
-    if (!token) return;
-    setMessage("");
+    const actionKey = `workload:${type}`;
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法调整负载。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, `正在${paused ? "暂停" : "恢复"}${jobLabels[type]}。`)) return;
     try {
       await apiRequest("/ingestion/processing-center/", {
         method: "POST",
@@ -345,26 +436,34 @@ export function ProcessingCenter() {
           job_type: type,
         }),
       }, token);
-      setMessage(paused ? `${jobLabels[type]} 已请求暂停。当前批次保存后生效。` : `${jobLabels[type]} 已恢复，已保存任务会继续运行。`);
+      setFeedback({ state: "success", message: paused ? `${jobLabels[type]} 已请求暂停。当前批次保存后生效。` : `${jobLabels[type]} 已恢复，已保存任务会继续运行。`, actionKey });
       setRevision((value) => value + 1);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "任务负载操作失败。");
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "任务负载操作失败。", actionKey });
+    } finally {
+      finishOperation(actionKey);
     }
   }
 
   async function reviewTaskAction(task: ReviewTask, action: "assign_self" | "complete" | "reopen") {
     const token = getServerSessionCredential();
-    if (!token) return;
-    setMessage("");
+    const actionKey = `review:${action}:${task.id}`;
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法操作审核任务。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, "正在提交审核操作。")) return;
     try {
       await apiRequest(`/ingestion/review-tasks/${task.id}/action/`, {
         method: "POST",
         body: JSON.stringify({ action }),
       }, token);
-      setMessage(action === "assign_self" ? "审核任务已领取。" : action === "complete" ? "审核任务已完成。" : "审核任务已恢复。 ");
+      setFeedback({ state: "success", message: action === "assign_self" ? "审核任务已领取。" : action === "complete" ? "审核任务已完成。" : "审核任务已恢复。", actionKey });
       setRevision((value) => value + 1);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "审核任务操作失败。");
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "审核任务操作失败。", actionKey });
+    } finally {
+      finishOperation(actionKey);
     }
   }
 
@@ -393,11 +492,22 @@ export function ProcessingCenter() {
   }), [items, statusCounts]);
 
   return (
-    <div className="admin-page processing-center-page">
+    <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
         <div><p>运行状态</p><h1>处理中心</h1><span>按任务类型和状态查看 OCR、页码与语义索引，并保留每次失败的完整记录。</span></div>
-        <div className="admin-action-row"><Link className="button secondary" href="/admin/publication">前往发布台 <ChevronRight size={15} /></Link><button className="button secondary" type="button" onClick={() => setRevision((value) => value + 1)}><RefreshCw size={15} />刷新</button></div>
+        <div className="admin-action-row">
+          <ActionLink className="button secondary" href="/admin/publication">前往发布台 <ChevronRight size={15} /></ActionLink>
+          <ActionButton
+            className="button secondary"
+            state={pendingOperation === "refresh" || (loading && !items.length) ? "pending" : error ? "error" : "idle"}
+            pendingLabel="正在刷新"
+            errorLabel="重新刷新"
+            disabled={Boolean(pendingOperation) && pendingOperation !== "refresh"}
+            onClick={() => void refreshNow()}
+          ><RefreshCw size={15} />刷新</ActionButton>
+        </div>
       </header>
+      <FunctionalHealthPanel revision={revision} />
       <section className="processing-summary">
         <article><Clock3 size={18} /><strong>{summary.active}</strong><span>等待或运行</span></article>
         <article><FileText size={18} /><strong>{summary.review}</strong><span>待复核</span></article>
@@ -431,21 +541,26 @@ export function ProcessingCenter() {
           {(["ocr", "external_enrichment"] as const).map((type) => {
             const paused = Boolean(workloads[type]?.paused);
             return (
-              <button
+              <ActionButton
                 className="button secondary"
-                type="button"
                 key={type}
+                state={operationState(`workload:${type}`)}
+                pressed={paused}
+                pendingLabel={paused ? `正在恢复${jobLabels[type]}` : `正在暂停${jobLabels[type]}`}
+                successLabel="操作已提交"
+                errorLabel="重试操作"
+                disabled={Boolean(pendingOperation)}
                 onClick={() => void workloadAction(type, !paused)}
               >
                 {paused ? <Play size={15} /> : <PauseCircle size={15} />}
                 {paused ? `恢复${jobLabels[type]}` : `暂停${jobLabels[type]}`}
-              </button>
+              </ActionButton>
             );
           })}
         </div>
       </section>
-      {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />读取进度……</p> : null}
-      {error ? <p className="review-error" role="alert">{error}</p> : null}
+      {loading && !items.length && !jobs.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
+      <AsyncStatus state="error" message={error} assertive />
       <section className="processing-list admin-panel processing-review-queue" aria-labelledby="processing-review-title">
         <header className="processing-job-toolbar">
           <div><h2 id="processing-review-title">人工审核队列</h2><p>元数据冲突、同名人物、实体消歧和页码问题集中在这里处理。</p></div>
@@ -472,9 +587,9 @@ export function ProcessingCenter() {
               </dl>
               <footer>
                 {task.upload_item ? <Link href={`/admin/intake/${task.upload_item}#bibliography`}>进入工作流</Link> : null}
-                {canManageReviewTasks && task.status === "pending" ? <button type="button" onClick={() => void reviewTaskAction(task, "assign_self")}>领取任务</button> : null}
-                {canManageReviewTasks && task.status === "in_progress" && task.task_type !== "entity_resolution" ? <button type="button" onClick={() => void reviewTaskAction(task, "complete")}>标记完成</button> : null}
-                {canManageReviewTasks && (task.status === "completed" || task.status === "cancelled") ? <button type="button" onClick={() => void reviewTaskAction(task, "reopen")}>恢复待办</button> : null}
+                {canManageReviewTasks && task.status === "pending" ? <ActionButton state={operationState(`review:assign_self:${task.id}`)} pendingLabel="正在领取" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "assign_self")}>领取任务</ActionButton> : null}
+                {canManageReviewTasks && task.status === "in_progress" && task.task_type !== "entity_resolution" ? <ActionButton state={operationState(`review:complete:${task.id}`)} pendingLabel="正在完成" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "complete")}>标记完成</ActionButton> : null}
+                {canManageReviewTasks && (task.status === "completed" || task.status === "cancelled") ? <ActionButton state={operationState(`review:reopen:${task.id}`)} pendingLabel="正在恢复" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "reopen")}>恢复待办</ActionButton> : null}
               </footer>
             </article>
           ))}
@@ -501,10 +616,10 @@ export function ProcessingCenter() {
               {job.last_error ? <details className="processing-job-error" open={job.status === "failed"}><summary>{job.error_code || "查看错误"}</summary><p>{job.last_error}</p></details> : null}
               {(job.status === "failed" || job.status === "pending" || job.status === "running" || job.status === "paused") ? (
                 <footer>
-                  {job.status === "failed" ? <button type="button" onClick={() => void jobAction(job, "retry")}><RotateCcw size={14} />重试</button> : null}
-                  {(job.status === "pending" || job.status === "running") && (job.job_type === "ocr" || job.job_type === "external_enrichment") ? <button type="button" onClick={() => void jobAction(job, "pause")}><PauseCircle size={14} />安全暂停</button> : null}
-                  {job.status === "paused" ? <button type="button" onClick={() => void jobAction(job, "resume")}><Play size={14} />继续</button> : null}
-                  {(job.status === "pending" || job.status === "paused") ? <button type="button" onClick={() => void jobAction(job, "cancel")}><XCircle size={14} />取消等待</button> : null}
+                  {job.status === "failed" ? <ActionButton state={operationState(`job:retry:${job.source}:${job.id}`)} pendingLabel="正在重试" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "retry")}><RotateCcw size={14} />重试</ActionButton> : null}
+                  {(job.status === "pending" || job.status === "running") && (job.job_type === "ocr" || job.job_type === "external_enrichment") ? <ActionButton state={operationState(`job:pause:${job.source}:${job.id}`)} pendingLabel="正在暂停" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "pause")}><PauseCircle size={14} />安全暂停</ActionButton> : null}
+                  {job.status === "paused" ? <ActionButton state={operationState(`job:resume:${job.source}:${job.id}`)} pendingLabel="正在继续" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "resume")}><Play size={14} />继续</ActionButton> : null}
+                  {(job.status === "pending" || job.status === "paused") ? <ActionButton state={operationState(`job:cancel:${job.source}:${job.id}`)} pendingLabel="正在取消" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "cancel")}><XCircle size={14} />取消等待</ActionButton> : null}
                 </footer>
               ) : null}
             </article>
@@ -520,13 +635,17 @@ export function ProcessingCenter() {
             <article key={item.id}>
               <div className="processing-item-heading"><FileText size={17} /><p><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></p><b>{stageLabels[item.status] ?? item.status}</b><span>{item.stage_progress}%</span></div>
               <div className="processing-bar"><i style={{ width: `${item.stage_progress}%` }} /></div>
-              <div className="processing-item-detail"><span>{item.is_stalled ? `已停滞 ${Math.max(1, Math.floor(item.stalled_seconds / 60))} 分钟` : latest ? `${latest.stage} · ${latest.status}` : "尚无处理日志"}</span><span>{item.error_message || item.dispatch_error || latest?.error_message || new Date(item.updated_at).toLocaleString("zh-CN")}</span><span><Link href={`/admin/intake/${item.id}#file`}>查看详情</Link>{item.edition ? <Link href={`/admin/intake/${item.id}#publication`}>发布检查</Link> : null}{item.suggested_action === "retry" || item.suggested_action === "resume" ? <button type="button" onClick={() => void retry(item)}><RotateCcw size={13} />重新处理</button> : null}<button className="danger-link" type="button" onClick={() => setRemoveTarget(item)}><Trash2 size={13} />移除</button></span></div>
+              <div className="processing-item-detail"><span>{item.is_stalled ? `已停滞 ${Math.max(1, Math.floor(item.stalled_seconds / 60))} 分钟` : latest ? `${latest.stage} · ${latest.status}` : "尚无处理日志"}</span><span>{item.error_message || item.dispatch_error || latest?.error_message || new Date(item.updated_at).toLocaleString("zh-CN")}</span><span><Link href={`/admin/intake/${item.id}#file`}>查看详情</Link>{item.edition ? <Link href={`/admin/intake/${item.id}#publication`}>发布检查</Link> : null}{item.suggested_action === "retry" || item.suggested_action === "resume" ? <ActionButton state={operationState(`item-retry:${item.id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation)} onClick={() => void retry(item)}><RotateCcw size={13} />重新处理</ActionButton> : null}<button className="danger-link" type="button" onClick={() => setRemoveTarget(item)}><Trash2 size={13} />移除</button></span></div>
             </article>
           );
         })}
         {!loading && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
       </section>
-      {message ? <p className="form-message" role="status">{message}</p> : null}
+      <ToastHost
+        items={feedback.message ? [{ id: feedback.actionKey || "processing", state: feedback.state === "idle" ? "success" : feedback.state, message: feedback.message }] : []}
+        onDismiss={() => setFeedback(EMPTY_PROCESSING_FEEDBACK)}
+        label="处理中心操作反馈"
+      />
       <ConfirmDialog open={Boolean(removeTarget)} title={`移除“${removeTarget?.review_data?.title || removeTarget?.source_filename || "馆藏记录"}”`} description="这会把记录从处理中心和复核队列移除。NAS 原始 PDF、衍生文件和审计记录不会被物理删除。" confirmLabel="确认移除" tone="danger" pending={actionPending} onCancel={() => setRemoveTarget(null)} onConfirm={() => void removeConfirmed()} />
     </div>
   );

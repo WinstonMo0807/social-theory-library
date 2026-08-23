@@ -58,6 +58,7 @@ BIBLIOGRAPHY_FIELDS = (
     "version_label",
     "publication_year",
     "publisher",
+    "publisher_authority_id",
     "publication_place",
     "journal_title",
     "volume",

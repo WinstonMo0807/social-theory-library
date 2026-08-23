@@ -1,8 +1,8 @@
 # Social Theory Library 架构
 
-更新日期为 2026-08-20。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
+更新日期为 2026-08-24。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-当前源码与生产应用版本均为 2.9.0。API、默认 Worker、Ingestion Worker、Beat 与 Web 使用 release commit `e318ec8` 的统一镜像。生产 migration head 为 catalog 0031、ingestion 0013 和 reading 0007。2.9 没有新增模型或 migration，也没有改变 R2 临时上传、公共观点检索 V2、Ask stable retrieval 和活动语义索引。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前源码与公网应用均为 2.9.2。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，最终 Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`。生产 migration head 为 catalog 0032、ingestion 0013 和 reading 0007，pending migration 为 0。公网 ready、主要路由、顺序语义检索、Reader Range、管理员预览、自动研究和 Processing Center 已完成真实验收。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
 
 ## 总体结构
 
@@ -38,7 +38,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-API、Web 和 Celery 应用已经部署 2.9.0。独立 PaddleOCR 镜像没有重建。历史镜像版本只在部署记录中保留，不代表当前源码状态。
+生产 API、Web 和 Celery 应用当前部署 2.9.2。独立 PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 和 Cloudflared 状态服务没有因本次功能发布重建。历史镜像版本只在部署记录与回退标签中保留。
 
 ## 后端模块
 
@@ -62,6 +62,28 @@ API、Web 和 Celery 应用已经部署 2.9.0。独立 PaddleOCR 镜像没有重
 
 生产 Compose 把 `ALLOW_DEMO_FALLBACK` 固定为 `false`。正式页面应读取真实 API 数据，不得以静态示例掩盖服务失败。
 
+## 2.9.2 Research Orchestrator 与功能健康
+
+`api/catalog/services/research` 是独立研究服务包。`ResearchContext` 合并 Work、Edition、可选 UploadItem、未保存 draft、已确认和未解决实体、Candidate 决定、FieldLock、PDF/OCR 状态及工作流缺口，并为同一上下文生成稳定 fingerprint。Intake 与 Maintenance 使用同一上下文结构，未保存的责任者名称可以在正式保存前进入查询规划。
+
+`ResearchFieldContractRegistry` 是 2.9.2 的唯一研究字段声明表。当前共有 44 个 contract，覆盖作品、书目、责任者、分类、知识、Reader、策展和发布字段。每个 contract 声明输出类型、可用实体和来源、证据要求、实现方式、mutation policy、draft 创建权限及字段依赖。运行时会同时检查 contract 和既有 `FieldPolicyRegistry` 的实现覆盖。开发环境遇到缺失实现会失败，生产健康探测会报告降级。
+
+`WorkflowGapAnalyzer` 与 `ResearchPlanner` 依据文档类型、工作流状态、当前值、确认、锁、冲突和 changed fields 生成确定性任务。字段变化只重排受影响的依赖，LLM 不参与工作流状态判断。`ResearchOrchestrator` 先返回本馆与已有候选，再通过 Celery 执行有界外部研究。`ResearchRun` 保存幂等键、context revision、计划、local/external 结果和分类诊断。外部来源失败会形成 degraded 结果，不阻止编辑、保存或本馆候选选择。
+
+`UniversalEntityDiscovery` 使用一个接口覆盖 person、work、theory、topic、knowledge_node、discipline、subdiscipline、organization、institution、publisher、journal 和 reading_path。候选分为 local、local_draft、authority、external_web 和 unresolved，并保留身份、上下文、字段匹配、来源质量与证据强度五项评分。外部身份必须经过显式 link、create draft、keep unresolved 或 reject 决定。服务不会自动合并 authority、覆盖 FieldLock 或把 SearXNG snippet 提升为 Evidence。共享 Picker 已进入九步工作流和实际使用的学者、学科、子学科、理论节点、主题、知识关系、时间轴与阅读路径维护输入。创建或关联仍由各对象原有模型、权限和决定服务约束。
+
+工作流前端在活动步骤首次展开时自动研究。未保存 draft 会随请求发送，字段变化使用 800ms debounce 和 dependency-scoped changed fields，手动按钮用于强制重跑。通用 Entity Picker 使用 420 至 560px 的响应式分组面板，支持五组来源、丰富身份信息、外部显式动作、部分失败状态、Arrow、Enter、Escape、Tab 与 ARIA active descendant。查询缩短、关闭面板或 draft 改变时会提升 request revision，旧异步响应不能覆盖当前结果。生产浏览器发现第一版右对齐面板会在两栏责任者表单中越出左侧；最终 Web 将责任者与全宽 Picker 改为左对齐，知识关系右栏仍右对齐，并让活动 workflow section 与相关维护面板在 Picker 打开时允许可见溢出。最终生产页面测得 560px 面板完整位于 1265px 视口内，祖先 overflow 为 visible；390、720 和 1440px 规则另有浏览器与 Node 回归覆盖。
+
+catalog 0032 新增 `ResearchRun`、`HealthCheckRun`、`HealthIncident` 和 `RecoveryAction`。`system_health.py` 注册 21 个 probe，覆盖数据库、缓存、Worker/Beat、PDF Reader、OCR、Meilisearch、QueryLexicon、处理任务、公开目录、Research Contract/Planner/Pipeline、SearXNG、SafeWebFetcher 和结构化 Provider。每次结果分别保存 configured、reachable、functional 和 productive。Processing Center 的 GET 只读取持久化快照，不因页面打开直接探测外部服务。
+
+Beat 调度通过 Django cache 全局租约防止重叠。单批默认执行 12 个、硬上限 24 个到期 probe，只有租约持有者可以释放。安全恢复动作使用固定 allowlist、幂等键、事务锁、最多三次尝试、30 秒起的指数退避和 `AuditEvent`。ResearchRun 在数据库事务内预分配 Celery task UUID，提交时通过 `apply_async(task_id=...)` 使用同一 owner；恢复逻辑只有在完整 Celery ownership inventory 可用时，才以 15 分钟 stale 门槛、`select_for_update` 和二次读取处理 orphan，inventory 不完整时 fail closed。Worker 终态写入不会覆盖并发 cancel。达到上限后 incident 回到 open，等待人工检查；恢复服务不控制宿主、防火墙或数据库结构。功能健康 GET 与 POST 都要求系统状态查看权限，probe、retry 与恢复再叠加相应管理 capability。
+
+后台 workspace 现在分别返回 `pdf_preview_url`、`page_preview_url` 和 `public_url`。只有 published Edition 且存在 slug 时才生成 public URL。draft 与 ready 继续通过公共 queryset 返回 404，管理员页面预览使用独立认证 serializer，并与公开作品页复用 `WorkDetailView` 展示组件，不开放收藏、公共下载、公开 Reader 或引用动作。生产预览曾出现 React #482，根因是客户端预览间接导入异步 Server `SiteFooter`；两个 Server page 现在通过 ReactNode slot 传入 footer。`ServerApiError` 只把 API 404 转为 `null`，5xx 与网络错误继续抛出，避免把服务故障伪装成不存在。
+
+`action-feedback.tsx` 提供共享 `ActionButton`、`ActionLink`、`AsyncStatus` 和 `ToastHost`。Workflow Editor、自动研究、管理员预览、Processing Center 和功能健康操作使用一致的 pressed、pending、success、error 和 disabled 语义，并保留 reduced-motion 行为。它只统一交互反馈，不改变各业务 mutation、权限或事务规则。
+
+上述 2.9.2 源码已通过完整本地门槛。后端全量为 678 项通过、32 项按显式环境条件跳过；前端 production build、118 项通用 Node、21 项 Auth 与 Scoped Search、TypeScript 和完整 ESLint 均通过。Django check、migration drift、compileall 与 diff check 也已退出 0。catalog 0032 已在 fresh BackupJob 的 PostgreSQL 16 恢复副本完成演练并正式应用。最终镜像上的 ResearchRun `e285af7a-4949-4567-b765-60739c44df17` 证明未保存 Person、精确 Edition、生成查询、预分配 task ID、VIAF、多候选和 SearXNG 实际调用；没有保存表单、接受候选、创建关系或覆盖 FieldLock。部署代码探针确认 external_web 与 SearXNG 结果保持 `research_lead`、`lead_only` 且 Evidence 数为 0。Research Orchestrator productive probe 当前 healthy，末次完整生产验收记录为 `final-verification-20260824-021518`。
+
 ## 2.9 社科研究候选层
 
 `WorkflowSuggestionAggregator` 以当前 Edition 和 Work 为上下文，在 Intake Mode 中额外读取 UploadItem。它把现有 MetadataCandidate、EntityResolutionCandidate、EnrichmentCandidate、TheoryReviewTask、QueryLexiconCandidate、QueryLexicon 解析结果和当前 Work 的 SemanticChunk 转换为统一的只读 DTO。聚合器不保存 Work、Edition、关系或词典数据。
@@ -71,6 +93,8 @@ API、Web 和 Celery 应用已经部署 2.9.0。独立 PaddleOCR 镜像没有重
 Intake 和 Maintenance 分别提供 `/api/catalog/admin/intake/<itemId>/suggestions/` 与 `/api/catalog/admin/library/works/<workId>/suggestions/`。GET 只读取快速候选。POST 以步骤为单位运行一次有界研究，并复用 Field Enrichment。SearXNG 摘要始终只是线索；只有 SafeWebFetcher 打开的原页且命中当前作品上下文时才显示为 Evidence。普通 Web 线索不能接受为正式知识，也不会写入 QueryLexicon 或馆藏 RAG。
 
 前端在现有 `WorkflowEditor` 中按当前展开步骤加载 `ResearchSuggestionPanel`。`ResearchEntityPicker` 将馆内、QueryLexicon、PDF、学术来源和普通 Web 分组显示。已有词典映射或没有待审决策的馆内实体可以直接选择；实体消歧、PDF、结构化和联网候选先进入共享 Inspector。正式接受仍调用各 Candidate 原有 decision endpoint，并继续要求人工确认分类和知识关系。
+
+EntityResolutionCandidate 按真实业务对象进入对应步骤。Work 进入作品身份，Person 进入责任者，Publisher 与 Organization 进入书目，KnowledgeNode 进入知识关系。可用操作直接读取原实体决定服务，不在聚合层另行推断。前端联网研究按钮读取 `can_run_enrichment` capability；候选决定完成后会重新读取当前步骤，避免旧的 pending 行继续显示为可操作。
 
 2.9 扩展了 Work 与 Edition 的 FieldPolicy 覆盖，包含图书字段以及期刊名、卷、期、页码和 DOI。接受学科候选复用 WorkDisciplineRelation 与 WorkSubdisciplineRelation。接受名称候选后仍由既有 authority mutation 和 QueryLexicon outbox 同步，不从网页直接创建词典条目。2.9 不创建 Web research index，不把网页全文写入 SemanticChunk，也不改变 publication 规则。
 

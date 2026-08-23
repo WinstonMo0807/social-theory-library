@@ -203,6 +203,11 @@ def _work_data(work: Work, edition: Edition) -> dict[str, Any]:
 def _bibliography_data(work: Work, edition: Edition) -> dict[str, Any]:
     return {
         **{field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS},
+        "publisher_authority_name": (
+            edition.publisher_authority.canonical_name
+            if edition.publisher_authority_id
+            else ""
+        ),
         "document_type": work.document_type,
         "expected_updated_at": edition.updated_at,
         "expected_work_updated_at": work.updated_at,
@@ -503,12 +508,13 @@ def build_admin_workspace(
     mode: str,
     item: UploadItem | None = None,
 ) -> dict[str, Any]:
-    edition = Edition.objects.select_related("work").get(pk=edition.pk)
+    edition = Edition.objects.select_related("work", "publisher_authority").get(pk=edition.pk)
     work = edition.work
     workflow = build_intake_workflow(item) if item else build_edition_workflow(edition)
     normalized = edition.assets.filter(
         kind=Asset.Kind.NORMALIZED,
         is_current=True,
+        status=Asset.Status.READY,
     ).order_by("-version").first()
     candidates = {
         "metadata": _metadata_candidates(item),
@@ -538,10 +544,15 @@ def build_admin_workspace(
             "filename": item.source_filename if item else (normalized.original_filename if normalized else ""),
             "document_type": work.document_type,
             "publication_state": edition.state,
-            "preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
-                f"/distribution/assets/{normalized.id}/file/" if normalized else ""
+            "pdf_preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
+                f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
             ),
-            "public_url": f"/works/{edition.public_slug}" if edition.public_slug else "",
+            "page_preview_url": f"/admin/preview/works/{edition.id}",
+            "public_url": (
+                f"/works/{edition.public_slug}"
+                if edition.state == PublicationState.PUBLISHED and edition.public_slug
+                else ""
+            ),
             "return_href": "/admin/review" if item else "/admin/library",
         },
         "workflow": workflow,

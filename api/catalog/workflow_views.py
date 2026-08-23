@@ -383,7 +383,10 @@ class WorkMaintenancePublicationView(APIView):
                 **workspace,
                 "detail": "馆藏版本已发布。",
                 "index_warning": index_warning,
-                "maintenance_url": f"/admin/library/works/{work_id}#publication",
+                "maintenance_url": (
+                    f"/admin/library/works/{work_id}"
+                    f"?edition={edition.id}#publication"
+                ),
                 "work_id": str(work_id),
                 "context": workspace["context"],
             }
