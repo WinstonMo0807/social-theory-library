@@ -138,7 +138,7 @@ test("dirty canonical value survives refresh and leaving prompts", async ({ page
   await mockWorkflow(page);
   await page.goto(`/admin/intake/${itemId}#work`);
   await page.getByRole("textbox", { name: "副题名" }).fill("尚未保存的副题名");
-  await page.getByRole("button", { name: "刷新" }).click();
+  await page.getByRole("button", { name: "刷新", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "副题名" })).toHaveValue("尚未保存的副题名");
   await expect(page.locator(".workflow-editor-header").getByText(/1 项未保存/)).toBeVisible();
   page.once("dialog", async (dialog) => {
@@ -158,12 +158,18 @@ test("journal fields, curation skip and warning confirmation preserve one editor
 
   mock.setState(workspace("curation", "journal_article"));
   await page.goto(`/admin/intake/${itemId}#curation`);
+  // A hash-only navigation intentionally preserves the mounted Workbench.
+  // Reload once so the mock server state represents the newly available step.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "暂不策展并继续" })).toBeEnabled();
   await page.getByRole("button", { name: "暂不策展并继续" }).click();
   await expect(page).toHaveURL(new RegExp(`#publication$`));
   expect(mock.calls.some((call) => call.path.includes("sections/curation"))).toBe(true);
   await page.getByRole("button", { name: "发布并留在当前项" }).click();
   await expect(page.getByRole("dialog", { name: "确认带警告发布" })).toBeVisible();
   await page.getByRole("button", { name: "确认发布" }).click();
-  await expect(page).toHaveURL(new RegExp(`/admin/library/works/${workId}#publication$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/admin/library/works/${workId}\\?edition=${editionId}#publication$`),
+  );
   expect(mock.calls.some((call) => call.path.endsWith("/publish/") && (call.body as { confirm_warnings?: boolean }).confirm_warnings)).toBe(true);
 });

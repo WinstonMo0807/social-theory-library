@@ -7,7 +7,9 @@ from catalog.models import (
     Asset,
     Discipline,
     DocumentType,
+    DomainChangeEvent,
     Edition,
+    EditorialRevision,
     EvidenceSnippet,
     KnowledgeNode,
     KnowledgeNodeAlias,
@@ -94,7 +96,7 @@ def test_public_nodes_only_show_published_and_support_multiple_disciplines(api_c
 
 
 @pytest.mark.django_db
-def test_editor_can_draft_but_only_admin_can_publish_node(api_client, admin_user):
+def test_editor_can_create_and_publish_node_without_superadmin(api_client):
     editor = User.objects.create_user(
         username="editor@theory.test",
         email="editor@theory.test",
@@ -102,7 +104,7 @@ def test_editor_can_draft_but_only_admin_can_publish_node(api_client, admin_user
         password="Editor-Theory-Test-2026",
     )
     api_client.force_authenticate(editor)
-    rejected = api_client.post(
+    published_directly = api_client.post(
         "/api/catalog/admin/theory-system/nodes/",
         {
             "node_type": "theory_tradition",
@@ -112,7 +114,8 @@ def test_editor_can_draft_but_only_admin_can_publish_node(api_client, admin_user
         },
         format="json",
     )
-    assert rejected.status_code == 400
+    assert published_directly.status_code == 201
+    assert published_directly.data["published_at"]
 
     draft = api_client.post(
         "/api/catalog/admin/theory-system/nodes/",
@@ -128,7 +131,6 @@ def test_editor_can_draft_but_only_admin_can_publish_node(api_client, admin_user
     assert draft.status_code == 201
     assert KnowledgeNodeAlias.objects.filter(node_id=draft.data["id"], alias="编辑别名").exists()
 
-    api_client.force_authenticate(admin_user)
     published = api_client.patch(
         f"/api/catalog/admin/theory-system/nodes/{draft.data['id']}/",
         {"status": "published"},
@@ -169,7 +171,7 @@ def test_graph_honors_two_level_and_thirty_node_hard_limits(api_client):
 
 
 @pytest.mark.django_db
-def test_review_confirmation_creates_public_relation_and_page_evidence(api_client, admin_user):
+def test_review_confirmation_drafts_then_publishes_relation_and_page_evidence(api_client, admin_user):
     work, _edition, asset = make_work()
     node = KnowledgeNode.objects.create(
         node_type="theory_tradition",
@@ -194,6 +196,17 @@ def test_review_confirmation_creates_public_relation_and_page_evidence(api_clien
         format="json",
     )
     assert response.status_code == 200
+    assert response.data["editorial_revision"]["status"] == "draft"
+    assert not WorkNodeRelation.objects.filter(work=work, node=node).exists()
+    revision = EditorialRevision.objects.get(
+        pk=response.data["editorial_revision"]["id"]
+    )
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{revision.id}/publish/",
+        {},
+        format="json",
+    )
+    assert published.status_code == 200
     relation = WorkNodeRelation.objects.get(work=work, node=node)
     assert relation.status == "published"
     evidence = EvidenceSnippet.objects.get(work_node_relation=relation)
@@ -201,6 +214,55 @@ def test_review_confirmation_creates_public_relation_and_page_evidence(api_clien
     assert evidence.page_end == 5
     assert evidence.review_status == "approved"
     assert f"/reader/{asset.id}?page=4" in response.data["viewer_href"]
+
+
+@pytest.mark.django_db
+def test_published_work_relation_direct_crud_requires_workbench_revision(
+    api_client,
+    admin_user,
+):
+    work, _edition, _asset = make_work("已发布关系保护测试")
+    node = KnowledgeNode.objects.create(
+        node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+        canonical_name_zh="关系保护理论",
+        slug="protected-work-relation",
+        status="published",
+    )
+    relation = WorkNodeRelation.objects.create(
+        work=work,
+        node=node,
+        role=WorkNodeRelation.Role.GENERAL_MENTION,
+        status="published",
+    )
+    original_strength = relation.strength
+    api_client.force_authenticate(admin_user)
+
+    created = api_client.post(
+        "/api/catalog/admin/theory-system/work-relations/",
+        {
+            "work": str(work.id),
+            "node": str(node.id),
+            "role": WorkNodeRelation.Role.CRITIQUE,
+            "status": "published",
+        },
+        format="json",
+    )
+    updated = api_client.patch(
+        f"/api/catalog/admin/theory-system/work-relations/{relation.id}/",
+        {"strength": "high"},
+        format="json",
+    )
+    deleted = api_client.delete(
+        f"/api/catalog/admin/theory-system/work-relations/{relation.id}/",
+    )
+
+    for response in (created, updated, deleted):
+        assert response.status_code == 409
+        assert response.data["code"] == "published_work_relation_requires_revision"
+        assert response.data["replacement"].endswith(f"{work.id}#knowledge")
+    relation.refresh_from_db()
+    assert relation.strength == original_strength
+    assert WorkNodeRelation.objects.filter(pk=relation.id).exists()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -232,6 +294,14 @@ def test_node_merge_preserves_source_and_can_roll_back(admin_user):
     assert target.aliases.filter(alias="旧译名").exists()
     assert target.work_relations.filter(work=work, role="foundational_work").exists()
     assert KnowledgeNodeMergeRecord.objects.filter(pk=record.pk).exists()
+    merge_events = DomainChangeEvent.objects.filter(
+        object_type="knowledge_node",
+        object_id__in=[source.id, target.id],
+    )
+    assert set(merge_events.values_list("change_kind", flat=True)) == {
+        "withdraw",
+        "update",
+    }
 
     rollback_merge(record.id, actor=admin_user)
     source.refresh_from_db()
@@ -239,6 +309,16 @@ def test_node_merge_preserves_source_and_can_roll_back(admin_user):
     assert source.status == "published"
     assert record.rolled_back_at is not None
     assert not target.work_relations.filter(work=work, role="foundational_work").exists()
+    assert DomainChangeEvent.objects.filter(
+        object_type="knowledge_node",
+        object_id=source.id,
+        change_kind="publish",
+    ).exists()
+    assert DomainChangeEvent.objects.filter(
+        object_type="knowledge_node",
+        object_id=target.id,
+        change_kind="update",
+    ).count() == 2
 
 
 @pytest.mark.django_db

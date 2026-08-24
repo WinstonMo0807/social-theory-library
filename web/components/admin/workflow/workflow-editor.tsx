@@ -371,7 +371,7 @@ function PublicationBody({ draft, context, permissions, goToIssue, publish, with
   const tasks = asArray(preflight.background_tasks).map((entry) => normalizeIssue(entry, "publication"));
   const canPublish = permissions.can_manage_publication !== false && permissions.can_publish !== false;
   const publicationState = asString(draft.publication_state ?? context.publication_state, "draft");
-  return <div className="workflow-publication"><div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{publicationState}</span></article><article><strong>阅读文件</strong><span>{asString(draft.reader_state, "待检查")}</span></article><article><strong>策展</strong><span>{asString(draft.curation_summary, "可选，未策展不阻止发布")}</span></article></div><div className="workflow-preflight-groups"><section className="blockers"><h3>必须解决</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>没有发布阻止项。</p> : null}</section><section className="warnings"><h3>建议处理</h3>{warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}{!warnings.length ? <p>没有发布警告。</p> : null}</section><section className="tasks"><h3>发布后继续处理</h3>{tasks.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="info" onActivate={() => goToIssue(issue)} />)}{!tasks.length ? <p>没有后台任务。</p> : null}</section></div><div className="workflow-publication-actions">{publicationState === "published" ? <><span>当前版本已公开。后续元数据、知识和策展维护继续使用本编辑器。</span><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在下架" disabled={!canPublish} onClick={withdraw}>下架当前版本</ActionButton></> : <><ActionButton className="button" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("next")}><Check size={14} />发布并处理下一项</ActionButton><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("stay")}>发布并留在当前项</ActionButton></>}</div>{!canPublish ? <p>当前账户可以查看检查结果，但最终发布由具有对应 capability 的管理员完成。</p> : null}</div>;
+  return <div className="workflow-publication"><div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{publicationState}</span></article><article><strong>阅读文件</strong><span>{asString(draft.reader_state, "待检查")}</span></article><article><strong>策展</strong><span>{asString(draft.curation_summary, "可选，未策展不阻止发布")}</span></article></div><div className="workflow-preflight-groups"><section className="blockers"><h3>必须解决</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>没有发布阻止项。</p> : null}</section><section className="warnings"><h3>建议处理</h3>{warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}{!warnings.length ? <p>没有发布警告。</p> : null}</section><section className="tasks"><h3>发布后继续处理</h3>{tasks.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="info" onActivate={() => goToIssue(issue)} />)}{!tasks.length ? <p>没有后台任务。</p> : null}</section></div><div className="workflow-publication-actions">{publicationState === "published" ? <><span>当前版本已公开。草稿 Revision 和新采用的策展内容仍需在这里确认发布。</span><ActionButton className="button" state={publishing ? "pending" : "idle"} pendingLabel="正在发布更新" disabled={!canPublish || blockers.length > 0} onClick={() => publish("stay")}><Check size={14} />发布当前更新</ActionButton><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在下架" disabled={!canPublish} onClick={withdraw}>下架当前版本</ActionButton></> : <><ActionButton className="button" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("next")}><Check size={14} />发布并处理下一项</ActionButton><ActionButton className="button secondary" state={publishing ? "pending" : "idle"} pendingLabel="正在发布" disabled={!canPublish || blockers.length > 0} onClick={() => publish("stay")}>发布并留在当前项</ActionButton></>}</div>{!canPublish ? <p>当前账户可以查看检查结果，但最终发布由具有对应 capability 的管理员完成。</p> : null}</div>;
 }
 
 function WorkflowSectionBody(props: BodyProps) {
@@ -382,7 +382,7 @@ function WorkflowSectionBody(props: BodyProps) {
   if (props.step === "classification") return <ClassificationBody {...props} />;
   if (props.step === "knowledge") return <KnowledgeBody {...props} />;
   if (props.step === "reader") return <ReaderBody {...props} />;
-  if (props.step === "curation") return <><ResearchSuggestionPanel mode={props.research.mode} itemId={props.research.itemId} workId={props.research.workId} step="curation" token={props.research.token} onInspect={props.research.onInspect} onUpdated={props.research.onUpdated} onMessage={props.research.onMessage} /><WorkCurationEditor workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions.filter((candidate) => candidateMatches(candidate, "reading_path_placements"))} onInspect={(candidate) => props.research.onInspect([candidate], "阅读路径候选")} /></>;
+  if (props.step === "curation") return <><ResearchSuggestionPanel mode={props.research.mode} itemId={props.research.itemId} workId={props.research.workId} step="curation" token={props.research.token} onInspect={props.research.onInspect} onUpdated={props.research.onUpdated} onMessage={props.research.onMessage} /><WorkCurationEditor workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions.filter((candidate) => candidateMatches(candidate, "reading_path_placements") || candidate.kind === "derived_claim_curation")} onInspect={(candidate) => props.research.onInspect([candidate], candidate.kind === "derived_claim_curation" ? "核心观点、批评与回应候选" : "阅读路径候选")} /></>;
   return <PublicationBody {...props} />;
 }
 
@@ -566,6 +566,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     try {
       const result = await apiRequest(`${endpoint}sections/${step}/${maintenanceQuery}`, { method: "PATCH", body: JSON.stringify({ data: draft, confirm_section: true }) }, token);
       const nextPayload = normalizePayload(result, mode, itemId, workId);
+      const revision = asRecord(asRecord(result).editorial_revision);
       setDirty((current) => ({ ...current, [step]: [] }));
       dirtyRef.current = { ...dirtyRef.current, [step]: [] };
       applyRemote(result, true);
@@ -577,7 +578,9 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
         goToStep(step, first?.field);
         return;
       }
-      setMessage(advance ? "本节已确认，已进入下一步骤。" : "本节已保存。");
+      setMessage(Object.keys(revision).length
+        ? "修改已保存为编辑草稿。正式页面保持原值，确认发布后才会更新。"
+        : advance ? "本节已确认，已进入下一步骤。" : "本节已保存。");
       if (advance) {
         const next = nextPayload.workflow.current_step !== step
           ? nextPayload.workflow.current_step
@@ -591,6 +594,27 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       finishOperation(operationKey);
     }
   }, [applyRemote, beginOperation, endpoint, finishOperation, focusFirstIssue, goToStep, itemId, maintenanceQuery, mode, payload, token, workId]);
+
+  const publishEditorialRevision = useCallback(async () => {
+    const revision = payload?.editorial_revision;
+    if (!revision || !token) return;
+    if (revision.has_conflict) {
+      setMessage("正式内容已经变化，请刷新后重新建立编辑草稿。");
+      return;
+    }
+    if (!window.confirm("确认把当前编辑草稿原子发布到正式页面吗？")) return;
+    const operationKey = "publish-editorial-revision";
+    if (!beginOperation(operationKey)) return;
+    try {
+      await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, token);
+      setMessage("编辑草稿已发布，下游投影已标记为需要增量更新。");
+      await refresh(true);
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "编辑草稿发布失败。");
+    } finally {
+      finishOperation(operationKey);
+    }
+  }, [beginOperation, finishOperation, payload?.editorial_revision, refresh, token]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -746,7 +770,13 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     try {
       const entityTargetType = asString(candidate.target_type ?? candidate.candidate_entity_type ?? candidate.entity_type);
       const entityTargetId = asString(candidate.candidate_entity_id ?? candidate.entity_id);
-      const body = entityTargetType
+      const body = candidate.kind === "derived_claim_curation"
+        ? {
+            action,
+            proposition: action === "accept_with_edit" ? asString(candidate.edited_proposition) : "",
+            kind: asString(candidate.curated_kind),
+          }
+        : entityTargetType
         ? {
             action,
             target_type: entityTargetType,
@@ -813,6 +843,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
         <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>{asString(payload.context.title, "未命名馆藏")}</h1><span>{payload.workflow.blockers_count} 个必须解决 · {payload.workflow.warnings_count} 个建议 · {currentDirtyCount} 项未保存</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveStep(active, false)} disabled={Boolean(busy) || !canEdit || activeStepPending}><Save size={14} />保存</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{payload.context.page_preview_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.page_preview_url)} target="_blank">页面预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
         {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
         {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
+        {payload.editorial_revision?.status === "draft" ? <section className="workflow-editorial-revision"><div><strong>已发布作品的编辑草稿</strong><p>第 {payload.editorial_revision.revision} 版草稿改动 {payload.editorial_revision.changed_fields.join("、")}。预览值已显示在表单中，公网仍使用正式版本。</p></div><ActionButton className="button" state={busy === "publish-editorial-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(busy) || payload.editorial_revision.has_conflict} onClick={() => void publishEditorialRevision()}><Check size={14} />单人确认并发布</ActionButton></section> : null}
         <div className="workflow-sections">{payload.workflow.steps.map((step) => {
           const presentation = presentations[step.key];
           const expanded = presentation === "current";

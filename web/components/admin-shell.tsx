@@ -45,6 +45,7 @@ const navigation = [
     ["/admin/library?view=quality", Activity, "馆藏质量"],
   ]],
   ["知识", [
+    ["/admin/knowledge", Sparkles, "Knowledge Studio"],
     ["/admin/scholars", UserRound, "学者"],
     ["/admin/disciplines", GraduationCap, "学科"],
     ["/admin/subdisciplines", GitBranch, "子学科"],

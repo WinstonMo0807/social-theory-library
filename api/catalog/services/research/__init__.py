@@ -8,10 +8,15 @@ import cycle while it reads the shared field contract registry.
 __all__ = [
     "context",
     "contracts",
+    "candidate_adoption",
     "diagnostics",
+    "evidence_pack",
     "entity_discovery",
+    "feedback",
     "orchestrator",
     "planner",
+    "prompt_registry",
     "ranking",
     "recovery",
+    "task_profiles",
 ]

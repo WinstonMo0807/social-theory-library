@@ -2,6 +2,18 @@
 
 更新日期为 2026-08-24。状态依据当前源码、已有测试和本轮可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
 
+## 3.0 当前真实限制
+
+- 3.0 已部署，catalog 0033、0034、DocumentRevision/Evidence backfill、registry seed、Claim shadow scheduling、Projection reconciliation 和公网 smoke 已执行。生产 readiness 为 3.0.0，pending migration 为 0。
+- 真实馆藏没有可用的 Claim gold judgment，也没有当前可消费 Claim demand 的 LLM executor。21 个 Claim shadow demand 正确等待，DerivedClaim 仍为 0。因此默认排序不能切换；Opposing Evidence Recall、Qualification Recall、Attribution Error Rate 和 stance accuracy 没有生产前后数字，公网当前只实测到 direct 组。
+- 生产 inventory 中存在 TheorySchool 到 archived KnowledgeNode 的可疑 legacy mapping。目标未发布且名称身份不匹配，migration 没有复制三条旧理论关系。该映射和关系 parity 需要研究者人工确认，不能自动改成另一个理论身份。
+- 真实 RTX 4070 worker 当前不在线。协议、权限、heartbeat、lease 与生产离线等待已验证；真实在线领取、模型输出质量和 reconnect 恢复仍待 Laptop 与专用 credential 可用后核实。
+- Processing Center 当前显示 6 个 optional Provider 降级、1 项缺失能力、21 个等待任务，blocking count 为 0，stale Projection 为 0。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
+- 8 个 DocumentRevision 已回填，其中《社会学的基本概念》当前没有可回填 Passage，因此 EvidenceSpan 为 0；另有一条 Work 标题为空。相关文档质量已形成 critical page 信息，需要后续馆藏清理，不应通过虚构 Evidence 或重建 Page 解决。
+- 3.0 兼容表暂不删除。TheorySchool、legacy Concept、WorkKnowledgeRelation 和旧 identity adapter 只有在 mapping parity、零旧写调用和观察期完成后才可退役。
+- 普通 non-superuser Editor 的生产写入旅程仍需在不创建临时高权限账户的前提下验证。自动化覆盖 Editor capability、Revision 和发布，生产未写入测试馆藏、未接受 Candidate，也未修改已发布 Canonical。
+- 两页选择性 OCR、已发布 Theory 的生产 Draft Revision、CuratedClaim 发布到真实 Work 页、Ask 登录后 Answer Composer 和 4070 在线领取均未对正式馆藏做写入 smoke。接口、权限和增量失效已有自动化，但生产状态继续标为待核实。
+
 ## 2.9.2 已解决项与剩余限制
 
 - 2.9.2 已部署公网。catalog 0032 的 PostgreSQL 16 rehearsal、正式 migration、统一 API/Worker/Beat、Web、容器内 HTTP readiness、Cloudflare、队列、日志、顺序语义检索、Reader Range、公网页面和稳定性观察均已有生产证据。该发布门槛已关闭。

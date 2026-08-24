@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 import uuid
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -178,7 +179,7 @@ def enqueue_query_lexicon_reconciliation(*, actor=None) -> ProcessingJob:
         lambda: run_query_lexicon_reconciliation.apply_async(
             args=[str(job.id), task_id],
             task_id=task_id,
-            queue="query_lexicon",
+            queue=settings.QUERY_LEXICON_TASK_QUEUE,
         )
     )
     return job

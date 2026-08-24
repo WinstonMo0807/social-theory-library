@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { AskLibraryLink } from "@/components/ask-library-link";
+import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { SaveTopicButton } from "@/components/save-topic-button";
 import { ArchitecturalImage, BookCard, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
 import { loadTopic } from "@/lib/server-api";
@@ -68,6 +69,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
           <div><Users size={23} /><span>关联学者</span><strong>{scholars.length} 位</strong></div>
           <SaveTopicButton topicId={topic.id} />
         </section>
+
+        <CuratedClaimSections groups={topic.curatedClaims} />
 
         <div className="topic-problem-layout">
           <div className="topic-problem-main">

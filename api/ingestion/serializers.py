@@ -803,6 +803,10 @@ class TheoryAssignmentSerializer(serializers.Serializer):
     evidence_text = serializers.CharField(required=False, allow_blank=True)
 
 
+class KnowledgeNodeAssignmentSerializer(TheoryAssignmentSerializer):
+    """Normalized theory-tradition assignment accepted by metadata review."""
+
+
 class SubdisciplineAssignmentSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     strength = serializers.ChoiceField(choices=("high", "medium", "low"), default="medium")
@@ -865,6 +869,16 @@ class MetadataReviewSerializer(serializers.Serializer):
         default=list,
     )
     theory_assignments = TheoryAssignmentSerializer(many=True, required=False, default=list)
+    knowledge_node_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list,
+    )
+    knowledge_node_assignments = KnowledgeNodeAssignmentSerializer(
+        many=True,
+        required=False,
+        default=list,
+    )
     topics = serializers.ListField(
         child=serializers.CharField(max_length=240),
         required=False,
@@ -894,6 +908,13 @@ class MetadataReviewSerializer(serializers.Serializer):
         default=list,
     )
     retry_publication = serializers.BooleanField(default=True)
+
+    def validate_theory_schools(self, value):
+        if any(str(name or "").strip() for name in value):
+            raise serializers.ValidationError(
+                "按名称新建 TheorySchool 的兼容写入已经退役。请先在 Knowledge Studio 建立或确认理论传统，再提交规范节点。"
+            )
+        return value
 
 
 class WithdrawSerializer(serializers.Serializer):

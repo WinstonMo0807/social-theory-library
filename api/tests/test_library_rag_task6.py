@@ -111,13 +111,13 @@ def test_library_qa_profile_is_independent_from_metadata_model():
 
 
 @pytest.mark.django_db
-def test_runtime_profiles_are_admin_only_audited_and_secret_safe(api_client, reader_user, admin_user):
+def test_runtime_profiles_are_superadmin_only_audited_and_secret_safe(api_client, reader_user, superadmin_user):
     with override_settings(AI_API_KEY="must-never-be-returned"):
         api_client.force_authenticate(reader_user)
         denied = api_client.get("/api/reading/admin/ai-runtime-profiles/")
         assert denied.status_code == 403
 
-        api_client.force_authenticate(admin_user)
+        api_client.force_authenticate(superadmin_user)
         current = api_client.get("/api/reading/admin/ai-runtime-profiles/")
         assert current.status_code == 200
         assert "must-never-be-returned" not in str(current.data)
@@ -133,7 +133,7 @@ def test_runtime_profiles_are_admin_only_audited_and_secret_safe(api_client, rea
     assert "must-never-be-returned" not in str(saved.data)
     assert SiteSetting.objects.get(key="ai_runtime_profiles").public is False
     audit = AuditEvent.objects.get(action="ai_runtime_profiles_update")
-    assert audit.actor_id == admin_user.id
+    assert audit.actor_id == superadmin_user.id
     assert audit.request_id == "task6-admin-test"
     assert "must-never-be-returned" not in str(audit.before) + str(audit.after)
 

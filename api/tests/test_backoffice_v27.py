@@ -3,6 +3,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from catalog.models import KnowledgeNode, NewAuthorityCandidate, Person, UnknownEntityObservation, Work
+from common.capabilities import Capability, SUPERADMIN_ONLY_CAPABILITIES, capability_snapshot
 from ingestion.models import ProcessingJob
 
 
@@ -31,6 +32,95 @@ def test_capability_contract_is_exposed(api_client):
     assert "can_view_semantic_index" in response.data["capabilities"]
     assert "can_manage_query_lexicon" not in response.data["capabilities"]
     assert "can_manage_semantic_index" not in response.data["capabilities"]
+
+
+def test_editor_can_complete_single_editorial_workflow_without_system_privileges():
+    editor = User.objects.create_user(
+        username="v30-editor@example.org",
+        email="v30-editor@example.org",
+        display_name="3.0 编辑",
+        role=User.Role.EDITOR,
+        password="Correct-Horse-Battery-2026",
+    )
+
+    snapshot = capability_snapshot(editor)
+    capabilities = set(snapshot.capabilities)
+
+    assert snapshot.access_level == "editor"
+    assert {
+        Capability.UPLOAD,
+        Capability.EDIT_METADATA,
+        Capability.EDIT_DRAFT_AUTHORITY,
+        Capability.CREATE_AUTHORITY,
+        Capability.REVIEW_CANDIDATE,
+        Capability.PUBLISH_WORK,
+        Capability.PUBLISH_AUTHORITY,
+        Capability.RUN_ENRICHMENT,
+    } <= capabilities
+    assert capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
+
+
+def test_reviewer_compatibility_and_superadmin_only_boundary_are_preserved():
+    reviewer = User.objects.create_user(
+        username="v30-reviewer@example.org",
+        email="v30-reviewer@example.org",
+        display_name="兼容审核者",
+        role=User.Role.REVIEWER,
+        password="Correct-Horse-Battery-2026",
+    )
+    admin = _admin()
+    superadmin = User.objects.create_superuser(
+        username="v30-superadmin@example.org",
+        email="v30-superadmin@example.org",
+        password="Correct-Horse-Battery-2026",
+    )
+
+    reviewer_capabilities = set(capability_snapshot(reviewer).capabilities)
+    admin_capabilities = set(capability_snapshot(admin).capabilities)
+    superadmin_snapshot = capability_snapshot(superadmin)
+    superadmin_capabilities = set(superadmin_snapshot.capabilities)
+
+    assert Capability.REVIEW_CANDIDATE in reviewer_capabilities
+    assert Capability.PUBLISH_WORK not in reviewer_capabilities
+    assert Capability.PUBLISH_AUTHORITY not in reviewer_capabilities
+    assert reviewer_capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
+    assert admin_capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
+    assert superadmin_snapshot.access_level == "superadmin"
+    assert SUPERADMIN_ONLY_CAPABILITIES <= superadmin_capabilities
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "/api/auth/users/",
+        "/api/distribution/providers/",
+        "/api/distribution/backups/",
+        "/api/reading/admin/ai-runtime-profiles/",
+    ],
+)
+def test_editor_and_ordinary_admin_cannot_cross_superadmin_boundary(url):
+    editor = User.objects.create_user(
+        username=f"editor-{url.replace('/', '-')}@example.org",
+        email=f"editor-{url.replace('/', '-')}@example.org",
+        role=User.Role.EDITOR,
+        password="Correct-Horse-Battery-2026",
+    )
+    admin = _admin()
+    superadmin = User.objects.create_superuser(
+        username=f"super-{url.replace('/', '-')}@example.org",
+        email=f"super-{url.replace('/', '-')}@example.org",
+        password="Correct-Horse-Battery-2026",
+    )
+    client = APIClient()
+
+    client.force_authenticate(editor)
+    assert client.get(url).status_code == 403
+
+    client.force_authenticate(admin)
+    assert client.get(url).status_code == 403
+
+    client.force_authenticate(superadmin)
+    assert client.get(url).status_code == 200
 
 
 def test_query_lexicon_workspace_is_readable_without_initialized_state(api_client):

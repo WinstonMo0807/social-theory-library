@@ -5,6 +5,7 @@ from typing import Any
 
 from .context import ResearchContext
 from .contracts import RESEARCH_CONTRACTS, ResearchFieldContract
+from .task_profiles import profile_key_for_contract, resolve_task_profile
 
 
 RESEARCH_PLANNER_VERSION = "research-planner-v1"
@@ -34,6 +35,12 @@ class ResearchTask:
     changed_fields: tuple[str, ...]
     context_fingerprint: str
     contract_version: str
+    task_profile_key: str
+    task_profile_version: int
+    retrieval_profile: str
+    minimum_evidence_policy: dict[str, Any]
+    prompt_key: str
+    required_capability: str
 
     def payload(self) -> dict[str, Any]:
         value = asdict(self)
@@ -189,6 +196,12 @@ class ResearchPlanner:
             providers = ["local", "query_lexicon", "pdf"]
             if contract.implementation in {"field_enrichment", "entity_discovery", "editorial_discovery", "evidence_only"}:
                 providers.extend(["structured", "searxng", "safe_web_fetcher"])
+            task_profile_key = profile_key_for_contract(
+                step=contract.step,
+                field=contract.field,
+                implementation=contract.implementation,
+            )
+            task_profile = resolve_task_profile(task_profile_key)
             tasks.append(
                 ResearchTask(
                     step=contract.step,
@@ -206,6 +219,12 @@ class ResearchPlanner:
                     changed_fields=context.changed_fields,
                     context_fingerprint=context.fingerprint,
                     contract_version=contract.version,
+                    task_profile_key=task_profile_key,
+                    task_profile_version=int(task_profile.get("version") or 1),
+                    retrieval_profile=str(task_profile.get("retrieval_profile") or "research_evidence"),
+                    minimum_evidence_policy=dict(task_profile.get("minimum_evidence_policy") or {}),
+                    prompt_key=str(task_profile.get("prompt_key") or ""),
+                    required_capability=str(task_profile.get("required_capability") or ""),
                 )
             )
         tasks.sort(key=lambda row: (-row.priority, row.step, row.field, row.query))

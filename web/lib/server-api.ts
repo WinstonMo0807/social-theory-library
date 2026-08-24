@@ -6,6 +6,7 @@ import {
   type Scholar,
   type TheorySchool,
   type Work,
+  type CuratedWorkClaim,
 } from "./data";
 import { defaultSiteConfig, type SiteConfig } from "./site-config";
 import type { SearchContext } from "./search-context";
@@ -33,6 +34,16 @@ type ApiPerson = {
   biography?: string;
   scholar_slug?: string | null;
 };
+
+export type PublicCuratedClaim = Omit<CuratedWorkClaim, "kind"> & {
+  kind: "core_viewpoint" | "major_criticism" | "major_response" | "debate_position";
+  position: "direct" | "support" | "oppose" | "qualify";
+};
+
+export type PublicCuratedClaimGroups = Record<
+  "core_viewpoint" | "major_criticism" | "major_response",
+  PublicCuratedClaim[]
+>;
 
 export type ApiWork = {
   id: string;
@@ -71,6 +82,11 @@ export type ApiWork = {
       reader_href: string;
     }[];
   }[];
+  curated_claims?: {
+    core_viewpoint: import("./data").CuratedWorkClaim[];
+    major_criticism: import("./data").CuratedWorkClaim[];
+    major_response: import("./data").CuratedWorkClaim[];
+  };
   outline?: { index: number; printed_label: string; chapter_title: string }[];
 };
 
@@ -84,6 +100,7 @@ type ApiScholar = {
   featured_quote: string;
   quote_source?: string;
   works: ApiWork[];
+  curated_claims?: PublicCuratedClaimGroups;
   curated?: {
     essential_works: ApiWork[];
     key_concepts: Array<{
@@ -202,6 +219,7 @@ type ApiTopic = {
     printed_label: string;
     snippet: string;
   }[];
+  curated_claims?: PublicCuratedClaimGroups;
   curated?: {
     hero_caption: string;
     foundational_works: ApiWork[];
@@ -504,12 +522,59 @@ export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
     sort_order: number;
     status: string;
   }[];
+  subdiscipline_links: Array<{
+    id: string;
+    subdiscipline: {
+      id: string;
+      name: string;
+      foreign_name: string;
+      slug: string;
+      discipline_id: string;
+    };
+    is_primary: boolean;
+    relation_role: string;
+    source: string;
+    confidence: number;
+    sort_order: number;
+    status: string;
+  }>;
+  topic_links: Array<{
+    id: string;
+    topic: { id: string; name: string; slug: string };
+    relation_label: string;
+    source: string;
+    confidence: number;
+    sort_order: number;
+    status: string;
+  }>;
   definition: string;
   basic_propositions: string[];
   theoretical_boundary: string;
   direct_relations: NormalizedKnowledgeRelation[];
   work_groups: Record<string, TheoryWorkRelation[]>;
   evidence: TheoryEvidence[];
+  curated_claims: Record<
+    "core_viewpoint" | "major_criticism" | "major_response" | "debate_position",
+    Array<{
+      id: string;
+      kind: string;
+      kind_label: string;
+      title: string;
+      proposition: string;
+      editorial_note: string;
+      qualifiers: unknown[];
+      position: "direct" | "support" | "oppose" | "qualify";
+      evidence: Array<{
+        id: string;
+        text: string;
+        source: { work_title: string; authors: string[] };
+        locator: { page: number; printed_page_label: string };
+        reader_url: string;
+        claim_role: string;
+        claim_role_label: string;
+      }>;
+    }>
+  >;
   published_at: string | null;
 };
 
@@ -814,6 +879,98 @@ export type SemanticSearchPayload = {
   stage_timings_ms?: Record<string, number | null>;
   candidate_counts?: Record<string, number>;
   results: SemanticSearchResult[];
+};
+
+export type ViewpointStance =
+  | "direct"
+  | "support"
+  | "oppose"
+  | "qualify"
+  | "critique"
+  | "extend"
+  | "reframe";
+
+export type ViewpointSearchResult = {
+  id: string;
+  source_kind: "semantic_chunk" | "derived_claim" | string;
+  claim_id: string | null;
+  proposition: string;
+  stance: ViewpointStance;
+  stance_label: string;
+  stance_confidence: number;
+  stance_reasons: string[];
+  score: number;
+  authors: string[];
+  work: { id: string; title: string };
+  page: number;
+  printed_page_label: string;
+  evidence: {
+    id: string;
+    kind: "collection_text";
+    source: {
+      work_id: string;
+      work_title: string;
+      edition_id: string;
+      asset_id: string;
+      authors: string[];
+      document_revision_id: string;
+      document_revision: number;
+    };
+    text: string;
+    locator: {
+      page: number;
+      page_id: string;
+      printed_page_label: string;
+      start_offset: number;
+      end_offset: number;
+      bbox: unknown;
+      section: string;
+    };
+    quality: { score: number; stale: boolean; stale_reason: string };
+    provenance: Record<string, unknown>;
+    reader_url: string;
+    pdf_url: string;
+  };
+  reader_url: string;
+  pdf_url: string;
+  attribution: string;
+  claim_type: string;
+  quality_score: number;
+  importance_score?: number;
+  qualifiers?: unknown[];
+  ranking_source: "semantic_v2_baseline" | "claim_index_shadow" | string;
+};
+
+export type ViewpointSearchPayload = {
+  query: string;
+  query_claim: {
+    proposition: string;
+    subject: string;
+    predicate: string;
+    object: string;
+    polarity: string;
+    qualifiers: string[];
+    claim_type: string;
+  };
+  default_mode: "baseline" | "claim";
+  results: ViewpointSearchResult[];
+  groups: Record<ViewpointStance, ViewpointSearchResult[]>;
+  count: number;
+  work_count: number;
+  stance_counts: Record<ViewpointStance, number>;
+  engine: string;
+  search_version: string;
+  fallback_used: boolean;
+  fallback_reason: string;
+  notice: string;
+  service_unavailable?: boolean;
+  metadata: {
+    benchmark_gate_passed: boolean;
+    default_ranking: string;
+    claim_ranking_status: "shadow" | "promoted" | string;
+    evidence_span_validation_required: boolean;
+    cosine_similarity_used_for_stance: boolean;
+  };
 };
 
 export class ServerApiError extends Error {
@@ -1248,6 +1405,7 @@ export function adaptWork(value: ApiWork, index = 0): Work {
     theories: value.theories,
     topics: value.topics,
     theoryAssociations: value.theory_associations ?? [],
+    curatedClaims: value.curated_claims,
     outline: value.outline ?? [],
   };
 }
@@ -1510,6 +1668,7 @@ export type LibraryTopic = {
     snippet: string;
   }[];
   workCount: number;
+  curatedClaims: PublicCuratedClaimGroups;
   curated: {
     heroCaption: string;
     foundationalWorks: Work[];
@@ -1564,6 +1723,11 @@ function adaptTopic(payload: ApiTopic): LibraryTopic {
       snippet: passage.snippet,
     })),
     workCount: payload.work_count,
+    curatedClaims: payload.curated_claims ?? {
+      core_viewpoint: [],
+      major_criticism: [],
+      major_response: [],
+    },
     curated: {
       heroCaption: payload.curated?.hero_caption ?? "",
       foundationalWorks: (payload.curated?.foundational_works ?? []).map(adaptWork),
@@ -1637,6 +1801,11 @@ export async function loadTopicPage(
         featuredPassageReason: "",
         featuredPassageEvidence: {},
       },
+      curatedClaims: {
+        core_viewpoint: [],
+        major_criticism: [],
+        major_response: [],
+      },
     }];
     return directoryPage({ count: results.length, results }, page);
   }
@@ -1678,6 +1847,11 @@ export async function loadTopic(slug: string): Promise<LibraryTopic | null> {
             featuredPassageReason: "",
             featuredPassageEvidence: {},
           },
+          curatedClaims: {
+            core_viewpoint: [],
+            major_criticism: [],
+            major_response: [],
+          },
         }
       : null;
   }
@@ -1691,6 +1865,7 @@ export async function loadScholar(slug: string): Promise<{
   timeline: [string, string][];
   featuredQuote: string;
   quoteSource: string;
+  curatedClaims: PublicCuratedClaimGroups;
   curated: {
     essentialWorks: Work[];
     keyConcepts: Array<{
@@ -1732,6 +1907,11 @@ export async function loadScholar(slug: string): Promise<{
       timeline: payload.timeline ?? [],
       featuredQuote: payload.featured_quote ?? "",
       quoteSource: payload.quote_source ?? "",
+      curatedClaims: payload.curated_claims ?? {
+        core_viewpoint: [],
+        major_criticism: [],
+        major_response: [],
+      },
       curated: {
         essentialWorks: (payload.curated?.essential_works ?? []).map(adaptWork),
         keyConcepts: payload.curated?.key_concepts ?? [],
@@ -1753,6 +1933,11 @@ export async function loadScholar(slug: string): Promise<{
           timeline: [],
           featuredQuote: "",
           quoteSource: "",
+          curatedClaims: {
+            core_viewpoint: [],
+            major_criticism: [],
+            major_response: [],
+          },
           curated: {
             essentialWorks: [],
             keyConcepts: [],
@@ -1937,6 +2122,109 @@ export async function loadSemanticSearch(
       },
       results: [],
     };
+  }
+}
+
+function emptyViewpointGroups(): Record<ViewpointStance, ViewpointSearchResult[]> {
+  return {
+    direct: [],
+    support: [],
+    oppose: [],
+    qualify: [],
+    critique: [],
+    extend: [],
+    reframe: [],
+  };
+}
+
+function emptyViewpointCounts(): Record<ViewpointStance, number> {
+  return {
+    direct: 0,
+    support: 0,
+    oppose: 0,
+    qualify: 0,
+    critique: 0,
+    extend: 0,
+    reframe: 0,
+  };
+}
+
+function unavailableViewpointSearch(
+  query: string,
+  notice: string,
+  serviceUnavailable = false,
+): ViewpointSearchPayload {
+  const groups = emptyViewpointGroups();
+  return {
+    query,
+    query_claim: {
+      proposition: query,
+      subject: "",
+      predicate: "",
+      object: "",
+      polarity: "uncertain",
+      qualifiers: [],
+      claim_type: "assertion",
+    },
+    default_mode: "baseline",
+    results: [],
+    groups,
+    count: 0,
+    work_count: 0,
+    stance_counts: emptyViewpointCounts(),
+    engine: serviceUnavailable ? "unavailable" : "v2",
+    search_version: "v2",
+    fallback_used: false,
+    fallback_reason: serviceUnavailable ? "api_unavailable" : "",
+    notice,
+    service_unavailable: serviceUnavailable,
+    metadata: {
+      benchmark_gate_passed: false,
+      default_ranking: "semantic_v2_baseline",
+      claim_ranking_status: "shadow",
+      evidence_span_validation_required: true,
+      cosine_similarity_used_for_stance: false,
+    },
+  };
+}
+
+export async function loadViewpointSearch(
+  query: string,
+  filters: SearchFilters = {},
+): Promise<ViewpointSearchPayload> {
+  if (query.trim().length < 2) {
+    return unavailableViewpointSearch(
+      query,
+      "输入一个完整的社会科学命题，系统会按直接、支持、相斥、限定和批评整理馆藏原文。",
+    );
+  }
+  const parameters = new URLSearchParams({ q: query.trim() });
+  [
+    ["document_type", filters.documentType],
+    ["language", filters.language],
+    ["author", filters.author],
+    ["year", filters.year],
+    ["theory", filters.theory],
+    ["topic", filters.topic],
+    ["concept", filters.concept],
+    ["access", filters.access],
+  ].forEach(([name, values]) => {
+    (values as string[] | undefined)?.forEach((value) => parameters.append(name as string, value));
+  });
+  if (filters.pageSize) parameters.set("limit", String(filters.pageSize));
+  if (filters.workId) parameters.set("work_id", filters.workId);
+  if (filters.maxPerWork !== undefined) parameters.set("max_per_work", String(filters.maxPerWork));
+  if (filters.sort) parameters.set("sort", filters.sort);
+  try {
+    return await serverRequest<ViewpointSearchPayload>(
+      `/catalog/viewpoint-search/?${parameters.toString()}`,
+    );
+  } catch {
+    return unavailableViewpointSearch(
+      query,
+      "观点检索暂时无法连接，系统没有生成替代结果。原文检索和在线阅读仍可继续使用。",
+      true,
+    );
   }
 }
 

@@ -11,12 +11,15 @@ from common.capabilities import Capability, has_capability
 
 from catalog.models import (
     Asset,
+    CuratedClaim,
     Discipline,
     Edition,
     EvidenceSnippet,
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
+    KnowledgeNodeSubdiscipline,
+    KnowledgeNodeTopic,
     KnowledgeNodeMergeRecord,
     KnowledgeNodeVersion,
     KnowledgeRelation,
@@ -27,9 +30,11 @@ from catalog.models import (
     ReadingPathItem,
     ReadingPathStage,
     RelationReviewStatus,
+    Subdiscipline,
     TheoryReviewTask,
     TheoryTimelineEvent,
     TimelineEventRelation,
+    Topic,
     Work,
     WorkNodeRelation,
 )
@@ -39,6 +44,7 @@ from catalog.services.relation_registry import (
     relation_policy,
     relation_would_create_cycle,
 )
+from catalog.services.evidence_envelope import public_curated_claim_groups
 
 
 def _media_url(request, field):
@@ -133,6 +139,96 @@ class KnowledgeNodeDisciplineSerializer(serializers.ModelSerializer):
             "status",
         )
         read_only_fields = ("id",)
+
+    def validate_status(self, value):
+        request = self.context.get("request")
+        if value in {"published", "archived"} and not has_capability(
+            getattr(request, "user", None),
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError("只有管理员可以发布或下线节点学科关系。")
+        return value
+
+
+class KnowledgeNodeSubdisciplineSerializer(serializers.ModelSerializer):
+    subdiscipline = serializers.SerializerMethodField()
+    subdiscipline_id = serializers.PrimaryKeyRelatedField(
+        source="subdiscipline",
+        queryset=Subdiscipline.objects.all(),
+        write_only=True,
+    )
+
+    class Meta:
+        model = KnowledgeNodeSubdiscipline
+        fields = (
+            "id",
+            "subdiscipline",
+            "subdiscipline_id",
+            "is_primary",
+            "relation_role",
+            "source",
+            "confidence",
+            "sort_order",
+            "status",
+        )
+        read_only_fields = ("id",)
+
+    def get_subdiscipline(self, obj):
+        return {
+            "id": str(obj.subdiscipline_id),
+            "name": obj.subdiscipline.name,
+            "foreign_name": obj.subdiscipline.foreign_name,
+            "slug": obj.subdiscipline.slug,
+            "discipline_id": str(obj.subdiscipline.discipline_id),
+        }
+
+    def validate_status(self, value):
+        request = self.context.get("request")
+        if value in {"published", "archived"} and not has_capability(
+            getattr(request, "user", None),
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError("只有管理员可以发布或下线节点子学科关系。")
+        return value
+
+
+class KnowledgeNodeTopicSerializer(serializers.ModelSerializer):
+    topic = serializers.SerializerMethodField()
+    topic_id = serializers.PrimaryKeyRelatedField(
+        source="topic",
+        queryset=Topic.objects.all(),
+        write_only=True,
+    )
+
+    class Meta:
+        model = KnowledgeNodeTopic
+        fields = (
+            "id",
+            "topic",
+            "topic_id",
+            "relation_label",
+            "source",
+            "confidence",
+            "sort_order",
+            "status",
+        )
+        read_only_fields = ("id",)
+
+    def get_topic(self, obj):
+        return {
+            "id": str(obj.topic_id),
+            "name": obj.topic.name,
+            "slug": obj.topic.slug,
+        }
+
+    def validate_status(self, value):
+        request = self.context.get("request")
+        if value in {"published", "archived"} and not has_capability(
+            getattr(request, "user", None),
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError("只有管理员可以发布或下线节点主题关系。")
+        return value
 
 
 class PersonNodeSerializer(serializers.ModelSerializer):
@@ -399,25 +495,51 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
 class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
     aliases = KnowledgeNodeAliasSerializer(many=True, read_only=True)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, read_only=True)
+    subdiscipline_links = serializers.SerializerMethodField()
+    topic_links = serializers.SerializerMethodField()
     definition = serializers.CharField()
     basic_propositions = serializers.JSONField()
     theoretical_boundary = serializers.CharField()
     direct_relations = serializers.SerializerMethodField()
     work_groups = serializers.SerializerMethodField()
     evidence = serializers.SerializerMethodField()
+    curated_claims = serializers.SerializerMethodField()
 
     class Meta(KnowledgeNodeListSerializer.Meta):
         fields = KnowledgeNodeListSerializer.Meta.fields + (
             "aliases",
             "discipline_links",
+            "subdiscipline_links",
+            "topic_links",
             "definition",
             "basic_propositions",
             "theoretical_boundary",
             "direct_relations",
             "work_groups",
             "evidence",
+            "curated_claims",
             "published_at",
         )
+
+    def get_subdiscipline_links(self, obj):
+        rows = [
+            row
+            for row in obj.subdiscipline_links.all()
+            if row.status == "published"
+        ]
+        return KnowledgeNodeSubdisciplineSerializer(
+            rows,
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_topic_links(self, obj):
+        rows = [row for row in obj.topic_links.all() if row.status == "published"]
+        return KnowledgeNodeTopicSerializer(
+            rows,
+            many=True,
+            context=self.context,
+        ).data
 
     def get_direct_relations(self, obj):
         queryset = KnowledgeRelation.objects.filter(
@@ -451,10 +573,27 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
         ).select_related("work", "file", "work_node_relation", "knowledge_relation")[:40]
         return EvidenceSnippetSerializer(queryset, many=True, context=self.context).data
 
+    def get_curated_claims(self, obj):
+        return public_curated_claim_groups(
+            target_field="node",
+            target_id=obj.id,
+            allowed_kinds=(
+                CuratedClaim.Kind.CORE_VIEWPOINT,
+                CuratedClaim.Kind.MAJOR_CRITICISM,
+                CuratedClaim.Kind.MAJOR_RESPONSE,
+                CuratedClaim.Kind.DEBATE_POSITION,
+            ),
+        )
+
 
 class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)
+    subdiscipline_links = KnowledgeNodeSubdisciplineSerializer(
+        many=True,
+        required=False,
+    )
+    topic_links = KnowledgeNodeTopicSerializer(many=True, required=False)
     primary_discipline_data = DisciplineCompactSerializer(source="primary_discipline", read_only=True)
     work_count = serializers.SerializerMethodField()
     relation_count = serializers.SerializerMethodField()
@@ -485,6 +624,8 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             "cover_url",
             "aliases",
             "discipline_links",
+            "subdiscipline_links",
+            "topic_links",
             "work_count",
             "relation_count",
             "created_by",
@@ -512,6 +653,34 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        if self.instance is not None:
+            from catalog.services.canonical_identity import (
+                INDEPENDENT_IDENTITY_NODE_TYPES,
+            )
+
+            if self.instance.node_type in INDEPENDENT_IDENTITY_NODE_TYPES:
+                raise serializers.ValidationError(
+                    {
+                        "node_type": (
+                            "该旧 KnowledgeNode 身份已进入迁移只读状态。"
+                            "请编辑独立的 Discipline、Subdiscipline 或 Topic。"
+                        )
+                    }
+                )
+        changing_identity_type = self.instance is None or (
+            "node_type" in attrs
+            and attrs["node_type"] != getattr(self.instance, "node_type", None)
+        )
+        if changing_identity_type:
+            from catalog.services.canonical_identity import (
+                CanonicalIdentityError,
+                validate_canonical_node_type,
+            )
+
+            try:
+                validate_canonical_node_type(attrs.get("node_type", ""))
+            except CanonicalIdentityError as exc:
+                raise serializers.ValidationError({"node_type": str(exc)}) from exc
         parent = attrs.get("parent", getattr(self.instance, "parent", None))
         if parent is None:
             return attrs
@@ -542,10 +711,39 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         for row in rows:
             KnowledgeNodeDiscipline.objects.create(node=node, **row)
 
+    def _sync_subdisciplines(self, node, rows):
+        node.subdiscipline_links.all().delete()
+        actor = getattr(self.context.get("request"), "user", None)
+        now = timezone.now()
+        for row in rows:
+            status_value = row.get("status", "pending")
+            KnowledgeNodeSubdiscipline.objects.create(
+                node=node,
+                reviewed_by=actor if status_value == "published" else None,
+                reviewed_at=now if status_value == "published" else None,
+                **row,
+            )
+
+    def _sync_topics(self, node, rows):
+        node.topic_links.all().delete()
+        actor = getattr(self.context.get("request"), "user", None)
+        now = timezone.now()
+        for row in rows:
+            status_value = row.get("status", "pending")
+            KnowledgeNodeTopic.objects.create(
+                node=node,
+                reviewed_by=actor if status_value == "published" else None,
+                reviewed_at=now if status_value == "published" else None,
+                **row,
+            )
+
     @transaction.atomic
     def create(self, validated_data):
+        changed_fields = list(validated_data)
         aliases = validated_data.pop("aliases", [])
         discipline_links = validated_data.pop("discipline_links", [])
+        subdiscipline_links = validated_data.pop("subdiscipline_links", [])
+        topic_links = validated_data.pop("topic_links", [])
         request = self.context.get("request")
         actor = getattr(request, "user", None)
         validated_data["created_by"] = actor
@@ -555,15 +753,36 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         node = super().create(validated_data)
         self._sync_aliases(node, aliases)
         self._sync_disciplines(node, discipline_links)
+        self._sync_subdisciplines(node, subdiscipline_links)
+        self._sync_topics(node, topic_links)
         record_node_version(node, actor, "建立理论节点")
+        if node.status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="knowledge_node",
+                target=node,
+                change_kind="publish",
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return node
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        changed_fields = list(validated_data)
         aliases = validated_data.pop("aliases", None)
         discipline_links = validated_data.pop("discipline_links", None)
+        subdiscipline_links = validated_data.pop("subdiscipline_links", None)
+        topic_links = validated_data.pop("topic_links", None)
         request = self.context.get("request")
         actor = getattr(request, "user", None)
+        previous_status = instance.status
         new_status = validated_data.get("status", instance.status)
         if new_status == "published" and instance.status != "published":
             validated_data["reviewed_by"] = actor
@@ -575,7 +794,28 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             self._sync_aliases(node, aliases)
         if discipline_links is not None:
             self._sync_disciplines(node, discipline_links)
+        if subdiscipline_links is not None:
+            self._sync_subdisciplines(node, subdiscipline_links)
+        if topic_links is not None:
+            self._sync_topics(node, topic_links)
         record_node_version(node, actor, self.context.get("change_note", "更新理论节点"))
+        if node.status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="knowledge_node",
+                target=node,
+                change_kind=(
+                    "publish" if previous_status != "published" else "update"
+                ),
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return node
 
 
@@ -583,13 +823,24 @@ class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
     def validate_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value in {"published", "rejected"} and not has_capability(user, Capability.REVIEW_CANDIDATE):
-            raise serializers.ValidationError("只有管理员或审核者可以确认理论关系。")
+        if value == "published" and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError("当前账户不能发布理论关系。")
+        if value == "rejected" and not has_capability(
+            user,
+            Capability.REVIEW_CANDIDATE,
+        ):
+            raise serializers.ValidationError("当前账户不能拒绝理论关系候选。")
         if value == "archived" and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以下线理论关系。")
         return value
 
+    @transaction.atomic
     def create(self, validated_data):
+        changed_fields = list(validated_data)
+        request = self.context.get("request")
         actor = getattr(self.context.get("request"), "user", None)
         validated_data["created_by"] = actor
         if validated_data.get("status") == "published":
@@ -597,9 +848,28 @@ class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
             validated_data["published_at"] = timezone.now()
         relation = super().create(validated_data)
         record_relation_version(relation, actor, "建立理论关系")
+        if relation.status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="knowledge_relation",
+                target=relation,
+                change_kind="publish",
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return relation
 
+    @transaction.atomic
     def update(self, instance, validated_data):
+        changed_fields = list(validated_data)
+        previous_status = instance.status
+        request = self.context.get("request")
         actor = getattr(self.context.get("request"), "user", None)
         status_value = validated_data.get("status", instance.status)
         if status_value == "published" and instance.status != "published":
@@ -607,6 +877,27 @@ class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
             validated_data["published_at"] = timezone.now()
         relation = super().update(instance, validated_data)
         record_relation_version(relation, actor, "更新理论关系")
+        if relation.status in {"published", "archived"}:
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            if relation.status == "archived":
+                change_kind = "withdraw"
+            elif previous_status != "published":
+                change_kind = "publish"
+            else:
+                change_kind = "update"
+            record_admin_canonical_change(
+                object_type="knowledge_relation",
+                target=relation,
+                change_kind=change_kind,
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return relation
 
 
@@ -780,88 +1071,15 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             ReadingPathItem.objects.create(reading_path=path, **row)
 
     def _sync_stage_groups(self, path, groups):
-        existing_stages = {str(stage.id): stage for stage in path.stages.select_for_update()}
-        normalized_groups = []
-        work_ids = []
-        for stage_position, source_group in enumerate(groups):
-            group = dict(source_group or {})
-            name = str(group.get("name") or "").strip()
-            if not name:
-                raise serializers.ValidationError({"stage_groups": ["每个阶段都需要名称。"]})
-            items = list(group.get("items") or [])
-            normalized_items = []
-            for item_position, source_item in enumerate(items):
-                item = dict(source_item or {})
-                node_id = item.get("node") or None
-                work_id = item.get("work") or None
-                if int(bool(node_id)) + int(bool(work_id)) != 1:
-                    raise serializers.ValidationError(
-                        {"stage_groups": ["每个路径项目必须且只能关联一个理论节点或馆藏作品。"]}
-                    )
-                if work_id:
-                    work_ids.append(str(work_id))
-                normalized_items.append(
-                    {
-                        "node_id": node_id,
-                        "work_id": work_id,
-                        "recommendation_reason": str(item.get("recommendation_reason") or ""),
-                        "position": int(item.get("position", item_position)),
-                        "is_required": bool(item.get("is_required")),
-                        "editorial_note": str(item.get("editorial_note") or ""),
-                    }
-                )
-            normalized_groups.append(
-                {
-                    "id": str(group.get("id") or ""),
-                    "name": name,
-                    "description": str(group.get("description") or ""),
-                    "position": int(group.get("position", stage_position)),
-                    "items": normalized_items,
-                }
-            )
-        if len(work_ids) != len(set(work_ids)):
-            raise serializers.ValidationError(
-                {"stage_groups": ["同一作品在一条阅读路径中只能出现一次。"]}
-            )
+        from catalog.services.reading_paths import (
+            ReadingPathStructureError,
+            sync_reading_path_stage_groups,
+        )
 
-        path.items.all().delete()
-        retained_stage_ids = []
-        reading_order = 0
-        for group in normalized_groups:
-            stage = existing_stages.get(group["id"])
-            if group["id"] and stage is None:
-                raise serializers.ValidationError(
-                    {"stage_groups": ["阶段已被其他管理员删除，请刷新后重试。"]}
-                )
-            if stage is None:
-                stage = ReadingPathStage.objects.create(
-                    reading_path=path,
-                    name=group["name"],
-                    description=group["description"],
-                    position=group["position"],
-                )
-            else:
-                stage.name = group["name"]
-                stage.description = group["description"]
-                stage.position = group["position"]
-                stage.save(update_fields=["name", "description", "position", "updated_at"])
-            retained_stage_ids.append(stage.id)
-            for item in sorted(group["items"], key=lambda row: row["position"]):
-                ReadingPathItem.objects.create(
-                    reading_path=path,
-                    stage=stage,
-                    stage_name=stage.name,
-                    stage_description=stage.description,
-                    node_id=item["node_id"],
-                    work_id=item["work_id"],
-                    recommendation_reason=item["recommendation_reason"],
-                    position=item["position"],
-                    reading_order=reading_order,
-                    is_required=item["is_required"],
-                    editorial_note=item["editorial_note"],
-                )
-                reading_order += 1
-        path.stages.exclude(pk__in=retained_stage_ids).delete()
+        try:
+            sync_reading_path_stage_groups(path, groups)
+        except ReadingPathStructureError as exc:
+            raise serializers.ValidationError({"stage_groups": [str(exc)]}) from exc
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -890,6 +1108,7 @@ class ReadingPathSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        changed_fields = list(validated_data)
         validated_data.pop("expected_updated_at", None)
         stage_groups = validated_data.pop("stage_groups", None)
         items = validated_data.pop("items", [])
@@ -903,14 +1122,35 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             self._sync_stage_groups(path, stage_groups)
         else:
             self._sync_items(path, items)
+        if path.status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="reading_path",
+                target=path,
+                change_kind="publish",
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    self.context.get("request").headers.get(
+                        "Idempotency-Key", ""
+                    )
+                    if self.context.get("request")
+                    else ""
+                ),
+            )
         return path
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        changed_fields = list(validated_data)
         expected_updated_at = validated_data.pop("expected_updated_at", None)
         stage_groups = validated_data.pop("stage_groups", None)
         instance = ReadingPath.objects.select_for_update().get(pk=instance.pk)
         request = self.context.get("request")
+        previous_status = instance.status
         if instance.status in {"published", "archived"} and not has_capability(
             getattr(request, "user", None),
             Capability.PUBLISH_AUTHORITY,
@@ -930,6 +1170,23 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             self._sync_stage_groups(path, stage_groups)
         elif items is not None:
             self._sync_items(path, items)
+        if path.status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="reading_path",
+                target=path,
+                change_kind=(
+                    "publish" if previous_status != "published" else "update"
+                ),
+                changed_fields=changed_fields,
+                actor=actor,
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return path
 
 

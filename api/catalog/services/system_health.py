@@ -720,6 +720,8 @@ CAPABILITY_LABELS = {
 
 
 def functional_health_snapshot() -> dict[str, Any]:
+    from catalog.services.processing_center_diagnostics import processing_center_diagnostics
+
     latest = _latest_runs()
     open_incidents = list(HealthIncident.objects.filter(status__in=[HealthIncident.Status.OPEN, HealthIncident.Status.RECOVERING]).order_by("-severity", "-last_seen_at")[:100])
     incidents_by_capability: dict[str, list[HealthIncident]] = defaultdict(list)
@@ -810,6 +812,7 @@ def functional_health_snapshot() -> dict[str, Any]:
         ],
         "probe_count": len(HEALTH_CHECKS.all()),
         "page_load_performs_live_probes": False,
+        "diagnostics": processing_center_diagnostics(),
     }
 
 

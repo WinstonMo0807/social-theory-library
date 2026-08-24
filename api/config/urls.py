@@ -58,6 +58,7 @@ urlpatterns = [
     path("api/health/", health),
     path("api/ready/", ready),
     path("api/auth/", include("accounts.urls")),
+    path("api/capability-worker/", include("common.remote_worker_urls")),
     path("api/catalog/", include("catalog.urls")),
     path("api/ingestion/", include("ingestion.urls")),
     path("api/reading/", include("reading.urls")),

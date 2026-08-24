@@ -1,4 +1,4 @@
-from catalog.models import TheorySchool, Topic
+from catalog.models import RelationReviewStatus, Topic
 
 
 def publish_knowledge_object(target) -> None:
@@ -10,26 +10,15 @@ def publish_knowledge_object(target) -> None:
 
 def demote_orphaned_knowledge_objects(
     *,
-    theory_ids: list | tuple | set = (),
     topic_ids: list | tuple | set = (),
 ) -> None:
-    if theory_ids:
-        (
-            TheorySchool.objects.filter(
-                pk__in=theory_ids,
-                editorial_status="published",
-            )
-            .exclude(workknowledgerelation__approved=True)
-            .exclude(personknowledgerelation__approved=True)
-            .update(editorial_status="draft")
-        )
     if topic_ids:
         (
             Topic.objects.filter(
                 pk__in=topic_ids,
                 editorial_status="published",
             )
-            .exclude(workknowledgerelation__approved=True)
-            .exclude(personknowledgerelation__approved=True)
+            .exclude(work_relations__review_status=RelationReviewStatus.APPROVED)
+            .exclude(person_relations__review_status=RelationReviewStatus.APPROVED)
             .update(editorial_status="draft")
         )

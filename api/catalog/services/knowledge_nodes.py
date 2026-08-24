@@ -11,6 +11,8 @@ from catalog.models import (
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
+    KnowledgeNodeSubdiscipline,
+    KnowledgeNodeTopic,
     KnowledgeNodeMergeRecord,
     KnowledgeNodeVersion,
     KnowledgeRelation,
@@ -22,6 +24,7 @@ from catalog.models import (
     TimelineEventRelation,
     WorkNodeRelation,
 )
+from catalog.services.canonical_mutations import record_admin_canonical_change
 
 
 def _user_id(user):
@@ -64,6 +67,44 @@ def node_snapshot(node: KnowledgeNode) -> dict:
                 "discipline_id",
                 "relation_type",
                 "discipline_specific_summary",
+                "sort_order",
+                "status",
+            )
+        ],
+        "subdiscipline_links": [
+            {
+                "subdiscipline_id": str(row["subdiscipline_id"]),
+                "is_primary": row["is_primary"],
+                "relation_role": row["relation_role"],
+                "source": row["source"],
+                "confidence": row["confidence"],
+                "sort_order": row["sort_order"],
+                "status": row["status"],
+            }
+            for row in node.subdiscipline_links.order_by("sort_order").values(
+                "subdiscipline_id",
+                "is_primary",
+                "relation_role",
+                "source",
+                "confidence",
+                "sort_order",
+                "status",
+            )
+        ],
+        "topic_links": [
+            {
+                "topic_id": str(row["topic_id"]),
+                "relation_label": row["relation_label"],
+                "source": row["source"],
+                "confidence": row["confidence"],
+                "sort_order": row["sort_order"],
+                "status": row["status"],
+            }
+            for row in node.topic_links.order_by("sort_order").values(
+                "topic_id",
+                "relation_label",
+                "source",
+                "confidence",
                 "sort_order",
                 "status",
             )
@@ -124,6 +165,8 @@ def merge_preview(source: KnowledgeNode) -> dict:
     return {
         "aliases": source.aliases.count(),
         "discipline_links": source.discipline_links.count(),
+        "subdiscipline_links": source.subdiscipline_links.count(),
+        "topic_links": source.topic_links.count(),
         "work_relations": source.work_relations.count(),
         "person_relations": source.person_relations.count(),
         "knowledge_relations": KnowledgeRelation.objects.filter(
@@ -207,6 +250,41 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         )
         if created:
             created_ids["KnowledgeNodeDiscipline"].append(str(copied.id))
+
+    for link in source.subdiscipline_links.all():
+        copied, created = KnowledgeNodeSubdiscipline.objects.get_or_create(
+            node=target,
+            subdiscipline=link.subdiscipline,
+            defaults={
+                "is_primary": link.is_primary,
+                "relation_role": link.relation_role,
+                "source": link.source,
+                "confidence": link.confidence,
+                "sort_order": link.sort_order,
+                "status": link.status,
+                "reviewed_by": link.reviewed_by,
+                "reviewed_at": link.reviewed_at,
+            },
+        )
+        if created:
+            created_ids["KnowledgeNodeSubdiscipline"].append(str(copied.id))
+
+    for link in source.topic_links.all():
+        copied, created = KnowledgeNodeTopic.objects.get_or_create(
+            node=target,
+            topic=link.topic,
+            defaults={
+                "relation_label": link.relation_label,
+                "source": link.source,
+                "confidence": link.confidence,
+                "sort_order": link.sort_order,
+                "status": link.status,
+                "reviewed_by": link.reviewed_by,
+                "reviewed_at": link.reviewed_at,
+            },
+        )
+        if created:
+            created_ids["KnowledgeNodeTopic"].append(str(copied.id))
 
     work_relation_map = {}
     for relation in source.work_relations.select_related("work"):
@@ -345,6 +423,34 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         },
         merged_by_id=_user_id(actor),
     )
+    record_admin_canonical_change(
+        object_type="knowledge_node",
+        target=source,
+        change_kind="withdraw",
+        changed_fields=["status", "published_at", "merged_into"],
+        actor=actor,
+        request_idempotency_key=f"knowledge-node-merge:{record.id}:source",
+    )
+    record_admin_canonical_change(
+        object_type="knowledge_node",
+        target=target,
+        change_kind="update",
+        changed_fields=[
+            "aliases",
+            "discipline_links",
+            "subdiscipline_links",
+            "topic_links",
+            "work_relations",
+            "person_relations",
+            "knowledge_relations",
+            "evidence",
+            "timeline_events",
+            "reading_path_items",
+            "legacy_mappings",
+        ],
+        actor=actor,
+        request_idempotency_key=f"knowledge-node-merge:{record.id}:target",
+    )
     return record
 
 
@@ -364,6 +470,8 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
         "WorkNodeRelation": WorkNodeRelation,
         "PersonNodeRelation": PersonNodeRelation,
         "KnowledgeNodeDiscipline": KnowledgeNodeDiscipline,
+        "KnowledgeNodeSubdiscipline": KnowledgeNodeSubdiscipline,
+        "KnowledgeNodeTopic": KnowledgeNodeTopic,
         "KnowledgeNodeAlias": KnowledgeNodeAlias,
     }
     for model_name in (
@@ -373,6 +481,8 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
         "WorkNodeRelation",
         "PersonNodeRelation",
         "KnowledgeNodeDiscipline",
+        "KnowledgeNodeSubdiscipline",
+        "KnowledgeNodeTopic",
         "KnowledgeNodeAlias",
     ):
         ids = created_ids.get(model_name, [])
@@ -396,4 +506,37 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
     record.rolled_back_at = timezone.now()
     record.rolled_back_by_id = _user_id(actor)
     record.save(update_fields=["rolled_back_at", "rolled_back_by", "updated_at"])
+    record_admin_canonical_change(
+        object_type="knowledge_node",
+        target=source,
+        change_kind=(
+            "publish"
+            if record.source_snapshot.get("status") == "published"
+            else "update"
+        ),
+        changed_fields=["status", "published_at", "merge_rollback"],
+        actor=actor,
+        request_idempotency_key=f"knowledge-node-merge-rollback:{record.id}:source",
+    )
+    record_admin_canonical_change(
+        object_type="knowledge_node",
+        target=target,
+        change_kind="update",
+        changed_fields=[
+            "aliases",
+            "discipline_links",
+            "subdiscipline_links",
+            "topic_links",
+            "work_relations",
+            "person_relations",
+            "knowledge_relations",
+            "evidence",
+            "timeline_events",
+            "reading_path_items",
+            "legacy_mappings",
+            "merge_rollback",
+        ],
+        actor=actor,
+        request_idempotency_key=f"knowledge-node-merge-rollback:{record.id}:target",
+    )
     return record

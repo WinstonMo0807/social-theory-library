@@ -195,12 +195,44 @@ REST_FRAMEWORK = {
         "semantic_search_user": os.getenv("SEMANTIC_SEARCH_USER_RATE", "120/min"),
         "library_qa": os.getenv("LIBRARY_QA_RATE", "30/hour"),
         "public_usage_event": os.getenv("PUBLIC_USAGE_EVENT_RATE", "120/min"),
+        "capability_worker": os.getenv("CAPABILITY_REMOTE_WORKER_RATE", "600/hour"),
     },
 }
 
 # Used only by the Web container when it renders public pages on the server.
 # Browser requests never receive this value. Short or empty values cannot bypass throttling.
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
+
+# Optional pull protocol for an opportunistic GPU worker.  The NAS remains the
+# system of record and never initiates a connection to the laptop.
+CAPABILITY_REMOTE_WORKER_ENABLED = env_bool("CAPABILITY_REMOTE_WORKER_ENABLED", False)
+CAPABILITY_REMOTE_WORKER_SHARED_SECRET = os.getenv(
+    "CAPABILITY_REMOTE_WORKER_SHARED_SECRET",
+    "",
+)
+CAPABILITY_REMOTE_WORKER_HEARTBEAT_TTL_SECONDS = max(
+    30,
+    min(int(os.getenv("CAPABILITY_REMOTE_WORKER_HEARTBEAT_TTL_SECONDS", "90")), 300),
+)
+CAPABILITY_REMOTE_WORKER_LEASE_SECONDS = max(
+    30,
+    min(int(os.getenv("CAPABILITY_REMOTE_WORKER_LEASE_SECONDS", "300")), 900),
+)
+CAPABILITY_REMOTE_WORKER_MAX_REQUEST_BYTES = max(
+    16 * 1024,
+    min(int(os.getenv("CAPABILITY_REMOTE_WORKER_MAX_REQUEST_BYTES", str(256 * 1024))), 1024 * 1024),
+)
+CAPABILITY_REMOTE_WORKER_MAX_JOB_TEXT_CHARS = max(
+    8_000,
+    min(int(os.getenv("CAPABILITY_REMOTE_WORKER_MAX_JOB_TEXT_CHARS", "120000")), 500_000),
+)
+
+# Promotion remains disabled unless a Superadmin activation backed by a
+# passing PostgreSQL benchmark run exists as well.
+VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED = env_bool(
+    "VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED",
+    False,
+)
 
 CACHE_URL = os.getenv("CACHE_URL", "")
 CACHES = {
@@ -257,6 +289,10 @@ CELERY_TASK_ROUTES = {
     "catalog.tasks.run_search_evaluation": {"queue": SEARCH_EVALUATION_TASK_QUEUE},
     "catalog.tasks.process_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
     "catalog.tasks.recover_query_lexicon_events": {"queue": QUERY_LEXICON_TASK_QUEUE},
+    "catalog.tasks.heartbeat_claim_executor": {"queue": "celery"},
+    "catalog.tasks.execute_claim_extraction_demand": {"queue": "celery"},
+    "catalog.tasks.execute_projection_demand": {"queue": "celery"},
+    "catalog.tasks.recover_projection_queue": {"queue": "celery"},
 }
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = None
@@ -268,6 +304,10 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "record-claim-executor-heartbeat": {
+        "task": "catalog.tasks.heartbeat_claim_executor",
+        "schedule": 30,
+    },
     "rotate-due-recommendations-hourly": {
         "task": "catalog.tasks.rotate_due_recommendations",
         "schedule": 60 * 60,
@@ -283,6 +323,10 @@ CELERY_BEAT_SCHEDULE = {
     "recover-semantic-index-queue": {
         "task": "catalog.tasks.recover_semantic_index_queue",
         "schedule": 120,
+    },
+    "recover-projection-queue": {
+        "task": "catalog.tasks.recover_projection_queue",
+        "schedule": 60,
     },
     "recover-query-lexicon-events": {
         "task": "catalog.tasks.recover_query_lexicon_events",
@@ -895,6 +939,16 @@ if PUBLIC_DEPLOYMENT_MODE:
         for marker in ("change", "replace", "example")
     ):
         production_errors.append("INTERNAL_API_TOKEN 必须使用至少 32 位的独立随机值")
+    if CAPABILITY_REMOTE_WORKER_ENABLED and (
+        len(CAPABILITY_REMOTE_WORKER_SHARED_SECRET) < 32
+        or any(
+            marker in CAPABILITY_REMOTE_WORKER_SHARED_SECRET.lower()
+            for marker in ("change", "replace", "example")
+        )
+    ):
+        production_errors.append(
+            "启用远程 capability worker 时必须配置至少 32 位的独立随机密钥"
+        )
     if SECURE_HSTS_SECONDS < 86400:
         production_errors.append("DJANGO_HSTS_SECONDS 至少应为 86400")
     if not PUBLIC_WEB_URL.startswith("https://") or not PUBLIC_API_URL.startswith("https://"):

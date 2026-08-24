@@ -34,14 +34,14 @@ export type ValidationIssue = {
 
 export const WORKFLOW_STEP_LABELS: Record<WorkflowStepKey, string> = {
   file: "文件与识别",
-  work: "作品",
-  bibliography: "书目与出版",
-  contributors: "责任者",
-  classification: "社科分类",
-  knowledge: "理论与主题",
-  reader: "阅读文件",
-  curation: "策展",
-  publication: "发布",
+  work: "作品与原作",
+  bibliography: "书目与版本",
+  contributors: "责任者与身份",
+  classification: "学科与子学科",
+  knowledge: "理论、主题与争论",
+  reader: "阅读与定位",
+  curation: "观点、回应与阅读路径（可选）",
+  publication: "发布与投影",
 };
 
 const STEP_SET = new Set<string>(WORKFLOW_STEP_KEYS);

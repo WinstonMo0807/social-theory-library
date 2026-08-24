@@ -1,6 +1,24 @@
 # 开发进度
 
-更新日期为 2026-08-24。当前源码与公网应用均为 2.9.2。本文只保留后续开发所需的简明状态，历史生产记录不等于本轮实时验收。
+更新日期为 2026-08-24。3.0 已部署到 `books.winstonmo.com`，API readiness 返回 3.0.0、database true、pending migrations 0。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
+
+## 3.0 四个 Wave 状态
+
+- Wave 1 已完成。Canonical identity、legacy 只读兼容、DocumentRevision、DocumentQualityAssessment、EvidenceSpan、DerivedClaim、ClaimEvidence、CuratedClaim、EditorialRevision、Dependency/Projection 与 capability-aware scheduling 已进入源码。
+- Wave 2 已完成。Claim shadow extraction、attribution、qualifier、stance、Claim Index、Unified Retrieval、Viewpoint Search shadow、ResearchTaskProfile、EvidencePack、Prompt Registry、扩展 AIRuntimeProfile、4070 pull worker、Debate/ReadingPath candidate 与人工反馈校准已实现。
+- Wave 3 已完成。Workbench A、Knowledge Studio B、Processing Center C、单 Editor Revision 发布、Research Inspector、公开 Viewpoint、Theory、Scholar、Topic、Debate、Work CuratedClaim 和 Ask Evidence 共用已实现。设置页可管理全部 3.0 AI capability、fallback/alias 和不可变 Prompt revision。
+- Wave 3 子系统验收中，前端 72 项通过。后端相关文件只有一条 2.8 旧测试仍期望直接修改已发布 ReadingPath；更新为 draft Revision、preview、单人 publish 契约后，失败项单独重跑通过。
+- Wave 4 已完成迁移、回填、镜像切换与核心 T4 smoke。catalog 0033、0034 已应用；8 个 active DocumentRevision 与 3,735 个 EvidenceSpan 已回填；21 个 Claim shadow demand 因没有 LLM executor 保持 `waiting_for_capability`，全部为非 publication blocking。
+- PostgreSQL 副本 migration rehearsal 保持 Work 8、Edition 8、Asset 16、Page 3,135、WorkNodeRelation 1 和 Page identity hash 不变。旧 2.9.2 API 在保留 additive schema 时仍返回 ready，应用回退已演练。
+- 正式 BackupJob `3a8a2633-dc3d-4566-8bed-28d0b1bc29aa` 已完成。归档 SHA-256 为 `afff698b1c4d8de1bac887fdb572f858a8a9191d195aca642abcc3b45163ee52`，并通过 `pg_restore --list`。
+- 最终 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:3.0.0-final-ae0f4614-20260824-150032`，image ID `sha256:069c9c1aedf7b31e24c2ddfa4602e9130d1338e033b701007202a36e7afcbdd1`。Web 使用 `social-theory-library-web:3.0.0-candidate-4022b77b-20260824-140003`，image ID `sha256:05b8dc9fd0c04e8c394234c97173995216bc6102a3f3a033a43c8851dfaef6d4`。
+- 正式切换发现 capability reconciliation 的 PostgreSQL nullable join 不能直接 `FOR UPDATE`。Capability runtime 与远程 Worker 都改为只锁 CapabilityDemand 本身。相关专项 25 项、生产 reconciliation 和远程 Worker 事务回滚 smoke 均通过；该问题没有修改 Canonical、Page、PDF 或活动索引。
+- 公网顺序语义检索和 Viewpoint 均为 `v2_hybrid`、`fallback_used=false`。Viewpoint 真实返回 3 条原文、2 本作品与可用 Reader 页码。Claim benchmark 没有 gold，gate 仍关闭，当前生产关系分组只有 direct，不能宣称 support、oppose、qualify 已有真实质量数字。
+- 严格公网 Playwright 6 项通过，覆盖公开路由、当前入库数据、Reader Range 206、中文 CMap 和真实 PDF canvas。生产状态核对确认 Work、Edition、Asset、Page、TextBlock、Passage、SemanticChunk 与 8 个 ORIGINAL Asset 的 count 和 identity hash 同切换前完全一致。
+- 末次观察记录为 `final-observation-20260824-150715`。API、两个 Worker、Beat、Web、Edge 与基础服务均 running，应用容器 RestartCount 0；两个 Worker 的 active、reserved、scheduled 和五个 Redis/Celery queue 均为 0。活动语义索引保持 `semantic_passages_20260818210650_4cf87bc9|3005|3005`，近 8 分钟 API、Worker、Web 与 Edge fatal pattern 均为 0。
+- 最终 API/Web archive 已持久化到 deploy-record 并复算 SHA-256。四个精确命名的远端 `/tmp` staging 和临时执行脚本已删除，释放 85,180,945 bytes；成功镜像、旧镜像、fresh backup、环境回退副本和 SSH 发布权限继续保留。
+- 当前生产没有人工 Claim gold judgment。Viewpoint 默认仍为 Semantic V2。`VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED` 必须保持 false，不得用空 benchmark 激活 Claim ranking。
+- 真实 4070 worker 尚未连入生产。生产事务回滚 smoke 已证明 `llm_large` 在零 executor 时保持 `waiting_for_capability`、不派发且不阻断出版；真实在线领取仍待 Laptop 与专用 secret 可用后验证。
 
 ## 2.9.2 生产完成状态，2026-08-24
 

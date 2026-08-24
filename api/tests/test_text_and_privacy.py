@@ -8,7 +8,7 @@ from catalog.services.text import normalize_search_text, sanitize_unicode
 from ingestion.services.extract import ExtractedBlock, ExtractedPage, persist_pages
 from ingestion.services.files import materialize_field_file
 from ingestion.services.metadata import extract_text_candidates, select_best
-from reading.models import Annotation
+from reading.models import Annotation, Bookmark
 
 
 def test_ocr_text_can_refine_book_metadata_without_using_filename():
@@ -71,6 +71,58 @@ def test_persist_pages_repairs_surrogates_without_changing_the_pdf():
     assert page.chapter_title == "封面\ufffd\ufffd"
     assert page.printed_label == "1\ufffd"
     assert page.blocks.get().text == "封面\ufffd\ufffd"
+
+
+@pytest.mark.django_db
+def test_full_reextract_never_deletes_missing_page_reader_identity(reader_user):
+    work = Work.objects.create(document_type="book", title="稳定 Page identity")
+    edition = Edition.objects.create(work=work)
+    asset = Asset.objects.create(
+        edition=edition,
+        kind=Asset.Kind.NORMALIZED,
+        file="public/stable-page.pdf",
+        sha256="7" * 64,
+        status=Asset.Status.PROCESSING,
+    )
+
+    def extracted(index: int, text: str) -> ExtractedPage:
+        return ExtractedPage(
+            index=index,
+            printed_label=str(index),
+            chapter_title="",
+            width=100,
+            height=200,
+            text=text,
+            source=Page.TextSource.EMBEDDED,
+            confidence=1,
+            blocks=[ExtractedBlock(order=0, text=text, bbox=[0, 0, 10, 10])],
+        )
+
+    persist_pages(asset, [extracted(1, "第一页"), extracted(2, "第二页")])
+    missing_page = asset.pages.get(index=2)
+    missing_page_id = missing_page.id
+    Annotation.objects.create(
+        user=reader_user,
+        asset=asset,
+        page=missing_page,
+        kind=Annotation.Kind.HIGHLIGHT,
+        selector={"start": 0, "end": 3},
+        quote="第二页",
+        asset_sha256=asset.sha256,
+    )
+    Bookmark.objects.create(user=reader_user, asset=asset, page=missing_page)
+
+    persist_pages(asset, [extracted(1, "第一页重新抽取")], replace_missing=True)
+
+    missing_page.refresh_from_db()
+    assert missing_page.id == missing_page_id
+    assert missing_page.text == ""
+    assert missing_page.normalized_text == ""
+    assert missing_page.text_source == Page.TextSource.NONE
+    assert not missing_page.blocks.exists()
+    assert not missing_page.passages.exists()
+    assert Annotation.objects.filter(page_id=missing_page_id).exists()
+    assert Bookmark.objects.filter(page_id=missing_page_id).exists()
 
 
 def test_ocr_search_highlight_is_narrower_than_the_paragraph_block():

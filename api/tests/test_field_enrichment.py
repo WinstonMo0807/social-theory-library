@@ -12,6 +12,7 @@ from catalog.models import (
     Discipline,
     DocumentType,
     Edition,
+    EditorialRevision,
     EnrichmentCandidate,
     EnrichmentEvidence,
     EnrichmentSourceClass,
@@ -20,6 +21,7 @@ from catalog.models import (
     KnowledgeRelation,
     Person,
     PersonNameVariant,
+    PublicationState,
     QueryLexiconChangeEvent,
     QueryLexiconEntry,
     ScholarProfile,
@@ -475,6 +477,44 @@ def test_accept_edition_candidate_writes_edition_source_of_truth(admin_user):
     candidate.refresh_from_db()
     assert result.authority_model == "catalog.Edition"
     assert edition.publication_year == 2000
+    assert candidate.status == EnrichmentCandidate.Status.ACCEPTED
+
+
+def test_accept_published_work_candidate_creates_revision_without_public_mutation(
+    admin_user,
+):
+    edition = _edition(title="Published authority", publisher="Known Press")
+    edition.state = PublicationState.PUBLISHED
+    edition.save(update_fields=["state", "updated_at"])
+    observation = _observation(
+        field_name="abstract",
+        value="经人工核对但仍需预览发布的摘要。",
+        identity_claims={
+            "title": edition.work.title,
+            "publisher": edition.publisher,
+        },
+    )
+    candidate = FieldEnrichmentService(
+        structured_adapters={"bibliographic": FakeStructuredAdapter([observation])}
+    ).enrich(
+        _request("work", edition.work_id, ["abstract"]),
+        actor=admin_user,
+    ).candidates[0]
+
+    result = accept_enrichment_candidate(
+        candidate,
+        actor=admin_user,
+        reason="来源已核对",
+    )
+
+    edition.work.refresh_from_db()
+    candidate.refresh_from_db()
+    revision = EditorialRevision.objects.get(pk=result.authority_id)
+    assert edition.work.abstract == ""
+    assert result.authority_model == "catalog.EditorialRevision"
+    assert revision.target_type == EditorialRevision.TargetType.WORK
+    assert revision.patch == {"abstract": "经人工核对但仍需预览发布的摘要。"}
+    assert revision.status == EditorialRevision.Status.DRAFT
     assert candidate.status == EnrichmentCandidate.Status.ACCEPTED
 
 

@@ -54,6 +54,8 @@ const actionLabels: Record<string, string> = {
   reject: "拒绝候选",
   reopen: "恢复待审",
   accept: "接受候选",
+  accept_with_edit: "修改后采用",
+  defer: "稍后处理",
   inspect: "核对来源",
 };
 
@@ -70,6 +72,7 @@ export function WorkflowInspector({
 }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewError, setPreviewError] = useState("");
+  const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (selection?.kind !== "pdf" || !selection.pdfUrl || !token) return;
@@ -125,11 +128,14 @@ export function WorkflowInspector({
             const conflicts = stringRows(candidate.conflicts);
             const actions = (candidate.available_actions ?? []).filter((action) => action !== "inspect");
             const leadOnly = candidate.evidence_status === "lead_only" || candidate.source_tier === "research_lead";
+            const isClaimCandidate = candidate.kind === "derived_claim_curation";
+            const claimDraft = claimDrafts[candidate.id] ?? String(candidate.proposed_value ?? candidate.label ?? "");
             return (
               <article key={candidate.id}>
                 <header><strong>{candidate.label || candidate.field_name || "候选"}</strong><span>{candidate.status || "pending"}</span></header>
                 {leadOnly ? <p className="workflow-inspector-lead-warning">这是研究线索。搜索摘要不是 Evidence，不能直接接受为正式知识。</p> : null}
                 {candidate.current_value !== undefined ? <div className="workflow-inspector-comparison"><section><small>当前值</small><pre>{displayValue(candidate.current_value)}</pre></section><section><small>候选值</small><pre>{displayValue(proposed)}</pre></section></div> : <pre>{displayValue(proposed)}</pre>}
+                {isClaimCandidate ? <label className="workflow-inspector-claim-edit"><span>采用时使用的命题文本</span><textarea rows={4} value={claimDraft} onChange={(event) => setClaimDrafts((current) => ({ ...current, [candidate.id]: event.target.value }))} /></label> : null}
                 <dl>
                   {candidate.source_tier_label || candidate.source_tier ? <div><dt>来源层级</dt><dd>{String(candidate.source_tier_label ?? candidate.source_tier)}</dd></div> : null}
                   {candidate.source_class || candidate.source ? <div><dt>来源</dt><dd>{String(candidate.source_class ?? candidate.source)}</dd></div> : null}
@@ -145,7 +151,7 @@ export function WorkflowInspector({
                   return <blockquote key={`${candidate.id}-evidence-${index}`}><p>{displayValue(row.supporting_text ?? row.text_quote ?? row.quote ?? entry)}</p>{url ? <a href={url} target="_blank" rel="noreferrer">查看来源 <ExternalLink size={12} /></a> : null}</blockquote>;
                 })}
                 <details><summary>词典影响</summary><ul>{lexiconImpact(candidate).map((row) => <li key={row}>{row}</li>)}</ul></details>
-                {candidate.status === "pending" && onDecision && candidate.decision_url && actions.length ? <footer>{actions.map((action) => <button className={action === "reject" ? "danger" : ""} type="button" key={action} onClick={() => onDecision(candidate, action)}>{action === "reject" ? <X size={13} /> : <Check size={13} />}{actionLabels[action] ?? action}</button>)}</footer> : null}
+                {candidate.status === "pending" && onDecision && candidate.decision_url && actions.length ? <footer>{actions.map((action) => <button className={action === "reject" ? "danger" : ""} type="button" key={action} onClick={() => onDecision(isClaimCandidate ? { ...candidate, edited_proposition: claimDraft } : candidate, action)}>{action === "reject" ? <X size={13} /> : <Check size={13} />}{actionLabels[action] ?? action}</button>)}</footer> : null}
               </article>
             );
           })}

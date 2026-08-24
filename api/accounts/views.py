@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsLibraryAdmin
+from common.permissions import CanManageUsers
 from common.capabilities import capability_snapshot
 
 from .cookies import clear_auth_cookies, expose_csrf_cookie, set_auth_cookies
@@ -126,7 +126,7 @@ class PasswordResetConfirmView(APIView):
 
 
 class AdminSetPasswordView(APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageUsers]
 
     def post(self, request, user_id):
         target = get_object_or_404(User, pk=user_id)
@@ -153,7 +153,7 @@ class AdminSetPasswordView(APIView):
 
 
 class AdminUserListView(generics.ListAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageUsers]
     serializer_class = AdminUserSerializer
     search_fields = ("email", "display_name")
     ordering_fields = ("date_joined", "last_login", "email")
@@ -167,7 +167,7 @@ class AdminUserListView(generics.ListAPIView):
 
 
 class AdminUserDetailView(generics.RetrieveUpdateAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageUsers]
     serializer_class = AdminUserUpdateSerializer
     queryset = User.objects.all()
     lookup_url_kwarg = "user_id"

@@ -628,10 +628,9 @@ def test_manual_publication_can_accept_low_metadata_confidence(settings):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_published_metadata_edit_stays_published_and_reindexes(
+def test_published_metadata_edit_requires_revision_and_preserves_canonical(
     api_client,
     admin_user,
-    django_capture_on_commit_callbacks,
 ):
     work, edition, asset, _page, _passage = create_public_asset(
         "Published title before edit",
@@ -655,49 +654,44 @@ def test_published_metadata_edit_stays_published_and_reindexes(
     with patch("ingestion.views.index_asset") as reindex, patch(
         "ingestion.views.generate_cover_candidates",
     ):
-        with django_capture_on_commit_callbacks(execute=True):
-            response = api_client.put(
-                f"/api/ingestion/items/{item.id}/review/",
-                {
-                    "title": "Published title after edit",
-                    "subtitle": "",
-                    "document_type": "book",
-                    "language": "en",
-                    "publication_year": 2026,
-                    "publisher": "Test Press",
-                    "publication_place": "London",
-                    "journal_title": "",
-                    "volume": "",
-                    "issue": "",
-                    "page_range": "",
-                    "degree_institution": "",
-                    "degree_type": "",
-                    "report_institution": "",
-                    "isbn": "",
-                    "doi": "",
-                    "abstract": "Updated without taking the item offline.",
-                    "authors": [],
-                    "author_ids": [],
-                    "theory_schools": [],
-                    "theory_school_ids": [],
-                    "topics": [],
-                    "topic_ids": [],
-                    "lock_fields": ["title"],
-                    "retry_publication": True,
-                },
-                format="json",
-            )
-    assert response.status_code == 200
+        response = api_client.put(
+            f"/api/ingestion/items/{item.id}/review/",
+            {
+                "title": "Published title after edit",
+                "subtitle": "",
+                "document_type": "book",
+                "language": "en",
+                "publication_year": 2026,
+                "publisher": "Test Press",
+                "publication_place": "London",
+                "journal_title": "",
+                "volume": "",
+                "issue": "",
+                "page_range": "",
+                "degree_institution": "",
+                "degree_type": "",
+                "report_institution": "",
+                "isbn": "",
+                "doi": "",
+                "abstract": "Updated without taking the item offline.",
+                "authors": [],
+                "author_ids": [],
+                "theory_schools": [],
+                "theory_school_ids": [],
+                "topics": [],
+                "topic_ids": [],
+                "lock_fields": ["title"],
+                "retry_publication": True,
+            },
+            format="json",
+        )
+    assert response.status_code == 409
+    assert response.data["code"] == "editorial_revision_required"
     item.refresh_from_db()
     edition.refresh_from_db()
     work.refresh_from_db()
     assert item.status == UploadItem.Status.PUBLISHED
     assert edition.state == PublicationState.PUBLISHED
-    assert work.title == "Published title after edit"
-    assert edition.citation_data["author"] == []
-    assert edition.canonical_filename.startswith("佚名_")
-    assert not edition.contributions.exists()
-    assert not work.knowledge_relations.exists()
-    reindex.assert_called_once()
-    assert reindex.call_args.kwargs["is_public"] is True
-    assert AuditEvent.objects.filter(action="published_metadata_edit").exists()
+    assert work.title == "Published title before edit"
+    reindex.assert_not_called()
+    assert not AuditEvent.objects.filter(action="published_metadata_edit").exists()

@@ -19,6 +19,12 @@ import {
   ToastHost,
   type ActionState,
 } from "./action-feedback";
+import {
+  ProcessingDiagnosticsPanel,
+  type ProcessingDiagnosticAction,
+  type ProcessingDiagnosticItem,
+  type ProcessingDiagnosticsPayload,
+} from "./processing-diagnostics";
 
 type HealthStatus = "healthy" | "degraded" | "failed" | "recovering" | "paused" | "unknown";
 type DimensionValue = boolean | null;
@@ -96,6 +102,7 @@ type FunctionalHealthPayload = {
   recoveries: HealthRecovery[];
   probe_count: number;
   page_load_performs_live_probes: boolean;
+  diagnostics?: ProcessingDiagnosticsPayload;
 };
 
 type RunProbeResponse = {
@@ -366,6 +373,49 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
     }
   }
 
+  async function runDiagnosticAction(item: ProcessingDiagnosticItem, action: ProcessingDiagnosticAction) {
+    const token = getServerSessionCredential();
+    if (!token) {
+      if (mountedRef.current) setFeedback({ state: "error", message: "登录状态尚未就绪，无法提交诊断恢复动作。", actionKey: "auth" });
+      return;
+    }
+    if (Boolean(actionInFlightRef.current)) return;
+    const actionKey = `diagnostic:${item.id}:${action.key}`;
+    actionInFlightRef.current = String(actionKey);
+    const diagnosticController = new AbortController();
+    actionAbortRef.current = diagnosticController;
+    if (mountedRef.current) {
+      setPendingAction(actionKey);
+      setFeedback({ state: "pending", message: `正在提交${action.label}。`, actionKey });
+    }
+    try {
+      snapshotAbortRef.current?.abort();
+      if (snapshotRequestRef.current) await snapshotRequestRef.current;
+      if (!mountedRef.current || diagnosticController.signal.aborted) return;
+      await apiRequest(
+        action.endpoint,
+        {
+          method: action.method,
+          body: JSON.stringify(action.body),
+          signal: diagnosticController.signal,
+        },
+        token,
+      );
+      if (!mountedRef.current || diagnosticController.signal.aborted) return;
+      setFeedback({ state: "success", message: `${action.label}已提交，请观察下一次 revision 快照。`, actionKey });
+      await loadSnapshot(true);
+    } catch (reason) {
+      if (!mountedRef.current || diagnosticController.signal.aborted) return;
+      setFeedback({ state: "error", message: reason instanceof Error ? reason.message : `${action.label}失败。`, actionKey });
+    } finally {
+      if (actionAbortRef.current === diagnosticController) actionAbortRef.current = null;
+      if (actionInFlightRef.current === actionKey) actionInFlightRef.current = "";
+      if (mountedRef.current) {
+        setPendingAction("");
+      }
+    }
+  }
+
   const capabilityLabels = useMemo(
     () => new Map((payload?.capabilities ?? []).map((row) => [row.key, row.label])),
     [payload?.capabilities],
@@ -418,6 +468,15 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
             <div><Clock3 size={16} /><span>快照时间</span><strong>{timeLabel(payload.generated_at)}</strong></div>
             <div><Wrench size={16} /><span>已登记探测</span><strong>{payload.probe_count}</strong></div>
           </div>
+
+          {payload.diagnostics ? (
+            <ProcessingDiagnosticsPanel
+              diagnostics={payload.diagnostics}
+              pendingAction={pendingAction}
+              actionState={actionState}
+              onAction={(item, action) => void runDiagnosticAction(item, action)}
+            />
+          ) : null}
 
           <div className="functional-health-capability-grid">
             {payload.capabilities.map((capability) => (

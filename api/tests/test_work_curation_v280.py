@@ -151,7 +151,6 @@ def test_contextual_journal_placement_supports_summary_patch_conflict_and_delete
 @pytest.mark.django_db
 def test_contextual_placement_enforces_work_identity_and_path_permissions(
     api_client,
-    admin_user,
 ):
     editor = make_editor()
     work = make_work("编辑策展作品")
@@ -177,7 +176,7 @@ def test_contextual_placement_enforces_work_identity_and_path_permissions(
     )
     assert wrong_work.status_code == 404
 
-    denied = api_client.post(
+    published_created = api_client.post(
         f"/api/catalog/admin/works/{work.id}/reading-path-placements/",
         {
             "reading_path_id": str(public_path.id),
@@ -185,8 +184,24 @@ def test_contextual_placement_enforces_work_identity_and_path_permissions(
         },
         format="json",
     )
-    assert denied.status_code == 403
-    advanced_denied = api_client.patch(
+    assert published_created.status_code == 202
+    assert published_created.data["editorial_revision"]["status"] == "draft"
+    assert not ReadingPathItem.objects.filter(
+        reading_path=public_path,
+        work=work,
+    ).exists()
+    published_revision = api_client.post(
+        f"/api{published_created.data['editorial_revision']['publish_url']}",
+        {},
+        format="json",
+    )
+    assert published_revision.status_code == 200
+    assert ReadingPathItem.objects.filter(
+        reading_path=public_path,
+        work=work,
+    ).exists()
+    public_path.refresh_from_db()
+    advanced_allowed = api_client.patch(
         f"/api/catalog/admin/theory-system/reading-paths/{public_path.id}/",
         {
             "expected_updated_at": public_path.updated_at.isoformat(),
@@ -194,18 +209,19 @@ def test_contextual_placement_enforces_work_identity_and_path_permissions(
         },
         format="json",
     )
-    assert advanced_denied.status_code == 403
-
-    api_client.force_authenticate(admin_user)
-    allowed = api_client.post(
-        f"/api/catalog/admin/works/{work.id}/reading-path-placements/",
-        {
-            "reading_path_id": str(public_path.id),
-            "stage_id": str(public_stage.id),
-        },
+    assert advanced_allowed.status_code == 202
+    assert advanced_allowed.data["editorial_revision"]["status"] == "draft"
+    assert ReadingPathItem.objects.filter(
+        reading_path=public_path,
+        work=work,
+    ).exists()
+    advanced_published = api_client.post(
+        f"/api{advanced_allowed.data['editorial_revision']['publish_url']}",
+        {},
         format="json",
     )
-    assert allowed.status_code == 201
+    assert advanced_published.status_code == 200
+    assert not ReadingPathItem.objects.filter(reading_path=public_path).exists()
 
 
 @pytest.mark.django_db
@@ -284,22 +300,15 @@ def test_work_recommendation_override_is_capability_guarded_deduplicated_and_use
     policy.save(update_fields=["item_count", "updated_at"])
 
     api_client.force_authenticate(editor)
-    denied = api_client.put(
-        f"/api/catalog/admin/works/{work.id}/recommendation-overrides/{policy.placement}/",
-        {"action": "pin", "position": 0},
-        format="json",
-    )
-    assert denied.status_code == 403
-
-    api_client.force_authenticate(admin_user)
     created = api_client.put(
         f"/api/catalog/admin/works/{work.id}/recommendation-overrides/{policy.placement}/",
-        {"action": "pin", "position": 0, "note": "当前作品置顶"},
+        {"action": "pin", "position": 0},
         format="json",
     )
     assert created.status_code == 200
     canonical_id = created.data["id"]
 
+    api_client.force_authenticate(admin_user)
     RecommendationOverride.objects.create(
         policy=policy,
         work=work,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -300,21 +301,90 @@ class AboutPageBlockListView(generics.ListAPIView):
         return response
 
 
-class AdminDisciplineListView(generics.ListCreateAPIView):
+class _CanonicalTaxonomyMutationMixin:
+    canonical_object_type = ""
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        target = serializer.save()
+        if target.editorial_status == "published":
+            from .services.canonical_mutations import record_admin_canonical_change
+
+            record_admin_canonical_change(
+                object_type=self.canonical_object_type,
+                target=target,
+                change_kind="publish",
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        previous_status = serializer.instance.editorial_status
+        target = serializer.save()
+        if target.editorial_status in {"published", "archived"}:
+            from .services.canonical_mutations import record_admin_canonical_change
+
+            if target.editorial_status == "archived":
+                change_kind = "withdraw"
+            elif previous_status != "published":
+                change_kind = "publish"
+            else:
+                change_kind = "update"
+            record_admin_canonical_change(
+                object_type=self.canonical_object_type,
+                target=target,
+                change_kind=change_kind,
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        target = self.get_object()
+        if target.editorial_status == "published":
+            return Response(
+                {
+                    "detail": "已发布规范对象不能硬删除，请先改为 archived。",
+                    "code": "published_authority_requires_withdrawal",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
+
+
+class AdminDisciplineListView(
+    _CanonicalTaxonomyMutationMixin,
+    generics.ListCreateAPIView,
+):
+    canonical_object_type = "discipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminDisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Discipline.objects.all().order_by("sort_order", "name")
 
 
-class AdminDisciplineDetailView(generics.RetrieveUpdateDestroyAPIView):
+class AdminDisciplineDetailView(
+    _CanonicalTaxonomyMutationMixin,
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    canonical_object_type = "discipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminDisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Discipline.objects.all()
 
 
-class AdminSubdisciplineListView(generics.ListCreateAPIView):
+class AdminSubdisciplineListView(
+    _CanonicalTaxonomyMutationMixin,
+    generics.ListCreateAPIView,
+):
+    canonical_object_type = "subdiscipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminSubdisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -332,7 +402,11 @@ class AdminSubdisciplineListView(generics.ListCreateAPIView):
         return queryset.order_by("discipline__sort_order", "name")
 
 
-class AdminSubdisciplineDetailView(generics.RetrieveUpdateDestroyAPIView):
+class AdminSubdisciplineDetailView(
+    _CanonicalTaxonomyMutationMixin,
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    canonical_object_type = "subdiscipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminSubdisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -406,6 +480,18 @@ class AdminTheoryTimelineDetailView(generics.RetrieveUpdateDestroyAPIView):
         "normalized_relations__scholar__person",
         "normalized_relations__work",
     )
+
+    def destroy(self, request, *args, **kwargs):
+        event = self.get_object()
+        if event.review_status == RelationReviewStatus.APPROVED:
+            return Response(
+                {
+                    "detail": "已发布的时间轴事件不能硬删除，请先改为 rejected。",
+                    "code": "published_timeline_requires_withdrawal",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         review_status = serializer.validated_data.get("review_status", serializer.instance.review_status)
@@ -557,6 +643,177 @@ RELATION_RESOURCES = {
 }
 
 
+LEGACY_THEORY_RELATION_KINDS = {
+    "theory-disciplines",
+    "theory-subdisciplines",
+    "theory-hierarchy",
+    "theory-relations",
+    "topic-theories",
+    "work-theories",
+}
+
+
+def _legacy_work_theory_write_retired():
+    return Response(
+        {
+            "detail": (
+                "work-theories 的 legacy 写入已经退役。请改用 "
+                "/api/catalog/admin/theory-system/work-relations/ 写入 WorkNodeRelation。"
+            ),
+            "code": "legacy_work_theory_write_retired",
+            "replacement": "/api/catalog/admin/theory-system/work-relations/",
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+def _legacy_theory_relation_write_retired(kind: str):
+    replacement = (
+        "/api/catalog/admin/theory-system/relations/"
+        if kind in {"theory-hierarchy", "theory-relations"}
+        else "/api/catalog/admin/theory-system/nodes/"
+    )
+    return Response(
+        {
+            "detail": (
+                f"{kind} 只保留迁移期读取，不能继续写入 TheorySchool 关系。"
+                "请在 Knowledge Studio 使用规范 KnowledgeNode 关系。"
+            ),
+            "code": "legacy_theory_relation_write_retired",
+            "replacement": replacement,
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+TOPIC_RELATION_FIELDS = {
+    "topic-disciplines": (
+        "discipline_relations",
+        "discipline",
+        "discipline_id",
+    ),
+    "topic-theories": (
+        "theory_relations",
+        "theory_school",
+        "theory_school_id",
+    ),
+    "topic-subdisciplines": (
+        "subdiscipline_relations",
+        "subdiscipline",
+        "subdiscipline_id",
+    ),
+}
+WORK_RELATION_KINDS = {"work-disciplines", "work-subdisciplines"}
+
+
+def _work_has_published_edition(work: Work | None) -> bool:
+    return bool(
+        work
+        and work.editions.filter(state=PublicationState.PUBLISHED).exists()
+    )
+
+
+def _published_work_relation_requires_revision():
+    return Response(
+        {
+            "detail": "已发布作品的知识关系必须先建立编辑草稿。",
+            "code": "editorial_revision_required",
+            "replacement": "/api/catalog/admin/workflow/maintenance/",
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+def _topic_relation_row(kind, *, instance=None, values=None) -> dict:
+    field_name, relation_field, id_field = TOPIC_RELATION_FIELDS[kind]
+    del field_name
+    values = values or {}
+    relation_target = values.get(
+        relation_field,
+        getattr(instance, relation_field, None),
+    )
+    row = {
+        id_field: str(relation_target.pk),
+        "review_status": str(
+            values.get(
+                "review_status",
+                getattr(instance, "review_status", RelationReviewStatus.SUGGESTED),
+            )
+        ),
+    }
+    if kind == "topic-disciplines":
+        row["is_primary"] = bool(
+            values.get("is_primary", getattr(instance, "is_primary", False))
+        )
+    else:
+        row["relation_label"] = str(
+            values.get(
+                "relation_label",
+                getattr(instance, "relation_label", ""),
+            )
+            or ""
+        )
+    return row
+
+
+def _draft_topic_relation_revision(
+    request,
+    *,
+    topic: Topic,
+    kind: str,
+    rows: list[dict],
+    change_note: str,
+):
+    from .models import CanonicalObjectRevision, EditorialRevision
+    from .services.editorial_revision import (
+        create_editorial_revision,
+        editorial_idempotency_key,
+        serialize_editorial_revision,
+    )
+
+    field_name = TOPIC_RELATION_FIELDS[kind][0]
+    patch = {field_name: rows}
+    current_revision = (
+        CanonicalObjectRevision.objects.filter(
+            object_type=EditorialRevision.TargetType.TOPIC,
+            object_id=topic.id,
+        )
+        .values_list("current_revision", flat=True)
+        .first()
+        or 0
+    )
+    revision = create_editorial_revision(
+        target_type=EditorialRevision.TargetType.TOPIC,
+        target_id=topic.id,
+        patch=patch,
+        actor=request.user,
+        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+        or editorial_idempotency_key(
+            target_type=EditorialRevision.TargetType.TOPIC,
+            target_id=topic.id,
+            base_revision=current_revision,
+            patch=patch,
+        ),
+        change_note=change_note,
+    )
+    return Response(
+        {
+            "topic_id": str(topic.id),
+            "relation_kind": kind,
+            "draft_relations": revision.patch[field_name],
+            "editorial_revision": serialize_editorial_revision(revision),
+        },
+        status=status.HTTP_202_ACCEPTED,
+    )
+
+
+def _topic_relation_rows(topic: Topic, kind: str) -> list[dict]:
+    from .services.editorial_revision import topic_relation_snapshot
+
+    field_name = TOPIC_RELATION_FIELDS[kind][0]
+    return topic_relation_snapshot(topic)[field_name]
+
+
 class AdminKnowledgeRelationListCreateView(APIView):
     permission_classes = [IsLibraryStaff]
 
@@ -581,12 +838,40 @@ class AdminKnowledgeRelationListCreateView(APIView):
         resource = self._resource(kind)
         if resource is None:
             return Response({"detail": "未知关系类型。"}, status=404)
+        if kind in LEGACY_THEORY_RELATION_KINDS:
+            if kind == "work-theories":
+                return _legacy_work_theory_write_retired()
+            return _legacy_theory_relation_write_retired(kind)
         _model, serializer_class = resource
         payload = request.data.copy()
-        if kind == "work-theories":
-            payload["kind"] = WorkKnowledgeRelation.Kind.THEORY_SCHOOL
         serializer = serializer_class(data=payload, context={"request": request})
         serializer.is_valid(raise_exception=True)
+        if kind in WORK_RELATION_KINDS and _work_has_published_edition(
+            serializer.validated_data.get("work")
+        ):
+            return _published_work_relation_requires_revision()
+        if kind in TOPIC_RELATION_FIELDS:
+            topic = serializer.validated_data["topic"]
+            if topic.editorial_status == "published":
+                from .services.editorial_revision import EditorialRevisionError
+
+                rows = _topic_relation_rows(topic, kind)
+                rows.append(
+                    _topic_relation_row(kind, values=serializer.validated_data)
+                )
+                try:
+                    return _draft_topic_relation_revision(
+                        request,
+                        topic=topic,
+                        kind=kind,
+                        rows=rows,
+                        change_note="已发布主题新增知识关系草稿",
+                    )
+                except EditorialRevisionError as error:
+                    return Response(
+                        {"detail": str(error), "code": "editorial_revision_error"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -602,17 +887,95 @@ class AdminKnowledgeRelationDetailView(APIView):
         return model, serializer_class, get_object_or_404(model, pk=pk)
 
     def patch(self, request, kind, pk):
+        if kind in LEGACY_THEORY_RELATION_KINDS:
+            if kind == "work-theories":
+                return _legacy_work_theory_write_retired()
+            return _legacy_theory_relation_write_retired(kind)
         _model, serializer_class, instance = self._object(kind, pk)
         if instance is None:
             return Response({"detail": "未知关系类型。"}, status=404)
         serializer = serializer_class(instance, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
+        if kind in WORK_RELATION_KINDS:
+            current_work = instance.work
+            requested_work = serializer.validated_data.get("work", current_work)
+            if _work_has_published_edition(
+                current_work
+            ) or _work_has_published_edition(requested_work):
+                return _published_work_relation_requires_revision()
+        if kind in TOPIC_RELATION_FIELDS:
+            topic = instance.topic
+            requested_topic = serializer.validated_data.get("topic", topic)
+            if requested_topic.pk != topic.pk:
+                return Response(
+                    {
+                        "detail": "主题关系不能在更新时改挂到另一主题，请分别删除和新建。",
+                        "code": "topic_relation_reparent_not_supported",
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if topic.editorial_status == "published":
+                from .services.editorial_revision import EditorialRevisionError
+
+                field_name, _relation_field, id_field = TOPIC_RELATION_FIELDS[kind]
+                rows = _topic_relation_rows(topic, kind)
+                current_id = str(getattr(instance, id_field))
+                replacement = _topic_relation_row(
+                    kind,
+                    instance=instance,
+                    values=serializer.validated_data,
+                )
+                rows = [
+                    replacement if str(row[id_field]) == current_id else row
+                    for row in rows
+                ]
+                try:
+                    return _draft_topic_relation_revision(
+                        request,
+                        topic=topic,
+                        kind=kind,
+                        rows=rows,
+                        change_note=f"已发布主题调整 {field_name} 草稿",
+                    )
+                except EditorialRevisionError as error:
+                    return Response(
+                        {"detail": str(error), "code": "editorial_revision_error"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
         serializer.save()
         return Response(serializer.data)
 
     def delete(self, request, kind, pk):
+        if kind in LEGACY_THEORY_RELATION_KINDS:
+            if kind == "work-theories":
+                return _legacy_work_theory_write_retired()
+            return _legacy_theory_relation_write_retired(kind)
         _model, _serializer_class, instance = self._object(kind, pk)
         if instance is None:
             return Response({"detail": "未知关系类型。"}, status=404)
+        if kind in WORK_RELATION_KINDS and _work_has_published_edition(instance.work):
+            return _published_work_relation_requires_revision()
+        if kind in TOPIC_RELATION_FIELDS and instance.topic.editorial_status == "published":
+            from .services.editorial_revision import EditorialRevisionError
+
+            _field_name, _relation_field, id_field = TOPIC_RELATION_FIELDS[kind]
+            rows = [
+                row
+                for row in _topic_relation_rows(instance.topic, kind)
+                if str(row[id_field]) != str(getattr(instance, id_field))
+            ]
+            try:
+                return _draft_topic_relation_revision(
+                    request,
+                    topic=instance.topic,
+                    kind=kind,
+                    rows=rows,
+                    change_note="已发布主题移除知识关系草稿",
+                )
+            except EditorialRevisionError as error:
+                return Response(
+                    {"detail": str(error), "code": "editorial_revision_error"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

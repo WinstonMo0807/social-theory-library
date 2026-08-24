@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Asset, OcrStatus, PublicationState, ReaderRenditionPolicy
-from common.permissions import CanViewEvidence, IsLibraryAdmin
+from common.permissions import CanManageProviders, CanRunBackup, CanViewEvidence
 
 from .models import BackupJob, CloudBudgetPolicy, CloudObject, CloudProvider, CloudUsageSnapshot
 from .serializers import BackupJobSerializer, CloudProviderSerializer, CloudUsageSnapshotSerializer
@@ -448,19 +448,19 @@ class AdminAssetPreviewView(AssetFileView):
 
 
 class CloudProviderListView(generics.ListCreateAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageProviders]
     serializer_class = CloudProviderSerializer
     queryset = CloudProvider.objects.all().order_by("-is_default", "name")
 
 
 class CloudProviderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageProviders]
     serializer_class = CloudProviderSerializer
     queryset = CloudProvider.objects.all()
 
 
 class CloudUsageListView(generics.ListCreateAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageProviders]
     serializer_class = CloudUsageSnapshotSerializer
 
     def get_queryset(self):
@@ -496,7 +496,7 @@ class CloudUsageListView(generics.ListCreateAPIView):
 
 
 class BackupJobListView(generics.ListCreateAPIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanRunBackup]
     serializer_class = BackupJobSerializer
     queryset = BackupJob.objects.all().order_by("-created_at")
 

@@ -21,6 +21,7 @@ from catalog.models import (
     SiteSetting,
 )
 from catalog.services.semantic_indexing import queue_semantic_job
+from catalog.services.document_intelligence import best_effort_ocr_completion
 from catalog.services.query_lexicon.candidates import (
     EXTRACTION_VERSION as QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
     candidate_source_checksum,
@@ -1048,6 +1049,42 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 "validation_details",
                 "updated_at",
             ]
+        )
+
+        configured_ocr_pages = (asset.validation_details or {}).get(
+            "ocr_required_page_indexes"
+        )
+        if isinstance(configured_ocr_pages, list):
+            completed_ocr_pages = sorted(
+                {
+                    int(index)
+                    for index in configured_ocr_pages
+                    if str(index).isdigit() and int(index) > 0
+                }
+            )
+        else:
+            completed_ocr_pages = list(
+                asset.pages.filter(
+                    text_source__in=[Page.TextSource.OCR, Page.TextSource.HYBRID]
+                )
+                .order_by("index")
+                .values_list("index", flat=True)
+            )
+        runtime_config = ocr_runtime_config()
+        stats["document_intelligence"] = best_effort_ocr_completion(
+            asset,
+            page_indexes=completed_ocr_pages,
+            provider=provider,
+            model=(
+                runtime_config["remote_model"]
+                if provider == "remote_ocr"
+                else ""
+            ),
+            provider_version=(
+                job.settings_version
+                or runtime_config["saved_configuration_version"]
+            ),
+            actor=job.created_by,
         )
 
         try:

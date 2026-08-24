@@ -16,6 +16,7 @@ from catalog.models import (
     TheorySchool,
 )
 from catalog.services.query_lexicon import mutations
+from ingestion.models import ProcessingJob
 
 
 pytestmark = pytest.mark.django_db
@@ -92,6 +93,85 @@ def test_worker_wakeup_is_deferred_until_transaction_commit(
     assert len(dispatched) == 1
     event = QueryLexiconChangeEvent.objects.get(entity_id=person.pk)
     assert dispatched == [(event.event_seq,)]
+
+
+def test_reconciliation_enqueue_uses_configured_query_lexicon_queue(
+    settings,
+    django_capture_on_commit_callbacks,
+    monkeypatch,
+):
+    from catalog import tasks as catalog_tasks
+    from catalog.services.query_lexicon.operations import (
+        enqueue_query_lexicon_reconciliation,
+    )
+
+    settings.QUERY_LEXICON_TASK_QUEUE = "query-lexicon-test"
+    dispatched = []
+
+    def capture_apply_async(*args, **kwargs):
+        dispatched.append((args, kwargs))
+
+    monkeypatch.setattr(
+        catalog_tasks.run_query_lexicon_reconciliation,
+        "apply_async",
+        capture_apply_async,
+    )
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        job = enqueue_query_lexicon_reconciliation()
+        assert dispatched == []
+
+    assert len(callbacks) == 1
+    assert len(dispatched) == 1
+    args, kwargs = dispatched[0]
+    assert args == ()
+    assert kwargs == {
+        "args": [str(job.id), job.task_id],
+        "task_id": job.task_id,
+        "queue": "query-lexicon-test",
+    }
+
+
+def test_reconciliation_recovery_uses_configured_query_lexicon_queue(
+    settings,
+    monkeypatch,
+):
+    from catalog import tasks as catalog_tasks
+
+    settings.QUERY_LEXICON_TASK_QUEUE = "query-lexicon-recovery-test"
+    job = ProcessingJob.objects.create(
+        job_type=ProcessingJob.JobType.QUERY_LEXICON_RECONCILE,
+        status=ProcessingJob.Status.FAILED,
+        error_code="queue_unavailable",
+        error_message="previous dispatch failed",
+        task_id="previous-task-id",
+    )
+    dispatched = []
+
+    def capture_apply_async(*args, **kwargs):
+        dispatched.append((args, kwargs))
+
+    monkeypatch.setattr(
+        catalog_tasks.run_query_lexicon_reconciliation,
+        "apply_async",
+        capture_apply_async,
+    )
+
+    result = catalog_tasks.recover_query_lexicon_reconciliation_jobs()
+
+    job.refresh_from_db()
+    assert result == {"candidates": 1, "requeued": 1}
+    assert job.status == ProcessingJob.Status.PENDING
+    assert job.task_id != "previous-task-id"
+    assert job.error_code == ""
+    assert len(dispatched) == 1
+    args, kwargs = dispatched[0]
+    assert args == ()
+    assert kwargs == {
+        "args": [str(job.id), job.task_id],
+        "task_id": job.task_id,
+        "queue": "query-lexicon-recovery-test",
+    }
 
 
 def test_event_recording_failure_rolls_back_authority_write(monkeypatch):

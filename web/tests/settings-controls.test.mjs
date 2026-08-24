@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("admin footer uses the shared 2.9.2 research orchestrator version", async () => {
+test("admin footer uses the shared 3.0.0 architecture version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "2\.9\.2"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v2\.9\.2 研究编排与功能健康"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.0"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.0 证据、知识与智能工作台"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
@@ -111,6 +111,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
     ["工作", ["/admin", "/admin/uploads", "/admin/review", "/admin/publication", "/admin/candidates"]],
     ["馆藏", ["/admin/library", "/admin/library?view=editions", "/admin/library?view=quality"]],
     ["知识", [
+      "/admin/knowledge",
       "/admin/scholars",
       "/admin/disciplines",
       "/admin/subdisciplines",
@@ -161,6 +162,35 @@ test("admin navigation uses the approved groups and only real routes", async () 
     import.meta.url,
   ));
   }));
+});
+
+test("AI settings expose every 3.0 capability and immutable Prompt revisions", async () => {
+  const [settings, prompts] = await Promise.all([
+    readFile(new URL("../components/admin-sections.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/prompt-registry-admin.tsx", import.meta.url), "utf8"),
+  ]);
+
+  for (const capability of [
+    "entity_reasoning",
+    "claim_extraction",
+    "claim_attribution",
+    "claim_stance",
+    "rerank",
+    "theory_reasoning",
+    "knowledge_relation_reasoning",
+    "debate_discovery",
+    "reading_path_generation",
+    "curation_reasoning",
+  ]) {
+    assert.match(settings, new RegExp(`\\| "${capability}"`));
+  }
+  assert.match(settings, /失败回退 profile/);
+  assert.match(settings, /Credential alias/);
+  assert.match(settings, /<PromptRegistryAdmin \/>/);
+  assert.match(prompts, /action: "create_revision"/);
+  assert.match(prompts, /action: "activate"/);
+  assert.match(prompts, /建立草稿修订/);
+  assert.match(prompts, /不会修改 Canonical Knowledge/);
 });
 
 test("admin navigation does not prefetch every management page at once", async () => {

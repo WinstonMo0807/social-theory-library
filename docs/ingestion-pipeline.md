@@ -1,15 +1,27 @@
 # PDF 入库、处理与发布流程
 
-更新日期：2026-08-15
-适用源码快照：`2.6.1`
+更新日期：2026-08-24
+适用源码基线：`4b97a3484db0c3918f5b0fef8bfc75c35bd0dcee` 加 3.0 发布候选
 
-## 1. 文档范围
+## 3.0 增量扩展
+
+3.0 没有重写上传、R2 staging、NAS intake、校验、查重、Work/Edition、Asset、PyMuPDF、选择性 OCR、Page、TextBlock、Passage、SemanticChunk 和人工发布。新增工作发生在现有 extraction 之后。
+
+1. `sync_document_revision_for_asset()` 根据 Asset 和文本校验和建立或复用 active DocumentRevision。旧 revision 标为 superseded，但 Page ID 保持不变。
+2. `assess_document_quality()` 保存六类质量结果和 critical pages。质量不足不会自动触发全馆 OCR。
+3. `sync_evidence_spans_for_revision()` 从当前页文本增量建立馆藏 EvidenceSpan。
+4. Claim extraction 以非阻断 capability demand 运行。AI 不可用时任务保持 waiting，不改变 UploadItem ready 或 publication preflight。
+5. DerivedClaim 和 Claim Index 只作为派生检索数据。Editor 采用后建立 draft CuratedClaim，发布动作再将有效 Evidence 支持的草稿公开。
+6. 选择性重做一页或几页 OCR 时，只让这些页的 EvidenceSpan、DerivedClaim 和相关 projection stale，再按 revision 调度增量处理。
+
+ORIGINAL Asset、人工 FieldLock、人工确认关系、Page、读者 Annotation 和 Bookmark 不会被上述过程替换。Passage 继续作为兼容全文单位，SemanticChunk 继续作为 retrieval unit。
+
+## 1. 历史流程说明
 
 - [SOURCE] 本文描述当前源码中的真实执行顺序，不把目标设计写成已实现功能。
-- [SOURCE] 当前目录没有 Git 历史。文件位置和行号以本次源码快照为准。
-- [SOURCE] 当前快照包含 `ingestion.0008`、`catalog.0019`、`catalog.0020` 和 `catalog.0021`。主 pipeline 已接入其中一部分能力；本文逐项区分模型、服务、API、界面和仍未完成部分。
-- [UNKNOWN] 生产环境当前队列深度、正在执行的任务和数据库记录不在本次只读审计范围内。
-- [USER] 本轮不自动部署、不执行生产迁移、不触碰真实 PDF 和生产数据。
+- [SOURCE] 下文保留 2.6.1 时形成的逐阶段说明。当前实现应同时结合上方 3.0 增量扩展和实际源码阅读。
+- [SOURCE] 3.0 新增 catalog 0033、0034。它们不改变 ingestion、reading 的 migration head。
+- [SOURCE] 本轮生产切换必须先使用 fresh BackupJob 在 disposable PostgreSQL 16 演练，再应用 migration。任何真实 PDF 和 ORIGINAL Asset 都不得被改写。
 
 ## 2. 入口与核心记录
 

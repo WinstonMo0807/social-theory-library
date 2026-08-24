@@ -1,7 +1,14 @@
 import pytest
 from django.test import RequestFactory, override_settings
 
-from catalog.models import Edition, KnowledgeNode, TheoryReviewTask, Topic, Work
+from catalog.models import (
+    DomainChangeEvent,
+    Edition,
+    KnowledgeNode,
+    TheoryReviewTask,
+    Topic,
+    Work,
+)
 from config.throttling import is_trusted_internal_request
 from ingestion.models import AuditEvent, UploadBatch, UploadItem
 
@@ -205,6 +212,11 @@ def test_timeline_event_can_publish_with_theory_but_without_work(
     assert response.status_code == 201
     assert response.data["work"] is None
     assert response.data["review_status"] == "approved"
+    assert DomainChangeEvent.objects.filter(
+        object_type="timeline_event",
+        object_id=response.data["id"],
+        change_kind="publish",
+    ).exists()
 
 
 @pytest.mark.django_db

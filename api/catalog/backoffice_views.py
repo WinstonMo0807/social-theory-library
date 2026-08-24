@@ -6,11 +6,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ingestion.models import ProcessingJob, UploadItem
-from catalog.models import HealthIncident
+from catalog.models import HealthIncident, PromptRegistryEntry, ResearchTaskProfile
 
 from common.permissions import (
     CanAccessBackOffice,
     CanManageQueryLexicon,
+    CanManagePromptRegistry,
     CanRetryJobs,
     CanViewQueryLexicon,
     CanViewEvidence,
@@ -89,15 +90,151 @@ class AdminQueryLexiconTermInspectorView(APIView):
 
 
 class AdminKnowledgeWorkspaceView(APIView):
-    permission_classes = [CanAccessBackOffice]
+    permission_classes = [CanAccessBackOffice, CanViewEvidence]
 
     def get(self, request):
-        return Response(
-            knowledge_workspace(
-                status=request.query_params.get("status", "pending"),
-                entity_type=request.query_params.get("entity_type", ""),
-                work_id=request.query_params.get("work_id", ""),
+        from catalog.services.knowledge_studio import knowledge_studio_workspace
+
+        # Keep the established candidate overview in the response while the
+        # Studio adds a bounded read model over canonical, derived and draft
+        # stores.  All mutations remain on their specialist endpoints.
+        payload = knowledge_workspace(
+            status=request.query_params.get("status", "pending"),
+            entity_type=request.query_params.get("entity_type", ""),
+            work_id=request.query_params.get("work_id", ""),
+        )
+        payload["studio"] = knowledge_studio_workspace(
+            query=request.query_params.get("q", ""),
+            object_type=request.query_params.get("object_type", ""),
+            selected_type=request.query_params.get("selected_type", ""),
+            selected_id=request.query_params.get("selected_id", ""),
+            limit=request.query_params.get("limit", 40),
+        )
+        return Response(payload)
+
+
+def _prompt_registry_row(prompt: PromptRegistryEntry) -> dict:
+    return {
+        "id": str(prompt.id),
+        "key": prompt.key,
+        "version": prompt.version,
+        "capability": prompt.capability,
+        "task_profile_key": prompt.task_profile_key,
+        "content": prompt.content,
+        "output_schema": prompt.output_schema,
+        "provider_guidance": prompt.provider_guidance,
+        "content_hash": prompt.content_hash,
+        "schema_hash": prompt.schema_hash,
+        "status": prompt.status,
+        "created_by": str(prompt.created_by_id) if prompt.created_by_id else None,
+        "activated_by": (
+            str(prompt.activated_by_id) if prompt.activated_by_id else None
+        ),
+        "activated_at": prompt.activated_at,
+        "created_at": prompt.created_at,
+        "updated_at": prompt.updated_at,
+    }
+
+
+class AdminPromptRegistryView(APIView):
+    """Immutable prompt revisions with explicit Superadmin activation."""
+
+    permission_classes = [CanManagePromptRegistry]
+
+    def get(self, request):
+        queryset = PromptRegistryEntry.objects.all()
+        key = str(request.query_params.get("key") or "").strip()
+        status_value = str(request.query_params.get("status") or "").strip()
+        if key:
+            queryset = queryset.filter(key=key)
+        if status_value:
+            queryset = queryset.filter(status=status_value)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 200))
+        except (TypeError, ValueError):
+            limit = 100
+        profiles = list(
+            ResearchTaskProfile.objects.filter(is_active=True)
+            .order_by("key")
+            .values(
+                "key",
+                "version",
+                "name",
+                "prompt_key",
+                "required_capability",
             )
+        )
+        return Response(
+            {
+                "immutable_revisions": True,
+                "activation_requires_superadmin": True,
+                "results": [
+                    _prompt_registry_row(row)
+                    for row in queryset.order_by("key", "-version")[:limit]
+                ],
+                "active_task_profiles": profiles,
+            }
+        )
+
+    def post(self, request):
+        from common.ai_runtime import AICapability
+        from catalog.services.research.prompt_registry import (
+            activate_prompt_revision,
+            create_prompt_revision,
+        )
+
+        action = str(request.data.get("action") or "create_revision").strip().casefold()
+        try:
+            if action == "create_revision":
+                output_schema = request.data.get("output_schema") or {}
+                provider_guidance = request.data.get("provider_guidance") or {}
+                if not isinstance(output_schema, dict):
+                    return Response(
+                        {"output_schema": ["output_schema 必须是 JSON 对象。"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if not isinstance(provider_guidance, dict):
+                    return Response(
+                        {"provider_guidance": ["provider_guidance 必须是 JSON 对象。"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                capability = str(request.data.get("capability") or "").strip()
+                if capability not in AICapability.VALUES:
+                    return Response(
+                        {"capability": ["请选择已注册的 AI capability。"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                prompt = create_prompt_revision(
+                    key=request.data.get("key", ""),
+                    capability=capability,
+                    content=request.data.get("content", ""),
+                    output_schema=output_schema,
+                    actor=request.user,
+                    task_profile_key=request.data.get("task_profile_key", ""),
+                    provider_guidance=provider_guidance,
+                )
+                return Response(
+                    _prompt_registry_row(prompt),
+                    status=status.HTTP_201_CREATED,
+                )
+            if action == "activate":
+                prompt = get_object_or_404(
+                    PromptRegistryEntry,
+                    pk=request.data.get("prompt_id"),
+                )
+                return Response(
+                    _prompt_registry_row(
+                        activate_prompt_revision(prompt=prompt, actor=request.user)
+                    )
+                )
+        except (PermissionError, ValueError) as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"detail": "action 必须是 create_revision 或 activate。"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
 

@@ -9,7 +9,7 @@ from django.conf import settings
 from django.db import DatabaseError
 
 
-PROFILE_DOCUMENT_VERSION = "ai-runtime-profiles-v1"
+PROFILE_DOCUMENT_VERSION = "ai-runtime-profiles-v2"
 PROFILE_SETTING_KEY = "ai_runtime_profiles"
 
 
@@ -17,11 +17,31 @@ class AICapability:
     METADATA_EXTRACTION = "metadata_extraction"
     LIBRARY_QA = "library_qa"
     FIELD_ENRICHMENT_OPTIONAL = "field_enrichment_optional"
+    ENTITY_REASONING = "entity_reasoning"
+    CLAIM_EXTRACTION = "claim_extraction"
+    CLAIM_ATTRIBUTION = "claim_attribution"
+    CLAIM_STANCE = "claim_stance"
+    RERANK = "rerank"
+    THEORY_REASONING = "theory_reasoning"
+    KNOWLEDGE_RELATION_REASONING = "knowledge_relation_reasoning"
+    DEBATE_DISCOVERY = "debate_discovery"
+    READING_PATH_GENERATION = "reading_path_generation"
+    CURATION_REASONING = "curation_reasoning"
 
     VALUES = (
         METADATA_EXTRACTION,
         LIBRARY_QA,
         FIELD_ENRICHMENT_OPTIONAL,
+        ENTITY_REASONING,
+        CLAIM_EXTRACTION,
+        CLAIM_ATTRIBUTION,
+        CLAIM_STANCE,
+        RERANK,
+        THEORY_REASONING,
+        KNOWLEDGE_RELATION_REASONING,
+        DEBATE_DISCOVERY,
+        READING_PATH_GENERATION,
+        CURATION_REASONING,
     )
 
 
@@ -70,6 +90,120 @@ CAPABILITY_POLICIES = {
         default_timeout_seconds=45,
         default_answer_behavior="candidate_judge_only",
     ),
+    AICapability.ENTITY_REASONING: CapabilityPolicy(
+        capability=AICapability.ENTITY_REASONING,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=2048,
+        default_timeout_seconds=60,
+        default_answer_behavior="structured_candidates",
+    ),
+    AICapability.CLAIM_EXTRACTION: CapabilityPolicy(
+        capability=AICapability.CLAIM_EXTRACTION,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=4096,
+        default_timeout_seconds=120,
+        default_answer_behavior="derived_claims_only",
+    ),
+    AICapability.CLAIM_ATTRIBUTION: CapabilityPolicy(
+        capability=AICapability.CLAIM_ATTRIBUTION,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=1536,
+        default_timeout_seconds=60,
+        default_answer_behavior="evidence_bound_classification",
+    ),
+    AICapability.CLAIM_STANCE: CapabilityPolicy(
+        capability=AICapability.CLAIM_STANCE,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=1536,
+        default_timeout_seconds=60,
+        default_answer_behavior="evidence_bound_classification",
+    ),
+    AICapability.RERANK: CapabilityPolicy(
+        capability=AICapability.RERANK,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=2048,
+        default_timeout_seconds=45,
+        default_answer_behavior="bounded_ranking",
+    ),
+    AICapability.THEORY_REASONING: CapabilityPolicy(
+        capability=AICapability.THEORY_REASONING,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=3072,
+        default_timeout_seconds=90,
+        default_answer_behavior="candidate_judge_only",
+    ),
+    AICapability.KNOWLEDGE_RELATION_REASONING: CapabilityPolicy(
+        capability=AICapability.KNOWLEDGE_RELATION_REASONING,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=3072,
+        default_timeout_seconds=90,
+        default_answer_behavior="candidate_judge_only",
+    ),
+    AICapability.DEBATE_DISCOVERY: CapabilityPolicy(
+        capability=AICapability.DEBATE_DISCOVERY,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=3072,
+        default_timeout_seconds=90,
+        default_answer_behavior="candidate_only",
+    ),
+    AICapability.READING_PATH_GENERATION: CapabilityPolicy(
+        capability=AICapability.READING_PATH_GENERATION,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0.1,
+        default_max_output_tokens=4096,
+        default_timeout_seconds=120,
+        default_answer_behavior="candidate_only",
+    ),
+    AICapability.CURATION_REASONING: CapabilityPolicy(
+        capability=AICapability.CURATION_REASONING,
+        supports_json=True,
+        supports_stream=False,
+        default_temperature=0,
+        default_max_output_tokens=3072,
+        default_timeout_seconds=90,
+        default_answer_behavior="candidate_judge_only",
+    ),
+}
+
+
+LEGACY_REQUIRED_CAPABILITIES = (
+    AICapability.METADATA_EXTRACTION,
+    AICapability.LIBRARY_QA,
+    AICapability.FIELD_ENRICHMENT_OPTIONAL,
+)
+
+DEFAULT_PROFILE_KEYS = {
+    capability: f"{capability.replace('_', '-')}-default"
+    for capability in AICapability.VALUES
+}
+DEFAULT_PROFILE_KEYS.update(
+    {
+        AICapability.METADATA_EXTRACTION: "metadata-default",
+        AICapability.LIBRARY_QA: "library-default",
+        AICapability.FIELD_ENRICHMENT_OPTIONAL: "field-enrichment-default",
+    }
+)
+
+ALLOWED_ANSWER_BEHAVIORS = {
+    capability: {policy.default_answer_behavior}
+    for capability, policy in CAPABILITY_POLICIES.items()
 }
 
 
@@ -102,6 +236,39 @@ class AIRuntimeProfileError(ValueError):
 def _provider_from_settings() -> str:
     provider = str(getattr(settings, "AI_PROVIDER", "none") or "none").strip().casefold()
     return provider if provider in SUPPORTED_AI_PROVIDERS else "none"
+
+
+def _disabled_default_profile(
+    capability: str,
+    *,
+    provider: str = "none",
+    model: str = "",
+    max_input_chars: int | None = None,
+) -> AIRuntimeProfile:
+    """Return an explicit, non-running profile for a newly introduced task.
+
+    New capabilities are deliberately disabled.  Extending the registry must
+    not make production depend on a laptop or cloud model merely because an
+    environment-wide provider happens to be configured.
+    """
+
+    policy = CAPABILITY_POLICIES[capability]
+    return AIRuntimeProfile(
+        key=DEFAULT_PROFILE_KEYS[capability],
+        capability=capability,
+        provider=provider if provider in SUPPORTED_AI_PROVIDERS else "none",
+        model=str(model or "").strip(),
+        enabled=False,
+        temperature=policy.default_temperature,
+        max_output_tokens=policy.default_max_output_tokens,
+        timeout_seconds=policy.default_timeout_seconds,
+        max_input_chars=int(
+            max_input_chars
+            if max_input_chars is not None
+            else getattr(settings, "AI_MAX_INPUT_CHARS", 16000)
+        ),
+        answer_behavior=policy.default_answer_behavior,
+    )
 
 
 def _environment_profiles() -> dict:
@@ -150,12 +317,23 @@ def _environment_profiles() -> dict:
             answer_behavior="candidate_judge_only",
         ),
     ]
+    reasoning_model = classifier_model or library_model
+    for capability in AICapability.VALUES:
+        if capability in LEGACY_REQUIRED_CAPABILITIES:
+            continue
+        profiles.append(
+            _disabled_default_profile(
+                capability,
+                provider=provider,
+                model=reasoning_model,
+                max_input_chars=max_input,
+            )
+        )
     return {
         "version": PROFILE_DOCUMENT_VERSION,
         "active": {
-            AICapability.METADATA_EXTRACTION: "metadata-default",
-            AICapability.LIBRARY_QA: "library-default",
-            AICapability.FIELD_ENRICHMENT_OPTIONAL: "field-enrichment-default",
+            profile.capability: profile.key
+            for profile in profiles
         },
         "profiles": [profile.safe_dict() for profile in profiles],
         "source": "environment-default",
@@ -238,12 +416,7 @@ def validate_runtime_profile(value: dict) -> AIRuntimeProfile:
         value.get("answer_behavior")
         or CAPABILITY_POLICIES[capability].default_answer_behavior
     ).strip().casefold()
-    allowed_behaviors = {
-        AICapability.METADATA_EXTRACTION: {"structured_candidates"},
-        AICapability.LIBRARY_QA: {"evidence_only"},
-        AICapability.FIELD_ENRICHMENT_OPTIONAL: {"candidate_judge_only"},
-    }
-    if answer_behavior not in allowed_behaviors[capability]:
+    if answer_behavior not in ALLOWED_ANSWER_BEHAVIORS[capability]:
         raise AIRuntimeProfileError("该 capability 不允许此 answer behavior。")
     return AIRuntimeProfile(
         key=key,
@@ -277,13 +450,29 @@ def validate_profile_document(value: dict) -> dict:
     by_key = {profile.key: profile for profile in profiles}
     if len(by_key) != len(profiles):
         raise AIRuntimeProfileError("AI runtime profile key 不能重复。")
+    by_capability: dict[str, list[AIRuntimeProfile]] = {}
+    for profile in profiles:
+        by_capability.setdefault(profile.capability, []).append(profile)
     normalized_active = {}
     for capability in AICapability.VALUES:
         key = str(active.get(capability) or "").strip().casefold()
+        if not key and capability not in LEGACY_REQUIRED_CAPABILITIES:
+            candidates = by_capability.get(capability) or []
+            if not candidates:
+                default_profile = _disabled_default_profile(capability)
+                if default_profile.key in by_key:
+                    raise AIRuntimeProfileError("AI runtime 默认 profile key 与现有配置冲突。")
+                profiles.append(default_profile)
+                by_key[default_profile.key] = default_profile
+                by_capability[capability] = [default_profile]
+                candidates = [default_profile]
+            key = candidates[0].key
         profile = by_key.get(key)
         if profile is None or profile.capability != capability:
             raise AIRuntimeProfileError(f"{capability} 的 active profile 无效。")
         normalized_active[capability] = key
+    if len(profiles) > 48:
+        raise AIRuntimeProfileError("AI runtime profiles 数量不能超过 48。")
     for profile in profiles:
         fallback = profile.fallback_profile_key
         if not fallback:

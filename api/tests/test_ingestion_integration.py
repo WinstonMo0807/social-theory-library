@@ -11,6 +11,9 @@ from catalog.models import (
     Contribution,
     Discipline,
     Edition,
+    EvidenceSnippet,
+    KnowledgeNode,
+    LegacyKnowledgeMapping,
     OcrStatus,
     Person,
     PublicationEvent,
@@ -21,7 +24,9 @@ from catalog.models import (
     Topic,
     WorkDisciplineRelation,
     WorkKnowledgeRelation,
+    WorkNodeRelation,
     WorkSubdisciplineRelation,
+    WorkTopicRelation,
     SemanticIndexVersion,
 )
 from ingestion.models import UploadBatch, UploadItem
@@ -105,7 +110,7 @@ def review_payload(**overrides):
         "doi": "",
         "abstract": "人工复核内容必须独立于后台索引任务保存。",
         "authors": ["人工确认学者"],
-        "theory_schools": ["人工确认流派"],
+        "theory_schools": [],
         "topics": ["人工确认主题"],
         "lock_fields": ["title", "authors", "theory_schools", "topics"],
         "retry_publication": True,
@@ -308,6 +313,18 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
         slug="test-theory",
         editorial_status="published",
     )
+    theory_node = KnowledgeNode.objects.create(
+        node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+        canonical_name_zh=theory.name,
+        slug="test-theory-normalized",
+        status="published",
+    )
+    LegacyKnowledgeMapping.objects.create(
+        legacy_model="TheorySchool",
+        legacy_id=theory.id,
+        node=theory_node,
+        migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+    )
     topic = Topic.objects.create(
         name="测试主题",
         slug="test-topic",
@@ -333,7 +350,7 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
             "doi": "",
             "abstract": "用于联动验收的测试文献。",
             "authors": ["测试学者"],
-            "theory_schools": ["测试理论"],
+            "theory_schools": [],
             "theory_assignments": [{
                 "id": str(theory.id),
                 "role": "foundational",
@@ -380,15 +397,16 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     assert Topic.objects.get(name="测试主题").editorial_status == "published"
     item.refresh_from_db()
     work = item.edition.work
-    theory_relation = WorkKnowledgeRelation.objects.get(
+    theory_relation = WorkNodeRelation.objects.get(
         work=work,
-        theory_school=theory,
+        node=theory_node,
     )
-    assert theory_relation.role == "foundational"
+    assert theory_relation.role == WorkNodeRelation.Role.FOUNDATIONAL
     assert theory_relation.strength == "high"
-    assert theory_relation.evidence_page == 2
-    assert theory_relation.review_status == "approved"
-    assert WorkKnowledgeRelation.objects.get(work=work, topic=topic).evidence_page == 2
+    assert theory_relation.status == "published"
+    assert EvidenceSnippet.objects.get(work_node_relation=theory_relation).page_number == 2
+    assert WorkTopicRelation.objects.get(work=work, topic=topic).evidence_page == 2
+    assert not WorkKnowledgeRelation.objects.filter(work=work).exists()
     assert WorkDisciplineRelation.objects.get(
         work=work,
         discipline=discipline,
@@ -397,11 +415,6 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
         work=work,
         subdiscipline=subdiscipline,
     ).strength == "high"
-    assert not TheorySchool.objects.filter(
-        editorial_status="published",
-        workknowledgerelation__approved=False,
-        workknowledgerelation__work=review_response.data["edition"],
-    ).exists()
 
     scholar_profile = ScholarProfile.objects.get(person__preferred_name="测试学者")
     assert scholar_profile.editorial_status == "draft"

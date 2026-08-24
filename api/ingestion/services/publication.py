@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from catalog.models import (
     Asset,
+    CuratedClaim,
     Edition,
     OcrStatus,
     PageLabelStatus,
@@ -16,6 +17,8 @@ from catalog.models import (
     ReviewStatus,
     SemanticIndexStatus,
 )
+from catalog.services.claims.curation import publish_work_curated_claims
+from catalog.services.dependency_engine import record_canonical_change
 from distribution.models import CloudObject
 
 
@@ -167,22 +170,33 @@ def publish_edition(
     confirm_warnings: bool = False,
 ) -> Edition:
     edition = Edition.objects.select_for_update().select_related("work").get(pk=edition.pk)
-    if edition.state == PublicationState.PUBLISHED:
+    has_curated_drafts = CuratedClaim.objects.filter(
+        work=edition.work,
+        status=CuratedClaim.Status.DRAFT,
+        evidence_links__evidence_span__is_stale=False,
+        evidence_links__evidence_span__document_revision__is_active=True,
+    ).exists()
+    if edition.state == PublicationState.PUBLISHED and not has_curated_drafts:
         return edition
     preflight = publication_preflight(edition)
     if preflight["blockers"]:
         raise PublicationBlocked(preflight["blockers"])
     if preflight["warnings"] and not confirm_warnings:
         raise PublicationWarningsRequireConfirmation(preflight["warnings"])
+    is_public_update = edition.state == PublicationState.PUBLISHED
     is_republication = edition.state == PublicationState.WITHDRAWN
     event_type = (
         PublicationEvent.EventType.REPUBLISH
         if is_republication
+        else PublicationEvent.EventType.UPDATE
+        if is_public_update
         else PublicationEvent.EventType.PUBLISH
     )
     event_key = idempotency_key or f"publish:{edition.id}:{edition.updated_at.isoformat()}"
     if is_republication:
         event_key = f"{event_key}:republish:{edition.updated_at.isoformat()}"
+    elif is_public_update:
+        event_key = f"{event_key}:curated-update:{edition.updated_at.isoformat()}"
     event_key = _publication_event_key(event_key)
     event, created = PublicationEvent.objects.get_or_create(
         idempotency_key=event_key,
@@ -209,11 +223,21 @@ def publish_edition(
             "updated_at",
         ]
     )
+    published_claims = publish_work_curated_claims(work=edition.work, actor=actor)
+    record_canonical_change(
+        object_type="edition",
+        object_id=edition.id,
+        change_kind=("update" if is_public_update else "publish"),
+        changed_fields=["state", "published_at", "curated_claims"],
+        actor=actor,
+        idempotency_key=f"publication-domain:{event.id}",
+    )
     event.completed_at = now
     event.payload = {
         "state": PublicationState.PUBLISHED,
         "preflight": preflight,
         "warnings_confirmed": bool(preflight["warnings"]),
+        "curated_claim_ids": [str(claim.id) for claim in published_claims],
     }
     event.save(update_fields=["completed_at", "payload", "updated_at"])
     transaction.on_commit(invalidate_public_recommendations)
@@ -237,5 +261,13 @@ def withdraw_edition(edition: Edition, actor=None, reason: str = "") -> Edition:
     edition.state = PublicationState.WITHDRAWN
     edition.withdrawn_at = now
     edition.save(update_fields=["state", "withdrawn_at", "updated_at"])
+    record_canonical_change(
+        object_type="edition",
+        object_id=edition.id,
+        change_kind="withdraw",
+        changed_fields=["state", "withdrawn_at"],
+        actor=actor,
+        idempotency_key=f"publication-domain:{event.id}",
+    )
     transaction.on_commit(invalidate_public_recommendations)
     return edition

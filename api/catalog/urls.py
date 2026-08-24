@@ -27,6 +27,11 @@ from .knowledge_views import (
     TheoryTimelineListView,
 )
 from .lifecycle_views import AdminEntityLifecycleView
+from .editorial_revision_views import (
+    AdminEditorialRevisionDetailView,
+    AdminEditorialRevisionListCreateView,
+    AdminEditorialRevisionPublishView,
+)
 from .enrichment_views import (
     AdminCandidateReviewDecisionView,
     AdminCandidateReviewView,
@@ -40,6 +45,7 @@ from .backoffice_views import (
     AdminFunctionalHealthView,
     AdminIntakeWorkspaceView,
     AdminKnowledgeWorkspaceView,
+    AdminPromptRegistryView,
     AdminProjectionRefreshView,
     AdminProjectionStatusView,
     AdminQueryLexiconTermInspectorView,
@@ -48,6 +54,7 @@ from .backoffice_views import (
     AdminWorkPagePreviewView,
 )
 from .curation_views import (
+    WorkClaimCandidateDecisionView,
     WorkCurationSummaryView,
     WorkReadingPathPlacementDetailView,
     WorkReadingPathPlacementListView,
@@ -66,6 +73,7 @@ from .workflow_suggestion_views import (
     MaintenanceWorkflowSuggestionView,
     WorkflowSuggestionPolicyView,
 )
+from .viewpoint_views import ViewpointSearchView
 from .research_views import (
     IntakeResearchView,
     ResearchContractView,
@@ -157,6 +165,21 @@ from .theory_system_views import (
 
 urlpatterns = [
     path(
+        "admin/editorial-revisions/",
+        AdminEditorialRevisionListCreateView.as_view(),
+        name="admin-editorial-revision-list",
+    ),
+    path(
+        "admin/editorial-revisions/<uuid:pk>/",
+        AdminEditorialRevisionDetailView.as_view(),
+        name="admin-editorial-revision-detail",
+    ),
+    path(
+        "admin/editorial-revisions/<uuid:pk>/publish/",
+        AdminEditorialRevisionPublishView.as_view(),
+        name="admin-editorial-revision-publish",
+    ),
+    path(
         "admin/workflows/queue/",
         WorkflowQueueView.as_view(),
         name="admin-workflow-queue",
@@ -237,6 +260,11 @@ urlpatterns = [
         name="admin-work-curation-summary",
     ),
     path(
+        "admin/works/<uuid:work_id>/claim-candidates/<uuid:claim_id>/decision/",
+        WorkClaimCandidateDecisionView.as_view(),
+        name="admin-work-claim-candidate-decision",
+    ),
+    path(
         "admin/works/<uuid:work_id>/reading-path-placements/",
         WorkReadingPathPlacementListView.as_view(),
         name="admin-work-reading-path-placement-list",
@@ -265,6 +293,11 @@ urlpatterns = [
         "admin/knowledge-workspace/",
         AdminKnowledgeWorkspaceView.as_view(),
         name="admin-knowledge-workspace",
+    ),
+    path(
+        "admin/prompt-registry/",
+        AdminPromptRegistryView.as_view(),
+        name="admin-prompt-registry",
     ),
     path(
         "admin/system-status/",
@@ -571,6 +604,7 @@ urlpatterns = [
     path("hot-searches/", HotSearchView.as_view(), name="hot-searches"),
     path("usage-events/", PublicUsageEventView.as_view(), name="usage-events"),
     path("semantic-search/", SemanticSearchView.as_view(), name="semantic-search"),
+    path("viewpoint-search/", ViewpointSearchView.as_view(), name="viewpoint-search"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),
     path("assets/<uuid:asset_id>/manifest/", PublicAssetManifestView.as_view(), name="asset-manifest"),

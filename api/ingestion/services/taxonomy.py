@@ -1,15 +1,20 @@
 import json
 import re
 
-from django.utils.text import slugify
-
 from catalog.models import (
     Discipline,
+    KnowledgeNode,
+    KnowledgePublicationStatus,
     RelationReviewStatus,
     Subdiscipline,
     TheorySchool,
     Topic,
-    WorkKnowledgeRelation,
+    WorkNodeRelation,
+    WorkTopicRelation,
+)
+from catalog.services.canonical_identity import (
+    CanonicalIdentityError,
+    mapped_node_for_legacy,
 )
 
 
@@ -209,12 +214,41 @@ def _matches(text: str, tokens: tuple[str, ...]) -> int:
     return sum(1 for token in tokens if token.casefold() in folded)
 
 
-def _safe_slug(name: str, suggested: str) -> str:
-    return suggested or slugify(name) or f"knowledge-{abs(hash(name))}"
+def _persist_unmapped_candidates(upload_item, candidates) -> None:
+    if upload_item is None or not candidates:
+        return
+    from .metadata import Candidate
+
+    persist_controlled_vocabulary_candidates(
+        upload_item,
+        [
+            Candidate(
+                field_name,
+                name,
+                "keyword_classifier_v3_candidate",
+                confidence,
+                {
+                    "reason": reason,
+                    "match_scope": "recognized_pdf_text",
+                    "canonical_write": False,
+                },
+            )
+            for field_name, name, confidence, reason in candidates
+        ],
+    )
 
 
-def suggest_relations(work, text: str) -> list[WorkKnowledgeRelation]:
+def suggest_relations(work, text: str, *, upload_item=None) -> list:
+    """Create review-only normalized relations when identity is already safe.
+
+    Keyword rules are discovery leads. They never create a TheorySchool,
+    KnowledgeNode, Topic, or legacy WorkKnowledgeRelation. A theory must have
+    an explicit mapped TheorySchool identity with the expected node type.
+    Everything else remains a MetadataCandidate for human resolution.
+    """
+
     created = []
+    unmapped_candidates = []
     theory_matches = [
         (name, slug, _matches(text, tokens))
         for name, (slug, tokens) in THEORY_RULES.items()
@@ -227,58 +261,63 @@ def suggest_relations(work, text: str) -> list[WorkKnowledgeRelation]:
     ]
     for name, slug, count in sorted(theory_matches, key=lambda item: item[2], reverse=True)[:3]:
         confidence = min(0.97, 0.78 + count * 0.08)
-        target, _ = TheorySchool.objects.get_or_create(
-            slug=_safe_slug(name, slug),
+        legacy = TheorySchool.objects.filter(slug=slug).first()
+        if legacy is None:
+            legacy = TheorySchool.objects.filter(name__iexact=name).first()
+        try:
+            target = mapped_node_for_legacy("TheorySchool", legacy.id) if legacy else None
+        except CanonicalIdentityError:
+            target = None
+        if target is None or target.status in {
+            KnowledgePublicationStatus.REJECTED,
+            KnowledgePublicationStatus.ARCHIVED,
+        }:
+            unmapped_candidates.append(
+                (
+                    "knowledge_nodes",
+                    name,
+                    confidence,
+                    "missing_or_inactive_reviewed_theory_mapping",
+                )
+            )
+            continue
+        relation, _ = WorkNodeRelation.objects.get_or_create(
+            work=work,
+            node=target,
+            role=WorkNodeRelation.Role.GENERAL_MENTION,
             defaults={
-                "name": name,
-                "editorial_status": "draft",
+                "source": "keyword_classifier_v3",
+                "confidence": confidence,
+                "status": KnowledgePublicationStatus.PENDING,
+                "is_primary": not any(
+                    isinstance(item, WorkNodeRelation) for item in created
+                ),
+                "strength": "high" if confidence >= 0.9 else "medium",
             },
         )
-        relation = WorkKnowledgeRelation.objects.filter(
-            work=work,
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-            theory_school=target,
-        ).first()
-        if relation is None:
-            relation = WorkKnowledgeRelation.objects.create(
-                work=work,
-                kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-                theory_school=target,
-                source="keyword_classifier",
-                confidence=confidence,
-                approved=False,
-                review_status=RelationReviewStatus.SUGGESTED,
-                is_primary=not created,
-                role="local_mention",
-                strength="high" if confidence >= 0.9 else "medium",
-            )
         created.append(relation)
     for name, slug, count in sorted(topic_matches, key=lambda item: item[2], reverse=True)[:5]:
         confidence = min(0.97, 0.78 + count * 0.08)
-        target, _ = Topic.objects.get_or_create(
-            slug=_safe_slug(name, slug),
+        target = Topic.objects.filter(slug=slug).first()
+        if target is None:
+            target = Topic.objects.filter(name__iexact=name).first()
+        if target is None or str(target.editorial_status).casefold() in _INACTIVE_EDITORIAL_STATUSES:
+            unmapped_candidates.append(
+                ("topics", name, confidence, "missing_or_inactive_canonical_topic")
+            )
+            continue
+        relation, _ = WorkTopicRelation.objects.get_or_create(
+            work=work,
+            topic=target,
             defaults={
-                "name": name,
-                "editorial_status": "draft",
+                "source": "keyword_classifier_v3",
+                "confidence": confidence,
+                "review_status": RelationReviewStatus.SUGGESTED,
+                "is_primary": not any(
+                    isinstance(item, WorkTopicRelation) for item in created
+                ),
             },
         )
-        relation = WorkKnowledgeRelation.objects.filter(
-            work=work,
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
-            topic=target,
-        ).first()
-        if relation is None:
-            relation = WorkKnowledgeRelation.objects.create(
-                work=work,
-                kind=WorkKnowledgeRelation.Kind.TOPIC,
-                topic=target,
-                source="keyword_classifier",
-                confidence=confidence,
-                approved=False,
-                review_status=RelationReviewStatus.SUGGESTED,
-                is_primary=not any(
-                    item.kind == WorkKnowledgeRelation.Kind.TOPIC for item in created
-                ),
-            )
         created.append(relation)
+    _persist_unmapped_candidates(upload_item, unmapped_candidates)
     return created

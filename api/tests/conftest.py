@@ -21,6 +21,16 @@ def admin_user(db):
 
 
 @pytest.fixture
+def superadmin_user(db):
+    return User.objects.create_superuser(
+        username="superadmin@example.org",
+        email="superadmin@example.org",
+        display_name="超级管理员",
+        password="Superadmin-Secure-Password-2026",
+    )
+
+
+@pytest.fixture
 def reader_user(db):
     return User.objects.create_user(
         username="reader@example.org",

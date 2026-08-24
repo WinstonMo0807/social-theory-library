@@ -23,6 +23,12 @@ class Capability:
     VIEW_SEMANTIC_INDEX = "can_view_semantic_index"
     MANAGE_SEMANTIC_INDEX = "can_manage_semantic_index"
     MANAGE_AI = "can_manage_ai"
+    MANAGE_AI_PROVIDERS = "can_manage_ai_providers"
+    MANAGE_AI_MODELS = "can_manage_ai_models"
+    MANAGE_PROMPT_REGISTRY = "can_manage_prompt_registry"
+    MANAGE_GLOBAL_PROJECTION = "can_manage_global_projection"
+    MERGE_AUTHORITY = "can_merge_authority"
+    RUN_SYSTEM_RECOVERY = "can_run_system_recovery"
     MANAGE_USERS = "can_manage_users"
     MANAGE_ROLES = "can_manage_roles"
     VIEW_SYSTEM_STATUS = "can_view_system_status"
@@ -45,6 +51,9 @@ ROLE_CAPABILITIES = {
         Capability.EDIT_METADATA,
         Capability.EDIT_DRAFT_AUTHORITY,
         Capability.CREATE_AUTHORITY,
+        Capability.REVIEW_CANDIDATE,
+        Capability.PUBLISH_WORK,
+        Capability.PUBLISH_AUTHORITY,
         Capability.RUN_ENRICHMENT,
     },
     "reviewer": STAFF_BASE
@@ -72,16 +81,24 @@ ROLE_CAPABILITIES = {
     },
 }
 
-SUPERADMIN_CAPABILITIES = ROLE_CAPABILITIES["admin"] | {
+SUPERADMIN_ONLY_CAPABILITIES = {
     Capability.MANAGE_QUERY_LEXICON,
     Capability.MANAGE_SEMANTIC_INDEX,
     Capability.MANAGE_AI,
+    Capability.MANAGE_AI_PROVIDERS,
+    Capability.MANAGE_AI_MODELS,
+    Capability.MANAGE_PROMPT_REGISTRY,
+    Capability.MANAGE_GLOBAL_PROJECTION,
+    Capability.MERGE_AUTHORITY,
+    Capability.RUN_SYSTEM_RECOVERY,
     Capability.MANAGE_USERS,
     Capability.MANAGE_ROLES,
     Capability.RUN_BACKUP,
     Capability.DESTRUCTIVE_MAINTENANCE,
     Capability.VIEW_MIGRATIONS,
 }
+
+SUPERADMIN_CAPABILITIES = ROLE_CAPABILITIES["admin"] | SUPERADMIN_ONLY_CAPABILITIES
 
 
 @dataclass(frozen=True, slots=True)

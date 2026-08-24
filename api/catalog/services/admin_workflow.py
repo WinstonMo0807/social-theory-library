@@ -31,14 +31,14 @@ from ingestion.services.prerequisites import (
 
 WORKFLOW_STEPS = (
     ("file", "文件与识别"),
-    ("work", "作品识别"),
-    ("bibliography", "书目与出版"),
+    ("work", "作品与原作"),
+    ("bibliography", "书目与版本"),
     ("contributors", "责任者与身份"),
-    ("classification", "社科分类"),
-    ("knowledge", "理论、主题与知识关系"),
-    ("reader", "文本与阅读文件"),
-    ("curation", "策展定位"),
-    ("publication", "发布检查与上架"),
+    ("classification", "学科与子学科"),
+    ("knowledge", "理论、主题与争论"),
+    ("reader", "阅读与定位"),
+    ("curation", "观点、回应与阅读路径（可选）"),
+    ("publication", "发布与投影"),
 )
 
 WORK_FIELDS = (

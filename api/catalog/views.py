@@ -7,7 +7,7 @@ import uuid
 from uuid import UUID
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Case, Count, IntegerField, Max, Q, Sum, Value, When
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -26,6 +26,8 @@ from .models import (
     CoverCandidate,
     DocumentType,
     Edition,
+    KnowledgePublicationStatus,
+    LegacyKnowledgeMapping,
     Page,
     PageLabelSegment,
     PageLabelStatus,
@@ -44,6 +46,8 @@ from .models import (
     Topic,
     Work,
     WorkKnowledgeRelation,
+    WorkNodeRelation,
+    WorkTopicRelation,
 )
 from .serializers import (
     AdminScholarSerializer,
@@ -1119,19 +1123,92 @@ class SemanticRuntimeSettingsView(APIView):
         return Response(response, status=202 if apply_error or asynchronous_apply else 200)
 
 
-class AdminTheorySchoolListView(generics.ListCreateAPIView):
+def _legacy_theory_school_write_retired():
+    return Response(
+        {
+            "detail": (
+                "TheorySchool 的 legacy 写入已经退役。请在 Knowledge Studio 中维护 "
+                "THEORY_TRADITION KnowledgeNode。"
+            ),
+            "code": "legacy_theory_school_write_retired",
+            "replacement": "/api/catalog/admin/theory-system/nodes/",
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+class AdminTheorySchoolListView(generics.ListAPIView):
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTheorySchoolSerializer
     search_fields = ("name", "description", "search_aliases")
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = TheorySchool.objects.all().order_by("name")
 
+    def post(self, request, *args, **kwargs):
+        return _legacy_theory_school_write_retired()
 
-class AdminTheorySchoolDetailView(generics.RetrieveUpdateDestroyAPIView):
+
+class AdminTheorySchoolDetailView(generics.RetrieveAPIView):
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTheorySchoolSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = TheorySchool.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        return _legacy_theory_school_write_retired()
+
+    def patch(self, request, *args, **kwargs):
+        return _legacy_theory_school_write_retired()
+
+    def delete(self, request, *args, **kwargs):
+        return _legacy_theory_school_write_retired()
+
+
+def _draft_published_editorial_change(
+    request,
+    *,
+    target_type: str,
+    target,
+    patch: dict,
+    change_note: str,
+):
+    from catalog.models import CanonicalObjectRevision
+    from catalog.services.editorial_revision import (
+        changed_editorial_patch,
+        create_editorial_revision,
+        editorial_idempotency_key,
+    )
+
+    clean_patch = changed_editorial_patch(
+        target_type=target_type,
+        target=target,
+        patch=patch,
+    )
+    if not clean_patch:
+        return None
+    current_revision = (
+        CanonicalObjectRevision.objects.filter(
+            object_type=target_type,
+            object_id=target.id,
+        )
+        .values_list("current_revision", flat=True)
+        .first()
+        or 0
+    )
+    return create_editorial_revision(
+        target_type=target_type,
+        target_id=target.id,
+        patch=clean_patch,
+        actor=request.user,
+        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+        or editorial_idempotency_key(
+            target_type=target_type,
+            target_id=target.id,
+            base_revision=current_revision,
+            patch=clean_patch,
+        ),
+        change_note=change_note,
+    )
 
 
 class AdminTopicListView(generics.ListCreateAPIView):
@@ -1141,12 +1218,126 @@ class AdminTopicListView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Topic.objects.all().order_by("name")
 
+    @transaction.atomic
+    def perform_create(self, serializer):
+        topic = serializer.save()
+        if topic.editorial_status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="topic",
+                target=topic,
+                change_kind="publish",
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
 
 class AdminTopicDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTopicSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Topic.objects.all()
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        previous_status = serializer.instance.editorial_status
+        topic = serializer.save()
+        if topic.editorial_status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="topic",
+                target=topic,
+                change_kind=(
+                    "publish" if previous_status != "published" else "update"
+                ),
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
+    def update(self, request, *args, **kwargs):
+        topic = self.get_object()
+        if topic.editorial_status != "published":
+            return super().update(request, *args, **kwargs)
+        if "hero_image" in request.data:
+            return Response(
+                {
+                    "detail": "已发布主题的主视觉尚不支持进入 JSON 编辑草稿。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(topic, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        from catalog.models import EditorialRevision
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            serialize_editorial_revision,
+        )
+
+        try:
+            revision = _draft_published_editorial_change(
+                request,
+                target_type=EditorialRevision.TargetType.TOPIC,
+                target=topic,
+                patch=dict(serializer.validated_data),
+                change_note=str(
+                    request.data.get("change_note") or "知识工作室主题编辑草稿"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if revision is None:
+            return Response(self.get_serializer(topic).data)
+        payload = dict(self.get_serializer(topic).data)
+        payload.update(revision.patch)
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        topic = self.get_object()
+        if topic.editorial_status != "published":
+            return super().destroy(request, *args, **kwargs)
+        from catalog.models import EditorialRevision
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            serialize_editorial_revision,
+        )
+
+        try:
+            revision = _draft_published_editorial_change(
+                request,
+                target_type=EditorialRevision.TargetType.TOPIC,
+                target=topic,
+                patch={"editorial_status": "archived"},
+                change_note=str(
+                    request.data.get("change_note") or "下线已发布主题"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"editorial_revision": serialize_editorial_revision(revision)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class AdminScholarListView(generics.ListCreateAPIView):
@@ -1164,12 +1355,134 @@ class AdminScholarListView(generics.ListCreateAPIView):
         "person__preferred_name",
     )
 
+    @transaction.atomic
+    def perform_create(self, serializer):
+        scholar = serializer.save()
+        if scholar.editorial_status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="scholar_profile",
+                target=scholar,
+                change_kind="publish",
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
 
 class AdminScholarDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminScholarSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = ScholarProfile.objects.select_related("person")
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        previous_status = serializer.instance.editorial_status
+        scholar = serializer.save()
+        if scholar.editorial_status == "published":
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            record_admin_canonical_change(
+                object_type="scholar_profile",
+                target=scholar,
+                change_kind=(
+                    "publish" if previous_status != "published" else "update"
+                ),
+                changed_fields=serializer.validated_data.keys(),
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+
+    def update(self, request, *args, **kwargs):
+        scholar = self.get_object()
+        if scholar.editorial_status != "published":
+            return super().update(request, *args, **kwargs)
+        if "portrait" in request.data:
+            return Response(
+                {
+                    "detail": "已发布学者的肖像尚不支持进入 JSON 编辑草稿。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(scholar, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        person_values = dict(values.pop("person", {}))
+        if person_values:
+            values["person"] = person_values
+        from catalog.models import EditorialRevision
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            serialize_editorial_revision,
+        )
+
+        try:
+            revision = _draft_published_editorial_change(
+                request,
+                target_type=EditorialRevision.TargetType.SCHOLAR_PROFILE,
+                target=scholar,
+                patch=values,
+                change_note=str(
+                    request.data.get("change_note") or "知识工作室学者编辑草稿"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if revision is None:
+            return Response(self.get_serializer(scholar).data)
+        payload = dict(self.get_serializer(scholar).data)
+        for field_name, value in revision.patch.items():
+            if field_name == "person":
+                payload.update(value)
+            else:
+                payload[field_name] = value
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        scholar = self.get_object()
+        if scholar.editorial_status != "published":
+            return super().destroy(request, *args, **kwargs)
+        from catalog.models import EditorialRevision
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            serialize_editorial_revision,
+        )
+
+        try:
+            revision = _draft_published_editorial_change(
+                request,
+                target_type=EditorialRevision.TargetType.SCHOLAR_PROFILE,
+                target=scholar,
+                patch={"editorial_status": "archived"},
+                change_note=str(
+                    request.data.get("change_note") or "下线已发布学者"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"editorial_revision": serialize_editorial_revision(revision)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class WorkListView(generics.ListAPIView):
@@ -1216,28 +1529,88 @@ class WorkDetailView(generics.RetrieveAPIView):
         )
 
 
+def _legacy_theory_work_counts(theory_ids) -> dict:
+    """Union legacy and normalized work ids during the migration window."""
+
+    counts = {theory_id: set() for theory_id in theory_ids}
+    for theory_id, work_id in WorkKnowledgeRelation.objects.filter(
+        theory_school_id__in=theory_ids,
+        kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
+        approved=True,
+        work__editions__state=PublicationState.PUBLISHED,
+    ).values_list("theory_school_id", "work_id"):
+        counts.setdefault(theory_id, set()).add(work_id)
+    mappings = list(
+        LegacyKnowledgeMapping.objects.filter(
+            legacy_model="TheorySchool",
+            legacy_id__in=[str(value) for value in theory_ids],
+            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+            node__node_type="theory_tradition",
+        ).values_list("legacy_id", "node_id")
+    )
+    legacy_by_node = {}
+    for legacy_id, node_id in mappings:
+        try:
+            legacy_by_node[node_id] = UUID(str(legacy_id))
+        except (TypeError, ValueError):
+            continue
+    for node_id, work_id in WorkNodeRelation.objects.filter(
+        node_id__in=legacy_by_node,
+        status=KnowledgePublicationStatus.PUBLISHED,
+        work__editions__state=PublicationState.PUBLISHED,
+    ).values_list("node_id", "work_id"):
+        counts.setdefault(legacy_by_node[node_id], set()).add(work_id)
+    return {theory_id: len(work_ids) for theory_id, work_ids in counts.items()}
+
+
+def _legacy_theory_ids_for_normalized_nodes(node_ids) -> list[str]:
+    if not node_ids:
+        return []
+    return list(
+        LegacyKnowledgeMapping.objects.filter(
+            legacy_model="TheorySchool",
+            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+            node_id__in=node_ids,
+            node__node_type="theory_tradition",
+        ).values_list("legacy_id", flat=True)
+    )
+
+
 class TheorySchoolListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = TheorySchoolSerializer
 
     def get_queryset(self):
-        queryset = (
-            TheorySchool.objects.filter(editorial_status="published")
-            .annotate(
-                work_count=Count(
-                    "workknowledgerelation",
-                    filter=Q(
-                        workknowledgerelation__approved=True,
-                        workknowledgerelation__work__editions__state=PublicationState.PUBLISHED,
-                    ),
-                    distinct=True,
-                )
+        queryset = TheorySchool.objects.filter(editorial_status="published")
+        theory_ids = list(queryset.values_list("id", flat=True))
+        work_counts = _legacy_theory_work_counts(theory_ids)
+        queryset = queryset.annotate(
+            work_count=Case(
+                *[
+                    When(pk=theory_id, then=Value(count))
+                    for theory_id, count in work_counts.items()
+                ],
+                default=Value(0),
+                output_field=IntegerField(),
             )
         )
         theme = self.request.query_params.get("theme", "").strip()
         if theme:
+            topic_work_ids = WorkTopicRelation.objects.filter(
+                Q(topic__slug=theme) | Q(topic__name__icontains=theme),
+                review_status=RelationReviewStatus.APPROVED,
+            ).values_list("work_id", flat=True)
+            normalized_node_ids = WorkNodeRelation.objects.filter(
+                work_id__in=topic_work_ids,
+                status=KnowledgePublicationStatus.PUBLISHED,
+                node__node_type="theory_tradition",
+            ).values_list("node_id", flat=True)
+            normalized_legacy_ids = _legacy_theory_ids_for_normalized_nodes(
+                normalized_node_ids
+            )
             queryset = queryset.filter(
                 Q(key_themes__icontains=theme)
+                | Q(pk__in=normalized_legacy_ids)
                 | Q(
                     workknowledgerelation__approved=True,
                     workknowledgerelation__work__knowledge_relations__topic__slug=theme,
@@ -1263,6 +1636,15 @@ class TheorySchoolListView(generics.ListAPIView):
         if self.request.query_params.get("has_works") == "true":
             queryset = queryset.filter(work_count__gt=0)
         if self.request.query_params.get("has_scholars") == "true":
+            normalized_scholar_nodes = WorkNodeRelation.objects.filter(
+                status=KnowledgePublicationStatus.PUBLISHED,
+                work__editions__contributions__approved=True,
+                work__editions__contributions__person__scholar_profile__editorial_status="published",
+                node__node_type="theory_tradition",
+            ).values_list("node_id", flat=True)
+            normalized_legacy_ids = _legacy_theory_ids_for_normalized_nodes(
+                normalized_scholar_nodes
+            )
             queryset = queryset.filter(
                 Q(
                     personknowledgerelation__approved=True,
@@ -1273,6 +1655,7 @@ class TheorySchoolListView(generics.ListAPIView):
                     workknowledgerelation__work__editions__contributions__approved=True,
                     workknowledgerelation__work__editions__contributions__person__scholar_profile__editorial_status="published",
                 )
+                | Q(pk__in=normalized_legacy_ids)
             )
         query = (
             self.request.query_params.get("q", "").strip()
@@ -1303,11 +1686,26 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         data = self.get_serializer(instance).data
+        mapping = LegacyKnowledgeMapping.objects.filter(
+            legacy_model="TheorySchool",
+            legacy_id=str(instance.id),
+            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+            node__node_type="theory_tradition",
+        ).first()
+        normalized_work_filter = Q()
+        if mapping is not None:
+            normalized_work_filter = Q(
+                node_relations__node_id=mapping.node_id,
+                node_relations__status=KnowledgePublicationStatus.PUBLISHED,
+            )
         works = public_works().filter(
-            knowledge_relations__kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-            knowledge_relations__theory_school=instance,
-            knowledge_relations__approved=True,
-        )
+            Q(
+                knowledge_relations__kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
+                knowledge_relations__theory_school=instance,
+                knowledge_relations__approved=True,
+            )
+            | normalized_work_filter
+        ).distinct()
         data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
         scholars = ScholarProfile.objects.filter(
             editorial_status="published",
@@ -1321,6 +1719,24 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
                 person__contributions__edition__state=PublicationState.PUBLISHED,
                 person__contributions__edition__work__knowledge_relations__theory_school=instance,
                 person__contributions__edition__work__knowledge_relations__approved=True,
+            )
+            | (
+                Q(
+                    person__node_relations__node_id=mapping.node_id,
+                    person__node_relations__status=KnowledgePublicationStatus.PUBLISHED,
+                )
+                if mapping is not None
+                else Q(pk__isnull=True)
+            )
+            | (
+                Q(
+                    person__contributions__approved=True,
+                    person__contributions__edition__state=PublicationState.PUBLISHED,
+                    person__contributions__edition__work__node_relations__node_id=mapping.node_id,
+                    person__contributions__edition__work__node_relations__status=KnowledgePublicationStatus.PUBLISHED,
+                )
+                if mapping is not None
+                else Q(pk__isnull=True)
             )
         ).select_related("person").distinct()
         data["scholars"] = ScholarProfileSerializer(
@@ -1338,10 +1754,10 @@ class TopicListView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Topic.objects.filter(editorial_status="published").annotate(
             work_count=Count(
-                "workknowledgerelation",
+                "work_relations",
                 filter=Q(
-                    workknowledgerelation__approved=True,
-                    workknowledgerelation__work__editions__state=PublicationState.PUBLISHED,
+                    work_relations__review_status=RelationReviewStatus.APPROVED,
+                    work_relations__work__editions__state=PublicationState.PUBLISHED,
                 ),
                 distinct=True,
             )
@@ -1409,23 +1825,22 @@ class TopicDetailView(generics.RetrieveAPIView):
         instance = self.get_object()
         data = self.get_serializer(instance).data
         works = public_works().filter(
-            knowledge_relations__kind=WorkKnowledgeRelation.Kind.TOPIC,
-            knowledge_relations__topic=instance,
-            knowledge_relations__approved=True,
-        )
+            topic_relations__topic=instance,
+            topic_relations__review_status=RelationReviewStatus.APPROVED,
+        ).distinct()
         data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
         scholars = ScholarProfile.objects.filter(
             editorial_status="published",
         ).filter(
             Q(
-                person__knowledge_relations__topic=instance,
-                person__knowledge_relations__approved=True,
+                person__topic_relations__topic=instance,
+                person__topic_relations__review_status=RelationReviewStatus.APPROVED,
             )
             | Q(
                 person__contributions__approved=True,
                 person__contributions__edition__state=PublicationState.PUBLISHED,
-                person__contributions__edition__work__knowledge_relations__topic=instance,
-                person__contributions__edition__work__knowledge_relations__approved=True,
+                person__contributions__edition__work__topic_relations__topic=instance,
+                person__contributions__edition__work__topic_relations__review_status=RelationReviewStatus.APPROVED,
             )
         ).select_related("person").distinct()
         data["scholars"] = ScholarProfileSerializer(
@@ -1433,15 +1848,27 @@ class TopicDetailView(generics.RetrieveAPIView):
             many=True,
             context={"request": request},
         ).data
-        theories = (
-            TheorySchool.objects.filter(
-                editorial_status="published",
-                workknowledgerelation__approved=True,
-                workknowledgerelation__work__knowledge_relations__topic=instance,
-                workknowledgerelation__work__knowledge_relations__approved=True,
+        theory_node_ids = WorkNodeRelation.objects.filter(
+            status=KnowledgePublicationStatus.PUBLISHED,
+            node__node_type="theory_tradition",
+            work__topic_relations__topic=instance,
+            work__topic_relations__review_status=RelationReviewStatus.APPROVED,
+        ).values_list("node_id", flat=True)
+        theories = TheorySchool.objects.filter(
+            editorial_status="published",
+            pk__in=_legacy_theory_ids_for_normalized_nodes(theory_node_ids),
+        ).distinct()
+        theory_ids = list(theories.values_list("id", flat=True))
+        theory_counts = _legacy_theory_work_counts(theory_ids)
+        theories = theories.annotate(
+            work_count=Case(
+                *[
+                    When(pk=theory_id, then=Value(count))
+                    for theory_id, count in theory_counts.items()
+                ],
+                default=Value(0),
+                output_field=IntegerField(),
             )
-            .annotate(work_count=Count("workknowledgerelation__work", distinct=True))
-            .distinct()
         )
         data["theories"] = TheorySchoolSerializer(
             theories,
@@ -2680,13 +3107,29 @@ class PublicAssetManifestView(APIView):
             person__contributions__role=Contribution.Role.AUTHOR,
             person__contributions__approved=True,
         ).select_related("person").distinct()
-        theories = asset.edition.work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-            approved=True,
-        ).select_related("theory_school")
-        topics = asset.edition.work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
-            approved=True,
+        theories = list(
+            asset.edition.work.node_relations.filter(
+                node__node_type="theory_tradition",
+                status=KnowledgePublicationStatus.PUBLISHED,
+            ).select_related("node")
+        )
+        legacy_theories = {
+            row.node_id: row
+            for row in LegacyKnowledgeMapping.objects.filter(
+                legacy_model="TheorySchool",
+                migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+                node_id__in=[relation.node_id for relation in theories],
+                node__node_type="theory_tradition",
+            )
+        }
+        legacy_theory_rows = {
+            str(row.id): row
+            for row in TheorySchool.objects.filter(
+                pk__in=[mapping.legacy_id for mapping in legacy_theories.values()]
+            )
+        }
+        topics = asset.edition.work.topic_relations.filter(
+            review_status=RelationReviewStatus.APPROVED,
         ).select_related("topic")
         return Response(
             {
@@ -2725,11 +3168,21 @@ class PublicAssetManifestView(APIView):
                 ],
                 "related_theories": [
                     {
-                        "name": relation.theory_school.name,
-                        "slug": relation.theory_school.slug,
+                        "name": (
+                            legacy_theory_rows[str(legacy_theories[relation.node_id].legacy_id)].name
+                            if relation.node_id in legacy_theories
+                            and str(legacy_theories[relation.node_id].legacy_id) in legacy_theory_rows
+                            else relation.node.canonical_name_zh
+                            or relation.node.canonical_name_en
+                        ),
+                        "slug": (
+                            legacy_theory_rows[str(legacy_theories[relation.node_id].legacy_id)].slug
+                            if relation.node_id in legacy_theories
+                            and str(legacy_theories[relation.node_id].legacy_id) in legacy_theory_rows
+                            else relation.node.slug
+                        ),
                     }
                     for relation in theories
-                    if relation.theory_school_id
                 ],
                 "related_topics": [
                     {

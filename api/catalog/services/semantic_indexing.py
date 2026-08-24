@@ -335,7 +335,28 @@ def _mark_semantic_job_paused(
             semantic_index_status=SemanticIndexStatus.PENDING,
             updated_at=timezone.now(),
         )
+    _finalize_projection_bindings(job)
     return job
+
+
+def _finalize_projection_bindings(job: SemanticIndexJob) -> None:
+    """Notify v3 projection parents without changing semantic job semantics."""
+
+    try:
+        from catalog.services.projection_refresh import (
+            finalize_semantic_projection_bindings,
+        )
+
+        finalize_semantic_projection_bindings(job)
+    except Exception as exc:
+        # The specialist job remains the durable fact. The projection runtime
+        # periodically reconciles this binding if this best-effort wakeup fails.
+        stats = dict(job.stats or {})
+        stats["projection_binding_warning"] = str(exc)[:1000]
+        SemanticIndexJob.objects.filter(pk=job.pk).update(
+            stats=stats,
+            updated_at=timezone.now(),
+        )
 
 
 def request_semantic_job_pause(job: SemanticIndexJob) -> SemanticIndexJob:
@@ -869,6 +890,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
             job.model_name = chunks[0].embedding_model if chunks else ""
             job.chunk_version = CHUNK_VERSION
             job.stats = {
+                **(job.stats or {}),
                 **result,
                 "chunks": len(chunks),
                 "elapsed_seconds": elapsed,
@@ -894,6 +916,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
         )
         job.progress = 100
         job.stats = {
+            **(job.stats or {}),
             **result,
             "chunks": len(chunks),
             "elapsed_seconds": elapsed,
@@ -925,6 +948,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                     error_message="候选索引任务降级为数据库检索，生产索引未切换。",
                     updated_at=timezone.now(),
                 )
+        _finalize_projection_bindings(job)
     except Exception as exc:
         job.status = SemanticIndexJob.Status.FAILED
         job.error_code = getattr(exc, "error_code", exc.__class__.__name__)
@@ -947,6 +971,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                 error_message=str(exc)[:4000],
                 updated_at=timezone.now(),
             )
+        _finalize_projection_bindings(job)
         raise
     return job
 
@@ -1004,6 +1029,7 @@ def queue_semantic_job(
     force: bool = False,
     actor=None,
     index_version: SemanticIndexVersion | None = None,
+    projection_parent_id=None,
 ) -> SemanticIndexJob | None:
     try:
         job = create_semantic_job(
@@ -1042,9 +1068,30 @@ def queue_semantic_job(
             semantic_index_status=SemanticIndexStatus.FAILED,
             updated_at=timezone.now(),
         )
+        if projection_parent_id:
+            stats = dict(job.stats or {})
+            stats["projection_refresh_parent_ids"] = [str(projection_parent_id)]
+            job.stats = stats
+            job.save(update_fields=["stats", "updated_at"])
         return job
     if job is None or job.status == SemanticIndexJob.Status.PAUSED:
+        if job is not None and projection_parent_id:
+            stats = dict(job.stats or {})
+            parent_ids = [str(value) for value in stats.get("projection_refresh_parent_ids") or []]
+            if str(projection_parent_id) not in parent_ids:
+                parent_ids.append(str(projection_parent_id))
+            stats["projection_refresh_parent_ids"] = parent_ids[-20:]
+            job.stats = stats
+            job.save(update_fields=["stats", "updated_at"])
         return job
+    if projection_parent_id:
+        stats = dict(job.stats or {})
+        parent_ids = [str(value) for value in stats.get("projection_refresh_parent_ids") or []]
+        if str(projection_parent_id) not in parent_ids:
+            parent_ids.append(str(projection_parent_id))
+        stats["projection_refresh_parent_ids"] = parent_ids[-20:]
+        job.stats = stats
+        job.save(update_fields=["stats", "updated_at"])
     if job.task_id:
         return job
     task_id = str(uuid.uuid4())

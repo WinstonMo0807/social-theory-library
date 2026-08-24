@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from .capabilities import Capability, has_capability
+from .capabilities import Capability, capability_snapshot, has_capability
 
 
 class RequiresCapability(BasePermission):
@@ -109,6 +109,36 @@ class CanManageAI(RequiresCapability):
     message = "只有超级管理员可以管理 AI runtime。"
 
 
+class CanManageProviders(RequiresCapability):
+    capability = Capability.MANAGE_AI_PROVIDERS
+    message = "只有超级管理员可以管理 Provider。"
+
+
+class CanManageModels(RequiresCapability):
+    capability = Capability.MANAGE_AI_MODELS
+    message = "只有超级管理员可以管理 AI 模型。"
+
+
+class CanManagePromptRegistry(RequiresCapability):
+    capability = Capability.MANAGE_PROMPT_REGISTRY
+    message = "只有超级管理员可以管理 Prompt Registry。"
+
+
+class CanManageGlobalProjection(RequiresCapability):
+    capability = Capability.MANAGE_GLOBAL_PROJECTION
+    message = "只有超级管理员可以执行全局 Projection 操作。"
+
+
+class CanMergeAuthority(RequiresCapability):
+    capability = Capability.MERGE_AUTHORITY
+    message = "只有超级管理员可以合并 Authority。"
+
+
+class CanRunSystemRecovery(RequiresCapability):
+    capability = Capability.RUN_SYSTEM_RECOVERY
+    message = "只有超级管理员可以执行系统恢复。"
+
+
 class CanManageUsers(RequiresCapability):
     capability = Capability.MANAGE_USERS
     message = "只有具备用户管理权限的管理员可以执行此操作。"
@@ -125,10 +155,10 @@ class IsLibraryAdmin(BasePermission):
     message = "仅管理员可执行此操作。"
 
     def has_permission(self, request, view):
-        return bool(
-            has_capability(request.user, Capability.PUBLISH_WORK)
-            or has_capability(request.user, Capability.MANAGE_USERS)
-        )
+        # Compatibility permission for ordinary administrative surfaces.  It
+        # must never be inferred from a content capability such as publishing:
+        # Editors deliberately publish Works in 3.0 but are not system admins.
+        return capability_snapshot(request.user).access_level in {"admin", "superadmin"}
 
 
 class IsCatalogEditor(BasePermission):

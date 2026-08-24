@@ -1,3 +1,49 @@
+export type EvidenceEnvelope = {
+  id: string;
+  kind: "collection_text";
+  source: {
+    work_id: string;
+    work_title: string;
+    edition_id: string;
+    asset_id: string;
+    authors: string[];
+    document_revision_id: string;
+    document_revision: number;
+  };
+  text: string;
+  locator: {
+    page: number;
+    page_id: string;
+    printed_page_label: string;
+    start_offset: number;
+    end_offset: number;
+    bbox: unknown[] | Record<string, unknown>;
+    section: string;
+  };
+  quality: {
+    score: number;
+    stale: boolean;
+    stale_reason: string;
+  };
+  provenance: Record<string, unknown>;
+  reader_url: string;
+  pdf_url: string;
+  claim_role: string;
+  claim_role_label: string;
+  claim_confidence: number;
+};
+
+export type CuratedWorkClaim = {
+  id: string;
+  kind: "core_viewpoint" | "major_criticism" | "major_response";
+  kind_label: string;
+  title: string;
+  proposition: string;
+  editorial_note: string;
+  qualifiers: unknown[];
+  evidence: EvidenceEnvelope[];
+};
+
 export type Work = {
   id: string;
   workId?: string;
@@ -32,6 +78,11 @@ export type Work = {
       reader_href: string;
     }[];
   }[];
+  curatedClaims?: {
+    core_viewpoint: CuratedWorkClaim[];
+    major_criticism: CuratedWorkClaim[];
+    major_response: CuratedWorkClaim[];
+  };
   outline?: { index: number; printed_label: string; chapter_title: string }[];
 };
 

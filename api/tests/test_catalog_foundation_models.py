@@ -114,15 +114,15 @@ def test_work_translation_cycle_is_rejected_before_save():
 @pytest.mark.django_db
 def test_knowledge_node_parent_cycle_is_rejected_and_public_parent_is_controlled():
     root = KnowledgeNode.objects.create(
-        node_type=KnowledgeNode.NodeType.DISCIPLINE,
-        canonical_name_zh="社会科学",
-        slug="social-sciences-foundation",
+        node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+        canonical_name_zh="关系理论",
+        slug="relational-theory-foundation",
         status="published",
     )
     child = KnowledgeNode.objects.create(
-        node_type=KnowledgeNode.NodeType.TOPIC,
-        canonical_name_zh="社会分层",
-        slug="social-stratification-foundation",
+        node_type=KnowledgeNode.NodeType.CONCEPT,
+        canonical_name_zh="关系位置",
+        slug="relational-position-foundation",
         parent=root,
         status="published",
     )

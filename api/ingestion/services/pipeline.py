@@ -25,6 +25,7 @@ from distribution.models import CloudObject, CloudProvider
 from distribution.services import cloud_budget_allows_new_publication
 from distribution.tasks import sync_cloud_object
 from catalog.services.covers import generate_cover_candidates, generate_recommendation_image
+from catalog.services.document_intelligence import best_effort_native_extraction
 from catalog.services.semantic_indexing import queue_semantic_job, remove_semantic_asset
 from catalog.services.publication_places import detect_publication_places
 from catalog.services.theory_suggestions import generate_theory_review_tasks
@@ -446,7 +447,11 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
     }
     edition.save()
     if not item.replacement_of_asset_id:
-        suggest_relations(work, f"{work.title}\n{first_text[:20000]}")
+        suggest_relations(
+            work,
+            f"{work.title}\n{first_text[:20000]}",
+            upload_item=item,
+        )
     return edition
 
 
@@ -1054,6 +1059,10 @@ def run_pipeline(item_id: str) -> UploadItem:
                     "updated_at",
                 ]
             )
+            document_intelligence = best_effort_native_extraction(
+                normalized,
+                actor=item.batch.created_by,
+            )
             attempt.output_summary = {
                 "pages": len(pages),
                 "method": method,
@@ -1062,6 +1071,7 @@ def run_pipeline(item_id: str) -> UploadItem:
                 "ocr_reason_counts": ocr_reason_counts,
                 "ocr_strategy": item.batch.ocr_strategy,
                 "ocr_detected": detected_needs_ocr,
+                "document_intelligence": document_intelligence,
             }
             attempt.save(update_fields=["output_summary", "updated_at"])
 

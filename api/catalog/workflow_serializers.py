@@ -122,6 +122,11 @@ class NodeRowSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=WorkNodeRelation.Role.choices)
     strength = serializers.ChoiceField(choices=RelationStrength.choices, default=RelationStrength.MEDIUM)
     is_primary = serializers.BooleanField(default=False)
+    evidence_asset = serializers.UUIDField(required=False, allow_null=True)
+    evidence_page = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    evidence_page_end = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    evidence_printed_label = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    evidence_text = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class KnowledgeSectionSerializer(WorkflowSectionSerializer):
@@ -136,6 +141,15 @@ class KnowledgeSectionSerializer(WorkflowSectionSerializer):
             keys = [(row["id"], row.get("role", "")) for row in rows]
             if len(keys) != len(set(keys)):
                 raise serializers.ValidationError({field: "同一知识关系不能重复。"})
+        for row in attrs.get("nodes", []):
+            if (
+                row.get("evidence_page")
+                and row.get("evidence_page_end")
+                and row["evidence_page_end"] < row["evidence_page"]
+            ):
+                raise serializers.ValidationError(
+                    {"nodes": "证据结束页不能早于开始页。"}
+                )
         return attrs
 
 

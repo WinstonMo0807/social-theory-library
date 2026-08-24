@@ -31,6 +31,7 @@ import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
+import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import {
   AuthoritySuggestions,
   StringListEditor,
@@ -1797,7 +1798,20 @@ type SemanticRuntime = {
   task?: { taskUid?: number; status?: string; version_id?: string; index_uid?: string; type?: string } | null;
 };
 
-type AIRuntimeCapability = "metadata_extraction" | "library_qa" | "field_enrichment_optional";
+type AIRuntimeCapability =
+  | "metadata_extraction"
+  | "library_qa"
+  | "field_enrichment_optional"
+  | "entity_reasoning"
+  | "claim_extraction"
+  | "claim_attribution"
+  | "claim_stance"
+  | "rerank"
+  | "theory_reasoning"
+  | "knowledge_relation_reasoning"
+  | "debate_discovery"
+  | "reading_path_generation"
+  | "curation_reasoning";
 
 type AIRuntimeProfile = {
   key: string;
@@ -1836,6 +1850,25 @@ const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
   metadata_extraction: "元数据提取",
   library_qa: "书库问答默认服务（可选）",
   field_enrichment_optional: "联网补全可选判断",
+  entity_reasoning: "实体推理",
+  claim_extraction: "Claim 提取",
+  claim_attribution: "Claim 归属",
+  claim_stance: "Claim 立场",
+  rerank: "结果重排",
+  theory_reasoning: "理论推理",
+  knowledge_relation_reasoning: "知识关系推理",
+  debate_discovery: "Debate 发现",
+  reading_path_generation: "Reading Path 生成",
+  curation_reasoning: "策展推理",
+};
+
+const aiCapabilityGuidance: Partial<Record<AIRuntimeCapability, string>> = {
+  claim_extraction: "默认以 shadow task 运行。服务暂不可用时保持等待，不阻断出版。",
+  claim_attribution: "必须返回绑定 EvidenceSpan 的结构化判断，不能用模型常识补足原文。",
+  claim_stance: "用于区分支持、相斥与限定，不能只依赖向量相似度。",
+  rerank: "仅在 benchmark 证明收益后启用外部重排服务。",
+  debate_discovery: "只生成候选，人工采用后才建立 Debate 草稿。",
+  reading_path_generation: "一次生成完整候选，人工采用后才成为 ReadingPath 草稿。",
 };
 
 const defaultSemanticRuntime: SemanticRuntime = {
@@ -2050,6 +2083,14 @@ export function SettingsAdmin() {
     });
   }
 
+  function updateAiActiveProfile(capability: AIRuntimeCapability, profileKey: string) {
+    if (!aiRuntime) return;
+    setAiRuntimeDraft({
+      ...aiRuntime,
+      active: { ...aiRuntime.active, [capability]: profileKey },
+    });
+  }
+
   async function saveAiRuntime(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
@@ -2180,12 +2221,17 @@ export function SettingsAdmin() {
             {aiRuntime.profiles.map((profile) => (
               <fieldset key={profile.key}>
                 <legend>{aiCapabilityLabels[profile.capability]} · {profile.key}</legend>
+                {aiCapabilityGuidance[profile.capability] ? <p className="admin-help">{aiCapabilityGuidance[profile.capability]}</p> : null}
                 <label className="switch-row">
                   <input type="checkbox" checked={profile.enabled} onChange={(event) => updateAiProfile(profile.key, { enabled: event.target.checked })} />
                   <span>启用该 profile</span>
                 </label>
                 <label><span>服务类型</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI 兼容接口</option></select></label>
                 <label><span>模型标识</span><input value={profile.model} onChange={(event) => updateAiProfile(profile.key, { model: event.target.value })} /></label>
+                <label><span>该能力的 active profile</span><select value={aiRuntime.active[profile.capability] || ""} onChange={(event) => updateAiActiveProfile(profile.capability, event.target.value)}>{aiRuntime.profiles.filter((candidate) => candidate.capability === profile.capability).map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.key}{candidate.enabled ? " · 已启用" : " · 已停用"}</option>)}</select></label>
+                <label><span>失败回退 profile</span><select value={profile.fallback_profile_key || ""} onChange={(event) => updateAiProfile(profile.key, { fallback_profile_key: event.target.value })}><option value="">不设置 fallback</option>{aiRuntime.profiles.filter((candidate) => candidate.capability === profile.capability && candidate.key !== profile.key).map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.key}</option>)}</select></label>
+                <label><span>Endpoint alias</span><input value={profile.endpoint_alias} onChange={(event) => updateAiProfile(profile.key, { endpoint_alias: event.target.value })} /></label>
+                <label><span>Credential alias</span><input value={profile.credential_alias} onChange={(event) => updateAiProfile(profile.key, { credential_alias: event.target.value })} /></label>
                 <label><span>生成温度（Temperature）</span><input type="number" min="0" max="2" step="0.05" value={profile.temperature} onChange={(event) => updateAiProfile(profile.key, { temperature: Number(event.target.value) })} /></label>
                 <label><span>最大输出 tokens</span><input type="number" min="128" max="8192" value={profile.max_output_tokens} onChange={(event) => updateAiProfile(profile.key, { max_output_tokens: Number(event.target.value) })} /></label>
                 <label><span>超时，秒</span><input type="number" min="3" max="600" value={profile.timeout_seconds} onChange={(event) => updateAiProfile(profile.key, { timeout_seconds: Number(event.target.value) })} /></label>
@@ -2202,6 +2248,7 @@ export function SettingsAdmin() {
             <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存 AI Runtime" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存 AI Runtime</ActionButton>
           </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
+        <PromptRegistryAdmin />
         <form className="admin-panel semantic-runtime-settings" onSubmit={saveSemanticRuntime}>
           <header><h2>观点检索资源</h2><Link href="/admin/semantic-index">打开索引管理</Link></header>
           <p>原文检索不受这里影响。向量模式会为公开全文段落生成嵌入；发生故障时，是否完成关键词降级要以测试查询返回的运行结果为准。</p>

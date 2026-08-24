@@ -61,6 +61,21 @@ export type WorkflowQueue = {
   [key: string]: unknown;
 };
 
+export type EditorialRevisionSummary = {
+  id: string;
+  target_type: string;
+  target_id: string;
+  base_revision: number;
+  current_revision: number;
+  revision: number;
+  changed_fields: string[];
+  status: "draft" | "published" | "superseded";
+  change_note?: string;
+  materialized_preview?: Record<string, unknown>;
+  has_conflict?: boolean;
+  publish_url: string;
+};
+
 export type WorkflowCandidate = {
   id: string;
   field_name?: string;
@@ -87,6 +102,7 @@ export type WorkflowPayload = {
   candidates: Record<string, unknown>;
   permissions: WorkflowPermissions;
   queue: WorkflowQueue;
+  editorial_revision?: EditorialRevisionSummary | null;
 };
 
 export type WorkflowDrafts = Record<WorkflowStepKey, Record<string, unknown>>;

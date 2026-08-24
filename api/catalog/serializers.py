@@ -6,12 +6,15 @@ from django.utils.text import slugify
 from rest_framework import serializers
 from uuid import UUID
 
+from common.capabilities import Capability, has_capability
+
 from .models import (
     AboutPageBlock,
     Asset,
     Concept,
     Contribution,
     CoverCandidate,
+    CuratedClaim,
     Discipline,
     Edition,
     KnowledgePublicationStatus,
@@ -41,6 +44,7 @@ from .models import (
     WorkKnowledgeRelation,
     WorkSubdisciplineRelation,
 )
+from .services.evidence_envelope import public_curated_claim_groups
 from .services.text import clean_page_label, normalize_search_text
 
 
@@ -536,9 +540,15 @@ class WorkDetailSerializer(WorkCardSerializer):
     editions = serializers.SerializerMethodField()
     outline = serializers.SerializerMethodField()
     theory_associations = serializers.SerializerMethodField()
+    curated_claims = serializers.SerializerMethodField()
 
     class Meta(WorkCardSerializer.Meta):
-        fields = WorkCardSerializer.Meta.fields + ("editions", "outline", "theory_associations")
+        fields = WorkCardSerializer.Meta.fields + (
+            "editions",
+            "outline",
+            "theory_associations",
+            "curated_claims",
+        )
 
     def get_editions(self, obj):
         editions = obj.editions.filter(state="published").prefetch_related("contributions__person", "assets")
@@ -608,6 +618,19 @@ class WorkDetailSerializer(WorkCardSerializer):
             }
             for relation in relations
         ]
+
+    def get_curated_claims(self, obj):
+        """Expose evidence-backed human curation, never machine-only claims."""
+        allowed_kinds = (
+            CuratedClaim.Kind.CORE_VIEWPOINT,
+            CuratedClaim.Kind.MAJOR_CRITICISM,
+            CuratedClaim.Kind.MAJOR_RESPONSE,
+        )
+        return public_curated_claim_groups(
+            target_field="work",
+            target_id=obj.id,
+            allowed_kinds=allowed_kinds,
+        )
 
 
 class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
@@ -862,6 +885,7 @@ class TopicSerializer(serializers.ModelSerializer):
     disciplines = serializers.SerializerMethodField()
     subdisciplines = serializers.SerializerMethodField()
     linked_theories = serializers.SerializerMethodField()
+    curated_claims = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
@@ -883,6 +907,7 @@ class TopicSerializer(serializers.ModelSerializer):
             "linked_theories",
             "work_count",
             "curated",
+            "curated_claims",
         )
 
     def get_disciplines(self, obj):
@@ -973,11 +998,23 @@ class TopicSerializer(serializers.ModelSerializer):
             "featured_passage_evidence": curation.get("featured_passage_evidence", {}),
         }
 
+    def get_curated_claims(self, obj):
+        return public_curated_claim_groups(
+            target_field="topic",
+            target_id=obj.id,
+            allowed_kinds=(
+                CuratedClaim.Kind.CORE_VIEWPOINT,
+                CuratedClaim.Kind.MAJOR_CRITICISM,
+                CuratedClaim.Kind.MAJOR_RESPONSE,
+            ),
+        )
+
 
 class ScholarProfileSerializer(serializers.ModelSerializer):
     person = PersonCompactSerializer()
     works = serializers.SerializerMethodField()
     curated = serializers.SerializerMethodField()
+    curated_claims = serializers.SerializerMethodField()
 
     class Meta:
         model = ScholarProfile
@@ -993,6 +1030,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             "quote_source",
             "works",
             "curated",
+            "curated_claims",
         )
 
     def get_works(self, obj):
@@ -1067,6 +1105,17 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
                 for item in related_theories
             ],
         }
+
+    def get_curated_claims(self, obj):
+        return public_curated_claim_groups(
+            target_field="scholar",
+            target_id=obj.id,
+            allowed_kinds=(
+                CuratedClaim.Kind.CORE_VIEWPOINT,
+                CuratedClaim.Kind.MAJOR_CRITICISM,
+                CuratedClaim.Kind.MAJOR_RESPONSE,
+            ),
+        )
 
 
 class DisciplineSerializer(serializers.ModelSerializer):
@@ -1410,6 +1459,18 @@ class AdminDisciplineSerializer(serializers.ModelSerializer):
             "scholars": public["scholar_count"],
         }
 
+    def validate_editorial_status(self, value):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError(
+                "当前账户不能发布或下线学科。"
+            )
+        return value
+
     def _complete_identity(self, validated_data, instance=None):
         name = validated_data.get("name", instance.name if instance else "")
         if not validated_data.get("slug"):
@@ -1456,6 +1517,18 @@ class AdminSubdisciplineSerializer(serializers.ModelSerializer):
     def validate_parent(self, value):
         if value and self.instance and value.pk == self.instance.pk:
             raise serializers.ValidationError("子学科不能以自身作为上级。")
+        return value
+
+    def validate_editorial_status(self, value):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError(
+                "当前账户不能发布或下线子学科。"
+            )
         return value
 
     def validate(self, attrs):
@@ -1551,16 +1624,25 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         )) and not normalized_relations and not has_existing_relations:
             raise serializers.ValidationError("时间轴事件至少需要关联一个学术实体或文献。")
         request = self.context.get("request")
-        role = getattr(getattr(request, "user", None), "role", "")
+        user = getattr(request, "user", None)
         review_status = attrs.get(
             "review_status",
             getattr(self.instance, "review_status", RelationReviewStatus.SUGGESTED),
         )
-        if review_status in {RelationReviewStatus.APPROVED, RelationReviewStatus.REJECTED} and role not in {
-            "admin",
-            "reviewer",
-        }:
-            raise serializers.ValidationError({"review_status": ["只有管理员或审核者可以确认时间轴事件。"]})
+        if review_status == RelationReviewStatus.APPROVED and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError(
+                {"review_status": ["当前账户不能发布时间轴事件。"]}
+            )
+        if review_status == RelationReviewStatus.REJECTED and not has_capability(
+            user,
+            Capability.REVIEW_CANDIDATE,
+        ):
+            raise serializers.ValidationError(
+                {"review_status": ["当前账户不能拒绝时间轴候选。"]}
+            )
         return attrs
 
     def _sync_relations(self, event, rows):
@@ -1570,17 +1652,61 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        changed_fields = list(validated_data)
         relations = validated_data.pop("normalized_relations", [])
         event = super().create(validated_data)
         self._sync_relations(event, relations)
+        if event.review_status == RelationReviewStatus.APPROVED:
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            request = self.context.get("request")
+            record_admin_canonical_change(
+                object_type="timeline_event",
+                target=event,
+                change_kind="publish",
+                changed_fields=changed_fields,
+                actor=getattr(request, "user", None),
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return event
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        changed_fields = list(validated_data)
+        previous_status = instance.review_status
         relations = validated_data.pop("normalized_relations", None)
         event = super().update(instance, validated_data)
         if relations is not None:
             self._sync_relations(event, relations)
+        if (
+            event.review_status == RelationReviewStatus.APPROVED
+            or previous_status == RelationReviewStatus.APPROVED
+        ):
+            from catalog.services.canonical_mutations import (
+                record_admin_canonical_change,
+            )
+
+            request = self.context.get("request")
+            record_admin_canonical_change(
+                object_type="timeline_event",
+                target=event,
+                change_kind=(
+                    "withdraw"
+                    if event.review_status != RelationReviewStatus.APPROVED
+                    else "publish"
+                    if previous_status != RelationReviewStatus.APPROVED
+                    else "update"
+                ),
+                changed_fields=changed_fields,
+                actor=getattr(request, "user", None),
+                request_idempotency_key=(
+                    request.headers.get("Idempotency-Key", "") if request else ""
+                ),
+            )
         return event
 
 
@@ -2029,6 +2155,18 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             _validate_reference_list(path, "work_ids", Work.objects.all(), "阅读路径文献")
         return value
 
+    def validate_editorial_status(self, value):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError(
+                "当前账户不能发布或下线主题。"
+            )
+        return value
+
     def create(self, validated_data):
         validated_data["slug"] = validated_data.get("slug") or _available_slug(
             Topic,
@@ -2140,6 +2278,18 @@ class AdminScholarSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"network": ["学术关系包含不存在的学者。"]})
         _structured_entries(value, "key_concepts")
         _structured_entries(value, "concept_map")
+        return value
+
+    def validate_editorial_status(self, value):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if value in {"published", "archived"} and not has_capability(
+            user,
+            Capability.PUBLISH_AUTHORITY,
+        ):
+            raise serializers.ValidationError(
+                "当前账户不能发布或下线学者。"
+            )
         return value
 
     @transaction.atomic

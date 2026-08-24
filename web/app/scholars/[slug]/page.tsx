@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Quote } from "lucide-react";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import { AskLibraryLink } from "@/components/ask-library-link";
+import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { SiteFooter } from "@/components/site-footer";
 import { BookCover, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
 import { loadScholar, loadTheorySchools } from "@/lib/server-api";
@@ -37,6 +38,7 @@ export default async function ScholarDetailPage({
     timeline,
     featuredQuote,
     quoteSource,
+    curatedClaims,
     curated,
   } = data;
   const essentialWorks = curated.essentialWorks.length ? curated.essentialWorks : scholarWorks;
@@ -91,6 +93,8 @@ export default async function ScholarDetailPage({
             </blockquote>
           ) : <div className="scholar-quote empty-state">尚无经过来源核对的公开引语。</div>}
         </section>
+
+        <CuratedClaimSections groups={curatedClaims} />
 
         <div className="scholar-body-grid">
           <section className="essential-texts panel">

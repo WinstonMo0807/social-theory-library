@@ -41,7 +41,7 @@ test("Reader and public entity pages use one scoped Ask link contract", async ()
 });
 
 
-test("Admin settings expose capability profiles but never a secret value input", async () => {
+test("Admin settings expose capability aliases but never a secret value input", async () => {
   const source = await readFile(
     new URL("../components/admin-sections.tsx", import.meta.url),
     "utf8",
@@ -57,7 +57,10 @@ test("Admin settings expose capability profiles but never a secret value input",
     source.indexOf('<form className="admin-panel ai-runtime-settings"'),
     source.indexOf('<form className="admin-panel semantic-runtime-settings"'),
   );
-  assert.doesNotMatch(section, /<input[^>]*(?:api.?key|secret|credential)/i);
+  assert.match(section, /Credential alias/);
+  assert.match(section, /profile\.credential_alias/);
+  assert.doesNotMatch(section, /<input[^>]*type=["']password["']/i);
+  assert.doesNotMatch(section, /profile\.(?:api_?key|secret|credential_value)/i);
 });
 
 

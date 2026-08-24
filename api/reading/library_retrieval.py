@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from difflib import SequenceMatcher
 from hashlib import sha256
+import logging
 import re
 import time
 from typing import Any
 
 from django.db.models import Q
 
-from catalog.models import Page, SemanticChunk
+from catalog.models import DerivedClaim, EvidenceSpan, Page, SemanticChunk
+from catalog.services.claims.indexing import search_claim_index, visible_claim_queryset
+from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.passage_language import detect_passage_language
 from catalog.services.query_lexicon.normalization import normalize_term
+from catalog.services.retrieval import unified_retrieve
 from catalog.services.semantic_indexing import active_semantic_index_uid
-from catalog.services.semantic_search import semantic_search
+from catalog.services.semantic_search import semantic_search  # legacy monkeypatch seam
 
 from .library_query import (
     LibraryQuery,
@@ -24,7 +29,19 @@ from .library_query import (
 )
 
 
-LIBRARY_RETRIEVAL_VERSION = "library-retrieval-v1"
+LIBRARY_RETRIEVAL_VERSION = "library-retrieval-v3"
+UNIFIED_RETRIEVAL_PROFILE = "reader_qa"
+_CLAIM_FILTER_KEYS = frozenset(
+    {
+        "work_ids",
+        "document_types",
+        "languages",
+        "authors",
+        "years",
+        "_allowed_access_statuses",
+    }
+)
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,19 +114,27 @@ def _semantic_call(
             "results": [],
             "engine": "scope_empty",
             "fallback_used": False,
-            "search_version": "v2" if retrieval_profile == "experimental_v2" else "v1",
+            "search_version": "v2",
+            "library_requested_profile": retrieval_profile,
+            "unified_retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
         }
-    search_version = "v2" if retrieval_profile == "experimental_v2" else "v1"
-    response = semantic_search(
+    # ``stable`` and ``experimental_v2`` remain accepted API values during the
+    # migration.  Execution is owned by the shared reader_qa profile so Ask no
+    # longer maintains a second semantic retrieval configuration.
+    response = unified_retrieve(
         query,
+        profile=UNIFIED_RETRIEVAL_PROFILE,
         filters=resolved_scope.semantic_filters,
         limit=limit,
         max_per_work=max_per_work,
-        strategy=strategy,
-        search_version=search_version,
         debug=True,
     )
-    return response
+    return {
+        **response,
+        "library_requested_profile": retrieval_profile,
+        "unified_retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
+        "library_requested_strategy": strategy,
+    }
 
 
 def _merge_resolved_scopes(
@@ -284,6 +309,85 @@ def _result_rows(
     return rows, diagnostics
 
 
+def _row_page_number(row: dict) -> int | None:
+    try:
+        return int(row.get("page_index") or row.get("page_start") or 0) or None
+    except (TypeError, ValueError):
+        return None
+
+
+def _matching_span(
+    row: dict,
+    candidates: list[EvidenceSpan],
+) -> EvidenceSpan | None:
+    if not candidates:
+        return None
+    row_hash = str(row.get("content_hash") or "").strip()
+    if row_hash:
+        hashed = [span for span in candidates if span.content_hash == row_hash]
+        if hashed:
+            return max(hashed, key=lambda span: span.quality)
+    snippet = normalize_term(row.get("snippet"))
+    if not snippet:
+        return None
+    exact = [
+        span
+        for span in candidates
+        if snippet in normalize_term(span.original_text)
+        or normalize_term(span.original_text) in snippet
+    ]
+    if exact:
+        return max(exact, key=lambda span: (span.quality, -abs(len(span.original_text) - len(snippet))))
+    ranked = sorted(
+        (
+            SequenceMatcher(
+                None,
+                snippet[:1600],
+                normalize_term(span.original_text)[:2400],
+            ).ratio(),
+            span.quality,
+            str(span.id),
+            span,
+        )
+        for span in candidates
+    )
+    if ranked and ranked[-1][0] >= 0.55:
+        return ranked[-1][3]
+    return None
+
+
+def _evidence_spans_by_page(rows: list[dict]) -> dict[tuple[str, int], list[EvidenceSpan]]:
+    lookups = {
+        (str(row.get("asset_id") or ""), page_number)
+        for row in rows
+        if row.get("asset_id") and (page_number := _row_page_number(row))
+    }
+    if not lookups:
+        return {}
+    asset_ids = {asset_id for asset_id, _page_number in lookups}
+    page_numbers = {page_number for _asset_id, page_number in lookups}
+    spans = (
+        EvidenceSpan.objects.filter(
+            document_revision__asset_id__in=asset_ids,
+            document_revision__is_active=True,
+            page_number__in=page_numbers,
+            is_stale=False,
+        )
+        .select_related(
+            "document_revision__asset__edition__work",
+            "page",
+        )
+        .prefetch_related("document_revision__asset__edition__contributions__person")
+        .order_by("page_number", "start_offset")
+    )
+    output: dict[tuple[str, int], list[EvidenceSpan]] = {}
+    for span in spans:
+        key = (str(span.document_revision.asset_id), span.page_number)
+        if key in lookups:
+            output.setdefault(key, []).append(span)
+    return output
+
+
 def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[LibraryEvidence]:
     chunk_ids = []
     for row in rows:
@@ -295,9 +399,9 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
         for chunk in SemanticChunk.objects.filter(id__in=chunk_ids).select_related("asset")
     }
     page_lookups = {
-        (str(row.get("asset_id") or ""), int(row.get("page_index") or 0))
+        (str(row.get("asset_id") or ""), _row_page_number(row))
         for row in rows
-        if row.get("asset_id") and row.get("page_index")
+        if row.get("asset_id") and _row_page_number(row)
     }
     page_query = Q()
     for asset_id, page_index in page_lookups:
@@ -308,16 +412,35 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             (str(page.asset_id), page.index): page
             for page in Page.objects.filter(page_query)
         }
+    spans_by_page = _evidence_spans_by_page(rows)
     output = []
     for index, row in enumerate(rows, start=1):
         asset_id = str(row.get("asset_id") or "")
-        page_index = int(row.get("page_index") or 0) or None
+        page_index = _row_page_number(row)
         chunk = chunks.get(str(row.get("id") or ""))
         page = pages.get((asset_id, page_index or 0))
         passage = str(row.get("snippet") or "").strip()
         if not passage:
             continue
+        span = _matching_span(row, spans_by_page.get((asset_id, page_index or 0), []))
+        if span is not None:
+            envelope = evidence_span_envelope(span)
+            revision = span.document_revision
+            asset = revision.asset
+            edition = asset.edition
+            work = edition.work
+            passage = span.original_text
+            asset_id = str(asset.id)
+            page = span.page
+            page_index = span.page_number or span.page.index
+            row_authors = envelope.source.get("authors") or row.get("authors") or []
+        else:
+            envelope = None
+            work = edition = None
+            row_authors = row.get("authors") or []
         language = (
+            str(span.language if span else "").strip()
+            or
             str(getattr(chunk, "language", "") or "").strip()
             or str(row.get("language") or "").strip()
             or detect_passage_language(passage)
@@ -332,34 +455,210 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             "coverage_entity_label": row.get("_coverage_entity_label", ""),
             "relevance": row.get("relevance", ""),
             "debug": row.get("debug") if isinstance(row.get("debug"), dict) else {},
+            "source_kind": "semantic_chunk",
+            "locator_validation": "evidence_span" if span else "page_compatibility",
+            **(
+                {
+                    "evidence_span_id": str(span.id),
+                    "document_revision_id": str(span.document_revision_id),
+                    "evidence_quality": span.quality,
+                }
+                if span
+                else {}
+            ),
         }
-        reader_url = str(row.get("reader_url") or "")
+        reader_url = envelope.reader_url if envelope else str(row.get("reader_url") or "")
         if not reader_url and asset_id:
             passage_value = semantic_chunk_id or document_id
             passage_query = f"&passage={passage_value}" if passage_value else ""
             reader_url = f"/reader/{asset_id}?page={page_index or 1}{passage_query}"
         output.append(
             LibraryEvidence(
-                evidence_id=evidence_id,
-                work_id=str(row.get("work_id") or ""),
-                work_title=str(row.get("title") or "未题名")[:500],
-                edition_id=str(row.get("edition_id") or ""),
+                evidence_id=str(span.id) if span else evidence_id,
+                work_id=str(work.id) if work else str(row.get("work_id") or ""),
+                work_title=(work.title if work else str(row.get("title") or "未题名"))[:500],
+                edition_id=str(edition.id) if edition else str(row.get("edition_id") or ""),
                 asset_id=asset_id,
                 page_id=str(page.id) if page else "",
                 page_index=page_index,
-                printed_label=str(row.get("printed_label") or "")[:80],
+                printed_label=str(
+                    (span.printed_page_label if span else "")
+                    or row.get("printed_label")
+                    or ""
+                )[:80],
                 semantic_chunk_id=semantic_chunk_id,
                 document_id=document_id,
                 original_passage=passage,
                 language=language,
-                authors=tuple(str(value)[:240] for value in row.get("authors", [])[:20] if value),
+                authors=tuple(str(value)[:240] for value in row_authors[:20] if value),
                 chapter_title=str(row.get("chapter_title") or "")[:500],
-                section_title=str(row.get("section_title") or "")[:500],
+                section_title=str((span.section if span else "") or row.get("section_title") or "")[:500],
                 reader_url=reader_url[:1000],
                 retrieval_provenance=provenance,
             )
         )
     return output
+
+
+def _claim_filters_supported(filters: dict) -> bool:
+    return not any(
+        key not in _CLAIM_FILTER_KEYS and value not in (None, "", [], (), {})
+        for key, value in filters.items()
+    )
+
+
+def _claim_evidence_from_hit(
+    hit: dict,
+    *,
+    filters: dict,
+    branch: str,
+    coverage_entity_id: str = "",
+    coverage_entity_label: str = "",
+) -> LibraryEvidence | None:
+    claim_id = str(hit.get("claim_id") or hit.get("id") or "").strip()
+    if not claim_id:
+        return None
+    claim = (
+        visible_claim_queryset(filters)
+        .filter(pk=claim_id)
+        .select_related(
+            "work",
+            "edition",
+            "document_revision__asset__edition__work",
+            "primary_evidence__page",
+        )
+        .prefetch_related("edition__contributions__person")
+        .first()
+    )
+    if claim is None:
+        return None
+    if (
+        hit.get("document_revision_id")
+        and str(hit["document_revision_id"]) != str(claim.document_revision_id)
+    ) or (
+        hit.get("evidence_span_id")
+        and str(hit["evidence_span_id"]) != str(claim.primary_evidence_id)
+    ):
+        return None
+    span = claim.primary_evidence
+    asset = claim.document_revision.asset
+    if (
+        not span.original_text.strip()
+        or asset.edition_id != claim.edition_id
+        or claim.edition.work_id != claim.work_id
+        or span.page.asset_id != asset.id
+    ):
+        return None
+    envelope = evidence_span_envelope(span)
+    authors = [
+        contribution.person.preferred_name
+        for contribution in claim.edition.contributions.all()
+        if contribution.approved and contribution.person_id
+    ]
+    return LibraryEvidence(
+        evidence_id=str(span.id),
+        work_id=str(claim.work_id),
+        work_title=claim.work.title[:500],
+        edition_id=str(claim.edition_id),
+        asset_id=str(asset.id),
+        page_id=str(span.page_id),
+        page_index=span.page_number or span.page.index,
+        printed_label=span.printed_page_label[:80],
+        semantic_chunk_id="",
+        document_id=f"evidence:{span.id}",
+        original_passage=span.original_text,
+        language=span.language or claim.work.language or detect_passage_language(span.original_text),
+        authors=tuple(str(value)[:240] for value in authors[:20] if value),
+        section_title=span.section[:500],
+        reader_url=envelope.reader_url[:1000],
+        retrieval_provenance={
+            "retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
+            "branch": branch,
+            "source_kind": "derived_claim_evidence",
+            "derived_claim_id": str(claim.id),
+            "evidence_span_id": str(span.id),
+            "document_revision_id": str(claim.document_revision_id),
+            "evidence_quality": span.quality,
+            "claim_quality": claim.quality_score,
+            "claim_importance": claim.importance_score,
+            "claim_type": claim.claim_type,
+            "claim_attribution": claim.attribution,
+            "coverage_entity_id": coverage_entity_id,
+            "coverage_entity_label": coverage_entity_label,
+            "locator_validation": "evidence_span",
+        },
+    )
+
+
+def _claim_recall(
+    library_query: LibraryQuery,
+    resolved_scope: ResolvedLibraryScope,
+) -> tuple[list[LibraryEvidence], dict[str, Any]]:
+    if resolved_scope.empty or library_query.query_type in {
+        LibraryQueryType.QUOTED_PHRASE,
+        LibraryQueryType.COMPARISON,
+    }:
+        return [], {"status": "skipped", "reason": "scope_empty_or_specialized_query"}
+    branches = [("claim_primary", resolved_scope.semantic_filters, "", "")]
+    output: list[LibraryEvidence] = []
+    diagnostics = []
+    rejected = 0
+    degraded = False
+    for branch, filters, entity_id, entity_label in branches:
+        if not _claim_filters_supported(filters):
+            diagnostics.append({"branch": branch, "status": "skipped_unsupported_filter"})
+            continue
+        try:
+            result = search_claim_index(
+                f"{library_query.resolved_query} {entity_label}".strip(),
+                filters=filters,
+                limit=max(4, min(library_query.retrieval_limits["max_passages"], 12)),
+            )
+        except Exception as exc:  # Derived Claim recall is optional to a grounded answer.
+            degraded = True
+            logger.exception(
+                "Library Claim recall degraded branch=%s error=%s",
+                branch,
+                exc.__class__.__name__,
+            )
+            diagnostics.append(
+                {
+                    "branch": branch,
+                    "status": "degraded",
+                    "error_category": exc.__class__.__name__,
+                }
+            )
+            continue
+        hits = result.get("hits") if isinstance(result, dict) else []
+        validated = 0
+        for hit in hits or []:
+            evidence = _claim_evidence_from_hit(
+                hit,
+                filters=filters,
+                branch=branch,
+                coverage_entity_id=entity_id,
+                coverage_entity_label=entity_label,
+            )
+            if evidence is None:
+                rejected += 1
+                continue
+            output.append(evidence)
+            validated += 1
+        diagnostics.append(
+            {
+                "branch": branch,
+                "status": "completed",
+                "backend": result.get("backend") if isinstance(result, dict) else "invalid",
+                "hit_count": len(hits or []),
+                "validated_count": validated,
+            }
+        )
+    return output, {
+        "status": "degraded" if degraded else "completed",
+        "validated_count": len(output),
+        "rejected_count": rejected,
+        "branches": diagnostics,
+    }
 
 
 def _deduplicate_and_budget(
@@ -378,10 +677,16 @@ def _deduplicate_and_budget(
     def add(row: LibraryEvidence) -> bool:
         nonlocal used_chars
         normalized_passage = normalize_term(row.original_passage)
-        key = row.document_id or (
-            row.work_id,
-            row.page_id or row.page_index,
-            sha256(normalized_passage.encode("utf-8")).hexdigest(),
+        evidence_span_id = str(row.retrieval_provenance.get("evidence_span_id") or "")
+        key = (
+            ("evidence_span", evidence_span_id)
+            if evidence_span_id
+            else row.document_id
+            or (
+                row.work_id,
+                row.page_id or row.page_index,
+                sha256(normalized_passage.encode("utf-8")).hexdigest(),
+            )
         )
         page_key = (row.work_id, row.page_id or row.page_index, normalized_passage[:180])
         if key in seen or page_key in seen:
@@ -442,9 +747,22 @@ class LibraryRetrievalService:
         started = time.monotonic()
         rows, diagnostics = _result_rows(library_query, resolved_scope)
         hydrated = _hydrate_evidence(rows, retrieval_profile=library_query.retrieval_profile)
+        claim_evidence, claim_diagnostics = _claim_recall(library_query, resolved_scope)
         if resolved_scope.asset_id:
             hydrated = [row for row in hydrated if row.asset_id == resolved_scope.asset_id]
-        selected = _deduplicate_and_budget(hydrated, library_query=library_query)
+            claim_evidence = [
+                row for row in claim_evidence if row.asset_id == resolved_scope.asset_id
+            ]
+        # Claim recall remains a bounded helper for locating original text.  It
+        # never supplies a proposition to the answer composer as evidence.
+        claim_cap = min(3, max(1, library_query.retrieval_limits["max_passages"] // 3))
+        combined = []
+        for index in range(max(len(hydrated), min(len(claim_evidence), claim_cap))):
+            if index < len(hydrated):
+                combined.append(hydrated[index])
+            if index < claim_cap and index < len(claim_evidence):
+                combined.append(claim_evidence[index])
+        selected = _deduplicate_and_budget(combined, library_query=library_query)
         reason = ""
         sufficient = bool(selected)
         if library_query.query_type == LibraryQueryType.QUOTED_PHRASE and not selected:
@@ -479,7 +797,8 @@ class LibraryRetrievalService:
         metadata = {
             "implementation_version": LIBRARY_RETRIEVAL_VERSION,
             "retrieval_profile": library_query.retrieval_profile,
-            "semantic_search_version": "v2" if library_query.retrieval_profile == "experimental_v2" else "v1",
+            "unified_retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
+            "semantic_search_version": "v2",
             "semantic_index_uid": next(
                 (
                     item["response"].get("index_uid")
@@ -494,6 +813,15 @@ class LibraryRetrievalService:
             "fallback_reasons": fallbacks,
             "raw_candidate_count": len(rows),
             "hydrated_candidate_count": len(hydrated),
+            "evidence_span_validated_count": sum(
+                1
+                for row in hydrated
+                if row.retrieval_provenance.get("locator_validation") == "evidence_span"
+            ),
+            "derived_claim_recall": claim_diagnostics,
+            "knowledge_anchor_count": len(library_query.entity_anchors),
+            "knowledge_use": "query_normalization_and_scope_only",
+            "answer_evidence_kind": "collection_original_text",
             "evidence_count": len(selected),
             "latency_ms": round((time.monotonic() - started) * 1000, 3),
             "branches": [

@@ -2,7 +2,60 @@
 
 更新日期为 2026-08-24。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-当前源码与公网应用均为 2.9.2。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，最终 Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`。生产 migration head 为 catalog 0032、ingestion 0013 和 reading 0007，pending migration 为 0。公网 ready、主要路由、顺序语义检索、Reader Range、管理员预览、自动研究和 Processing Center 已完成真实验收。完整生产入口见 [GPT-HANDOFF.md](GPT-HANDOFF.md)。
+当前工作树是从 `4b97a3484db0c3918f5b0fef8bfc75c35bd0dcee` 开始的 3.0 发布候选。公网在本轮切换完成前仍是 2.9.2。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`。生产 migration head 暂为 catalog 0032、ingestion 0013 和 reading 0007。3.0 目标 head 为 catalog 0034，其余 app head 不变。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
+
+## 3.0 正式架构
+
+3.0 继续使用一套 Django、PostgreSQL、Redis、Celery、Meilisearch、NAS 和 PaddleOCR。它没有建立平行的 v3 数据库、搜索服务或管理后台。PostgreSQL 保存业务与知识事实。Redis 只承担 broker、cache 和 lease。Meilisearch 只保存可重建的全文、SemanticChunk 和 Claim projection。
+
+数据分为三层。
+
+| 层级 | 主要对象 | 写入规则 |
+| --- | --- | --- |
+| Canonical | Discipline、Subdiscipline、Topic、KnowledgeNode、Person、ScholarProfile、Work、Edition、ReadingPath、CuratedClaim | 只能由明确的人工动作或单 Editor 发布提交。所有正式变更写 DomainChangeEvent |
+| Derived | DocumentRevision、DocumentQualityAssessment、EvidenceSpan、DerivedClaim、各类 Candidate 和 EvidencePack | 可以由 parser、OCR、Provider 或 AI 增量生成。失效时保留 provenance，不直接改正式知识 |
+| Projection | QueryLexicon、全文、Semantic、Claim Index、Knowledge Graph、Timeline、Recommendation、Reading Path support 和公共缓存 | 可重建。每个目标记录 source revision、projected revision、lease、retry 和 stale 状态 |
+
+Page 仍由 Asset 直接拥有。DocumentRevision 记录同一 Asset 的解释版本，不会重建 Page。ORIGINAL Asset 永不被 OCR 或 normalized 文件覆盖。SemanticChunk 继续是 retrieval unit，不会被提升为正式知识。
+
+### Canonical identity
+
+- Discipline、Subdiscipline 和 Topic 保持独立身份。
+- Theory、Concept、Debate 和 Research Problem 分别使用对应 node type 的 KnowledgeNode。
+- Person 与 ScholarProfile 分离。Work 与 Edition 分离。ReadingPath 保持独立模型。
+- 正式知识关系使用 KnowledgeRelation、WorkNodeRelation、PersonNodeRelation，以及明确的 Discipline、Subdiscipline、Topic relation。
+- TheorySchool、legacy Concept 和 WorkKnowledgeRelation 不再接收新的正式写入。它们只承担迁移读取和人工确认 mapping。
+- KnowledgeNode 不再允许新增 Discipline、Subdiscipline 或 Topic node type。KnowledgeNode 与这些独立对象通过明确 relation 连接。
+
+兼容层的退役条件是生产 inventory 已完成，所有有业务意义的旧对象都有人工确认 mapping，normalized relation 数量与证据核对一致，连续观察期没有旧写调用，公开页和后台也不再依赖旧表。未满足这些条件时只读保留，不直接删表。生产中现有 TheorySchool 到 archived KnowledgeNode 的可疑 mapping 必须人工处理，迁移不能猜测其语义。
+
+### Document Intelligence 与 Claim
+
+现有 ingestion 在 extraction 后调用 Document Intelligence 同步服务。服务根据 Asset checksum、parser、OCR 和文本版本建立或复用 DocumentRevision，更新六类质量指标，并为当前 Page 建立 EvidenceSpan。选择性 OCR 只会让相关页的 EvidenceSpan 和 DerivedClaim stale，再按页重算。
+
+Claim extraction 是可恢复的 shadow task。每条 DerivedClaim 绑定 DocumentRevision、EvidenceSpan、prompt revision、provider/model revision、attribution、scope 与质量因素。Claim Index 写入现有 Meilisearch。人工采用后才建立 CuratedClaim。公开 Work 只读取已发布且 Evidence 仍有效的 CuratedClaim。
+
+### Unified Retrieval 与观点检索
+
+Unified Retrieval 是 Semantic Search V2 的公共编排层。它复用 query understanding、QueryLexicon、sparse、dense、RRF、dedupe、rerank、filters 和 hydration，并通过 profile 服务 public fulltext、viewpoint、research evidence、entity discovery、curation 和 reader QA。
+
+观点检索同时召回 SemanticChunk 与 DerivedClaim。Evidence validation 会拒绝找不到 active DocumentRevision 和 EvidenceSpan 的结果。立场分类显式处理 polarity、否定、qualifier、attribution 和 claim type。公开返回 direct、support、oppose、qualify、critique、extend 和 reframe。Claim 排序只有在 PostgreSQL 中保存的 benchmark run 通过门槛，并且部署 flag 同时启用后，才可取代 Semantic V2 baseline。
+
+Ask Library 使用同一 Unified Retrieval、EvidenceSpan、DerivedClaim 和 Knowledge，只在最后增加 Answer Composer。没有足够馆藏 Evidence 时不调用 composer，并明确返回证据不足。
+
+### Dependency 与任务能力
+
+Canonical mutation 统一写 CanonicalObjectRevision 和 DomainChangeEvent。Dependency Resolver 只标记受影响 projection。Projection executor 通过 PostgreSQL lease 幂等领取工作，完成时提交实际 projected revision。如果新 canonical revision 在执行中出现，旧执行不能把目标误标为最新。
+
+ProcessingJob、ResearchRun、SemanticIndexJob 和 QueryLexicon event 保持各自专业状态。CapabilityDemand 与 ExecutorRegistration 只在它们之上协调 cpu_light、document_parse、ocr、embedding、rerank、llm_small、llm_large、web_research 和 projection。没有新鲜 executor heartbeat 时，任务保留 waiting_for_capability，不会进入无人消费 queue。4070 worker 使用 pull、heartbeat 和短租约，不要求 NAS 连接笔记本公网地址。
+
+### 三个后台工作面
+
+- Workbench A 复用 WorkflowEditor，覆盖文件、书目、责任者、分类、知识、观点策展、Reading Path 和发布。Claim 候选最多主动显示五项。
+- Knowledge Studio B 以对象为中心展示正式内容、关系、Evidence、Claims、AI candidates、Revision、Frontend impact 和 Preview，并复用原有专业编辑器。
+- Processing Center C 展示 Document Intelligence、Claim、Research、Provider、executor 和 projection 新鲜度。它不承担内容编辑，只提供有界的安全恢复动作。
+
+已发布 Work、KnowledgeNode、ScholarProfile、Topic 和 ReadingPath 的重要编辑先建立 EditorialRevision。草稿保存 materialized preview 和 changed fields。单 Editor 明确发布时，以事务提交 canonical change 并触发 dependency propagation。
 
 ## 总体结构
 

@@ -22,7 +22,15 @@ from ingestion.services.publication import (
     withdraw_edition,
 )
 
-from catalog.models import Asset, Edition, EnrichmentCandidate, TheoryReviewTask, Work
+from catalog.models import (
+    Asset,
+    CanonicalObjectRevision,
+    Edition,
+    EditorialRevision,
+    EnrichmentCandidate,
+    TheoryReviewTask,
+    Work,
+)
 from catalog.services.admin_workspace import (
     QUEUE_STATUSES,
     build_admin_workspace,
@@ -36,6 +44,13 @@ from catalog.services.work_editor import (
     intake_edition,
     maintenance_edition,
     save_workflow_section,
+)
+from catalog.services.editorial_revision import (
+    EditorialRevisionError,
+    changed_editorial_patch,
+    create_editorial_revision,
+    editorial_idempotency_key,
+    serialize_editorial_revision,
 )
 from catalog.workflow_serializers import SECTION_SERIALIZERS
 
@@ -214,6 +229,91 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
             return Response({"detail": "未知或不可编辑的工作流步骤。"}, status=400)
         serializer = serializer_class(data=_section_input(step_key, request.data), partial=True)
         serializer.is_valid(raise_exception=True)
+        if step_key in {"work", "classification", "knowledge"} and edition.work.editions.filter(
+            state="published"
+        ).exists():
+            raw_values = dict(serializer.validated_data)
+            change_note = str(raw_values.pop("note", "") or "")
+            expected_edition = raw_values.pop("expected_updated_at", None)
+            expected_work = raw_values.pop("expected_work_updated_at", None)
+            if expected_edition is not None and edition.updated_at != expected_edition:
+                return _edit_error(WorkflowEditConflict("当前版本已被其他操作更新，请刷新后重试。"))
+            if expected_work is not None and edition.work.updated_at != expected_work:
+                return _edit_error(WorkflowEditConflict("当前作品已被其他操作更新，请刷新后重试。"))
+            if step_key == "work":
+                patch = {
+                    key: value
+                    for key, value in raw_values.items()
+                    if key in {
+                        "document_type",
+                        "title",
+                        "subtitle",
+                        "original_title",
+                        "uniform_title",
+                        "language",
+                        "original_language",
+                        "first_publication_date",
+                        "translation_of",
+                        "abstract",
+                    }
+                }
+            else:
+                patch = {step_key: raw_values}
+            try:
+                patch = changed_editorial_patch(
+                    target_type=EditorialRevision.TargetType.WORK,
+                    target=edition.work,
+                    patch=patch,
+                )
+                if patch:
+                    current_revision = (
+                        CanonicalObjectRevision.objects.filter(
+                            object_type=EditorialRevision.TargetType.WORK,
+                            object_id=edition.work_id,
+                        )
+                        .values_list("current_revision", flat=True)
+                        .first()
+                        or 0
+                    )
+                    revision = create_editorial_revision(
+                        target_type=EditorialRevision.TargetType.WORK,
+                        target_id=edition.work_id,
+                        patch=patch,
+                        actor=request.user,
+                        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+                        or editorial_idempotency_key(
+                            target_type=EditorialRevision.TargetType.WORK,
+                            target_id=edition.work_id,
+                            base_revision=current_revision,
+                            patch=patch,
+                        ),
+                        change_note=change_note or "馆藏维护工作台保存正式作品草稿",
+                    )
+                    workspace = build_admin_workspace(
+                        edition,
+                        user=request.user,
+                        mode="maintenance",
+                    )
+                    workspace["editorial_revision"] = serialize_editorial_revision(revision)
+                    if step_key == "work":
+                        workspace["data"]["work"].update(revision.materialized_preview)
+                    else:
+                        workspace["data"][step_key]["draft_revision"] = (
+                            revision.materialized_preview.get(step_key)
+                        )
+                    return Response(workspace, status=status.HTTP_202_ACCEPTED)
+                return Response(
+                    build_admin_workspace(
+                        edition,
+                        user=request.user,
+                        mode="maintenance",
+                    )
+                )
+            except EditorialRevisionError as error:
+                return Response(
+                    {"detail": str(error), "code": "editorial_revision_error"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         try:
             result = save_workflow_section(
                 edition,

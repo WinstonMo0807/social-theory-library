@@ -1,5 +1,37 @@
 # 数据模型与权限
 
+更新日期为 2026-08-24。以下 3.0 模型是当前发布候选的正式职责划分。旧章节保留基础对象说明。
+
+## 3.0 分层
+
+### Canonical
+
+- Discipline、Subdiscipline、Topic 是独立规范身份。
+- KnowledgeNode 只承载 THEORY_TRADITION、CONCEPT、DEBATE 和 RESEARCH_PROBLEM 等知识节点。
+- Person 与 ScholarProfile、Work 与 Edition、ReadingPath 分别保存身份和呈现职责。
+- KnowledgeRelation、WorkNodeRelation、PersonNodeRelation 和专门的 Discipline、Subdiscipline、Topic relation 保存正式关系。
+- CuratedClaim 是 Editor 从 DerivedClaim 采用的策展命题。只有 published 状态才进入公网。
+
+### Derived
+
+- DocumentRevision 保存 Asset 的 parser、extraction、OCR、source checksum、text checksum、quality summary 和 active/superseded provenance。它不是 Page 的父对象。
+- DocumentQualityAssessment 分别保存 reader、fulltext、semantic、claim、structure 和 OCR 质量，并可记录 critical pages。
+- EvidenceSpan 只表示馆藏内部原文。它保存 revision、Page、页码、纸本页码、block/offset/bbox、原文、规范文本、语言、section、content hash 和 OCR provenance。
+- DerivedClaim 保存原子命题、subject、predicate、object、polarity、modality、qualifier、三类 scope、attribution、claim type、prompt 和 model provenance。
+- CandidateEvidence、EnrichmentEvidence、QueryLexiconCandidateEvidence、EvidenceSnippet 与 UnknownEntityObservation 继续按各自职责保留，不合并成万能 Evidence 表。
+- ResearchTaskProfile、EvidencePack、PromptRegistryEntry、DebateCandidate、ReadingPathCandidate 和 IntelligenceFeedback 支持研究任务、候选与人工校准。
+
+### Projection 与执行状态
+
+- CanonicalObjectRevision 和 DomainChangeEvent 记录正式对象 revision 与变更事实。
+- ProjectionState 保存 source revision、projected revision、stale reason、lease 与 retry。
+- CapabilityDemand 和 ExecutorRegistration 协调现有 ProcessingJob、ResearchRun、SemanticIndexJob 与 QueryLexicon event，不替代这些专业任务表。
+- QueryLexicon、全文、Semantic、Claim Index、Knowledge Graph、Timeline、Recommendation、Reading Path support 和公共缓存均可重建。
+
+## 3.0 兼容对象
+
+TheorySchool、legacy Concept 与 WorkKnowledgeRelation 停止新增正式写入。LegacyKnowledgeMapping 只接受人工确认 mapping。兼容读取在 normalized parity、零旧写调用和观察期完成前保留。不得直接删除旧表，也不得自动修复语义可疑的 mapping。
+
 ## 文献
 
 ### Work
@@ -44,7 +76,7 @@
 
 ### TheorySchool
 
-经过编辑确认的思想传统。
+迁移兼容的旧思想传统。新理论使用 `KnowledgeNode(node_type=THEORY_TRADITION)`，本表停止新增正式写入。
 
 ### Topic
 
@@ -52,7 +84,7 @@
 
 ### Concept
 
-具有定义、来源和关系的术语。
+迁移兼容的旧概念。新概念使用 `KnowledgeNode(node_type=CONCEPT)`，本表停止新增正式写入。
 
 ### KnowledgeRelation
 
@@ -93,16 +125,19 @@
 
 ## 权限
 
-| 能力 | 访客 | 读者 | 编辑 | 管理员 |
-| --- | :---: | :---: | :---: | :---: |
-| 浏览、搜索、在线阅读 | 是 | 是 | 是 | 是 |
-| 下载、复制、引用 | 是 | 是 | 是 | 是 |
-| 高亮、划线、笔记、书签 | 否 | 是 | 是 | 是 |
-| 收藏、书单、进度、历史 | 否 | 是 | 是 | 是 |
-| 导出自己的数据 | 否 | 是 | 是 | 是 |
-| 编辑文献和知识内容 | 否 | 否 | 是 | 是 |
-| 批量上传和重试 | 否 | 否 | 是 | 是 |
-| 公开、下架文献 | 否 | 否 | 是 | 是 |
-| 用户管理与密码重置 | 否 | 否 | 否 | 是 |
-| 系统、云端和备份配置 | 否 | 否 | 否 | 是 |
-| 查看其他用户笔记正文 | 否 | 否 | 否 | 否 |
+| 能力 | 访客 | 读者 | Editor | Admin | Superadmin |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| 浏览、搜索、在线阅读 | 是 | 是 | 是 | 是 | 是 |
+| 下载、复制、引用 | 是 | 是 | 是 | 是 | 是 |
+| 高亮、划线、笔记、书签 | 否 | 是 | 是 | 是 | 是 |
+| 收藏、书单、进度、历史 | 否 | 是 | 是 | 是 | 是 |
+| 导出自己的数据 | 否 | 是 | 是 | 是 | 是 |
+| 上传、编辑、候选决定与研究 | 否 | 否 | 是 | 是 | 是 |
+| 授权范围内单人发布 | 否 | 否 | 是 | 是 | 是 |
+| 任务重试、状态与审计查看 | 否 | 否 | 否 | 是 | 是 |
+| Authority merge、Provider、模型、Prompt | 否 | 否 | 否 | 否 | 是 |
+| 全局 Projection、恢复、用户与角色 | 否 | 否 | 否 | 否 | 是 |
+| 备份和破坏性维护 | 否 | 否 | 否 | 否 | 是 |
+| 查看其他用户笔记正文 | 否 | 否 | 否 | 否 | 否 |
+
+Reviewer 只为旧账户兼容保留，不参与强制审核流程。Editor expertise 只影响候选和任务优先级，不形成审批门槛。

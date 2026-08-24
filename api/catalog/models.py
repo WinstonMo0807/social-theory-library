@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -478,6 +479,158 @@ class Passage(UUIDTimeStampedModel):
         ]
 
 
+class DocumentRevision(UUIDTimeStampedModel):
+    """Versioned provenance for a document interpretation.
+
+    Page remains anchored directly to Asset.  A revision records how the
+    current text was produced without becoming a new parent for Page rows.
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="document_revisions")
+    revision = models.PositiveIntegerField()
+    parser_name = models.CharField(max_length=120, blank=True)
+    parser_version = models.CharField(max_length=120, blank=True)
+    extraction_method = models.CharField(max_length=120, blank=True)
+    extraction_version = models.CharField(max_length=120, blank=True)
+    ocr_provider = models.CharField(max_length=120, blank=True)
+    ocr_model = models.CharField(max_length=240, blank=True)
+    ocr_version = models.CharField(max_length=160, blank=True)
+    source_checksum = models.CharField(max_length=64, db_index=True)
+    text_checksum = models.CharField(max_length=64, db_index=True)
+    quality_summary = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_document_revisions",
+    )
+
+    class Meta:
+        ordering = ["asset_id", "-revision"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["asset", "revision"],
+                name="unique_document_revision_number",
+            ),
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(is_active=True),
+                name="unique_active_document_revision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["asset", "is_active", "-revision"]),
+        ]
+
+
+class DocumentQualityAssessment(UUIDTimeStampedModel):
+    document_revision = models.ForeignKey(
+        DocumentRevision,
+        on_delete=models.CASCADE,
+        related_name="quality_assessments",
+    )
+    assessor = models.CharField(max_length=120, default="deterministic")
+    assessor_version = models.CharField(max_length=120)
+    reader_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    fulltext_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    semantic_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    claim_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    structure_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    ocr_quality = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
+    critical_pages = models.JSONField(default=list, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document_revision", "assessor", "assessor_version"],
+                name="unique_document_quality_assessment",
+            ),
+        ]
+
+
+class EvidenceSpan(UUIDTimeStampedModel):
+    """A locator-backed span of source text from the library collection."""
+
+    document_revision = models.ForeignKey(
+        DocumentRevision,
+        on_delete=models.PROTECT,
+        related_name="evidence_spans",
+    )
+    page = models.ForeignKey(Page, on_delete=models.PROTECT, related_name="evidence_spans")
+    text_block = models.ForeignKey(
+        TextBlock,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="evidence_spans",
+    )
+    passage = models.ForeignKey(
+        Passage,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="evidence_spans",
+    )
+    page_number = models.PositiveIntegerField(db_index=True)
+    printed_page_label = models.CharField(max_length=40, blank=True)
+    start_offset = models.PositiveIntegerField(default=0)
+    end_offset = models.PositiveIntegerField(default=0)
+    bbox = models.JSONField(default=list, blank=True)
+    original_text = models.TextField()
+    normalized_text = models.TextField(blank=True)
+    language = models.CharField(max_length=32, blank=True)
+    section = models.CharField(max_length=600, blank=True)
+    content_hash = models.CharField(max_length=64, db_index=True)
+    quality = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    extraction_method = models.CharField(max_length=120, blank=True)
+    ocr_provenance = models.JSONField(default=dict, blank=True)
+    is_stale = models.BooleanField(default=False, db_index=True)
+    stale_reason = models.CharField(max_length=240, blank=True)
+    invalidated_at = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        errors = {}
+        if self.document_revision_id and self.page_id:
+            if self.document_revision.asset_id != self.page.asset_id:
+                errors["page"] = "EvidenceSpan Page 必须属于 DocumentRevision 的 Asset。"
+            if self.page_number != self.page.index:
+                errors["page_number"] = "EvidenceSpan 页码必须与稳定 Page identity 一致。"
+        if self.text_block_id and self.text_block.page_id != self.page_id:
+            errors["text_block"] = "TextBlock 必须属于 EvidenceSpan 的 Page。"
+        if self.passage_id and self.passage.page_id != self.page_id:
+            errors["passage"] = "Passage 必须属于 EvidenceSpan 的 Page。"
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["page_number", "start_offset"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document_revision", "page", "content_hash", "start_offset", "end_offset"],
+                name="unique_revision_evidence_span",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(end_offset__gte=models.F("start_offset")),
+                name="evidence_span_offsets_ordered",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["document_revision", "page_number", "is_stale"]),
+        ]
+
+
 class SemanticChunk(UUIDTimeStampedModel):
     class IndexStatus(models.TextChoices):
         PENDING = "pending", "待建立"
@@ -892,6 +1045,91 @@ class SearchEvaluationResult(UUIDTimeStampedModel):
             self.retrieved_document_id = self.retrieved_chunk.document_id
             if kwargs.get("update_fields") is not None:
                 kwargs["update_fields"] = set(kwargs["update_fields"]) | {"retrieved_document_id"}
+        super().save(*args, **kwargs)
+
+
+class ClaimBenchmarkJudgment(UUIDTimeStampedModel):
+    """Human gold labels layered on the existing retrieval benchmark corpus."""
+
+    class Relation(models.TextChoices):
+        DIRECT = "direct", "直接回应"
+        SUPPORT = "support", "支持"
+        OPPOSE = "oppose", "相斥"
+        QUALIFY = "qualify", "限定"
+        CRITIQUE = "critique", "批评"
+        EXTEND = "extend", "延伸"
+        REFRAME = "reframe", "重构问题"
+
+    class Attribution(models.TextChoices):
+        AUTHOR_CLAIM = "author_claim", "作者主张"
+        QUOTED_CLAIM = "quoted_claim", "引述主张"
+        REPORTED_CLAIM = "reported_claim", "转述主张"
+        CRITICIZED_CLAIM = "criticized_claim", "被批评主张"
+        HISTORICAL_DESCRIPTION = "historical_description", "历史描述"
+        UNCERTAIN = "uncertain", "归因不确定"
+
+    query = models.ForeignKey(
+        SearchEvaluationQuery,
+        on_delete=models.CASCADE,
+        related_name="claim_judgments",
+    )
+    evidence_span = models.ForeignKey(
+        EvidenceSpan,
+        on_delete=models.PROTECT,
+        related_name="benchmark_judgments",
+    )
+    document_revision = models.ForeignKey(
+        DocumentRevision,
+        on_delete=models.PROTECT,
+        related_name="benchmark_judgments",
+    )
+    work = models.ForeignKey(
+        Work,
+        on_delete=models.PROTECT,
+        related_name="claim_benchmark_judgments",
+    )
+    expected_relation = models.CharField(max_length=20, choices=Relation.choices, db_index=True)
+    expected_attribution = models.CharField(
+        max_length=32,
+        choices=Attribution.choices,
+        default=Attribution.UNCERTAIN,
+    )
+    relevance = models.PositiveSmallIntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+    )
+    locator_verified = models.BooleanField(default=False, db_index=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_claim_benchmark_judgments",
+    )
+
+    class Meta:
+        ordering = ["query__order", "-relevance", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["query", "evidence_span"],
+                name="unique_claim_benchmark_judgment",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["query", "expected_relation", "relevance"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.evidence_span_id:
+            span = self.evidence_span
+            self.document_revision_id = span.document_revision_id
+            self.work_id = span.document_revision.asset.edition.work_id
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {
+                    "document_revision",
+                    "work",
+                }
         super().save(*args, **kwargs)
 
 
@@ -2020,6 +2258,50 @@ class WorkDisciplineRelation(UUIDTimeStampedModel):
         ]
 
 
+class WorkTopicRelation(UUIDTimeStampedModel):
+    """Canonical Work-to-Topic relation replacing legacy kind-based rows."""
+
+    work = models.ForeignKey(Work, on_delete=models.CASCADE, related_name="topic_relations")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="work_relations")
+    is_primary = models.BooleanField(default=False)
+    strength = models.CharField(
+        max_length=16,
+        choices=RelationStrength.choices,
+        default=RelationStrength.MEDIUM,
+    )
+    source = models.CharField(max_length=120, blank=True)
+    confidence = models.FloatField(default=0)
+    evidence_asset = models.ForeignKey(
+        Asset,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="work_topic_evidence",
+    )
+    evidence_page = models.PositiveIntegerField(null=True, blank=True)
+    evidence_printed_label = models.CharField(max_length=40, blank=True)
+    evidence_text = models.TextField(blank=True)
+    review_status = models.CharField(
+        max_length=20,
+        choices=RelationReviewStatus.choices,
+        default=RelationReviewStatus.SUGGESTED,
+        db_index=True,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_work_topics",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["work", "topic"], name="unique_work_topic"),
+        ]
+
+
 class PersonSubdisciplineRelation(UUIDTimeStampedModel):
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="subdiscipline_relations")
     subdiscipline = models.ForeignKey(Subdiscipline, on_delete=models.CASCADE, related_name="person_relations")
@@ -2072,6 +2354,34 @@ class PersonDisciplineRelation(UUIDTimeStampedModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["person", "discipline"], name="unique_person_discipline"),
+        ]
+
+
+class PersonTopicRelation(UUIDTimeStampedModel):
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="topic_relations")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="person_relations")
+    is_primary = models.BooleanField(default=False)
+    relation_label = models.CharField(max_length=120, blank=True)
+    source = models.CharField(max_length=120, blank=True)
+    confidence = models.FloatField(default=0)
+    review_status = models.CharField(
+        max_length=20,
+        choices=RelationReviewStatus.choices,
+        default=RelationReviewStatus.SUGGESTED,
+        db_index=True,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_person_topics",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["person", "topic"], name="unique_person_topic"),
         ]
 
 
@@ -2371,6 +2681,87 @@ class KnowledgeNodeDiscipline(UUIDTimeStampedModel):
             models.UniqueConstraint(
                 fields=["node", "discipline"],
                 name="unique_knowledge_node_discipline",
+            ),
+        ]
+
+
+class KnowledgeNodeSubdiscipline(UUIDTimeStampedModel):
+    node = models.ForeignKey(
+        KnowledgeNode,
+        on_delete=models.CASCADE,
+        related_name="subdiscipline_links",
+    )
+    subdiscipline = models.ForeignKey(
+        Subdiscipline,
+        on_delete=models.CASCADE,
+        related_name="knowledge_node_links",
+    )
+    is_primary = models.BooleanField(default=False)
+    relation_role = models.CharField(max_length=20, blank=True)
+    source = models.CharField(max_length=160, blank=True)
+    confidence = models.FloatField(default=0)
+    sort_order = models.PositiveIntegerField(default=0)
+    status = models.CharField(
+        max_length=20,
+        choices=KnowledgePublicationStatus.choices,
+        default=KnowledgePublicationStatus.PENDING,
+        db_index=True,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_knowledge_node_subdisciplines",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["sort_order", "subdiscipline__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["node", "subdiscipline"],
+                name="unique_knowledge_node_subdiscipline",
+            ),
+        ]
+
+
+class KnowledgeNodeTopic(UUIDTimeStampedModel):
+    node = models.ForeignKey(
+        KnowledgeNode,
+        on_delete=models.CASCADE,
+        related_name="topic_links",
+    )
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name="knowledge_node_links",
+    )
+    relation_label = models.CharField(max_length=120, blank=True)
+    source = models.CharField(max_length=160, blank=True)
+    confidence = models.FloatField(default=0)
+    sort_order = models.PositiveIntegerField(default=0)
+    status = models.CharField(
+        max_length=20,
+        choices=KnowledgePublicationStatus.choices,
+        default=KnowledgePublicationStatus.PENDING,
+        db_index=True,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_knowledge_node_topics",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["sort_order", "topic__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["node", "topic"],
+                name="unique_knowledge_node_topic",
             ),
         ]
 
@@ -2683,6 +3074,340 @@ class ReadingPathItem(UUIDTimeStampedModel):
     class Meta:
         ordering = ["reading_order", "created_at"]
         indexes = [models.Index(fields=["reading_path", "reading_order"])]
+
+
+class DerivedClaim(UUIDTimeStampedModel):
+    class Polarity(models.TextChoices):
+        POSITIVE = "positive", "肯定"
+        NEGATIVE = "negative", "否定"
+        MIXED = "mixed", "混合"
+        UNCERTAIN = "uncertain", "不确定"
+
+    class Attribution(models.TextChoices):
+        AUTHOR_CLAIM = "author_claim", "作者主张"
+        QUOTED_CLAIM = "quoted_claim", "引述主张"
+        REPORTED_CLAIM = "reported_claim", "转述主张"
+        CRITICIZED_CLAIM = "criticized_claim", "被批评主张"
+        HISTORICAL_DESCRIPTION = "historical_description", "历史描述"
+        UNCERTAIN = "uncertain", "归因不确定"
+
+    class ClaimType(models.TextChoices):
+        ASSERTION = "assertion", "论断"
+        CAUSAL = "causal", "因果"
+        DEFINITION = "definition", "定义"
+        EVALUATION = "evaluation", "评价"
+        COMPARISON = "comparison", "比较"
+        MECHANISM = "mechanism", "机制"
+        INTERPRETATION = "interpretation", "解释"
+        CRITICISM = "criticism", "批评"
+        RESPONSE = "response", "回应"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "有效"
+        STALE = "stale", "待重算"
+        SUPERSEDED = "superseded", "已取代"
+        REJECTED = "rejected", "已拒绝"
+
+    document_revision = models.ForeignKey(
+        DocumentRevision,
+        on_delete=models.PROTECT,
+        related_name="derived_claims",
+    )
+    primary_evidence = models.ForeignKey(
+        EvidenceSpan,
+        on_delete=models.PROTECT,
+        related_name="primary_for_claims",
+    )
+    work = models.ForeignKey(Work, on_delete=models.CASCADE, related_name="derived_claims")
+    edition = models.ForeignKey(Edition, on_delete=models.CASCADE, related_name="derived_claims")
+    proposition = models.TextField()
+    subject = models.CharField(max_length=600, blank=True)
+    predicate = models.CharField(max_length=300, blank=True)
+    object = models.TextField(blank=True)
+    polarity = models.CharField(max_length=20, choices=Polarity.choices, default=Polarity.UNCERTAIN)
+    modality = models.CharField(max_length=120, blank=True)
+    qualifiers = models.JSONField(default=list, blank=True)
+    temporal_scope = models.JSONField(default=dict, blank=True)
+    geographic_scope = models.JSONField(default=dict, blank=True)
+    population_scope = models.JSONField(default=dict, blank=True)
+    attribution = models.CharField(
+        max_length=32,
+        choices=Attribution.choices,
+        default=Attribution.UNCERTAIN,
+        db_index=True,
+    )
+    claim_type = models.CharField(max_length=24, choices=ClaimType.choices, db_index=True)
+    prompt_key = models.CharField(max_length=160)
+    prompt_version = models.CharField(max_length=120)
+    model_provider = models.CharField(max_length=120)
+    model_name = models.CharField(max_length=240)
+    model_revision = models.CharField(max_length=160, blank=True)
+    quality_factors = models.JSONField(default=dict, blank=True)
+    quality_score = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        db_index=True,
+    )
+    importance_score = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        db_index=True,
+    )
+    cluster_key = models.CharField(max_length=160, blank=True, db_index=True)
+    fingerprint = models.CharField(max_length=64)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE, db_index=True)
+    shadow = models.BooleanField(default=True, db_index=True)
+    stale_reason = models.CharField(max_length=240, blank=True)
+
+    def clean(self):
+        errors = {}
+        if self.document_revision_id and self.primary_evidence_id:
+            if self.primary_evidence.document_revision_id != self.document_revision_id:
+                errors["primary_evidence"] = (
+                    "DerivedClaim 的主要依据必须属于同一 DocumentRevision。"
+                )
+        if self.document_revision_id and self.edition_id:
+            if self.document_revision.asset.edition_id != self.edition_id:
+                errors["edition"] = "DerivedClaim Edition 必须匹配 DocumentRevision Asset。"
+        if self.edition_id and self.work_id and self.edition.work_id != self.work_id:
+            errors["work"] = "DerivedClaim Work 必须匹配 Edition。"
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["-importance_score", "-quality_score", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document_revision", "fingerprint"],
+                name="unique_claim_per_document_revision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["work", "status", "shadow", "-importance_score"]),
+            models.Index(fields=["claim_type", "attribution", "polarity"]),
+        ]
+
+
+class CuratedClaim(UUIDTimeStampedModel):
+    class Kind(models.TextChoices):
+        CORE_VIEWPOINT = "core_viewpoint", "核心观点"
+        MAJOR_CRITICISM = "major_criticism", "主要批评"
+        MAJOR_RESPONSE = "major_response", "主要回应"
+        DEBATE_POSITION = "debate_position", "争论立场"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "草稿"
+        PUBLISHED = "published", "已发布"
+        SUPERSEDED = "superseded", "已取代"
+
+    work = models.ForeignKey(
+        Work,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="curated_claims",
+    )
+    node = models.ForeignKey(
+        KnowledgeNode,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="curated_claims",
+    )
+    scholar = models.ForeignKey(
+        ScholarProfile,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="curated_claims",
+    )
+    topic = models.ForeignKey(
+        Topic,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="curated_claims",
+    )
+    kind = models.CharField(max_length=32, choices=Kind.choices, db_index=True)
+    title = models.CharField(max_length=300, blank=True)
+    proposition = models.TextField()
+    editorial_note = models.TextField(blank=True)
+    qualifiers = models.JSONField(default=list, blank=True)
+    adopted_from = models.ForeignKey(
+        DerivedClaim,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="curated_adoptions",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_curated_claims",
+    )
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_curated_claims",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["kind", "sort_order", "created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(work__isnull=False, node__isnull=True, scholar__isnull=True, topic__isnull=True)
+                    | models.Q(work__isnull=True, node__isnull=False, scholar__isnull=True, topic__isnull=True)
+                    | models.Q(work__isnull=True, node__isnull=True, scholar__isnull=False, topic__isnull=True)
+                    | models.Q(work__isnull=True, node__isnull=True, scholar__isnull=True, topic__isnull=False)
+                ),
+                name="curated_claim_has_target",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["work", "status", "kind", "sort_order"]),
+            models.Index(fields=["node", "status", "kind", "sort_order"]),
+        ]
+
+
+class ClaimEvidence(UUIDTimeStampedModel):
+    class Role(models.TextChoices):
+        PRIMARY = "primary", "主要依据"
+        SUPPORTS = "supports", "支持"
+        OPPOSES = "opposes", "相斥"
+        QUALIFIES = "qualifies", "限定"
+        ATTRIBUTION = "attribution", "归因"
+
+    derived_claim = models.ForeignKey(
+        DerivedClaim,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="evidence_links",
+    )
+    curated_claim = models.ForeignKey(
+        CuratedClaim,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="evidence_links",
+    )
+    evidence_span = models.ForeignKey(
+        EvidenceSpan,
+        on_delete=models.PROTECT,
+        related_name="claim_links",
+    )
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.SUPPORTS)
+    confidence = models.FloatField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    validation = models.JSONField(default=dict, blank=True)
+
+    def clean(self):
+        if (
+            self.derived_claim_id
+            and self.evidence_span_id
+            and self.derived_claim.document_revision_id
+            != self.evidence_span.document_revision_id
+        ):
+            raise ValidationError(
+                {
+                    "evidence_span": (
+                        "DerivedClaim 的补充依据必须属于同一 DocumentRevision。"
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(derived_claim__isnull=False) & models.Q(curated_claim__isnull=True))
+                    | (models.Q(derived_claim__isnull=True) & models.Q(curated_claim__isnull=False))
+                ),
+                name="claim_evidence_exactly_one_claim",
+            ),
+            models.UniqueConstraint(
+                fields=["derived_claim", "evidence_span", "role"],
+                condition=models.Q(derived_claim__isnull=False),
+                name="unique_derived_claim_evidence_role",
+            ),
+            models.UniqueConstraint(
+                fields=["curated_claim", "evidence_span", "role"],
+                condition=models.Q(curated_claim__isnull=False),
+                name="unique_curated_claim_evidence_role",
+            ),
+        ]
+
+
+class EditorialRevision(UUIDTimeStampedModel):
+    class TargetType(models.TextChoices):
+        WORK = "work", "作品"
+        KNOWLEDGE_NODE = "knowledge_node", "知识节点"
+        SCHOLAR_PROFILE = "scholar_profile", "学者"
+        TOPIC = "topic", "主题"
+        READING_PATH = "reading_path", "阅读路径"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "草稿"
+        PUBLISHED = "published", "已发布"
+        SUPERSEDED = "superseded", "已取代"
+
+    target_type = models.CharField(max_length=32, choices=TargetType.choices, db_index=True)
+    target_id = models.UUIDField(db_index=True)
+    base_revision = models.PositiveBigIntegerField(default=0)
+    revision = models.PositiveBigIntegerField()
+    patch = models.JSONField(default=dict)
+    materialized_preview = models.JSONField(default=dict)
+    changed_fields = models.JSONField(default=list)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    idempotency_key = models.CharField(max_length=160, unique=True)
+    change_note = models.CharField(max_length=500, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_editorial_revisions",
+    )
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_editorial_revisions",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["target_type", "target_id", "-revision"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["target_type", "target_id", "revision"],
+                name="unique_editorial_target_revision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["target_type", "target_id", "status", "-revision"]),
+        ]
 
 
 class TheoryReviewTask(UUIDTimeStampedModel):
@@ -3704,6 +4429,187 @@ class QueryLexiconChangeEvent(models.Model):
         ]
 
 
+class CanonicalObjectRevision(UUIDTimeStampedModel):
+    object_type = models.CharField(max_length=80, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+    current_revision = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["object_type", "object_id"],
+                name="unique_canonical_object_revision",
+            ),
+        ]
+
+
+class DomainChangeEvent(UUIDTimeStampedModel):
+    class ChangeKind(models.TextChoices):
+        CREATE = "create", "创建"
+        UPDATE = "update", "更新"
+        PUBLISH = "publish", "发布"
+        WITHDRAW = "withdraw", "下架"
+        DELETE = "delete", "删除"
+
+    object_type = models.CharField(max_length=80, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+    canonical_revision = models.PositiveBigIntegerField()
+    change_kind = models.CharField(max_length=20, choices=ChangeKind.choices)
+    changed_fields = models.JSONField(default=list, blank=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="domain_change_events",
+    )
+    correlation_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    idempotency_key = models.CharField(max_length=200, unique=True)
+    processed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["object_type", "object_id", "canonical_revision"],
+                name="unique_domain_object_revision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["processed_at", "next_attempt_at", "created_at"]),
+        ]
+
+
+class ProjectionState(UUIDTimeStampedModel):
+    class ProjectionType(models.TextChoices):
+        QUERY_LEXICON = "query_lexicon", "QueryLexicon"
+        FULLTEXT = "fulltext", "全文"
+        SEMANTIC = "semantic", "语义"
+        CLAIM_INDEX = "claim_index", "Claim Index"
+        KNOWLEDGE_GRAPH = "knowledge_graph", "知识关系"
+        TIMELINE = "timeline", "时间轴"
+        RECOMMENDATION = "recommendation", "推荐"
+        READING_PATH_SUPPORT = "reading_path_support", "阅读路径支持"
+        PUBLIC = "public", "公网呈现"
+
+    class Status(models.TextChoices):
+        CURRENT = "current", "最新"
+        STALE = "stale", "落后"
+        PROJECTING = "projecting", "更新中"
+        WAITING_FOR_CAPABILITY = "waiting_for_capability", "等待执行能力"
+        FAILED = "failed", "失败"
+        UNKNOWN = "unknown", "待核实"
+
+    object_type = models.CharField(max_length=80, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+    projection_type = models.CharField(max_length=40, choices=ProjectionType.choices, db_index=True)
+    source_revision = models.PositiveBigIntegerField(default=0)
+    projected_revision = models.PositiveBigIntegerField(default=0)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.UNKNOWN, db_index=True)
+    stale_reason = models.CharField(max_length=300, blank=True)
+    task_owner_type = models.CharField(max_length=80, blank=True)
+    task_owner_key = models.CharField(max_length=255, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+    last_projected_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["object_type", "object_id", "projection_type"],
+                name="unique_object_projection_state",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_revision__gte=models.F("projected_revision")),
+                name="projection_revision_not_ahead",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["status", "projection_type", "updated_at"]),
+        ]
+
+
+class CapabilityExecutor(UUIDTimeStampedModel):
+    class Kind(models.TextChoices):
+        NAS = "nas", "NAS"
+        REMOTE_GPU = "remote_gpu", "远程 GPU"
+        CLOUD = "cloud", "云端"
+
+    class Status(models.TextChoices):
+        ONLINE = "online", "在线"
+        OFFLINE = "offline", "离线"
+        DRAINING = "draining", "停止接单"
+
+    executor_id = models.CharField(max_length=160, unique=True)
+    display_name = models.CharField(max_length=240, blank=True)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    capabilities = models.JSONField(default=list)
+    model_revisions = models.JSONField(default=dict, blank=True)
+    concurrency = models.PositiveSmallIntegerField(default=1)
+    current_load = models.PositiveSmallIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OFFLINE, db_index=True)
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    heartbeat_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["status", "heartbeat_expires_at"])]
+
+
+class CapabilityDemand(UUIDTimeStampedModel):
+    class State(models.TextChoices):
+        WAITING_FOR_CAPABILITY = "waiting_for_capability", "等待执行能力"
+        READY = "ready", "可领取"
+        CLAIMED = "claimed", "已领取"
+        COMPLETED = "completed", "已完成"
+        FAILED = "failed", "失败"
+        CANCELED = "canceled", "已取消"
+
+    owner_type = models.CharField(max_length=80, db_index=True)
+    owner_key = models.CharField(max_length=255, db_index=True)
+    capability = models.CharField(max_length=80, db_index=True)
+    state = models.CharField(
+        max_length=32,
+        choices=State.choices,
+        default=State.WAITING_FOR_CAPABILITY,
+        db_index=True,
+    )
+    priority = models.SmallIntegerField(default=0)
+    publication_blocking = models.BooleanField(default=False)
+    preferred_queue = models.CharField(max_length=120, blank=True)
+    idempotency_key = models.CharField(max_length=200, unique=True)
+    claimed_by = models.ForeignKey(
+        CapabilityExecutor,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claimed_demands",
+    )
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    not_before = models.DateTimeField(null=True, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-priority", "created_at"]
+        indexes = [
+            models.Index(fields=["state", "capability", "-priority", "created_at"]),
+            models.Index(fields=["owner_type", "owner_key"]),
+        ]
+
+
 class PublicationEvent(UUIDTimeStampedModel):
     class EventType(models.TextChoices):
         PUBLISH = "publish", "发布"
@@ -3826,6 +4732,279 @@ class ResearchRun(UUIDTimeStampedModel):
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["work", "active_step", "created_at"]),
             models.Index(fields=["context_fingerprint", "created_at"]),
+        ]
+
+
+class ResearchTaskProfile(UUIDTimeStampedModel):
+    """Versioned policy describing how the existing orchestrator runs one task."""
+
+    key = models.CharField(max_length=120, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    name = models.CharField(max_length=240)
+    required_context = models.JSONField(default=list)
+    retrieval_profile = models.CharField(max_length=80)
+    preferred_evidence_sources = models.JSONField(default=list)
+    minimum_evidence_policy = models.JSONField(default=dict)
+    prompt_key = models.CharField(max_length=160)
+    output_schema = models.JSONField(default=dict)
+    ranking_policy = models.JSONField(default=dict)
+    human_review_policy = models.JSONField(default=dict)
+    required_capability = models.CharField(max_length=80, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_research_task_profiles",
+    )
+
+    class Meta:
+        ordering = ["key", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["key", "version"],
+                name="unique_research_task_profile_version",
+            ),
+            models.UniqueConstraint(
+                fields=["key"],
+                condition=models.Q(is_active=True),
+                name="unique_active_research_task_profile",
+            ),
+        ]
+
+
+class PromptRegistryEntry(UUIDTimeStampedModel):
+    """Auditable prompt revisions; active entries are configuration, not code."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "草稿"
+        ACTIVE = "active", "启用"
+        RETIRED = "retired", "停用"
+
+    key = models.CharField(max_length=160, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    capability = models.CharField(max_length=80, db_index=True)
+    task_profile_key = models.CharField(max_length=120, blank=True, db_index=True)
+    content = models.TextField()
+    output_schema = models.JSONField(default=dict)
+    provider_guidance = models.JSONField(default=dict, blank=True)
+    content_hash = models.CharField(max_length=64, db_index=True)
+    schema_hash = models.CharField(max_length=64, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_prompt_registry_entries",
+    )
+    activated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="activated_prompt_registry_entries",
+    )
+    activated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["key", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["key", "version"],
+                name="unique_prompt_registry_entry_version",
+            ),
+            models.UniqueConstraint(
+                fields=["key"],
+                condition=models.Q(status="active"),
+                name="unique_active_prompt_registry_entry",
+            ),
+        ]
+
+
+class EvidencePack(UUIDTimeStampedModel):
+    """Immutable constrained evidence returned to a research task."""
+
+    research_run = models.ForeignKey(
+        ResearchRun,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="evidence_packs",
+    )
+    task_profile_key = models.CharField(max_length=120, db_index=True)
+    task_profile_version = models.PositiveIntegerField(default=1)
+    retrieval_profile = models.CharField(max_length=80)
+    subject_type = models.CharField(max_length=80, blank=True, db_index=True)
+    subject_id = models.CharField(max_length=160, blank=True, db_index=True)
+    envelope_snapshot = models.JSONField(default=list)
+    retrieval_snapshot = models.JSONField(default=dict)
+    query_lexicon_revision = models.CharField(max_length=160, blank=True)
+    semantic_index_uid = models.CharField(max_length=255, blank=True)
+    document_revisions = models.JSONField(default=list)
+    fingerprint = models.CharField(max_length=64, unique=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_evidence_packs",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["task_profile_key", "created_at"]),
+            models.Index(fields=["subject_type", "subject_id", "created_at"]),
+        ]
+
+
+class DebateCandidate(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "待处理"
+        ADOPTED = "adopted", "已采用"
+        REJECTED = "rejected", "已拒绝"
+        DEFERRED = "deferred", "稍后处理"
+
+    title = models.CharField(max_length=300)
+    canonical_question = models.TextField()
+    summary = models.TextField(blank=True)
+    evidence_pack = models.ForeignKey(
+        EvidencePack,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="debate_candidates",
+    )
+    quality_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    importance_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    conflict_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    corroboration_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    suggested_node = models.ForeignKey(
+        KnowledgeNode,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="debate_candidates",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_debate_candidates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-importance_score", "-quality_score", "created_at"]
+        indexes = [models.Index(fields=["status", "-importance_score", "created_at"])]
+
+
+class DebateCandidateClaim(UUIDTimeStampedModel):
+    class Stance(models.TextChoices):
+        SUPPORT = "support", "支持"
+        OPPOSE = "oppose", "相斥"
+        QUALIFY = "qualify", "限定"
+
+    candidate = models.ForeignKey(DebateCandidate, on_delete=models.CASCADE, related_name="claim_links")
+    claim = models.ForeignKey(DerivedClaim, on_delete=models.PROTECT, related_name="debate_candidate_links")
+    stance = models.CharField(max_length=16, choices=Stance.choices)
+    rank = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["stance", "rank", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate", "claim"],
+                name="unique_debate_candidate_claim",
+            ),
+        ]
+
+
+class ReadingPathCandidate(UUIDTimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "待处理"
+        ADOPTED = "adopted", "已采用"
+        REJECTED = "rejected", "已拒绝"
+        DEFERRED = "deferred", "稍后处理"
+
+    title = models.CharField(max_length=300)
+    target_audience = models.CharField(max_length=300)
+    learning_goal = models.TextField()
+    stages = models.JSONField(default=list)
+    evidence_pack = models.ForeignKey(
+        EvidencePack,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reading_path_candidates",
+    )
+    quality_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    importance_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    adopted_reading_path = models.ForeignKey(
+        ReadingPath,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="source_candidates",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_reading_path_candidates",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-importance_score", "-quality_score", "created_at"]
+        indexes = [models.Index(fields=["status", "-importance_score", "created_at"])]
+
+
+class IntelligenceFeedback(UUIDTimeStampedModel):
+    class Decision(models.TextChoices):
+        ACCEPT = "accept", "采用"
+        ACCEPT_WITH_EDIT = "accept_with_edit", "修改后采用"
+        REJECT = "reject", "拒绝"
+        DEFER = "defer", "稍后处理"
+
+    task_profile_key = models.CharField(max_length=120, db_index=True)
+    task_profile_version = models.PositiveIntegerField(default=1)
+    provider = models.CharField(max_length=120, blank=True, db_index=True)
+    model = models.CharField(max_length=240, blank=True)
+    prompt_key = models.CharField(max_length=160, blank=True, db_index=True)
+    prompt_version = models.CharField(max_length=80, blank=True)
+    candidate_type = models.CharField(max_length=80, db_index=True)
+    candidate_id = models.CharField(max_length=160, db_index=True)
+    decision = models.CharField(max_length=24, choices=Decision.choices, db_index=True)
+    original_payload = models.JSONField(default=dict, blank=True)
+    edited_payload = models.JSONField(default=dict, blank=True)
+    field_key = models.CharField(max_length=120, blank=True, db_index=True)
+    expertise = models.JSONField(default=list, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="intelligence_feedback",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate_type", "candidate_id", "reviewed_by"],
+                name="unique_intelligence_candidate_feedback",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["task_profile_key", "decision", "created_at"]),
+            models.Index(fields=["provider", "prompt_key", "decision"]),
         ]
 
 

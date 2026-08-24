@@ -16,16 +16,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.capabilities import Capability, has_capability
-from common.permissions import IsKnowledgeEditor, IsKnowledgeReviewer, IsLibraryAdmin
+from common.permissions import (
+    CanMergeAuthority,
+    CanRunSystemRecovery,
+    IsKnowledgeEditor,
+    IsKnowledgeReviewer,
+)
 from ingestion.models import AuditEvent
 
 from .models import (
     Asset,
     Discipline,
+    CanonicalObjectRevision,
+    EditorialRevision,
     EvidenceSnippet,
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
+    KnowledgeNodeSubdiscipline,
+    KnowledgeNodeTopic,
     KnowledgeNodeMergeRecord,
     KnowledgeNodeVersion,
     KnowledgeRelation,
@@ -119,11 +128,19 @@ def _published_node_queryset():
     published_links = KnowledgeNodeDiscipline.objects.filter(status="published").select_related(
         "discipline"
     )
+    published_subdisciplines = KnowledgeNodeSubdiscipline.objects.filter(
+        status="published"
+    ).select_related("subdiscipline__discipline")
+    published_topics = KnowledgeNodeTopic.objects.filter(status="published").select_related(
+        "topic"
+    )
     return KnowledgeNode.objects.filter(status="published").select_related(
         "primary_discipline"
     ).prefetch_related(
         "aliases",
         Prefetch("discipline_links", queryset=published_links),
+        Prefetch("subdiscipline_links", queryset=published_subdisciplines),
+        Prefetch("topic_links", queryset=published_topics),
         "person_relations__person__scholar_profile",
     )
 
@@ -165,6 +182,72 @@ def _is_uuid(value):
 
 def _published_work_queryset():
     return Work.objects.filter(editions__state=PublicationState.PUBLISHED).distinct()
+
+
+def _published_work_node_relation_requires_revision(work=None):
+    return Response(
+        {
+            "detail": (
+                "已发布作品的知识关系必须通过 Workbench 编辑草稿修改，"
+                "确认发布前不会影响公网。"
+            ),
+            "code": "published_work_relation_requires_revision",
+            "work_id": str(work.id) if work is not None else None,
+            "replacement": (
+                f"/admin/library/works/{work.id}#knowledge"
+                if work is not None
+                else "/admin/library"
+            ),
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+def _work_relation_revision_from_review_task(task, node, relation_type, actor):
+    from catalog.services.editorial_revision import (
+        create_editorial_revision,
+        editorial_target_snapshot,
+    )
+
+    snapshot = editorial_target_snapshot(target_type="work", target=task.work)
+    knowledge = dict(snapshot["knowledge"])
+    rows = [dict(row) for row in knowledge.get("nodes", [])]
+    key = (str(node.id), relation_type)
+    pages = [
+        int(value)
+        for value in task.evidence_pages or []
+        if str(value).isdigit()
+    ]
+    candidate_row = {
+        "id": str(node.id),
+        "role": relation_type,
+        "strength": "medium",
+        "is_primary": False,
+        "evidence_asset": str(task.file_id) if task.file_id and pages and task.evidence_text else None,
+        "evidence_page": min(pages) if pages and task.evidence_text else None,
+        "evidence_page_end": max(pages) if pages and task.evidence_text else None,
+        "evidence_printed_label": "",
+        "evidence_text": task.evidence_text if pages else "",
+    }
+    replaced = False
+    for index, row in enumerate(rows):
+        if (str(row.get("id")), str(row.get("role"))) == key:
+            rows[index] = candidate_row
+            replaced = True
+            break
+    if not replaced:
+        rows.append(candidate_row)
+    knowledge["nodes"] = rows
+    if knowledge == snapshot["knowledge"]:
+        return None
+    return create_editorial_revision(
+        target_type="work",
+        target_id=task.work_id,
+        patch={"knowledge": knowledge},
+        actor=actor,
+        idempotency_key=f"theory-review-task:{task.id}:work-relation",
+        change_note="采用理论关系候选，待单人确认发布",
+    )
 
 
 class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
@@ -615,6 +698,8 @@ class AdminKnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListCreateAP
         queryset = KnowledgeNode.objects.select_related("primary_discipline").prefetch_related(
             "aliases",
             "discipline_links__discipline",
+            "subdiscipline_links__subdiscipline__discipline",
+            "topic_links__topic",
         )
         legacy_id = self.request.query_params.get("legacy_id", "").strip()
         if legacy_id:
@@ -638,16 +723,175 @@ class AdminKnowledgeNodeDetailView(
     queryset = KnowledgeNode.objects.select_related("primary_discipline").prefetch_related(
         "aliases",
         "discipline_links__discipline",
+        "subdiscipline_links__subdiscipline__discipline",
+        "topic_links__topic",
     )
+
+    def update(self, request, *args, **kwargs):
+        node = self.get_object()
+        if node.status != "published":
+            return super().update(request, *args, **kwargs)
+
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(node, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        if "cover_asset" in values:
+            return Response(
+                {
+                    "detail": "已发布节点的主视觉暂不能绕过编辑草稿直接替换。请先发布文字草稿，再单独处理主视觉版本。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        aliases = values.get("aliases")
+        if aliases is not None:
+            values["aliases"] = [dict(row) for row in aliases]
+        links = values.get("discipline_links")
+        if links is not None:
+            values["discipline_links"] = [
+                {
+                    "discipline_id": str(row["discipline"].id),
+                    "relation_type": row.get("relation_type", "related"),
+                    "discipline_specific_summary": row.get(
+                        "discipline_specific_summary", ""
+                    ),
+                    "sort_order": row.get("sort_order", 0),
+                    "status": row.get("status", "pending"),
+                }
+                for row in links
+            ]
+        subdiscipline_links = values.get("subdiscipline_links")
+        if subdiscipline_links is not None:
+            values["subdiscipline_links"] = [
+                {
+                    "subdiscipline_id": str(row["subdiscipline"].id),
+                    "is_primary": row.get("is_primary", False),
+                    "relation_role": row.get("relation_role", ""),
+                    "source": row.get("source", ""),
+                    "confidence": row.get("confidence", 0),
+                    "sort_order": row.get("sort_order", 0),
+                    "status": row.get("status", "pending"),
+                }
+                for row in subdiscipline_links
+            ]
+        topic_links = values.get("topic_links")
+        if topic_links is not None:
+            values["topic_links"] = [
+                {
+                    "topic_id": str(row["topic"].id),
+                    "relation_label": row.get("relation_label", ""),
+                    "source": row.get("source", ""),
+                    "confidence": row.get("confidence", 0),
+                    "sort_order": row.get("sort_order", 0),
+                    "status": row.get("status", "pending"),
+                }
+                for row in topic_links
+            ]
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            changed_editorial_patch,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        try:
+            patch = changed_editorial_patch(
+                target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                target=node,
+                patch=values,
+            )
+            if not patch:
+                return Response(self.get_serializer(node).data)
+            current_revision = (
+                CanonicalObjectRevision.objects.filter(
+                    object_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                    object_id=node.id,
+                )
+                .values_list("current_revision", flat=True)
+                .first()
+                or 0
+            )
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                target_id=node.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                    target_id=node.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(request.data.get("change_note") or "知识工作室编辑草稿"),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = dict(self.get_serializer(node).data)
+        for field_name, value in revision.patch.items():
+            if field_name not in {
+                "aliases",
+                "discipline_links",
+                "subdiscipline_links",
+                "topic_links",
+            }:
+                payload[field_name] = value
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         node = self.get_object()
         if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
             return Response({"detail": "只有管理员可以下线理论节点。"}, status=403)
-        node.status = "archived"
-        node.published_at = None
-        node.save(update_fields=["status", "published_at", "updated_at"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if node.status != "published":
+            return super().destroy(request, *args, **kwargs)
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        patch = {"status": "archived"}
+        current_revision = (
+            CanonicalObjectRevision.objects.filter(
+                object_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                object_id=node.id,
+            )
+            .values_list("current_revision", flat=True)
+            .first()
+            or 0
+        )
+        try:
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                target_id=node.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+                    target_id=node.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(request.data.get("change_note") or "下线已发布知识节点"),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"editorial_revision": serialize_editorial_revision(revision)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class AdminKnowledgeNodeVersionListView(TheorySystemFeatureMixin, generics.ListAPIView):
@@ -661,7 +905,7 @@ class AdminKnowledgeNodeVersionListView(TheorySystemFeatureMixin, generics.ListA
 
 
 class AdminKnowledgeNodeMergePreviewView(TheorySystemFeatureMixin, APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanMergeAuthority]
 
     def get(self, request, pk):
         source = get_object_or_404(KnowledgeNode, pk=pk)
@@ -669,7 +913,7 @@ class AdminKnowledgeNodeMergePreviewView(TheorySystemFeatureMixin, APIView):
 
 
 class AdminKnowledgeNodeMergeView(TheorySystemFeatureMixin, APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanMergeAuthority]
 
     def post(self, request, pk):
         target_id = request.data.get("target_node")
@@ -691,7 +935,7 @@ class AdminKnowledgeNodeMergeView(TheorySystemFeatureMixin, APIView):
 
 
 class AdminKnowledgeNodeMergeRollbackView(TheorySystemFeatureMixin, APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanRunSystemRecovery]
 
     def post(self, request, record_id):
         try:
@@ -726,6 +970,18 @@ class AdminKnowledgeRelationDetailView(
     serializer_class = AdminKnowledgeRelationSerializer
     queryset = KnowledgeRelation.objects.select_related("source_node", "target_node")
 
+    def destroy(self, request, *args, **kwargs):
+        relation = self.get_object()
+        if relation.status == "published":
+            return Response(
+                {
+                    "detail": "已发布知识关系不能硬删除，请先把状态改为 archived。",
+                    "code": "published_relation_requires_withdrawal",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class AdminKnowledgeRelationVersionListView(TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [IsKnowledgeEditor]
@@ -759,6 +1015,20 @@ class AdminWorkNodeRelationListView(TheorySystemFeatureMixin, generics.ListCreat
             )
         return queryset.distinct().order_by("-updated_at")
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        work = serializer.validated_data["work"]
+        if work.editions.filter(state=PublicationState.PUBLISHED).exists():
+            return _published_work_node_relation_requires_revision(work)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
 
 class AdminWorkNodeRelationDetailView(
     TheorySystemFeatureMixin,
@@ -769,6 +1039,46 @@ class AdminWorkNodeRelationDetailView(
     queryset = WorkNodeRelation.objects.select_related("work", "node").prefetch_related(
         "evidence__file"
     )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        requested_work = serializer.validated_data.get("work", instance.work)
+        if (
+            instance.work.editions.filter(
+                state=PublicationState.PUBLISHED
+            ).exists()
+            or requested_work.editions.filter(
+                state=PublicationState.PUBLISHED
+            ).exists()
+        ):
+            blocked_work = (
+                instance.work
+                if instance.work.editions.filter(
+                    state=PublicationState.PUBLISHED
+                ).exists()
+                else requested_work
+            )
+            return _published_work_node_relation_requires_revision(blocked_work)
+        self.perform_update(serializer)
+        if getattr(instance, "_prefetched_objects_cache", None):
+            instance._prefetched_objects_cache = {}
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.work.editions.filter(
+            state=PublicationState.PUBLISHED
+        ).exists():
+            return _published_work_node_relation_requires_revision(instance.work)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminEvidenceListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
@@ -927,6 +1237,7 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
     @transaction.atomic
     def post(self, request, pk):
         task = get_object_or_404(TheoryReviewTask.objects.select_for_update(), pk=pk)
+        pending_revision = None
         action = request.data.get("action", "").strip()
         status_map = {
             "reject": TheoryReviewTask.TaskStatus.REJECTED,
@@ -1033,40 +1344,59 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
                     return Response({"relation_type": ["请选择受控的文献关系类型。"]}, status=400)
                 if not task.work_id:
                     return Response({"work": ["审核任务缺少馆藏文献。"]}, status=400)
-                relation, _created = WorkNodeRelation.objects.update_or_create(
-                    work=task.work,
-                    node=node,
-                    role=relation_type,
-                    defaults={
-                        "confidence": task.confidence,
-                        "status": "published",
-                        "source": "theory_review_task",
-                        "reviewed_by": request.user,
-                        "reviewed_at": timezone.now(),
-                    },
-                )
                 pages = [int(value) for value in task.evidence_pages or [] if str(value).isdigit()]
-                if task.file_id and pages and task.evidence_text:
-                    EvidenceSnippet.objects.update_or_create(
+                if task.work.editions.filter(
+                    state=PublicationState.PUBLISHED
+                ).exists():
+                    try:
+                        pending_revision = _work_relation_revision_from_review_task(
+                            task,
+                            node,
+                            relation_type,
+                            request.user,
+                        )
+                    except ValueError as exc:
+                        return Response(
+                            {
+                                "detail": str(exc),
+                                "code": "editorial_revision_error",
+                            },
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                else:
+                    relation, _created = WorkNodeRelation.objects.update_or_create(
                         work=task.work,
-                        file=task.file,
                         node=node,
-                        work_node_relation=relation,
-                        page_number=min(pages),
+                        role=relation_type,
                         defaults={
-                            "page_end": max(pages),
-                            "quote": task.evidence_text,
-                            "extraction_method": (
-                                EvidenceSnippet.ExtractionMethod.OCR
-                                if task.file.extraction_method == "ocr"
-                                else EvidenceSnippet.ExtractionMethod.TEXT_LAYER
-                            ),
-                            "semantic_confidence": task.confidence,
-                            "review_status": RelationReviewStatus.APPROVED,
+                            "confidence": task.confidence,
+                            "status": "published",
+                            "source": "theory_review_task",
                             "reviewed_by": request.user,
                             "reviewed_at": timezone.now(),
                         },
                     )
+                    if task.file_id and pages and task.evidence_text:
+                        EvidenceSnippet.objects.update_or_create(
+                            work=task.work,
+                            file=task.file,
+                            node=node,
+                            work_node_relation=relation,
+                            page_number=min(pages),
+                            defaults={
+                                "page_end": max(pages),
+                                "quote": task.evidence_text,
+                                "extraction_method": (
+                                    EvidenceSnippet.ExtractionMethod.OCR
+                                    if task.file.extraction_method == "ocr"
+                                    else EvidenceSnippet.ExtractionMethod.TEXT_LAYER
+                                ),
+                                "semantic_confidence": task.confidence,
+                                "review_status": RelationReviewStatus.APPROVED,
+                                "reviewed_by": request.user,
+                                "reviewed_at": timezone.now(),
+                            },
+                        )
             task.status = TheoryReviewTask.TaskStatus.CONFIRMED
         else:
             return Response({"action": ["未知审核操作。"]}, status=400)
@@ -1076,7 +1406,18 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
             task.assigned_to_id = request.data["assigned_to"]
         task.reviewed_at = timezone.now()
         task.save()
-        return Response(TheoryReviewTaskSerializer(task, context={"request": request}).data)
+        payload = dict(
+            TheoryReviewTaskSerializer(task, context={"request": request}).data
+        )
+        if pending_revision is not None:
+            from catalog.services.editorial_revision import (
+                serialize_editorial_revision,
+            )
+
+            payload["editorial_revision"] = serialize_editorial_revision(
+                pending_revision
+            )
+        return Response(payload)
 
 
 class AdminReadingPathListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
@@ -1120,6 +1461,146 @@ class AdminReadingPathDetailView(
         context = super().get_serializer_context()
         context["include_unpublished_items"] = True
         return context
+
+    def update(self, request, *args, **kwargs):
+        path = self.get_object()
+        if path.status != "published":
+            return super().update(request, *args, **kwargs)
+        if "cover_asset" in request.data:
+            return Response(
+                {
+                    "detail": "已发布阅读路径的封面尚不支持进入 JSON 编辑草稿。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(path, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        expected_updated_at = values.pop("expected_updated_at", None)
+        if expected_updated_at is not None and path.updated_at != expected_updated_at:
+            return Response(
+                {
+                    "detail": "阅读路径已被其他编辑更新，请刷新后重试。",
+                    "code": "editorial_revision_conflict",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        items = values.pop("items", None)
+        stage_groups = values.pop("stage_groups", None)
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            changed_editorial_patch,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+        from catalog.services.reading_paths import (
+            ReadingPathStructureError,
+            stage_groups_from_items,
+        )
+
+        try:
+            if stage_groups is not None:
+                values["stage_groups"] = stage_groups
+            elif items is not None:
+                values["stage_groups"] = stage_groups_from_items(path, items)
+            patch = changed_editorial_patch(
+                target_type=EditorialRevision.TargetType.READING_PATH,
+                target=path,
+                patch=values,
+            )
+            if not patch:
+                return Response(self.get_serializer(path).data)
+            current_revision = (
+                CanonicalObjectRevision.objects.filter(
+                    object_type=EditorialRevision.TargetType.READING_PATH,
+                    object_id=path.id,
+                )
+                .values_list("current_revision", flat=True)
+                .first()
+                or 0
+            )
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.READING_PATH,
+                target_id=path.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.READING_PATH,
+                    target_id=path.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(
+                    request.data.get("change_note") or "阅读路径编辑草稿"
+                ),
+            )
+        except (EditorialRevisionError, ReadingPathStructureError) as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payload = dict(self.get_serializer(path).data)
+        for field_name, value in revision.patch.items():
+            if field_name == "stage_groups":
+                payload["draft_stage_groups"] = value
+            else:
+                payload[field_name] = value
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        path = self.get_object()
+        if path.status != "published":
+            return super().destroy(request, *args, **kwargs)
+        if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
+            raise PermissionDenied("删除已发布阅读路径需要 authority 发布权限。")
+        from catalog.services.editorial_revision import (
+            EditorialRevisionError,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        patch = {"status": "archived"}
+        current_revision = (
+            CanonicalObjectRevision.objects.filter(
+                object_type=EditorialRevision.TargetType.READING_PATH,
+                object_id=path.id,
+            )
+            .values_list("current_revision", flat=True)
+            .first()
+            or 0
+        )
+        try:
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.READING_PATH,
+                target_id=path.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.READING_PATH,
+                    target_id=path.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(
+                    request.data.get("change_note") or "下线已发布阅读路径"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"editorial_revision": serialize_editorial_revision(revision)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     def perform_destroy(self, instance):
         if instance.status == "published" and not has_capability(

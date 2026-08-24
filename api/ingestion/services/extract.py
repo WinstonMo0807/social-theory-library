@@ -4,6 +4,7 @@ import re
 
 import fitz
 from django.db import transaction
+from django.utils import timezone
 
 from catalog.models import Asset, Page, Passage, TextBlock
 from catalog.services.text import clean_page_label, normalize_search_text, sanitize_unicode
@@ -404,7 +405,17 @@ def persist_pages(
         )
         persisted[extracted.index] = page
     if replace_missing:
-        asset.pages.exclude(index__in=page_indexes).delete()
+        # Page is a stable reader identity. A shorter or partially failed
+        # extraction must not cascade-delete annotations and bookmarks. Keep
+        # the row and clear only derived text for pages absent from this run.
+        asset.pages.exclude(index__in=page_indexes).update(
+            chapter_title="",
+            text="",
+            normalized_text="",
+            text_source=Page.TextSource.NONE,
+            confidence=0,
+            updated_at=timezone.now(),
+        )
         TextBlock.objects.filter(page__asset=asset).delete()
         Passage.objects.filter(page__asset=asset).delete()
     else:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsLibraryAdmin
+from common.permissions import CanManageAI
 
 from .runtime_profiles import (
     runtime_profile_payload,
@@ -26,9 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 
 
 class AdminAIRuntimeProfilesView(APIView):
-    # ADMIN remains the compatibility operator for the existing runtime page;
-    # destructive provider/credential changes still stay in server settings.
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageAI]
 
     def get(self, request):
         return Response(runtime_profile_payload())
@@ -47,7 +45,7 @@ class AdminAIRuntimeProfilesView(APIView):
 
 
 class AdminAIRuntimeProfileTestView(APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanManageAI]
 
     def post(self, request):
         serializer = AIRuntimeProfileTestSerializer(data=request.data)

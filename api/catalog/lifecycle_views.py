@@ -20,6 +20,7 @@ from .models import (
     TheorySchool,
     Topic,
 )
+from .services.canonical_mutations import record_admin_canonical_change
 from .services.knowledge_nodes import record_node_version
 
 
@@ -40,6 +41,15 @@ LIFECYCLE_MODELS = {
     "topic": LifecycleConfig(Topic, "name", "editorial_status"),
     "scholar": LifecycleConfig(ScholarProfile, "person__preferred_name", "editorial_status"),
     "knowledge-node": LifecycleConfig(KnowledgeNode, "canonical_name_zh", "status"),
+}
+
+CANONICAL_OBJECT_TYPES = {
+    "discipline": "discipline",
+    "subdiscipline": "subdiscipline",
+    "theory-school": "theory_school",
+    "topic": "topic",
+    "scholar": "scholar_profile",
+    "knowledge-node": "knowledge_node",
 }
 
 
@@ -141,6 +151,19 @@ class AdminEntityLifecycleView(APIView):
         snapshot = lifecycle_snapshot(kind, obj, config)
         before = {"status": snapshot["status"], "name": snapshot["name"]}
 
+        if kind == "theory-school" and action in {"restore", "delete"}:
+            return Response(
+                {
+                    "detail": (
+                        "TheorySchool 已进入迁移兼容期，只允许下线。"
+                        "恢复或删除须在规范映射完成后的专用迁移中执行。"
+                    ),
+                    "code": "legacy_theory_school_read_only",
+                    "impact": snapshot,
+                },
+                status=409,
+            )
+
         if action in {"archive", "restore"}:
             if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以下线或恢复公开实体。"}, status=403)
@@ -164,6 +187,16 @@ class AdminEntityLifecycleView(APIView):
                 object_id=str(obj.pk),
                 before=before,
                 after={"status": next_status, "name": snapshot["name"]},
+            )
+            record_admin_canonical_change(
+                object_type=CANONICAL_OBJECT_TYPES[kind],
+                target=obj,
+                change_kind="withdraw" if action == "archive" else "update",
+                changed_fields=[config.status_field, "published_at"],
+                actor=request.user,
+                request_idempotency_key=request.headers.get(
+                    "Idempotency-Key", ""
+                ),
             )
             return Response(lifecycle_snapshot(kind, obj, config))
 

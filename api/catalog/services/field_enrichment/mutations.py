@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from copy import deepcopy
 import json
 
 from django.db import transaction
@@ -10,21 +11,29 @@ from django.utils import timezone
 from catalog.models import (
     Discipline,
     Edition,
+    EditorialRevision,
     EnrichmentCandidate,
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
+    KnowledgeNodeSubdiscipline,
     KnowledgeRelation,
     PersonNameVariant,
     ReadingPathItem,
     ReadingPathStage,
     RelationReviewStatus,
+    Subdiscipline,
     WorkDisciplineRelation,
     WorkSubdisciplineRelation,
     TimelineEventRelation,
     TheoryTimelineEvent,
     TopicDisciplineRelation,
     Work,
+)
+from catalog.services.canonical_mutations import record_admin_canonical_change
+from catalog.services.editorial_revision import (
+    create_editorial_revision,
+    editorial_target_snapshot,
 )
 from catalog.services.knowledge_nodes import record_relation_version
 from catalog.services.query_lexicon.normalization import normalize_term
@@ -66,6 +75,239 @@ class FieldMutationRegistry:
 
 
 FIELD_MUTATIONS = FieldMutationRegistry()
+
+
+def _published_revision_target(target_type: str, target):
+    if target_type == "work" and target.editions.filter(state="published").exists():
+        return EditorialRevision.TargetType.WORK, target
+    if target_type == "knowledge_node" and target.status == "published":
+        return EditorialRevision.TargetType.KNOWLEDGE_NODE, target
+    if target_type == "person":
+        profile = getattr(target, "scholar_profile", None)
+        if profile is not None and profile.editorial_status == "published":
+            return EditorialRevision.TargetType.SCHOLAR_PROFILE, profile
+    if target_type == "reading_path" and target.status == "published":
+        return EditorialRevision.TargetType.READING_PATH, target
+    return None
+
+
+def _append_work_classification(snapshot, *, field_name: str, value: dict) -> dict:
+    classification = deepcopy(snapshot["classification"])
+    if field_name == "discipline":
+        identifier = str(value["discipline_id"])
+        if any(str(row["id"]) == identifier for row in classification["disciplines"]):
+            return classification
+        is_primary = value["relation_type"] == "primary"
+        if is_primary:
+            for row in classification["disciplines"]:
+                row["is_primary"] = False
+        classification["disciplines"].append(
+            {
+                "id": identifier,
+                "is_primary": is_primary,
+                "evidence_page": None,
+                "evidence_printed_label": "",
+                "evidence_text": "",
+            }
+        )
+    else:
+        identifier = str(value["subdiscipline_node_id"])
+        if any(
+            str(row["id"]) == identifier
+            for row in classification["subdisciplines"]
+        ):
+            return classification
+        classification["subdisciplines"].append(
+            {
+                "id": identifier,
+                "is_primary": False,
+                "strength": "medium",
+                "evidence_page": None,
+                "evidence_printed_label": "",
+                "evidence_text": "",
+            }
+        )
+    return classification
+
+
+def _revision_patch_for_candidate(
+    *,
+    revision_type: str,
+    target,
+    candidate: EnrichmentCandidate,
+    value,
+) -> dict | None:
+    snapshot = editorial_target_snapshot(target_type=revision_type, target=target)
+    adapter = FIELD_POLICIES.get(
+        candidate.target_type,
+        candidate.field_name,
+    ).mutation_adapter
+    if revision_type == EditorialRevision.TargetType.WORK:
+        if adapter == "work_discipline":
+            return {
+                "classification": _append_work_classification(
+                    snapshot,
+                    field_name="discipline",
+                    value=value,
+                )
+            }
+        if adapter == "work_subdiscipline":
+            return {
+                "classification": _append_work_classification(
+                    snapshot,
+                    field_name="subdiscipline",
+                    value=value,
+                )
+            }
+        if candidate.field_name in {
+            "title",
+            "subtitle",
+            "original_title",
+            "uniform_title",
+            "language",
+            "original_language",
+            "abstract",
+            "first_publication_date",
+        }:
+            return {candidate.field_name: value}
+    if revision_type == EditorialRevision.TargetType.SCHOLAR_PROFILE:
+        if adapter == "person_affiliation":
+            affiliations = list(snapshot.get("affiliations") or [])
+            if value["name"] not in affiliations:
+                affiliations.append(value["name"])
+            return {"affiliations": affiliations}
+    if revision_type == EditorialRevision.TargetType.KNOWLEDGE_NODE:
+        if adapter == "knowledge_node_alias":
+            aliases = list(snapshot.get("aliases") or [])
+            aliases.append(
+                {
+                    "alias": value["alias"],
+                    "language": value["language"],
+                    "alias_type": value["alias_type"],
+                    "source_kind": KnowledgeNodeAlias.SourceKind.WEB_EVIDENCE,
+                    "is_verified": True,
+                }
+            )
+            return {"aliases": aliases}
+        if adapter == "knowledge_node_discipline":
+            links = list(snapshot.get("discipline_links") or [])
+            links.append(
+                {
+                    "discipline_id": str(value["discipline_id"]),
+                    "relation_type": value["relation_type"],
+                    "discipline_specific_summary": "",
+                    "sort_order": len(links),
+                    "status": "pending",
+                }
+            )
+            return {"discipline_links": links}
+        if adapter == "knowledge_node_subdiscipline":
+            links = list(snapshot.get("subdiscipline_links") or [])
+            identifier = str(value["subdiscipline_node_id"])
+            if not any(
+                str(row["subdiscipline_id"]) == identifier
+                for row in links
+            ):
+                links.append(
+                    {
+                        "subdiscipline_id": identifier,
+                        "is_primary": False,
+                        "relation_role": "related",
+                        "source": f"field_enrichment:{candidate.id}",
+                        "confidence": candidate.confidence,
+                        "sort_order": len(links),
+                        "status": "pending",
+                    }
+                )
+            return {"subdiscipline_links": links}
+    if revision_type == EditorialRevision.TargetType.READING_PATH:
+        if adapter == "reading_path_item":
+            groups = deepcopy(snapshot.get("stage_groups") or [])
+            group = next(
+                (row for row in groups if row["name"] == value["stage_name"]),
+                None,
+            )
+            if group is None:
+                group = {
+                    "id": "",
+                    "name": value["stage_name"],
+                    "description": value.get("stage_description", ""),
+                    "position": len(groups),
+                    "items": [],
+                }
+                groups.append(group)
+            group["items"].append(
+                {
+                    "id": "",
+                    "node": str(value.get("node_id") or "") or None,
+                    "work": str(value.get("work_id") or "") or None,
+                    "recommendation_reason": value.get(
+                        "recommendation_reason", ""
+                    ),
+                    "position": len(group["items"]),
+                    "is_required": bool(value.get("is_required", False)),
+                    "editorial_note": f"来源候选 {candidate.id}",
+                }
+            )
+            return {"stage_groups": groups}
+    return None
+
+
+def _create_revision_for_published_target(
+    *,
+    candidate: EnrichmentCandidate,
+    target,
+    value,
+    actor,
+    reason: str,
+) -> MutationResult | None:
+    resolved = _published_revision_target(candidate.target_type, target)
+    if resolved is None:
+        return None
+    revision_type, revision_target = resolved
+    patch = _revision_patch_for_candidate(
+        revision_type=revision_type,
+        target=revision_target,
+        candidate=candidate,
+        value=value,
+    )
+    if patch is None:
+        return None
+    revision = create_editorial_revision(
+        target_type=revision_type,
+        target_id=revision_target.id,
+        patch=patch,
+        actor=actor,
+        idempotency_key=f"field-enrichment:{candidate.id}:{candidate.policy_version}",
+        change_note=(
+            f"采用研究候选 {candidate.field_name}。{str(reason or '').strip()}"
+        )[:500],
+    )
+    return MutationResult("catalog.EditorialRevision", revision.id, True, True)
+
+
+def _record_direct_canonical_change(
+    *,
+    candidate: EnrichmentCandidate,
+    target,
+    result: MutationResult,
+    actor,
+) -> None:
+    if not result.changed:
+        return
+    object_type = candidate.target_type
+    canonical_target = target
+    if candidate.target_type == "person" and result.authority_model == "catalog.ScholarProfile":
+        object_type = "scholar_profile"
+        canonical_target = target.scholar_profile
+    record_admin_canonical_change(
+        object_type=object_type,
+        target=canonical_target,
+        change_kind="update",
+        changed_fields=[candidate.field_name],
+        actor=actor,
+        request_idempotency_key=f"field-enrichment:{candidate.id}",
+    )
 
 
 def _evidence_urls(candidate) -> list[str]:
@@ -364,16 +606,23 @@ def _knowledge_node_discipline(*, target, value, candidate, actor):
 
 @FIELD_MUTATIONS.register("knowledge_node_subdiscipline")
 def _knowledge_node_subdiscipline(*, target, value, candidate, actor):
-    parent = KnowledgeNode.objects.get(
-        pk=value["subdiscipline_node_id"],
-        node_type=KnowledgeNode.NodeType.SUBDISCIPLINE,
+    subdiscipline = Subdiscipline.objects.get(pk=value["subdiscipline_node_id"])
+    relation, created = KnowledgeNodeSubdiscipline.objects.get_or_create(
+        node=target,
+        subdiscipline=subdiscipline,
+        defaults={
+            "relation_role": "related",
+            "source": f"field_enrichment:{candidate.id}",
+            "confidence": candidate.confidence,
+            "status": "pending",
+        },
     )
-    if target.parent_id == parent.id:
-        return MutationResult("catalog.KnowledgeNode", target.id, False, False)
-    target.parent = parent
-    target.full_clean()
-    target.save(update_fields=["parent", "updated_at"])
-    return MutationResult("catalog.KnowledgeNode", target.id, False, True)
+    return MutationResult(
+        "catalog.KnowledgeNodeSubdiscipline",
+        relation.id,
+        created,
+        created,
+    )
 
 
 @FIELD_MUTATIONS.register("knowledge_relation")
@@ -543,13 +792,27 @@ def accept_enrichment_candidate(candidate: EnrichmentCandidate, *, actor, reason
     current = current_field_value(candidate.target_type, target, candidate.field_name)
     if stable_json(current) != stable_json(candidate.current_value):
         raise ValueError("authority 字段已在候选生成后变化，请重新核对。")
-    result = FIELD_MUTATIONS.mutate(
-        policy.mutation_adapter,
+    result = _create_revision_for_published_target(
+        candidate=candidate,
         target=target,
         value=value,
-        candidate=candidate,
         actor=actor,
+        reason=reason,
     )
+    if result is None:
+        result = FIELD_MUTATIONS.mutate(
+            policy.mutation_adapter,
+            target=target,
+            value=value,
+            candidate=candidate,
+            actor=actor,
+        )
+        _record_direct_canonical_change(
+            candidate=candidate,
+            target=target,
+            result=result,
+            actor=actor,
+        )
     candidate.proposed_value = value
     candidate.normalized_value = value
     candidate.status = EnrichmentCandidate.Status.ACCEPTED

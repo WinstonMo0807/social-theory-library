@@ -73,7 +73,7 @@ def test_password_is_argon2_hash_and_login_uses_email(api_client, reader_user):
 
 
 @pytest.mark.django_db
-def test_admin_can_set_new_password_but_cannot_read_old_password(api_client, admin_user, reader_user):
+def test_superadmin_can_set_new_password_but_cannot_read_old_password(api_client, superadmin_user, reader_user):
     login = api_client.post(
         "/api/auth/login/",
         {
@@ -85,7 +85,7 @@ def test_admin_can_set_new_password_but_cannot_read_old_password(api_client, adm
     old_access = login.data["access"]
     old_refresh = login.data["refresh"]
 
-    api_client.force_authenticate(admin_user)
+    api_client.force_authenticate(superadmin_user)
     response = api_client.post(
         f"/api/auth/users/{reader_user.id}/set-password/",
         {"new_password": "New-Direct-Reset-Password-2026"},

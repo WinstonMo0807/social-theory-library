@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -28,6 +29,9 @@ from catalog.models import (
     Contribution,
     Discipline,
     Edition,
+    EvidenceSnippet,
+    KnowledgeNode,
+    KnowledgePublicationStatus,
     OcrStatus,
     PageLabelStatus,
     Person,
@@ -44,7 +48,14 @@ from catalog.models import (
     Topic,
     WorkDisciplineRelation,
     WorkKnowledgeRelation,
+    WorkNodeRelation,
     WorkSubdisciplineRelation,
+    WorkTopicRelation,
+)
+from catalog.services.canonical_identity import (
+    CanonicalIdentityError,
+    canonical_work_node_role,
+    mapped_node_for_legacy,
 )
 from catalog.services.knowledge import demote_orphaned_knowledge_objects
 from catalog.services.covers import generate_cover_candidates, generate_recommendation_image
@@ -1665,6 +1676,19 @@ class MetadataReviewView(APIView):
         data = serializer.validated_data
         work = edition.work
         was_published = edition.state == PublicationState.PUBLISHED
+        if was_published:
+            return Response(
+                {
+                    "detail": (
+                        "已发布文献不能再通过 legacy metadata review 直接修改。"
+                        "请在 Maintenance Workbench 创建 EditorialRevision 并预览发布。"
+                    ),
+                    "code": "editorial_revision_required",
+                    "work_id": str(work.id),
+                    "edition_id": str(edition.id),
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         previous_title = work.title
         before = {
             "title": work.title,
@@ -1765,17 +1789,8 @@ class MetadataReviewView(APIView):
             )
             author_names.append(person.preferred_name)
 
-        previous_theory_ids = list(
-            work.knowledge_relations.filter(
-                kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-                theory_school__isnull=False,
-            ).values_list("theory_school_id", flat=True)
-        )
         previous_topic_ids = list(
-            work.knowledge_relations.filter(
-                kind=WorkKnowledgeRelation.Kind.TOPIC,
-                topic__isnull=False,
-            ).values_list("topic_id", flat=True)
+            work.topic_relations.values_list("topic_id", flat=True)
         )
         theory_assignments = {
             entry["id"]: entry
@@ -1786,51 +1801,116 @@ class MetadataReviewView(APIView):
             *theory_assignments.keys(),
         ]))
         theories_by_id = TheorySchool.objects.in_bulk(requested_theory_ids)
-        selected_theories = [
-            theories_by_id[theory_id]
-            for theory_id in requested_theory_ids
-            if theory_id in theories_by_id
-        ]
-        selected_theory_ids = {target.id for target in selected_theories}
-        for name in data.get("theory_schools", []):
-            name = " ".join(name.split()).strip()
-            if not name:
-                continue
-            target = TheorySchool.objects.filter(name__iexact=name).first()
-            if target is None:
-                target = TheorySchool.objects.create(
-                    name=name,
-                    slug=_knowledge_slug(TheorySchool, name),
-                    editorial_status="draft",
+        missing_theory_ids = set(requested_theory_ids) - set(theories_by_id)
+        if missing_theory_ids:
+            raise DRFValidationError(
+                {"theory_assignments": ["指定的 legacy 理论传统不存在。"]}
+            )
+
+        normalized_assignments = {
+            entry["id"]: entry
+            for entry in data.get("knowledge_node_assignments", [])
+        }
+        requested_node_ids = list(
+            dict.fromkeys(
+                [*data.get("knowledge_node_ids", []), *normalized_assignments.keys()]
+            )
+        )
+        nodes_by_id = KnowledgeNode.objects.in_bulk(requested_node_ids)
+        missing_node_ids = set(requested_node_ids) - set(nodes_by_id)
+        if missing_node_ids:
+            raise DRFValidationError(
+                {"knowledge_node_assignments": ["指定的规范知识节点不存在。"]}
+            )
+
+        selected_theories: list[tuple[KnowledgeNode, dict]] = []
+        selected_keys = set()
+        for theory_id in requested_theory_ids:
+            assignment = theory_assignments.get(theory_id, {})
+            try:
+                node = mapped_node_for_legacy("TheorySchool", theories_by_id[theory_id].id)
+            except CanonicalIdentityError as exc:
+                raise DRFValidationError(
+                    {"theory_assignments": [str(exc)]}
+                ) from exc
+            role = canonical_work_node_role(assignment.get("role", "local_mention"))
+            key = (node.id, role)
+            if key not in selected_keys:
+                selected_theories.append((node, {**assignment, "role": role}))
+                selected_keys.add(key)
+        for node_id in requested_node_ids:
+            node = nodes_by_id[node_id]
+            if node.node_type != KnowledgeNode.NodeType.THEORY_TRADITION:
+                raise DRFValidationError(
+                    {
+                        "knowledge_node_assignments": [
+                            "元数据复核中的理论定位只接受 THEORY_TRADITION 节点。"
+                        ]
+                    }
                 )
-            if target.id not in selected_theory_ids:
-                selected_theories.append(target)
-                selected_theory_ids.add(target.id)
-        selected_theory_ids = {target.id for target in selected_theories}
-        work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-        ).exclude(theory_school_id__in=selected_theory_ids).delete()
-        for index, target in enumerate(selected_theories):
-            assignment = theory_assignments.get(target.id, {})
-            WorkKnowledgeRelation.objects.update_or_create(
+            assignment = normalized_assignments.get(node_id, {})
+            role = canonical_work_node_role(assignment.get("role", "local_mention"))
+            key = (node.id, role)
+            if key not in selected_keys:
+                selected_theories.append((node, {**assignment, "role": role}))
+                selected_keys.add(key)
+
+        reviewed_at = timezone.now()
+        for relation in work.node_relations.select_for_update().filter(
+            node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+            source="metadata_review_v3",
+        ):
+            if (relation.node_id, relation.role) not in selected_keys:
+                relation.status = KnowledgePublicationStatus.REJECTED
+                relation.reviewed_by = request.user
+                relation.reviewed_at = reviewed_at
+                relation.save(
+                    update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"]
+                )
+
+        evidence_asset = edition.assets.filter(
+            kind=Asset.Kind.NORMALIZED,
+            status=Asset.Status.READY,
+            is_current=True,
+        ).first()
+        for index, (node, assignment) in enumerate(selected_theories):
+            relation, _created = WorkNodeRelation.objects.update_or_create(
                 work=work,
-                kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-                theory_school=target,
+                node=node,
+                role=assignment["role"],
                 defaults={
-                    "source": "manual_review",
+                    "source": "metadata_review_v3",
                     "confidence": 1,
-                    "approved": True,
-                    "review_status": RelationReviewStatus.APPROVED,
+                    "status": KnowledgePublicationStatus.PUBLISHED,
                     "reviewed_by": request.user,
-                    "reviewed_at": timezone.now(),
+                    "reviewed_at": reviewed_at,
                     "is_primary": assignment.get("is_primary", index == 0),
-                    "role": assignment.get("role", "local_mention"),
                     "strength": assignment.get("strength", "medium"),
-                    "evidence_page": assignment.get("evidence_page"),
-                    "evidence_printed_label": assignment.get("evidence_printed_label", ""),
-                    "evidence_text": assignment.get("evidence_text", ""),
                 },
             )
+            if (
+                evidence_asset
+                and assignment.get("evidence_page")
+                and assignment.get("evidence_text")
+            ):
+                EvidenceSnippet.objects.update_or_create(
+                    work=work,
+                    file=evidence_asset,
+                    node=node,
+                    work_node_relation=relation,
+                    page_number=assignment["evidence_page"],
+                    defaults={
+                        "printed_page_label": assignment.get(
+                            "evidence_printed_label", ""
+                        ),
+                        "quote": assignment["evidence_text"],
+                        "extraction_method": EvidenceSnippet.ExtractionMethod.MANUAL,
+                        "semantic_confidence": 1,
+                        "review_status": RelationReviewStatus.APPROVED,
+                        "reviewed_by": request.user,
+                        "reviewed_at": reviewed_at,
+                    },
+                )
         topic_assignments = {
             entry["id"]: entry
             for entry in data.get("topic_assignments", [])
@@ -1861,23 +1941,27 @@ class MetadataReviewView(APIView):
                 selected_topics.append(target)
                 selected_topic_ids.add(target.id)
         selected_topic_ids = {target.id for target in selected_topics}
-        work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
-        ).exclude(topic_id__in=selected_topic_ids).delete()
+        work.topic_relations.select_for_update().filter(
+            source="metadata_review_v3",
+        ).exclude(topic_id__in=selected_topic_ids).update(
+            review_status=RelationReviewStatus.REJECTED,
+            reviewed_by=request.user,
+            reviewed_at=reviewed_at,
+        )
         for index, target in enumerate(selected_topics):
             assignment = topic_assignments.get(target.id, {})
-            WorkKnowledgeRelation.objects.update_or_create(
+            WorkTopicRelation.objects.update_or_create(
                 work=work,
-                kind=WorkKnowledgeRelation.Kind.TOPIC,
                 topic=target,
                 defaults={
-                    "source": "manual_review",
+                    "source": "metadata_review_v3",
                     "confidence": 1,
-                    "approved": True,
                     "review_status": RelationReviewStatus.APPROVED,
                     "reviewed_by": request.user,
-                    "reviewed_at": timezone.now(),
+                    "reviewed_at": reviewed_at,
                     "is_primary": assignment.get("is_primary", index == 0),
+                    "strength": "medium",
+                    "evidence_asset": evidence_asset,
                     "evidence_page": assignment.get("evidence_page"),
                     "evidence_printed_label": assignment.get("evidence_printed_label", ""),
                     "evidence_text": assignment.get("evidence_text", ""),
@@ -1955,7 +2039,6 @@ class MetadataReviewView(APIView):
                 },
             )
         demote_orphaned_knowledge_objects(
-            theory_ids=previous_theory_ids,
             topic_ids=previous_topic_ids,
         )
 
@@ -2021,6 +2104,7 @@ class MetadataReviewView(APIView):
             "document_type",
             "authors",
             "theory_schools",
+            "knowledge_nodes",
             "topics",
             "disciplines",
             "subdisciplines",
@@ -2043,6 +2127,7 @@ class MetadataReviewView(APIView):
                 "document_type",
                 "authors",
                 "theory_schools",
+                "knowledge_nodes",
                 "topics",
                 "disciplines",
                 "subdisciplines",
@@ -2088,7 +2173,9 @@ class MetadataReviewView(APIView):
                 "document_type": work.document_type,
                 "publication_year": edition.publication_year,
                 "authors": author_names,
-                "theory_schools": [target.name for target in selected_theories],
+                "theory_schools": [
+                    node.canonical_name_zh for node, _assignment in selected_theories
+                ],
                 "topics": [target.name for target in selected_topics],
                 "disciplines": [target.name for target in selected_disciplines],
                 "subdisciplines": [target.name for target in selected_subdisciplines],

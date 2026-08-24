@@ -2,6 +2,44 @@
 
 更新日期为 2026-08-24。本文件记录源码中的部署入口、安全要求和最近一次 2.9.2 生产发布快照。任何后续部署仍需重新检查实时状态。
 
+## Version 3.0 Wave 4 cutover
+
+3.0 从 `4b97a3484db0c3918f5b0fef8bfc75c35bd0dcee` 增量构建。它继续使用现有 `social-science-library` Compose project、PostgreSQL、Redis、Meilisearch、NAS、PaddleOCR、SearXNG 与 Cloudflare 入口。不得建立第二套数据库或搜索基础设施。
+
+目标 migration 为 catalog 0033 和 0034。二者先在 fresh BackupJob 恢复出的 disposable PostgreSQL 16 上应用。演练必须确认迁移前后 Work、Edition、Asset、Page、TextBlock、Passage、SemanticChunk、Person、KnowledgeNode 与活动 SemanticIndexVersion 没有意外删除，并确认 2.9.2 image 能在保留新增表的 schema 上完成核心只读操作。应用回退默认保留 additive schema，不自动反向 migration。
+
+正式顺序如下。
+
+1. 冻结源码并记录 archive SHA、镜像 tag、当前 Compose、env 文件校验、活动索引和核心对象 inventory。
+2. 生成 fresh BackupJob，复算归档 checksum，并完成 PostgreSQL 16 restore、migration 和 rollback compatibility rehearsal。
+3. 等待任务稳定，暂停 Beat 和相关 Worker。旧 API/Web 继续服务。
+4. 使用候选 API image 执行 migration plan、0033、0034 和 no pending migration 检查。
+5. 依次切换 API、默认 Worker、Ingestion Worker、Beat、Web 和 Edge。不得使用 `docker compose down -v`。
+6. 有界执行 DocumentRevision/Evidence backfill、registry seed 和 projection reconciliation。Claim 只进入 shadow；AI 不可用不阻断发布。
+7. 完成 T4 smoke 和观察后才更新本节为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED`。
+
+切换时保持 `VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED=false`。只有真实人工 benchmark run 达到门槛，且 Superadmin 显式激活后，才能在后续发布中改为 true。4070 worker 使用主动 pull，不要求 NAS 保存笔记本公网地址或依赖其在线。
+
+回退入口必须包括旧 API/Web image、旧 Compose/env 副本、fresh database backup、源码 archive 和活动 index UID。若新应用异常，暂停 3.0 Beat/Worker，切回完整 2.9.2 image family，并重新检查 ready、public routes、Reader Range、队列和日志。除非确认发生数据损坏且用户授权，不用 restore 覆盖生产数据库。
+
+### 2026-08-24 实际 3.0 cutover
+
+当前状态为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED WITH EXPLICIT DEGRADED ITEMS`。公网 `/api/ready/` 返回 3.0.0、database true、pending migrations 0。Compose project、PostgreSQL、Redis、Meilisearch、NAS、PaddleOCR、SearXNG、Cloudflare 和活动语义索引均沿用 2.9.2，没有新增平行数据面。
+
+- 正式 BackupJob 为 `3a8a2633-dc3d-4566-8bed-28d0b1bc29aa`。归档 `/data/backups/pre-v300-database-20260824-142628/library-backup-20260824-062810-3a8a2633.tar.gz` 的 SHA-256 为 `afff698b1c4d8de1bac887fdb572f858a8a9191d195aca642abcc3b45163ee52`，已复算并通过 `pg_restore --list`。
+- deploy record 位于 `storage/backups/pre-v300-cutover-20260824-142628/deploy-record`。其中保存旧 `.env`、Compose、2.9.2 API 源码、旧与新镜像 ID、迁移演练、馆藏 identity hash、backfill、benchmark、Projection reconciliation 和 API hotfix 记录。生产 Secret 没有写入 Git 或输出日志。
+- catalog 0033、0034 先在 PostgreSQL 16 disposable clone 应用。迁移前后 Work 8、Edition 8、Asset 16、Page 3,135、WorkNodeRelation 1 和 Page identity hash 一致。旧 2.9.2 API 在保留新增 schema 的 clone 上仍返回 ready，因此应用回退不要求反向 migration。
+- 正式回填建立 8 个 active DocumentRevision 和 3,735 个 EvidenceSpan。Work、Edition、Asset、Page、TextBlock、Passage、SemanticChunk 与 8 个 ORIGINAL Asset 的 count 和 identity hash 和切换前一致。没有全馆 OCR、Page 重建、PDF 覆盖或活动索引切换。
+- Claim shadow 有界调度 21 条 demand。当前没有 LLM executor，全部为 `waiting_for_capability`，publication blocking 为 0。Claim benchmark 没有 gold，gate false，默认 Viewpoint 继续使用 Semantic V2。
+- 最终 API、Worker、Ingestion Worker 和 Beat 使用 `social-theory-library-api:3.0.0-final-ae0f4614-20260824-150032`，image ID `sha256:069c9c1aedf7b31e24c2ddfa4602e9130d1338e033b701007202a36e7afcbdd1`。API archive SHA-256 为 `ae0f461428b8abb16e05b32ad70373dfbf699c924c83c74b8409062e59ac0bc6`。
+- Web 使用 `social-theory-library-web:3.0.0-candidate-4022b77b-20260824-140003`，image ID `sha256:05b8dc9fd0c04e8c394234c97173995216bc6102a3f3a033a43c8851dfaef6d4`。Web archive SHA-256 为 `4022b77b565770d4ce839c683864e3271d1aaf60bcf25ada27e65be710baf0eb`。该标签对应已校验并实际部署的不可变发布包。
+- 正式切换暴露出 PostgreSQL 对 nullable join 执行无范围 `FOR UPDATE` 的限制。Capability runtime 与远程 Worker 的 CapabilityDemand 查询改为 `select_for_update(of=("self",))`。专项 25 项、生产 `reconcile_v3_projections --limit 100` 以及一次不留数据的 4070 lease/context/completion 事务回滚 smoke 均通过；stale Projection 和 waiting Projection demand 均为 0。
+- 严格公网 Playwright 6 项通过。首页、当前入库、固定与动态路由、Explore assets、Ask 权限、Reader Range 206、中文 CMap 和 596 页真实 PDF canvas 均已覆盖。顺序 Semantic 与 Viewpoint 查询为 `v2_hybrid`、fallback false，原文、作品、页码和 Reader URL 可用。
+- 末次记录 `final-observation-20260824-150715` 中，两个 Worker 的 active、reserved、scheduled 均为 0；Redis 的 celery、ingestion、query_lexicon、unacked、unacked_index 均为 0。活动语义索引仍为 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。API、Worker、Ingestion Worker、Beat、Web 与 Edge 的近 8 分钟 fatal pattern 均为 0，应用容器 RestartCount 为 0。
+- 最终 API/Web 归档已复制到 deploy-record 的 `release-artifacts`，复制后 SHA-256 再次匹配。四个仅用于构建和演练的 `/tmp/social-theory-library-v300-*` staging 目录及临时脚本已按精确白名单删除，共释放 85,180,945 bytes；生产镜像、BackupJob、回退环境、部署记录和 SSH 权限保留。
+
+应用回退先恢复 `deploy-record/environment-before.env`，再切回记录中的 2.9.2 API/Web image 并重建 API、Worker、Ingestion Worker、Beat 与 Web。0033、0034 保留；该路径已在迁移 clone 上验证。只有确认数据损坏并取得明确授权时，才使用上述 fresh BackupJob 覆盖数据库。不得执行 `down -v`，不得删除 DocumentRevision、EvidenceSpan、等待中的 Claim demand、原 PDF 或活动索引。
+
 ## Version 2.9.2 production deployment, 2026-08-24
 
 当前判断为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED`。公网 [https://books.winstonmo.com](https://books.winstonmo.com) 的 `/api/ready/` 返回 2.9.2、database true、pending migrations 0。生产仍使用 `social-science-library` Compose project、`compose.public.yaml` 与 `compose.cloudflare.yaml`，没有建立第二套部署体系。

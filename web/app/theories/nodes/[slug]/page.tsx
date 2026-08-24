@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, ExternalLink, Network
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { AskLibraryLink } from "@/components/ask-library-link";
+import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import {
   TheoryBanner,
   TheorySectionHeading,
@@ -30,6 +31,8 @@ export default async function KnowledgeNodePage({ params }: { params: Promise<{ 
   const readingPaths = allPaths.filter((path) => path.items.some((item) => item.node_data?.id === node.id));
   const groupedWorks = Object.entries(node.work_groups).filter(([, rows]) => rows.length);
   const disciplineLinks = [node.primary_discipline, ...node.related_disciplines].filter(Boolean);
+  const subdisciplines = (node.subdiscipline_links ?? []).map((row) => row.subdiscipline);
+  const topics = (node.topic_links ?? []).map((row) => row.topic);
 
   return (
     <>
@@ -46,8 +49,12 @@ export default async function KnowledgeNodePage({ params }: { params: Promise<{ 
             <h1>{node.canonical_name_zh}</h1>
             {node.canonical_name_en ? <h2>{node.canonical_name_en}</h2> : null}
             {disciplineLinks.length ? <div className="theory-discipline-pills">{disciplineLinks.map((discipline, index) => discipline ? <Link className={index === 0 ? "primary" : ""} href={`/theories/disciplines/${discipline.slug}`} key={discipline.id}>{discipline.name}</Link> : null)}</div> : null}
+            {(subdisciplines.length || topics.length) ? <div className="theory-discipline-pills" aria-label="规范子学科与研究主题">
+              {subdisciplines.map((item) => <Link href={`/subdisciplines/${item.slug}`} key={`subdiscipline-${item.id}`}>{item.name}</Link>)}
+              {topics.map((item) => <Link href={`/topics/${item.slug}`} key={`topic-${item.id}`}>{item.name}</Link>)}
+            </div> : null}
             {node.definition || node.summary ? <p className="definition">{node.definition || node.summary}</p> : null}
-            {node.core_questions.length ? <div className="theory-core-question"><strong>核心问题</strong><p>{node.core_questions[0]}</p></div> : null}
+            {node.core_questions.length ? <div className="theory-core-question"><strong>{node.node_type === "debate" ? "争论问题" : "核心问题"}</strong><p>{node.core_questions[0]}</p></div> : null}
             <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
           </div>
           <div className="theory-node-hero-side">
@@ -66,6 +73,8 @@ export default async function KnowledgeNodePage({ params }: { params: Promise<{ 
           {node.basic_propositions.length ? <article><TheorySectionHeading title="基本命题" /> <ol>{node.basic_propositions.slice(0, 5).map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol></article> : null}
           {node.theoretical_boundary ? <article><TheorySectionHeading title="理论边界" /><p>{node.theoretical_boundary}</p></article> : null}
         </section> : null}
+
+        <CuratedClaimSections groups={node.curated_claims} debate={node.node_type === "debate"} />
 
         {timeline.length ? <section className="theory-node-development">
           <TheorySectionHeading title="形成与发展" href={`/theories/timeline?node=${encodeURIComponent(slug)}`} action="查看完整时间轴" />

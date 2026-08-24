@@ -13,6 +13,7 @@ from catalog.models import (
     Discipline,
     Edition,
     EditionWorkflowDecision,
+    EvidenceSnippet,
     KnowledgeNode,
     KnowledgePublicationStatus,
     Person,
@@ -25,15 +26,20 @@ from catalog.models import (
     Topic,
     Work,
     WorkDisciplineRelation,
-    WorkKnowledgeRelation,
     WorkNodeRelation,
     WorkSubdisciplineRelation,
+    WorkTopicRelation,
 )
 from ingestion.models import EntityResolutionCandidate, FieldLock, UploadItem
 from ingestion.services.candidate_decisions import accept_candidates_from_review
 from ingestion.services.files import canonical_pdf_filename
 
 from .admin_workflow import BIBLIOGRAPHY_FIELDS, WORK_FIELDS, record_step_decision
+from .canonical_identity import (
+    CanonicalIdentityError,
+    canonical_work_node_role,
+    mapped_node_for_legacy,
+)
 
 
 class WorkflowEditError(ValueError):
@@ -76,7 +82,15 @@ def _check_expected(actual, expected, label: str) -> None:
 
 def _require_all(model, identifiers, label: str) -> dict:
     identifiers = list(dict.fromkeys(identifiers))
-    rows = model.objects.in_bulk(identifiers)
+    fetched = {
+        str(identifier): value
+        for identifier, value in model.objects.in_bulk(identifiers).items()
+    }
+    rows = {
+        identifier: fetched[str(identifier)]
+        for identifier in identifiers
+        if str(identifier) in fetched
+    }
     missing = [str(identifier) for identifier in identifiers if identifier not in rows]
     if missing:
         raise WorkflowEditError(f"{label}包含不存在的对象：{', '.join(missing)}")
@@ -242,14 +256,13 @@ def _reject_unselected_relations(queryset, selected_ids: set, id_field: str, act
             relation.delete()
 
 
-def _save_classification(edition: Edition, values: dict[str, Any], actor) -> None:
-    work = edition.work
+def apply_work_classification(work: Work, values: dict[str, Any], actor) -> None:
     discipline_rows = values.get("disciplines", [])
     subdiscipline_rows = values.get("subdisciplines", [])
     disciplines = _require_all(Discipline, [row["id"] for row in discipline_rows], "学科")
     subdisciplines = _require_all(Subdiscipline, [row["id"] for row in subdiscipline_rows], "子学科")
-    selected_disciplines = set(disciplines)
-    selected_subdisciplines = set(subdisciplines)
+    selected_disciplines = {row.pk for row in disciplines.values()}
+    selected_subdisciplines = {row.pk for row in subdisciplines.values()}
     _reject_unselected_relations(
         list(work.discipline_relations.select_for_update()),
         selected_disciplines,
@@ -298,8 +311,11 @@ def _save_classification(edition: Edition, values: dict[str, Any], actor) -> Non
         )
 
 
-def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
-    work = edition.work
+def _save_classification(edition: Edition, values: dict[str, Any], actor) -> None:
+    apply_work_classification(edition.work, values, actor)
+
+
+def apply_work_knowledge(work: Work, values: dict[str, Any], actor) -> None:
     theory_rows = values.get("theories", [])
     topic_rows = values.get("topics", [])
     node_rows = values.get("nodes", [])
@@ -308,55 +324,41 @@ def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
     nodes = _require_all(KnowledgeNode, [row["id"] for row in node_rows], "知识节点")
     assets = _require_all(
         Asset,
-        [row["evidence_asset"] for row in [*theory_rows, *topic_rows] if row.get("evidence_asset")],
+        [
+            row["evidence_asset"]
+            for row in [*theory_rows, *topic_rows, *node_rows]
+            if row.get("evidence_asset")
+        ],
         "证据文件",
     )
     now = timezone.now()
 
-    existing_theories = list(
-        work.knowledge_relations.select_for_update().filter(
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-        )
-    )
-    _reject_unselected_relations(existing_theories, set(theories), "theory_school_id", actor)
+    mapped_theory_rows = []
     for row in theory_rows:
-        WorkKnowledgeRelation.objects.update_or_create(
-            work=work,
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-            theory_school=theories[row["id"]],
-            defaults={
-                "source": "workflow_section_confirmation",
-                "confidence": 1,
-                "approved": True,
-                "is_primary": row.get("is_primary", False),
-                "role": row["role"],
-                "strength": row["strength"],
-                "evidence_asset": assets.get(row.get("evidence_asset")),
-                "evidence_page": row.get("evidence_page"),
-                "evidence_printed_label": row.get("evidence_printed_label", ""),
-                "evidence_text": row.get("evidence_text", ""),
-                "review_status": RelationReviewStatus.APPROVED,
-                "reviewed_by": actor,
-                "reviewed_at": now,
-            },
+        try:
+            node = mapped_node_for_legacy("TheorySchool", theories[row["id"]].id)
+        except CanonicalIdentityError as exc:
+            raise WorkflowEditError(str(exc)) from exc
+        mapped_theory_rows.append(
+            {**row, "node": node, "canonical_role": canonical_work_node_role(row["role"])}
         )
 
-    existing_topics = list(
-        work.knowledge_relations.select_for_update().filter(
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
-        )
+    existing_topics = list(work.topic_relations.select_for_update())
+    _reject_unselected_relations(
+        existing_topics,
+        {row.pk for row in topics.values()},
+        "topic_id",
+        actor,
     )
-    _reject_unselected_relations(existing_topics, set(topics), "topic_id", actor)
     for row in topic_rows:
-        WorkKnowledgeRelation.objects.update_or_create(
+        WorkTopicRelation.objects.update_or_create(
             work=work,
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
             topic=topics[row["id"]],
             defaults={
                 "source": "workflow_section_confirmation",
                 "confidence": 1,
-                "approved": True,
                 "is_primary": row.get("is_primary", False),
+                "strength": row.get("strength", "medium"),
                 "evidence_asset": assets.get(row.get("evidence_asset")),
                 "evidence_page": row.get("evidence_page"),
                 "evidence_printed_label": row.get("evidence_printed_label", ""),
@@ -367,7 +369,13 @@ def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
             },
         )
 
-    selected_node_keys = {(row["id"], row["role"]) for row in node_rows}
+    selected_node_keys = {
+        (nodes[row["id"]].pk, row["role"])
+        for row in node_rows
+    }
+    selected_node_keys.update(
+        (row["node"].id, row["canonical_role"]) for row in mapped_theory_rows
+    )
     for relation in work.node_relations.select_for_update():
         if (relation.node_id, relation.role) in selected_node_keys:
             continue
@@ -379,7 +387,7 @@ def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
         else:
             relation.delete()
     for row in node_rows:
-        WorkNodeRelation.objects.update_or_create(
+        relation, _created = WorkNodeRelation.objects.update_or_create(
             work=work,
             node=nodes[row["id"]],
             role=row["role"],
@@ -394,7 +402,64 @@ def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
                 "reviewed_at": now,
             },
         )
-    selected_node_ids = set(nodes)
+        evidence_asset = assets.get(row.get("evidence_asset"))
+        if evidence_asset and row.get("evidence_page") and row.get("evidence_text"):
+            EvidenceSnippet.objects.update_or_create(
+                work=work,
+                file=evidence_asset,
+                node=nodes[row["id"]],
+                work_node_relation=relation,
+                page_number=row["evidence_page"],
+                defaults={
+                    "page_end": row.get("evidence_page_end"),
+                    "printed_page_label": row.get(
+                        "evidence_printed_label", ""
+                    ),
+                    "quote": row["evidence_text"],
+                    "extraction_method": EvidenceSnippet.ExtractionMethod.MANUAL,
+                    "semantic_confidence": 1,
+                    "review_status": RelationReviewStatus.APPROVED,
+                    "reviewed_by": actor,
+                    "reviewed_at": now,
+                },
+            )
+    for row in mapped_theory_rows:
+        relation, _created = WorkNodeRelation.objects.update_or_create(
+            work=work,
+            node=row["node"],
+            role=row["canonical_role"],
+            defaults={
+                "is_primary": row.get("is_primary", False),
+                "strength": row["strength"],
+                "confidence": 1,
+                "status": KnowledgePublicationStatus.PUBLISHED,
+                "source": "workflow_legacy_identity_adapter",
+                "created_by": actor,
+                "reviewed_by": actor,
+                "reviewed_at": now,
+            },
+        )
+        evidence_asset = assets.get(row.get("evidence_asset"))
+        if evidence_asset and row.get("evidence_page") and row.get("evidence_text"):
+            EvidenceSnippet.objects.update_or_create(
+                work=work,
+                file=evidence_asset,
+                node=row["node"],
+                work_node_relation=relation,
+                page_number=row["evidence_page"],
+                defaults={
+                    "printed_page_label": row.get("evidence_printed_label", ""),
+                    "quote": row["evidence_text"],
+                    "extraction_method": EvidenceSnippet.ExtractionMethod.MANUAL,
+                    "semantic_confidence": 1,
+                    "review_status": RelationReviewStatus.APPROVED,
+                    "reviewed_by": actor,
+                    "reviewed_at": now,
+                },
+            )
+    selected_node_ids = {row.pk for row in nodes.values()} | {
+        row["node"].id for row in mapped_theory_rows
+    }
     TheoryReviewTask.objects.select_for_update().filter(
         work=work,
         candidate_node_id__in=selected_node_ids,
@@ -412,6 +477,10 @@ def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
         reviewed_at=now,
         updated_at=now,
     )
+
+
+def _save_knowledge(edition: Edition, values: dict[str, Any], actor) -> None:
+    apply_work_knowledge(edition.work, values, actor)
 
 
 def _save_reader(edition: Edition, values: dict[str, Any]) -> None:

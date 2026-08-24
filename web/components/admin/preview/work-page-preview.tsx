@@ -40,6 +40,7 @@ function adaptPreviewWork(value: ApiWork): Work {
     theories: value.theories,
     topics: value.topics,
     theoryAssociations: value.theory_associations ?? [],
+    curatedClaims: value.curated_claims,
     outline: value.outline ?? [],
   };
 }

@@ -7,7 +7,15 @@ from django.utils import timezone
 from unittest.mock import patch
 
 from accounts.models import User
-from catalog.models import Asset, Edition, Person, PublicationState, Topic, Work
+from catalog.models import (
+    Asset,
+    Edition,
+    Person,
+    PublicationState,
+    TheorySchool,
+    Topic,
+    Work,
+)
 from distribution.models import CloudProvider
 from ingestion.models import AuditEvent, UploadBatch, UploadItem
 from distribution.services import cloud_budget_allows_new_publication, signed_read_url
@@ -440,7 +448,7 @@ def test_admin_configures_reader_submission_mailto_without_smtp(
 @pytest.mark.django_db
 def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
     api_client.force_authenticate(admin_user)
-    theory = api_client.post(
+    retired_write = api_client.post(
         "/api/catalog/admin/theory-schools/",
         {
             "name": "关系社会学",
@@ -452,21 +460,27 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         },
         format="json",
     )
-    assert theory.status_code == 201
-    assert theory.data["slug"]
-    neighbor_theory = api_client.post(
-        "/api/catalog/admin/theory-schools/",
-        {
-            "name": "邻接理论",
-            "slug": "",
-            "description": "用于测试流派关系",
-            "symbol": "邻",
-            "key_themes": ["关系"],
-            "editorial_status": "published",
-        },
-        format="json",
+    assert retired_write.status_code == 409
+    assert retired_write.data["code"] == "legacy_theory_school_write_retired"
+
+    # Existing TheorySchool rows remain readable during migration, but the API
+    # no longer creates or edits them.  These rows represent historical data.
+    theory = TheorySchool.objects.create(
+        name="关系社会学",
+        slug="relational-sociology-legacy",
+        description="测试流派",
+        symbol="关系",
+        key_themes=["关系", "网络"],
+        editorial_status="published",
     )
-    assert neighbor_theory.status_code == 201
+    neighbor_theory = TheorySchool.objects.create(
+        name="邻接理论",
+        slug="neighbor-theory-legacy",
+        description="用于测试流派关系",
+        symbol="邻",
+        key_themes=["关系"],
+        editorial_status="published",
+    )
 
     topic = api_client.post(
         "/api/catalog/admin/topics/",
@@ -564,8 +578,17 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         },
         format="json",
     )
-    assert scholar_curation.status_code == 200
+    assert scholar_curation.status_code == 202
     assert scholar_curation.data["curation"]["key_concepts"][0]["name"] == "平台劳动"
+    scholar_revision = api_client.post(
+        (
+            "/api/catalog/admin/editorial-revisions/"
+            f"{scholar_curation.data['editorial_revision']['id']}/publish/"
+        ),
+        {},
+        format="json",
+    )
+    assert scholar_revision.status_code == 200
 
     topic_curation = api_client.patch(
         f"/api/catalog/admin/topics/{topic.data['id']}/",
@@ -575,7 +598,7 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
                 "foundational_work_ids": [],
                 "recent_work_ids": [],
                 "related_scholar_ids": [scholar.data["id"]],
-                "linked_theory_ids": [theory.data["id"]],
+                "linked_theory_ids": [str(theory.id)],
                 "reading_paths": [
                     {
                         "title": "主题入门",
@@ -588,20 +611,29 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         },
         format="json",
     )
-    assert topic_curation.status_code == 200
+    assert topic_curation.status_code == 202
+    topic_revision = api_client.post(
+        (
+            "/api/catalog/admin/editorial-revisions/"
+            f"{topic_curation.data['editorial_revision']['id']}/publish/"
+        ),
+        {},
+        format="json",
+    )
+    assert topic_revision.status_code == 200
 
     theory_curation = api_client.patch(
-        f"/api/catalog/admin/theory-schools/{theory.data['id']}/",
+        f"/api/catalog/admin/theory-schools/{theory.id}/",
         {
             "curation": {
                 "hero_caption": "测试流派图片说明",
                 "foundational_work_ids": [],
                 "curated_reading_work_ids": [],
                 "key_scholar_ids": [scholar.data["id"]],
-                "neighbor_school_ids": [neighbor_theory.data["id"]],
+                "neighbor_school_ids": [str(neighbor_theory.id)],
                 "neighbor_relations": [
                     {
-                        "school_id": neighbor_theory.data["id"],
+                        "school_id": str(neighbor_theory.id),
                         "relation": "概念邻近",
                         "source": "测试资料",
                     }
@@ -625,7 +657,8 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         },
         format="json",
     )
-    assert theory_curation.status_code == 200
+    assert theory_curation.status_code == 409
+    assert theory_curation.data["code"] == "legacy_theory_school_write_retired"
 
     public_scholars = api_client.get("/api/catalog/scholars/")
     public_scholar = next(
@@ -637,16 +670,14 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
     assert public_scholar["curated"]["network"][0]["relation"] == "合作研究"
     public_topic = api_client.get(f"/api/catalog/topics/{topic.data['slug']}/")
     assert public_topic.data["curated"]["reading_paths"][0]["title"] == "主题入门"
-    public_theory = api_client.get(f"/api/catalog/theory-schools/{theory.data['slug']}/")
-    assert public_theory.data["curated"]["key_scholars"][0]["name"] == "测试人物"
-    assert public_theory.data["curated"]["core_concepts"][0]["name"] == "关系"
-    assert public_theory.data["curated"]["neighbors"][0]["relation"] == "概念邻近"
-    assert public_theory.data["curated"]["conceptual_map"][0]["target"] == "网络"
+    public_theory = api_client.get(f"/api/catalog/theory-schools/{theory.slug}/")
+    assert public_theory.status_code == 200
+    assert public_theory.data["name"] == "关系社会学"
 
 
 @pytest.mark.django_db
-def test_cloud_budget_snapshot_blocks_only_new_publications(api_client, admin_user):
-    api_client.force_authenticate(admin_user)
+def test_cloud_budget_snapshot_blocks_only_new_publications(api_client, superadmin_user):
+    api_client.force_authenticate(superadmin_user)
     provider_response = api_client.post(
         "/api/distribution/providers/",
         {
@@ -692,8 +723,8 @@ def test_cloud_budget_snapshot_blocks_only_new_publications(api_client, admin_us
 
 
 @pytest.mark.django_db
-def test_admin_updates_user_without_exposing_old_password(api_client, admin_user, reader_user):
-    api_client.force_authenticate(admin_user)
+def test_superadmin_updates_user_without_exposing_old_password(api_client, superadmin_user, reader_user):
+    api_client.force_authenticate(superadmin_user)
     listing = api_client.get("/api/auth/users/")
     row = next(item for item in listing.data["results"] if item["id"] == reader_user.id)
     assert "password" not in row
@@ -760,7 +791,7 @@ def test_only_configured_owner_can_promote_or_demote_administrators(
         {"is_active": False},
         format="json",
     )
-    assert owner_protected.status_code == 400
+    assert owner_protected.status_code == 403
     owner.refresh_from_db()
     assert owner.is_active is True
 

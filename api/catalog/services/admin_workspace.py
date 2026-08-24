@@ -10,9 +10,12 @@ from ingestion.models import EntityResolutionCandidate, MetadataCandidate, Uploa
 
 from catalog.models import (
     Asset,
+    CuratedClaim,
     Edition,
+    EditorialRevision,
     EnrichmentCandidate,
     KnowledgePublicationStatus,
+    LegacyKnowledgeMapping,
     PublicationState,
     ReadingPathItem,
     RecommendationOverride,
@@ -20,6 +23,7 @@ from catalog.models import (
     TheoryReviewTask,
     Work,
     WorkKnowledgeRelation,
+    WorkTopicRelation,
 )
 from catalog.services.admin_workflow import (
     BIBLIOGRAPHY_FIELDS,
@@ -32,6 +36,7 @@ from catalog.services.work_curation import (
     WORK_RECOMMENDATION_PLACEMENTS,
     build_work_curation_summary,
 )
+from catalog.services.claims.curation import high_value_claim_candidates
 
 
 QUEUE_STATUSES = (
@@ -310,16 +315,49 @@ def _classification_data(workflow: dict[str, Any], edition: Edition) -> dict[str
 
 def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any]:
     relations: list[dict[str, Any]] = []
-    for relation in edition.work.knowledge_relations.select_related(
-        "theory_school", "topic", "concept"
-    ).order_by("kind", "created_at"):
+    node_relations = list(
+        edition.work.node_relations.select_related("node").order_by("node__canonical_name_zh")
+    )
+    node_ids = {row.node_id for row in node_relations}
+    topic_relations = list(
+        edition.work.topic_relations.select_related("topic").order_by("-is_primary", "topic__name")
+    )
+    topic_ids = {row.topic_id for row in topic_relations}
+    legacy_rows = list(
+        edition.work.knowledge_relations.select_related("theory_school", "topic", "concept").order_by(
+            "kind", "created_at"
+        )
+    )
+    legacy_ids = {
+        row.theory_school_id
+        for row in legacy_rows
+        if row.theory_school_id
+    } | {
+        row.concept_id
+        for row in legacy_rows
+        if row.concept_id
+    }
+    mapped_nodes = {
+        (row.legacy_model, row.legacy_id): row.node_id
+        for row in LegacyKnowledgeMapping.objects.filter(
+            legacy_id__in=legacy_ids,
+            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+        )
+    }
+    for relation in legacy_rows:
         if relation.theory_school_id:
+            if mapped_nodes.get(("TheorySchool", relation.theory_school_id)) in node_ids:
+                continue
             target_type = "theory"
             target = relation.theory_school
         elif relation.topic_id:
+            if relation.topic_id in topic_ids:
+                continue
             target_type = "topic"
             target = relation.topic
         else:
+            if mapped_nodes.get(("Concept", relation.concept_id)) in node_ids:
+                continue
             target_type = "concept"
             target = relation.concept
         if target is None:
@@ -340,9 +378,29 @@ def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any
                 "evidence_printed_label": relation.evidence_printed_label,
                 "evidence_text": relation.evidence_text,
                 "evidence_summary": relation.evidence_text,
+                "legacy_compatibility": True,
             }
         )
-    for relation in edition.work.node_relations.select_related("node").order_by("node__canonical_name_zh"):
+    for relation in topic_relations:
+        relations.append(
+            {
+                "id": str(relation.id),
+                "target_type": "topic",
+                "target_id": str(relation.topic_id),
+                "name": relation.topic.name,
+                "role": "topic",
+                "strength": relation.strength,
+                "is_primary": relation.is_primary,
+                "review_status": relation.review_status,
+                "approved": relation.review_status == RelationReviewStatus.APPROVED,
+                "evidence_asset": str(relation.evidence_asset_id) if relation.evidence_asset_id else None,
+                "evidence_page": relation.evidence_page,
+                "evidence_printed_label": relation.evidence_printed_label,
+                "evidence_text": relation.evidence_text,
+                "evidence_summary": relation.evidence_text,
+            }
+        )
+    for relation in node_relations:
         relations.append(
             {
                 "id": str(relation.id),
@@ -426,6 +484,19 @@ def _curation_data(workflow: dict[str, Any], work: Work) -> dict[str, Any]:
     return {
         "reading_path_placements": placements,
         "recommendation_placements": recommendation_placements,
+        "curated_claims": [
+            {
+                "id": str(claim.id),
+                "kind": claim.kind,
+                "proposition": claim.proposition,
+                "editorial_note": claim.editorial_note,
+                "status": claim.status,
+                "evidence_count": claim.evidence_links.count(),
+            }
+            for claim in work.curated_claims.prefetch_related("evidence_links").order_by(
+                "kind", "sort_order", "created_at"
+            )
+        ],
         "skipped": _step_status(workflow, "curation") == "skipped",
     }
 
@@ -533,7 +604,37 @@ def build_admin_workspace(
             }
             for row in TheoryReviewTask.objects.filter(work=work).select_related("candidate_node")[:100]
         ],
+        # Machine claim volume is deliberately compressed to no more than five
+        # current human decisions.  DerivedClaim remains shadow data until an
+        # Editor explicitly adopts it as CuratedClaim.
+        "claims": high_value_claim_candidates(work, reviewer=user, limit=5),
     }
+    data = {
+        "file": _file_data(item, edition),
+        "work": _work_data(work, edition),
+        "edition": _bibliography_data(work, edition),
+        "bibliography": _bibliography_data(work, edition),
+        "contributors": _contributors_data(edition, item),
+        "classification": _classification_data(workflow, edition),
+        "knowledge": _knowledge_data(workflow, edition),
+        "reader": _reader_data(edition),
+        "curation": _curation_data(workflow, work),
+        "publication": _publication_data(workflow, edition),
+    }
+    pending_revision = None
+    if mode == "maintenance":
+        pending_revision = EditorialRevision.objects.filter(
+            target_type=EditorialRevision.TargetType.WORK,
+            target_id=work.id,
+            status=EditorialRevision.Status.DRAFT,
+        ).order_by("-revision").first()
+        if pending_revision is not None:
+            data["work"].update(pending_revision.materialized_preview)
+    serialized_revision = None
+    if pending_revision is not None:
+        from catalog.services.editorial_revision import serialize_editorial_revision
+
+        serialized_revision = serialize_editorial_revision(pending_revision)
     return {
         "mode": mode,
         "context": {
@@ -556,21 +657,11 @@ def build_admin_workspace(
             "return_href": "/admin/review" if item else "/admin/library",
         },
         "workflow": workflow,
-        "data": {
-            "file": _file_data(item, edition),
-            "work": _work_data(work, edition),
-            "edition": _bibliography_data(work, edition),
-            "bibliography": _bibliography_data(work, edition),
-            "contributors": _contributors_data(edition, item),
-            "classification": _classification_data(workflow, edition),
-            "knowledge": _knowledge_data(workflow, edition),
-            "reader": _reader_data(edition),
-            "curation": _curation_data(workflow, work),
-            "publication": _publication_data(workflow, edition),
-        },
+        "data": data,
         "candidates": candidates,
         "permissions": _permissions(user),
         "queue": _queue_for(item),
+        "editorial_revision": serialized_revision,
     }
 
 
@@ -643,16 +734,56 @@ def serialize_work_library_row(work: Work) -> dict[str, Any]:
         )
     legacy_relations = list(work.knowledge_relations.all())
     node_relations = list(work.node_relations.all())
+    topic_relations = list(work.topic_relations.all())
+    node_ids = {row.node_id for row in node_relations}
+    topic_ids = {row.topic_id for row in topic_relations}
+    legacy_ids = {
+        row.theory_school_id
+        for row in legacy_relations
+        if row.theory_school_id
+    } | {
+        row.concept_id
+        for row in legacy_relations
+        if row.concept_id
+    }
+    mapped_nodes = {
+        (row.legacy_model, row.legacy_id): row.node_id
+        for row in LegacyKnowledgeMapping.objects.filter(
+            legacy_id__in=legacy_ids,
+            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
+        )
+    }
+    compatibility_relations = [
+        row
+        for row in legacy_relations
+        if (
+            row.topic_id and row.topic_id not in topic_ids
+        )
+        or (
+            row.theory_school_id
+            and mapped_nodes.get(("TheorySchool", row.theory_school_id)) not in node_ids
+        )
+        or (
+            row.concept_id
+            and mapped_nodes.get(("Concept", row.concept_id)) not in node_ids
+        )
+    ]
     knowledge_pending = any(
         not row.approved or row.review_status == RelationReviewStatus.SUGGESTED
-        for row in legacy_relations
+        for row in compatibility_relations
     ) or any(
         row.status in {KnowledgePublicationStatus.DRAFT, KnowledgePublicationStatus.PENDING}
         for row in node_relations
+    ) or any(
+        row.review_status == RelationReviewStatus.SUGGESTED
+        for row in topic_relations
     )
-    knowledge_count = sum(row.approved for row in legacy_relations)
+    knowledge_count = sum(row.approved for row in compatibility_relations)
     knowledge_count += sum(
         row.status == KnowledgePublicationStatus.PUBLISHED for row in node_relations
+    )
+    knowledge_count += sum(
+        row.review_status == RelationReviewStatus.APPROVED for row in topic_relations
     )
     knowledge_status = "attention" if knowledge_pending else "complete" if knowledge_count else "draft"
     curated = bool(list(work.reading_path_items.all())) or any(
