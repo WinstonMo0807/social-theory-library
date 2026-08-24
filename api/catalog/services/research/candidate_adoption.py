@@ -143,6 +143,7 @@ def decide_reading_path_candidate(
             title=final_title,
             slug=_unique_slug(ReadingPath, final_title),
             introduction=final_goal,
+            learning_goal=final_goal,
             audience=final_audience,
             status=KnowledgePublicationStatus.DRAFT,
             created_by=actor,
@@ -173,6 +174,7 @@ def decide_reading_path_candidate(
                     stage_description=stage_description,
                     work=work,
                     recommendation_reason=str(item.get("reason") or "").strip(),
+                    prerequisite=str(item.get("prerequisite") or "").strip(),
                     position=item_position,
                     reading_order=item_count,
                     is_required=bool(item.get("required", False)),
@@ -215,4 +217,3 @@ def decide_reading_path_candidate(
         },
     )
     return locked
-

@@ -337,7 +337,11 @@ def _searxng_probe() -> ProbeResult:
 
 
 def _safe_fetcher_probe() -> ProbeResult:
-    from catalog.services.field_enrichment.web import SafeWebFetcher, configured_web_search_adapter
+    from catalog.services.field_enrichment.web import (
+        SafeWebFetcher,
+        WebFetchError,
+        configured_web_search_adapter,
+    )
 
     configured = bool(str(getattr(settings, "FIELD_ENRICHMENT_SEARXNG_URL", "") or "").strip())
     if not configured:
@@ -346,15 +350,32 @@ def _safe_fetcher_probe() -> ProbeResult:
     if not results:
         return ProbeResult(True, True, True, False, "Discovery 没有为 SafeWebFetcher 提供可抓取页面。", error_code="fetch_no_candidate")
     last_error = ""
+    last_error_code = ""
     for result in results[:2]:
         try:
             document = SafeWebFetcher().fetch(result.url)
             productive = len(document.text.strip()) >= 80
             if productive:
                 return ProbeResult(True, True, True, True, "SafeWebFetcher 已安全打开公开页面并取得正文。", {"domain": document.domain, "text_length": len(document.text), "source_record_id": str(document.source_record_id or "")})
+        except WebFetchError as exc:
+            last_error = exc.__class__.__name__
+            last_error_code = exc.code
         except Exception as exc:
             last_error = exc.__class__.__name__
-    return ProbeResult(True, True, False, False, "SafeWebFetcher 未能从候选页面取得可用正文。", {"attempted": min(len(results), 2)}, "fetch_failed", last_error)
+            last_error_code = "fetch_failed"
+    return ProbeResult(
+        True,
+        True,
+        False,
+        False,
+        "SafeWebFetcher 未能从候选页面取得可用正文。",
+        {
+            "attempted": min(len(results), 2),
+            "error_category": last_error_code or "fetch_failed",
+        },
+        last_error_code or "fetch_failed",
+        last_error,
+    )
 
 
 def _authority_probe(provider: str) -> ProbeResult:
@@ -406,6 +427,7 @@ def _research_productive_probe() -> ProbeResult:
     latest = (
         ResearchRun.objects.filter(
             created_at__gte=cutoff,
+            is_current=True,
             status__in=RESEARCH_RUN_TERMINAL_STATUSES,
             finished_at__isnull=False,
         )

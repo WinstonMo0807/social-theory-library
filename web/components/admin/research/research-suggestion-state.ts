@@ -87,7 +87,7 @@ export function prefixedResearchChangedFields(step: string, fields: readonly str
 }
 
 export function isTerminalResearchStatus(status: unknown): boolean {
-  return ["completed", "degraded", "failed", "canceled"].includes(String(status ?? ""));
+  return ["completed", "degraded", "failed", "canceled", "stale", "superseded"].includes(String(status ?? ""));
 }
 
 export function groupResearchSuggestions(

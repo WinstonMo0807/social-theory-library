@@ -67,7 +67,7 @@ def test_topic_publication_records_domain_change_and_projection_state(
     ).exists()
 
 
-def test_compatibility_reviewer_cannot_publish_authority_or_relation(
+def test_legacy_reviewer_is_normalized_to_editor_for_authority_publication(
     api_client,
 ):
     reviewer = _reviewer()
@@ -78,7 +78,7 @@ def test_compatibility_reviewer_cannot_publish_authority_or_relation(
     topic_response = api_client.post(
         "/api/catalog/admin/topics/",
         {
-            "name": "审核者不得发布",
+            "name": "兼容账号发布主题",
             "slug": "reviewer-must-not-publish-topic",
             "editorial_status": "published",
         },
@@ -97,12 +97,10 @@ def test_compatibility_reviewer_cannot_publish_authority_or_relation(
         format="json",
     )
 
-    assert topic_response.status_code == 400
-    assert "editorial_status" in topic_response.data["error"]["detail"]
-    assert relation_response.status_code == 400
-    assert "status" in relation_response.data["error"]["detail"]
-    assert not Topic.objects.filter(slug="reviewer-must-not-publish-topic").exists()
-    assert not KnowledgeRelation.objects.filter(
+    assert topic_response.status_code == 201
+    assert relation_response.status_code == 201
+    assert Topic.objects.filter(slug="reviewer-must-not-publish-topic").exists()
+    assert KnowledgeRelation.objects.filter(
         source_node=source,
         target_node=target,
     ).exists()
@@ -207,7 +205,15 @@ def test_lifecycle_withdrawal_propagates_and_legacy_theory_school_cannot_restore
         format="json",
     )
 
-    assert withdrawn.status_code == 200
+    assert withdrawn.status_code == 202
+    topic.refresh_from_db()
+    assert topic.editorial_status == "published"
+    published = api_client.post(
+        f"/api{withdrawn.data['editorial_revision']['publish_url']}",
+        {},
+        format="json",
+    )
+    assert published.status_code == 200
     event = DomainChangeEvent.objects.get(object_type="topic", object_id=topic.id)
     assert event.change_kind == "withdraw"
     assert blocked_restore.status_code == 409

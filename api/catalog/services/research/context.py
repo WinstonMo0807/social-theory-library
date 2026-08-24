@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from catalog.models import (
     Asset,
+    CanonicalObjectRevision,
     Edition,
     EnrichmentCandidate,
     KnowledgePublicationStatus,
@@ -19,7 +20,7 @@ from catalog.services.admin_workflow import build_edition_workflow, build_intake
 from ingestion.models import EntityResolutionCandidate, FieldLock, MetadataCandidate, UploadItem
 
 
-RESEARCH_CONTEXT_VERSION = "research-context-v1"
+RESEARCH_CONTEXT_VERSION = "research-context-v2"
 MAX_DRAFT_BYTES = 96_000
 MAX_CHANGED_FIELDS = 32
 
@@ -42,6 +43,61 @@ def _bounded_draft(value: Any) -> dict[str, Any]:
     if len(encoded) > MAX_DRAFT_BYTES:
         raise ValueError("研究上下文中的未保存表单超过 96 KiB。")
     return normalized
+
+
+def _stable_hash(value: Any) -> str:
+    return sha256(
+        json.dumps(
+            _json_value(value),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _path_value(draft: dict[str, Any], persisted: dict[str, Any], path: str) -> Any:
+    parts = [row for row in str(path or "").split(".") if row]
+    if not parts:
+        return None
+
+    def read(source: Any) -> Any:
+        current = source
+        for part in parts:
+            if isinstance(current, dict):
+                if part not in current:
+                    return None
+                current = current[part]
+            elif isinstance(current, list) and part.isdigit():
+                index = int(part)
+                if index >= len(current):
+                    return None
+                current = current[index]
+            else:
+                return None
+        return current
+
+    draft_value = read(draft)
+    return draft_value if draft_value is not None else read(persisted)
+
+
+def _canonical_revision(edition: Edition) -> dict[str, Any]:
+    revisions = {
+        row.object_type: row.current_revision
+        for row in CanonicalObjectRevision.objects.filter(
+            Q(object_type="work", object_id=edition.work_id)
+            | Q(object_type="edition", object_id=edition.id)
+        )
+    }
+    return {
+        "work": int(revisions.get("work", 0)),
+        "edition": int(revisions.get("edition", 0)),
+        # Compatibility safeguard until every legacy save emits a DomainChange.
+        # These timestamps keep Research identity correct during that migration.
+        "work_updated_at": _json_value(edition.work.updated_at),
+        "edition_updated_at": _json_value(edition.updated_at),
+    }
 
 
 def _candidate_state(edition: Edition, item: UploadItem | None) -> tuple[list[dict], list[dict]]:
@@ -118,6 +174,7 @@ def _persisted_data(edition: Edition) -> dict[str, Any]:
             "subtitle": work.subtitle,
             "original_title": work.original_title,
             "uniform_title": work.uniform_title,
+            "canonical_title": work.uniform_title,
             "language": work.language,
             "original_language": work.original_language,
             "first_publication_date": work.first_publication_date,
@@ -127,12 +184,17 @@ def _persisted_data(edition: Edition) -> dict[str, Any]:
         "bibliography": {
             "id": str(edition.id),
             "version_label": edition.version_label,
+            "edition_statement": edition.version_label,
+            "publication_date": edition.publication_date,
             "publication_year": edition.publication_year,
             "publisher": edition.publisher,
             "publication_place": edition.publication_place,
             "isbn": edition.isbn,
             "isbn10": edition.isbn10,
             "isbn13": edition.isbn13,
+            "series": edition.series,
+            "extent": edition.extent,
+            "responsibility_statement": edition.responsibility_statement,
             "journal_title": edition.journal_title,
             "volume": edition.volume,
             "issue": edition.issue,
@@ -270,6 +332,11 @@ class ResearchContext:
     field_locks: list[dict[str, Any]]
     pdf_ocr_signals: dict[str, Any]
     workflow_status: dict[str, Any]
+    canonical_revision: dict[str, Any] = field(default_factory=dict)
+    draft_session_id: str = ""
+    draft_hash: str = ""
+    trigger_input_values: dict[str, Any] = field(default_factory=dict)
+    trigger_input_hash: str = ""
     workflow_gaps: list[dict[str, Any]] = field(default_factory=list)
     changed_fields: tuple[str, ...] = ()
     fingerprint: str = ""
@@ -295,6 +362,7 @@ def build_research_context(
     active_step: str,
     draft_data: dict[str, Any] | None = None,
     changed_fields: list[str] | tuple[str, ...] | None = None,
+    draft_session_id: str = "",
 ) -> ResearchContext:
     edition = Edition.objects.select_related("work").get(pk=edition.pk)
     if item is not None:
@@ -306,6 +374,25 @@ def build_research_context(
     if len(changed) > MAX_CHANGED_FIELDS:
         raise ValueError("一次研究最多声明 32 个 changed fields。")
     persisted = _persisted_data(edition)
+    canonical_revision = _canonical_revision(edition)
+    normalized_session_id = str(draft_session_id or "").strip()[:96]
+    draft_hash = _stable_hash(draft)
+    # Import locally to keep context construction independent from registry
+    # initialization order.
+    from .contracts import RESEARCH_CONTRACTS
+
+    trigger_paths = {
+        path
+        for contract in RESEARCH_CONTRACTS.all()
+        for path in contract.effective_trigger_inputs
+        if path
+    }
+    trigger_paths.update(changed)
+    trigger_input_values = {
+        path: _json_value(_path_value(draft, persisted, path))
+        for path in sorted(trigger_paths)
+    }
+    trigger_input_hash = _stable_hash(trigger_input_values)
     accepted, rejected = _candidate_state(edition, item)
     workflow = build_intake_workflow(item) if item else build_edition_workflow(edition)
     locks = [
@@ -334,6 +421,11 @@ def build_research_context(
         "pdf_ocr_signals": _pdf_signals(edition),
         "workflow_status": _json_value(workflow),
         "changed_fields": list(changed),
+        "canonical_revision": canonical_revision,
+        "draft_session_id": normalized_session_id,
+        "draft_hash": draft_hash,
+        "trigger_input_values": trigger_input_values,
+        "trigger_input_hash": trigger_input_hash,
     }
     fingerprint = sha256(
         json.dumps(base, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
@@ -353,6 +445,11 @@ def build_research_context(
         field_locks=base["field_locks"],
         pdf_ocr_signals=base["pdf_ocr_signals"],
         workflow_status=base["workflow_status"],
+        canonical_revision=canonical_revision,
+        draft_session_id=normalized_session_id,
+        draft_hash=draft_hash,
+        trigger_input_values=trigger_input_values,
+        trigger_input_hash=trigger_input_hash,
         changed_fields=changed,
         fingerprint=fingerprint,
     )

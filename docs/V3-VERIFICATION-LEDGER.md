@@ -1,6 +1,6 @@
 # Social Theory Library 3.0 Verification Ledger
 
-更新时间：2026-08-24
+更新时间：2026-08-25
 
 本记录只登记实际执行的检查。环境依赖、生产验证和真实馆藏质量评估在完成前均标为待核实。工程严格按四个 Wave 推进，不再拆分子 Phase。
 
@@ -66,3 +66,26 @@
 - 一次前端命令曾在仓库根目录误执行并因缺少根级 `package.json` 退出。改在 `web` 目录执行后通过。这是命令目录错误，不是产品失败。
 - 一次 Django 检查从 `api` 目录误用 `\.venv` 相对路径，三条命令均未运行。改为 `..\.venv` 后 `check`、migration drift 和 migration inventory 通过。
 - 一次 pytest 包装调用只取得了后台 session，未收集测试输出。随后用同一目标命令正确轮询，测试通过；该空输出不计入通过数。
+
+## 3.0.1 Product Integration Pass 发布前记录
+
+| 改动 | 风险 | 已执行验证 | 为什么足够 | 最终综合验收 |
+| --- | --- | --- | --- | --- |
+| 3.0.0 Git baseline | 高 | 当前 HEAD 在开发开始时为 `35b5cce`，tag `v3.0.0-baseline` 指向同一提交；公网仍为 3.0.0 | 为 3.0.1 提供明确源码起点，没有改变生产 image、数据库或 rollback | 发布 archive 必须从最终 release commit 生成，并保留 pre-v301 deploy-record |
+| Draft-aware Research 与字段契约 | 高 | `pytest --collect-only` 确认 draft-aware 文件为 9 项；相关子系统测试按改动面运行，失败后只重跑受影响 case | 覆盖 canonical revision、draft hash、trigger snapshot、迟到结果隔离、跨步骤增量依赖和直接实体决定幂等 | 最终完整后端回归与真实改题名旅程 |
+| FrontMatterIntelligence 与本地优先书目证据 | 高 | Front Matter 定向测试、3 条 ingestion reconciliation/证据测试、2 条完整 ingestion 旅程通过 | 验证 native extraction、EvidenceSpan、有限页 OCR 与后续外部 corroboration 顺序；现有正式 Work/Edition 不被派生结果覆盖 | 两页 OCR、真实 PDF 作者/译者/ISBN 候选 smoke |
+| Candidate 核实与 SafeWebFetcher 分类 | 高 | `pytest --collect-only` 确认 Candidate Verification 文件为 14 项；它与 Field Enrichment 的实际执行合计 36 项通过 | 覆盖 local-first、无 Evidence 禁止采用、Web 核实转换、错误分类和刷新不抹证据 | 生产可用中文网页正向路径与失败分类 smoke |
+| SafeWebFetcher rebinding 与代理边界 | 高 | Candidate Verification 与 Field Enrichment 合计 36 项通过，包含 DNS 重绑、redirect 和环境代理案例 | 每一跳重新校验公开地址，请求固定到已验证 IP，并保留 Host 与 TLS SNI。`trust_env=false` 阻止未审计代理改变目标 | 生产网络中的 HTTPS 与中文页面正向 smoke |
+| 作者、译者与 Publisher 决定 | 高 | Entity Resolution 10 项、Front Matter 5 项、候选前端文件 9 项通过；TypeScript 通过 | 覆盖 role-aware contributor、已有 Person、新学者主页、仅责任者，以及已发布 Edition 的 Publisher 先进入 EditorialRevision | 普通 Editor 使用真实候选的完整决定旅程 |
+| Asset 正文访问控制 | 高 | 最终 access matrix 12 项通过，并覆盖兼容 Global Search | Passage、SemanticChunk focus、manifest、Page、文档内搜索和兼容 Global Search 统一使用 Distribution access policy；拒绝响应不包含原文 | 生产四类 access status inventory 和公网 smoke |
+| 显式 OCR skip | 高 | SKIP policy 的 Front Matter 和 ingestion batch 2 项通过 | 确认显式跳过 OCR 时不会被高价值前置页分析重新排队 | 生产有限页 selective OCR 与 skip 对照 |
+| Workbench 保存草稿语义 | 中 | `test_save_draft_does_not_confirm_lock_or_accept_candidates` 通过 | 同时断言 Work 暂存成功，且没有 WorkflowDecision、FieldLock 或 Candidate acceptance | 核心 Workbench Playwright 与 Editor 真实旅程 |
+| 角色与唯一 Owner | 高 | Accounts 与角色集合 26 项通过，增强的 Django 管理表单 case 再跑 1 项通过 | 覆盖三角色、Reviewer 兼容、Editor 发布、Owner-only 敏感操作，并确认个人资料、管理 API、公开注册和 Django 管理表单不能变更或占用 Owner 邮箱 | 生产 Owner 配置、大小写重复邮箱脱敏核对和普通 Editor 写入 smoke |
+| Research Source Registry | 中 | registry 定向测试通过，标准 metadata parser 与 Provider 配置边界进入 Processing Center | NCPSSD、Z39.50、CNKI、维普、万方只建立受控扩展，不引入万能 crawler。Secret 不返回前端 | 生产配置、健康、用途、最近成功和受影响功能 smoke |
+| 4070 远程客户端 | 高 | client 与服务端相关集合 16 项通过，覆盖 WAN 失败持续运行、轮询下限、heartbeat 节流和稳定 completion id | 当前只领取 `claim_extraction`，没有把已声明的其他 capability 误写成可执行 | 真实 Laptop claim extraction、离线恢复和模型输出抽样 |
+| catalog 0035 至 0038、ingestion 0014 | 高 | Django check、migration drift 和 migration inventory 通过；0038 定向数据迁移测试通过 | 0038 non-atomic、按路径事务、稳定 event key、仅填空值，并记录 revision 和 DomainChangeEvent。reverse 为 noop | fresh PostgreSQL 16 restore rehearsal、重复运行核对和 3.0.0 additive-schema compatibility |
+| T3 后端完整回归 | 高 | 初轮发现 3 个旧契约失败并定向关闭。安全审查后的三项高风险修复分别完成定向验证。一次并行编辑期间的运行遇到 Candidate decision 临时语法状态，不计为稳定验收；语法修正后影响面 49 项通过。所有编辑停止后，最终完整回归 897 passed、32 skipped，退出码 0 | 最终完整回归来自稳定 worktree。32 项均为既有环境型 skip，未把它们写成通过 | 生产前 migration rehearsal 与 T4 旅程继续覆盖 PostgreSQL、Provider、Worker 和公网环境 |
+| T3 前端完整门槛 | 高 | production build 成功；142 项完整 Node 测试有 1 个旧选择器失败，更新后受影响文件 7 项通过；TypeScript 与完整 lint 通过 | 失败是 UI 信息架构变化后的旧选择器，不是运行时功能失败。受影响文件覆盖新选择器契约 | 生产候选 image 与公网静态 bundle smoke |
+| Workbench Playwright | 高 | 首次因本地 API 未启动而 3 项均为 `Internal Server Error`；启动候选 API 后同套件 3 项通过 | 相同浏览器旅程在真实本地候选 API 上通过，首次结果明确记为环境前置缺失 | 普通 Editor 生产账户与真实 PDF 旅程 |
+
+发布前尚未完成 fresh BackupJob、PostgreSQL 16 restore/migration/rollback compatibility rehearsal、最终 image build、生产 migration、cutover、T4 smoke 和观察。公网继续运行 3.0.0。Library Synthesis Candidate 尚未实现。远程 4070 客户端当前只执行 `claim_extraction`，其他 AI capability 仍是后续执行器范围。

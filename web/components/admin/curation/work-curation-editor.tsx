@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Check, ExternalLink, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ActionButton } from "@/components/action-feedback";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ResearchEntityPicker } from "../research/research-entity-picker";
+import { useResearchWorkspace } from "../research/research-workspace-context";
 import { asArray, asRecord, asString, type WorkflowCandidate } from "../workflow/workflow-types";
 
 type PathOption = { id: string; title: string; status?: string; stages?: Array<{ id?: string; name: string }> };
@@ -19,6 +21,47 @@ type Placement = {
   is_required: boolean;
   editorial_note: string;
 };
+
+function candidateField(candidate: WorkflowCandidate): string {
+  return asString(candidate.field_name ?? candidate.field).toLocaleLowerCase();
+}
+
+function candidateEntityType(candidate: WorkflowCandidate): string {
+  return asString(candidate.entity_type ?? candidate.target_type ?? candidate.candidate_entity_type).toLocaleLowerCase();
+}
+
+function matchesCandidate(candidate: WorkflowCandidate, names: string[]): boolean {
+  const field = candidateField(candidate);
+  const entityType = candidateEntityType(candidate);
+  return names.some((name) => field.includes(name) || entityType.includes(name));
+}
+
+function adoptionAction(candidate: WorkflowCandidate): string {
+  const actions = candidate.available_actions ?? [];
+  return ["accept", "link_existing", "use_value", "create_draft", "keep_unresolved"].find((action) => actions.includes(action)) ?? "";
+}
+
+function CurationCandidateSection({
+  title,
+  description,
+  candidates,
+  impact,
+  canManage,
+  busy,
+  onInspect,
+  onDecide,
+}: {
+  title: string;
+  description: string;
+  candidates: WorkflowCandidate[];
+  impact: string[];
+  canManage: boolean;
+  busy: string;
+  onInspect?: (candidate: WorkflowCandidate) => void;
+  onDecide: (candidate: WorkflowCandidate, action: string) => Promise<void>;
+}) {
+  return <section className="workflow-curation-knowledge-section"><header><div><h3>{title}</h3><p>{description}</p></div><span>{candidates.length} 个候选</span></header><div className="workflow-frontend-impact"><strong>采用后影响</strong>{impact.map((item) => <span key={item}>{item}</span>)}</div>{candidates.length ? <div className="workflow-curation-candidate-list">{candidates.map((candidate) => { const actions = candidate.available_actions ?? []; const adopt = adoptionAction(candidate); return <article key={candidate.id}><button type="button" className="workflow-curation-candidate-summary" onClick={() => onInspect?.(candidate)}><span><strong>{asString(candidate.label, "未命名候选")}</strong><small>{asString(candidate.source_tier_label ?? candidate.source_tier ?? candidate.source, "来源待核对")} · {String(candidate.evidence_count ?? 0)} 条依据</small></span><b>{Math.round(Number(candidate.confidence ?? 0) * 100)}%</b></button><div className="workflow-curation-candidate-actions">{adopt && candidate.decision_url ? <ActionButton state={busy === `candidate-${candidate.id}-${adopt}` ? "pending" : "idle"} pendingLabel="采用中" disabled={!canManage || Boolean(busy)} onClick={() => void onDecide(candidate, adopt)}><Check size={12} />采用</ActionButton> : null}{actions.includes("accept_with_edit") ? <ActionButton disabled={!canManage || Boolean(busy)} onClick={() => onInspect?.(candidate)}><Pencil size={12} />修改后采用</ActionButton> : null}<ActionButton disabled={Boolean(busy)} onClick={() => onInspect?.(candidate)}><Search size={12} />查看依据</ActionButton>{actions.includes("reject") && candidate.decision_url ? <ActionButton className="danger" state={busy === `candidate-${candidate.id}-reject` ? "pending" : "idle"} pendingLabel="记录中" disabled={!canManage || Boolean(busy)} onClick={() => void onDecide(candidate, "reject")}><X size={12} />拒绝/不采用</ActionButton> : null}</div></article>; })}</div> : <p className="workflow-no-reliable-candidate">没有可靠候选。当前馆藏原文、馆内实体或已核实来源没有达到本区证据要求，可以稍后重跑研究。</p>}</section>;
+}
 
 function placementsFrom(value: Record<string, unknown>): Placement[] {
   return asArray(value.reading_path_placements ?? value.placements).flatMap((entry, index) => {
@@ -65,6 +108,7 @@ export function WorkCurationEditor({
   suggestions?: WorkflowCandidate[];
   onInspect?: (candidate: WorkflowCandidate) => void;
 }) {
+  const workspace = useResearchWorkspace();
   const [selectedPath, setSelectedPath] = useState("");
   const [selectedPathName, setSelectedPathName] = useState("");
   const [selectedPathOption, setSelectedPathOption] = useState<PathOption | null>(null);
@@ -76,8 +120,13 @@ export function WorkCurationEditor({
   const [busy, setBusy] = useState("");
   const busyRef = useRef("");
   const placements = placementsFrom(value);
-  const claimSuggestions = suggestions.filter((candidate) => candidate.kind === "derived_claim_curation").slice(0, 5);
-  const readingPathSuggestions = suggestions.filter((candidate) => candidate.kind !== "derived_claim_curation");
+  const claimSuggestions = suggestions.filter((candidate) => candidate.kind === "derived_claim_curation" || matchesCandidate(candidate, ["core_viewpoint", "major_criticism", "major_response"])).slice(0, 5);
+  const theoryConceptSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["theory", "concept"]));
+  const scholarRelationSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["scholar", "person", "contributor"]));
+  const topicSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["topic"]));
+  const debateSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["debate"]));
+  const readingPathSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["reading_path", "placement"]));
+  const recommendationSuggestions = suggestions.filter((candidate) => matchesCandidate(candidate, ["recommendation"]));
   const curatedClaims = asArray(value.curated_claims).map(asRecord);
 
   const beginAction = (key: string) => {
@@ -216,6 +265,20 @@ export function WorkCurationEditor({
     }
   }
 
+  async function decideCandidate(candidate: WorkflowCandidate, action: string) {
+    const actionKey = `candidate-${candidate.id}-${action}`;
+    if (!beginAction(actionKey)) return;
+    try {
+      const succeeded = await workspace?.onCandidateDecision?.(candidate, action);
+      if (succeeded === false) throw new Error("候选决定没有完成。");
+      onMessage(action === "reject" ? "已记录不采用，正式内容没有被写入。" : "候选已采用，变更将进入编辑草稿并显示在前台影响中。");
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "候选决定失败。");
+    } finally {
+      finishAction(actionKey);
+    }
+  }
+
   async function confirmCuration() {
     const actionKey = "confirm";
     if (!beginAction(actionKey)) return;
@@ -239,17 +302,26 @@ export function WorkCurationEditor({
   const recommendationRows = asArray(value.recommendation_placements ?? value.recommendations).map(asRecord);
   return (
     <div className="workflow-curation-editor">
-      <header><div><h3>当前作品的策展位置</h3><p>这里只修改当前作品。新增、重排和发布整条路径仍在完整策展工作台完成。</p></div><button type="button" disabled={!canManage || Boolean(busy)} onClick={() => void refreshCuration()}><RefreshCw size={14} />{busy === "refresh" ? "刷新中" : "刷新"}</button></header>
+      <header><div><h3>知识策展与前台联动</h3><p>在同一页面判断作品如何进入 Knowledge Core。每项采用都会显示真实前台影响，未完成的可选策展不会阻止发布。</p></div><button type="button" disabled={!canManage || Boolean(busy)} onClick={() => void refreshCuration()}><RefreshCw size={14} />{busy === "refresh" ? "刷新中" : "刷新"}</button></header>
       <section className="workflow-claim-curation" aria-labelledby="workflow-claim-curation-title">
         <header><div><h3 id="workflow-claim-curation-title">核心观点、批评与回应</h3><p>机器命题已去重、聚类和排序。这里只主动呈现最多五个当前最值得人工判断的候选。</p></div><span>{claimSuggestions.length} 个待决定</span></header>
+        <div className="workflow-frontend-impact"><strong>采用后影响</strong><span>Work 页面</span><span>Scholar 页面</span><span>观点检索</span><span>向书库提问</span></div>
         {curatedClaims.length ? <div className="workflow-curated-claim-list">{curatedClaims.map((claim, index) => <article key={asString(claim.id, `curated-${index}`)}><small>{({ core_viewpoint: "核心观点", major_criticism: "主要批评", major_response: "主要回应" } as Record<string, string>)[asString(claim.kind)] ?? asString(claim.kind)}</small><p>{asString(claim.proposition)}</p><span>{asString(claim.status, "draft")} · {String(claim.evidence_count ?? 0)} 条依据</span></article>)}</div> : <p>尚未采用正式策展命题。此项可稍后处理，不阻止作品发布。</p>}
-        {claimSuggestions.length ? <div className="workflow-claim-candidate-list">{claimSuggestions.map((candidate) => <button type="button" key={candidate.id} disabled={!canManage || Boolean(busy)} onClick={() => onInspect?.(candidate)}><span><small>{({ core_viewpoint: "核心观点候选", major_criticism: "主要批评候选", major_response: "主要回应候选" } as Record<string, string>)[asString(candidate.field_name)] ?? "命题候选"}</small><strong>{asString(candidate.label, "未命名命题")}</strong><em>{asArray(candidate.reasons)[0] ? String(asArray(candidate.reasons)[0]) : "打开检查器核对馆藏原文"}</em></span><b>{Math.round(Number(candidate.confidence ?? 0) * 100)}%</b></button>)}</div> : null}
+        {claimSuggestions.length ? <div className="workflow-curation-candidate-list">{claimSuggestions.map((candidate) => <article key={candidate.id}><button type="button" className="workflow-curation-candidate-summary" disabled={Boolean(busy)} onClick={() => onInspect?.(candidate)}><span><small>{({ core_viewpoint: "核心观点候选", major_criticism: "主要批评候选", major_response: "主要回应候选" } as Record<string, string>)[asString(candidate.field_name)] ?? "命题候选"}</small><strong>{asString(candidate.label, "未命名命题")}</strong><em>{asArray(candidate.reasons)[0] ? String(asArray(candidate.reasons)[0]) : "打开检查器核对馆藏原文"}</em></span><b>{Math.round(Number(candidate.confidence ?? 0) * 100)}%</b></button><div className="workflow-curation-candidate-actions"><ActionButton state={busy === `candidate-${candidate.id}-accept` ? "pending" : "idle"} pendingLabel="采用中" disabled={!canManage || Boolean(busy) || !(candidate.available_actions ?? []).includes("accept")} onClick={() => void decideCandidate(candidate, "accept")}><Check size={12} />采用</ActionButton>{(candidate.available_actions ?? []).includes("accept_with_edit") ? <ActionButton disabled={!canManage || Boolean(busy)} onClick={() => onInspect?.(candidate)}><Pencil size={12} />修改后采用</ActionButton> : null}<ActionButton disabled={Boolean(busy)} onClick={() => onInspect?.(candidate)}><Search size={12} />查看依据</ActionButton>{(candidate.available_actions ?? []).includes("reject") ? <ActionButton className="danger" state={busy === `candidate-${candidate.id}-reject` ? "pending" : "idle"} pendingLabel="记录中" disabled={!canManage || Boolean(busy)} onClick={() => void decideCandidate(candidate, "reject")}><X size={12} />拒绝/不采用</ActionButton> : null}</div></article>)}</div> : <p className="workflow-no-reliable-candidate">没有可靠候选。原因是当前 PDF EvidenceSpan 尚未形成达到阈值的原子命题，或候选仍在后台等待可用 AI capability。</p>}
       </section>
+      <div className="workflow-curation-knowledge-grid">
+        <CurationCandidateSection title="理论与概念" description="确认作品与正式 Theory、Concept 的关系。" candidates={theoryConceptSuggestions} impact={["Work 页面", "Theory 页面", "知识图谱", "相关推荐"]} canManage={canManage} busy={busy} onInspect={onInspect} onDecide={decideCandidate} />
+        <CurationCandidateSection title="学者与知识关系" description="连接作者、批评者及其他学者与作品中的知识位置。" candidates={scholarRelationSuggestions} impact={["Work 页面", "Scholar 页面", "知识图谱"]} canManage={canManage} busy={busy} onInspect={onInspect} onDecide={decideCandidate} />
+        <CurationCandidateSection title="主题" description="选择馆内正式 Topic，避免用自由文本制造重复主题。" candidates={topicSuggestions} impact={["Work 页面", "Topic 页面", "主题检索"]} canManage={canManage} busy={busy} onInspect={onInspect} onDecide={decideCandidate} />
+        <CurationCandidateSection title="Debate / 争论" description="采用后进入 Debate 草稿及其证据位置，不会自动公开。" candidates={debateSuggestions} impact={["Work 页面", "Debate 页面", "观点检索"]} canManage={canManage} busy={busy} onInspect={onInspect} onDecide={decideCandidate} />
+      </div>
       <section className="workflow-current-placements">
+        <header><div><h3>Reading Path</h3><p>选择现有路径和阶段，并说明先后逻辑。</p></div><div className="workflow-frontend-impact"><strong>采用后影响</strong><span>Work 页面</span><span>Reading Path 页面</span></div></header>
         {placements.map((placement) => <article key={placement.id}><div><strong>{placement.path_title}</strong><span>{placement.stage_name}</span></div><p>{placement.recommendation_reason || "尚未填写推荐理由"}</p><small>{placement.is_required ? "必读" : "选读"}{placement.editorial_note ? ` · ${placement.editorial_note}` : ""}</small>{canManage ? <button type="button" disabled={Boolean(busy)} onClick={() => void removePlacement(placement)}><Trash2 size={13} />{busy === `remove-${placement.id}` ? "移除中" : "移除"}</button> : null}</article>)}
         {!placements.length ? <p>当前作品尚未加入阅读路径。这是一项策展提示，不会阻止发布。</p> : null}
       </section>
       {canManage ? <section className="workflow-placement-form"><ResearchEntityPicker label="搜索现有阅读路径" endpoint="/catalog/admin/theory-system/reading-paths/" entityType="reading_path" step="curation" field="reading_path_placements" queryHint={selectedPathName} values={selectedPath ? [{ id: selectedPath, name: selectedPathName || "已选择阅读路径" }] : []} suggestions={readingPathSuggestions} onInspect={onInspect} disabled={Boolean(busy)} onChange={(next) => { const path = next.at(-1); setSelectedPath(path?.id ?? ""); setSelectedPathName(path?.name ?? ""); setSelectedPathOption(null); setSelectedStage(""); setPathLoading(Boolean(path?.id)); }} /><label><span>与当前作品有关的阶段</span><select value={selectedStage} onChange={(event) => setSelectedStage(event.target.value)} disabled={Boolean(busy) || !selectedPath || pathLoading}><option value="">{pathLoading ? "正在读取现有阶段" : "选择现有阶段"}</option>{selectedPathOption?.stages?.map((stage) => <option value={stage.id} key={stage.id}>{stage.name}</option>)}</select>{selectedPathOption ? <small>{selectedPathOption.title} · {selectedPathOption.status || "draft"}</small> : null}</label><label><span>推荐理由</span><textarea disabled={Boolean(busy)} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} /></label><label><span>编辑备注</span><textarea disabled={Boolean(busy)} rows={2} value={editorialNote} onChange={(event) => setEditorialNote(event.target.value)} /></label><label className="workflow-checkbox"><input type="checkbox" disabled={Boolean(busy)} checked={required} onChange={(event) => setRequired(event.target.checked)} /><span>设为必读</span></label><button className="button" type="button" disabled={Boolean(busy) || !selectedPath || !selectedStage || pathLoading} onClick={() => void placeWork()}><Plus size={14} />{busy === "placement" ? "正在加入" : "加入阅读路径"}</button></section> : null}
+      <CurationCandidateSection title="相关推荐" description="说明作品在相关推荐中的位置和推荐理由。" candidates={recommendationSuggestions} impact={["Work 页面", "相关推荐模块"]} canManage={canManageRecommendations} busy={busy} onInspect={onInspect} onDecide={decideCandidate} />
       {recommendationRows.length ? <section className="workflow-recommendation-placements"><h3>与当前作品有关的推荐位置</h3>{recommendationRows.map((row) => { const placement = asString(row.placement); const enabled = row.override_enabled === true; return <article key={placement}><span><strong>{asString(row.title, placement)}</strong><small>{enabled ? "人工指定" : "按策略计算"}</small></span>{canManageRecommendations ? <button type="button" disabled={Boolean(busy)} onClick={() => void updateRecommendation(placement, !enabled)}>{busy === `recommendation-${placement}` ? "保存中" : enabled ? "恢复策略" : "指定当前位置"}</button> : null}</article>; })}<Link href="/admin/recommendations">打开完整推荐管理 <ExternalLink size={12} /></Link></section> : null}
       <footer>{canManage ? <button className="button" type="button" disabled={Boolean(busy)} onClick={() => void confirmCuration()}>{busy === "confirm" ? "正在确认" : "确认策展并继续"}</button> : null}<button className="button secondary" type="button" disabled={!canManage || Boolean(busy)} onClick={() => void skipCuration()}>{busy === "skip" ? "正在跳过" : "暂不策展并继续"}</button><Link className="button secondary" href="/admin/reading-paths">打开完整策展工作台 <ExternalLink size={13} /></Link></footer>
     </div>

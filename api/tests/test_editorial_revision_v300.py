@@ -6,6 +6,7 @@ from accounts.models import User
 from catalog.models import (
     CanonicalObjectRevision,
     Asset,
+    Contribution,
     CuratedClaim,
     DerivedClaim,
     Discipline,
@@ -19,6 +20,7 @@ from catalog.models import (
     KnowledgeNodeTopic,
     ProjectionState,
     PublicationState,
+    Person,
     Page,
     Subdiscipline,
     Topic,
@@ -104,6 +106,251 @@ def test_published_work_maintenance_creates_preview_then_editor_publishes_atomic
         object_id=work.id,
         status=ProjectionState.Status.STALE,
     ).exists()
+
+
+def test_published_workbench_sections_merge_into_one_publishable_revision(api_client):
+    editor = _user(User.Role.EDITOR, "work-sections")
+    work, edition = _published_work("多分区正式作品")
+    edition.publisher = "旧出版社"
+    edition.publication_year = 2001
+    edition.save(update_fields=["publisher", "publication_year", "updated_at"])
+    person = Person.objects.create(
+        preferred_name="新作者",
+        sort_name="新作者",
+        authority_status=Person.AuthorityStatus.DRAFT,
+    )
+    api_client.force_authenticate(editor)
+
+    title_draft = api_client.patch(
+        f"/api/catalog/admin/library/works/{work.id}/sections/work/?edition={edition.id}",
+        {
+            "data": {
+                "title": "多分区草稿题名",
+                "document_type": "book",
+                "language": "zh-CN",
+            },
+            "confirm_section": False,
+        },
+        format="json",
+    )
+    bibliography_draft = api_client.patch(
+        f"/api/catalog/admin/library/works/{work.id}/sections/bibliography/?edition={edition.id}",
+        {
+            "data": {
+                "publisher": "新出版社",
+                "publication_date": "2026-08-25",
+                "publication_year": 2026,
+            },
+            "confirm_section": False,
+        },
+        format="json",
+    )
+    contributors_draft = api_client.patch(
+        f"/api/catalog/admin/library/works/{work.id}/sections/contributors/?edition={edition.id}",
+        {
+            "data": {
+                "contributors": [
+                    {"person_id": str(person.id), "role": "author", "order": 0}
+                ]
+            },
+            "confirm_section": False,
+        },
+        format="json",
+    )
+    reader_draft = api_client.patch(
+        f"/api/catalog/admin/library/works/{work.id}/sections/reader/?edition={edition.id}",
+        {
+            "data": {"reader_rendition_policy": "ocr"},
+            "confirm_section": False,
+        },
+        format="json",
+    )
+
+    assert [
+        title_draft.status_code,
+        bibliography_draft.status_code,
+        contributors_draft.status_code,
+        reader_draft.status_code,
+    ] == [202, 202, 202, 202]
+    work.refresh_from_db()
+    edition.refresh_from_db()
+    assert work.title == "多分区正式作品"
+    assert edition.publisher == "旧出版社"
+    assert edition.publication_year == 2001
+    assert edition.reader_rendition_policy == "auto"
+    assert not Contribution.objects.filter(edition=edition).exists()
+
+    active = EditorialRevision.objects.get(
+        target_type=EditorialRevision.TargetType.WORK,
+        target_id=work.id,
+        status=EditorialRevision.Status.DRAFT,
+    )
+    assert set(active.changed_fields) == {
+        "title",
+        "bibliography",
+        "contributors",
+        "reader",
+    }
+    assert EditorialRevision.objects.filter(
+        target_type=EditorialRevision.TargetType.WORK,
+        target_id=work.id,
+        status=EditorialRevision.Status.SUPERSEDED,
+    ).count() == 3
+    assert reader_draft.data["editorial_revision"]["id"] == str(active.id)
+    assert reader_draft.data["data"]["work"]["title"] == "多分区草稿题名"
+    assert reader_draft.data["data"]["bibliography"]["publisher"] == "新出版社"
+    assert reader_draft.data["data"]["contributors"]["items"][0]["display_name"] == "新作者"
+    assert reader_draft.data["data"]["reader"]["reader_rendition_policy"] == "ocr"
+
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{active.id}/publish/",
+        {},
+        format="json",
+    )
+
+    assert published.status_code == 200
+    work.refresh_from_db()
+    edition.refresh_from_db()
+    assert work.title == "多分区草稿题名"
+    assert edition.publisher == "新出版社"
+    assert edition.publication_date.isoformat() == "2026-08-25"
+    assert edition.publication_year == 2026
+    assert edition.reader_rendition_policy == "ocr"
+    assert list(
+        edition.contributions.values_list("person_id", "role", "approved")
+    ) == [(person.id, "author", True)]
+    event = DomainChangeEvent.objects.get(
+        object_type="work",
+        object_id=work.id,
+        change_kind=DomainChangeEvent.ChangeKind.PUBLISH,
+    )
+    assert set(event.changed_fields) == {
+        "title",
+        "bibliography",
+        "contributors",
+        "reader",
+    }
+
+
+def test_admin_work_page_preview_materializes_saved_workbench_revision(api_client):
+    editor = _user(User.Role.EDITOR, "work-preview")
+    work, edition = _published_work("预览前正式题名")
+    edition.publisher = "预览前出版社"
+    edition.publication_year = 2001
+    edition.save(update_fields=["publisher", "publication_year", "updated_at"])
+    person = Person.objects.create(
+        preferred_name="预览草稿作者",
+        sort_name="预览草稿作者",
+        authority_status=Person.AuthorityStatus.DRAFT,
+    )
+    discipline = Discipline.objects.create(
+        name="预览草稿学科",
+        slug="preview-draft-discipline",
+        code="PREVIEW-DRAFT",
+        editorial_status="published",
+    )
+    topic = Topic.objects.create(
+        name="预览草稿主题",
+        slug="preview-draft-topic",
+        editorial_status="published",
+    )
+    node = KnowledgeNode.objects.create(
+        node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+        canonical_name_zh="预览草稿理论",
+        slug="preview-draft-theory",
+        status="published",
+    )
+    api_client.force_authenticate(editor)
+
+    for section, values in (
+        (
+            "work",
+            {
+                "title": "管理员实际预览题名",
+                "document_type": "book",
+                "language": "zh-CN",
+                "abstract": "只存在于待发布修订中的摘要。",
+            },
+        ),
+        (
+            "bibliography",
+            {
+                "publisher": "管理员实际预览出版社",
+                "publication_date": "2026-08-25",
+                "publication_year": 2026,
+            },
+        ),
+        (
+            "contributors",
+            {
+                "contributors": [
+                    {"person_id": str(person.id), "role": "author", "order": 0}
+                ]
+            },
+        ),
+        (
+            "classification",
+            {
+                "disciplines": [{"id": str(discipline.id), "is_primary": True}],
+                "subdisciplines": [],
+            },
+        ),
+        (
+            "knowledge",
+            {
+                "theories": [],
+                "topics": [{"id": str(topic.id), "is_primary": True}],
+                "nodes": [
+                    {
+                        "id": str(node.id),
+                        "role": "foundational_work",
+                        "strength": "high",
+                        "is_primary": True,
+                        "evidence_page": 3,
+                        "evidence_text": "草稿中的理论关系证据。",
+                    }
+                ],
+            },
+        ),
+    ):
+        saved = api_client.patch(
+            f"/api/catalog/admin/library/works/{work.id}/sections/{section}/?edition={edition.id}",
+            {"data": values, "confirm_section": False},
+            format="json",
+        )
+        assert saved.status_code == 202
+
+    preview = api_client.get(
+        f"/api/catalog/admin/page-preview/editions/{edition.id}/"
+    )
+
+    assert preview.status_code == 200
+    assert preview.data["editorial_revision"]["status"] == "draft"
+    assert set(preview.data["editorial_revision"]["changed_fields"]) == {
+        "title",
+        "abstract",
+        "bibliography",
+        "contributors",
+        "classification",
+        "knowledge",
+    }
+    assert preview.data["work"]["title"] == "管理员实际预览题名"
+    assert preview.data["work"]["abstract"] == "只存在于待发布修订中的摘要。"
+    assert preview.data["work"]["edition"]["publisher"] == "管理员实际预览出版社"
+    assert preview.data["work"]["edition"]["publication_date"] == "2026-08-25"
+    assert preview.data["work"]["edition"]["contributors"][0]["person"][
+        "preferred_name"
+    ] == "预览草稿作者"
+    assert preview.data["work"]["disciplines"][0]["name"] == "预览草稿学科"
+    assert preview.data["work"]["topics"][0]["name"] == "预览草稿主题"
+    assert preview.data["work"]["theories"][0]["name"] == "预览草稿理论"
+    assert preview.data["work"]["theory_associations"][0]["evidence"][0][
+        "quote"
+    ] == "草稿中的理论关系证据。"
+    work.refresh_from_db()
+    edition.refresh_from_db()
+    assert work.title == "预览前正式题名"
+    assert edition.publisher == "预览前出版社"
 
 
 def test_published_knowledge_node_patch_stays_draft_until_single_editor_confirm(api_client):
@@ -218,7 +465,7 @@ def test_published_node_normalized_taxonomy_links_publish_through_revision(api_c
     ).exists()
 
 
-def test_reviewer_can_prepare_authority_revision_but_is_not_required_and_cannot_publish(api_client):
+def test_legacy_reviewer_is_normalized_to_editor_for_revision_publication(api_client):
     reviewer = _user(User.Role.REVIEWER, "reviewer")
     node = KnowledgeNode.objects.create(
         node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
@@ -238,21 +485,12 @@ def test_reviewer_can_prepare_authority_revision_but_is_not_required_and_cannot_
         format="json",
     )
     assert created.status_code == 201
-    denied = api_client.post(
+    published = api_client.post(
         f"/api/catalog/admin/editorial-revisions/{created.data['id']}/publish/",
         {},
         format="json",
     )
-    assert denied.status_code == 403
-
-    editor = _user(User.Role.EDITOR, "publisher")
-    api_client.force_authenticate(editor)
-    allowed = api_client.post(
-        f"/api/catalog/admin/editorial-revisions/{created.data['id']}/publish/",
-        {},
-        format="json",
-    )
-    assert allowed.status_code == 200
+    assert published.status_code == 200
 
 
 def test_generic_revision_endpoint_covers_other_published_knowledge_targets(api_client):
@@ -411,3 +649,13 @@ def test_claim_candidate_decision_requires_permission_and_returns_bounded_remain
     assert accepted.data["curated_claim"]["evidence"][0]["locator"]["page"] == 1
     assert len(accepted.data["remaining_candidates"]) <= 5
     assert all(row["id"] != str(claim.id) for row in accepted.data["remaining_candidates"])
+
+    preview = api_client.get(
+        f"/api/catalog/admin/page-preview/editions/{edition.id}/"
+    )
+    assert preview.status_code == 200
+    preview_claims = preview.data["work"]["curated_claims"]["core_viewpoint"]
+    assert [row["proposition"] for row in preview_claims] == [
+        "制度分类参与塑造治理对象。"
+    ]
+    assert preview_claims[0]["evidence"][0]["locator"]["page"] == 1

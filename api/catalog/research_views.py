@@ -49,6 +49,7 @@ def _request_payload(request) -> dict:
         "mode": str(value.get("mode") or "full").strip().casefold(),
         "force": bool(value.get("force", False)),
         "include_background": bool(value.get("include_background", False)),
+        "draft_session_id": str(value.get("draft_session_id") or "").strip()[:96],
     }
 
 
@@ -265,7 +266,7 @@ class _ResearchContextView(ResearchPermissionMixin, APIView):
                 {"detail": "当前项目还没有可研究的 Work/Edition。"},
                 status=status.HTTP_409_CONFLICT,
             )
-        queryset = ResearchRun.objects.filter(edition=edition)
+        queryset = ResearchRun.objects.filter(edition=edition, is_current=True)
         if item is not None:
             queryset = queryset.filter(upload_item_id=item.id)
         requested_step = str(request.query_params.get("step") or "").strip().casefold()
@@ -461,7 +462,11 @@ class ResearchEntityDecisionView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
         group = {**discovery, "results": [row]}
-        ResearchOrchestrator._persist_intake_entity_candidates(item=item, groups=[group])
+        ResearchOrchestrator._persist_intake_entity_candidates(
+            context=context,
+            item=item,
+            groups=[group],
+        )
         review_candidate_id = row.get("review_candidate_id")
         if not review_candidate_id:
             return Response(

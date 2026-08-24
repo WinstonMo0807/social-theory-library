@@ -13,14 +13,23 @@ from common.permissions import IsLibraryStaff
 from ingestion.models import AuditEvent
 
 from .models import (
+    CanonicalObjectRevision,
     Discipline,
+    EditorialRevision,
     KnowledgeNode,
+    ReadingPath,
     ScholarProfile,
     Subdiscipline,
     TheorySchool,
     Topic,
 )
 from .services.canonical_mutations import record_admin_canonical_change
+from .services.editorial_revision import (
+    EditorialRevisionError,
+    create_editorial_revision,
+    editorial_idempotency_key,
+    serialize_editorial_revision,
+)
 from .services.knowledge_nodes import record_node_version
 
 
@@ -41,6 +50,7 @@ LIFECYCLE_MODELS = {
     "topic": LifecycleConfig(Topic, "name", "editorial_status"),
     "scholar": LifecycleConfig(ScholarProfile, "person__preferred_name", "editorial_status"),
     "knowledge-node": LifecycleConfig(KnowledgeNode, "canonical_name_zh", "status"),
+    "reading-path": LifecycleConfig(ReadingPath, "title", "status"),
 }
 
 CANONICAL_OBJECT_TYPES = {
@@ -50,6 +60,16 @@ CANONICAL_OBJECT_TYPES = {
     "topic": "topic",
     "scholar": "scholar_profile",
     "knowledge-node": "knowledge_node",
+    "reading-path": "reading_path",
+}
+
+EDITORIAL_LIFECYCLE_TARGETS = {
+    "discipline": EditorialRevision.TargetType.DISCIPLINE,
+    "subdiscipline": EditorialRevision.TargetType.SUBDISCIPLINE,
+    "topic": EditorialRevision.TargetType.TOPIC,
+    "scholar": EditorialRevision.TargetType.SCHOLAR_PROFILE,
+    "knowledge-node": EditorialRevision.TargetType.KNOWLEDGE_NODE,
+    "reading-path": EditorialRevision.TargetType.READING_PATH,
 }
 
 
@@ -123,6 +143,34 @@ def lifecycle_snapshot(kind: str, obj, config: LifecycleConfig) -> dict:
     }
 
 
+def _draft_public_withdrawal(*, request, kind: str, obj, config: LifecycleConfig):
+    target_type = EDITORIAL_LIFECYCLE_TARGETS[kind]
+    patch = {config.status_field: config.archived_value}
+    current_revision = (
+        CanonicalObjectRevision.objects.filter(
+            object_type=target_type,
+            object_id=obj.id,
+        )
+        .values_list("current_revision", flat=True)
+        .first()
+        or 0
+    )
+    return create_editorial_revision(
+        target_type=target_type,
+        target_id=obj.id,
+        patch=patch,
+        actor=request.user,
+        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
+        or editorial_idempotency_key(
+            target_type=target_type,
+            target_id=obj.id,
+            base_revision=current_revision,
+            patch=patch,
+        ),
+        change_note=f"下线已发布{_name(obj, config.name_field)}",
+    )
+
+
 class AdminEntityLifecycleView(APIView):
     permission_classes = [IsLibraryStaff]
 
@@ -167,6 +215,31 @@ class AdminEntityLifecycleView(APIView):
         if action in {"archive", "restore"}:
             if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以下线或恢复公开实体。"}, status=403)
+            if (
+                action == "archive"
+                and snapshot["is_public"]
+                and kind in EDITORIAL_LIFECYCLE_TARGETS
+            ):
+                try:
+                    revision = _draft_public_withdrawal(
+                        request=request,
+                        kind=kind,
+                        obj=obj,
+                        config=config,
+                    )
+                except EditorialRevisionError as error:
+                    return Response(
+                        {"detail": str(error), "code": "editorial_revision_error"},
+                        status=400,
+                    )
+                return Response(
+                    {
+                        "detail": "已建立下线草稿，正式内容尚未改变。",
+                        "impact": snapshot,
+                        "editorial_revision": serialize_editorial_revision(revision),
+                    },
+                    status=202,
+                )
             next_status = config.archived_value if action == "archive" else config.draft_value
             setattr(obj, config.status_field, next_status)
             update_fields = [config.status_field, "updated_at"]
@@ -201,11 +274,14 @@ class AdminEntityLifecycleView(APIView):
             return Response(lifecycle_snapshot(kind, obj, config))
 
         if action == "delete":
-            # Entity lifecycle deletion is still the existing admin authority
-            # operation; storage/database destructive maintenance remains a
-            # separate superadmin capability.
-            if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
-                return Response({"detail": "只有管理员可以永久删除实体。"}, status=403)
+            if not has_capability(
+                request.user,
+                Capability.DESTRUCTIVE_MAINTENANCE,
+            ):
+                return Response(
+                    {"detail": "只有 System Owner 可以永久删除实体。"},
+                    status=403,
+                )
             if snapshot["is_public"]:
                 return Response({"detail": "公开实体必须先下线，再执行永久删除。", "impact": snapshot}, status=409)
             legacy_confirmation = str(request.data.get("confirmation", "")).strip()

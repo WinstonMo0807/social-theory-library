@@ -14,6 +14,7 @@ from catalog.models import (
     Asset,
     CanonicalObjectRevision,
     Discipline,
+    Edition,
     EditorialRevision,
     KnowledgeNode,
     KnowledgeNodeAlias,
@@ -68,6 +69,9 @@ TARGET_POLICIES = {
                 "is_featured",
                 "classification",
                 "knowledge",
+                "bibliography",
+                "contributors",
+                "reader",
             }
         ),
     ),
@@ -115,6 +119,45 @@ TARGET_POLICIES = {
             }
         ),
     ),
+    EditorialRevision.TargetType.DISCIPLINE: EditorialTargetPolicy(
+        Discipline,
+        frozenset(
+            {
+                "code",
+                "name",
+                "foreign_name",
+                "slug",
+                "search_aliases",
+                "description",
+                "introduction",
+                "sort_order",
+                "curation_level",
+                "editorial_status",
+            }
+        ),
+    ),
+    EditorialRevision.TargetType.SUBDISCIPLINE: EditorialTargetPolicy(
+        Subdiscipline,
+        frozenset(
+            {
+                "name",
+                "foreign_name",
+                "slug",
+                "search_aliases",
+                "description",
+                "discipline",
+                "parent",
+                "research_object",
+                "core_questions",
+                "formation_period",
+                "research_directions",
+                "methods",
+                "representative_issues",
+                "curation_level",
+                "editorial_status",
+            }
+        ),
+    ),
     EditorialRevision.TargetType.TOPIC: EditorialTargetPolicy(
         Topic,
         frozenset(
@@ -145,6 +188,7 @@ TARGET_POLICIES = {
                 "title",
                 "slug",
                 "introduction",
+                "learning_goal",
                 "primary_discipline",
                 "audience",
                 "difficulty",
@@ -166,6 +210,9 @@ SPECIAL_FIELDS = frozenset(
         "topic_links",
         "classification",
         "knowledge",
+        "bibliography",
+        "contributors",
+        "reader",
         "person",
         "stage_groups",
         "discipline_relations",
@@ -475,6 +522,92 @@ def _validated_work_relation_patch(target: Work, field_name: str, value) -> dict
     return _json_value(values)
 
 
+def _work_edition_section_snapshot(edition: Edition, field_name: str) -> dict[str, Any]:
+    from catalog.services.admin_workflow import BIBLIOGRAPHY_FIELDS
+
+    if field_name == "bibliography":
+        return _json_value(
+            {field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS}
+        )
+    if field_name == "contributors":
+        return {
+            "contributors": [
+                {
+                    "person_id": str(row.person_id),
+                    "role": row.role,
+                    "order": row.order,
+                }
+                for row in edition.contributions.order_by("order", "created_at", "id")
+            ]
+        }
+    if field_name == "reader":
+        return {"reader_rendition_policy": edition.reader_rendition_policy}
+    raise EditorialRevisionError("未知的版本编辑草稿分区。")
+
+
+def _validated_work_edition_patch(
+    target: Work,
+    field_name: str,
+    value,
+) -> dict[str, Any] | None:
+    from catalog.workflow_serializers import (
+        BibliographySectionSerializer,
+        ContributorsSectionSerializer,
+        ReaderSectionSerializer,
+    )
+
+    if not isinstance(value, dict):
+        raise EditorialRevisionError(f"{field_name} 必须是 JSON 对象。")
+    edition_id = str(value.get("edition_id") or "").strip()
+    raw_values = value.get("values")
+    if not edition_id or not isinstance(raw_values, dict):
+        raise EditorialRevisionError(
+            f"{field_name} 草稿必须包含当前 edition_id 和 values。"
+        )
+    edition = target.editions.filter(pk=edition_id).first()
+    if edition is None:
+        raise EditorialRevisionError("编辑草稿引用的版本不属于当前作品。")
+    serializer_class = {
+        "bibliography": BibliographySectionSerializer,
+        "contributors": ContributorsSectionSerializer,
+        "reader": ReaderSectionSerializer,
+    }[field_name]
+    serializer = serializer_class(data=raw_values, partial=True)
+    if not serializer.is_valid():
+        raise EditorialRevisionError(
+            f"{field_name} 草稿无效：{serializer.errors}"
+        )
+    values = {
+        key: row
+        for key, row in serializer.validated_data.items()
+        if key not in {"expected_updated_at", "expected_work_updated_at", "note"}
+    }
+    if field_name == "contributors":
+        normalized_rows = []
+        for index, row in enumerate(values.get("contributors", [])):
+            normalized_rows.append(
+                {
+                    "person_id": str(row["person_id"]),
+                    "role": row["role"],
+                    "order": row.get("order", index),
+                }
+            )
+        missing = _missing_ids(
+            Person,
+            [row["person_id"] for row in normalized_rows],
+        )
+        if missing:
+            raise EditorialRevisionError(
+                f"责任者包含不存在的人物：{', '.join(missing)}"
+            )
+        values["contributors"] = normalized_rows
+    values = _json_value(values)
+    current = _work_edition_section_snapshot(edition, field_name)
+    if all(current.get(key) == row for key, row in values.items()):
+        return None
+    return {"edition_id": edition_id, "values": values}
+
+
 def _validated_scholar_person_patch(target: ScholarProfile, value) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise EditorialRevisionError("person 必须是 JSON 对象。")
@@ -596,8 +729,42 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                     field_name,
                     patch[field_name],
                 )
+        for field_name in ("bibliography", "contributors", "reader"):
+            if field_name not in patch:
+                continue
+            normalized = _validated_work_edition_patch(
+                target,
+                field_name,
+                patch[field_name],
+            )
+            if normalized is None:
+                patch.pop(field_name, None)
+            else:
+                patch[field_name] = normalized
     if isinstance(target, ScholarProfile) and "person" in patch:
         patch["person"] = _validated_scholar_person_patch(target, patch["person"])
+    if isinstance(target, Subdiscipline):
+        discipline_id = str(patch.get("discipline") or target.discipline_id)
+        if not Discipline.objects.filter(pk=discipline_id).exists():
+            raise EditorialRevisionError("子学科草稿引用了不存在的所属学科。")
+        parent_id = str(patch.get("parent") or target.parent_id or "")
+        if parent_id:
+            if parent_id == str(target.id):
+                raise EditorialRevisionError("子学科不能以自身作为上级。")
+            parent = Subdiscipline.objects.select_related("parent").filter(
+                pk=parent_id
+            ).first()
+            if parent is None:
+                raise EditorialRevisionError("子学科草稿引用了不存在的上级子学科。")
+            if str(parent.discipline_id) != discipline_id:
+                raise EditorialRevisionError("上级子学科必须属于同一学科。")
+            seen = {str(target.id)}
+            current = parent
+            while current is not None:
+                if str(current.id) in seen:
+                    raise EditorialRevisionError("子学科层级不能形成循环。")
+                seen.add(str(current.id))
+                current = current.parent
     if isinstance(target, Topic):
         for field_name in TOPIC_RELATION_POLICIES:
             if field_name in patch:
@@ -991,6 +1158,36 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
                 apply_work_classification(target, patch["classification"], actor)
             if "knowledge" in patch:
                 apply_work_knowledge(target, patch["knowledge"], actor)
+            for field_name in ("bibliography", "contributors", "reader"):
+                if field_name not in patch:
+                    continue
+                section = patch[field_name]
+                edition = target.editions.select_for_update().filter(
+                    pk=section["edition_id"]
+                ).first()
+                if edition is None:
+                    raise EditorialRevisionError(
+                        "编辑草稿引用的版本不属于当前作品。"
+                    )
+                from catalog.services.work_editor import save_workflow_section
+                from catalog.workflow_serializers import SECTION_SERIALIZERS
+
+                serializer = SECTION_SERIALIZERS[field_name](
+                    data=section["values"],
+                    partial=True,
+                )
+                if not serializer.is_valid():
+                    raise EditorialRevisionError(
+                        f"{field_name} 草稿无效：{serializer.errors}"
+                    )
+
+                save_workflow_section(
+                    edition,
+                    field_name,
+                    serializer.validated_data,
+                    actor=actor,
+                    confirm_section=True,
+                )
         except WorkflowEditError as exc:
             raise EditorialRevisionError(str(exc)) from exc
     if isinstance(target, KnowledgeNode):
@@ -1082,6 +1279,87 @@ def create_editorial_revision(
 
 
 @transaction.atomic
+def save_workflow_editorial_revision(
+    *,
+    work_id,
+    section_patch: dict[str, Any],
+    actor,
+    idempotency_key: str = "",
+    change_note: str = "",
+) -> EditorialRevision | None:
+    """Merge one Workbench section into the single current Work draft.
+
+    Workbench saves sections independently.  Keeping the latest draft as a
+    complete union prevents a later section save from silently superseding an
+    earlier unsaved section.  The published Work remains unchanged until the
+    merged revision is confirmed.
+    """
+
+    work = Work.objects.select_for_update().filter(pk=work_id).first()
+    if work is None:
+        raise EditorialRevisionError("作品不存在。")
+    canonical, _created = CanonicalObjectRevision.objects.select_for_update().get_or_create(
+        object_type=EditorialRevision.TargetType.WORK,
+        object_id=work.id,
+        defaults={"current_revision": 0},
+    )
+    latest = (
+        EditorialRevision.objects.select_for_update()
+        .filter(
+            target_type=EditorialRevision.TargetType.WORK,
+            target_id=work.id,
+            status=EditorialRevision.Status.DRAFT,
+        )
+        .order_by("-revision")
+        .first()
+    )
+    if latest is not None and latest.base_revision != canonical.current_revision:
+        raise EditorialRevisionConflict("正式内容已变化，请基于最新内容重新建立草稿。")
+    combined = dict(latest.patch or {}) if latest is not None else {}
+    combined.update(dict(section_patch or {}))
+    clean_patch = changed_editorial_patch(
+        target_type=EditorialRevision.TargetType.WORK,
+        target=work,
+        patch=combined,
+    )
+    if not clean_patch:
+        if latest is not None:
+            latest.status = EditorialRevision.Status.SUPERSEDED
+            latest.save(update_fields=["status", "updated_at"])
+        return None
+    if latest is not None and latest.patch == clean_patch:
+        return latest
+    revision_number = (
+        EditorialRevision.objects.filter(
+            target_type=EditorialRevision.TargetType.WORK,
+            target_id=work.id,
+        )
+        .order_by("-revision")
+        .values_list("revision", flat=True)
+        .first()
+        or 0
+    )
+    resolved_key = str(idempotency_key or "").strip() or (
+        f"{editorial_idempotency_key(target_type=EditorialRevision.TargetType.WORK, target_id=work.id, base_revision=canonical.current_revision, patch=clean_patch)}"
+        f":workflow:{revision_number}"
+    )
+    revision = create_editorial_revision(
+        target_type=EditorialRevision.TargetType.WORK,
+        target_id=work.id,
+        patch=clean_patch,
+        actor=actor,
+        idempotency_key=resolved_key,
+        change_note=change_note,
+    )
+    if revision.status != EditorialRevision.Status.DRAFT:
+        raise EditorialRevisionConflict("该幂等键对应的编辑草稿已经失效。")
+    if latest is not None and latest.pk != revision.pk:
+        latest.status = EditorialRevision.Status.SUPERSEDED
+        latest.save(update_fields=["status", "updated_at"])
+    return revision
+
+
+@transaction.atomic
 def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
     if actor is None or not getattr(actor, "is_authenticated", False):
         raise EditorialRevisionError("发布必须记录实际操作人。")
@@ -1167,10 +1445,15 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
 
     from catalog.services.dependency_engine import record_canonical_change
 
+    change_kind = (
+        "withdraw"
+        if previous_status == "published" and next_status in {"archived", "withdrawn"}
+        else "publish"
+    )
     event = record_canonical_change(
         object_type=revision.target_type,
         object_id=revision.target_id,
-        change_kind="publish",
+        change_kind=change_kind,
         changed_fields=revision.changed_fields,
         actor=actor,
         idempotency_key=f"editorial-publish:{revision.pk}",

@@ -1,6 +1,34 @@
 # 部署说明
 
-更新日期为 2026-08-24。本文件记录源码中的部署入口、安全要求和最近一次 2.9.2 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-25。本文件记录源码中的部署入口、安全要求和最近一次 3.0.0 生产发布快照。任何后续部署仍需重新检查实时状态。
+
+## Version 3.0.1 pre-cutover status
+
+当前判断为 `SOURCE CANDIDATE / LOCAL GATES COMPLETE / NOT DEPLOYED`。3.0.0 部署源码已固定为 commit `35b5cce` 和 tag `v3.0.0-baseline`。3.0.1 工作树从该提交开始。公网 `/api/ready/` 仍返回 3.0.0，生产 API/Web image、`storage/backups/pre-v300-cutover-20260824-142628/deploy-record`、fresh database backup 和现有回退入口都保持不变。
+
+3.0.1 目标 migration 为 catalog 0035、0036、0037、0038 和 ingestion 0014，reading 仍为 0007。
+
+- catalog 0035 增加 Edition publication date，并为 ResearchRun 增加 canonical revision、draft session/hash、trigger input、current 和 superseded 状态。
+- catalog 0036 增加 ReadingPath learning goal、ReadingPathItem prerequisite，并允许 Subdiscipline EditorialRevision。catalog 0037 增加 Discipline EditorialRevision。
+- catalog 0038 设置 `atomic = False`。它按 ReadingPath 聚合已采用 Candidate，并在每条路径自己的事务中回填空的 learning goal 与 prerequisite。每条实际变化同步增加 CanonicalObjectRevision，并创建带稳定 idempotency key 的 DomainChangeEvent。migration 只前向运行，reverse 为 noop。
+- ingestion 0014 只扩展 EntityResolutionCandidate status choices，增加 `stale`。它不删除 Candidate 或 Evidence。
+
+本地 T3 已完成。初轮后端完整回归发现 3 个本轮影响面内的旧契约失败，契约更新后受影响 4 case 通过。发布安全审查关闭 Owner identity、迟到 Research candidate 和兼容 Global Search 正文权限三项高风险问题；所有编辑停止后，稳定最终代码完整回归为 897 passed、32 个环境型 skip。前端 production build 与 142 项完整 Node 测试发现 1 个旧选择器失败，修改后受影响文件 7 项通过。TypeScript、完整 lint、Django check、migration drift 和 `git diff --check` 通过。Workbench Playwright 首次因没有启动本地 API 而得到 3 个 `Internal Server Error`。启动 3.0.1 候选 API 后，同一套件 3 项通过。
+
+正式切换前仍需完成以下门槛。
+
+1. 从当前 3.0.0 生产生成 fresh BackupJob，复算归档 checksum，并恢复到 disposable PostgreSQL 16。
+   切换前还要确认生产邮箱在大小写无关比较下没有重复，并把唯一 Winston 管理员的有效邮箱写入受保护的 `LIBRARY_OWNER_EMAIL`，输出只保留脱敏布尔和数量。
+2. 在恢复副本顺序应用 catalog 0035 至 0038 和 ingestion 0014。核对 Work、Edition、Asset、Page、TextBlock、Passage、SemanticChunk、Person、KnowledgeNode、ReadingPath、ORIGINAL Asset 和活动索引的数量与 identity hash。
+3. 核对 0038 的候选输入、实际更新路径、Canonical revision 和 DomainChangeEvent 数量。重复执行等价逻辑应无重复写入。因为 0038 没有反向数据迁移，应用回退必须保留 additive schema。
+4. 使用保留新增 schema 的恢复副本验证 3.0.0 API 核心只读兼容性。失败时停止发布，不在生产执行 down migration 或 restore 覆盖。
+5. 从最终 release commit 构建明确 tag 的 API/Web image。API、默认 Worker、Ingestion Worker 与 Beat 使用同一 API image revision。
+6. 保存 pre-v301 Compose、环境文件校验、镜像 ID、源码 archive、活动索引、队列与核心 inventory。暂停 Beat 和 Worker 后应用 migration，再按 API、Worker、Beat、Web、Edge 顺序切换。
+7. 完成容器内 HTTP readiness、普通 Editor 关键旅程、Candidate 核实、有限页 OCR、CuratedClaim、Projection、公开页、Reader Range、Ask Evidence、Provider degradation、missing capability 和日志观察后，才可标记 3.0.1 已部署。
+
+4070 客户端当前只执行 `claim_extraction`。其他 capability 不能因 heartbeat 声明而写成已经有执行路径。Laptop 离线时需求保持 waiting，publication 不受阻。Library Synthesis Candidate 也尚未实现，不能在生产 smoke 中把 Source Abstract 或模型常识冒充为该能力。
+
+Research Source 扩展必须遵守源码中的边界。NCPSSD 只允许规则核对后的公开 metadata。全国联合编目必须使用配置的 Z39.50 endpoint 和 credential alias。CNKI、维普、万方只允许合法授权 Provider 或人工 Evidence 导入。Provider 缺失形成可见降级，不放宽 Candidate 与 Evidence 门槛。
 
 ## Version 3.0 Wave 4 cutover
 

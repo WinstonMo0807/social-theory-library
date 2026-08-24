@@ -133,7 +133,7 @@ def _edition_identity(target, observation: FieldObservation, context: dict) -> I
         if value and claimed_ids.get(key) and claimed_ids[key].replace("-", "").casefold() != value
     ]
     title_matches = bool(
-        _normalized_set(canonical_terms("edition", target))
+        _normalized_set([*canonical_terms("edition", target), *(context.get("canonical_terms") or [])])
         & _normalized_set([claims.get("title"), claims.get("original_title")])
     )
     corroborators = []
@@ -160,10 +160,10 @@ def _edition_identity(target, observation: FieldObservation, context: dict) -> I
     )
 
 
-def _work_identity(target_type: str, target, observation: FieldObservation) -> IdentityAssessment:
+def _work_identity(target_type: str, target, observation: FieldObservation, context: dict) -> IdentityAssessment:
     claims = observation.identity_claims or {}
     matches = sorted(
-        _normalized_set(canonical_terms(target_type, target))
+        _normalized_set([*canonical_terms(target_type, target), *(context.get("canonical_terms") or [])])
         & _normalized_set(
             [
                 claims.get("name"),
@@ -206,4 +206,4 @@ def assess_identity(
         return _person_identity(target, observation, context)
     if target_type == "edition":
         return _edition_identity(target, observation, context)
-    return _work_identity(target_type, target, observation)
+    return _work_identity(target_type, target, observation, context)

@@ -6,14 +6,14 @@ const editionId = "33333333-3333-4333-8333-333333333333";
 
 const labels = {
   file: "文件与识别",
-  work: "作品识别",
-  bibliography: "书目与出版",
-  contributors: "责任者与身份",
-  classification: "社科分类",
-  knowledge: "理论、主题与知识关系",
-  reader: "文本与阅读文件",
-  curation: "策展定位",
-  publication: "发布检查与上架",
+  work: "作品与原作",
+  bibliography: "书目与版本",
+  contributors: "作者与责任者",
+  classification: "学科与子学科",
+  knowledge: "理论、主题与争论",
+  reader: "阅读与定位",
+  curation: "知识策展与前台联动（可选）",
+  publication: "发布与投影",
 };
 
 type StepKey = keyof typeof labels;
@@ -127,10 +127,10 @@ test("focus mode validates, saves, collapses and advances without route navigati
   await page.getByRole("textbox", { name: "作品题名" }).fill("修订后的图书工作流");
   await page.getByRole("button", { name: "保存并继续" }).click();
   await expect(page).toHaveURL(new RegExp(`#bibliography$`));
-  await expect(page.getByRole("heading", { name: "书目与出版" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "书目与版本" })).toBeVisible();
   expect(mock.calls[0].path).toContain("sections/work");
 
-  await page.getByRole("button", { name: /作品识别/ }).first().click();
+  await page.getByRole("button", { name: /作品与原作/ }).first().click();
   await expect(page).toHaveURL(new RegExp(`#work$`));
 });
 
@@ -141,11 +141,9 @@ test("dirty canonical value survives refresh and leaving prompts", async ({ page
   await page.getByRole("button", { name: "刷新", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "副题名" })).toHaveValue("尚未保存的副题名");
   await expect(page.locator(".workflow-editor-header").getByText(/1 项未保存/)).toBeVisible();
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("未保存修改");
-    await dialog.dismiss();
-  });
   await page.getByRole("button", { name: "退出当前工作" }).click();
+  await expect(page.getByRole("dialog", { name: "当前工作有未保存修改" })).toBeVisible();
+  await page.getByRole("button", { name: "继续编辑" }).click();
   await expect(page).toHaveURL(new RegExp(`#work$`));
 });
 
@@ -165,7 +163,7 @@ test("journal fields, curation skip and warning confirmation preserve one editor
   await page.getByRole("button", { name: "暂不策展并继续" }).click();
   await expect(page).toHaveURL(new RegExp(`#publication$`));
   expect(mock.calls.some((call) => call.path.includes("sections/curation"))).toBe(true);
-  await page.getByRole("button", { name: "发布并留在当前项" }).click();
+  await page.getByRole("button", { name: "发布作品" }).click();
   await expect(page.getByRole("dialog", { name: "确认带警告发布" })).toBeVisible();
   await page.getByRole("button", { name: "确认发布" }).click();
   await expect(page).toHaveURL(

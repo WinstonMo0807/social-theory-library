@@ -186,6 +186,7 @@ _register(
 )
 
 for field_name, adapter in (
+    ("publication_date", "edition_publication_date"),
     ("publication_year", "edition_publication_year"),
     ("publisher", "edition_publisher"),
     ("isbn", "edition_isbn"),
@@ -194,7 +195,13 @@ for field_name, adapter in (
         "edition", field_name, FACTUAL, BIBLIOGRAPHIC_PRIORITY,
         structured=("bibliographic",), web=True, mutation=adapter,
         refresh=86400 * 365,
-        schema={"type": "integer" if field_name == "publication_year" else "string"},
+        schema=(
+            {"type": "integer"}
+            if field_name == "publication_year"
+            else {"type": "string", "format": "date"}
+            if field_name == "publication_date"
+            else {"type": "string"}
+        ),
     )
 
 for field_name in (

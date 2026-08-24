@@ -107,9 +107,15 @@ def _configured_values(name: str, default: str) -> set[str]:
 
 
 def _provider_enabled(provider: str) -> bool:
-    return provider.casefold() in _configured_values(
+    environment_default = provider.casefold() in _configured_values(
         "AUTHORITY_PROVIDER_ENABLED",
         "wikidata,viaf,loc,openalex",
+    )
+    from catalog.services.research_sources import research_source_enabled
+
+    return research_source_enabled(
+        provider,
+        environment_default=environment_default,
     )
 
 
@@ -537,7 +543,9 @@ def _loc_candidates(entity_type: str, query: str) -> tuple[list[dict], SourceRec
 
 
 def _openalex_candidates(query: str) -> tuple[list[dict], SourceRecord]:
-    api_key = str(getattr(settings, "OPENALEX_API_KEY", "") or "").strip()
+    from catalog.services.research_sources import resolve_source_credential
+
+    api_key = resolve_source_credential("openalex").strip()
     if not api_key:
         raise ValueError("OpenAlex 尚未配置 API Key")
     payload, record = _cached_payload("openalex", "person", query)

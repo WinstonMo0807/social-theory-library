@@ -10,17 +10,24 @@ from ingestion.models import EntityResolutionCandidate, MetadataCandidate, Uploa
 
 from catalog.models import (
     Asset,
+    Contribution,
     CuratedClaim,
+    Discipline,
     Edition,
     EditorialRevision,
     EnrichmentCandidate,
+    KnowledgeNode,
     KnowledgePublicationStatus,
     LegacyKnowledgeMapping,
     PublicationState,
+    Person,
     ReadingPathItem,
     RecommendationOverride,
     RelationReviewStatus,
+    Subdiscipline,
     TheoryReviewTask,
+    TheorySchool,
+    Topic,
     Work,
     WorkKnowledgeRelation,
     WorkTopicRelation,
@@ -234,11 +241,27 @@ def _contributors_data(edition: Edition, item: UploadItem | None) -> dict[str, A
         for contribution in edition.contributions.select_related("person").order_by("order", "created_at")
     ]
     if item:
-        candidate_rows = list(item.entity_resolution_candidates.filter(target_type="person"))
+        candidate_rows = list(
+            item.entity_resolution_candidates.filter(
+                target_type="person",
+                status__in=[
+                    EntityResolutionCandidate.Status.PROPOSED,
+                    EntityResolutionCandidate.Status.LINKED,
+                    EntityResolutionCandidate.Status.CREATE_DRAFT,
+                    EntityResolutionCandidate.Status.UNRESOLVED,
+                ],
+            )
+        )
         counts = Counter(row.source_name for row in candidate_rows)
         linked_names = {str(row["display_name"]).casefold() for row in rows}
         linked_person_ids = {str(row["person_id"]) for row in rows if row["person_id"]}
         for candidate in candidate_rows:
+            contribution_role = str(
+                (candidate.supporting_properties or {}).get("contribution_role")
+                or Contribution.Role.AUTHOR
+            )
+            if contribution_role not in Contribution.Role.values:
+                contribution_role = Contribution.Role.AUTHOR
             if (
                 candidate.source_name.casefold() in linked_names
                 or (
@@ -255,7 +278,7 @@ def _contributors_data(edition: Edition, item: UploadItem | None) -> dict[str, A
                     "id": None,
                     "person_id": None,
                     "display_name": candidate.source_name,
-                    "role": "author",
+                    "role": contribution_role,
                     "order": len(rows),
                     "approved": False,
                     "resolution_state": candidate.status,
@@ -446,6 +469,178 @@ def _reader_data(edition: Edition) -> dict[str, Any]:
     }
 
 
+def _apply_work_revision_preview(
+    data: dict[str, Any],
+    preview: dict[str, Any],
+    edition: Edition,
+) -> None:
+    """Materialize the current Work revision into Workbench-shaped sections."""
+
+    work_values = data["work"]
+    for field_name in set(work_values).intersection(preview):
+        if field_name not in {"expected_updated_at", "expected_work_updated_at"}:
+            work_values[field_name] = preview[field_name]
+
+    classification = preview.get("classification")
+    if isinstance(classification, dict):
+        discipline_rows = list(classification.get("disciplines") or [])
+        discipline_by_id = {
+            str(row.id): row
+            for row in Discipline.objects.filter(
+                pk__in=[row.get("id") for row in discipline_rows if isinstance(row, dict)]
+            )
+        }
+        primary = []
+        related = []
+        for source in discipline_rows:
+            if not isinstance(source, dict):
+                continue
+            target = discipline_by_id.get(str(source.get("id") or ""))
+            row = {
+                **source,
+                "name": target.name if target else "已移除的学科",
+                "slug": target.slug if target else "",
+                "review_status": "draft",
+            }
+            (primary if row.get("is_primary") else related).append(row)
+        subdiscipline_rows = list(classification.get("subdisciplines") or [])
+        subdiscipline_by_id = {
+            str(row.id): row
+            for row in Subdiscipline.objects.filter(
+                pk__in=[row.get("id") for row in subdiscipline_rows if isinstance(row, dict)]
+            )
+        }
+        data["classification"].update(
+            {
+                "primary_disciplines": primary,
+                "related_disciplines": related,
+                "subdisciplines": [
+                    {
+                        **row,
+                        "name": (
+                            subdiscipline_by_id[str(row.get("id") or "")].name
+                            if str(row.get("id") or "") in subdiscipline_by_id
+                            else "已移除的子学科"
+                        ),
+                        "slug": (
+                            subdiscipline_by_id[str(row.get("id") or "")].slug
+                            if str(row.get("id") or "") in subdiscipline_by_id
+                            else ""
+                        ),
+                        "review_status": "draft",
+                    }
+                    for row in subdiscipline_rows
+                    if isinstance(row, dict)
+                ],
+                "draft_revision": True,
+            }
+        )
+
+    knowledge = preview.get("knowledge")
+    if isinstance(knowledge, dict):
+        theory_rows = [row for row in knowledge.get("theories") or [] if isinstance(row, dict)]
+        topic_rows = [row for row in knowledge.get("topics") or [] if isinstance(row, dict)]
+        node_rows = [row for row in knowledge.get("nodes") or [] if isinstance(row, dict)]
+        theories = {
+            str(row.id): row
+            for row in TheorySchool.objects.filter(pk__in=[row.get("id") for row in theory_rows])
+        }
+        topics = {
+            str(row.id): row
+            for row in Topic.objects.filter(pk__in=[row.get("id") for row in topic_rows])
+        }
+        nodes = {
+            str(row.id): row
+            for row in KnowledgeNode.objects.filter(pk__in=[row.get("id") for row in node_rows])
+        }
+
+        def relation(source, *, target_type: str, label: str, slug: str = ""):
+            return {
+                **source,
+                "id": None,
+                "target_type": target_type,
+                "target_id": str(source.get("id") or ""),
+                "name": label,
+                "slug": slug,
+                "approved": False,
+                "review_status": "draft",
+                "evidence_summary": source.get("evidence_text") or "",
+            }
+
+        relations = []
+        for row in theory_rows:
+            target = theories.get(str(row.get("id") or ""))
+            relations.append(
+                relation(
+                    row,
+                    target_type="theory",
+                    label=target.name if target else "已移除的理论",
+                    slug=target.slug if target else "",
+                )
+            )
+        for row in topic_rows:
+            target = topics.get(str(row.get("id") or ""))
+            relations.append(
+                relation(
+                    row,
+                    target_type="topic",
+                    label=target.name if target else "已移除的主题",
+                    slug=target.slug if target else "",
+                )
+            )
+        for row in node_rows:
+            target = nodes.get(str(row.get("id") or ""))
+            relations.append(
+                relation(
+                    row,
+                    target_type="knowledge_node",
+                    label=target.canonical_name_zh if target else "已移除的知识节点",
+                    slug=target.slug if target else "",
+                )
+            )
+        data["knowledge"].update(
+            {"relations": relations, "draft_revision": True}
+        )
+
+    for section_name in ("bibliography", "contributors", "reader"):
+        section = preview.get(section_name)
+        if not isinstance(section, dict) or str(section.get("edition_id") or "") != str(edition.id):
+            continue
+        values = section.get("values")
+        if not isinstance(values, dict):
+            continue
+        if section_name == "bibliography":
+            data["bibliography"].update(values)
+            data["edition"].update(values)
+        elif section_name == "reader":
+            data["reader"].update(values)
+        else:
+            contributor_rows = list(values.get("contributors") or [])
+            people = {
+                str(row.id): row
+                for row in Person.objects.filter(
+                    pk__in=[row.get("person_id") for row in contributor_rows if isinstance(row, dict)]
+                )
+            }
+            data["contributors"]["items"] = [
+                {
+                    "id": None,
+                    **row,
+                    "display_name": (
+                        people[str(row.get("person_id") or "")].preferred_name
+                        if str(row.get("person_id") or "") in people
+                        else "已移除的人物"
+                    ),
+                    "approved": False,
+                    "resolution_state": "draft_revision",
+                    "candidate_count": 0,
+                }
+                for row in contributor_rows
+                if isinstance(row, dict)
+            ]
+        data[section_name]["draft_revision"] = True
+
+
 def _curation_data(workflow: dict[str, Any], work: Work) -> dict[str, Any]:
     summary = build_work_curation_summary(work.id)
     placements = [
@@ -629,7 +824,11 @@ def build_admin_workspace(
             status=EditorialRevision.Status.DRAFT,
         ).order_by("-revision").first()
         if pending_revision is not None:
-            data["work"].update(pending_revision.materialized_preview)
+            _apply_work_revision_preview(
+                data,
+                pending_revision.materialized_preview,
+                edition,
+            )
     serialized_revision = None
     if pending_revision is not None:
         from catalog.services.editorial_revision import serialize_editorial_revision
@@ -641,9 +840,9 @@ def build_admin_workspace(
             "item_id": str(item.id) if item else None,
             "work_id": str(work.id),
             "edition_id": str(edition.id),
-            "title": work.title,
+            "title": data["work"].get("title") or work.title,
             "filename": item.source_filename if item else (normalized.original_filename if normalized else ""),
-            "document_type": work.document_type,
+            "document_type": data["work"].get("document_type") or work.document_type,
             "publication_state": edition.state,
             "pdf_preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
                 f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""

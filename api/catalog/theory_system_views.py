@@ -57,6 +57,7 @@ from .services.knowledge_nodes import (
     rollback_merge,
 )
 from .services.scoped_search import SearchContext, SearchService
+from .services.semantic_search import viewer_access_statuses
 from .theory_serializers import (
     AdminKnowledgeNodeSerializer,
     AdminKnowledgeRelationSerializer,
@@ -90,6 +91,14 @@ class PublicEvidenceFocusView(TheorySystemFeatureMixin, APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
+        authenticated = bool(request.user.is_authenticated)
+        staff = bool(
+            authenticated
+            and (
+                request.user.is_staff
+                or getattr(request.user, "role", "") in {"admin", "editor", "reviewer"}
+            )
+        )
         evidence = get_object_or_404(
             EvidenceSnippet.objects.select_related(
                 "file",
@@ -103,6 +112,10 @@ class PublicEvidenceFocusView(TheorySystemFeatureMixin, APIView):
                 file__kind=Asset.Kind.NORMALIZED,
                 file__status=Asset.Status.READY,
                 file__is_current=True,
+                file__access_status__in=viewer_access_statuses(
+                    authenticated=authenticated,
+                    staff=staff,
+                ),
                 work__editions__state=PublicationState.PUBLISHED,
             ).distinct(),
         )

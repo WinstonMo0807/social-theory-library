@@ -31,16 +31,22 @@ def _claim_research_task(run_id, task_id: str) -> tuple[bool, str]:
         run = ResearchRun.objects.select_for_update(of=("self",)).get(pk=run_id)
         if (
             run.status == ResearchRun.Status.QUEUED
+            and run.is_current
             and not str(run.task_id or "").strip()
         ):
             run.task_id = task_id
-        if run.status == ResearchRun.Status.QUEUED and str(run.task_id or "").strip() == task_id:
+        if run.status == ResearchRun.Status.QUEUED and run.is_current and str(run.task_id or "").strip() == task_id:
             # Refresh the row at the moment the Worker actually claims it. A
             # legitimately queued task may have waited longer than the stale
             # threshold while still being owned by Celery.
             run.updated_at = now
             run.save(update_fields=["task_id", "updated_at"])
-        return str(run.task_id or "").strip() == task_id, run.status
+        return (
+            run.status == ResearchRun.Status.QUEUED
+            and run.is_current
+            and str(run.task_id or "").strip() == task_id,
+            run.status,
+        )
 
 
 def _write_research_task_terminal(
@@ -59,6 +65,7 @@ def _write_research_task_terminal(
             return None
         if (
             run.status not in {ResearchRun.Status.QUEUED, ResearchRun.Status.RUNNING}
+            or not run.is_current
             or str(run.task_id or "").strip() != task_id
         ):
             return run.status

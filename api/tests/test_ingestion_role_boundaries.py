@@ -29,7 +29,7 @@ def test_catalog_writers_can_create_upload_batches(api_client, role):
     assert response.status_code == 201
 
 
-def test_reviewer_can_read_review_queue_but_cannot_create_or_delete_ingestion_records(
+def test_legacy_reviewer_is_normalized_to_editor_for_ingestion(
     api_client,
     admin_user,
 ):
@@ -44,7 +44,7 @@ def test_reviewer_can_read_review_queue_but_cannot_create_or_delete_ingestion_re
     )
 
     assert list_response.status_code == 200
-    assert create_response.status_code == 403
+    assert create_response.status_code == 201
 
 
 def test_reader_cannot_open_ingestion_queue(api_client, reader_user):

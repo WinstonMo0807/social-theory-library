@@ -23,6 +23,7 @@ class Capability:
     VIEW_SEMANTIC_INDEX = "can_view_semantic_index"
     MANAGE_SEMANTIC_INDEX = "can_manage_semantic_index"
     MANAGE_AI = "can_manage_ai"
+    CONFIGURE_PROVIDERS = "can_configure_providers"
     MANAGE_AI_PROVIDERS = "can_manage_ai_providers"
     MANAGE_AI_MODELS = "can_manage_ai_models"
     MANAGE_PROMPT_REGISTRY = "can_manage_prompt_registry"
@@ -56,12 +57,6 @@ ROLE_CAPABILITIES = {
         Capability.PUBLISH_AUTHORITY,
         Capability.RUN_ENRICHMENT,
     },
-    "reviewer": STAFF_BASE
-    | {
-        Capability.EDIT_METADATA,
-        Capability.EDIT_DRAFT_AUTHORITY,
-        Capability.REVIEW_CANDIDATE,
-    },
     "admin": STAFF_BASE
     | {
         Capability.UPLOAD,
@@ -74,6 +69,9 @@ ROLE_CAPABILITIES = {
         Capability.RUN_ENRICHMENT,
         Capability.RETRY_JOBS,
         Capability.MANAGE_SEARCH_RUNTIME,
+        Capability.MANAGE_AI,
+        Capability.CONFIGURE_PROVIDERS,
+        Capability.MANAGE_USERS,
         Capability.VIEW_QUERY_LEXICON,
         Capability.VIEW_SEMANTIC_INDEX,
         Capability.VIEW_SYSTEM_STATUS,
@@ -81,24 +79,32 @@ ROLE_CAPABILITIES = {
     },
 }
 
-SUPERADMIN_ONLY_CAPABILITIES = {
+# Retirement condition: remove this alias after production inventory reports no
+# stored ``reviewer`` values and every client consumes only the three roles.
+LEGACY_ROLE_ALIASES = {"reviewer": "editor"}
+
+OWNER_ONLY_CAPABILITIES = {
     Capability.MANAGE_QUERY_LEXICON,
     Capability.MANAGE_SEMANTIC_INDEX,
-    Capability.MANAGE_AI,
     Capability.MANAGE_AI_PROVIDERS,
     Capability.MANAGE_AI_MODELS,
     Capability.MANAGE_PROMPT_REGISTRY,
     Capability.MANAGE_GLOBAL_PROJECTION,
     Capability.MERGE_AUTHORITY,
     Capability.RUN_SYSTEM_RECOVERY,
-    Capability.MANAGE_USERS,
     Capability.MANAGE_ROLES,
     Capability.RUN_BACKUP,
     Capability.DESTRUCTIVE_MAINTENANCE,
     Capability.VIEW_MIGRATIONS,
 }
 
-SUPERADMIN_CAPABILITIES = ROLE_CAPABILITIES["admin"] | SUPERADMIN_ONLY_CAPABILITIES
+OWNER_CAPABILITIES = ROLE_CAPABILITIES["admin"] | OWNER_ONLY_CAPABILITIES
+
+# Temporary import compatibility for integrations written against 3.0.0.
+# These aliases now mean System Owner, not an arbitrary Django superuser.
+# Retirement condition: remove them when all imports use OWNER_* names.
+SUPERADMIN_ONLY_CAPABILITIES = OWNER_ONLY_CAPABILITIES
+SUPERADMIN_CAPABILITIES = OWNER_CAPABILITIES
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,9 +122,13 @@ class CapabilitySnapshot:
 def capability_snapshot(user) -> CapabilitySnapshot:
     if not user or not getattr(user, "is_authenticated", False):
         return CapabilitySnapshot("anonymous", ())
-    if getattr(user, "is_superuser", False) or is_library_owner(user):
-        return CapabilitySnapshot("superadmin", tuple(sorted(SUPERADMIN_CAPABILITIES)))
+    if is_library_owner(user):
+        # Keep the 3.0.0 transport value until web/session consumers use the
+        # explicit owner flag. The decisive boundary is the configured owner
+        # identity, never the broad Django ``is_superuser`` flag.
+        return CapabilitySnapshot("superadmin", tuple(sorted(OWNER_CAPABILITIES)))
     role = str(getattr(user, "role", "reader") or "reader")
+    role = LEGACY_ROLE_ALIASES.get(role, role)
     return CapabilitySnapshot(role, tuple(sorted(ROLE_CAPABILITIES.get(role, set()))))
 
 

@@ -22,7 +22,7 @@ class CanViewEvidence(RequiresCapability):
 
 class CanReviewCandidate(RequiresCapability):
     capability = Capability.REVIEW_CANDIDATE
-    message = "仅管理员或审核者可以决定候选。"
+    message = "仅 Editor 或 Administrator 可以决定候选。"
 
 
 class CanReviewCandidateOrCreateAuthority(BasePermission):
@@ -41,7 +41,7 @@ class CanReviewCandidateOrCreateAuthority(BasePermission):
 
 class CanManageQueryLexicon(RequiresCapability):
     capability = Capability.MANAGE_QUERY_LEXICON
-    message = "只有超级管理员可以执行 QueryLexicon reconciliation。"
+    message = "只有 System Owner 可以执行 QueryLexicon reconciliation。"
 
 
 class CanViewQueryLexicon(RequiresCapability):
@@ -56,7 +56,7 @@ class CanViewSystemStatus(RequiresCapability):
 
 class CanRunBackup(RequiresCapability):
     capability = Capability.RUN_BACKUP
-    message = "只有超级管理员可以运行正式备份。"
+    message = "只有 System Owner 可以运行正式备份。"
 
 
 class CanUpload(RequiresCapability):
@@ -96,7 +96,7 @@ class CanRetryJobs(RequiresCapability):
 
 class CanManageSemanticIndex(RequiresCapability):
     capability = Capability.MANAGE_SEMANTIC_INDEX
-    message = "只有超级管理员可以切换 semantic index。"
+    message = "只有 System Owner 可以切换 semantic index。"
 
 
 class CanViewSemanticIndex(RequiresCapability):
@@ -106,37 +106,47 @@ class CanViewSemanticIndex(RequiresCapability):
 
 class CanManageAI(RequiresCapability):
     capability = Capability.MANAGE_AI
-    message = "只有超级管理员可以管理 AI runtime。"
+    message = "当前账户不能管理非敏感 AI runtime 配置。"
+
+
+class CanConfigureProviders(RequiresCapability):
+    capability = Capability.CONFIGURE_PROVIDERS
+    message = "当前账户不能配置非敏感 Provider 参数。"
 
 
 class CanManageProviders(RequiresCapability):
     capability = Capability.MANAGE_AI_PROVIDERS
-    message = "只有超级管理员可以管理 Provider。"
+    message = "只有 System Owner 可以执行 Provider 删除或敏感管理。"
 
 
 class CanManageModels(RequiresCapability):
     capability = Capability.MANAGE_AI_MODELS
-    message = "只有超级管理员可以管理 AI 模型。"
+    message = "只有 System Owner 可以管理 AI 模型。"
 
 
 class CanManagePromptRegistry(RequiresCapability):
     capability = Capability.MANAGE_PROMPT_REGISTRY
-    message = "只有超级管理员可以管理 Prompt Registry。"
+    message = "只有 System Owner 可以管理 Prompt Registry。"
 
 
 class CanManageGlobalProjection(RequiresCapability):
     capability = Capability.MANAGE_GLOBAL_PROJECTION
-    message = "只有超级管理员可以执行全局 Projection 操作。"
+    message = "只有 System Owner 可以执行全局 Projection 操作。"
 
 
 class CanMergeAuthority(RequiresCapability):
     capability = Capability.MERGE_AUTHORITY
-    message = "只有超级管理员可以合并 Authority。"
+    message = "只有 System Owner 可以合并 Authority。"
 
 
 class CanRunSystemRecovery(RequiresCapability):
     capability = Capability.RUN_SYSTEM_RECOVERY
-    message = "只有超级管理员可以执行系统恢复。"
+    message = "只有 System Owner 可以执行全局系统恢复。"
+
+
+class CanRunDestructiveMaintenance(RequiresCapability):
+    capability = Capability.DESTRUCTIVE_MAINTENANCE
+    message = "只有 System Owner 可以执行破坏性维护。"
 
 
 class CanManageUsers(RequiresCapability):
@@ -165,24 +175,18 @@ class IsCatalogEditor(BasePermission):
     message = "仅管理员或编辑可执行入库写操作。"
 
     def has_permission(self, request, view):
-        return bool(
-            (
-                has_capability(request.user, Capability.EDIT_METADATA)
-                and not has_capability(request.user, Capability.REVIEW_CANDIDATE)
-            )
-            or has_capability(request.user, Capability.PUBLISH_WORK)
-        )
+        return has_capability(request.user, Capability.EDIT_METADATA)
 
 
 class IsKnowledgeEditor(BasePermission):
-    message = "仅管理员、编辑或审核者可维护知识内容。"
+    message = "仅 Editor 或 Administrator 可维护知识内容。"
 
     def has_permission(self, request, view):
         return has_capability(request.user, Capability.EDIT_DRAFT_AUTHORITY)
 
 
 class IsKnowledgeReviewer(BasePermission):
-    message = "仅管理员或审核者可执行审核。"
+    message = "仅 Editor 或 Administrator 可执行候选决策。"
 
     def has_permission(self, request, view):
         return has_capability(request.user, Capability.REVIEW_CANDIDATE)

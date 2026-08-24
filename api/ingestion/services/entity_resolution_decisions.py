@@ -17,6 +17,7 @@ from catalog.models import (
     Person,
     PublicationState,
     PublisherAuthority,
+    ScholarProfile,
     Work,
 )
 from ingestion.models import DecisionLog, EntityResolutionCandidate, ReviewTask, UploadItem
@@ -68,6 +69,19 @@ def available_resolution_actions(candidate: EntityResolutionCandidate) -> list[s
     if candidate.status != EntityResolutionCandidate.Status.PROPOSED:
         return []
 
+    properties = candidate.supporting_properties or {}
+    candidate_group = str(properties.get("candidate_group") or "").strip().casefold()
+    evidence_status = str(properties.get("evidence_status") or "").strip().casefold()
+    provider = str(properties.get("provider") or "").strip().casefold()
+    is_search_lead = (
+        candidate_group in {"external_web", "research_lead"}
+        or provider in {"searxng", "web_search", "searching"}
+    )
+    if is_search_lead and evidence_status not in {"verified_text", "web_evidence"}:
+        # Search snippets can be rejected, but must be fetched and evidenced
+        # before any canonical/draft adoption action becomes available.
+        return ["reject"]
+
     actions: list[str] = []
     expected = TARGET_MODELS.get(candidate.target_type)
     if (
@@ -84,7 +98,6 @@ def available_resolution_actions(candidate: EntityResolutionCandidate) -> list[s
     if is_draft_choice:
         actions.append("keep_unresolved")
     actions.append("reject")
-    properties = candidate.supporting_properties or {}
     policy_key = "research_allowed_resolution_actions"
     if policy_key in properties:
         allowed = {
@@ -132,7 +145,78 @@ def _unique_node_slug(name: str) -> str:
     return candidate
 
 
-def _link_existing(candidate: EntityResolutionCandidate, *, target_id: str, confirm_identity: bool):
+def _unique_scholar_slug(name: str, person_id) -> str:
+    base = slugify(name, allow_unicode=True)[:140] or f"scholar-{str(person_id)[:8]}"
+    candidate = base
+    counter = 1
+    while ScholarProfile.objects.filter(slug=candidate).exists():
+        counter += 1
+        candidate = f"{base}-{counter}"
+    return candidate
+
+
+def _contribution_role(candidate: EntityResolutionCandidate) -> str:
+    role = str(
+        (candidate.supporting_properties or {}).get("contribution_role")
+        or Contribution.Role.AUTHOR
+    )
+    if role not in Contribution.Role.values:
+        raise ResolutionDecisionError("责任者候选缺少有效角色，请重新生成候选。")
+    return role
+
+
+def _draft_publisher_revision(
+    candidate: EntityResolutionCandidate,
+    *,
+    edition: Edition,
+    publisher: PublisherAuthority,
+    actor,
+) -> None:
+    from catalog.services.admin_workflow import BIBLIOGRAPHY_FIELDS
+    from catalog.services.editorial_revision import (
+        EditorialRevisionError,
+        save_workflow_editorial_revision,
+    )
+
+    values = {field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS}
+    values["publisher_authority_id"] = str(publisher.id)
+    if not str(values.get("publisher") or "").strip():
+        values["publisher"] = publisher.canonical_name
+    try:
+        revision = save_workflow_editorial_revision(
+            work_id=edition.work_id,
+            section_patch={
+                "bibliography": {
+                    "edition_id": str(edition.id),
+                    "values": values,
+                }
+            },
+            actor=actor,
+            idempotency_key=(
+                f"entity-resolution:{candidate.id}:publisher:{publisher.id}"
+            ),
+            change_note="Publisher 实体候选已采用，等待单人发布确认。",
+        )
+    except EditorialRevisionError as exc:
+        raise ResolutionDecisionError(str(exc)) from exc
+    properties = dict(candidate.supporting_properties or {})
+    properties.update(
+        {
+            "canonical_write_deferred": True,
+            "editorial_revision_id": str(revision.id) if revision is not None else "",
+            "editorial_revision_target": "bibliography.publisher_authority_id",
+        }
+    )
+    candidate.supporting_properties = properties
+
+
+def _link_existing(
+    candidate: EntityResolutionCandidate,
+    *,
+    target_id: str,
+    confirm_identity: bool,
+    actor,
+):
     model_config = TARGET_MODELS.get(candidate.target_type)
     if model_config is None:
         raise ResolutionDecisionError("不支持该实体类型。")
@@ -151,10 +235,11 @@ def _link_existing(candidate: EntityResolutionCandidate, *, target_id: str, conf
 
     item = candidate.upload_item
     if candidate.target_type == "person" and item.edition_id:
+        role = _contribution_role(candidate)
         contribution, created = Contribution.objects.get_or_create(
             edition_id=item.edition_id,
             person=entity,
-            role=Contribution.Role.AUTHOR,
+            role=role,
             defaults={
                 "source": "entity_resolution",
                 "confidence": 1,
@@ -173,8 +258,16 @@ def _link_existing(candidate: EntityResolutionCandidate, *, target_id: str, conf
         edition.save(update_fields=["work", "updated_at"])
     elif candidate.target_type == "publisher" and item.edition_id:
         edition = item.edition
-        edition.publisher_authority = entity
-        edition.save(update_fields=["publisher_authority", "updated_at"])
+        if edition.state == PublicationState.PUBLISHED:
+            _draft_publisher_revision(
+                candidate,
+                edition=edition,
+                publisher=entity,
+                actor=actor,
+            )
+        else:
+            edition.publisher_authority = entity
+            edition.save(update_fields=["publisher_authority", "updated_at"])
     elif candidate.target_type == "organization" and item.edition_id:
         role = str(candidate.supporting_properties.get("organization_role") or "").strip()
         if role not in OrganizationContribution.Role.values:
@@ -202,16 +295,22 @@ def _create_draft(candidate: EntityResolutionCandidate, *, actor):
 
     item = candidate.upload_item
     if candidate.target_type == "person":
+        role = _contribution_role(candidate)
         entity = Person.objects.create(
             preferred_name=name,
             sort_name=name,
             authority_status=Person.AuthorityStatus.DRAFT,
         )
+        ScholarProfile.objects.create(
+            person=entity,
+            slug=_unique_scholar_slug(name, entity.id),
+            editorial_status="draft",
+        )
         if item.edition_id:
             Contribution.objects.update_or_create(
                 edition_id=item.edition_id,
                 person=entity,
-                role=Contribution.Role.AUTHOR,
+                role=role,
                 defaults={
                     "source": "entity_resolution",
                     "confidence": 1,
@@ -272,6 +371,36 @@ def _create_draft(candidate: EntityResolutionCandidate, *, actor):
     return entity
 
 
+def _keep_unresolved_contributor(candidate: EntityResolutionCandidate):
+    if candidate.target_type != "person":
+        return None
+    name = " ".join(candidate.source_name.split()).strip()
+    if not name:
+        raise ResolutionDecisionError("候选名称为空，不能添加责任者。")
+    role = _contribution_role(candidate)
+    person = Person.objects.create(
+        preferred_name=name,
+        sort_name=name,
+        authority_status=Person.AuthorityStatus.DRAFT,
+    )
+    if candidate.upload_item.edition_id:
+        Contribution.objects.create(
+            edition_id=candidate.upload_item.edition_id,
+            person=person,
+            role=role,
+            source="entity_resolution_unresolved",
+            confidence=1,
+            approved=False,
+        )
+    candidate.candidate_entity_type = "person"
+    candidate.candidate_entity_id = str(person.id)
+    candidate.label = person.preferred_name
+    properties = dict(candidate.supporting_properties or {})
+    properties["contributor_only"] = True
+    candidate.supporting_properties = properties
+    return person
+
+
 def _resolved_status_matches(candidate: EntityResolutionCandidate, *, action: str, target_id: str) -> bool:
     if candidate.status != ACTION_STATUS[action]:
         return False
@@ -290,7 +419,7 @@ def _contribution_snapshot(candidate: EntityResolutionCandidate, target_id: str)
     contribution = Contribution.objects.filter(
         edition_id=candidate.upload_item.edition_id,
         person_id=target_id,
-        role=Contribution.Role.AUTHOR,
+        role=_contribution_role(candidate),
     ).first()
     if contribution is None:
         return None
@@ -446,9 +575,12 @@ def decide_entity_resolution(
             candidate,
             target_id=target_id,
             confirm_identity=confirm_identity,
+            actor=actor,
         )
     elif action == "create_draft":
         entity = _create_draft(candidate, actor=actor)
+    elif action == "keep_unresolved":
+        entity = _keep_unresolved_contributor(candidate)
 
     now = timezone.now()
     candidate.status = ACTION_STATUS[action]
@@ -459,6 +591,7 @@ def decide_entity_resolution(
             "candidate_entity_type",
             "candidate_entity_id",
             "label",
+            "supporting_properties",
             "status",
             "reviewed_by",
             "reviewed_at",
@@ -503,7 +636,9 @@ def decide_entity_resolution(
             "status": candidate.status,
             "candidate_entity_type": candidate.candidate_entity_type,
             "candidate_entity_id": candidate.candidate_entity_id,
-            "entity_is_draft": action == "create_draft",
+            "entity_is_draft": action == "create_draft" or (
+                action == "keep_unresolved" and candidate.target_type == "person"
+            ),
             "rejected_sibling_ids": rejected_siblings,
             "source_name": candidate.source_name,
             "source_record_id": str(candidate.source_record_id) if candidate.source_record_id else "",
@@ -600,8 +735,12 @@ def _archive_created_entity(decision: DecisionLog) -> None:
         person = Person.objects.select_for_update().get(pk=target_id)
         if person.authority_status != Person.AuthorityStatus.DRAFT:
             raise ResolutionDecisionError("新建人物草稿已进入后续审核，不能自动撤销。")
-        if hasattr(person, "scholar_profile"):
-            raise ResolutionDecisionError("新建人物草稿已建立公开策展资料，不能自动撤销。")
+        profile = getattr(person, "scholar_profile", None)
+        if profile is not None:
+            if profile.editorial_status != "draft":
+                raise ResolutionDecisionError("新建学者主页已进入后续审核，不能自动撤销。")
+            profile.editorial_status = "archived"
+            profile.save(update_fields=["editorial_status", "updated_at"])
         if person.contributions.exists():
             raise ResolutionDecisionError("新建人物草稿仍有关联作品，不能自动归档。")
         person.authority_status = Person.AuthorityStatus.ARCHIVED

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -24,7 +25,6 @@ from ingestion.services.publication import (
 
 from catalog.models import (
     Asset,
-    CanonicalObjectRevision,
     Edition,
     EditorialRevision,
     EnrichmentCandidate,
@@ -46,10 +46,10 @@ from catalog.services.work_editor import (
     save_workflow_section,
 )
 from catalog.services.editorial_revision import (
+    EditorialRevisionConflict,
     EditorialRevisionError,
-    changed_editorial_patch,
-    create_editorial_revision,
-    editorial_idempotency_key,
+    publish_editorial_revision,
+    save_workflow_editorial_revision,
     serialize_editorial_revision,
 )
 from catalog.workflow_serializers import SECTION_SERIALIZERS
@@ -69,6 +69,17 @@ def _edit_error(error: WorkflowEditError) -> Response:
             else status.HTTP_400_BAD_REQUEST
         ),
     )
+
+
+def _confirm_section(request_data) -> bool:
+    value = request_data.get("confirm_section", True)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.strip().lower() in {"true", "1", "yes"}:
+        return True
+    if isinstance(value, str) and value.strip().lower() in {"false", "0", "no"}:
+        return False
+    raise WorkflowEditError("confirm_section 必须是布尔值。")
 
 
 def _section_input(step_key: str, request_data) -> dict:
@@ -176,11 +187,13 @@ class IntakeWorkflowSectionView(WorkflowSectionPermissionMixin, APIView):
         serializer = serializer_class(data=_section_input(step_key, request.data), partial=True)
         serializer.is_valid(raise_exception=True)
         try:
+            confirm_section = _confirm_section(request.data)
             save_workflow_section(
                 edition,
                 step_key,
                 serializer.validated_data,
                 actor=request.user,
+                confirm_section=confirm_section,
             )
         except WorkflowEditError as error:
             return _edit_error(error)
@@ -229,7 +242,18 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
             return Response({"detail": "未知或不可编辑的工作流步骤。"}, status=400)
         serializer = serializer_class(data=_section_input(step_key, request.data), partial=True)
         serializer.is_valid(raise_exception=True)
-        if step_key in {"work", "classification", "knowledge"} and edition.work.editions.filter(
+        try:
+            confirm_section = _confirm_section(request.data)
+        except WorkflowEditError as error:
+            return _edit_error(error)
+        if step_key in {
+            "work",
+            "bibliography",
+            "contributors",
+            "classification",
+            "knowledge",
+            "reader",
+        } and edition.work.editions.filter(
             state="published"
         ).exists():
             raw_values = dict(serializer.validated_data)
@@ -257,50 +281,32 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
                         "abstract",
                     }
                 }
-            else:
+            elif step_key in {"classification", "knowledge"}:
                 patch = {step_key: raw_values}
+            else:
+                patch = {
+                    step_key: {
+                        "edition_id": str(edition.id),
+                        "values": raw_values,
+                    }
+                }
             try:
-                patch = changed_editorial_patch(
-                    target_type=EditorialRevision.TargetType.WORK,
-                    target=edition.work,
-                    patch=patch,
+                revision = save_workflow_editorial_revision(
+                    work_id=edition.work_id,
+                    section_patch=patch,
+                    actor=request.user,
+                    idempotency_key=str(
+                        request.headers.get("Idempotency-Key") or ""
+                    ).strip(),
+                    change_note=change_note or "馆藏维护工作台保存正式作品草稿",
                 )
-                if patch:
-                    current_revision = (
-                        CanonicalObjectRevision.objects.filter(
-                            object_type=EditorialRevision.TargetType.WORK,
-                            object_id=edition.work_id,
-                        )
-                        .values_list("current_revision", flat=True)
-                        .first()
-                        or 0
-                    )
-                    revision = create_editorial_revision(
-                        target_type=EditorialRevision.TargetType.WORK,
-                        target_id=edition.work_id,
-                        patch=patch,
-                        actor=request.user,
-                        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
-                        or editorial_idempotency_key(
-                            target_type=EditorialRevision.TargetType.WORK,
-                            target_id=edition.work_id,
-                            base_revision=current_revision,
-                            patch=patch,
-                        ),
-                        change_note=change_note or "馆藏维护工作台保存正式作品草稿",
-                    )
+                if revision is not None:
                     workspace = build_admin_workspace(
                         edition,
                         user=request.user,
                         mode="maintenance",
                     )
                     workspace["editorial_revision"] = serialize_editorial_revision(revision)
-                    if step_key == "work":
-                        workspace["data"]["work"].update(revision.materialized_preview)
-                    else:
-                        workspace["data"][step_key]["draft_revision"] = (
-                            revision.materialized_preview.get(step_key)
-                        )
                     return Response(workspace, status=status.HTTP_202_ACCEPTED)
                 return Response(
                     build_admin_workspace(
@@ -320,6 +326,7 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
                 step_key,
                 serializer.validated_data,
                 actor=request.user,
+                confirm_section=confirm_section,
             )
         except WorkflowEditError as error:
             return _edit_error(error)
@@ -440,14 +447,41 @@ class WorkMaintenancePublicationView(APIView):
         confirmed = request.data.get("confirm_warnings") is True or str(
             request.data.get("confirm_warnings") or ""
         ).casefold() in {"1", "true", "yes"}
+        published_revision = None
         try:
-            edition = publish_edition(
-                edition,
-                actor=request.user,
-                idempotency_key=f"maintenance:{edition.id}:{edition.updated_at.isoformat()}",
-                allow_low_confidence=True,
-                confirm_warnings=confirmed,
-            )
+            # One publication action owns the complete public mutation.  A
+            # warning or blocker raised by Edition publication therefore also
+            # rolls back a pending Work EditorialRevision and its projection
+            # events instead of leaving a half-published canonical object.
+            with transaction.atomic():
+                pending_revision = (
+                    EditorialRevision.objects.select_for_update()
+                    .filter(
+                        target_type=EditorialRevision.TargetType.WORK,
+                        target_id=edition.work_id,
+                        status=EditorialRevision.Status.DRAFT,
+                    )
+                    .order_by("-revision")
+                    .first()
+                )
+                if pending_revision is not None:
+                    published_revision = publish_editorial_revision(
+                        pending_revision.id,
+                        actor=request.user,
+                    )
+                edition = Edition.objects.select_related("work").get(pk=edition.pk)
+                edition = publish_edition(
+                    edition,
+                    actor=request.user,
+                    idempotency_key=(
+                        f"maintenance:{edition.id}:revision:{published_revision.id}"
+                        if published_revision is not None
+                        else f"maintenance:{edition.id}:{edition.updated_at.isoformat()}"
+                    ),
+                    allow_low_confidence=True,
+                    confirm_warnings=confirmed,
+                    force_update=published_revision is not None,
+                )
         except PublicationBlocked as error:
             return Response(
                 {"detail": "存在阻止发布的技术问题。", "blockers": error.reasons},
@@ -461,6 +495,22 @@ class WorkMaintenancePublicationView(APIView):
                     "confirmation_required": True,
                 },
                 status=409,
+            )
+        except (EditorialRevisionConflict, EditorialRevisionError) as error:
+            return Response(
+                {
+                    "detail": str(error),
+                    "code": (
+                        "editorial_revision_conflict"
+                        if isinstance(error, EditorialRevisionConflict)
+                        else "editorial_revision_error"
+                    ),
+                },
+                status=(
+                    status.HTTP_409_CONFLICT
+                    if isinstance(error, EditorialRevisionConflict)
+                    else status.HTTP_400_BAD_REQUEST
+                ),
             )
         index_warning = ""
         normalized = edition.assets.filter(
@@ -483,6 +533,11 @@ class WorkMaintenancePublicationView(APIView):
                 **workspace,
                 "detail": "馆藏版本已发布。",
                 "index_warning": index_warning,
+                "published_editorial_revision": (
+                    serialize_editorial_revision(published_revision)
+                    if published_revision is not None
+                    else None
+                ),
                 "maintenance_url": (
                     f"/admin/library/works/{work_id}"
                     f"?edition={edition.id}#publication"

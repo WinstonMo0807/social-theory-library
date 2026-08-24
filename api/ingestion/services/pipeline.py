@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.files import File
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.text import slugify
 
 from catalog.models import (
@@ -26,6 +27,7 @@ from distribution.services import cloud_budget_allows_new_publication
 from distribution.tasks import sync_cloud_object
 from catalog.services.covers import generate_cover_candidates, generate_recommendation_image
 from catalog.services.document_intelligence import best_effort_native_extraction
+from catalog.services.front_matter_intelligence import run_front_matter_intelligence
 from catalog.services.semantic_indexing import queue_semantic_job, remove_semantic_asset
 from catalog.services.publication_places import detect_publication_places
 from catalog.services.theory_suggestions import generate_theory_review_tasks
@@ -59,10 +61,9 @@ from .metadata import (
     overall_confidence,
     select_best,
 )
-from .provider_gateway import enrich_candidates_with_gateway
-from .reconciliation import persist_resolution_candidates, propose_author_reconciliation
+from .reconciliation import persist_resolution_candidates
 from .publication import PublicationBlocked, publication_readiness, publish_edition
-from .processing import queue_ocr_job, queue_page_label_job
+from .processing import queue_external_enrichment_job, queue_ocr_job, queue_page_label_job
 from .prerequisites import (
     InitialIngestionPrerequisiteNotReady,
     initial_ingestion_block_message,
@@ -274,18 +275,50 @@ def _reload_candidates(item: UploadItem) -> list[Candidate]:
     ]
 
 
-def _propose_people(item: UploadItem, authors: list[str]) -> int:
-    """Generate reconciliation choices without creating or publishing authority entities."""
+def _propose_people(
+    item: UploadItem,
+    names: list[str],
+    *,
+    role: str = Contribution.Role.AUTHOR,
+) -> int:
+    """Generate role-aware choices without creating or publishing Person rows."""
 
-    return propose_author_reconciliation(item, authors)
+    count = 0
+    for name in names:
+        count += len(
+            persist_resolution_candidates(
+                item,
+                target_type="person",
+                source_name=str(name),
+                supporting_properties={
+                    "research_field": f"contributors.{role}s",
+                    "contribution_role": role,
+                    "candidate_group": "in_library_evidence",
+                },
+            )
+        )
+    return count
 
 
 @transaction.atomic
 def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list[Candidate], first_text: str):
     reused_existing_edition = False
+    reused_existing_work = False
+    reconciliation = dict((item.preflight_summary or {}).get("catalog_reconciliation") or {})
+    reconciliation_mode = str(reconciliation.get("mode") or "")
     if item.edition_id:
         edition = Edition.objects.select_for_update().select_related("work").get(pk=item.edition_id)
         work = edition.work
+        if (
+            item.replacement_of_asset_id
+            or reconciliation_mode == "existing_edition"
+            or edition.state in {PublicationState.PUBLISHED, PublicationState.WITHDRAWN}
+        ):
+            # Extraction may continue to add auditable candidates, but an
+            # existing or published canonical edition is changed only through
+            # the editor/revision workflow.
+            return edition
+        reused_existing_work = reconciliation_mode == "existing_work"
     else:
         title = str(selected.get("title", "")).strip()
         if title:
@@ -304,6 +337,7 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
         elif catalog_match.mode == "existing_work" and catalog_match.work is not None:
             work = Work.objects.select_for_update().get(pk=catalog_match.work.pk)
             edition = Edition.objects.create(work=work)
+            reused_existing_work = True
         else:
             work = Work.objects.create(
                 document_type=selected.get("document_type", "book"),
@@ -330,18 +364,33 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
         return edition
 
     locked_fields = set(edition.field_locks.values_list("field_name", flat=True))
-    if "title" not in locked_fields and selected.get("title"):
-        work.title = str(selected["title"]).strip()
-        work.normalized_title = work.title.casefold()
-    if "document_type" not in locked_fields and selected.get("document_type"):
-        work.document_type = selected["document_type"]
-    if "language" not in locked_fields and selected.get("language"):
-        work.language = selected["language"]
-    if "abstract" not in locked_fields and selected.get("abstract"):
-        work.abstract = str(selected["abstract"]).strip()
-    work.save()
+    work_field_map = {
+        "title": "title",
+        "subtitle": "subtitle",
+        "original_title": "original_title",
+        "uniform_title": "uniform_title",
+        "canonical_title": "uniform_title",
+        "document_type": "document_type",
+        "language": "language",
+        "original_language": "original_language",
+        "abstract": "abstract",
+    }
+    if not reused_existing_work:
+        for source_name, model_name in work_field_map.items():
+            if source_name not in locked_fields and selected.get(source_name) not in (None, ""):
+                setattr(work, model_name, str(selected[source_name]).strip())
+        if "first_publication_date" not in locked_fields and selected.get("first_publication_date"):
+            first_date = selected["first_publication_date"]
+            if isinstance(first_date, str):
+                first_date = parse_date(first_date)
+            if first_date is not None:
+                work.first_publication_date = first_date
+        work.save()
 
     field_map = {
+        "version_label": "version_label",
+        "edition_statement": "version_label",
+        "publication_date": "publication_date",
         "publication_year": "publication_year",
         "publisher": "publisher",
         "publication_place": "publication_place",
@@ -353,11 +402,22 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
         "degree_type": "degree_type",
         "report_institution": "report_institution",
         "isbn": "isbn",
+        "isbn10": "isbn10",
+        "isbn13": "isbn13",
         "doi": "doi",
+        "series": "series",
+        "extent": "extent",
+        "responsibility_statement": "responsibility_statement",
     }
     for source_name, model_name in field_map.items():
         if source_name not in locked_fields and selected.get(source_name) not in (None, ""):
-            setattr(edition, model_name, selected[source_name])
+            value = selected[source_name]
+            if source_name == "publication_date" and isinstance(value, str):
+                value = parse_date(value)
+            if value is not None:
+                setattr(edition, model_name, value)
+    if edition.publication_date:
+        edition.publication_year = edition.publication_date.year
     normalized_isbn = normalize_isbn(selected.get("isbn"))
     if "isbn" not in locked_fields and normalized_isbn:
         if len(normalized_isbn) == 10:
@@ -378,7 +438,9 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
             field_name="public_slug",
         )
     if "authors" not in locked_fields:
-        _propose_people(item, selected.get("authors", []))
+        _propose_people(item, selected.get("authors", []), role=Contribution.Role.AUTHOR)
+    if "translators" not in locked_fields:
+        _propose_people(item, selected.get("translators", []), role=Contribution.Role.TRANSLATOR)
     if "publisher" not in locked_fields and selected.get("publisher"):
         persist_resolution_candidates(
             item,
@@ -881,11 +943,9 @@ def run_pipeline(item_id: str) -> UploadItem:
             if attempt.should_run:
                 candidates, first_text = extract_local_candidates(source_path)
                 if item.batch.external_enrichment_enabled:
-                    candidates, provider_warnings = enrich_candidates_with_gateway(
-                        candidates,
-                        source_path,
-                        upload_item=item,
-                    )
+                    provider_warnings = [
+                        "外部书目验证已延后到馆内原文与必要 OCR 证据形成之后。"
+                    ]
                 else:
                     provider_warnings = ["该批次已关闭外部元数据补充。"]
                 ai_summary = {"status": "disabled"}
@@ -1063,6 +1123,30 @@ def run_pipeline(item_id: str) -> UploadItem:
                 normalized,
                 actor=item.batch.created_by,
             )
+            front_matter_intelligence = run_front_matter_intelligence(
+                normalized,
+                upload_item=item,
+                actor=item.batch.created_by,
+                schedule_ocr=False,
+            )
+            ocr_skipped = item.batch.ocr_strategy == UploadBatch.OcrStrategy.SKIP
+            ocr_page_indexes = (
+                []
+                if ocr_skipped
+                else sorted(
+                    {
+                        int(index)
+                        for index in (normalized.validation_details or {}).get(
+                            "ocr_required_page_indexes", []
+                        )
+                        if str(index).isdigit() and int(index) > 0
+                    }
+                )
+            )
+            needs_ocr = bool(ocr_page_indexes) and not ocr_skipped
+            if needs_ocr and edition.ocr_status != OcrStatus.PENDING:
+                edition.ocr_status = OcrStatus.PENDING
+                edition.save(update_fields=["ocr_status", "updated_at"])
             attempt.output_summary = {
                 "pages": len(pages),
                 "method": method,
@@ -1072,10 +1156,21 @@ def run_pipeline(item_id: str) -> UploadItem:
                 "ocr_strategy": item.batch.ocr_strategy,
                 "ocr_detected": detected_needs_ocr,
                 "document_intelligence": document_intelligence,
+                "front_matter_intelligence": front_matter_intelligence,
             }
             attempt.save(update_fields=["output_summary", "updated_at"])
 
         canonical_first_text = "\n".join(page.text for page in pages[:5])
+        candidates = _reload_candidates(item)
+        selected = select_best(candidates)
+        item.recognized_metadata = selected
+        item.save(update_fields=["recognized_metadata", "updated_at"])
+        edition = _create_or_update_catalog(
+            item,
+            selected,
+            candidates,
+            canonical_first_text,
+        )
         classification_chunks = []
         classification_chars = 0
         for page in pages:
@@ -1107,11 +1202,9 @@ def run_pipeline(item_id: str) -> UploadItem:
                 )
                 candidates = [*candidates, *refined]
                 if item.batch.external_enrichment_enabled:
-                    candidates, provider_warnings = enrich_candidates_with_gateway(
-                        candidates,
-                        source_path,
-                        upload_item=item,
-                    )
+                    provider_warnings = [
+                        "外部书目验证将在馆内原文与必要 OCR 完成后作为后台任务运行。"
+                    ]
                 else:
                     provider_warnings = ["该批次已关闭外部元数据补充。"]
                 if item.batch.ai_suggestions_enabled:
@@ -1231,7 +1324,7 @@ def run_pipeline(item_id: str) -> UploadItem:
         if not _ensure_cloud_copy(item, normalized):
             return UploadItem.objects.get(pk=item.pk)
 
-        if needs_ocr:
+        if needs_ocr and item.batch.ocr_strategy != UploadBatch.OcrStrategy.SKIP:
             queue_ocr_job(
                 normalized,
                 upload_item=item,
@@ -1252,6 +1345,11 @@ def run_pipeline(item_id: str) -> UploadItem:
                 upload_item=item,
                 actor=item.batch.created_by,
             )
+            if item.batch.external_enrichment_enabled:
+                queue_external_enrichment_job(
+                    item,
+                    actor=item.batch.created_by,
+                )
         if item.replacement_of_asset_id:
             with processing_attempt(item, "replacement_activation", reuse_completed=False) as attempt:
                 result = _finalize_item_publication(item, normalized)

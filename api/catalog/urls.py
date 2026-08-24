@@ -71,6 +71,8 @@ from .workflow_views import (
 from .workflow_suggestion_views import (
     IntakeWorkflowSuggestionView,
     MaintenanceWorkflowSuggestionView,
+    ResearchCandidateVerifyView,
+    ResearchLeadVerifyView,
     WorkflowSuggestionPolicyView,
 )
 from .viewpoint_views import ViewpointSearchView
@@ -82,6 +84,7 @@ from .research_views import (
     ResearchRunDetailView,
     WorkResearchView,
 )
+from .research_source_views import AdminResearchSourceRegistryView
 from .search_evaluation_views import (
     SearchEvaluationRunDetailView,
     SearchEvaluationRunListCreateView,
@@ -225,6 +228,16 @@ urlpatterns = [
         name="admin-workflow-suggestion-policies",
     ),
     path(
+        "admin/research/candidates/<uuid:candidate_id>/verify/",
+        ResearchCandidateVerifyView.as_view(),
+        name="admin-research-candidate-verify",
+    ),
+    path(
+        "admin/research/leads/verify/",
+        ResearchLeadVerifyView.as_view(),
+        name="admin-research-lead-verify",
+    ),
+    path(
         "admin/intake/<uuid:item_id>/research/",
         IntakeResearchView.as_view(),
         name="admin-intake-research",
@@ -308,6 +321,11 @@ urlpatterns = [
         "admin/functional-health/",
         AdminFunctionalHealthView.as_view(),
         name="admin-functional-health",
+    ),
+    path(
+        "admin/research-sources/",
+        AdminResearchSourceRegistryView.as_view(),
+        name="admin-research-source-registry",
     ),
     path(
         "admin/page-preview/editions/<uuid:edition_id>/",

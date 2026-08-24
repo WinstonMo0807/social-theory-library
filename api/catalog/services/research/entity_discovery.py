@@ -8,6 +8,7 @@ from billiard.exceptions import SoftTimeLimitExceeded
 from django.db.models import Count, Q
 
 from catalog.models import (
+    Concept,
     Discipline,
     Edition,
     KnowledgeNode,
@@ -32,6 +33,8 @@ SUPPORTED_ENTITY_TYPES = (
     "person",
     "work",
     "theory",
+    "concept",
+    "debate",
     "topic",
     "knowledge_node",
     "discipline",
@@ -57,6 +60,10 @@ def _external_actions(entity_type: str) -> list[str]:
         actions.append("create_draft")
     actions.extend(["keep_unresolved", "reject"])
     return actions
+
+
+def _web_lead_actions() -> list[str]:
+    return ["inspect", "verify", "reject"]
 
 
 @dataclass(frozen=True)
@@ -198,7 +205,8 @@ def _named_rows(model, query: str, *, name_fields: tuple[str, ...], entity_type:
     condition = Q()
     for field_name in name_fields:
         condition |= Q(**{f"{field_name}__icontains": query})
-    rows = model.objects.filter(condition)[:limit]
+    queryset = model.objects.all() if hasattr(model, "objects") else model
+    rows = queryset.filter(condition)[:limit]
     output = []
     for row in rows:
         label = str(
@@ -265,7 +273,49 @@ def _local_candidates(entity_type: str, query: str, limit: int) -> list[dict[str
     if entity_type == "work":
         return _local_works(query, limit)
     if entity_type == "theory":
-        return _named_rows(TheorySchool, query, name_fields=("name", "foreign_name"), entity_type="theory", limit=limit)
+        canonical = _named_rows(
+            KnowledgeNode.objects.filter(node_type=KnowledgeNode.NodeType.THEORY_TRADITION),
+            query,
+            name_fields=("canonical_name_zh", "canonical_name_en"),
+            entity_type="theory",
+            limit=limit,
+        )
+        legacy = _named_rows(
+            TheorySchool,
+            query,
+            name_fields=("name", "foreign_name"),
+            entity_type="theory",
+            limit=max(0, limit - len(canonical)),
+        ) if len(canonical) < limit else []
+        for row in legacy:
+            row["metadata"]["compatibility_source"] = "legacy_theory_school"
+        return [*canonical, *legacy][:limit]
+    if entity_type == "concept":
+        canonical = _named_rows(
+            KnowledgeNode.objects.filter(node_type=KnowledgeNode.NodeType.CONCEPT),
+            query,
+            name_fields=("canonical_name_zh", "canonical_name_en"),
+            entity_type="concept",
+            limit=limit,
+        )
+        legacy = _named_rows(
+            Concept,
+            query,
+            name_fields=("name",),
+            entity_type="concept",
+            limit=max(0, limit - len(canonical)),
+        ) if len(canonical) < limit else []
+        for row in legacy:
+            row["metadata"]["compatibility_source"] = "legacy_concept"
+        return [*canonical, *legacy][:limit]
+    if entity_type == "debate":
+        return _named_rows(
+            KnowledgeNode.objects.filter(node_type=KnowledgeNode.NodeType.DEBATE),
+            query,
+            name_fields=("canonical_name_zh", "canonical_name_en"),
+            entity_type="debate",
+            limit=limit,
+        )
     if entity_type == "topic":
         return _named_rows(Topic, query, name_fields=("name",), entity_type="topic", limit=limit)
     if entity_type == "knowledge_node":
@@ -288,6 +338,8 @@ def _local_candidates(entity_type: str, query: str, limit: int) -> list[dict[str
 AUTHORITY_TYPE_MAP = {
     "person": "person",
     "theory": "theory_tradition",
+    "concept": "concept",
+    "debate": "debate",
     "topic": "topic",
     "knowledge_node": "concept",
     "discipline": "discipline",
@@ -409,7 +461,7 @@ class UniversalEntityDiscovery:
                         conflicts=[],
                         metadata={"query": query, "url": result.url},
                         source_url=result.url,
-                        actions=_external_actions(entity_type),
+                        actions=_web_lead_actions(),
                         evidence_status="lead_only",
                     ))
             except WebSearchError as exc:

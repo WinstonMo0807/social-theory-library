@@ -512,6 +512,7 @@ class CandidateEvidence(UUIDTimeStampedModel):
 class EntityResolutionCandidate(UUIDTimeStampedModel):
     class Status(models.TextChoices):
         PROPOSED = "proposed", "待判断"
+        STALE = "stale", "草稿变化后已过期"
         LINKED = "linked", "已关联现有实体"
         CREATE_DRAFT = "create_draft", "创建新实体草稿"
         UNRESOLVED = "unresolved", "保留未解析名称"

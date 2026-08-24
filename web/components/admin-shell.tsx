@@ -60,7 +60,7 @@ const navigation = [
     ["/admin/recommendations", Sparkles, "推荐"],
   ]],
   ["系统", [
-    ["/admin/processing", ChartNoAxesCombined, "处理任务"],
+    ["/admin/processing", ChartNoAxesCombined, "Processing Center"],
     ["/admin/status", Activity, "系统状态"],
     ["/admin/distribution", Cloud, "备份与存储"],
     ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
@@ -243,7 +243,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <button className="sr-only" type="submit">搜索</button>
           </form>
           <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link>
-          <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : user.role === "reviewer" ? "审核者" : "编辑"}</small></p></div>
+          <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small></p></div>
         </header> : null}
         <div className="admin-content">{children}</div>
       </div>

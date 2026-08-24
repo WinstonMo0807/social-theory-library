@@ -25,6 +25,37 @@ Heartbeat 必须声明 `executor_id`、capabilities、并发数，以及每项 A
 
 当前可远程完成的首个专业任务是 `claim_extraction`。领取响应包含原文 EvidenceSpan、固定 Prompt 版本和输出 schema。完成结果只有在写入 `DerivedClaim` 与 `ClaimEvidence` 后，CapabilityDemand 才会成为 completed。其他任务类型不会被该版本的拉取端点领取。
 
+## 3.0.1 可运行客户端
+
+仓库已提供 `api/common/remote_worker_client.py`。它不是协议示例，而是可直接运行的 pull worker。客户端先发送 heartbeat，再领取 Claim 任务，调用笔记本本地的 Ollama、vLLM 或 OpenAI-compatible endpoint，最后通过带租约的 completion API 写回候选。客户端不能访问 PostgreSQL，也不能直接写 Canonical Knowledge。
+
+在 4070 笔记本的私有环境中设置以下变量。Token 与模型 API Key 不得写入仓库或命令历史。
+
+```dotenv
+STL_WORKER_SERVER_URL=https://books.winstonmo.com/api/capability-worker
+STL_WORKER_TOKEN=<与服务端一致的独立 worker token>
+STL_WORKER_EXECUTOR_ID=remote-gpu:4070-winston
+STL_WORKER_PROVIDER=ollama
+STL_WORKER_MODEL_URL=http://127.0.0.1:11434
+STL_WORKER_MODEL=<本地模型名>
+STL_WORKER_MODEL_REVISION=<不可变模型 revision>
+STL_WORKER_GPU_NAME=RTX 4070
+# 可选。空闲领取间隔下限为 10 秒，以免超过服务端专用限流
+STL_WORKER_POLL_SECONDS=10
+# 可选。长推理期间 heartbeat 与 lease 的续期间隔，默认 30 秒
+STL_WORKER_KEEPALIVE_SECONDS=30
+```
+
+从 `api` 目录运行：
+
+```powershell
+..\.venv\Scripts\python.exe -m common.remote_worker_client
+```
+
+首次接入可使用 `--once`，它只 heartbeat 并最多处理一项需求。服务端 URL 在非本机环境必须使用 HTTPS。笔记本下线后 heartbeat 会过期，未领取任务回到 `waiting_for_capability`；已过期租约不能提交结果，人工上传和发布不受影响。
+
+客户端空闲时最多每 30 秒发送一次 heartbeat，并按服务端返回值且不短于 10 秒领取任务。临时网络中断会进入有界退避，不会结束常驻进程。
+
 ## 租约和幂等
 
 - 领取使用数据库行锁，并受 Worker concurrency 限制。

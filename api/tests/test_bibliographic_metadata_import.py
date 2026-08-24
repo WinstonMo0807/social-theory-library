@@ -180,7 +180,7 @@ def test_import_rejects_unsafe_yaml_python_tag(api_client, admin_user):
     assert not SourceRecord.objects.filter(upload_item=item).exists()
 
 
-def test_reviewer_cannot_import_catalog_metadata(api_client, admin_user):
+def test_legacy_reviewer_is_normalized_to_editor_for_metadata_import(api_client, admin_user):
     item = make_item(admin_user)
     reviewer = User.objects.create_user(
         username="metadata-reviewer@example.org",
@@ -194,5 +194,5 @@ def test_reviewer_cannot_import_catalog_metadata(api_client, admin_user):
         {"file": SimpleUploadedFile("book.json", b'{"title":"example"}')},
         format="multipart",
     )
-    assert response.status_code == 403
-    assert not SourceRecord.objects.filter(upload_item=item).exists()
+    assert response.status_code == 201
+    assert SourceRecord.objects.filter(upload_item=item).exists()

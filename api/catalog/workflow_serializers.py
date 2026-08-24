@@ -33,7 +33,9 @@ class WorkSectionSerializer(WorkflowSectionSerializer):
 
 class BibliographySectionSerializer(WorkflowSectionSerializer):
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    publication_date = serializers.DateField(required=False, allow_null=True)
     publication_year = serializers.IntegerField(min_value=1000, max_value=2100, required=False, allow_null=True)
+
     publisher = serializers.CharField(max_length=300, required=False, allow_blank=True)
     publisher_authority_id = serializers.UUIDField(required=False, allow_null=True)
     publication_place = serializers.CharField(max_length=200, required=False, allow_blank=True)
@@ -51,6 +53,16 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     series = serializers.CharField(max_length=300, required=False, allow_blank=True)
     extent = serializers.CharField(max_length=160, required=False, allow_blank=True)
     responsibility_statement = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        publication_date = attrs.get("publication_date")
+        publication_year = attrs.get("publication_year")
+        if publication_date and publication_year and publication_date.year != publication_year:
+            raise serializers.ValidationError(
+                {"publication_date": "本版本出版日期与兼容出版年份不一致。"}
+            )
+        return attrs
 
 
 class ContributorRowSerializer(serializers.Serializer):

@@ -24,6 +24,7 @@ from catalog.models import (
     PublicationState,
     QueryLexiconChangeEvent,
     QueryLexiconEntry,
+    ResearchRun,
     ScholarProfile,
     Work,
 )
@@ -158,6 +159,37 @@ def _request(target_type, target_id, fields, *, mode="structured", form_context=
         requested_mode=mode,
         visibility="admin",
     )
+
+
+def _research_run(edition, admin_user, *, status=ResearchRun.Status.RUNNING):
+    return ResearchRun.objects.create(
+        work=edition.work,
+        edition=edition,
+        requested_by=admin_user,
+        status=status,
+        idempotency_key=f"field-enrichment-race-{uuid4()}",
+        context_fingerprint="1" * 64,
+        draft_session_id="workbench-race-session",
+        draft_hash="2" * 64,
+        trigger_input_values={"work.title": "新的未保存题名"},
+        trigger_input_hash="3" * 64,
+        is_current=True,
+        context_version="test-context-v1",
+        contract_version="test-contract-v1",
+        planner_version="test-planner-v1",
+        active_step="work",
+    )
+
+
+def _research_form_context(run):
+    return {
+        "research_run_id": str(run.id),
+        "research_context_fingerprint": run.context_fingerprint,
+        "research_draft_session_id": run.draft_session_id,
+        "research_draft_hash": run.draft_hash,
+        "research_trigger_input_hash": run.trigger_input_hash,
+        "is_current_context": True,
+    }
 
 
 def test_field_policy_registry_is_field_specific():
@@ -398,6 +430,108 @@ def test_candidate_and_evidence_deduplicate_across_repeated_page_request(admin_u
     assert first.candidates[0].id == second.candidates[0].id
     assert EnrichmentCandidate.objects.count() == 1
     assert EnrichmentEvidence.objects.count() == 1
+
+
+def test_provider_result_is_ignored_when_draft_changes_before_candidate_persistence(admin_user):
+    edition = _edition(title="数据库旧题名", publisher="Known Press")
+    run = _research_run(edition, admin_user)
+    observation = _observation(
+        field_name="title",
+        value="旧草稿研究所得题名",
+        identity_claims={"title": edition.work.title},
+    )
+
+    class SupersedingAdapter(FakeStructuredAdapter):
+        def collect(self, **kwargs):
+            ResearchRun.objects.filter(pk=run.pk).update(
+                status=ResearchRun.Status.SUPERSEDED,
+                is_current=False,
+                stale_reason="测试模拟 Provider 返回前草稿已经变化。",
+            )
+            return super().collect(**kwargs)
+
+    result = FieldEnrichmentService(
+        structured_adapters={"bibliographic": SupersedingAdapter([observation])}
+    ).enrich(
+        _request(
+            "work",
+            edition.work_id,
+            ["title"],
+            form_context=_research_form_context(run),
+        ),
+        actor=admin_user,
+    )
+
+    assert result.candidates == []
+    assert result.stats["stale_result_ignored"] == 1
+    assert any(row.code == "research_context_stale" for row in result.errors)
+    assert not EnrichmentCandidate.objects.filter(target_id=edition.work_id).exists()
+
+
+def test_accept_revalidates_linked_research_run_and_persists_stale_state(admin_user):
+    edition = _edition(title="数据库旧题名", publisher="Known Press")
+    run = _research_run(edition, admin_user)
+    observation = _observation(
+        field_name="title",
+        value="旧草稿研究所得题名",
+        identity_claims={"title": edition.work.title},
+    )
+    candidate = FieldEnrichmentService(
+        structured_adapters={"bibliographic": FakeStructuredAdapter([observation])}
+    ).enrich(
+        _request(
+            "work",
+            edition.work_id,
+            ["title"],
+            form_context=_research_form_context(run),
+        ),
+        actor=admin_user,
+    ).candidates[0]
+    ResearchRun.objects.filter(pk=run.pk).update(
+        status=ResearchRun.Status.SUPERSEDED,
+        is_current=False,
+        stale_reason="新的未保存题名已经触发下一次研究。",
+    )
+
+    with pytest.raises(ValueError, match="候选已经过期"):
+        accept_enrichment_candidate(candidate, actor=admin_user)
+
+    candidate.refresh_from_db()
+    edition.work.refresh_from_db()
+    assert candidate.status == EnrichmentCandidate.Status.SUPERSEDED
+    assert candidate.request_context["is_current_context"] is False
+    assert candidate.request_context["stale_reason"]
+    assert edition.work.title == "数据库旧题名"
+
+
+def test_accept_rejects_context_hash_mismatch_even_when_run_flag_is_current(admin_user):
+    edition = _edition(title="数据库旧题名", publisher="Known Press")
+    run = _research_run(edition, admin_user)
+    observation = _observation(
+        field_name="title",
+        value="上下文不匹配的题名",
+        identity_claims={"title": edition.work.title},
+    )
+    candidate = FieldEnrichmentService(
+        structured_adapters={"bibliographic": FakeStructuredAdapter([observation])}
+    ).enrich(
+        _request(
+            "work",
+            edition.work_id,
+            ["title"],
+            form_context=_research_form_context(run),
+        ),
+        actor=admin_user,
+    ).candidates[0]
+    ResearchRun.objects.filter(pk=run.pk).update(draft_hash="4" * 64)
+
+    with pytest.raises(ValueError, match="草稿或触发输入不一致"):
+        accept_enrichment_candidate(candidate, actor=admin_user)
+
+    candidate.refresh_from_db()
+    edition.work.refresh_from_db()
+    assert candidate.status == EnrichmentCandidate.Status.SUPERSEDED
+    assert edition.work.title == "数据库旧题名"
 
 
 def test_accept_person_name_variant_writes_authority_then_outbox(admin_user):

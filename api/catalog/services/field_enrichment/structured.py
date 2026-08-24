@@ -258,7 +258,11 @@ class BibliographicStructuredAdapter:
                 return [], [EnrichmentError(code="edition_missing", detail="作品没有可核对的版本。")]
         else:
             return [], [EnrichmentError(code="adapter_target_mismatch", detail="书目 adapter 只支持 Work/Edition。")]
-        candidates, warnings = refresh_remote_candidates(edition, upload_item=None)
+        candidates, warnings = refresh_remote_candidates(
+            edition,
+            upload_item=None,
+            context_override=context,
+        )
         errors = [
             EnrichmentError(code="provider_partial_failure", detail=value[:300])
             for value in warnings

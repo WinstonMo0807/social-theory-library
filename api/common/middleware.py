@@ -1,6 +1,9 @@
 import hmac
 
 from django.conf import settings
+from django.http import HttpResponseForbidden
+
+from accounts.ownership import is_library_owner
 
 
 class TrustedLanHttpMiddleware:
@@ -36,3 +39,21 @@ class TrustedLanHttpMiddleware:
                 if cookie is not None:
                     cookie["secure"] = ""
         return response
+
+
+class OwnerOnlyDjangoAdminMiddleware:
+    """Prevent Django superuser flags from bypassing the product capability model."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        is_django_admin = request.path == "/admin" or request.path.startswith("/admin/")
+        user = getattr(request, "user", None)
+        if (
+            is_django_admin
+            and getattr(user, "is_authenticated", False)
+            and not is_library_owner(user)
+        ):
+            return HttpResponseForbidden("Django 管理入口仅供 System Owner 使用。")
+        return self.get_response(request)

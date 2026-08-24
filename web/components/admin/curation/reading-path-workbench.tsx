@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, ImagePlus, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -18,6 +19,7 @@ type PathItemDraft = {
   work: string | null;
   work_name: string;
   recommendation_reason: string;
+  prerequisite: string;
   is_required: boolean;
   editorial_note: string;
 };
@@ -33,6 +35,7 @@ type ReadingPathRow = {
   title: string;
   slug: string;
   introduction: string;
+  learning_goal: string;
   primary_discipline: string | null;
   primary_discipline_name: string;
   audience: string;
@@ -43,6 +46,8 @@ type ReadingPathRow = {
   sort_order: number;
   stages: Array<{ id: string; name: string; description: string; position: number }>;
   items: Array<Record<string, unknown>>;
+  draft_stage_groups: Array<Record<string, unknown>>;
+  editorial_revision: { id: string; revision: number; status: string } | null;
   updated_at: string;
 };
 
@@ -50,6 +55,7 @@ const emptyPath = {
   title: "",
   slug: "",
   introduction: "",
+  learning_goal: "",
   primary_discipline: "",
   audience: "",
   difficulty: "beginner",
@@ -63,7 +69,7 @@ function key(prefix: string) {
 }
 
 function emptyItem(): PathItemDraft {
-  return { key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", is_required: false, editorial_note: "" };
+  return { key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", prerequisite: "", is_required: false, editorial_note: "" };
 }
 
 function emptyStage(position: number): StageDraft {
@@ -78,6 +84,7 @@ function normalizePath(value: unknown): ReadingPathRow {
     title: asString(row.title),
     slug: asString(row.slug),
     introduction: asString(row.introduction),
+    learning_goal: asString(row.learning_goal),
     primary_discipline: asString(row.primary_discipline) || null,
     primary_discipline_name: asString(primaryDiscipline.name),
     audience: asString(row.audience),
@@ -91,11 +98,49 @@ function normalizePath(value: unknown): ReadingPathRow {
       return { id: asString(stage.id), name: asString(stage.name, `第 ${position + 1} 阶段`), description: asString(stage.description), position: Number(stage.position ?? position) };
     }),
     items: asArray(row.items).map(asRecord),
+    draft_stage_groups: asArray(row.draft_stage_groups).map(asRecord),
+    editorial_revision: asString(asRecord(row.editorial_revision).id) ? {
+      id: asString(asRecord(row.editorial_revision).id),
+      revision: Number(asRecord(row.editorial_revision).revision ?? 0),
+      status: asString(asRecord(row.editorial_revision).status),
+    } : null,
     updated_at: asString(row.updated_at),
   };
 }
 
 function pathStages(path: ReadingPathRow): StageDraft[] {
+  if (path.draft_stage_groups.length) {
+    const canonicalItems = new Map(
+      path.items.map((item) => [asString(item.id), item]),
+    );
+    return path.draft_stage_groups.map((entry, stageIndex) => {
+      const stage = asRecord(entry);
+      return {
+        key: asString(stage.id, key("draft-stage")),
+        id: asString(stage.id) || undefined,
+        name: asString(stage.name, `第 ${stageIndex + 1} 阶段`),
+        description: asString(stage.description),
+        items: asArray(stage.items).map((value) => {
+          const item = asRecord(value);
+          const canonical = canonicalItems.get(asString(item.id)) ?? {};
+          const nodeData = asRecord(canonical.node_data);
+          const workData = asRecord(canonical.work_data);
+          return {
+            key: asString(item.id, key("draft-item")),
+            id: asString(item.id) || undefined,
+            node: asString(item.node) || null,
+            node_name: asString(nodeData.canonical_name_zh ?? nodeData.name),
+            work: asString(item.work) || null,
+            work_name: asString(workData.title ?? workData.name),
+            recommendation_reason: asString(item.recommendation_reason),
+            prerequisite: asString(item.prerequisite),
+            is_required: item.is_required === true,
+            editorial_note: asString(item.editorial_note),
+          };
+        }),
+      };
+    });
+  }
   const stages: StageDraft[] = path.stages.map((stage) => ({ key: stage.id, id: stage.id, name: stage.name, description: stage.description, items: [] as PathItemDraft[] }));
   const byId = new Map(stages.map((stage) => [stage.id, stage]));
   path.items.forEach((item) => {
@@ -116,6 +161,7 @@ function pathStages(path: ReadingPathRow): StageDraft[] {
       work: asString(item.work) || null,
       work_name: asString(workData.title ?? workData.name ?? item.work_title),
       recommendation_reason: asString(item.recommendation_reason),
+      prerequisite: asString(item.prerequisite),
       is_required: item.is_required === true,
       editorial_note: asString(item.editorial_note),
     });
@@ -132,6 +178,8 @@ function move<T>(values: T[], from: number, to: number) {
 }
 
 export function ReadingPathWorkbench() {
+  const searchParams = useSearchParams();
+  const requestedPath = searchParams.get("path")?.trim() ?? "";
   const [paths, setPaths] = useState<ReadingPathRow[]>([]);
   const [editing, setEditing] = useState<ReadingPathRow | null>(null);
   const [draft, setDraft] = useState({ ...emptyPath });
@@ -167,12 +215,53 @@ export function ReadingPathWorkbench() {
     return () => window.clearTimeout(timer);
   }, [loadPaths]);
 
+  useEffect(() => {
+    if (!requestedPath) return;
+    let active = true;
+    const token = getServerSessionCredential();
+    if (!token) return;
+    void apiRequest(
+      `/catalog/admin/theory-system/reading-paths/${encodeURIComponent(requestedPath)}/`,
+      {},
+      token,
+    ).then((payload) => {
+      if (!active) return;
+      const path = normalizePath(payload);
+      setEditing(path);
+      setDraft({
+        title: path.title,
+        slug: path.slug,
+        introduction: path.introduction,
+        learning_goal: path.learning_goal,
+        primary_discipline: path.primary_discipline ?? "",
+        audience: path.audience,
+        difficulty: path.difficulty,
+        estimated_reading: path.estimated_reading,
+        status: path.status,
+        sort_order: path.sort_order,
+      });
+      setPrimaryDisciplineName(path.primary_discipline_name);
+      setStages(pathStages(path));
+      setCover(null);
+      setMessage("已从 Knowledge Studio 打开这条阅读路径。");
+      setMessageState("success");
+    }).catch((error) => {
+      if (!active) return;
+      setMessage(error instanceof Error ? error.message : "阅读路径读取失败。");
+      setMessageState("error");
+    });
+    return () => {
+      active = false;
+    };
+  }, [requestedPath]);
+
   function start(path?: ReadingPathRow) {
     setEditing(path ?? null);
     setDraft(path ? {
       title: path.title,
       slug: path.slug,
       introduction: path.introduction,
+      learning_goal: path.learning_goal,
       primary_discipline: path.primary_discipline ?? "",
       audience: path.audience,
       difficulty: path.difficulty,
@@ -222,6 +311,7 @@ export function ReadingPathWorkbench() {
             node: item.node,
             work: item.work,
             recommendation_reason: item.recommendation_reason,
+            prerequisite: item.prerequisite,
             position,
             is_required: item.is_required,
             editorial_note: item.editorial_note,
@@ -240,7 +330,9 @@ export function ReadingPathWorkbench() {
         saved = normalizePath(await apiRequest(`/catalog/admin/theory-system/reading-paths/${saved.id}/`, { method: "PATCH", body }, token));
       }
       start(saved);
-      setMessage("阅读路径已保存。阶段和阶段内作品分别排序，单项策展 placement 已保留。");
+      setMessage(saved.editorial_revision
+        ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
+        : "阅读路径已保存。阶段和阶段内作品分别排序，单项策展 placement 已保留。");
       setMessageState("success");
       await loadPaths();
     } catch (error) {
@@ -260,10 +352,15 @@ export function ReadingPathWorkbench() {
     setMessage("正在删除阅读路径……");
     setMessageState("pending");
     try {
-      await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`, { method: "DELETE" }, token);
-      start();
+      const response = asRecord(await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`, { method: "DELETE" }, token));
+      const revision = asRecord(response.editorial_revision);
+      if (asString(revision.id)) {
+        setMessage(`已建立 Revision ${Number(revision.revision ?? 0)} 下线草稿。正式页面尚未改变。`);
+      } else {
+        start();
+        setMessage("阅读路径已删除。");
+      }
       await loadPaths();
-      setMessage("阅读路径已删除。");
       setMessageState("success");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "阅读路径删除失败。");
@@ -304,9 +401,10 @@ export function ReadingPathWorkbench() {
           <header><div><h2>{editing ? `编辑 ${editing.title}` : "新建阅读路径"}</h2><p>{stages.length} 个阶段 · {itemCount} 个项目</p></div>{editing ? <div><Link href={`/theories/reading-paths/${editing.slug}`} target="_blank">预览 <ExternalLink size={12} /></Link><ActionButton type="button" state={pendingAction === `delete-reading-path:${editing.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-path:${editing.id}`} aria-label="删除阅读路径" onClick={() => void removePath()}><Trash2 size={14} /></ActionButton></div> : null}</header>
           <div className="inline-fields"><label><span>标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} /></label></div>
           <label><span>路径介绍</span><textarea rows={4} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label>
+          <label><span>学习目标</span><textarea rows={3} value={draft.learning_goal} onChange={(event) => setDraft({ ...draft, learning_goal: event.target.value })} /></label>
           <div className="inline-fields three"><ResearchEntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" queryParam="q" nameField="name" entityType="discipline" step="classification" field="primary_disciplines" values={draft.primary_discipline ? [{ id: draft.primary_discipline, name: primaryDisciplineName || "已选择主要学科" }] : []} onChange={(next) => { const selected = next.at(-1); setDraft({ ...draft, primary_discipline: selected?.id ?? "" }); setPrimaryDisciplineName(selected?.name ?? ""); }} /><label><span>适合人群</span><input value={draft.audience} onChange={(event) => setDraft({ ...draft, audience: event.target.value })} /></label><label><span>难度</span><select value={draft.difficulty} onChange={(event) => setDraft({ ...draft, difficulty: event.target.value })}><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">深入</option></select></label></div>
           <div className="inline-fields three"><label><span>预计阅读量</span><input value={draft.estimated_reading} onChange={(event) => setDraft({ ...draft, estimated_reading: event.target.value })} /></label><label><span>状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="archived">归档</option></select></label><label><span>路径排序</span><input type="number" value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
-          <label className="knowledge-image-upload"><ImagePlus size={17} /><span>{cover?.name || "更新路径封面"}</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCover(event.target.files?.[0] ?? null)} /></label>
+          <label className="knowledge-image-upload"><ImagePlus size={17} /><span>{editing?.status === "published" ? "已发布路径的封面暂不支持进入 Revision" : cover?.name || "更新路径封面"}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={editing?.status === "published"} onChange={(event) => setCover(event.target.files?.[0] ?? null)} /></label>
           <section className="reading-path-v280-stages">
             <header><div><h3>阶段与项目</h3><p>先排阶段，再在每个阶段内排作品。空阶段可以保留。</p></div><button type="button" onClick={() => setStages((current) => [...current, emptyStage(current.length)])}><Plus size={13} />添加阶段</button></header>
             {stages.map((stage, stageIndex) => <article className="reading-path-v280-stage" key={stage.key}>
@@ -316,7 +414,8 @@ export function ReadingPathWorkbench() {
                 <header><strong>项目 {itemIndex + 1}</strong><div><button type="button" aria-label="上移项目" disabled={itemIndex === 0} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex - 1) })}><ArrowUp size={12} /></button><button type="button" aria-label="下移项目" disabled={itemIndex === stage.items.length - 1} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex + 1) })}><ArrowDown size={12} /></button><button type="button" aria-label="移除项目" onClick={() => patchStage(stageIndex, { items: stage.items.filter((_row, index) => index !== itemIndex) })}><Trash2 size={12} /></button></div></header>
                 <div className="inline-fields reading-path-v292-entity-fields"><ResearchEntityPicker label="馆藏作品" endpoint="/catalog/admin/library/works/" entityType="work" step="curation" field="reading_path_placements" queryParam="q" nameField="title" values={item.work ? [{ id: item.work, name: item.work_name || "已选择馆藏作品" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { work: selected?.id ?? null, work_name: selected?.name ?? "", node: null, node_name: "" }); }} /><ResearchEntityPicker label="知识节点" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="curation" field="reading_path_placements" queryParam="q" nameField="canonical_name_zh" values={item.node ? [{ id: item.node, name: item.node_name || "已选择知识节点" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { node: selected?.id ?? null, node_name: selected?.name ?? "", work: null, work_name: "" }); }} /></div>
                 <label><span>推荐理由</span><textarea rows={2} value={item.recommendation_reason} onChange={(event) => patchItem(stageIndex, itemIndex, { recommendation_reason: event.target.value })} /></label>
-                <label><span>编辑备注</span><textarea rows={2} value={item.editorial_note} onChange={(event) => patchItem(stageIndex, itemIndex, { editorial_note: event.target.value })} /></label>
+                <label><span>前置要求</span><textarea rows={2} value={item.prerequisite} onChange={(event) => patchItem(stageIndex, itemIndex, { prerequisite: event.target.value })} /></label>
+                <label><span>编辑备注（仅后台）</span><textarea rows={2} value={item.editorial_note} onChange={(event) => patchItem(stageIndex, itemIndex, { editorial_note: event.target.value })} /></label>
                 <label className="workflow-checkbox"><input type="checkbox" checked={item.is_required} onChange={(event) => patchItem(stageIndex, itemIndex, { is_required: event.target.checked })} /><span>设为必读</span></label>
               </section>)}</div>
               <button className="button secondary" type="button" onClick={() => patchStage(stageIndex, { items: [...stage.items, emptyItem()] })}><Plus size={12} />在本阶段添加作品或节点</button>

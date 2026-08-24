@@ -54,6 +54,12 @@ def _request_context(value: dict) -> dict:
         "current_value",
         "node_id",
         "work_id",
+        "research_run_id",
+        "research_context_fingerprint",
+        "research_draft_session_id",
+        "research_draft_hash",
+        "research_trigger_input_hash",
+        "is_current_context",
     }
     return normalize_json({key: value[key] for key in allowed if key in value})
 
@@ -170,6 +176,47 @@ def _enrich_form_context(target_type: str, form_context: dict) -> dict:
     return context
 
 
+def _draft_aware_target_context(target_type: str, context: dict, form_context: dict) -> dict:
+    research = form_context.get("research_context")
+    if not isinstance(research, dict):
+        return context
+    draft = research.get("draft_data")
+    if not isinstance(draft, dict):
+        return context
+    section_name = "bibliography" if target_type == "edition" else "work" if target_type == "work" else ""
+    section = draft.get(section_name) if section_name else None
+    if not isinstance(section, dict):
+        return context
+    merged = dict(context)
+    for field_name in (
+        "title", "original_title", "canonical_title", "uniform_title", "language",
+        "publication_date", "publication_year", "publisher", "isbn", "isbn10", "isbn13", "doi",
+    ):
+        if field_name in section and section[field_name] not in (None, ""):
+            merged[field_name] = section[field_name]
+    if target_type == "edition":
+        work_draft = draft.get("work")
+        if isinstance(work_draft, dict):
+            for field_name in ("title", "original_title", "language", "document_type"):
+                if work_draft.get(field_name) not in (None, ""):
+                    merged[field_name] = work_draft[field_name]
+    canonical = [
+        merged.get("title"),
+        merged.get("original_title"),
+        merged.get("canonical_title"),
+        merged.get("uniform_title"),
+    ]
+    merged["canonical_terms"] = [str(value).strip() for value in canonical if str(value or "").strip()]
+    contributors = draft.get("contributors")
+    if isinstance(contributors, dict):
+        merged["authors"] = [
+            str(row.get("display_name") or "").strip()
+            for row in contributors.get("items") or []
+            if isinstance(row, dict) and str(row.get("display_name") or "").strip()
+        ]
+    return merged
+
+
 class FieldEnrichmentService:
     def __init__(self, *, structured_adapters=None, search_adapter=None, fetcher=None):
         self.structured_adapters = structured_adapters or STRUCTURED_ADAPTERS
@@ -256,6 +303,38 @@ class FieldEnrichmentService:
         actor,
         request_id,
     ) -> tuple[list[EnrichmentCandidate], list[EnrichmentError], dict]:
+        research_run_id = str(form_context.get("research_run_id") or "").strip()
+        if research_run_id:
+            from catalog.models import ResearchRun
+
+            run_filters = {
+                "pk": research_run_id,
+                "is_current": True,
+                "context_fingerprint": str(form_context.get("research_context_fingerprint") or ""),
+                "draft_session_id": str(form_context.get("research_draft_session_id") or ""),
+                "draft_hash": str(form_context.get("research_draft_hash") or ""),
+                "trigger_input_hash": str(form_context.get("research_trigger_input_hash") or ""),
+                "status__in": [ResearchRun.Status.QUEUED, ResearchRun.Status.RUNNING],
+            }
+            if request.target_type == EnrichmentCandidate.TargetType.WORK:
+                run_filters["work_id"] = request.target_id
+            elif request.target_type == EnrichmentCandidate.TargetType.EDITION:
+                run_filters["edition_id"] = request.target_id
+            current_run = ResearchRun.objects.select_for_update(of=("self",)).filter(
+                **run_filters,
+            ).first()
+            if current_run is None or form_context.get("is_current_context") is not True:
+                return (
+                    [],
+                    [
+                        EnrichmentError(
+                            code="research_context_stale",
+                            provider="research_orchestrator",
+                            detail="未保存草稿已经变化，迟到结果未写入候选。",
+                        )
+                    ],
+                    {"stale_result_ignored": 1},
+                )
         policies_by_field = {policy.field_name: policy for policy in policies}
         current_values = {
             policy.field_name: normalize_json(
@@ -326,6 +405,7 @@ class FieldEnrichmentService:
                 policy.field_name,
                 candidate_identity_value(policy.mutation_adapter, normalized_value),
                 policy.policy_version,
+                str(form_context.get("research_context_fingerprint") or ""),
             )
             confidence, confidence_factors = _confidence(
                 policy,
@@ -369,6 +449,7 @@ class FieldEnrichmentService:
                     candidate.confidence_factors = confidence_factors
                 candidate.request_id = request_id
                 candidate.requested_mode = request.requested_mode
+                candidate.request_context = _request_context(form_context)
                 candidate.refresh_after = max(
                     filter(None, [candidate.refresh_after, defaults["refresh_after"]])
                 )
@@ -379,6 +460,7 @@ class FieldEnrichmentService:
                         "confidence_factors",
                         "request_id",
                         "requested_mode",
+                        "request_context",
                         "refresh_after",
                         "updated_at",
                     ]
@@ -471,11 +553,15 @@ class FieldEnrichmentService:
     def enrich(self, request: FieldEnrichmentRequest, *, actor=None) -> EnrichmentResult:
         started = time.perf_counter()
         policies, target = self._validate_request(request)
-        context = target_context(request.target_type, target)
         submitted_context = dict(request.form_context or {})
         if request.current_value is not None:
             submitted_context["current_value"] = normalize_json(request.current_value)
         form_context = _enrich_form_context(request.target_type, submitted_context)
+        context = _draft_aware_target_context(
+            request.target_type,
+            target_context(request.target_type, target),
+            form_context,
+        )
         request_id = uuid4()
         observations = []
         errors = []
@@ -538,6 +624,99 @@ class FieldEnrichmentService:
             len(errors),
             stats["latency_ms"],
         )
+        return EnrichmentResult(
+            request_id=request_id,
+            candidates=candidates,
+            errors=errors,
+            stats=stats,
+        )
+
+    def verify_source(
+        self,
+        request: FieldEnrichmentRequest,
+        *,
+        source_url: str,
+        actor=None,
+    ) -> EnrichmentResult:
+        """Fetch one chosen search lead and persist only field-valid observations."""
+
+        started = time.perf_counter()
+        policies, target = self._validate_request(request)
+        submitted_context = dict(request.form_context or {})
+        if request.current_value is not None:
+            submitted_context["current_value"] = normalize_json(request.current_value)
+        form_context = _enrich_form_context(request.target_type, submitted_context)
+        context = _draft_aware_target_context(
+            request.target_type,
+            target_context(request.target_type, target),
+            form_context,
+        )
+        document = self.fetcher.fetch(source_url)
+        observations: list[FieldObservation] = []
+        errors: list[EnrichmentError] = []
+        eligible_policies = tuple(
+            policy
+            for policy in policies
+            if policy.allow_general_web
+            and document.source_class in policy.allowed_source_classes
+        )
+        for policy in eligible_policies:
+            observations.extend(
+                extract_web_observations(
+                    document=document,
+                    policy=policy,
+                    context=context,
+                    form_context=form_context,
+                )
+            )
+        if not eligible_policies:
+            errors.append(
+                EnrichmentError(
+                    code="source_class_not_allowed",
+                    provider="safe_web_fetch",
+                    detail="该来源类型不符合当前字段的 Evidence policy。",
+                )
+            )
+        elif not observations:
+            errors.append(
+                EnrichmentError(
+                    code="no_reliable_candidate",
+                    provider="safe_web_fetch",
+                    detail="已取得来源正文，但没有提取到符合字段格式和身份要求的可靠候选。",
+                )
+            )
+        request_id = uuid4()
+        candidates, persistence_errors, persistence_stats = self._persist(
+            request=request,
+            target=target,
+            policies=policies,
+            context=context,
+            form_context=form_context,
+            observations=observations,
+            actor=actor,
+            request_id=request_id,
+        )
+        errors.extend(persistence_errors)
+        if observations and not candidates and not any(
+            row.code == "no_reliable_candidate" for row in errors
+        ):
+            errors.append(
+                EnrichmentError(
+                    code="no_reliable_candidate",
+                    provider="safe_web_fetch",
+                    detail="正文中的值未通过目标身份或字段证据门槛，未生成可采用候选。",
+                )
+            )
+        stats = {
+            **persistence_stats,
+            "source_url": document.canonical_url,
+            "source_record_id": str(document.source_record_id or ""),
+            "fetched_document_count": 1,
+            "observation_count": len(observations),
+            "candidate_count": len(candidates),
+            "error_count": len(errors),
+            "latency_ms": round((time.perf_counter() - started) * 1000, 3),
+        }
         return EnrichmentResult(
             request_id=request_id,
             candidates=candidates,

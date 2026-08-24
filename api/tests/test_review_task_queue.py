@@ -96,7 +96,7 @@ def test_entity_resolution_task_cannot_be_completed_while_candidates_are_pending
     assert task.status == ReviewTask.Status.PENDING
 
 
-def test_reviewer_can_read_queue_but_cannot_change_task(api_client, admin_user):
+def test_legacy_reviewer_is_normalized_to_editor_for_review_tasks(api_client, admin_user):
     item = make_item(admin_user)
     task = ReviewTask.objects.create(
         upload_item=item,
@@ -113,8 +113,10 @@ def test_reviewer_can_read_queue_but_cannot_change_task(api_client, admin_user):
     api_client.force_authenticate(reviewer)
 
     assert api_client.get("/api/ingestion/review-tasks/").status_code == 200
-    assert api_client.post(
+    started = api_client.post(
         f"/api/ingestion/review-tasks/{task.id}/action/",
         {"action": "start"},
         format="json",
-    ).status_code == 403
+    )
+    assert started.status_code == 200
+    assert started.data["task"]["assigned_to"] == reviewer.id

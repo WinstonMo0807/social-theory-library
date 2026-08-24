@@ -168,6 +168,7 @@ def publish_edition(
     *,
     allow_low_confidence: bool = False,
     confirm_warnings: bool = False,
+    force_update: bool = False,
 ) -> Edition:
     edition = Edition.objects.select_for_update().select_related("work").get(pk=edition.pk)
     has_curated_drafts = CuratedClaim.objects.filter(
@@ -176,7 +177,11 @@ def publish_edition(
         evidence_links__evidence_span__is_stale=False,
         evidence_links__evidence_span__document_revision__is_active=True,
     ).exists()
-    if edition.state == PublicationState.PUBLISHED and not has_curated_drafts:
+    if (
+        edition.state == PublicationState.PUBLISHED
+        and not has_curated_drafts
+        and not force_update
+    ):
         return edition
     preflight = publication_preflight(edition)
     if preflight["blockers"]:

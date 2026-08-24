@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
 
 from .models import (
@@ -355,6 +356,14 @@ class _CanonicalTaxonomyMutationMixin:
                 },
                 status=status.HTTP_409_CONFLICT,
             )
+        if not has_capability(
+            request.user,
+            Capability.DESTRUCTIVE_MAINTENANCE,
+        ):
+            return Response(
+                {"detail": "只有 System Owner 可以永久删除规范对象。"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         return super().destroy(request, *args, **kwargs)
 
 
@@ -378,6 +387,79 @@ class AdminDisciplineDetailView(
     serializer_class = AdminDisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Discipline.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        discipline = self.get_object()
+        if discipline.editorial_status != "published":
+            return super().update(request, *args, **kwargs)
+        if "hero_image" in request.data:
+            return Response(
+                {
+                    "detail": "已发布学科的主视觉尚不支持进入 JSON 编辑草稿。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(
+            discipline,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        from .models import CanonicalObjectRevision, EditorialRevision
+        from .services.editorial_revision import (
+            EditorialRevisionError,
+            changed_editorial_patch,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        try:
+            patch = changed_editorial_patch(
+                target_type=EditorialRevision.TargetType.DISCIPLINE,
+                target=discipline,
+                patch=dict(serializer.validated_data),
+            )
+            if not patch:
+                return Response(self.get_serializer(discipline).data)
+            current_revision = (
+                CanonicalObjectRevision.objects.filter(
+                    object_type=EditorialRevision.TargetType.DISCIPLINE,
+                    object_id=discipline.id,
+                )
+                .values_list("current_revision", flat=True)
+                .first()
+                or 0
+            )
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.DISCIPLINE,
+                target_id=discipline.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(
+                    request.headers.get("Idempotency-Key") or ""
+                ).strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.DISCIPLINE,
+                    target_id=discipline.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(
+                    request.data.get("change_note") or "知识工作室学科编辑草稿"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payload = dict(self.get_serializer(discipline).data)
+        payload.update(revision.patch)
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
 
 
 class AdminSubdisciplineListView(
@@ -411,6 +493,130 @@ class AdminSubdisciplineDetailView(
     serializer_class = AdminSubdisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Subdiscipline.objects.select_related("discipline", "parent")
+
+    def update(self, request, *args, **kwargs):
+        subdiscipline = self.get_object()
+        if subdiscipline.editorial_status != "published":
+            return super().update(request, *args, **kwargs)
+        if "hero_image" in request.data:
+            return Response(
+                {
+                    "detail": "已发布子学科的主视觉尚不支持进入 JSON 编辑草稿。",
+                    "code": "published_binary_requires_revision",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(
+            subdiscipline,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        from .models import CanonicalObjectRevision, EditorialRevision
+        from .services.editorial_revision import (
+            EditorialRevisionError,
+            changed_editorial_patch,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        try:
+            patch = changed_editorial_patch(
+                target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                target=subdiscipline,
+                patch=dict(serializer.validated_data),
+            )
+            if not patch:
+                return Response(self.get_serializer(subdiscipline).data)
+            current_revision = (
+                CanonicalObjectRevision.objects.filter(
+                    object_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                    object_id=subdiscipline.id,
+                )
+                .values_list("current_revision", flat=True)
+                .first()
+                or 0
+            )
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                target_id=subdiscipline.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(
+                    request.headers.get("Idempotency-Key") or ""
+                ).strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                    target_id=subdiscipline.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(
+                    request.data.get("change_note") or "知识工作室子学科编辑草稿"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payload = dict(self.get_serializer(subdiscipline).data)
+        payload.update(revision.patch)
+        payload["editorial_revision"] = serialize_editorial_revision(revision)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, *args, **kwargs):
+        subdiscipline = self.get_object()
+        if subdiscipline.editorial_status != "published":
+            return super().destroy(request, *args, **kwargs)
+        from .models import CanonicalObjectRevision, EditorialRevision
+        from .services.editorial_revision import (
+            EditorialRevisionError,
+            create_editorial_revision,
+            editorial_idempotency_key,
+            serialize_editorial_revision,
+        )
+
+        patch = {"editorial_status": "archived"}
+        current_revision = (
+            CanonicalObjectRevision.objects.filter(
+                object_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                object_id=subdiscipline.id,
+            )
+            .values_list("current_revision", flat=True)
+            .first()
+            or 0
+        )
+        try:
+            revision = create_editorial_revision(
+                target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                target_id=subdiscipline.id,
+                patch=patch,
+                actor=request.user,
+                idempotency_key=str(
+                    request.headers.get("Idempotency-Key") or ""
+                ).strip()
+                or editorial_idempotency_key(
+                    target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+                    target_id=subdiscipline.id,
+                    base_revision=current_revision,
+                    patch=patch,
+                ),
+                change_note=str(
+                    request.data.get("change_note") or "下线已发布子学科"
+                ),
+            )
+        except EditorialRevisionError as error:
+            return Response(
+                {"detail": str(error), "code": "editorial_revision_error"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"editorial_revision": serialize_editorial_revision(revision)},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class AdminTheoryTimelineListView(generics.ListCreateAPIView):

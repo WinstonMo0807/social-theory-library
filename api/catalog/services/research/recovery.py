@@ -24,6 +24,7 @@ RESEARCH_RUN_TERMINAL_STATUSES = frozenset(
         ResearchRun.Status.DEGRADED,
         ResearchRun.Status.FAILED,
         ResearchRun.Status.CANCELED,
+        ResearchRun.Status.SUPERSEDED,
     }
 )
 

@@ -188,10 +188,8 @@ def test_semantic_snapshot_waits_for_validation_before_switching_active_index(
 
 
 @pytest.mark.django_db
-def test_admin_semantic_activation_requires_explicit_confirmation(api_client, admin_user):
-    admin_user.is_superuser = True
-    admin_user.save(update_fields=["is_superuser"])
-    api_client.force_authenticate(admin_user)
+def test_admin_semantic_activation_requires_explicit_confirmation(api_client, superadmin_user):
+    api_client.force_authenticate(superadmin_user)
     candidate = SemanticIndexVersion.objects.create(
         uid="semantic_passages_confirmation_required",
         provider="huggingFace",

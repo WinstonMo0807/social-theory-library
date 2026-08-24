@@ -8,7 +8,8 @@ from .contracts import RESEARCH_CONTRACTS, ResearchFieldContract
 from .task_profiles import profile_key_for_contract, resolve_task_profile
 
 
-RESEARCH_PLANNER_VERSION = "research-planner-v1"
+RESEARCH_PLANNER_VERSION = "research-planner-v2"
+MAX_RESEARCH_TASKS = 64
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,12 @@ class ResearchTask:
     minimum_evidence_policy: dict[str, Any]
     prompt_key: str
     required_capability: str
+    canonical_revision: dict[str, Any]
+    draft_session_id: str
+    draft_hash: str
+    trigger_input_values: dict[str, Any]
+    trigger_input_hash: str
+    no_reliable_candidate_reason: str
 
     def payload(self) -> dict[str, Any]:
         value = asdict(self)
@@ -143,10 +150,20 @@ class ResearchPlanner:
             ]
             if names:
                 return names[0]
+        for changed in context.changed_fields:
+            if changed not in contract.effective_trigger_inputs and changed != f"{contract.step}.{contract.field}":
+                continue
+            values = self._text_values(context.trigger_input_values.get(changed))
+            if values:
+                return values[0][:500]
         value = context.draft_value(contract.step, contract.field, None)
         values = self._text_values(value)
         if values:
             return values[0][:500]
+        for path in contract.effective_trigger_inputs:
+            values = self._text_values(context.trigger_input_values.get(path))
+            if values:
+                return values[0][:500]
         for step, field in (
             ("work", "title"),
             ("work", "original_title"),
@@ -160,17 +177,67 @@ class ResearchPlanner:
         return ""
 
     @staticmethod
-    def _affected(contract: ResearchFieldContract, changed_fields: tuple[str, ...]) -> bool:
+    def _paths_overlap(left: str, right: str) -> bool:
+        return (
+            left == right
+            or left.startswith(f"{right}.")
+            or right.startswith(f"{left}.")
+        )
+
+    @classmethod
+    def _affected(cls, contract: ResearchFieldContract, changed_fields: tuple[str, ...]) -> bool:
         if not changed_fields:
             return True
-        keys = {f"{contract.step}.{contract.field}", *contract.dependencies}
+        keys = {f"{contract.step}.{contract.field}", *contract.effective_trigger_inputs}
         return any(
-            changed == key
-            or changed.startswith(f"{key}.")
-            or key.startswith(f"{changed}.")
+            cls._paths_overlap(changed, key)
             for changed in changed_fields
             for key in keys
         )
+
+    @staticmethod
+    def _canonical_dependency_path(path: str) -> str:
+        normalized = str(path or "").strip()
+        if "." not in normalized:
+            return normalized
+        step, field = normalized.split(".", 1)
+        if "." in field:
+            return normalized
+        try:
+            contract = RESEARCH_CONTRACTS.get(step, field)
+        except ValueError:
+            return normalized
+        return f"{contract.step}.{contract.canonical_field}"
+
+    @classmethod
+    def _expanded_dependency_paths(cls, changed_fields: tuple[str, ...]) -> tuple[str, ...]:
+        """Resolve declared downstream fields without scheduling unrelated work."""
+
+        expanded = {
+            cls._canonical_dependency_path(value)
+            for value in changed_fields
+            if str(value or "").strip()
+        }
+        if not expanded:
+            return ()
+        while True:
+            before = len(expanded)
+            for contract in RESEARCH_CONTRACTS.all():
+                keys = {f"{contract.step}.{contract.field}", *contract.effective_trigger_inputs}
+                if not any(
+                    cls._paths_overlap(path, key)
+                    for path in expanded
+                    for key in keys
+                ):
+                    continue
+                expanded.update(
+                    cls._canonical_dependency_path(path)
+                    for path in contract.dependent_fields
+                    if str(path or "").strip()
+                )
+            if len(expanded) == before:
+                break
+        return tuple(sorted(expanded))
 
     def plan(
         self,
@@ -182,26 +249,41 @@ class ResearchPlanner:
         gaps = self.gap_analyzer.analyze(context, candidate_counts=candidate_counts)
         gap_priority = {(row.step, row.field): row.priority for row in gaps}
         context = replace(context, workflow_gaps=[asdict(row) for row in gaps])
+        affected_paths = self._expanded_dependency_paths(context.changed_fields)
         tasks = []
         for contract in RESEARCH_CONTRACTS.all():
             if contract.field != contract.canonical_field or not contract.research_enabled:
                 continue
-            if not self._affected(contract, context.changed_fields):
+            if not self._affected(contract, affected_paths):
                 continue
-            if contract.step != context.active_step and not include_background:
+            if contract.step != context.active_step and not include_background and not context.changed_fields:
                 continue
             query = self._query(context, contract)
             priority = 100 if contract.step == context.active_step else 45
             priority = max(priority, gap_priority.get((contract.step, contract.field), 0))
-            providers = ["local", "query_lexicon", "pdf"]
-            if contract.implementation in {"field_enrichment", "entity_discovery", "editorial_discovery", "evidence_only"}:
-                providers.extend(["structured", "searxng", "safe_web_fetcher"])
-            task_profile_key = profile_key_for_contract(
+            contract_path = f"{contract.step}.{contract.field}"
+            if any(
+                self._paths_overlap(contract_path, path)
+                for path in affected_paths
+                if path not in context.changed_fields
+            ):
+                priority = max(priority, 110)
+            providers = [
+                *contract.local_catalog_sources,
+                *contract.document_sources,
+                *contract.authority_providers,
+                *contract.external_providers,
+            ]
+            task_profile_key = contract.research_task_profile or profile_key_for_contract(
                 step=contract.step,
                 field=contract.field,
                 implementation=contract.implementation,
             )
             task_profile = resolve_task_profile(task_profile_key)
+            trigger_values = {
+                path: context.trigger_input_values.get(path)
+                for path in contract.effective_trigger_inputs
+            }
             tasks.append(
                 ResearchTask(
                     step=contract.step,
@@ -225,7 +307,13 @@ class ResearchPlanner:
                     minimum_evidence_policy=dict(task_profile.get("minimum_evidence_policy") or {}),
                     prompt_key=str(task_profile.get("prompt_key") or ""),
                     required_capability=str(task_profile.get("required_capability") or ""),
+                    canonical_revision=context.canonical_revision,
+                    draft_session_id=context.draft_session_id,
+                    draft_hash=context.draft_hash,
+                    trigger_input_values=trigger_values,
+                    trigger_input_hash=context.trigger_input_hash,
+                    no_reliable_candidate_reason=contract.no_reliable_candidate_reason,
                 )
             )
         tasks.sort(key=lambda row: (-row.priority, row.step, row.field, row.query))
-        return context, tasks[:24]
+        return context, tasks[:MAX_RESEARCH_TASKS]

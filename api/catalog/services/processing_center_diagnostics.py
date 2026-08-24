@@ -287,14 +287,14 @@ def _capability_diagnostics() -> tuple[list[dict[str, Any]], list[dict[str, Any]
             }
         )
 
-    unresolved = CapabilityDemand.objects.filter(
+    unresolved = list(CapabilityDemand.objects.filter(
         state__in=[
             CapabilityDemand.State.WAITING_FOR_CAPABILITY,
             CapabilityDemand.State.READY,
         ]
-    )
+    ).order_by("-priority", "created_at")[:5000])
     grouped: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for demand in unresolved.iterator(chunk_size=200):
+    for demand in unresolved:
         if any(
             executor_matches_demand(executor, demand)
             for executor in live_executors
@@ -377,6 +377,30 @@ def _capability_diagnostics() -> tuple[list[dict[str, Any]], list[dict[str, Any]
             }
         )
     items.sort(key=lambda row: (-int(row["publication_blocking"]), row["title"]))
+    executor_by_id = {str(row.id): row for row in executors}
+    for executor_row in executor_rows:
+        executor = executor_by_id.get(executor_row["id"])
+        if executor is None:
+            continue
+        compatible = [
+            demand
+            for demand in unresolved
+            if executor_matches_demand(executor, demand)
+        ]
+        executor_row["backlog"] = {
+            "compatible_ready": sum(
+                demand.state == CapabilityDemand.State.READY
+                for demand in compatible
+            ),
+            "compatible_waiting": sum(
+                demand.state == CapabilityDemand.State.WAITING_FOR_CAPABILITY
+                for demand in compatible
+            ),
+            "claimed": CapabilityDemand.objects.filter(
+                claimed_by=executor,
+                state=CapabilityDemand.State.CLAIMED,
+            ).count(),
+        }
     return items, executor_rows, {
         "missing_capabilities": len(items),
         "waiting_demands": sum(int(row["details"]["waiting_count"]) for row in items),
@@ -503,6 +527,7 @@ def _provider_diagnostics() -> tuple[list[dict[str, Any]], list[dict[str, Any]],
                 "fallback_available": fallback_available,
                 "endpoint_configured": environment["endpoint_configured"],
                 "credential_configured": environment["credential_configured"],
+                "management_url": "/admin/settings#ai-runtime",
             }
         )
         if runtime_status != "degraded":
@@ -603,6 +628,9 @@ def processing_center_diagnostics() -> dict[str, Any]:
     projections, projection_summary = _projection_diagnostics()
     capabilities, executors, capability_summary = _capability_diagnostics()
     providers, provider_profiles, provider_summary = _provider_diagnostics()
+    from catalog.services.research_sources import research_source_registry_payload
+
+    research_sources = research_source_registry_payload()
     feedback_calibration = feedback_calibration_snapshot()[:VISIBLE_LIMIT]
     prompt_rows = list(
         PromptRegistryEntry.objects.filter(
@@ -628,6 +656,24 @@ def processing_center_diagnostics() -> dict[str, Any]:
         )
     )
     blocking_capabilities = sum(bool(row["publication_blocking"]) for row in capabilities)
+    impact_rows = [
+        {
+            "id": row["id"],
+            "title": row["title"],
+            "reason": row["reason"],
+            "affected_features": row["affected_features"],
+            "publication_blocking": row["publication_blocking"],
+            "severity": row["severity"],
+        }
+        for row in [*projections, *capabilities, *providers]
+    ]
+    impact_rows.sort(
+        key=lambda row: (
+            -int(row["publication_blocking"]),
+            -int(row["severity"] == "critical"),
+            row["title"],
+        )
+    )
     return {
         "version": DIAGNOSTICS_VERSION,
         "generated_at": timezone.now(),
@@ -638,7 +684,9 @@ def processing_center_diagnostics() -> dict[str, Any]:
             "stale_projection_count": projection_summary["total"],
             "missing_capability_count": len(capabilities),
             "provider_degradation_count": len(providers),
+            "research_source_degradation_count": research_sources["summary"]["degraded"],
         },
+        "functional_impacts": impact_rows[:8],
         "sections": [
             {
                 "key": "projections",
@@ -664,6 +712,7 @@ def processing_center_diagnostics() -> dict[str, Any]:
         ],
         "executors": executors,
         "provider_profiles": provider_profiles,
+        "research_sources": research_sources,
         "prompt_registry": {
             "active": [
                 {

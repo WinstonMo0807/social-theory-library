@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -17,6 +17,8 @@ from .models import (
     CuratedClaim,
     Discipline,
     Edition,
+    EvidenceSnippet,
+    KnowledgeNode,
     KnowledgePublicationStatus,
     Person,
     Passage,
@@ -26,6 +28,7 @@ from .models import (
     RecommendationPolicy,
     RecommendationSnapshot,
     RelationReviewStatus,
+    RelationStrength,
     ScholarProfile,
     Subdiscipline,
     TheoryDisciplineRelation,
@@ -42,9 +45,14 @@ from .models import (
     Work,
     WorkDisciplineRelation,
     WorkKnowledgeRelation,
+    WorkNodeRelation,
     WorkSubdisciplineRelation,
 )
-from .services.evidence_envelope import public_curated_claim_groups
+from .services.evidence_envelope import (
+    admin_preview_curated_claim_groups,
+    public_curated_claim_groups,
+)
+from .services.semantic_search import viewer_access_statuses
 from .services.text import clean_page_label, normalize_search_text
 
 
@@ -77,6 +85,20 @@ def _is_uuid(value):
     except (TypeError, ValueError, AttributeError):
         return False
     return True
+
+
+def _viewer_asset_statuses(context) -> list[str]:
+    request = context.get("request") if isinstance(context, dict) else None
+    user = getattr(request, "user", None)
+    authenticated = bool(user and getattr(user, "is_authenticated", False))
+    staff = bool(
+        authenticated
+        and (
+            getattr(user, "is_staff", False)
+            or getattr(user, "role", "") in {"admin", "editor", "reviewer"}
+        )
+    )
+    return viewer_access_statuses(authenticated=authenticated, staff=staff)
 
 
 def _validate_reference_list(value, key, queryset, label):
@@ -395,6 +417,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "public_slug",
             "version_label",
             "edition_statement",
+            "publication_date",
             "publication_year",
             "publisher",
             "publisher_verbatim",
@@ -429,6 +452,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             is_current=True,
+            access_status__in=_viewer_asset_statuses(self.context),
         ).first()
         return AssetCompactSerializer(asset).data if asset else None
 
@@ -504,10 +528,50 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return values
 
     def get_theories(self, obj):
-        return self._relations(obj, WorkKnowledgeRelation.Kind.THEORY_SCHOOL)
+        # Canonical WorkNodeRelation is the public source for theory identity.
+        # Keep the legacy relation as a migration-only fallback so already
+        # published 2.x records remain visible until their backfill completes.
+        values = []
+        seen = set()
+        for relation in obj.node_relations.all():
+            node = relation.node
+            if (
+                relation.status != KnowledgePublicationStatus.PUBLISHED
+                or node.status != KnowledgePublicationStatus.PUBLISHED
+                or node.node_type != "theory_tradition"
+                or node.slug in seen
+            ):
+                continue
+            seen.add(node.slug)
+            values.append(
+                {"id": str(node.id), "name": node.canonical_name_zh, "slug": node.slug}
+            )
+        for row in self._relations(obj, WorkKnowledgeRelation.Kind.THEORY_SCHOOL):
+            if row["slug"] in seen:
+                continue
+            seen.add(row["slug"])
+            values.append(row)
+        return values
 
     def get_topics(self, obj):
-        return self._relations(obj, WorkKnowledgeRelation.Kind.TOPIC)
+        values = []
+        seen = set()
+        for relation in obj.topic_relations.all():
+            topic = relation.topic
+            if (
+                relation.review_status != RelationReviewStatus.APPROVED
+                or topic.editorial_status != "published"
+                or topic.slug in seen
+            ):
+                continue
+            seen.add(topic.slug)
+            values.append({"id": str(topic.id), "name": topic.name, "slug": topic.slug})
+        for row in self._relations(obj, WorkKnowledgeRelation.Kind.TOPIC):
+            if row["slug"] in seen:
+                continue
+            seen.add(row["slug"])
+            values.append(row)
+        return values
 
     def get_disciplines(self, obj):
         return [
@@ -565,6 +629,7 @@ class WorkDetailSerializer(WorkCardSerializer):
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             is_current=True,
+            access_status__in=_viewer_asset_statuses(self.context),
         ).first()
         if not asset:
             return []
@@ -578,13 +643,28 @@ class WorkDetailSerializer(WorkCardSerializer):
         ]
 
     def get_theory_associations(self, obj):
+        public_evidence = EvidenceSnippet.objects.filter(
+            review_status=RelationReviewStatus.APPROVED,
+            file__kind=Asset.Kind.NORMALIZED,
+            file__status=Asset.Status.READY,
+            file__is_current=True,
+            file__access_status__in=_viewer_asset_statuses(self.context),
+        ).select_related("file")
+        preview_edition = self.context.get("preview_edition")
+        public_evidence = (
+            public_evidence.filter(file__edition=preview_edition)
+            if preview_edition is not None
+            else public_evidence.filter(file__edition__state=PublicationState.PUBLISHED)
+        )
         relations = (
             obj.node_relations.filter(
                 status=KnowledgePublicationStatus.PUBLISHED,
                 node__status=KnowledgePublicationStatus.PUBLISHED,
             )
             .select_related("node")
-            .prefetch_related("evidence")
+            .prefetch_related(
+                Prefetch("evidence", queryset=public_evidence, to_attr="public_evidence")
+            )
             .order_by("role", "node__sort_order", "node__canonical_name_zh")
         )
         return [
@@ -612,8 +692,7 @@ class WorkDetailSerializer(WorkCardSerializer):
                             f"&evidence={evidence.id}"
                         ),
                     }
-                    for evidence in relation.evidence.all()
-                    if evidence.review_status == RelationReviewStatus.APPROVED
+                    for evidence in relation.public_evidence
                 ],
             }
             for relation in relations
@@ -634,7 +713,11 @@ class WorkDetailSerializer(WorkCardSerializer):
 
 
 class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
-    """Render one selected Edition without weakening any public queryset."""
+    """Render one selected Edition with the saved EditorialRevision overlay.
+
+    The overlay is a read model only.  It never writes draft values to the
+    canonical Work, Edition or relation tables while generating a preview.
+    """
 
     def _preview_edition(self):
         return self.context["preview_edition"]
@@ -651,6 +734,7 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             is_current=True,
+            access_status__in=_viewer_asset_statuses(self.context),
         ).first()
         if not asset:
             return []
@@ -670,6 +754,234 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
 
     def get_recommendation_image(self, obj):
         return self.get_cover(obj)
+
+    def get_curated_claims(self, obj):
+        return admin_preview_curated_claim_groups(
+            work_id=obj.id,
+            edition_id=self._preview_edition().id,
+            allowed_kinds=(
+                CuratedClaim.Kind.CORE_VIEWPOINT,
+                CuratedClaim.Kind.MAJOR_CRITICISM,
+                CuratedClaim.Kind.MAJOR_RESPONSE,
+            ),
+        )
+
+    def _editorial_preview(self):
+        value = self.context.get("editorial_preview")
+        return value if isinstance(value, dict) else {}
+
+    def _apply_bibliography_preview(self, data, preview):
+        section = preview.get("bibliography")
+        if (
+            not isinstance(section, dict)
+            or str(section.get("edition_id") or "") != str(self._preview_edition().id)
+            or not isinstance(section.get("values"), dict)
+        ):
+            return
+        values = dict(section["values"])
+        for edition_data in [data.get("edition"), *(data.get("editions") or [])]:
+            if not isinstance(edition_data, dict):
+                continue
+            for field_name, value in values.items():
+                if field_name == "publisher_authority_id":
+                    edition_data["publisher_authority"] = value
+                elif field_name in edition_data:
+                    edition_data[field_name] = value
+            if "version_label" in values:
+                edition_data["edition_statement"] = values["version_label"]
+            if "publisher" in values:
+                edition_data["publisher_verbatim"] = values["publisher"]
+            if "publication_place" in values:
+                edition_data["publication_place_verbatim"] = values["publication_place"]
+
+    def _apply_contributor_preview(self, data, preview):
+        section = preview.get("contributors")
+        if (
+            not isinstance(section, dict)
+            or str(section.get("edition_id") or "") != str(self._preview_edition().id)
+            or not isinstance(section.get("values"), dict)
+        ):
+            return
+        rows = [
+            row
+            for row in section["values"].get("contributors") or []
+            if isinstance(row, dict) and row.get("person_id")
+        ]
+        people = {
+            str(person.id): person
+            for person in Person.objects.select_related("scholar_profile").filter(
+                pk__in=[row["person_id"] for row in rows]
+            )
+        }
+        contributors = []
+        for index, row in enumerate(rows):
+            person = people.get(str(row["person_id"]))
+            if person is None:
+                continue
+            contributors.append(
+                {
+                    "role": row.get("role") or Contribution.Role.AUTHOR,
+                    "order": row.get("order", index),
+                    "person": PersonCompactSerializer(person, context=self.context).data,
+                }
+            )
+        for edition_data in [data.get("edition"), *(data.get("editions") or [])]:
+            if isinstance(edition_data, dict):
+                edition_data["contributors"] = contributors
+
+    def _apply_classification_preview(self, data, preview):
+        section = preview.get("classification")
+        if not isinstance(section, dict):
+            return
+        discipline_rows = [
+            row for row in section.get("disciplines") or [] if isinstance(row, dict)
+        ]
+        disciplines = {
+            str(item.id): item
+            for item in Discipline.objects.filter(
+                pk__in=[row.get("id") for row in discipline_rows]
+            )
+        }
+        data["disciplines"] = [
+            {
+                "id": str(item.id),
+                "name": item.name,
+                "slug": item.slug,
+                "is_primary": bool(row.get("is_primary")),
+            }
+            for row in discipline_rows
+            if (item := disciplines.get(str(row.get("id") or ""))) is not None
+        ]
+        subdiscipline_rows = [
+            row for row in section.get("subdisciplines") or [] if isinstance(row, dict)
+        ]
+        subdisciplines = {
+            str(item.id): item
+            for item in Subdiscipline.objects.filter(
+                pk__in=[row.get("id") for row in subdiscipline_rows]
+            )
+        }
+        data["subdisciplines"] = [
+            {
+                "id": str(item.id),
+                "name": item.name,
+                "slug": item.slug,
+                "is_primary": bool(row.get("is_primary")),
+            }
+            for row in subdiscipline_rows
+            if (item := subdisciplines.get(str(row.get("id") or ""))) is not None
+        ]
+
+    def _apply_knowledge_preview(self, data, preview):
+        section = preview.get("knowledge")
+        if not isinstance(section, dict):
+            return
+        theory_rows = [
+            row for row in section.get("theories") or [] if isinstance(row, dict)
+        ]
+        topic_rows = [row for row in section.get("topics") or [] if isinstance(row, dict)]
+        node_rows = [row for row in section.get("nodes") or [] if isinstance(row, dict)]
+        legacy_theories = {
+            str(item.id): item
+            for item in TheorySchool.objects.filter(
+                pk__in=[row.get("id") for row in theory_rows]
+            )
+        }
+        topics = {
+            str(item.id): item
+            for item in Topic.objects.filter(pk__in=[row.get("id") for row in topic_rows])
+        }
+        nodes = {
+            str(item.id): item
+            for item in KnowledgeNode.objects.filter(
+                pk__in=[row.get("id") for row in node_rows]
+            )
+        }
+        theories = []
+        seen = set()
+        for row in theory_rows:
+            theory = legacy_theories.get(str(row.get("id") or ""))
+            if theory is not None and theory.slug not in seen:
+                seen.add(theory.slug)
+                theories.append({"id": str(theory.id), "name": theory.name, "slug": theory.slug})
+        for row in node_rows:
+            node = nodes.get(str(row.get("id") or ""))
+            if (
+                node is not None
+                and node.node_type == KnowledgeNode.NodeType.THEORY_TRADITION
+                and node.slug not in seen
+            ):
+                seen.add(node.slug)
+                theories.append(
+                    {"id": str(node.id), "name": node.canonical_name_zh, "slug": node.slug}
+                )
+        data["theories"] = theories
+        data["topics"] = [
+            {"id": str(topic.id), "name": topic.name, "slug": topic.slug}
+            for row in topic_rows
+            if (topic := topics.get(str(row.get("id") or ""))) is not None
+        ]
+        role_labels = dict(WorkNodeRelation.Role.choices)
+        associations = []
+        for index, row in enumerate(node_rows):
+            node = nodes.get(str(row.get("id") or ""))
+            if node is None:
+                continue
+            evidence = []
+            if row.get("evidence_text"):
+                evidence.append(
+                    {
+                        "id": f"draft-{index}-{node.id}",
+                        "page_number": row.get("evidence_page"),
+                        "page_end": row.get("evidence_page_end"),
+                        "printed_page_label": row.get("evidence_printed_label") or "",
+                        "quote": row["evidence_text"],
+                        "reader_href": "",
+                    }
+                )
+            role = row.get("role") or WorkNodeRelation.Role.GENERAL_MENTION
+            associations.append(
+                {
+                    "id": f"draft-{index}-{node.id}-{role}",
+                    "node": {
+                        "id": str(node.id),
+                        "name": node.canonical_name_zh,
+                        "foreign_name": node.canonical_name_en,
+                        "slug": node.slug,
+                        "type": node.node_type,
+                    },
+                    "role": role,
+                    "role_label": role_labels.get(role, role),
+                    "strength": row.get("strength") or RelationStrength.MEDIUM,
+                    "evidence": evidence,
+                }
+            )
+        data["theory_associations"] = associations
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        preview = self._editorial_preview()
+        if not preview:
+            return data
+        for field_name in (
+            "document_type",
+            "title",
+            "subtitle",
+            "original_title",
+            "uniform_title",
+            "abstract",
+            "language",
+            "original_language",
+            "first_publication_date",
+            "translation_of",
+        ):
+            if field_name in preview:
+                data[field_name] = preview[field_name]
+        self._apply_bibliography_preview(data, preview)
+        self._apply_contributor_preview(data, preview)
+        self._apply_classification_preview(data, preview)
+        self._apply_knowledge_preview(data, preview)
+        return data
 
 
 class TheorySchoolSerializer(serializers.ModelSerializer):
@@ -885,6 +1197,7 @@ class TopicSerializer(serializers.ModelSerializer):
     disciplines = serializers.SerializerMethodField()
     subdisciplines = serializers.SerializerMethodField()
     linked_theories = serializers.SerializerMethodField()
+    knowledge_nodes = serializers.SerializerMethodField()
     curated_claims = serializers.SerializerMethodField()
 
     class Meta:
@@ -905,6 +1218,7 @@ class TopicSerializer(serializers.ModelSerializer):
             "disciplines",
             "subdisciplines",
             "linked_theories",
+            "knowledge_nodes",
             "work_count",
             "curated",
             "curated_claims",
@@ -950,6 +1264,24 @@ class TopicSerializer(serializers.ModelSerializer):
                 review_status=RelationReviewStatus.APPROVED,
                 theory_school__editorial_status="published",
             ).select_related("theory_school")
+        ]
+
+    def get_knowledge_nodes(self, obj):
+        """Expose published normalized Topic relations without legacy dual-write."""
+
+        return [
+            {
+                "id": str(link.node_id),
+                "node_type": link.node.node_type,
+                "name": link.node.canonical_name_zh,
+                "foreign_name": link.node.canonical_name_en,
+                "slug": link.node.slug,
+                "summary": link.node.summary,
+                "relation_label": link.relation_label,
+            }
+            for link in obj.knowledge_node_links.all()
+            if link.status == KnowledgePublicationStatus.PUBLISHED
+            and link.node.status == KnowledgePublicationStatus.PUBLISHED
         ]
 
     def get_curated(self, obj):
@@ -1015,6 +1347,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
     works = serializers.SerializerMethodField()
     curated = serializers.SerializerMethodField()
     curated_claims = serializers.SerializerMethodField()
+    knowledge_nodes = serializers.SerializerMethodField()
 
     class Meta:
         model = ScholarProfile
@@ -1031,6 +1364,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             "works",
             "curated",
             "curated_claims",
+            "knowledge_nodes",
         )
 
     def get_works(self, obj):
@@ -1116,6 +1450,65 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
                 CuratedClaim.Kind.MAJOR_RESPONSE,
             ),
         )
+
+    def get_knowledge_nodes(self, obj):
+        """Expose explicit and work-backed normalized knowledge relations."""
+
+        values = []
+        seen = set()
+        for relation in obj.person.node_relations.all():
+            node = relation.node
+            if (
+                relation.status != KnowledgePublicationStatus.PUBLISHED
+                or node.status != KnowledgePublicationStatus.PUBLISHED
+                or node.id in seen
+            ):
+                continue
+            seen.add(node.id)
+            values.append(
+                {
+                    "id": str(node.id),
+                    "node_type": node.node_type,
+                    "name": node.canonical_name_zh,
+                    "foreign_name": node.canonical_name_en,
+                    "slug": node.slug,
+                    "summary": node.summary,
+                    "relation_label": relation.relation_label,
+                    "is_representative": relation.is_representative,
+                    "relation_source": "person_relation",
+                }
+            )
+        work_relations = (
+            WorkNodeRelation.objects.filter(
+                work__editions__contributions__person=obj.person,
+                work__editions__contributions__role=Contribution.Role.AUTHOR,
+                work__editions__contributions__approved=True,
+                work__editions__state=PublicationState.PUBLISHED,
+                status=KnowledgePublicationStatus.PUBLISHED,
+                node__status=KnowledgePublicationStatus.PUBLISHED,
+            )
+            .select_related("node")
+            .distinct()
+        )
+        for relation in work_relations:
+            node = relation.node
+            if node.id in seen:
+                continue
+            seen.add(node.id)
+            values.append(
+                {
+                    "id": str(node.id),
+                    "node_type": node.node_type,
+                    "name": node.canonical_name_zh,
+                    "foreign_name": node.canonical_name_en,
+                    "slug": node.slug,
+                    "summary": node.summary,
+                    "relation_label": relation.get_role_display(),
+                    "is_representative": False,
+                    "relation_source": "published_work_relation",
+                }
+            )
+        return values
 
 
 class DisciplineSerializer(serializers.ModelSerializer):

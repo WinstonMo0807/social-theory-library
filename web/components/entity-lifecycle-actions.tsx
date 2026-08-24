@@ -29,6 +29,23 @@ type LifecycleSnapshot = {
   guidance: string;
 };
 
+type LifecycleRevisionResponse = {
+  detail: string;
+  impact: LifecycleSnapshot;
+  editorial_revision: {
+    id: string;
+    revision: number;
+    status: string;
+    publish_url: string;
+  };
+};
+
+function isRevisionResponse(
+  payload: LifecycleSnapshot | LifecycleRevisionResponse,
+): payload is LifecycleRevisionResponse {
+  return "editorial_revision" in payload;
+}
+
 export function EntityLifecycleActions({
   kind,
   id,
@@ -72,11 +89,17 @@ export function EntityLifecycleActions({
     if (!token) return;
     setWorking(true);
     try {
-      const payload = await apiRequest<LifecycleSnapshot>(
+      const payload = await apiRequest<LifecycleSnapshot | LifecycleRevisionResponse>(
         `/catalog/admin/lifecycle/${kind}/${id}/`,
         { method: "POST", body: JSON.stringify({ action }) },
         token,
       );
+      if (isRevisionResponse(payload)) {
+        setSnapshot(payload.impact);
+        setConfirmation(null);
+        setMessage(`已建立 Revision ${payload.editorial_revision.revision} 下线草稿。正式页面尚未改变，请到 Knowledge Studio 预览并确认发布。`);
+        return;
+      }
       setSnapshot(payload);
       setConfirmation(null);
       setMessage(action === "archive" ? "内容已经下线，普通读者将不再看到。" : "内容已恢复为草稿，可继续编辑后发布。");

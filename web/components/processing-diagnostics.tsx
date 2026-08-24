@@ -54,6 +54,11 @@ type ExecutorSnapshot = {
   model_revisions: Record<string, string>;
   current_load: number;
   concurrency: number;
+  backlog?: {
+    compatible_ready: number;
+    compatible_waiting: number;
+    claimed: number;
+  };
 };
 
 type ProviderProfileSnapshot = {
@@ -64,6 +69,7 @@ type ProviderProfileSnapshot = {
   status: string;
   fallback_profile?: string;
   fallback_available: boolean;
+  management_url?: string;
 };
 
 export type ProcessingDiagnosticsPayload = {
@@ -76,7 +82,16 @@ export type ProcessingDiagnosticsPayload = {
     stale_projection_count: number;
     missing_capability_count: number;
     provider_degradation_count: number;
+    research_source_degradation_count?: number;
   };
+  functional_impacts?: Array<{
+    id: string;
+    title: string;
+    reason: string;
+    affected_features: string[];
+    publication_blocking: boolean;
+    severity: "info" | "warning" | "critical";
+  }>;
   sections: DiagnosticSection[];
   executors: ExecutorSnapshot[];
   provider_profiles: ProviderProfileSnapshot[];
@@ -175,11 +190,26 @@ export function ProcessingDiagnosticsPanel({
         <div>{diagnostics.summary.blocking_count ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}<span>发布阻断</span><strong>{diagnostics.summary.blocking_count}</strong></div>
       </div>
 
+      {(diagnostics.functional_impacts ?? []).length ? (
+        <section className="processing-diagnostic-section" id="processing-overview" aria-labelledby="processing-functional-impact-title">
+          <header><div><AlertTriangle size={17} /><h3 id="processing-functional-impact-title">当前用户功能影响</h3></div><span>先判断读者和编辑者会遇到什么，再查看依赖详情。</span><strong>{diagnostics.functional_impacts?.length ?? 0}</strong></header>
+          <div className="processing-diagnostic-list">
+            {(diagnostics.functional_impacts ?? []).map((impact) => (
+              <article className={`processing-diagnostic-item ${impact.severity}`} key={impact.id}>
+                <header><div><span>{impact.publication_blocking ? "影响发布" : "可降级继续"}</span><h4>{impact.title}</h4></div><b>{impact.publication_blocking ? "阻断" : "非阻断"}</b></header>
+                <p>{impact.reason}</p>
+                <dl><div><dt>受影响功能</dt><dd>{impact.affected_features.join("、") || "未记录"}</dd></div><div><dt>发布</dt><dd>{impact.publication_blocking ? "相关发布需要先恢复" : "上传、编辑和发布可继续"}</dd></div></dl>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <div className="processing-diagnostic-sections">
         {diagnostics.sections.map((section) => {
           const SectionIcon = SECTION_ICONS[section.key];
           return (
-            <section className="processing-diagnostic-section" key={section.key} aria-labelledby={`diagnostic-${section.key}`}>
+            <section className="processing-diagnostic-section" id={section.key === "projections" ? "processing-projections" : section.key === "capabilities" ? "processing-workers" : "processing-ai-models"} key={section.key} aria-labelledby={`diagnostic-${section.key}`}>
               <header>
                 <div><SectionIcon size={17} /><h3 id={`diagnostic-${section.key}`}>{section.label}</h3></div>
                 <span>{section.description}</span>
@@ -231,6 +261,12 @@ export function ProcessingDiagnosticsPanel({
                           })}
                         </footer>
                       ) : null}
+                      {item.kind === "capability" ? (
+                        <footer>
+                          <a className="button secondary" href="/admin/settings#ai-runtime">配置模型</a>
+                          <a className="button secondary" href="#processing-worker-inventory">连接 4070</a>
+                        </footer>
+                      ) : null}
                     </article>
                   ))}
                 </div>
@@ -241,7 +277,7 @@ export function ProcessingDiagnosticsPanel({
       </div>
 
       <div className="processing-runtime-inventory">
-        <details>
+        <details id="processing-worker-inventory">
           <summary>Executor heartbeat <strong>{diagnostics.executors.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.executors.map((executor) => (
@@ -250,12 +286,13 @@ export function ProcessingDiagnosticsPanel({
                 <b className={executor.heartbeat_fresh ? "healthy" : "offline"}>{executor.heartbeat_fresh ? "在线" : "离线或过期"}</b>
                 <span>{executor.capabilities.join("、") || "未声明能力"}</span>
                 <span>负载 {executor.current_load}/{executor.concurrency} · {timeLabel(executor.last_heartbeat_at)}</span>
+                <span>Backlog 可领取 {executor.backlog?.compatible_ready ?? 0} · 等待能力 {executor.backlog?.compatible_waiting ?? 0} · 已领取 {executor.backlog?.claimed ?? 0}</span>
               </article>
             ))}
             {!diagnostics.executors.length ? <p>尚无已登记 executor。</p> : null}
           </div>
         </details>
-        <details>
+        <details id="processing-ai-runtime">
           <summary>AI Runtime profiles <strong>{diagnostics.provider_profiles.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.provider_profiles.map((profile) => (
@@ -264,6 +301,7 @@ export function ProcessingDiagnosticsPanel({
                 <b>{profile.status}</b>
                 <span>{profile.provider || "none"} · {profile.model || "未配置模型"}</span>
                 <span>{profile.fallback_available ? `fallback ${profile.fallback_profile} 可用` : "无已确认可用 fallback"}</span>
+                {profile.management_url ? <a href={profile.management_url}>配置模型</a> : null}
               </article>
             ))}
           </div>

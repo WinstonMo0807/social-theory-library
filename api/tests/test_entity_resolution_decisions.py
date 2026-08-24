@@ -5,10 +5,13 @@ from catalog.models import (
     Contribution,
     DocumentType,
     Edition,
+    EditorialRevision,
     OrganizationAuthority,
     OrganizationContribution,
     Person,
     PublicationState,
+    PublisherAuthority,
+    ScholarProfile,
     Work,
 )
 from ingestion.models import AuditEvent, DecisionLog, EntityResolutionCandidate, UploadBatch, UploadItem
@@ -144,7 +147,7 @@ def test_same_name_person_link_requires_explicit_identity_confirmation(
     assert not Contribution.objects.filter(edition=item.edition, person=person).exists()
 
 
-def test_create_person_draft_never_creates_public_scholar_profile(api_client, admin_user):
+def test_create_person_draft_creates_unpublished_scholar_homepage(api_client, admin_user):
     item = make_item(admin_user)
     candidate = next(
         row
@@ -167,11 +170,92 @@ def test_create_person_draft_never_creates_public_scholar_profile(api_client, ad
     candidate.refresh_from_db()
     person = Person.objects.get(pk=candidate.candidate_entity_id)
     assert person.authority_status == Person.AuthorityStatus.DRAFT
-    assert not hasattr(person, "scholar_profile")
+    assert person.scholar_profile.editorial_status == "draft"
     assert candidate.status == EntityResolutionCandidate.Status.CREATE_DRAFT
 
 
-def test_reviewer_cannot_change_catalog_entity_resolution(api_client, admin_user):
+def test_keep_unresolved_translator_adds_contributor_without_scholar_homepage(
+    api_client,
+    admin_user,
+):
+    item = make_item(admin_user)
+    candidate = next(
+        row
+        for row in persist_resolution_candidates(
+            item,
+            target_type="person",
+            source_name="仅作责任者的译者",
+            supporting_properties={"contribution_role": Contribution.Role.TRANSLATOR},
+        )
+        if row.candidate_entity_type == "person_draft"
+    )
+    api_client.force_authenticate(make_editor())
+
+    response = api_client.post(
+        decision_url(item, candidate),
+        {"action": "keep_unresolved", "target_type": "person"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    candidate.refresh_from_db()
+    person = Person.objects.get(pk=candidate.candidate_entity_id)
+    assert not ScholarProfile.objects.filter(person=person).exists()
+    contribution = Contribution.objects.get(edition=item.edition, person=person)
+    assert contribution.role == Contribution.Role.TRANSLATOR
+    assert contribution.approved is False
+    assert candidate.supporting_properties["contributor_only"] is True
+
+
+def test_published_publisher_link_creates_editorial_revision_without_canonical_write(
+    api_client,
+    admin_user,
+):
+    item = make_item(admin_user)
+    item.edition.state = PublicationState.PUBLISHED
+    item.edition.publisher = ""
+    item.edition.publisher_authority = None
+    item.edition.save(
+        update_fields=["state", "publisher", "publisher_authority", "updated_at"]
+    )
+    publisher = PublisherAuthority.objects.create(canonical_name="证据出版社")
+    candidate = next(
+        row
+        for row in persist_resolution_candidates(
+            item,
+            target_type="publisher",
+            source_name=publisher.canonical_name,
+        )
+        if row.candidate_entity_id == str(publisher.id)
+    )
+    api_client.force_authenticate(make_editor())
+
+    response = api_client.post(
+        decision_url(item, candidate),
+        {
+            "action": "link_existing",
+            "target_type": "publisher",
+            "target_id": str(publisher.id),
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    item.edition.refresh_from_db()
+    candidate.refresh_from_db()
+    assert item.edition.publisher_authority_id is None
+    revision = EditorialRevision.objects.get(
+        target_type=EditorialRevision.TargetType.WORK,
+        target_id=item.edition.work_id,
+        status=EditorialRevision.Status.DRAFT,
+    )
+    bibliography = revision.patch["bibliography"]
+    assert bibliography["edition_id"] == str(item.edition_id)
+    assert bibliography["values"]["publisher_authority_id"] == str(publisher.id)
+    assert candidate.supporting_properties["editorial_revision_id"] == str(revision.id)
+
+
+def test_legacy_reviewer_is_normalized_to_editor_for_entity_resolution(api_client, admin_user):
     item = make_item(admin_user)
     candidate = next(
         row
@@ -192,9 +276,9 @@ def test_reviewer_cannot_change_catalog_entity_resolution(api_client, admin_user
         format="json",
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 200
     candidate.refresh_from_db()
-    assert candidate.status == EntityResolutionCandidate.Status.PROPOSED
+    assert candidate.status == EntityResolutionCandidate.Status.UNRESOLVED
 
 
 def test_editor_can_revert_unpublished_person_link_and_restore_review_group(

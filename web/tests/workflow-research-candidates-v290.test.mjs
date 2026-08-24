@@ -52,6 +52,14 @@ test("classification and knowledge use the research picker without manual UUID f
   assert.match(editor, /step="bibliography"/);
 });
 
+test("front matter authors and translators enter the contributor draft with explicit roles", async () => {
+  const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
+  assert.match(editor, /\["authors", "translators"\]\.includes\(field\)/);
+  assert.match(editor, /field === "authors" \? "author" : "translator"/);
+  assert.match(editor, /update\("contributors", "items"/);
+  assert.match(editor, /创建学者主页或仅添加为责任者/);
+});
+
 test("candidate inspector separates evidence, match basis and lexicon impact", async () => {
   const inspector = await readFile(new URL("../components/admin/inspector/workflow-inspector.tsx", import.meta.url), "utf8");
   assert.match(inspector, /匹配依据/);
@@ -76,6 +84,22 @@ test("step research is a shared action and does not navigate away from workflow"
   assert.match(panel, /method: "POST"/);
   assert.match(panel, /建议不会自动写入正式字段/);
   assert.doesNotMatch(panel, /window\.location|router\.push/);
+  assert.match(panel, /draft_session_id: draftSessionId/);
+  assert.match(panel, /setPayload\(\{ status: "stale"/);
+});
+
+test("candidate workspace exposes every result and converts evidenced web leads before adoption", async () => {
+  const panel = await readFile(new URL("../components/admin/research/research-suggestion-panel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /expanded \? rows : rows\.slice\(0, 5\)/);
+  assert.match(panel, /展开全部 \$\{rows\.length\} 项/);
+  assert.match(panel, /candidate\.verify_url/);
+  assert.match(panel, /candidate\.verify_payload/);
+  assert.match(panel, /research\/candidates\/\$\{encodeURIComponent/);
+  assert.match(panel, /核实此结果/);
+  assert.match(panel, /修改后采用/);
+  assert.match(panel, /查看依据/);
+  assert.match(panel, /拒绝\/不采用/);
+  assert.match(panel, /ToastHost/);
 });
 
 test("research actions respect capability and refresh after a candidate decision", async () => {

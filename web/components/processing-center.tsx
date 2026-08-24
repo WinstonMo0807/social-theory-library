@@ -494,7 +494,7 @@ export function ProcessingCenter() {
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><p>运行状态</p><h1>处理中心</h1><span>按任务类型和状态查看 OCR、页码与语义索引，并保留每次失败的完整记录。</span></div>
+        <div><p>Processing Center</p><h1>处理中心</h1><span>先看用户功能影响，再按任务类型检查 Research、AI、OCR、Worker 与 Projection，并保留每次失败的完整记录。</span></div>
         <div className="admin-action-row">
           <ActionLink className="button secondary" href="/admin/publication">前往发布台 <ChevronRight size={15} /></ActionLink>
           <ActionButton
@@ -507,8 +507,21 @@ export function ProcessingCenter() {
           ><RefreshCw size={15} />刷新</ActionButton>
         </div>
       </header>
+      <nav className="processing-type-tabs" aria-label="Processing Center 工作面">
+        {[
+          ["processing-overview", "总览"],
+          ["processing-research-sources", "Research Sources"],
+          ["processing-ai-models", "AI 与模型"],
+          ["processing-documents", "OCR 与文档"],
+          ["processing-workers", "任务与 Worker"],
+          ["processing-projections", "Projection 一致性"],
+          ["processing-faults-recovery", "故障与恢复"],
+        ].map(([target, label]) => (
+          <button type="button" key={target} onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{label}</button>
+        ))}
+      </nav>
       <FunctionalHealthPanel revision={revision} />
-      <section className="processing-summary">
+      <section className="processing-summary" id="processing-documents">
         <article><Clock3 size={18} /><strong>{summary.active}</strong><span>等待或运行</span></article>
         <article><FileText size={18} /><strong>{summary.review}</strong><span>待复核</span></article>
         <article><AlertCircle size={18} /><strong>{summary.failed}</strong><span>失败</span></article>
@@ -596,7 +609,7 @@ export function ProcessingCenter() {
           {!loading && !reviewTasks.length ? <p className="admin-list-state">当前状态下没有人工审核任务。</p> : null}
         </div>
       </section>
-      <section className="processing-list admin-panel processing-job-list">
+      <section className="processing-list admin-panel processing-job-list" id="processing-task-list">
         <header className="processing-job-toolbar"><div><h2>后台任务</h2><p>先选择类型，再按运行状态缩小范围。</p></div><span>{filteredJobs.length} / {jobs.length} 项</span></header>
         <nav className="processing-type-tabs" aria-label="任务类型筛选">
           <button type="button" className={!jobType ? "active" : ""} aria-pressed={!jobType} onClick={() => setJobType("")}>全部 <strong>{jobs.length}</strong></button>

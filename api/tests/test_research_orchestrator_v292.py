@@ -23,6 +23,7 @@ from catalog.models import (
     ReadingPath,
     RecoveryAction,
     ResearchRun,
+    ScholarProfile,
     TheorySchool,
     Topic,
     Work,
@@ -2211,18 +2212,24 @@ def test_research_entity_decision_create_draft_is_explicit_idempotent_and_preser
 
 
 @pytest.mark.parametrize(
-    ("action", "group", "expected_status"),
+    ("action", "group", "expected_status", "creates_contributor"),
     [
-        ("keep_unresolved", "unresolved", EntityResolutionCandidate.Status.UNRESOLVED),
-        ("reject", "external_web", EntityResolutionCandidate.Status.REJECTED),
+        (
+            "keep_unresolved",
+            "unresolved",
+            EntityResolutionCandidate.Status.UNRESOLVED,
+            True,
+        ),
+        ("reject", "external_web", EntityResolutionCandidate.Status.REJECTED, False),
     ],
 )
-def test_research_entity_decision_non_mutating_actions_leave_authorities_untouched(
+def test_research_entity_decision_preserves_verified_authorities_and_contributor_policy(
     api_client,
     admin_user,
     action,
     group,
     expected_status,
+    creates_contributor,
 ):
     _work, edition = _edition(title=f"{action} 测试作品")
     item = _item(admin_user, edition)
@@ -2258,12 +2265,24 @@ def test_research_entity_decision_non_mutating_actions_leave_authorities_untouch
     assert response.data["idempotent"] is False
     assert response.data["candidate"]["status"] == expected_status
     candidate = EntityResolutionCandidate.objects.get(upload_item=item, source_name=query)
-    assert candidate.candidate_entity_id == ""
     assert candidate.status == expected_status
     baseline.refresh_from_db()
     assert baseline.authority_status == Person.AuthorityStatus.VERIFIED
-    assert Person.objects.count() == 1
-    assert not Contribution.objects.filter(edition=edition).exists()
+    if creates_contributor:
+        created = Person.objects.get(pk=candidate.candidate_entity_id)
+        assert created.preferred_name == query
+        assert created.authority_status == Person.AuthorityStatus.DRAFT
+        assert not ScholarProfile.objects.filter(person=created).exists()
+        assert Contribution.objects.filter(
+            edition=edition,
+            person=created,
+            approved=False,
+        ).exists()
+        assert Person.objects.count() == 2
+    else:
+        assert candidate.candidate_entity_id == ""
+        assert Person.objects.count() == 1
+        assert not Contribution.objects.filter(edition=edition).exists()
     assert DecisionLog.objects.filter(
         resolution_candidate=candidate,
         action=action,
@@ -2275,7 +2294,7 @@ def test_research_entity_decision_non_mutating_actions_leave_authorities_untouch
     ).count() == 1
 
 
-def test_research_entity_decision_requires_enrichment_permission(
+def test_research_entity_decision_rejects_readers_and_normalizes_legacy_reviewer(
     api_client,
     admin_user,
     reader_user,
@@ -2320,11 +2339,11 @@ def test_research_entity_decision_requires_enrichment_permission(
 
     assert anonymous.status_code in {401, 403}
     assert reader.status_code == 403
-    assert reviewer.status_code == 403
-    assert discover.call_count == 0
-    assert not EntityResolutionCandidate.objects.filter(upload_item=item).exists()
-    assert not DecisionLog.objects.filter(upload_item=item).exists()
-    assert not AuditEvent.objects.filter(action__startswith="research_entity_").exists()
+    assert reviewer.status_code == 200
+    assert discover.call_count == 1
+    assert EntityResolutionCandidate.objects.filter(upload_item=item).exists()
+    assert DecisionLog.objects.filter(upload_item=item).exists()
+    assert AuditEvent.objects.filter(action__startswith="research_entity_").exists()
 
 
 def test_research_entity_decision_rejects_invalid_or_expired_discovery_candidate(

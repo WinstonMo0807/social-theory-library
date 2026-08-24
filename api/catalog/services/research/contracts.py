@@ -6,7 +6,7 @@ from types import MappingProxyType
 from catalog.models import EnrichmentCandidate, EnrichmentSourceClass
 
 
-RESEARCH_CONTRACT_VERSION = "research-field-contract-v1"
+RESEARCH_CONTRACT_VERSION = "research-field-contract-v2"
 
 
 class ResearchImplementation:
@@ -45,7 +45,23 @@ class ResearchFieldContract:
     research_enabled: bool = True
     dependencies: tuple[str, ...] = ()
     description: str = ""
+    scope: str = ""
+    trigger_inputs: tuple[str, ...] = ()
+    dependent_fields: tuple[str, ...] = ()
+    local_catalog_sources: tuple[str, ...] = ()
+    document_sources: tuple[str, ...] = ()
+    authority_providers: tuple[str, ...] = ()
+    external_providers: tuple[str, ...] = ()
+    research_task_profile: str = ""
+    output_schema: dict | None = None
+    accept_policy: str = ""
+    stale_policy: str = "invalidate_on_trigger_change"
+    no_reliable_candidate_reason: str = "证据数量或质量未达到当前字段要求。"
     version: str = RESEARCH_CONTRACT_VERSION
+
+    @property
+    def effective_trigger_inputs(self) -> tuple[str, ...]:
+        return self.trigger_inputs or self.dependencies
 
 
 class ResearchFieldContractRegistry:
@@ -169,7 +185,45 @@ def _register(
     enabled: bool = True,
     dependencies: tuple[str, ...] = (),
     description: str = "",
+    scope: str = "",
+    trigger_inputs: tuple[str, ...] = (),
+    dependent_fields: tuple[str, ...] = (),
+    local_catalog_sources: tuple[str, ...] | None = None,
+    document_sources: tuple[str, ...] | None = None,
+    authority_providers: tuple[str, ...] | None = None,
+    external_providers: tuple[str, ...] | None = None,
+    task_profile: str = "",
+    output_schema: dict | None = None,
+    accept_policy: str = "",
+    stale_policy: str = "invalidate_on_trigger_change",
+    no_reliable_reason: str = "证据数量或质量未达到当前字段要求。",
 ) -> None:
+    resolved_scope = scope or {
+        "work": "Work",
+        "edition": "Edition",
+        "person": "Person",
+        "reading_path": "Curation",
+    }.get(str(target or ""), "Curation")
+    resolved_triggers = trigger_inputs or dependencies
+    resolved_local_sources = local_catalog_sources if local_catalog_sources is not None else (
+        "canonical_entities",
+        "draft_entities",
+        "existing_holdings",
+        "query_lexicon",
+    )
+    resolved_document_sources = document_sources if document_sources is not None else (
+        ("native_text", "front_matter", "selective_ocr", "evidence_span")
+        if step in {"work", "bibliography", "contributors", "classification", "knowledge", "curation"}
+        else ()
+    )
+    resolved_authorities = authority_providers if authority_providers is not None else (
+        "crossref",
+        "openalex",
+        "viaf",
+        "openlibrary",
+        "google_books",
+    )
+    resolved_external = external_providers if external_providers is not None else ("safe_web_fetcher", "searxng_discovery_lead")
     RESEARCH_CONTRACTS.register(
         ResearchFieldContract(
             step=step,
@@ -190,6 +244,18 @@ def _register(
             research_enabled=enabled,
             dependencies=dependencies,
             description=description,
+            scope=resolved_scope,
+            trigger_inputs=resolved_triggers,
+            dependent_fields=dependent_fields,
+            local_catalog_sources=resolved_local_sources,
+            document_sources=resolved_document_sources,
+            authority_providers=resolved_authorities if enabled else (),
+            external_providers=resolved_external if enabled else (),
+            research_task_profile=task_profile,
+            output_schema=output_schema or {"type": output},
+            accept_policy=accept_policy or mutation,
+            stale_policy=stale_policy,
+            no_reliable_candidate_reason=no_reliable_reason,
         )
     )
 
@@ -207,7 +273,36 @@ for _field in (
         candidates=("metadata", "enrichment", "corpus"),
         mutation=ResearchMutationPolicy.EXISTING_FIELD_POLICY,
         dependencies=("work.title", "work.original_title", "work.document_type"),
+        dependent_fields=(
+            "work.original_title",
+            "work.language",
+            "work.first_publication_date",
+            "work.abstract",
+            "bibliography",
+            "contributors.authors",
+            "contributors.translators",
+        ) if _field in {"title", "subtitle", "original_title"} else (),
+        task_profile="bibliographic_identity",
+        no_reliable_reason=(
+            "本馆 PDF 没有可定位的原摘要，且外部来源未提供可核验摘要。"
+            if _field == "abstract"
+            else "本馆文档、馆内目录和已核验书目来源均未形成可靠候选。"
+        ),
     )
+
+_register(
+    "work", "canonical_title",
+    canonical="uniform_title",
+    output="scalar",
+    implementation=ResearchImplementation.FIELD_ENRICHMENT,
+    target="work",
+    enrichment_field="uniform_title",
+    candidates=("metadata", "enrichment", "corpus"),
+    mutation=ResearchMutationPolicy.EXISTING_FIELD_POLICY,
+    dependencies=("work.title", "work.original_title", "work.document_type"),
+    task_profile="bibliographic_identity",
+    description="Workbench 名称；正式存储继续复用 Work.uniform_title。",
+)
 
 _register(
     "work", "translation_of",
@@ -223,7 +318,7 @@ _register(
 )
 
 for _field in (
-    "version_label", "publication_year", "publisher", "publication_place", "isbn",
+    "version_label", "publication_date", "publication_year", "publisher", "publication_place", "isbn",
     "isbn10", "isbn13", "series", "extent", "responsibility_statement",
     "journal_title", "volume", "issue", "page_range", "doi", "degree_institution",
     "degree_type", "report_institution",
@@ -248,7 +343,23 @@ for _field in (
         mutation=ResearchMutationPolicy.EXISTING_FIELD_POLICY,
         direct=bool(_direct_entities),
         dependencies=("work.title", "work.original_title", "bibliography.isbn", "bibliography.doi"),
+        task_profile="bibliographic_identity",
+        no_reliable_reason="当前 PDF 前置信息和可核验书目来源均未提供该版本字段。",
     )
+
+_register(
+    "bibliography", "edition_statement",
+    canonical="version_label",
+    output="scalar",
+    implementation=ResearchImplementation.FIELD_ENRICHMENT,
+    target="edition",
+    enrichment_field="version_label",
+    candidates=("metadata", "enrichment", "corpus"),
+    mutation=ResearchMutationPolicy.EXISTING_FIELD_POLICY,
+    dependencies=("work.title", "work.original_title", "bibliography.isbn", "bibliography.doi"),
+    task_profile="bibliographic_identity",
+    description="Workbench 名称；正式存储继续复用 Edition.version_label。",
+)
 
 for _alias in ("contributors", "display_name", "person"):
     _register(
@@ -263,6 +374,29 @@ for _alias in ("contributors", "display_name", "person"):
         create_draft=True,
         direct=True,
         dependencies=("contributors.items", "work.title", "work.original_title"),
+        task_profile="person_identity",
+    )
+
+for _field, _roles in (
+    ("authors", ("author",)),
+    ("translators", ("translator",)),
+    ("other_contributors", ("editor", "compiler", "contributor", "other")),
+):
+    _register(
+        "contributors", _field,
+        canonical="contributors",
+        output="entity_list",
+        implementation=ResearchImplementation.ENTITY_DISCOVERY,
+        target="person",
+        entities=("person",),
+        candidates=("entity", "authority", "external_web", "unresolved"),
+        mutation=ResearchMutationPolicy.EXPLICIT_ENTITY_DECISION,
+        create_draft=True,
+        direct=True,
+        dependencies=("contributors.items", "work.title", "work.original_title", "bibliography.responsibility_statement"),
+        task_profile="person_identity",
+        output_schema={"type": "array", "items": {"type": "object", "required": ["person", "role"]}},
+        description=f"责任者角色范围：{', '.join(_roles)}。",
     )
 
 for _field, _entities, _canonical in (
@@ -282,7 +416,23 @@ for _field, _entities, _canonical in (
         mutation=ResearchMutationPolicy.EXPLICIT_ENTITY_DECISION,
         direct=True,
         dependencies=("work.title", "work.abstract", "classification"),
+        task_profile="theory_classification",
     )
+
+_register(
+    "classification", "primary_discipline",
+    canonical="primary_disciplines",
+    output="entity",
+    implementation=ResearchImplementation.ENTITY_DISCOVERY,
+    target="work",
+    entities=("discipline",),
+    candidates=("entity", "query_lexicon", "enrichment", "external_web"),
+    mutation=ResearchMutationPolicy.EXPLICIT_ENTITY_DECISION,
+    direct=True,
+    dependencies=("work.title", "work.abstract", "classification"),
+    task_profile="theory_classification",
+    description="单数产品字段；正式工作台继续使用 primary_disciplines 列表保存。",
+)
 
 for _field, _entities in (
     ("relations", ("theory", "topic", "knowledge_node")),
@@ -303,6 +453,29 @@ for _field, _entities in (
         create_draft=True,
         direct=True,
         dependencies=("work.title", "work.abstract", "knowledge.relations"),
+        task_profile=("concept_importance" if _field == "topic" else "theory_classification"),
+    )
+
+for _field, _entities, _profile in (
+    ("theories", ("theory",), "theory_classification"),
+    ("concepts", ("concept", "knowledge_node"), "concept_importance"),
+    ("topics", ("topic",), "concept_importance"),
+    ("debates", ("debate", "knowledge_node"), "debate_discovery"),
+    ("scholar_relations", ("person",), "theory_development_position"),
+):
+    _register(
+        "knowledge", _field,
+        output="entity_relation",
+        implementation=ResearchImplementation.ENTITY_DISCOVERY,
+        target="work",
+        entities=_entities,
+        candidates=("relation", "entity", "query_lexicon", "pdf_evidence", "external_web"),
+        evidence=1,
+        mutation=ResearchMutationPolicy.EXPLICIT_ENTITY_DECISION,
+        create_draft=_field in {"concepts", "debates", "scholar_relations"},
+        direct=True,
+        dependencies=("work.title", "work.abstract", "knowledge.relations"),
+        task_profile=_profile,
     )
 
 for _field in ("reader_rendition_policy", "text_layer_status", "page_label_status", "semantic_index_status"):
@@ -328,6 +501,7 @@ _register(
     mutation=ResearchMutationPolicy.EXPLICIT_EDITORIAL_REVIEW,
     direct=True,
     dependencies=("work.title", "work.abstract", "knowledge.relations"),
+    task_profile="reading_path_placement",
 )
 _register(
     "curation", "recommendation_reason",
@@ -337,7 +511,31 @@ _register(
     candidates=("corpus", "syllabus", "external_web"),
     mutation=ResearchMutationPolicy.NEVER_DIRECT,
     dependencies=("work.title", "work.abstract", "knowledge.relations"),
+    task_profile="reading_path_placement",
 )
+
+for _field, _profile in (
+    ("core_viewpoints", "core_viewpoint"),
+    ("major_criticisms", "major_criticism"),
+    ("major_responses", "major_response"),
+):
+    _register(
+        "curation", _field,
+        output="evidence_list",
+        implementation=ResearchImplementation.EVIDENCE_ONLY,
+        target="work",
+        candidates=("derived_claim", "curated_claim", "pdf_evidence"),
+        sources=(),
+        mutation=ResearchMutationPolicy.EXPLICIT_EDITORIAL_REVIEW,
+        dependencies=("work.title", "work.abstract", "knowledge.relations"),
+        local_catalog_sources=("derived_claims", "curated_claims", "existing_holdings"),
+        document_sources=("evidence_span", "selective_ocr"),
+        authority_providers=(),
+        external_providers=(),
+        task_profile=_profile,
+        output_schema={"type": "array", "maxItems": 5, "items": {"type": "object"}},
+        no_reliable_reason="当前馆藏 Claim 与 EvidenceSpan 尚未形成可采用的高价值候选。",
+    )
 _register(
     "publication", "preflight",
     output="status",
@@ -391,11 +589,35 @@ for _step, _field, _output, _entities, _target in (
 
 
 WORKFLOW_FIELDS = MappingProxyType({
-    step: tuple(contract.field for contract in RESEARCH_CONTRACTS.for_step(step))
-    for step in (
-        "work", "bibliography", "contributors", "classification", "knowledge",
-        "reader", "curation", "publication",
-    )
+    "work": (
+        "title", "subtitle", "original_title", "canonical_title", "uniform_title",
+        "abstract", "language", "original_language", "first_publication_date",
+        "translation_of",
+    ),
+    "bibliography": (
+        "edition_statement", "version_label", "publication_date", "publication_year",
+        "publisher", "publication_place", "isbn", "isbn10", "isbn13", "series",
+        "extent", "responsibility_statement", "journal_title", "volume", "issue",
+        "page_range", "doi", "degree_institution", "degree_type", "report_institution",
+    ),
+    "contributors": (
+        "contributors", "display_name", "person", "authors", "translators", "other_contributors",
+    ),
+    "classification": (
+        "primary_discipline", "primary_disciplines", "related_disciplines", "disciplines", "subdisciplines",
+    ),
+    "knowledge": (
+        "relations", "theory", "topic", "knowledge_node", "theories", "concepts",
+        "topics", "debates", "scholar_relations",
+    ),
+    "reader": (
+        "reader_rendition_policy", "text_layer_status", "page_label_status", "semantic_index_status",
+    ),
+    "curation": (
+        "core_viewpoints", "major_criticisms", "major_responses",
+        "reading_path_placements", "recommendation_reason",
+    ),
+    "publication": ("preflight",),
 })
 
 
@@ -443,6 +665,21 @@ def contract_payload(contract: ResearchFieldContract) -> dict[str, object]:
         "allow_direct_use": contract.allow_direct_use,
         "research_enabled": contract.research_enabled,
         "dependencies": list(contract.dependencies),
+        "scope": contract.scope,
+        "trigger_inputs": list(contract.effective_trigger_inputs),
+        "dependent_fields": list(contract.dependent_fields),
+        "local_catalog_sources": list(contract.local_catalog_sources),
+        "document_ocr_sources": list(contract.document_sources),
+        "authority_providers": list(contract.authority_providers),
+        "external_providers": list(contract.external_providers),
+        "research_task_profile": contract.research_task_profile,
+        "output_schema": contract.output_schema or {},
+        "accept_policy": contract.accept_policy,
+        "stale_policy": contract.stale_policy,
+        "no_reliable_candidate": {
+            "status": "no_reliable_candidate",
+            "reason": contract.no_reliable_candidate_reason,
+        },
         "description": contract.description,
         "version": contract.version,
     }

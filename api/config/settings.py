@@ -58,6 +58,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "common.middleware.OwnerOnlyDjangoAdminMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -852,7 +853,8 @@ DEFAULT_FROM_EMAIL = os.getenv(
 EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "社会理论书库")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 READER_SUBMISSION_EMAIL = os.getenv("READER_SUBMISSION_EMAIL", "")
-LIBRARY_OWNER_EMAIL = os.getenv("LIBRARY_OWNER_EMAIL", "owner@example.com").strip().lower()
+LIBRARY_OWNER_EMAIL = os.getenv("LIBRARY_OWNER_EMAIL", "").strip().lower()
+LIBRARY_OWNER_DISPLAY_NAME = os.getenv("LIBRARY_OWNER_DISPLAY_NAME", "Winston").strip() or "Winston"
 PRIVATE_DATA_ENCRYPTION_KEY = os.getenv("PRIVATE_DATA_ENCRYPTION_KEY", "")
 S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
 S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
@@ -934,6 +936,14 @@ if PUBLIC_DEPLOYMENT_MODE:
         production_errors.append("必须启用 HTTPS 重定向和安全 Cookie")
     if not JWT_COOKIE_AUTH_ENABLED or JWT_RETURN_TOKENS_IN_BODY:
         production_errors.append("公网模式必须使用 HttpOnly Cookie，且不得在响应正文返回登录令牌")
+    if (
+        not LIBRARY_OWNER_EMAIL
+        or "@" not in LIBRARY_OWNER_EMAIL
+        or LIBRARY_OWNER_EMAIL.endswith("@example.com")
+        or LIBRARY_OWNER_EMAIL.endswith("@example.org")
+        or LIBRARY_OWNER_EMAIL.endswith("@example.test")
+    ):
+        production_errors.append("公网模式必须配置当前 System Owner 的真实邮箱")
     if len(INTERNAL_API_TOKEN) < 32 or any(
         marker in INTERNAL_API_TOKEN.lower()
         for marker in ("change", "replace", "example")

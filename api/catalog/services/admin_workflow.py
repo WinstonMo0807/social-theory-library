@@ -33,11 +33,11 @@ WORKFLOW_STEPS = (
     ("file", "文件与识别"),
     ("work", "作品与原作"),
     ("bibliography", "书目与版本"),
-    ("contributors", "责任者与身份"),
+    ("contributors", "作者与责任者"),
     ("classification", "学科与子学科"),
     ("knowledge", "理论、主题与争论"),
     ("reader", "阅读与定位"),
-    ("curation", "观点、回应与阅读路径（可选）"),
+    ("curation", "知识策展与前台联动（可选）"),
     ("publication", "发布与投影"),
 )
 
@@ -56,6 +56,7 @@ WORK_FIELDS = (
 
 BIBLIOGRAPHY_FIELDS = (
     "version_label",
+    "publication_date",
     "publication_year",
     "publisher",
     "publisher_authority_id",
@@ -516,7 +517,7 @@ def _contributors_step(edition: Edition) -> dict[str, Any]:
     return _confirmed_step(
         edition,
         "contributors",
-        "责任者与身份",
+        "作者与责任者",
         issues,
         f"已确认 {approved} 位责任者",
         "确认责任者并继续",
@@ -580,7 +581,6 @@ def _knowledge_step(edition: Edition) -> dict[str, Any]:
                 "knowledge_review_pending",
                 f"仍有 {pending} 条知识建议或关系需要人工决定。",
                 "knowledge",
-                severity="blocker",
             )
         )
     confirmed = work.knowledge_relations.filter(approved=True).count()
@@ -626,7 +626,7 @@ def _curation_step(edition: Edition) -> dict[str, Any]:
     return _confirmed_step(
         edition,
         "curation",
-        "策展定位",
+        "知识策展与前台联动",
         issues,
         f"阅读路径 {paths} 条 · 推荐规则 {overrides} 条",
         "确认策展或暂不策展",

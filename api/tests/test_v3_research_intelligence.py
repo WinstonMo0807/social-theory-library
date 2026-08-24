@@ -62,9 +62,10 @@ def test_intelligence_registry_seeds_all_contracts_and_evidence_bound_prompts():
 
 
 @pytest.mark.django_db
-def test_prompt_registry_is_superadmin_only_and_activation_retires_previous_revision():
+def test_prompt_registry_is_owner_only_and_activation_retires_previous_revision(settings):
     editor = _user(suffix="prompt-editor")
     superadmin = _user(superuser=True, suffix="prompt-superadmin")
+    settings.LIBRARY_OWNER_EMAIL = superadmin.email
     with pytest.raises(PermissionError):
         create_prompt_revision(
             key="research.claim_stance",
@@ -221,8 +222,13 @@ def test_candidate_adoption_creates_complete_drafts_and_records_human_feedback()
     )
     path = decided_path.adopted_reading_path
     assert path.status == KnowledgePublicationStatus.DRAFT
+    assert path.learning_goal == "理解国家与社会关系"
+    assert path.introduction == path.learning_goal
     assert path.stages.count() == 1
-    assert path.items.get().work_id == work.id
+    adopted_item = path.items.get()
+    assert adopted_item.work_id == work.id
+    assert adopted_item.prerequisite == "无"
+    assert adopted_item.editorial_note == adopted_item.prerequisite
     assert IntelligenceFeedback.objects.filter(reviewed_by=editor).count() == 2
 
 

@@ -93,6 +93,7 @@ def current_field_value(target_type: str, target, field_name: str) -> Any:
             )
     if target_type == "edition" and field_name in {
         "version_label",
+        "publication_date",
         "publication_year",
         "publisher",
         "publication_place",
@@ -111,7 +112,8 @@ def current_field_value(target_type: str, target, field_name: str) -> Any:
         "extent",
         "responsibility_statement",
     }:
-        return getattr(target, field_name)
+        value = getattr(target, field_name)
+        return value.isoformat() if field_name == "publication_date" and value else value
     if target_type == "work":
         if field_name == "first_publication_date":
             return target.first_publication_date.isoformat() if target.first_publication_date else ""
@@ -186,6 +188,7 @@ def target_context(target_type: str, target) -> dict[str, Any]:
                 "title": target.work.title,
                 "original_title": target.work.original_title,
                 "publication_year": target.publication_year,
+                "publication_date": target.publication_date.isoformat() if target.publication_date else "",
                 "publisher": target.publisher,
                 "isbn": target.isbn,
                 "doi": target.doi,

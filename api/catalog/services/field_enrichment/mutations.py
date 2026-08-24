@@ -22,6 +22,7 @@ from catalog.models import (
     ReadingPathItem,
     ReadingPathStage,
     RelationReviewStatus,
+    ResearchRun,
     Subdiscipline,
     WorkDisciplineRelation,
     WorkSubdisciplineRelation,
@@ -451,6 +452,19 @@ def _edition_publication_year(*, target, value, candidate, actor):
     return _edition_field(target, "publication_year", value)
 
 
+@FIELD_MUTATIONS.register("edition_publication_date")
+def _edition_publication_date(*, target, value, candidate, actor):
+    from datetime import date
+
+    parsed = date.fromisoformat(value)
+    result = _edition_field(target, "publication_date", parsed)
+    if target.publication_year != parsed.year:
+        target.publication_year = parsed.year
+        target.save(update_fields=["publication_year", "updated_at"])
+        return MutationResult("catalog.Edition", target.id, False, True)
+    return result
+
+
 @FIELD_MUTATIONS.register("edition_publisher")
 def _edition_publisher(*, target, value, candidate, actor):
     return _edition_field(target, "publisher", value)
@@ -759,9 +773,96 @@ def _validate_evidence(candidate: EnrichmentCandidate, policy) -> None:
         raise ValueError("候选存在没有 supporting passage 的来源。")
 
 
-@transaction.atomic
+_RESEARCH_CONTEXT_KEYS = (
+    "research_context_fingerprint",
+    "research_draft_session_id",
+    "research_draft_hash",
+    "research_trigger_input_hash",
+)
+
+
+def _research_context_stale_reason(
+    candidate: EnrichmentCandidate,
+    run: ResearchRun | None,
+) -> str:
+    context = dict(candidate.request_context or {})
+    run_id = str(context.get("research_run_id") or "").strip()
+    if not run_id:
+        return ""
+    if run is None or str(run.id) != run_id:
+        return "候选关联的 ResearchRun 不存在或已经变化。"
+    if context.get("is_current_context") is not True or not run.is_current:
+        return "候选关联的未保存草稿已经变化。"
+    if run.status in {ResearchRun.Status.SUPERSEDED, ResearchRun.Status.CANCELED}:
+        return "候选关联的 ResearchRun 已经失效。"
+    if any(key not in context for key in _RESEARCH_CONTEXT_KEYS):
+        return "候选缺少完整的 ResearchRun 上下文，请重新研究。"
+    expected = {
+        "research_context_fingerprint": run.context_fingerprint,
+        "research_draft_session_id": run.draft_session_id,
+        "research_draft_hash": run.draft_hash,
+        "research_trigger_input_hash": run.trigger_input_hash,
+    }
+    if any(str(context.get(key) or "") != str(value or "") for key, value in expected.items()):
+        return "候选与当前 ResearchRun 的草稿或触发输入不一致。"
+    if candidate.target_type == EnrichmentCandidate.TargetType.WORK and candidate.target_id != run.work_id:
+        return "候选与 ResearchRun 的作品不一致。"
+    if candidate.target_type == EnrichmentCandidate.TargetType.EDITION and candidate.target_id != run.edition_id:
+        return "候选与 ResearchRun 的版本不一致。"
+    return ""
+
+
+def _mark_research_candidate_superseded(
+    candidate: EnrichmentCandidate,
+    stale_reason: str,
+) -> None:
+    request_context = dict(candidate.request_context or {})
+    request_context["is_current_context"] = False
+    request_context["stale_reason"] = stale_reason
+    candidate.status = EnrichmentCandidate.Status.SUPERSEDED
+    candidate.request_context = request_context
+    candidate.save(update_fields=["status", "request_context", "updated_at"])
+
+
 def accept_enrichment_candidate(candidate: EnrichmentCandidate, *, actor, reason: str = "") -> MutationResult:
-    candidate = EnrichmentCandidate.objects.select_for_update().get(pk=candidate.pk)
+    # Research invalidation locks ResearchRun before its candidates. Keep the
+    # same lock order here so a draft change and an acceptance serialize cleanly.
+    preview = EnrichmentCandidate.objects.only("request_context").get(pk=candidate.pk)
+    preview_context = dict(preview.request_context or {})
+    research_run_id = str(preview_context.get("research_run_id") or "").strip()
+    stale_reason = ""
+    result = None
+    with transaction.atomic():
+        run = None
+        if research_run_id:
+            run = ResearchRun.objects.select_for_update(of=("self",)).filter(
+                pk=research_run_id
+            ).first()
+        candidate = EnrichmentCandidate.objects.select_for_update().get(pk=candidate.pk)
+        locked_run_id = str((candidate.request_context or {}).get("research_run_id") or "").strip()
+        if candidate.status == EnrichmentCandidate.Status.ACCEPTED:
+            result = _accept_locked_enrichment_candidate(candidate, actor=actor, reason=reason)
+        elif locked_run_id != research_run_id:
+            stale_reason = "候选的 ResearchRun 上下文在审核期间已经变化。"
+        else:
+            stale_reason = _research_context_stale_reason(candidate, run)
+        if candidate.status != EnrichmentCandidate.Status.ACCEPTED and stale_reason:
+            if candidate.status == EnrichmentCandidate.Status.PENDING:
+                _mark_research_candidate_superseded(candidate, stale_reason)
+            result = None
+        elif candidate.status != EnrichmentCandidate.Status.ACCEPTED:
+            result = _accept_locked_enrichment_candidate(candidate, actor=actor, reason=reason)
+    if stale_reason:
+        raise ValueError(f"候选已经过期，不能采用。{stale_reason}")
+    return result
+
+
+def _accept_locked_enrichment_candidate(
+    candidate: EnrichmentCandidate,
+    *,
+    actor,
+    reason: str = "",
+) -> MutationResult:
     if candidate.status == EnrichmentCandidate.Status.ACCEPTED:
         if not candidate.accepted_authority_model or not candidate.accepted_authority_id:
             raise ValueError("已接受候选缺少 authority 审计引用。")

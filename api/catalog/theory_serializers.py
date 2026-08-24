@@ -45,6 +45,7 @@ from catalog.services.relation_registry import (
     relation_would_create_cycle,
 )
 from catalog.services.evidence_envelope import public_curated_claim_groups
+from catalog.services.semantic_search import viewer_access_statuses
 
 
 def _media_url(request, field):
@@ -55,6 +56,31 @@ def _media_url(request, field):
     except ValueError:
         return ""
     return request.build_absolute_uri(url) if request else url
+
+
+def _viewer_asset_statuses(context) -> list[str]:
+    request = context.get("request") if isinstance(context, dict) else None
+    user = getattr(request, "user", None)
+    authenticated = bool(user and getattr(user, "is_authenticated", False))
+    staff = bool(
+        authenticated
+        and (
+            getattr(user, "is_staff", False)
+            or getattr(user, "role", "") in {"admin", "editor", "reviewer"}
+        )
+    )
+    return viewer_access_statuses(authenticated=authenticated, staff=staff)
+
+
+def _public_evidence_queryset(context):
+    return EvidenceSnippet.objects.filter(
+        review_status=RelationReviewStatus.APPROVED,
+        file__kind=Asset.Kind.NORMALIZED,
+        file__status=Asset.Status.READY,
+        file__is_current=True,
+        file__access_status__in=_viewer_asset_statuses(context),
+        file__edition__state=PublicationState.PUBLISHED,
+    ).select_related("work", "file", "work_node_relation", "knowledge_relation")
 
 
 def _published_edition(work):
@@ -82,6 +108,8 @@ def compact_work(work, request=None):
             if item.kind == Asset.Kind.NORMALIZED
             and item.is_current
             and item.status == Asset.Status.READY
+            and item.access_status
+            in _viewer_asset_statuses({"request": request})
         ),
         None,
     )
@@ -310,7 +338,7 @@ class WorkNodeRelationSerializer(serializers.ModelSerializer):
     node_name = serializers.CharField(source="node.canonical_name_zh", read_only=True)
     node_slug = serializers.CharField(source="node.slug", read_only=True)
     role_label = serializers.CharField(source="get_role_display", read_only=True)
-    evidence = EvidenceSnippetSerializer(many=True, read_only=True)
+    evidence = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkNodeRelation
@@ -337,6 +365,12 @@ class WorkNodeRelationSerializer(serializers.ModelSerializer):
 
     def get_work_data(self, obj):
         return compact_work(obj.work, self.context.get("request"))
+
+    def get_evidence(self, obj):
+        queryset = _public_evidence_queryset(self.context).filter(
+            work_node_relation=obj,
+        )
+        return EvidenceSnippetSerializer(queryset, many=True, context=self.context).data
 
 
 class KnowledgeRelationSerializer(serializers.ModelSerializer):
@@ -567,10 +601,7 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
         return groups
 
     def get_evidence(self, obj):
-        queryset = obj.evidence.filter(
-            review_status=RelationReviewStatus.APPROVED,
-            work__editions__state=PublicationState.PUBLISHED,
-        ).select_related("work", "file", "work_node_relation", "knowledge_relation")[:40]
+        queryset = _public_evidence_queryset(self.context).filter(node=obj)[:40]
         return EvidenceSnippetSerializer(queryset, many=True, context=self.context).data
 
     def get_curated_claims(self, obj):
@@ -906,7 +937,7 @@ class AdminWorkNodeRelationSerializer(WorkNodeRelationSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if value in {"published", "rejected"} and not has_capability(user, Capability.REVIEW_CANDIDATE):
-            raise serializers.ValidationError("只有管理员或审核者可以确认文献关系。")
+            raise serializers.ValidationError("只有 Editor 或 Administrator 可以确认文献关系。")
         return value
 
     def create(self, validated_data):
@@ -987,6 +1018,7 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             "work",
             "work_data",
             "recommendation_reason",
+            "prerequisite",
             "position",
             "reading_order",
             "is_required",
@@ -1012,6 +1044,7 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             "title",
             "slug",
             "introduction",
+            "learning_goal",
             "primary_discipline",
             "primary_discipline_data",
             "audience",

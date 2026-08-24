@@ -17,6 +17,7 @@ import Link from "next/link";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { ActionButton, type ActionState } from "./action-feedback";
 
 type DirectoryObject = {
   id: string;
@@ -63,9 +64,16 @@ type StudioSelection = {
   evidence: EvidenceEnvelope[];
   claims: { curated: ClaimRow[]; derived: ClaimRow[]; derived_is_machine_only: boolean };
   ai_candidates: Array<{ id: string; candidate_type: string; field_name: string; proposed_value: unknown; confidence: number; status: string; source: string; evidence?: string; conflicts?: unknown }>;
-  revisions: Array<{ id: string; revision: number; base_revision: number; status: string; changed_fields: string[]; change_note: string; patch: Record<string, unknown>; created_at: string }>;
+  revisions: Array<{ id: string; revision: number; base_revision: number; status: string; changed_fields: string[]; change_note: string; patch: Record<string, unknown>; created_at: string; has_conflict: boolean; publish_url: string }>;
   preview: { source: string; revision_id: string | null; materialized: Record<string, unknown> };
-  frontend_impact: { public_visibility: boolean; modules: string[]; projections: string[] };
+  frontend_impact: {
+    public_visibility: boolean;
+    modules: string[];
+    projections: string[];
+    projection_states: Array<{ type: string; name: string; label: string; status: string; source_revision: number; projected_revision: number; lag: number; last_error_code: string }>;
+    targets: Array<{ label: string; url: string; modules: string[] }>;
+  };
+  mutation_contract: { target_type: string; current_revision: number; published_changes_require_revision: boolean; single_editor_publish: boolean; canonical_commit_is_atomic: boolean; dependency_propagation_on_publish: boolean };
   editor_url: string;
   preview_url: string;
   related_editor_urls: Array<{ label: string; url: string }>;
@@ -96,7 +104,10 @@ const objectLabels: Record<string, string> = {
   debate: "争论",
   research_problem: "研究问题",
   scholar: "学者",
+  subdiscipline: "子学科",
   topic: "主题",
+  reading_path: "阅读路径",
+  work: "重要作品",
 };
 
 const statusLabels: Record<string, string> = {
@@ -109,6 +120,12 @@ const statusLabels: Record<string, string> = {
   accepted: "已采用",
   rejected: "已拒绝",
   superseded: "已取代",
+  ready: "待发布",
+  current: "最新",
+  stale: "待更新",
+  projecting: "更新中",
+  failed: "更新失败",
+  not_materialized: "尚未建立",
 };
 
 const fieldLabels: Record<string, string> = {
@@ -142,6 +159,27 @@ const fieldLabels: Record<string, string> = {
   death_year: "逝世年",
   period: "时期",
   primary_discipline: "主要学科",
+  foreign_name: "外文名称",
+  discipline: "所属学科",
+  parent: "上级子学科",
+  research_object: "研究对象",
+  formation_period: "形成时期",
+  research_directions: "研究方向",
+  representative_issues: "代表性议题",
+  title: "题名",
+  canonical_title: "规范题名",
+  subtitle: "副题名",
+  original_title: "原题名",
+  abstract: "摘要",
+  document_type: "文献类型",
+  language: "作品语言",
+  original_language: "原作语言",
+  first_publication_date: "首次出版日期",
+  editions: "版本",
+  audience: "目标读者",
+  difficulty: "阅读难度",
+  estimated_reading: "预计阅读量",
+  stages: "阶段与作品",
 };
 
 function displayValue(value: unknown) {
@@ -182,14 +220,24 @@ function ClaimCard({ claim, derived }: { claim: ClaimRow; derived?: boolean }) {
   );
 }
 
-function ObjectDetail({ selection }: { selection: StudioSelection }) {
+function ObjectDetail({
+  selection,
+  publishingRevision,
+  publishState,
+  onPublishRevision,
+}: {
+  selection: StudioSelection;
+  publishingRevision: string;
+  publishState: ActionState;
+  onPublishRevision: (revision: StudioSelection["revisions"][number]) => void;
+}) {
   return (
     <section className="knowledge-studio-detail" aria-label={`${selection.label}知识对象详情`}>
       <header className="knowledge-studio-object-header">
         <div><p>{objectLabels[selection.object_type] || selection.object_type}</p><h2>{selection.label}</h2><span className={`status-badge ${selection.status}`}>{statusLabels[selection.status] || selection.status}</span></div>
         <div>
           <Link className="button" href={selection.editor_url}>进入专门编辑器 <ArrowRight size={14} /></Link>
-          <Link className="button secondary" href={selection.preview_url} target="_blank">公开页预览 <ExternalLink size={14} /></Link>
+          {selection.preview_url ? <Link className="button secondary" href={selection.preview_url} target="_blank">页面预览 <ExternalLink size={14} /></Link> : null}
         </div>
       </header>
 
@@ -202,7 +250,11 @@ function ObjectDetail({ selection }: { selection: StudioSelection }) {
           <header><h3>前台影响</h3><span>{selection.frontend_impact.public_visibility ? "当前公开" : "当前不公开"}</span></header>
           <strong>页面模块</strong><p>{selection.frontend_impact.modules.join("、")}</p>
           <strong>相关投影</strong><p>{selection.frontend_impact.projections.join("、")}</p>
+          <strong>实际前台位置</strong>
+          <nav>{selection.frontend_impact.targets.map((row) => row.url ? <Link href={row.url} key={`${row.label}:${row.url}`} target="_blank">{row.label}<ArrowRight size={13} /></Link> : null)}</nav>
+          <div className="knowledge-studio-list">{selection.frontend_impact.projection_states.map((row) => <article key={row.type}><div><b>{row.name}</b><span>{statusLabels[row.status] || row.status}</span></div><small>source {row.source_revision} · projected {row.projected_revision}{row.lag ? ` · 落后 ${row.lag}` : ""}{row.last_error_code ? ` · ${row.last_error_code}` : ""}</small></article>)}</div>
           <nav>{selection.related_editor_urls.map((row) => <Link href={row.url} key={row.url}>{row.label}<ArrowRight size={13} /></Link>)}</nav>
+          <p className="knowledge-studio-boundary-note">{selection.mutation_contract.published_changes_require_revision ? "该对象已公开。保存会先建立 EditorialRevision，单个有权限的 Editor 确认发布后才更新正式内容和相关投影。" : "该对象尚未公开，可在专门编辑器完善草稿。首次发布会记录 Canonical change 并更新相关投影。"}</p>
         </section>
       </div>
 
@@ -237,7 +289,7 @@ function ObjectDetail({ selection }: { selection: StudioSelection }) {
         </section>
         <section className="admin-panel">
           <header><h3><FileClock size={16} />EditorialRevision</h3><span>草稿、发布与取代历史</span></header>
-          <div className="knowledge-studio-list">{selection.revisions.map((row) => <article key={row.id}><div><b>Revision {row.revision}</b><span>{statusLabels[row.status] || row.status}</span></div><p>{row.changed_fields.join("、") || "未记录字段差异"}</p><small>base {row.base_revision} · {row.change_note || "无编辑说明"}</small></article>)}{!selection.revisions.length ? <p className="admin-list-state">尚无 EditorialRevision。</p> : null}</div>
+          <div className="knowledge-studio-list">{selection.revisions.map((row) => <article key={row.id}><div><b>Revision {row.revision}</b><span>{row.has_conflict ? "与正式版本冲突" : statusLabels[row.status] || row.status}</span></div><p>{row.changed_fields.join("、") || "未记录字段差异"}</p><small>base {row.base_revision} · {row.change_note || "无编辑说明"}</small>{row.publish_url && !row.has_conflict ? <ActionButton className="button" state={publishingRevision === row.id ? publishState : "idle"} pendingLabel="发布中" successLabel="已发布" onClick={() => onPublishRevision(row)}>确认发布此修订</ActionButton> : null}</article>)}{!selection.revisions.length ? <p className="admin-list-state">尚无 EditorialRevision。</p> : null}</div>
         </section>
       </div>
     </section>
@@ -253,6 +305,8 @@ export function KnowledgeWorkspace() {
   const [selected, setSelected] = useState<{ type: string; id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [publishingRevision, setPublishingRevision] = useState("");
+  const [publishState, setPublishState] = useState<ActionState>("idle");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -283,6 +337,26 @@ export function KnowledgeWorkspace() {
     setQuery(queryDraft.trim());
   }
 
+  async function publishRevision(revision: StudioSelection["revisions"][number]) {
+    if (!revision.publish_url || publishingRevision) return;
+    setPublishingRevision(revision.id);
+    setPublishState("pending");
+    try {
+      await apiRequest(revision.publish_url, { method: "POST", body: JSON.stringify({}) }, getServerSessionCredential());
+      setPublishState("success");
+      await load();
+      setMessage(`Revision ${revision.revision} 已发布，正式内容和相关投影已开始更新。`);
+    } catch (error) {
+      setPublishState("error");
+      setMessage(error instanceof Error ? error.message : "EditorialRevision 发布失败。");
+    } finally {
+      window.setTimeout(() => {
+        setPublishingRevision("");
+        setPublishState("idle");
+      }, 1200);
+    }
+  }
+
   const studio = payload?.studio;
   const current = studio?.selection;
   const currentKey = current ? `${current.object_type}:${current.id}` : "";
@@ -295,7 +369,7 @@ export function KnowledgeWorkspace() {
       </header>
 
       <section className="knowledge-studio-quick-links" aria-label="知识专门工作区">
-        <Link href="/admin/theory-nodes">理论与概念</Link><Link href="/admin/scholars">学者</Link><Link href="/admin/topics">主题</Link><Link href="/admin/theory-relations">关系</Link><Link href="/admin/theory-timeline">时间轴</Link><Link href="/admin/reading-paths">阅读路径</Link>
+        <Link href="/admin/theory-nodes">理论与概念</Link><Link href="/admin/scholars">学者</Link><Link href="/admin/subdisciplines">子学科</Link><Link href="/admin/topics">主题</Link><Link href="/admin/library">重要作品</Link><Link href="/admin/theory-relations">关系</Link><Link href="/admin/theory-timeline">时间轴</Link><Link href="/admin/reading-paths">阅读路径</Link>
       </section>
 
       {payload ? <section className="knowledge-studio-overview">
@@ -308,7 +382,7 @@ export function KnowledgeWorkspace() {
 
       <form className="admin-toolbar knowledge-studio-toolbar" onSubmit={submitSearch}>
         <label><span>对象类型</span><select value={objectType} onChange={(event) => { setObjectType(event.target.value); setSelected(null); }}>{studio?.object_types.map((row) => <option value={row.value} key={row.value}>{row.label}{row.value !== "all" ? ` (${studio.counts[row.value] || 0})` : ""}</option>) || <option value="all">全部对象</option>}</select></label>
-        <label className="knowledge-studio-search"><span>名称</span><div><Search size={15} /><input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="搜索理论、概念、争论、学者或主题" /></div></label>
+        <label className="knowledge-studio-search"><span>名称</span><div><Search size={15} /><input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="搜索理论、概念、学者、子学科、主题、阅读路径或重要作品" /></div></label>
         <button className="button" type="submit">搜索</button>
         <label><span>Authority 候选</span><select value={candidateStatus} onChange={(event) => setCandidateStatus(event.target.value)}><option value="pending">待审核</option><option value="all">全部</option><option value="matched">已关联</option><option value="draft_created">已创建草稿</option><option value="rejected">已拒绝</option></select></label>
       </form>
@@ -324,7 +398,7 @@ export function KnowledgeWorkspace() {
             return <button className={currentKey === key ? "active" : ""} type="button" key={key} onClick={() => setSelected({ type: row.object_type, id: row.id })}><span>{objectLabels[row.object_type] || row.object_type}</span><strong>{row.label}</strong><small>{row.secondary_label || statusLabels[row.status] || row.status}</small><ArrowRight size={14} /></button>;
           })}{!studio.objects.length ? <p className="admin-list-state">当前筛选下没有知识对象。</p> : null}</div>
         </aside>
-        {current ? <ObjectDetail selection={current} /> : <section className="admin-panel knowledge-studio-empty"><Sparkles size={22} /><h2>选择一个知识对象</h2><p>选择后可统一检查正式内容、关系、原文证据、Claims、候选和编辑草稿。</p></section>}
+        {current ? <ObjectDetail selection={current} publishingRevision={publishingRevision} publishState={publishState} onPublishRevision={(revision) => void publishRevision(revision)} /> : <section className="admin-panel knowledge-studio-empty"><Sparkles size={22} /><h2>选择一个知识对象</h2><p>选择后可统一检查正式内容、关系、原文证据、Claims、候选和编辑草稿。</p></section>}
       </div> : null}
 
       {payload ? <section className="admin-panel knowledge-studio-authority-queue">

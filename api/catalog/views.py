@@ -1752,14 +1752,18 @@ class TopicListView(generics.ListAPIView):
     serializer_class = TopicSerializer
 
     def get_queryset(self):
-        queryset = Topic.objects.filter(editorial_status="published").annotate(
-            work_count=Count(
-                "work_relations",
-                filter=Q(
-                    work_relations__review_status=RelationReviewStatus.APPROVED,
-                    work_relations__work__editions__state=PublicationState.PUBLISHED,
-                ),
-                distinct=True,
+        queryset = (
+            Topic.objects.filter(editorial_status="published")
+            .prefetch_related("knowledge_node_links__node")
+            .annotate(
+                work_count=Count(
+                    "work_relations",
+                    filter=Q(
+                        work_relations__review_status=RelationReviewStatus.APPROVED,
+                        work_relations__work__editions__state=PublicationState.PUBLISHED,
+                    ),
+                    distinct=True,
+                )
             )
         )
         discipline = self.request.query_params.get("discipline", "").strip()
@@ -1786,15 +1790,23 @@ class TopicListView(generics.ListAPIView):
                 id_field="subdiscipline_relations__subdiscipline_id",
             )
         if theory:
-            queryset = queryset.filter(
-                theory_relations__review_status=RelationReviewStatus.APPROVED,
+            # Prefer normalized Topic to KnowledgeNode relations while retaining
+            # legacy TheorySchool matching for records awaiting backfill.
+            normalized = Q(
+                knowledge_node_links__status=KnowledgePublicationStatus.PUBLISHED,
+                knowledge_node_links__node__status=KnowledgePublicationStatus.PUBLISHED,
+                knowledge_node_links__node__node_type="theory_tradition",
             )
-            queryset = filter_slug_or_uuid(
-                queryset,
-                theory,
-                slug_field="theory_relations__theory_school__slug",
-                id_field="theory_relations__theory_school_id",
-            )
+            legacy = Q(theory_relations__review_status=RelationReviewStatus.APPROVED)
+            try:
+                theory_identifier = UUID(str(theory))
+            except (TypeError, ValueError, AttributeError):
+                normalized &= Q(knowledge_node_links__node__slug=theory)
+                legacy &= Q(theory_relations__theory_school__slug=theory)
+            else:
+                normalized &= Q(knowledge_node_links__node_id=theory_identifier)
+                legacy &= Q(theory_relations__theory_school_id=theory_identifier)
+            queryset = queryset.filter(normalized | legacy)
         query = (
             self.request.query_params.get("q", "").strip()
             or self.request.query_params.get("search", "").strip()
@@ -1875,16 +1887,37 @@ class TopicDetailView(generics.RetrieveAPIView):
             many=True,
             context={"request": request},
         ).data
+        authenticated = bool(request.user.is_authenticated)
+        staff = bool(
+            authenticated
+            and (
+                request.user.is_staff
+                or getattr(request.user, "role", "") in {"admin", "editor", "reviewer"}
+            )
+        )
         passage_queryset = (
             Passage.objects.filter(
                 page__asset__edition__state=PublicationState.PUBLISHED,
                 page__asset__kind=Asset.Kind.NORMALIZED,
                 page__asset__status=Asset.Status.READY,
                 page__asset__is_current=True,
-                page__asset__edition__work__knowledge_relations__topic=instance,
-                page__asset__edition__work__knowledge_relations__approved=True,
+                page__asset__access_status__in=viewer_access_statuses(
+                    authenticated=authenticated,
+                    staff=staff,
+                ),
+            )
+            .filter(
+                Q(
+                    page__asset__edition__work__topic_relations__topic=instance,
+                    page__asset__edition__work__topic_relations__review_status=RelationReviewStatus.APPROVED,
+                )
+                | Q(
+                    page__asset__edition__work__knowledge_relations__topic=instance,
+                    page__asset__edition__work__knowledge_relations__approved=True,
+                )
             )
             .select_related("page__asset__edition__work")
+            .distinct()
             .order_by("page__asset__edition", "page__index")
         )
         curation = instance.curation if isinstance(instance.curation, dict) else {}
@@ -1983,6 +2016,7 @@ class GlobalSearchView(APIView):
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
             page__asset__is_current=True,
+            page__asset__access_status__in=_viewer_asset_access_statuses(request),
         ).select_related("page__asset__edition__work")
 
         if query:
@@ -3035,10 +3069,24 @@ class AdminUsageAnalyticsView(APIView):
         )
 
 
+def _viewer_asset_access_statuses(request) -> list[str]:
+    user = getattr(request, "user", None)
+    authenticated = bool(user and getattr(user, "is_authenticated", False))
+    staff = bool(
+        authenticated
+        and (
+            getattr(user, "is_staff", False)
+            or getattr(user, "role", "") in {"admin", "editor", "reviewer"}
+        )
+    )
+    return viewer_access_statuses(authenticated=authenticated, staff=staff)
+
+
 class PassageFocusView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
+        allowed_access_statuses = _viewer_asset_access_statuses(request)
         passage = Passage.objects.select_related("page__asset__edition__work").filter(
             pk=pk,
             page__asset__edition__state=PublicationState.PUBLISHED,
@@ -3046,6 +3094,7 @@ class PassageFocusView(APIView):
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
             page__asset__is_current=True,
+            page__asset__access_status__in=allowed_access_statuses,
         ).first()
         if passage is not None:
             return Response(
@@ -3069,6 +3118,7 @@ class PassageFocusView(APIView):
             asset__kind=Asset.Kind.NORMALIZED,
             asset__status=Asset.Status.READY,
             asset__is_current=True,
+            asset__access_status__in=allowed_access_statuses,
         )
         locator = chunk.locators[0] if chunk.locators else {}
         page = chunk.asset.pages.filter(index=chunk.page_start).first()
@@ -3099,6 +3149,7 @@ class PublicAssetManifestView(APIView):
             status=Asset.Status.READY,
             edition__state=PublicationState.PUBLISHED,
             is_current=True,
+            access_status__in=_viewer_asset_access_statuses(request),
         )
         chapter_pages = asset.pages.exclude(chapter_title="").order_by("index")
         author_profiles = ScholarProfile.objects.filter(
@@ -3207,6 +3258,7 @@ class PublicPageContentView(APIView):
             status=Asset.Status.READY,
             edition__state=PublicationState.PUBLISHED,
             is_current=True,
+            access_status__in=_viewer_asset_access_statuses(request),
         )
         page = get_object_or_404(asset.pages, index=page_index)
         return Response(
@@ -3254,6 +3306,7 @@ class DocumentSearchView(APIView):
             status=Asset.Status.READY,
             edition__state=PublicationState.PUBLISHED,
             is_current=True,
+            access_status__in=_viewer_asset_access_statuses(request),
         )
         if not query:
             return Response({"query": "", "matches": []})

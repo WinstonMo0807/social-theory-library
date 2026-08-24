@@ -13,6 +13,11 @@ type WorkDetailViewProps = {
   preview?: {
     publicationState: string;
     pdfPreviewUrl: string;
+    draftRevision?: {
+      revision: number;
+      changedFields: string[];
+      hasConflict: boolean;
+    } | null;
   };
   footer: ReactNode;
 };
@@ -42,7 +47,11 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
           <div className="admin-page-preview-banner" role="status">
             <ShieldCheck size={16} />
             <strong>管理员页面预览</strong>
-            <span>当前版本状态为 {preview.publicationState}。此页面需要后台权限，普通访客仍无法访问。</span>
+            <span>
+              {preview.draftRevision
+                ? `正在预览已保存的第 ${preview.draftRevision.revision} 版草稿，包含 ${preview.draftRevision.changedFields.length} 项待发布变更。${preview.draftRevision.hasConflict ? "正式内容已变化，请返回工作台处理冲突。" : "普通访客仍看到正式版本。"}`
+                : `当前版本状态为 ${preview.publicationState}。此页面需要后台权限，普通访客仍无法访问。`}
+            </span>
           </div>
         ) : null}
         <p className="breadcrumbs">
@@ -75,9 +84,12 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
                 ? <a className="button" href={previewPdf} target="_blank" rel="noreferrer"><Eye size={16} /> 后台 PDF</a>
                 : <span className="button disabled" aria-disabled="true"><Eye size={16} /> PDF 尚未就绪</span>
             ) : (
-              <>
+              work.pages ? <>
                 <Link className="button" href={`/reader/${work.id}`}><Eye size={16} /> 在线阅读</Link>
                 <AssetDownloadButton assetId={work.id} />
+                <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
+              </> : <>
+                <span className="button disabled" aria-disabled="true"><Eye size={16} /> 当前版本不可在线阅读</span>
                 <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
               </>
             )}

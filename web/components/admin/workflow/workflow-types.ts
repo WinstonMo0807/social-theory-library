@@ -105,6 +105,28 @@ export type WorkflowPayload = {
   editorial_revision?: EditorialRevisionSummary | null;
 };
 
+export function normalizeEditorialRevision(value: unknown): EditorialRevisionSummary | null {
+  const row = asRecord(value);
+  const status = asString(row.status);
+  if (!asString(row.id) || !["draft", "published", "superseded"].includes(status)) {
+    return null;
+  }
+  return {
+    id: asString(row.id),
+    target_type: asString(row.target_type),
+    target_id: asString(row.target_id),
+    base_revision: asNumber(row.base_revision),
+    current_revision: asNumber(row.current_revision),
+    revision: asNumber(row.revision),
+    changed_fields: asArray(row.changed_fields).map((field) => asString(field)).filter(Boolean),
+    status: status as EditorialRevisionSummary["status"],
+    change_note: asString(row.change_note),
+    materialized_preview: asRecord(row.materialized_preview),
+    has_conflict: asBoolean(row.has_conflict),
+    publish_url: asString(row.publish_url),
+  };
+}
+
 export type WorkflowDrafts = Record<WorkflowStepKey, Record<string, unknown>>;
 
 export function asRecord(value: unknown): Record<string, unknown> {

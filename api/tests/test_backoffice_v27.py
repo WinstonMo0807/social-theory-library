@@ -60,7 +60,7 @@ def test_editor_can_complete_single_editorial_workflow_without_system_privileges
     assert capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
 
 
-def test_reviewer_compatibility_and_superadmin_only_boundary_are_preserved():
+def test_reviewer_compatibility_and_owner_only_boundary_are_preserved(settings):
     reviewer = User.objects.create_user(
         username="v30-reviewer@example.org",
         email="v30-reviewer@example.org",
@@ -74,15 +74,17 @@ def test_reviewer_compatibility_and_superadmin_only_boundary_are_preserved():
         email="v30-superadmin@example.org",
         password="Correct-Horse-Battery-2026",
     )
+    settings.LIBRARY_OWNER_EMAIL = superadmin.email
 
     reviewer_capabilities = set(capability_snapshot(reviewer).capabilities)
     admin_capabilities = set(capability_snapshot(admin).capabilities)
     superadmin_snapshot = capability_snapshot(superadmin)
     superadmin_capabilities = set(superadmin_snapshot.capabilities)
 
+    assert capability_snapshot(reviewer).access_level == "editor"
     assert Capability.REVIEW_CANDIDATE in reviewer_capabilities
-    assert Capability.PUBLISH_WORK not in reviewer_capabilities
-    assert Capability.PUBLISH_AUTHORITY not in reviewer_capabilities
+    assert Capability.PUBLISH_WORK in reviewer_capabilities
+    assert Capability.PUBLISH_AUTHORITY in reviewer_capabilities
     assert reviewer_capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
     assert admin_capabilities.isdisjoint(SUPERADMIN_ONLY_CAPABILITIES)
     assert superadmin_snapshot.access_level == "superadmin"
@@ -90,15 +92,15 @@ def test_reviewer_compatibility_and_superadmin_only_boundary_are_preserved():
 
 
 @pytest.mark.parametrize(
-    "url",
+    ("url", "admin_status"),
     [
-        "/api/auth/users/",
-        "/api/distribution/providers/",
-        "/api/distribution/backups/",
-        "/api/reading/admin/ai-runtime-profiles/",
+        ("/api/auth/users/", 200),
+        ("/api/distribution/providers/", 200),
+        ("/api/distribution/backups/", 403),
+        ("/api/reading/admin/ai-runtime-profiles/", 200),
     ],
 )
-def test_editor_and_ordinary_admin_cannot_cross_superadmin_boundary(url):
+def test_endpoint_permissions_follow_v301_admin_and_owner_boundary(url, admin_status, settings):
     editor = User.objects.create_user(
         username=f"editor-{url.replace('/', '-')}@example.org",
         email=f"editor-{url.replace('/', '-')}@example.org",
@@ -111,13 +113,14 @@ def test_editor_and_ordinary_admin_cannot_cross_superadmin_boundary(url):
         email=f"super-{url.replace('/', '-')}@example.org",
         password="Correct-Horse-Battery-2026",
     )
+    settings.LIBRARY_OWNER_EMAIL = superadmin.email
     client = APIClient()
 
     client.force_authenticate(editor)
     assert client.get(url).status_code == 403
 
     client.force_authenticate(admin)
-    assert client.get(url).status_code == 403
+    assert client.get(url).status_code == admin_status
 
     client.force_authenticate(superadmin)
     assert client.get(url).status_code == 200

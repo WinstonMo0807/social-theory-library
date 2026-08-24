@@ -9,10 +9,18 @@ from catalog.models import (
     DocumentType,
     Edition,
     EditionWorkflowDecision,
+    EditorialRevision,
     PublicationState,
+    TheoryReviewTask,
 )
 from catalog.services.admin_workflow import WORKFLOW_STEPS, build_edition_workflow
-from ingestion.models import EntityResolutionCandidate, UploadBatch, UploadItem
+from ingestion.models import (
+    EntityResolutionCandidate,
+    FieldLock,
+    MetadataCandidate,
+    UploadBatch,
+    UploadItem,
+)
 from ingestion.services.entity_resolution_decisions import decide_entity_resolution
 from ingestion.services.reconciliation import persist_resolution_candidates
 
@@ -91,6 +99,55 @@ def test_workflow_order_section_confirmation_and_curation_skip(
     )
     assert decision.decision == EditionWorkflowDecision.Decision.SKIPPED
     assert "尚未加入阅读路径" not in skipped.data["data"]["publication"]["blockers"]
+
+
+@pytest.mark.django_db
+def test_save_draft_does_not_confirm_lock_or_accept_candidates(
+    api_client,
+    admin_user,
+    settings,
+    tmp_path,
+):
+    work, edition, _original, _normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="尚未确认的书名",
+    )
+    item = make_item(admin_user, edition)
+    candidate = MetadataCandidate.objects.create(
+        upload_item=item,
+        field_name="title",
+        value="暂存后的书名",
+        source="front_matter",
+        confidence=0.91,
+    )
+    api_client.force_authenticate(admin_user)
+
+    response = api_client.patch(
+        f"/api/catalog/admin/intake/{item.id}/sections/work/",
+        {
+            "data": {
+                "title": "暂存后的书名",
+                "document_type": "book",
+                "language": "zh-CN",
+            },
+            "confirm_section": False,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    work.refresh_from_db()
+    candidate.refresh_from_db()
+    assert work.title == "暂存后的书名"
+    assert not EditionWorkflowDecision.objects.filter(
+        edition=edition,
+        step_key=EditionWorkflowDecision.Step.WORK,
+    ).exists()
+    assert not FieldLock.objects.filter(edition=edition, field_name="title").exists()
+    assert candidate.lifecycle == MetadataCandidate.Lifecycle.PROPOSED
+    work_step = next(row for row in response.data["workflow"]["steps"] if row["key"] == "work")
+    assert work_step["status"] != "complete"
 
 
 @pytest.mark.django_db
@@ -289,6 +346,30 @@ def test_workflow_stale_confirmation_and_publication_blocker(settings, tmp_path,
 
 
 @pytest.mark.django_db
+def test_pending_knowledge_research_is_visible_but_non_blocking(settings, tmp_path):
+    work, edition, _original, _normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="可选知识策展",
+    )
+    TheoryReviewTask.objects.create(
+        task_type=TheoryReviewTask.TaskType.NEW_NODE,
+        work=work,
+        suggested_node_name="待判断理论",
+        evidence_text="机器候选仍需人工判断。",
+    )
+
+    workflow = build_edition_workflow(edition)
+    knowledge = next(row for row in workflow["steps"] if row["key"] == "knowledge")
+    pending_issue = next(
+        row for row in knowledge["issues"] if row["code"] == "knowledge_review_pending"
+    )
+
+    assert knowledge["status"] == "attention"
+    assert pending_issue["severity"] == "warning"
+
+
+@pytest.mark.django_db
 def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     api_client,
     admin_user,
@@ -334,6 +415,47 @@ def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     )
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
+
+    draft = api_client.patch(
+        f"/api/catalog/admin/library/works/{work.id}/sections/work/?edition={edition.id}",
+        {
+            "data": {
+                "title": "由最终发布动作提交的草稿题名",
+                "document_type": "book",
+                "language": "zh-CN",
+            },
+            "confirm_section": False,
+        },
+        format="json",
+    )
+    assert draft.status_code == 202
+    revision_id = draft.data["editorial_revision"]["id"]
+    work.refresh_from_db()
+    assert work.title == "维护发布与下一项"
+
+    rolled_back = api_client.post(
+        f"/api/catalog/admin/library/works/{work.id}/publication/",
+        {"confirm_warnings": False},
+        format="json",
+    )
+    assert rolled_back.status_code == 409
+    work.refresh_from_db()
+    assert work.title == "维护发布与下一项"
+    assert EditorialRevision.objects.get(pk=revision_id).status == EditorialRevision.Status.DRAFT
+
+    updated = api_client.post(
+        f"/api/catalog/admin/library/works/{work.id}/publication/",
+        {"confirm_warnings": True},
+        format="json",
+    )
+    assert updated.status_code == 200
+    assert updated.data["published_editorial_revision"]["id"] == revision_id
+    work.refresh_from_db()
+    assert work.title == "由最终发布动作提交的草稿题名"
+    assert (
+        EditorialRevision.objects.get(pk=revision_id).status
+        == EditorialRevision.Status.PUBLISHED
+    )
 
 
 @pytest.mark.django_db

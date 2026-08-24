@@ -600,8 +600,11 @@ def search_google_books_title(title: str, *, language: str = "", limit: int = 3)
 
 def _openalex_headers() -> dict[str, str]:
     headers = {"User-Agent": "SocialTheoryLibrary/2.7 (administrator metadata suggestions)"}
-    if getattr(settings, "OPENALEX_API_KEY", ""):
-        headers["api_key"] = settings.OPENALEX_API_KEY
+    from catalog.services.research_sources import resolve_source_credential
+
+    api_key = resolve_source_credential("openalex")
+    if api_key:
+        headers["api_key"] = api_key
     return headers
 
 
@@ -828,7 +831,9 @@ def _element_text(element) -> str:
 
 
 def resolve_grobid(path: str | Path) -> list[Candidate]:
-    base_url = settings.GROBID_SERVICE_URL.rstrip("/")
+    from catalog.services.research_sources import resolve_source_endpoint
+
+    base_url = resolve_source_endpoint("grobid")
     if not base_url:
         return []
     with Path(path).open("rb") as handle:
@@ -927,7 +932,9 @@ def enrich_candidates(candidates: list[Candidate], path: str | Path | None = Non
         ),
         None,
     )
-    if path and settings.GROBID_SERVICE_URL and document_type == DocumentType.JOURNAL_ARTICLE:
+    from catalog.services.research_sources import resolve_source_endpoint
+
+    if path and resolve_source_endpoint("grobid") and document_type == DocumentType.JOURNAL_ARTICLE:
         try:
             enriched.extend(resolve_grobid(path))
         except (httpx.HTTPError, ElementTree.ParseError, KeyError, ValueError):

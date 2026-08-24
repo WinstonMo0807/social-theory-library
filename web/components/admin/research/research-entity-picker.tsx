@@ -66,6 +66,16 @@ const ACTION_LABELS: Record<string, string> = {
   accept: "接受候选",
   reopen: "恢复待审",
 };
+
+function entityActionLabel(action: string, entityType: string, hasTextTarget: boolean): string {
+  if (action === "link_existing" && hasTextTarget) return "使用规范文本";
+  if (entityType === "person") {
+    if (action === "link_existing") return "关联已有学者";
+    if (action === "create_draft") return "创建新学者主页";
+    if (action === "keep_unresolved") return "仅添加为责任者";
+  }
+  return ACTION_LABELS[action] ?? action;
+}
 const DIRECT_ENTITY_DECISION_ACTIONS = new Set(["create_draft", "keep_unresolved", "reject"]);
 const DIRECT_ENTITY_DECISION_TYPES = new Set(["person", "work", "knowledge_node", "organization", "publisher"]);
 
@@ -290,6 +300,7 @@ export function ResearchEntityPicker({
           item_id: workspace?.itemId,
           work_id: workspace?.workId,
           edition_id: workspace?.editionId,
+          draft_session_id: workspace?.draftSessionId,
           entity_type: resolvedEntityType,
           field,
           query: query.trim(),
@@ -444,6 +455,7 @@ export function ResearchEntityPicker({
           item_id: workspace.itemId,
           work_id: workspace.workId,
           edition_id: workspace.editionId,
+          draft_session_id: workspace.draftSessionId,
           entity_type: candidate.entity_type ?? resolvedEntityType,
           field,
           query: query.trim() || queryHint.trim() || String(candidate.label ?? ""),
@@ -582,7 +594,7 @@ export function ResearchEntityPicker({
                 const selfReference = field === "translation_of" && Boolean(candidate.entity_id && String(candidate.entity_id) === workspace?.workId) && ["link_existing", "use_value"].includes(action);
                 const unavailable = selfReference;
                 const disabledReason = selfReference ? "当前作品不能作为自己的原作" : undefined;
-                const baseLabel = action === "link_existing" && onUseValue ? "使用规范文本" : ACTION_LABELS[action] ?? action;
+                const baseLabel = entityActionLabel(action, candidateEntityType, Boolean(onUseValue));
                 const selectedLabel = action === "link_existing" && selected ? onUseValue ? "已使用该文本" : "已加入表单" : action === "use_value" && selected ? "已使用该文本" : baseLabel;
                 return <button type="button" data-action={action} disabled={disabled || Boolean(acting) || pending || unavailable || (["link_existing", "use_value"].includes(action) && selected)} title={disabledReason} key={action} onClick={() => void decideExternal(candidate, action)}>{pending ? <LoaderCircle className="spin" size={12} /> : ["link_existing", "use_value"].includes(action) && selected ? <Check size={12} /> : action === "create_draft" ? <Plus size={12} /> : action === "inspect" ? <Search size={12} /> : action === "reject" ? <X size={12} /> : <ExternalLink size={12} />}{unavailable ? `${selectedLabel}（当前不可用）` : selectedLabel}</button>;
               })}

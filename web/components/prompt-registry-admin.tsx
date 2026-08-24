@@ -90,6 +90,18 @@ function timeLabel(value: string | null) {
   return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("zh-CN", { hour12: false });
 }
 
+async function fetchPromptRegistry() {
+  const token = getServerSessionCredential();
+  if (!token) {
+    throw new Error("登录状态尚未就绪，无法读取 Prompt Registry。");
+  }
+  return apiRequest<PromptRegistryPayload>(
+    "/catalog/admin/prompt-registry/?limit=200",
+    {},
+    token,
+  );
+}
+
 export function PromptRegistryAdmin() {
   const [payload, setPayload] = useState<PromptRegistryPayload | null>(null);
   const [draft, setDraft] = useState<PromptDraft>(EMPTY_DRAFT);
@@ -100,20 +112,9 @@ export function PromptRegistryAdmin() {
   const [messageState, setMessageState] = useState<ActionState>("idle");
 
   const loadRegistry = useCallback(async () => {
-    const token = getServerSessionCredential();
-    if (!token) {
-      setMessage("登录状态尚未就绪，无法读取 Prompt Registry。");
-      setMessageState("error");
-      setLoading(false);
-      return false;
-    }
     setLoading(true);
     try {
-      const result = await apiRequest<PromptRegistryPayload>(
-        "/catalog/admin/prompt-registry/?limit=200",
-        {},
-        token,
-      );
+      const result = await fetchPromptRegistry();
       setPayload(result);
       setMessage("");
       setMessageState("idle");
@@ -128,8 +129,26 @@ export function PromptRegistryAdmin() {
   }, []);
 
   useEffect(() => {
-    void loadRegistry();
-  }, [loadRegistry]);
+    let active = true;
+    void fetchPromptRegistry()
+      .then((result) => {
+        if (!active) return;
+        setPayload(result);
+        setMessage("");
+        setMessageState("idle");
+      })
+      .catch((reason) => {
+        if (!active) return;
+        setMessage(reason instanceof Error ? reason.message : "Prompt Registry 读取失败。");
+        setMessageState("error");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const capabilities = useMemo(() => {
     const values = new Set(Object.keys(CAPABILITY_LABELS));

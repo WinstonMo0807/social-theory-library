@@ -189,21 +189,20 @@ class AdminFieldEnrichmentDecisionView(APIView):
         serializer = EnrichmentDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            with transaction.atomic():
-                candidate = EnrichmentCandidate.objects.select_for_update().get(pk=candidate_id)
-                values = serializer.validated_data
-                if values["action"] == "accept":
-                    accept_enrichment_candidate(
-                        candidate,
-                        actor=request.user,
-                        reason=values.get("reason", ""),
-                    )
-                else:
-                    reject_enrichment_candidate(
-                        candidate,
-                        actor=request.user,
-                        reason=values.get("reason", ""),
-                    )
+            candidate = EnrichmentCandidate.objects.get(pk=candidate_id)
+            values = serializer.validated_data
+            if values["action"] == "accept":
+                accept_enrichment_candidate(
+                    candidate,
+                    actor=request.user,
+                    reason=values.get("reason", ""),
+                )
+            else:
+                reject_enrichment_candidate(
+                    candidate,
+                    actor=request.user,
+                    reason=values.get("reason", ""),
+                )
         except EnrichmentCandidate.DoesNotExist:
             return Response({"detail": "候选不存在。"}, status=404)
         except ValueError as exc:
@@ -389,49 +388,48 @@ class AdminCandidateReviewDecisionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            with transaction.atomic():
-                if candidate_kind == "field_enrichment":
-                    candidate = EnrichmentCandidate.objects.select_for_update().get(
-                        pk=candidate_id
-                    )
-                    if action == "accept":
-                        accept_enrichment_candidate(candidate, actor=request.user, reason=reason)
-                    else:
-                        reject_enrichment_candidate(candidate, actor=request.user, reason=reason)
-                    candidate.refresh_from_db()
-                    payload = EnrichmentCandidateSerializer(candidate).data
-                    payload["review_kind"] = "field_enrichment"
-                elif candidate_kind == "query_lexicon":
-                    candidate = QueryLexiconCandidate.objects.select_for_update().get(
-                        pk=candidate_id
-                    )
-                    if action == "accept":
-                        accept_query_lexicon_candidate(candidate, actor=request.user, reason=reason)
-                    else:
-                        reject_query_lexicon_candidate(candidate, actor=request.user, reason=reason)
-                    candidate.refresh_from_db()
-                    payload = QueryLexiconCandidateReviewSerializer(candidate).data
-                elif candidate_kind == "new_authority":
-                    candidate = NewAuthorityCandidate.objects.select_for_update().get(
-                        pk=candidate_id,
-                    )
-                    values = serializer.validated_data
-                    candidate = decide_new_authority_candidate(
-                        candidate,
-                        action=action,
-                        actor=request.user,
-                        target_type=values.get("target_type", ""),
-                        target_id=str(values.get("target_id") or ""),
-                        canonical_term=values.get("canonical_term", ""),
-                        node_type=values.get("node_type", "theory_tradition"),
-                        confirm_new=values.get("confirm_new", False),
-                        reason=reason,
-                    )
-                    payload = NewAuthorityCandidateSerializer(candidate).data
-                    payload["target_label"] = candidate.primary_term
-                    _with_review_status(payload)
+            if candidate_kind == "field_enrichment":
+                candidate = EnrichmentCandidate.objects.get(pk=candidate_id)
+                if action == "accept":
+                    accept_enrichment_candidate(candidate, actor=request.user, reason=reason)
                 else:
-                    return Response({"detail": "不支持的候选类型。"}, status=400)
+                    reject_enrichment_candidate(candidate, actor=request.user, reason=reason)
+                candidate.refresh_from_db()
+                payload = EnrichmentCandidateSerializer(candidate).data
+                payload["review_kind"] = "field_enrichment"
+            else:
+                with transaction.atomic():
+                    if candidate_kind == "query_lexicon":
+                        candidate = QueryLexiconCandidate.objects.select_for_update().get(
+                            pk=candidate_id
+                        )
+                        if action == "accept":
+                            accept_query_lexicon_candidate(candidate, actor=request.user, reason=reason)
+                        else:
+                            reject_query_lexicon_candidate(candidate, actor=request.user, reason=reason)
+                        candidate.refresh_from_db()
+                        payload = QueryLexiconCandidateReviewSerializer(candidate).data
+                    elif candidate_kind == "new_authority":
+                        candidate = NewAuthorityCandidate.objects.select_for_update().get(
+                            pk=candidate_id,
+                        )
+                        values = serializer.validated_data
+                        candidate = decide_new_authority_candidate(
+                            candidate,
+                            action=action,
+                            actor=request.user,
+                            target_type=values.get("target_type", ""),
+                            target_id=str(values.get("target_id") or ""),
+                            canonical_term=values.get("canonical_term", ""),
+                            node_type=values.get("node_type", "theory_tradition"),
+                            confirm_new=values.get("confirm_new", False),
+                            reason=reason,
+                        )
+                        payload = NewAuthorityCandidateSerializer(candidate).data
+                        payload["target_label"] = candidate.primary_term
+                        _with_review_status(payload)
+                    else:
+                        return Response({"detail": "不支持的候选类型。"}, status=400)
         except (
             EnrichmentCandidate.DoesNotExist,
             QueryLexiconCandidate.DoesNotExist,

@@ -185,7 +185,7 @@ class RemoteWorkerHeartbeatView(RemoteWorkerAPIView):
                 "current_load": executor.current_load,
                 "heartbeat_expires_at": executor.heartbeat_expires_at.isoformat(),
                 "server_time": timezone.now().isoformat(),
-                "poll_after_seconds": 5,
+                "poll_after_seconds": 10,
             }
         )
 

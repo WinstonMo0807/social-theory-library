@@ -11,6 +11,12 @@ import type { ApiWork } from "@/lib/server-api";
 type PreviewPayload = {
   preview_mode: true;
   publication_state: string;
+  editorial_revision: {
+    id: string;
+    revision: number;
+    changed_fields: string[];
+    has_conflict: boolean;
+  } | null;
   public_url: string;
   pdf_preview_url: string;
   work: ApiWork;
@@ -109,6 +115,13 @@ export function AdminWorkPagePreview({
       preview={{
         publicationState: payload.publication_state,
         pdfPreviewUrl: normalizePublicResourceUrl(payload.pdf_preview_url),
+        draftRevision: payload.editorial_revision
+          ? {
+              revision: payload.editorial_revision.revision,
+              changedFields: payload.editorial_revision.changed_fields,
+              hasConflict: payload.editorial_revision.has_conflict,
+            }
+          : null,
       }}
     />
   );

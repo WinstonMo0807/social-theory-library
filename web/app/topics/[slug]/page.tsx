@@ -38,7 +38,19 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
   const scholars = topic.curated.relatedScholars.length
     ? topic.scholars.filter((scholar) => topic.curated.relatedScholars.some((item) => item.slug === scholar.slug))
     : topic.scholars;
-  const theorySchools = topic.linkedTheories.length ? topic.linkedTheories : topic.theories;
+  const normalizedTheories = topic.knowledgeNodes
+    .filter((node) => node.node_type === "theory_tradition")
+    .map((node) => ({ ...node, href: `/theories/nodes/${node.slug}`, symbol: node.name.slice(0, 2) }));
+  const theorySchools = normalizedTheories.length
+    ? normalizedTheories
+    : (topic.linkedTheories.length ? topic.linkedTheories : topic.theories).map((theory) => ({
+        ...theory,
+        href: `/theory-schools/${theory.slug}`,
+        symbol: "symbol" in theory ? theory.symbol : theory.name.slice(0, 2),
+      }));
+  const relatedKnowledge = topic.knowledgeNodes.filter((node) =>
+    ["concept", "debate", "research_problem"].includes(node.node_type),
+  );
   const excerpt = topic.passages.find((passage) => passage.id === topic.curated.featuredPassageId)
     ?? topic.passages[0];
 
@@ -83,13 +95,19 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
 
             <section className="topic-relations-row">
               <article className="panel">
-                <SectionHeading title="相关理论传统" href={`/topics/${topic.slug}/theory-schools`} />
-                {theorySchools.slice(0, 5).map((theory) => (
-                  <Link className="topic-relation-link" href={`/theory-schools/${theory.slug}`} key={theory.slug}>
-                    <span>{"symbol" in theory ? theory.symbol : theory.name.slice(0, 2)}</span><strong>{theory.name}</strong><ArrowRight size={15} />
+                <SectionHeading title="理论、概念与争论" href={`/topics/${topic.slug}/theory-schools`} />
+                {theorySchools.slice(0, 3).map((theory) => (
+                  <Link className="topic-relation-link" href={theory.href} key={theory.slug}>
+                    <span>{theory.symbol}</span><strong>{theory.name}</strong><ArrowRight size={15} />
                   </Link>
                 ))}
-                {!theorySchools.length ? <p className="empty-state">尚无经过确认的理论关系。</p> : null}
+                {relatedKnowledge.slice(0, 5 - Math.min(3, theorySchools.length)).map((node) => (
+                  <Link className="topic-relation-link" href={`/theories/nodes/${node.slug}`} key={node.id}>
+                    <span>{node.node_type === "debate" ? "争论" : node.node_type === "concept" ? "概念" : "问题"}</span>
+                    <strong>{node.name}</strong><ArrowRight size={15} />
+                  </Link>
+                ))}
+                {!theorySchools.length && !relatedKnowledge.length ? <p className="empty-state">尚无经过确认的知识关系。</p> : null}
               </article>
               <article className="panel">
                 <SectionHeading title="相关子学科" href="/subdisciplines" />

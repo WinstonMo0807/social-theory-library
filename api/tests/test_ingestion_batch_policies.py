@@ -116,8 +116,8 @@ def test_pipeline_consumes_batch_ocr_provider_ai_and_access_policy(
     )
 
     with patch(
-        "ingestion.services.pipeline.enrich_candidates_with_gateway"
-    ) as gateway, patch(
+        "ingestion.services.pipeline.queue_external_enrichment_job"
+    ) as external_enrichment, patch(
         "ingestion.services.pipeline.metadata_candidates_from_ai",
         return_value=([ai_candidate], {"status": "succeeded"}),
     ) as ai_service, patch(
@@ -126,7 +126,7 @@ def test_pipeline_consumes_batch_ocr_provider_ai_and_access_policy(
         result = run_pipeline(str(item.id))
 
     assert result.status == UploadItem.Status.READY
-    gateway.assert_not_called()
+    external_enrichment.assert_not_called()
     ai_service.assert_called()
     queue_ocr.assert_called_once()
     normalized = result.edition.assets.get(kind=Asset.Kind.NORMALIZED)
@@ -211,8 +211,11 @@ def test_skip_ocr_disables_all_ocr_paths_for_scanned_pages(
     assert normalized.extraction_method == "ocr_disabled"
     assert normalized.validation_details["ocr_detected_page_indexes"] == [1, 2]
     assert normalized.validation_details["ocr_required_page_indexes"] == []
+    assert "front_matter_ocr_page_indexes" not in normalized.validation_details
     assert result.edition.ocr_status == OcrStatus.DISABLED
     assert result.edition.semantic_index_status == SemanticIndexStatus.NOT_INDEXED
+    result.refresh_from_db()
+    assert result.preflight_summary["front_matter_intelligence"]["ocr_page_indexes"] == []
     queue_ocr.assert_not_called()
     queue_semantic.assert_not_called()
     queue_page_labels.assert_called_once()

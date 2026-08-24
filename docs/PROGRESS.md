@@ -1,6 +1,22 @@
 # 开发进度
 
-更新日期为 2026-08-24。3.0 已部署到 `books.winstonmo.com`，API readiness 返回 3.0.0、database true、pending migrations 0。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
+更新日期为 2026-08-25。3.0 已部署到 `books.winstonmo.com`，API readiness 返回 3.0.0、database true、pending migrations 0。3.0.1 仍是发布前源码，尚未替换公网镜像或应用 migration。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
+
+## 3.0.1 Product Integration Pass 发布前状态
+
+- 已部署的 3.0.0 源码已固定为 commit `35b5cce` 和 tag `v3.0.0-baseline`。当前分支 `codex/v3.0.1-product-integration` 从该提交开始。生产 3.0.0 API/Web image、pre-v300 deploy-record、fresh backup 与应用回退入口均未改动。
+- Workbench 字段已接入 `ResearchFieldContract`。ResearchRun 使用 canonical revision、draft session、draft hash、trigger values 和 trigger hash 区分未保存草稿。字段变化会让旧候选 stale，旧 run 的迟到结果被拒绝，Planner 只重跑受依赖影响的字段。
+- FrontMatterIntelligence 先消费 native text、DocumentRevision 与 EvidenceSpan，再安排有限页 OCR，最后才使用外部来源核对。显式跳过 OCR 的批次不会被前置页分析重新排队。作者和译者候选进入作者与责任者步骤，并可关联已有 Person、创建 draft ScholarProfile，或只作为责任者保留。
+- Candidate workspace 支持查看全部结果、采用、修改后采用、查看依据、拒绝和 Web 结果核实。SafeWebFetcher 已增加分类错误、逐跳 DNS/IP 校验、固定已验证 IP、原 Host/TLS SNI 保留与禁用环境代理。SearXNG snippet 继续只是 discovery lead。
+- Workbench 已增加 dirty-state 退出选择、保存草稿、预览、发布前检查和发布。知识策展页覆盖 Claim、Theory、Concept、Scholar、Topic、Debate、ReadingPath 与推荐影响。Knowledge Studio 与公开 Work、Theory、Scholar、Topic、Debate、ReadingPath 消费同一 Canonical、Revision 和 Projection。
+- Passage、SemanticChunk focus、Asset manifest、Page 和馆内全文搜索已统一执行 Asset access policy。12 个匿名、读者、staff 与四类 access status 的组合测试通过。受限正文返回 404，响应体不包含原文。
+- 正常 UI 收敛到 Reader、Editor、Administrator。旧 Reviewer 账号运行时按 Editor 兼容。Owner-only 操作通过唯一 owner identity 控制，不在业务逻辑散布账户字符串。
+- Research Source Registry 已提供标准 metadata 解析和中文来源扩展边界。NCPSSD 仅允许完成使用规则核对后的公开 metadata。全国联合编目需要 Z39.50 endpoint 与 credential alias。CNKI、维普、万方只允许合法授权 Provider 或人工 Evidence 导入。
+- 4070 worker 的 heartbeat、pull、lease、WAN 断线重试、轮询下限和稳定 completion id 已进入源码。当前远程客户端只执行 `claim_extraction`。其他已注册 AI capability 尚未形成该客户端的实际执行路径。Library Synthesis 摘要尚未实现，当前只返回 Source Abstract 或带原因的 No Reliable Candidate。
+- 目标 migration 为 catalog 0035 至 0038 和 ingestion 0014。0038 是 non-atomic、幂等、仅前向的 ReadingPath 语义回填，按单条 ReadingPath 使用事务，并写 Canonical revision 与待处理 DomainChangeEvent。它没有 reverse 数据操作。
+- 初轮 T3 后端完整回归出现 3 个属于本轮影响面的旧契约失败，修正后受影响 4 case 通过。发布审查随后发现 Owner identity、迟到 Research candidate 和兼容 Global Search 正文权限三项高风险问题，均已修复。一次并行修改期间启动的回归只暴露 Candidate decision 文件的临时语法状态，不计为稳定代码验收；修正后 49 项影响面测试通过。所有编辑停止后，稳定最终代码的完整后端回归为 897 passed、32 skipped，退出码 0。前端 production build 与 142 项完整 Node 测试执行一次，只有 1 个旧选择器断言失败。更新选择器后，受影响文件 7 项全部通过。
+- TypeScript、完整 lint、Django check、migration drift 和 `git diff --check` 均通过。Asset access 最终矩阵 12 项通过，并覆盖兼容 Global Search。Accounts、角色、draft-aware Research 与 Candidate 核实的最终影响面集合 49 项通过。Workbench Playwright 第一次运行时本地 API 未启动，3 项都表现为 `Internal Server Error`。启动 3.0.1 候选本地 API 后，同一套件 3 项全部通过。首次结果只记录为环境前置缺失，不计为产品通过。
+- 发布前仍需完成 fresh BackupJob、PostgreSQL 16 restore 与 migration rehearsal、3.0.0 additive-schema compatibility、候选镜像构建、生产 cutover、T4 smoke、观察和回退确认。在这些步骤完成前，3.0.1 不标记为已部署。
 
 ## 3.0 四个 Wave 状态
 

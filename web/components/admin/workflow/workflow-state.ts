@@ -36,11 +36,11 @@ export const WORKFLOW_STEP_LABELS: Record<WorkflowStepKey, string> = {
   file: "文件与识别",
   work: "作品与原作",
   bibliography: "书目与版本",
-  contributors: "责任者与身份",
+  contributors: "作者与责任者",
   classification: "学科与子学科",
   knowledge: "理论、主题与争论",
   reader: "阅读与定位",
-  curation: "观点、回应与阅读路径（可选）",
+  curation: "知识策展与前台联动（可选）",
   publication: "发布与投影",
 };
 
@@ -91,7 +91,7 @@ export function nextWorkflowStep(
 }
 
 export function bibliographyFields(documentType: string): readonly string[] {
-  const common = ["publication_year"] as const;
+  const common = ["publication_date", "publication_year"] as const;
   if (documentType === "journal_article") {
     return [...common, "journal_title", "volume", "issue", "page_range", "doi"];
   }
@@ -155,16 +155,29 @@ export function validateWorkflowSection(
       }
     });
   }
-  if (step === "classification" && value.confirmed !== true) {
-    issues.push({ field: "confirmed", message: "请确认本节分类判断。" });
-  }
-  if (step === "knowledge" && value.confirmed !== true) {
-    issues.push({ field: "confirmed", message: "请确认理论、主题与知识关系。" });
-  }
   return issues;
 }
 
 export type DirtyFields = Partial<Record<WorkflowStepKey, readonly string[]>>;
+
+const RESEARCH_FIELD_DEPENDENCIES: Record<string, readonly string[]> = {
+  title: ["title", "original_title", "authors", "contributors", "language", "first_publication_date", "abstract", "publisher", "publication_date", "publication_year", "version_label", "isbn10", "isbn13", "series"],
+  original_title: ["original_title", "authors", "contributors", "language", "original_language", "first_publication_date", "abstract"],
+  isbn10: ["isbn10", "isbn13", "title", "authors", "contributors", "publisher", "publication_date", "publication_year", "version_label", "series"],
+  isbn13: ["isbn10", "isbn13", "title", "authors", "contributors", "publisher", "publication_date", "publication_year", "version_label", "series"],
+};
+
+export function invalidatedResearchFields(dirty: DirtyFields): Set<string> {
+  const fields = new Set<string>();
+  WORKFLOW_STEP_KEYS.forEach((step) => {
+    (dirty[step] ?? []).forEach((path) => {
+      const field = String(path).split(".").at(-1) ?? String(path);
+      fields.add(field);
+      (RESEARCH_FIELD_DEPENDENCIES[field] ?? []).forEach((dependent) => fields.add(dependent));
+    });
+  });
+  return fields;
+}
 
 export function dirtyFieldCount(dirty: DirtyFields): number {
   return WORKFLOW_STEP_KEYS.reduce((count, key) => count + new Set(dirty[key] ?? []).size, 0);

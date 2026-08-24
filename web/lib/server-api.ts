@@ -45,6 +45,18 @@ export type PublicCuratedClaimGroups = Record<
   PublicCuratedClaim[]
 >;
 
+export type PublicKnowledgeNodeLink = {
+  id: string;
+  node_type: "theory_tradition" | "concept" | "debate" | "research_problem" | "subdiscipline";
+  name: string;
+  foreign_name: string;
+  slug: string;
+  summary: string;
+  relation_label: string;
+  is_representative?: boolean;
+  relation_source?: "person_relation" | "published_work_relation";
+};
+
 export type ApiWork = {
   id: string;
   document_type: "book" | "journal_article" | "thesis" | "report";
@@ -100,6 +112,7 @@ type ApiScholar = {
   featured_quote: string;
   quote_source?: string;
   works: ApiWork[];
+  knowledge_nodes?: PublicKnowledgeNodeLink[];
   curated_claims?: PublicCuratedClaimGroups;
   curated?: {
     essential_works: ApiWork[];
@@ -205,6 +218,7 @@ type ApiTopic = {
   disciplines: { id: string; name: string; slug: string; is_primary: boolean }[];
   subdisciplines: { id: string; name: string; slug: string; relation_label: string }[];
   linked_theories: { id: string; name: string; slug: string; relation_label: string }[];
+  knowledge_nodes?: PublicKnowledgeNodeLink[];
   key_concepts: string[];
   timeline: [string, string, string][];
   work_count: number;
@@ -603,6 +617,7 @@ export type NormalizedReadingPathItem = {
   work: string | null;
   work_data: TheoryWorkCompact | null;
   recommendation_reason: string;
+  prerequisite?: string;
   reading_order: number;
   is_required: boolean;
   editorial_note: string;
@@ -613,6 +628,7 @@ export type NormalizedReadingPath = {
   title: string;
   slug: string;
   introduction: string;
+  learning_goal?: string;
   primary_discipline: string | null;
   primary_discipline_data: TheoryDisciplineCompact | null;
   audience: string;
@@ -1654,6 +1670,7 @@ export type LibraryTopic = {
   disciplines: { id: string; name: string; slug: string; is_primary: boolean }[];
   subdisciplines: { id: string; name: string; slug: string; relation_label: string }[];
   linkedTheories: { id: string; name: string; slug: string; relation_label: string }[];
+  knowledgeNodes: PublicKnowledgeNodeLink[];
   concepts: string[];
   timeline: [string, string, string][];
   works: Work[];
@@ -1702,6 +1719,7 @@ function adaptTopic(payload: ApiTopic): LibraryTopic {
     disciplines: payload.disciplines ?? [],
     subdisciplines: payload.subdisciplines ?? [],
     linkedTheories: payload.linked_theories ?? [],
+    knowledgeNodes: payload.knowledge_nodes ?? [],
     concepts: payload.key_concepts ?? [],
     timeline: payload.timeline ?? [],
     works: (payload.works ?? []).map(adaptWork),
@@ -1785,6 +1803,7 @@ export async function loadTopicPage(
       disciplines: [],
       subdisciplines: [],
       linkedTheories: [],
+      knowledgeNodes: [],
       works: demoWorks.slice(0, 3),
       scholars: demoScholars.slice(0, 4),
       theories: demoTheorySchools.slice(0, 5),
@@ -1831,6 +1850,7 @@ export async function loadTopic(slug: string): Promise<LibraryTopic | null> {
           disciplines: [],
           subdisciplines: [],
           linkedTheories: [],
+          knowledgeNodes: [],
           works: demoWorks.slice(0, 6),
           scholars: demoScholars.slice(0, 4),
           theories: demoTheorySchools.slice(0, 5),
@@ -1866,6 +1886,7 @@ export async function loadScholar(slug: string): Promise<{
   featuredQuote: string;
   quoteSource: string;
   curatedClaims: PublicCuratedClaimGroups;
+  knowledgeNodes: PublicKnowledgeNodeLink[];
   curated: {
     essentialWorks: Work[];
     keyConcepts: Array<{
@@ -1912,6 +1933,7 @@ export async function loadScholar(slug: string): Promise<{
         major_criticism: [],
         major_response: [],
       },
+      knowledgeNodes: payload.knowledge_nodes ?? [],
       curated: {
         essentialWorks: (payload.curated?.essential_works ?? []).map(adaptWork),
         keyConcepts: payload.curated?.key_concepts ?? [],
@@ -1938,6 +1960,7 @@ export async function loadScholar(slug: string): Promise<{
             major_criticism: [],
             major_response: [],
           },
+          knowledgeNodes: [],
           curated: {
             essentialWorks: [],
             keyConcepts: [],

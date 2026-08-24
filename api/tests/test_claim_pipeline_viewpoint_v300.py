@@ -593,7 +593,7 @@ def test_viewpoint_search_keeps_baseline_default_and_groups_validated_claim_shad
 
 
 @override_settings(VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED=True)
-def test_viewpoint_claim_default_requires_explicit_benchmark_gate():
+def test_viewpoint_claim_default_requires_explicit_benchmark_gate(settings):
     work, _edition, _asset, revision, spans = _source(title="观点检索 Gate", pages=1)
     claim = _claim(
         revision,
@@ -631,6 +631,7 @@ def test_viewpoint_claim_default_requires_explicit_benchmark_gate():
         email="benchmark-owner@example.org",
         password="Correct-Horse-Battery-2026",
     )
+    settings.LIBRARY_OWNER_EMAIL = superadmin.email
     activate_claim_viewpoint_ranking(benchmark["report_hash"], actor=superadmin)
 
     result = viewpoint_search(

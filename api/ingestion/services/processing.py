@@ -22,6 +22,7 @@ from catalog.models import (
 )
 from catalog.services.semantic_indexing import queue_semantic_job
 from catalog.services.document_intelligence import best_effort_ocr_completion
+from catalog.services.front_matter_intelligence import run_front_matter_intelligence
 from catalog.services.query_lexicon.candidates import (
     EXTRACTION_VERSION as QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
     candidate_source_checksum,
@@ -1086,6 +1087,24 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             ),
             actor=job.created_by,
         )
+        if job.upload_item_id:
+            try:
+                stats["front_matter_intelligence"] = run_front_matter_intelligence(
+                    asset,
+                    upload_item=job.upload_item,
+                    actor=job.created_by,
+                    schedule_ocr=False,
+                )
+                if job.upload_item.batch.external_enrichment_enabled:
+                    external_job = queue_external_enrichment_job(
+                        job.upload_item,
+                        actor=job.created_by,
+                    )
+                    stats["external_corroboration_job_id"] = str(external_job.id)
+            except Exception as exc:
+                # Front-matter candidates are derived and remain optional for
+                # reading and publication.  The OCR result itself stays valid.
+                stats["front_matter_warning"] = str(exc)[:2000]
 
         try:
             place_evidence = detect_publication_places(

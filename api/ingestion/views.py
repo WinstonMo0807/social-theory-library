@@ -73,6 +73,8 @@ from catalog.services.publication_places import (
 )
 from common.permissions import (
     CanEditMetadata,
+    CanPublishWork,
+    CanRunDestructiveMaintenance,
     CanUpload,
     IsCatalogEditor,
     IsLibraryAdmin,
@@ -2594,10 +2596,10 @@ class MetadataImportView(APIView):
 
 
 class PublishUploadItemView(APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanPublishWork]
 
     def get_permissions(self):
-        permission_classes = [IsLibraryStaff] if self.request.method == "GET" else [IsLibraryAdmin]
+        permission_classes = [IsLibraryStaff] if self.request.method == "GET" else [CanPublishWork]
         return [permission() for permission in permission_classes]
 
     def _item(self, item_id):
@@ -3069,7 +3071,7 @@ class SystemHealthView(APIView):
 class DeleteUploadItemView(APIView):
     """Soft-delete an intake record while preserving NAS files and the audit trail."""
 
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanRunDestructiveMaintenance]
 
     def post(self, request, item_id):
         item = get_object_or_404(

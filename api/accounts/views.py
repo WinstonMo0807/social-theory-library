@@ -12,7 +12,7 @@ from common.capabilities import capability_snapshot
 
 from .cookies import clear_auth_cookies, expose_csrf_cookie, set_auth_cookies
 from .models import User
-from .ownership import is_library_owner
+from .ownership import is_library_owner, is_library_owner_identity
 from .serializers import (
     AdminSetPasswordSerializer,
     AdminUserSerializer,
@@ -130,7 +130,11 @@ class AdminSetPasswordView(APIView):
 
     def post(self, request, user_id):
         target = get_object_or_404(User, pk=user_id)
-        if target.role == User.Role.ADMIN and target != request.user and not is_library_owner(request.user):
+        if (
+            (is_library_owner_identity(target) or target.role == User.Role.ADMIN)
+            and target != request.user
+            and not is_library_owner(request.user)
+        ):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied("只有书库最高管理员可以重置其他管理员的密码。")
@@ -177,19 +181,23 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
         requested_role = serializer.validated_data.get("role", target.role)
         requested_active = serializer.validated_data.get("is_active", target.is_active)
         actor_is_owner = is_library_owner(self.request.user)
-        target_is_owner = is_library_owner(target)
+        target_is_owner = is_library_owner_identity(target)
+        if target_is_owner and not actor_is_owner:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("System Owner 账户只能由本人管理。")
         if target_is_owner and (requested_role != User.Role.ADMIN or not requested_active):
             from rest_framework.exceptions import ValidationError
 
             raise ValidationError("最高管理员账户不能被停用或降级。")
-        if (
-            (requested_role == User.Role.ADMIN or target.role == User.Role.ADMIN)
-            and not actor_is_owner
-            and target != self.request.user
-        ):
+        if target.role == User.Role.ADMIN and target != self.request.user and not actor_is_owner:
             from rest_framework.exceptions import PermissionDenied
 
-            raise PermissionDenied("只有最高管理员可以授予或撤销管理员角色。")
+            raise PermissionDenied("Administrator 账户只能由 System Owner 管理。")
+        if requested_role != target.role and not actor_is_owner:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("只有 System Owner 可以变更账户角色。")
         if target == self.request.user and (requested_role != User.Role.ADMIN or not requested_active):
             from rest_framework.exceptions import ValidationError
 

@@ -39,21 +39,37 @@ export default async function ScholarDetailPage({
     featuredQuote,
     quoteSource,
     curatedClaims,
+    knowledgeNodes,
     curated,
   } = data;
   const essentialWorks = curated.essentialWorks.length ? curated.essentialWorks : scholarWorks;
-  const keyConcepts = curated.keyConcepts.length ? curated.keyConcepts : scholar.concerns;
-  const relatedSchools = curated.relatedTheories.length
+  const normalizedConcepts = knowledgeNodes.filter((node) => node.node_type === "concept");
+  const normalizedTheories = knowledgeNodes.filter((node) => node.node_type === "theory_tradition");
+  const normalizedDebates = knowledgeNodes.filter((node) => node.node_type === "debate");
+  const keyConcepts = curated.keyConcepts.length
+    ? curated.keyConcepts
+    : normalizedConcepts.length
+      ? normalizedConcepts.map((node) => ({ name: node.name, description: node.summary, source: node.relation_label }))
+      : scholar.concerns;
+  const relatedSchools = normalizedTheories.length
+    ? normalizedTheories.map((node) => ({
+        ...node,
+        href: `/theories/nodes/${node.slug}`,
+        symbol: node.name.slice(0, 2),
+        description: node.summary || node.relation_label || "已确认的知识关系",
+      }))
+    : curated.relatedTheories.length
     ? curated.relatedTheories.map((school) => ({
         ...school,
+        href: `/theory-schools/${school.slug}`,
         symbol: school.symbol || school.name.slice(0, 2),
         books: 0,
         scholars: 0,
         description: school.description || "管理员确认的相关理论流派",
       }))
-    : theorySchools.filter((school) =>
-        scholarWorks.some((work) => work.theories?.some((item) => item.slug === school.slug)),
-      );
+    : theorySchools
+        .filter((school) => scholarWorks.some((work) => work.theories?.some((item) => item.slug === school.slug)))
+        .map((school) => ({ ...school, href: `/theory-schools/${school.slug}` }));
 
   return (
     <>
@@ -132,7 +148,7 @@ export default async function ScholarDetailPage({
               <div>
                 <SectionHeading title="相关理论流派" href={`/scholars/${slug}/theories`} action="查看全部" />
                 {relatedSchools.slice(0, 5).map((school) => (
-                  <Link className="school-link-row" href={`/theory-schools/${school.slug}`} key={school.slug}>
+                  <Link className="school-link-row" href={school.href} key={school.slug}>
                     <span className="theory-symbol">{school.symbol}</span>
                     <strong>{school.name}</strong>
                     <ArrowRight size={16} />
@@ -177,6 +193,17 @@ export default async function ScholarDetailPage({
             ))}
             {!curated.network.length ? <div className="connection-row empty-state">只有附有来源并经人工确认的学术关系才会公开。</div> : null}
           </section>
+
+          {normalizedDebates.length ? <section className="network-connections panel">
+            <SectionHeading title="参与的争论" />
+            {normalizedDebates.map((debate) => (
+              <Link className="connection-row" href={`/theories/nodes/${debate.slug}`} key={debate.id}>
+                <span className="theory-symbol">争论</span>
+                <p><strong>{debate.name}</strong><small>{debate.relation_label || debate.summary}</small></p>
+                <ArrowRight size={16} />
+              </Link>
+            ))}
+          </section> : null}
 
           <section className="curated-works panel">
             <SectionHeading title="馆藏作品" href={`/explore?q=${scholar.name}`} action={`查看全部 ${scholarWorks.length} 部`} />

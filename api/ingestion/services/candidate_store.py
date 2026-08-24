@@ -7,6 +7,7 @@ import uuid
 
 from django.db import transaction
 
+from catalog.models import Asset
 from ingestion.models import CandidateEvidence, MetadataCandidate, SourceRecord, UploadItem
 
 from .metadata import Candidate
@@ -65,6 +66,15 @@ def _persist_evidence(
     source_record: SourceRecord | None,
 ) -> None:
     evidence = dict(candidate.evidence or {})
+    evidence_asset = None
+    evidence_asset_id = str(evidence.get("asset_id") or "").strip()
+    if evidence_asset_id and stored.upload_item.edition_id:
+        evidence_asset = Asset.objects.filter(
+            pk=evidence_asset_id,
+            edition_id=stored.upload_item.edition_id,
+        ).first()
+    if evidence_asset is None:
+        evidence_asset = stored.upload_item.asset
     page_number = evidence.get("page")
     if page_number is None and isinstance(evidence.get("page_range"), list) and evidence["page_range"]:
         page_number = evidence["page_range"][0]
@@ -106,13 +116,13 @@ def _persist_evidence(
     }
     existing = existing_signatures.get(_evidence_signature(values))
     if existing:
-        if existing.asset_id is None and stored.upload_item.asset_id:
-            existing.asset_id = stored.upload_item.asset_id
+        if existing.asset_id is None and evidence_asset is not None:
+            existing.asset = evidence_asset
             existing.save(update_fields=["asset", "updated_at"])
         return
     CandidateEvidence.objects.create(
         metadata_candidate=stored,
-        asset=stored.upload_item.asset,
+        asset=evidence_asset,
         source_record=source_record,
         page_number=values["page_number"],
         bbox=values["bbox"],

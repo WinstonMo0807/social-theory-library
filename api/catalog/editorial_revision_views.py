@@ -25,6 +25,8 @@ EDIT_CAPABILITY = {
     EditorialRevision.TargetType.WORK: Capability.EDIT_METADATA,
     EditorialRevision.TargetType.KNOWLEDGE_NODE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.SCHOLAR_PROFILE: Capability.EDIT_DRAFT_AUTHORITY,
+    EditorialRevision.TargetType.DISCIPLINE: Capability.EDIT_DRAFT_AUTHORITY,
+    EditorialRevision.TargetType.SUBDISCIPLINE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.TOPIC: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.EDIT_DRAFT_AUTHORITY,
 }
@@ -33,6 +35,8 @@ PUBLISH_CAPABILITY = {
     EditorialRevision.TargetType.WORK: Capability.PUBLISH_WORK,
     EditorialRevision.TargetType.KNOWLEDGE_NODE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.SCHOLAR_PROFILE: Capability.PUBLISH_AUTHORITY,
+    EditorialRevision.TargetType.DISCIPLINE: Capability.PUBLISH_AUTHORITY,
+    EditorialRevision.TargetType.SUBDISCIPLINE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.TOPIC: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.PUBLISH_AUTHORITY,
 }

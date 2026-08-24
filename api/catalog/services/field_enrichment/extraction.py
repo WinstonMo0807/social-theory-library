@@ -15,6 +15,9 @@ from .values import stable_json
 
 
 YEAR_RE = re.compile(r"(?<!\d)(1[5-9]\d{2}|20\d{2}|2100)(?!\d)")
+DATE_RE = re.compile(
+    r"(?<!\d)(1[5-9]\d{2}|20\d{2}|2100)\s*(?:[-/.年])\s*(0?[1-9]|1[0-2])\s*(?:[-/.月])\s*(0?[1-9]|[12]\d|3[01])\s*日?(?!\d)"
+)
 ISBN_RE = re.compile(r"(?:ISBN(?:-1[03])?\s*[:：]?\s*)?((?:97[89][\s-]?)?\d[\d\s-]{7,15}[\dXx])")
 ORCID_RE = re.compile(r"\b(\d{4}-\d{4}-\d{4}-\d{3}[\dX])\b", re.I)
 WIKIDATA_RE = re.compile(r"\b(Q\d{2,})\b", re.I)
@@ -257,6 +260,26 @@ def extract_web_observations(
                 context=context,
             )
             output.append(FieldObservation(**{**row.__dict__, "identity_claims": claims}))
+    elif policy.field_name == "publication_date":
+        for start, end, sentence in _sentences(document.text):
+            if not any(label.casefold() in sentence.casefold() for label in ("published", "publication", "出版", "发行")):
+                continue
+            for match in DATE_RE.finditer(sentence):
+                value = f"{int(match.group(1)):04d}-{int(match.group(2)):02d}-{int(match.group(3)):02d}"
+                output.append(
+                    _observation(
+                        document=document,
+                        policy=policy,
+                        value=value,
+                        supporting_text=sentence,
+                        locator={
+                            "start": start + match.start(),
+                            "end": start + match.end(),
+                            "pattern": "publication_date",
+                        },
+                        context=context,
+                    )
+                )
     elif policy.field_name == "publication_year":
         for start, end, sentence, value in _labeled_value_sentences(
             document,

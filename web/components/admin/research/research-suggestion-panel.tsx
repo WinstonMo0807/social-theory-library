@@ -1,8 +1,8 @@
 "use client";
 
-import { ExternalLink, FlaskConical, Search } from "lucide-react";
+import { Check, ExternalLink, FlaskConical, Pencil, Search, ShieldCheck, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
+import { ActionButton, AsyncStatus, ToastHost, type ActionState, type ToastItem } from "@/components/action-feedback";
 import { apiRequest } from "@/lib/api";
 import type { WorkflowCandidate } from "../workflow/workflow-types";
 import {
@@ -26,6 +26,8 @@ export type ResearchRunPayload = {
   diagnostics?: Record<string, unknown>;
   error?: { code?: string; message?: string } | null;
   created?: boolean;
+  is_current?: boolean;
+  stale_reason?: string;
 };
 
 export const ResearchSuggestionCapabilityContext = createContext(false);
@@ -55,7 +57,34 @@ const statusLabels: Record<string, string> = {
   degraded: "部分来源不可用",
   failed: "研究失败",
   canceled: "已取消",
+  stale: "草稿已变化，旧候选失效",
+  superseded: "已由新草稿研究取代",
 };
+
+function isLeadOnly(candidate: WorkflowCandidate): boolean {
+  return candidate.source_tier === "research_lead"
+    || candidate.evidence_status === "lead_only"
+    || (Number(candidate.evidence_count ?? 0) === 0 && ["general_web", "searching", "searxng"].includes(String(candidate.source_class ?? candidate.source ?? "").toLocaleLowerCase()));
+}
+
+function adoptionAction(candidate: WorkflowCandidate): string {
+  const actions = candidate.available_actions ?? [];
+  return ["accept", "link_existing", "use_value", "create_draft", "keep_unresolved"].find((action) => actions.includes(action)) ?? "";
+}
+
+function adoptionLabel(action: string, candidate: WorkflowCandidate): string {
+  if (action === "apply_draft") return "采用到草稿";
+  if (action === "link_existing") return candidate.entity_type === "person" ? "关联已有学者" : "关联馆内实体";
+  if (action === "create_draft") return candidate.entity_type === "person" ? "创建新学者主页" : "采用为实体草稿";
+  if (action === "keep_unresolved") return "仅添加为责任者";
+  if (action === "use_value") return "采用规范文本";
+  return "采用";
+}
+
+function canVerifyLead(candidate: WorkflowCandidate): boolean {
+  if (candidate.verify_url) return true;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(candidate.id));
+}
 
 function endpointFor(mode: "intake" | "maintenance", itemId?: string, workId?: string, editionId?: string) {
   const endpoint = mode === "intake"
@@ -94,6 +123,7 @@ export function ResearchSuggestionPanel({
   token,
   canRun,
   onInspect,
+  onUpdated,
   onMessage,
 }: {
   mode: "intake" | "maintenance";
@@ -121,18 +151,24 @@ export function ResearchSuggestionPanel({
   );
   const changedKey = changedFields.join("\u001f");
   const draftFingerprint = useMemo(() => stableDraftFingerprint(draftData), [draftData]);
+  const draftSessionId = workspace?.draftSessionId;
   const endpoint = endpointFor(mode, itemId, workId, editionId);
   const [payload, setPayload] = useState<ResearchRunPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [candidateAction, setCandidateAction] = useState("");
+  const [expandedTiers, setExpandedTiers] = useState<Set<string>>(() => new Set());
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [dismissedCandidateIds, setDismissedCandidateIds] = useState<Set<string>>(() => new Set());
   const requestRevision = useRef(0);
   const requestInFlightRevision = useRef<number | null>(null);
   const lastAutomaticRequest = useRef("");
   const hasAutomaticResearch = useRef(false);
+  const lastDraftFingerprint = useRef("");
   const messageHandler = useRef(onMessage ?? workspace?.onMessage);
   useEffect(() => { messageHandler.current = onMessage ?? workspace?.onMessage; }, [onMessage, workspace?.onMessage]);
 
-  const suggestions = useMemo(() => researchRunSuggestions(payload), [payload]);
+  const suggestions = useMemo(() => researchRunSuggestions(payload).filter((candidate) => !dismissedCandidateIds.has(String(candidate.id))), [dismissedCandidateIds, payload]);
   const grouped = useMemo(() => groupResearchSuggestions(suggestions, field), [field, suggestions]);
   const publishSuggestions = useCallback((rows: WorkflowCandidate[]) => {
     window.dispatchEvent(new CustomEvent("workflow-research-suggestions", { detail: { step, suggestions: rows } }));
@@ -140,8 +176,12 @@ export function ResearchSuggestionPanel({
 
   const applyPayload = useCallback((result: ResearchRunPayload) => {
     setPayload(result);
-    publishSuggestions(researchRunSuggestions(result));
+    publishSuggestions(result.is_current === false ? [] : researchRunSuggestions(result));
   }, [publishSuggestions]);
+
+  const setToast = useCallback((id: string, state: ToastItem["state"], message: string) => {
+    setToasts((current) => [...current.filter((item) => item.id !== id), { id, state, message }]);
+  }, []);
 
   const pollRun = useCallback(async (initial: ResearchRunPayload, revision: number) => {
     let result = initial;
@@ -208,6 +248,7 @@ export function ResearchSuggestionPanel({
       return;
     }
     const revision = ++requestRevision.current;
+    if (force) setDismissedCandidateIds(new Set());
     requestInFlightRevision.current = revision;
     if (manual) setRunning(true);
     else setLoading(true);
@@ -216,6 +257,7 @@ export function ResearchSuggestionPanel({
         method: "POST",
         body: JSON.stringify({
           edition_id: editionId,
+          draft_session_id: draftSessionId,
           step,
           draft: draftData,
           changed_fields: fields,
@@ -254,7 +296,7 @@ export function ResearchSuggestionPanel({
         setRunning(false);
       }
     }
-  }, [applyPayload, credential, draftData, editionId, endpoint, itemId, mode, pollRun, step, workId]);
+  }, [applyPayload, credential, draftData, draftSessionId, editionId, endpoint, itemId, mode, pollRun, step, workId]);
 
   const loadLatest = useCallback(async () => {
     if (!credential || (mode === "intake" ? !itemId : !workId)) return;
@@ -281,6 +323,54 @@ export function ResearchSuggestionPanel({
     }
   }, [applyPayload, credential, endpoint, itemId, mode, pollRun, step, workId]);
 
+  const runCandidateAction = useCallback(async (candidate: WorkflowCandidate, action: string) => {
+    if (!credential || candidateAction) return;
+    const key = `${candidate.id}:${action}`;
+    setCandidateAction(key);
+    setToast(key, "pending", action === "verify" ? "正在取得并核实正文证据……" : action === "reject" ? "正在记录不采用决定……" : "正在采用候选……");
+    try {
+      if (action === "dismiss") {
+        setDismissedCandidateIds((current) => new Set(current).add(String(candidate.id)));
+        publishSuggestions(suggestions.filter((row) => String(row.id) !== String(candidate.id)));
+        setToast(key, "success", "已在本次研究中标记不采用。正式内容没有变化。");
+        return;
+      }
+      if (action === "apply_draft") {
+        const applied = workspace?.onCandidateApply?.(candidate);
+        if (!applied) throw new Error("该候选不能作为普通字段直接填入。");
+        setToast(key, "success", "候选已填入未保存草稿。");
+        return;
+      }
+      if (action === "verify") {
+        const verifyUrl = String(candidate.verify_url ?? `/catalog/admin/research/candidates/${encodeURIComponent(String(candidate.id))}/verify/`);
+        const verifyPayload = candidate.verify_payload && typeof candidate.verify_payload === "object"
+          ? candidate.verify_payload
+          : {};
+        const result = await apiRequest<Record<string, unknown>>(verifyUrl, { method: "POST", body: JSON.stringify(verifyPayload) }, credential);
+        const resultStatus = String(result.status ?? "verified");
+        if (resultStatus !== "verified") {
+          const detail = String(result.detail ?? "没有取得可核实的正文证据。该结果仍不可采用。");
+          setToast(key, resultStatus === "failed" ? "error" : "success", detail);
+        } else {
+          setToast(key, "success", "已取得正文证据，候选现在可以进入人工采用。");
+        }
+        if (onUpdated) await onUpdated();
+        else await workspace?.onUpdated?.();
+        await loadLatest();
+        return;
+      }
+      const decided = await workspace?.onCandidateDecision?.(candidate, action);
+      if (decided === false) throw new Error("候选决定没有完成。");
+      setToast(key, "success", action === "reject" ? "已记录不采用。" : action === "defer" ? "已标记稍后处理。" : "候选已采用并记录审计。");
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "候选操作失败。";
+      setToast(key, "error", message);
+      messageHandler.current?.(message);
+    } finally {
+      setCandidateAction("");
+    }
+  }, [candidateAction, credential, loadLatest, onUpdated, publishSuggestions, setToast, suggestions, workspace]);
+
   useEffect(() => {
     const reload = () => { void loadLatest(); };
     window.addEventListener(RESEARCH_SUGGESTION_REFRESH_EVENT, reload);
@@ -296,10 +386,24 @@ export function ResearchSuggestionPanel({
       setPayload(null);
       setLoading(false);
       setRunning(false);
+      setDismissedCandidateIds(new Set());
       publishSuggestions([]);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [endpoint, publishSuggestions, step]);
+
+  useEffect(() => {
+    const previous = lastDraftFingerprint.current;
+    lastDraftFingerprint.current = draftFingerprint;
+    if (!previous || previous === draftFingerprint || !changedFields.length) return;
+    requestRevision.current += 1;
+    requestInFlightRevision.current = null;
+    lastAutomaticRequest.current = "";
+    setPayload({ status: "stale", stale_reason: "当前未保存草稿已经变化。" });
+    setLoading(false);
+    setRunning(false);
+    publishSuggestions([]);
+  }, [changedFields.length, draftFingerprint, publishSuggestions]);
 
   useEffect(() => {
     if (!credential || (mode === "intake" ? !itemId : !workId)) return;
@@ -338,6 +442,8 @@ export function ResearchSuggestionPanel({
     ? "pending"
     : status === "failed" || Boolean(payload?.error?.message)
       ? "error"
+      : status === "stale" || status === "superseded"
+        ? "idle"
       : isTerminalResearchStatus(status)
         ? "success"
         : "idle";
@@ -384,7 +490,46 @@ export function ResearchSuggestionPanel({
       {errors.map((error, index) => <AsyncStatus state="error" message={String(error.detail ?? error.message ?? "候选来源暂时不可用。")} className="workflow-research-error" key={`${String(error.code ?? "error")}-${index}`} />)}
       {grouped.length ? <div className="workflow-research-group-counts">{grouped.map(([tier, rows]) => <span key={tier}>{tierLabels[tier] ?? tier} {rows.length}</span>)}</div> : null}
       {Array.isArray(payload?.plan) && payload.plan.length ? <div className="workflow-research-run-status">{payload.plan.slice(0, 8).map((task, index) => <span key={`${String(task.step)}-${String(task.field)}-${index}`} data-status={isTerminalResearchStatus(status) ? "complete" : "running"}>{String(task.step)} · {String(task.field)}</span>)}</div> : null}
-      {grouped.length ? <div className="workflow-research-groups">{grouped.map(([tier, rows]) => <section key={tier}><h4>{tierLabels[tier] ?? tier}</h4>{rows.slice(0, 5).map((candidate) => <button type="button" className="workflow-research-card" key={String(candidate.id)} onClick={() => onInspect?.([candidate], `${candidate.label ?? "候选"} · 来源检查`)}><span><strong>{String(candidate.label ?? candidate.field_name ?? "候选")}</strong><small>{String(candidate.source_class ?? candidate.source ?? "")} · {Math.round(Number(candidate.confidence ?? 0) * 100)}% · {Number(candidate.evidence_count ?? 0)} 条证据</small></span><span>{tier === "research_lead" ? <ExternalLink size={13} /> : <Search size={13} />}</span></button>)}</section>)}</div> : !loading ? <p className="workflow-research-empty">当前步骤尚无候选。可以继续编辑，或强制重跑本节。</p> : null}
+      {grouped.length ? (
+        <div className="workflow-research-groups">
+          {grouped.map(([tier, rows]) => {
+            const expanded = expandedTiers.has(tier);
+            const visibleRows = expanded ? rows : rows.slice(0, 5);
+            return (
+              <section key={tier}>
+                <header><h4>{tierLabels[tier] ?? tier}</h4><span>{rows.length} 项</span></header>
+                <div className="workflow-research-result-area" data-expanded={expanded}>
+                  {visibleRows.map((candidate) => {
+                    const actions = candidate.available_actions ?? [];
+                    const directAction = adoptionAction(candidate);
+                    const adopt = directAction || (candidate.proposed_value !== undefined || candidate.value !== undefined ? "apply_draft" : "");
+                    const leadOnly = isLeadOnly(candidate);
+                    const inspect = () => onInspect?.([candidate], `${candidate.label ?? "候选"} · 来源检查`);
+                    return (
+                      <article className="workflow-research-candidate" key={String(candidate.id)}>
+                        <button type="button" className="workflow-research-card" onClick={inspect}>
+                          <span><strong>{String(candidate.label ?? candidate.field_name ?? "候选")}</strong><small>{String(candidate.source_class ?? candidate.source ?? "")} · {Math.round(Number(candidate.confidence ?? 0) * 100)}% · {Number(candidate.evidence_count ?? 0)} 条证据</small></span>
+                          <span>{leadOnly ? <ExternalLink size={13} /> : <Search size={13} />}</span>
+                        </button>
+                        <div className="workflow-research-card-actions">
+                          {leadOnly && canVerifyLead(candidate) ? <ActionButton state={candidateAction === `${candidate.id}:verify` ? "pending" : "idle"} pendingLabel="核实中" disabled={Boolean(candidateAction)} onClick={() => void runCandidateAction(candidate, "verify")}><ShieldCheck size={12} />核实此结果</ActionButton> : null}
+                          {!leadOnly && adopt && (candidate.decision_url || adopt === "apply_draft") ? <ActionButton state={candidateAction === `${candidate.id}:${adopt}` ? "pending" : "idle"} pendingLabel="采用中" disabled={Boolean(candidateAction)} onClick={() => void runCandidateAction(candidate, adopt)}><Check size={12} />{adoptionLabel(adopt, candidate)}</ActionButton> : null}
+                          {!leadOnly && actions.includes("accept_with_edit") ? <ActionButton disabled={Boolean(candidateAction)} onClick={inspect}><Pencil size={12} />修改后采用</ActionButton> : null}
+                          <ActionButton disabled={Boolean(candidateAction)} onClick={inspect}><Search size={12} />查看依据</ActionButton>
+                          {actions.includes("reject") ? <ActionButton className="danger" state={candidateAction === `${candidate.id}:${candidate.decision_url ? "reject" : "dismiss"}` ? "pending" : "idle"} pendingLabel="记录中" disabled={Boolean(candidateAction)} onClick={() => void runCandidateAction(candidate, candidate.decision_url ? "reject" : "dismiss")}><X size={12} />拒绝/不采用</ActionButton> : null}
+                        </div>
+                        {candidate.no_reliable_candidate_reason ? <p className="workflow-no-reliable-candidate">没有可靠候选。{String(candidate.no_reliable_candidate_reason)}</p> : null}
+                      </article>
+                    );
+                  })}
+                </div>
+                {rows.length > 5 ? <button className="workflow-research-expand" type="button" onClick={() => setExpandedTiers((current) => { const next = new Set(current); if (next.has(tier)) next.delete(tier); else next.add(tier); return next; })}>{expanded ? "收起" : `展开全部 ${rows.length} 项`}</button> : null}
+              </section>
+            );
+          })}
+        </div>
+      ) : !loading ? <p className="workflow-research-empty">当前步骤尚无候选。可以继续编辑，或强制重跑本节。</p> : null}
+      <ToastHost items={toasts} onDismiss={(id) => setToasts((current) => current.filter((item) => item.id !== id))} label="候选操作反馈" />
     </section>
   );
 }

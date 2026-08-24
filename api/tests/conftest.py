@@ -21,7 +21,9 @@ def admin_user(db):
 
 
 @pytest.fixture
-def superadmin_user(db):
+def superadmin_user(db, settings):
+    settings.LIBRARY_OWNER_EMAIL = "superadmin@example.org"
+    settings.LIBRARY_OWNER_DISPLAY_NAME = "Winston"
     return User.objects.create_superuser(
         username="superadmin@example.org",
         email="superadmin@example.org",

@@ -236,6 +236,7 @@ VALUE_NORMALIZERS = {
     "person_affiliation": _affiliation,
     "person_name_variant": _name_variant,
     "edition_publication_year": _publication_year,
+    "edition_publication_date": _date,
     "edition_publisher": lambda value: _short_text(value, "出版社", 300),
     "edition_isbn": _isbn,
     "edition_isbn10": _isbn,

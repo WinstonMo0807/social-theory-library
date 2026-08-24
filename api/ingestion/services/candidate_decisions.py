@@ -16,6 +16,7 @@ FIELD_PAYLOAD_MAP = {
     "language": "language",
     "abstract": "abstract",
     "version_label": "version_label",
+    "publication_date": "publication_date",
     "publication_year": "publication_year",
     "publisher": "publisher",
     "publication_place": "publication_place",
@@ -29,6 +30,7 @@ FIELD_PAYLOAD_MAP = {
     "isbn": "isbn",
     "doi": "doi",
     "authors": "authors",
+    "translators": "translators",
     "disciplines": "disciplines",
     "subdisciplines": "subdisciplines",
     "theory_schools": "theory_schools",
@@ -41,12 +43,20 @@ def _submitted_value(field_name: str, payload: dict):
     if not key or key not in payload:
         return None, False
     value = payload[key]
-    if field_name == "publication_year" and value in ("", None):
+    if field_name in {"publication_date", "publication_year"} and value in ("", None):
         return None, True
     return value, True
 
 
 def _candidate_matches(candidate: MetadataCandidate, submitted) -> bool:
+    if candidate.field_name in {"authors", "translators"}:
+        submitted_values = submitted if isinstance(submitted, list) else [submitted]
+        candidate_values = candidate.value if isinstance(candidate.value, list) else [candidate.value]
+        return {
+            normalized_candidate_value(value) for value in submitted_values
+        } == {
+            normalized_candidate_value(value) for value in candidate_values
+        }
     if candidate.field_name in {"disciplines", "subdisciplines", "theory_schools", "topics"}:
         submitted_values = submitted if isinstance(submitted, list) else [submitted]
         candidate_values = candidate.value if isinstance(candidate.value, list) else [candidate.value]

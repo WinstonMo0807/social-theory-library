@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+import codecs
 from datetime import timedelta
 from hashlib import sha256
 from html.parser import HTMLParser
@@ -8,6 +9,7 @@ import ipaddress
 import json
 import re
 import socket
+import ssl
 import time
 from typing import Protocol
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -58,9 +60,13 @@ def canonicalize_url(value: str) -> str:
     scheme = parsed.scheme.casefold()
     host = parsed.hostname.casefold().rstrip(".")
     port = parsed.port
-    netloc = host
+    try:
+        host_for_url = f"[{host}]" if ipaddress.ip_address(host).version == 6 else host
+    except ValueError:
+        host_for_url = host
+    netloc = host_for_url
     if port and not ((scheme == "https" and port == 443) or (scheme == "http" and port == 80)):
-        netloc = f"{host}:{port}"
+        netloc = f"{host_for_url}:{port}"
     path = re.sub(r"/{2,}", "/", parsed.path or "/")
     return urlunsplit((scheme, netloc, path, parsed.query, ""))
 
@@ -72,10 +78,10 @@ def _resolve_addresses(hostname: str, port: int) -> set[str]:
             for row in socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
         }
     except socket.gaierror as exc:
-        raise WebFetchError("fetch_blocked", "来源主机无法解析。") from exc
+        raise WebFetchError("dns", "来源主机无法解析。") from exc
 
 
-def validate_public_url(value: str) -> str:
+def _validated_public_target(value: str) -> tuple[str, tuple[str, ...]]:
     normalized = canonicalize_url(value)
     parsed = urlsplit(normalized)
     host = parsed.hostname or ""
@@ -92,7 +98,39 @@ def validate_public_url(value: str) -> str:
         address = ipaddress.ip_address(value)
         if not address.is_global:
             raise WebFetchError("fetch_blocked", "来源地址解析到私网、回环或链路本地地址。")
+    ordered = tuple(
+        sorted(
+            {str(ipaddress.ip_address(value)) for value in addresses},
+            key=lambda value: (ipaddress.ip_address(value).version, int(ipaddress.ip_address(value))),
+        )
+    )
+    return normalized, ordered
+
+
+def validate_public_url(value: str) -> str:
+    normalized, _addresses = _validated_public_target(value)
     return normalized
+
+
+def _pinned_request_target(url: str, address: str) -> tuple[str, str, str]:
+    """Return an IP-literal request URL while preserving HTTP Host and TLS SNI."""
+
+    parsed = urlsplit(url)
+    hostname = parsed.hostname or ""
+    try:
+        ascii_hostname = hostname.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise WebFetchError("invalid_source", "来源主机名无法安全编码。") from exc
+    literal = ipaddress.ip_address(address)
+    address_for_url = f"[{literal}]" if literal.version == 6 else str(literal)
+    netloc = address_for_url
+    if parsed.port:
+        netloc = f"{address_for_url}:{parsed.port}"
+    host_header = f"[{ascii_hostname}]" if ":" in ascii_hostname else ascii_hostname
+    if parsed.port:
+        host_header = f"{host_header}:{parsed.port}"
+    pinned_url = urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, ""))
+    return pinned_url, host_header, ascii_hostname
 
 
 def classify_source(url: str, title: str = "") -> str:
@@ -127,7 +165,9 @@ class SearXNGSearchAdapter:
         self.requester = requester or httpx.get
 
     def _base_url(self) -> str:
-        value = str(getattr(settings, "FIELD_ENRICHMENT_SEARXNG_URL", "") or "").strip()
+        from catalog.services.research_sources import resolve_source_endpoint
+
+        value = resolve_source_endpoint("searxng")
         if not value:
             raise WebSearchError("provider_unavailable", "SearXNG 尚未配置。")
         parsed = urlsplit(value)
@@ -273,6 +313,70 @@ def _clean_extracted_text(values: Iterable[str], limit: int) -> str:
     return "\n".join(line for line in lines if line)[:limit]
 
 
+_HTTP_CHARSET_RE = re.compile(r"charset\s*=\s*[\"']?([^;\s\"']+)", re.I)
+_META_CHARSET_RE = re.compile(
+    br"<meta[^>]+charset\s*=\s*[\"']?\s*([a-zA-Z0-9._-]+)",
+    re.I,
+)
+
+
+def _decode_page_bytes(body: bytes, content_type_header: str) -> tuple[str, str]:
+    """Decode common English and Chinese pages without silently replacing text."""
+
+    declared = ""
+    header_match = _HTTP_CHARSET_RE.search(content_type_header or "")
+    if header_match:
+        declared = header_match.group(1).strip()
+    if not declared:
+        meta_match = _META_CHARSET_RE.search(body[:8192])
+        if meta_match:
+            declared = meta_match.group(1).decode("ascii", errors="ignore").strip()
+
+    candidates = [declared] if declared else []
+    if body.startswith(codecs.BOM_UTF8):
+        candidates.insert(0, "utf-8-sig")
+    elif body.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        candidates.insert(0, "utf-16")
+    candidates.extend(("utf-8", "gb18030", "big5"))
+
+    seen: set[str] = set()
+    invalid_declared = False
+    for encoding in candidates:
+        key = str(encoding or "").strip().casefold()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        try:
+            codecs.lookup(key)
+        except LookupError:
+            if declared and key == declared.casefold():
+                invalid_declared = True
+                break
+            continue
+        try:
+            return body.decode(key, errors="strict"), key
+        except UnicodeDecodeError:
+            continue
+    detail = "来源页面声明了无法识别的字符编码。" if invalid_declared else "来源页面字符编码无法可靠识别。"
+    raise WebFetchError("encoding", detail)
+
+
+def _request_error_code(exc: BaseException) -> str:
+    current: BaseException | None = exc
+    messages: list[str] = []
+    while current is not None:
+        messages.append(str(current).casefold())
+        if isinstance(current, ssl.SSLError):
+            return "tls"
+        current = current.__cause__ or current.__context__
+    combined = " ".join(messages)
+    if any(token in combined for token in ("certificate", "tls", "ssl", "handshake")):
+        return "tls"
+    if any(token in combined for token in ("name or service not known", "nodename nor servname", "getaddrinfo", "dns")):
+        return "dns"
+    return "provider_unavailable"
+
+
 class SafeWebFetcher:
     def __init__(self, client_factory: Callable | None = None):
         self.client_factory = client_factory or httpx.Client
@@ -319,7 +423,12 @@ class SafeWebFetcher:
             return None
 
     def fetch(self, url: str) -> FetchedDocument:
-        original_url = validate_public_url(url)
+        from catalog.services.research_sources import source_configuration
+
+        source_config = source_configuration("safe_web_fetcher")
+        if source_config["configured_by"] == "database" and not source_config["enabled"]:
+            raise WebFetchError("provider_unavailable", "SafeWebFetcher Research Source 已禁用。")
+        original_url, current_addresses = _validated_public_target(url)
         cached = self._cached(original_url)
         if cached:
             return cached
@@ -331,39 +440,67 @@ class SafeWebFetcher:
         response_bytes = b""
         status_code = 0
         content_type = ""
+        content_type_header = ""
         try:
-            with self.client_factory(timeout=timeout, follow_redirects=False) as client:
-                for redirect_count in range(redirects + 1):
-                    current_url = validate_public_url(current_url)
-                    domain = urlsplit(current_url).hostname or ""
-                    self._rate_limit(domain)
+            for redirect_count in range(redirects + 1):
+                domain = urlsplit(current_url).hostname or ""
+                self._rate_limit(domain)
+                pinned_url, host_header, sni_hostname = _pinned_request_target(
+                    current_url,
+                    current_addresses[0],
+                )
+                # A fresh client per hop prevents a TLS connection established
+                # for one hostname from being reused after a cross-host redirect.
+                # trust_env=False also prevents proxy-side DNS from bypassing
+                # the locally validated and pinned public address.
+                with self.client_factory(
+                    timeout=timeout,
+                    follow_redirects=False,
+                    trust_env=False,
+                ) as client:
                     with client.stream(
                         "GET",
-                        current_url,
+                        pinned_url,
                         headers={
                             "Accept": "text/html,application/xhtml+xml,text/plain;q=0.8",
+                            "Host": host_header,
                             "User-Agent": "SocialTheoryLibrary/2.7 field-enrichment",
                         },
+                        extensions={"sni_hostname": sni_hostname},
                     ) as response:
                         status_code = response.status_code
                         if 300 <= status_code < 400:
                             location = response.headers.get("location", "")
                             if not location or redirect_count >= redirects:
-                                raise WebFetchError("invalid_source", "来源重定向超过限制。")
-                            current_url = validate_public_url(urljoin(current_url, location))
+                                raise WebFetchError("redirect", "来源重定向缺少目标或超过限制。")
+                            current_url, current_addresses = _validated_public_target(
+                                urljoin(current_url, location)
+                            )
                             continue
                         if status_code == 429:
                             raise WebFetchError("rate_limited", "来源页面请求频率受限。")
+                        if status_code in {401, 403, 451}:
+                            raise WebFetchError("robots", "来源站点的访问或使用规则拒绝正文读取。")
                         response.raise_for_status()
-                        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().casefold()
+                        robots_directive = str(response.headers.get("x-robots-tag", "") or "").casefold()
+                        if any(token in robots_directive for token in ("noindex", "nosnippet", "noai")):
+                            raise WebFetchError("robots", "来源页面明确禁止索引、摘录或 AI 使用。")
+                        content_type_header = response.headers.get("content-type", "")
+                        content_type = content_type_header.split(";", 1)[0].strip().casefold()
                         if content_type not in {"text/html", "application/xhtml+xml", "text/plain"}:
-                            raise WebFetchError("invalid_source", "来源页面内容类型不支持。")
+                            raise WebFetchError("content_type", "来源页面内容类型不支持。")
+                        try:
+                            declared_size = int(response.headers.get("content-length") or 0)
+                        except (TypeError, ValueError):
+                            declared_size = 0
+                        if declared_size > max_bytes:
+                            raise WebFetchError("size", "来源页面超过大小限制。")
                         chunks = []
                         size = 0
                         for chunk in response.iter_bytes():
                             size += len(chunk)
                             if size > max_bytes:
-                                raise WebFetchError("invalid_source", "来源页面超过大小限制。")
+                                raise WebFetchError("size", "来源页面超过大小限制。")
                             chunks.append(chunk)
                         response_bytes = b"".join(chunks)
                         break
@@ -372,13 +509,19 @@ class SafeWebFetcher:
         except httpx.HTTPStatusError as exc:
             raise WebFetchError("provider_unavailable", f"来源页面返回 HTTP {exc.response.status_code}。") from exc
         except httpx.RequestError as exc:
-            raise WebFetchError("provider_unavailable", "来源页面当前不可访问。") from exc
-        text_value = response_bytes.decode("utf-8", errors="replace")
+            code = _request_error_code(exc)
+            detail = "来源页面 TLS 或证书校验失败。" if code == "tls" else "来源主机无法解析。" if code == "dns" else "来源页面当前不可访问。"
+            raise WebFetchError(code, detail) from exc
+        text_value, detected_encoding = _decode_page_bytes(response_bytes, content_type_header)
         title = urlsplit(current_url).hostname or "来源页面"
         canonical_url = current_url
         if content_type in {"text/html", "application/xhtml+xml"}:
             parser = _PageParser()
-            parser.feed(text_value)
+            try:
+                parser.feed(text_value)
+                parser.close()
+            except (UnicodeError, ValueError) as exc:
+                raise WebFetchError("html", "来源页面 HTML 无法解析。") from exc
             extracted = _clean_extracted_text(parser.text_parts, max_text_chars)
             parsed_title = " ".join("".join(parser.title_parts).split())
             if parsed_title:
@@ -391,7 +534,7 @@ class SafeWebFetcher:
         else:
             extracted = _clean_extracted_text([text_value], max_text_chars)
         if len(extracted) < 40:
-            raise WebFetchError("parse_failed", "来源页面没有足够可审核正文。")
+            raise WebFetchError("html", "来源页面没有足够可审核正文。")
         checksum = sha256(response_bytes).hexdigest()
         retrieved_at = timezone.now()
         source_class = classify_source(canonical_url, title)
@@ -415,6 +558,7 @@ class SafeWebFetcher:
                 },
                 "stored_text_is_bounded_extraction": True,
                 "response_size_bytes": len(response_bytes),
+                "detected_encoding": detected_encoding,
             },
             provider_version="safe-web-fetch-v1",
             retrieved_at=retrieved_at,
@@ -439,6 +583,13 @@ class SafeWebFetcher:
 def configured_web_search_adapter() -> WebSearchAdapter:
     name = str(getattr(settings, "FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER", "searxng") or "").strip().casefold()
     if name == "searxng":
+        from catalog.services.research_sources import research_source_enabled, resolve_source_endpoint
+
+        if not research_source_enabled(
+            "searxng",
+            environment_default=bool(resolve_source_endpoint("searxng")),
+        ):
+            raise WebSearchError("provider_unavailable", "SearXNG Research Source 已禁用。")
         return SearXNGSearchAdapter()
     raise WebSearchError("provider_unavailable", f"未配置可用的 WebSearchAdapter：{name or 'none'}")
 
@@ -455,6 +606,7 @@ def plan_queries(*, context: dict, policies: tuple[FieldPolicy, ...], form_conte
             "affiliation": "university affiliation official profile",
             "name_variant": "alternate name translated name",
             "publication_year": "publication year",
+            "publication_date": "publication date",
             "publisher": "publisher",
             "isbn": "ISBN",
             "first_publication_date": "first published",

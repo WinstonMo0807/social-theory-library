@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
@@ -32,7 +33,7 @@ function pickerLabels(values: EntityValue[]): Record<string, string> {
   return Object.fromEntries(values.flatMap((value) => value.id ? [[value.id, value.name]] : []));
 }
 
-function useResource<T>(path: string) {
+function useResource<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,7 @@ function useResource<T>(path: string) {
     setRevision((value) => value + 1);
   }, []);
   useEffect(() => {
+    if (!path) return;
     let active = true;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -51,7 +53,7 @@ function useResource<T>(path: string) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [path, revision]);
-  return { data, error, loading, refresh };
+  return { data, error, loading: Boolean(path) && loading, refresh };
 }
 
 function Frame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) {
@@ -76,6 +78,13 @@ type DisciplineRow = {
   curation_level: number;
   editorial_status: string;
   counts: { theories: number; subdisciplines: number; topics: number; works: number; scholars: number };
+  editorial_revision?: {
+    id: string;
+    revision: number;
+    status: string;
+    changed_fields: string[];
+    publish_url: string;
+  };
 };
 
 type DisciplineDraft = {
@@ -151,6 +160,10 @@ export function DisciplinesAdmin() {
     event.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return;
+    if (editing?.editorial_status === "published" && image) {
+      setMessage("已发布学科的主视觉暂不能放入 JSON 修订。请先保存其他字段，主视觉保持不变。");
+      return;
+    }
     try {
       let saved = await apiRequest<DisciplineRow>(
         `/catalog/admin/disciplines/${editing ? `${editing.id}/` : ""}`,
@@ -179,7 +192,9 @@ export function DisciplinesAdmin() {
       setEditing(saved);
       setDraft(disciplineToDraft(saved));
       setImage(null);
-      setMessage("学科已经保存。理论传统、子学科、主题和统计会按关系自动生成。");
+      setMessage(saved.editorial_revision
+        ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
+        : "学科已经保存。理论传统、子学科、主题和统计会按关系自动生成。");
       resource.refresh();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "保存失败");
@@ -252,6 +267,13 @@ type SubdisciplineRow = {
   representative_issues: string[];
   curation_level: number;
   editorial_status: string;
+  editorial_revision?: {
+    id: string;
+    revision: number;
+    status: string;
+    changed_fields: string[];
+    publish_url: string;
+  };
 };
 
 type SubdisciplineDraft = {
@@ -297,8 +319,15 @@ function subdisciplineToDraft(row: SubdisciplineRow): SubdisciplineDraft {
 }
 
 export function SubdisciplinesAdmin() {
+  const searchParams = useSearchParams();
+  const requestedSubdiscipline = searchParams.get("subdiscipline")?.trim() ?? "";
   const rows = useResource<Page<SubdisciplineRow>>("/catalog/admin/subdisciplines/");
   const disciplines = useResource<Page<DisciplineRow>>("/catalog/admin/disciplines/");
+  const requested = useResource<SubdisciplineRow>(
+    requestedSubdiscipline
+      ? `/catalog/admin/subdisciplines/${encodeURIComponent(requestedSubdiscipline)}/`
+      : null,
+  );
   const [editing, setEditing] = useState<SubdisciplineRow | null>(null);
   const [draft, setDraft] = useState<SubdisciplineDraft>(emptySubdiscipline());
   const [image, setImage] = useState<File | null>(null);
@@ -314,6 +343,20 @@ export function SubdisciplinesAdmin() {
     setEntityLabels({});
     window.requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: motionAwareScrollBehavior(), block: "start" }));
   }
+
+  useEffect(() => {
+    if (!requested.data) return;
+    const selected = requested.data;
+    const timer = window.setTimeout(() => {
+      setEditing(selected);
+      setDraft(subdisciplineToDraft(selected));
+      setImage(null);
+      setMessage("已从 Knowledge Studio 打开这个子学科。");
+      setEntityLabels({});
+      window.requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: motionAwareScrollBehavior(), block: "start" }));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [requested.data]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -352,7 +395,9 @@ export function SubdisciplinesAdmin() {
       setEditing(saved);
       setDraft(subdisciplineToDraft(saved));
       setImage(null);
-      setMessage("子学科已经保存。与理论和主题的关系仍需在关系审核区确认。");
+      setMessage(saved.editorial_revision
+        ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
+        : "子学科已经保存。与理论和主题的关系仍需在关系审核区确认。");
       rows.refresh();
     } catch (reason) { setMessage(reason instanceof Error ? reason.message : "保存失败"); }
   }
@@ -401,7 +446,7 @@ export function SubdisciplinesAdmin() {
               <StringListEditor label="代表性议题" itemLabel="议题" value={editorLineValues(draft.representative_issues)} onChange={(value) => setDraft({ ...draft, representative_issues: value.join("\n") })} addLabel="添加议题" />
             </div>
           </fieldset>
-          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{image?.name || (editing?.hero_image ? "替换现有主视觉" : "上传子学科主视觉")}</span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>策展等级</span><input type="number" min={0} value={draft.curation_level} onChange={(event) => setDraft({ ...draft, curation_level: Number(event.target.value) })} /></label><label><span>状态</span><select value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
+          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{editing?.editorial_status === "published" ? "已发布主视觉保持不变" : image?.name || (editing?.hero_image ? "替换现有主视觉" : "上传子学科主视觉")}</span><input type="file" accept="image/*" disabled={editing?.editorial_status === "published"} onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>策展等级</span><input type="number" min={0} value={draft.curation_level} onChange={(event) => setDraft({ ...draft, curation_level: Number(event.target.value) })} /></label><label><span>状态</span><select value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
           {editing ? <EntityLifecycleActions kind="subdiscipline" id={editing.id} name={editing.name} status={draft.editorial_status} previewHref={`/subdisciplines/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, editorial_status: snapshot.status })); setEditing((current) => current ? { ...current, editorial_status: snapshot.status } : current); rows.refresh(); }} onDeleted={() => { setEditing(null); setDraft(emptySubdiscipline(disciplines.data?.results[0]?.id ?? "")); rows.refresh(); }} /> : null}
           <footer className="knowledge-editor-actions"><button className="button" type="submit"><Save size={15} />保存子学科</button><Notice>{message}</Notice></footer>
         </form>

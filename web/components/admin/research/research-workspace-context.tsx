@@ -9,10 +9,12 @@ export type ResearchWorkspaceContextValue = {
   itemId?: string;
   workId?: string;
   editionId?: string;
+  draftSessionId: string;
   token: string | null;
   canRun: boolean;
   draftData: WorkflowDrafts;
   changedFields: DirtyFields;
+  onCandidateApply?: (candidate: WorkflowCandidate) => boolean;
   onCandidateDecision?: (candidate: WorkflowCandidate, action: string) => Promise<boolean> | boolean;
   onUpdated?: () => Promise<void> | void;
   onMessage?: (message: string) => void;

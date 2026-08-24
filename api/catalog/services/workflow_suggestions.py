@@ -64,6 +64,17 @@ SOURCE_TIER_LABELS = {
     "research_lead": "联网研究线索",
 }
 
+# Product ordering is intentional and must win over model/provider confidence.
+# Confidence is only comparable inside one provenance tier.
+SOURCE_TIER_PRIORITY = {
+    "in_library": 0,
+    "query_lexicon": 1,
+    "pdf_evidence": 1,
+    "structured_source": 2,
+    "web_evidence": 3,
+    "research_lead": 4,
+}
+
 
 def _json_value(value: Any) -> Any:
     if isinstance(value, (UUID, date, datetime)):
@@ -100,7 +111,7 @@ def _step_for_metadata(field_name: str) -> str:
     for step, fields in STEP_FIELD_ALIASES.items():
         if field in fields:
             return step
-    if field in {"authors", "contributors"}:
+    if field in {"authors", "translators", "contributors"}:
         return "contributors"
     if field in {"theory_schools", "topics", "concepts", "knowledge_nodes"}:
         return "knowledge"
@@ -109,11 +120,36 @@ def _step_for_metadata(field_name: str) -> str:
     return "work"
 
 
-def _metadata_tier(source: str) -> tuple[str, str, bool]:
-    value = str(source or "").casefold()
+def _metadata_tier(candidate: MetadataCandidate) -> tuple[str, str, bool]:
+    value = str(candidate.source or "").casefold()
+    evidence_rows = list(candidate.evidence_records.all())
+    if any(row.asset_id for row in evidence_rows):
+        return "pdf_evidence", "pdf", True
     if any(token in value for token in ("pdf", "ocr", "grobid", "text_layer", "semantic")):
         return "pdf_evidence", "pdf", True
+    if any(
+        token in value
+        for token in (
+            "crossref",
+            "openalex",
+            "openlibrary",
+            "google_books",
+            "authority",
+            "z39",
+            "marc",
+            "ncpssd",
+        )
+    ) or candidate.source_record_id:
+        return "structured_source", value or "structured_provider", True
     return "in_library", "library", True
+
+
+def _suggestion_sort_key(row: dict[str, Any]) -> tuple[int, float, str]:
+    return (
+        SOURCE_TIER_PRIORITY.get(str(row.get("source_tier") or ""), 99),
+        -float(row.get("confidence") or 0),
+        str(row.get("label") or "").casefold(),
+    )
 
 
 def _source_profile(source_class: str, *, structured: bool = False):
@@ -159,6 +195,11 @@ def _entity_candidate_provenance(
     persisted_evidence_status = str(properties.get("evidence_status") or "").strip().casefold()
     provider = str(properties.get("provider") or "entity_resolution").strip()
     provider_key = provider.casefold()
+    if candidate_group in {"external_evidence", "verified_web"} or persisted_evidence_status in {
+        "verified_text",
+        "web_evidence",
+    }:
+        return "web_evidence", provider, "verified_text", True
     if candidate_group in {"external_web", "unresolved"} or persisted_evidence_status in {
         "lead_only",
         "none",
@@ -244,6 +285,7 @@ def _dto(
         "status": status,
         "review_state": status,
         "decision_url": decision_url or None,
+        "verify_url": None,
         "available_actions": list(available_actions or ["inspect"]),
         "human_confirmation_required": True,
     }
@@ -268,7 +310,7 @@ class WorkflowSuggestionAggregator:
                 continue
             if field and candidate.field_name not in {field, "contributors" if field in {"person", "display_name"} else field}:
                 continue
-            tier, source_class, is_evidence = _metadata_tier(candidate.source)
+            tier, source_class, is_evidence = _metadata_tier(candidate)
             evidence = _evidence_payload(candidate.evidence_records.all())
             rows.append(
                 _dto(
@@ -317,7 +359,8 @@ class WorkflowSuggestionAggregator:
                 continue
             source_tier, source_class, evidence_status, include_evidence = _entity_candidate_provenance(candidate)
             evidence = (
-                [
+                list((candidate.preview_data or {}).get("evidence") or [])
+                or [
                     {
                         "match_reasons": candidate.match_reasons,
                         "conflicts": candidate.conflicts,
@@ -329,6 +372,9 @@ class WorkflowSuggestionAggregator:
                 else []
             )
             status = "pending" if candidate.status == EntityResolutionCandidate.Status.PROPOSED else candidate.status
+            available_actions = ["inspect", *available_resolution_actions(candidate)]
+            if source_tier == "research_lead" and status == "pending":
+                available_actions = ["inspect", "verify", "reject"]
             row = _dto(
                 identifier=candidate.id,
                 step=candidate_step,
@@ -345,7 +391,7 @@ class WorkflowSuggestionAggregator:
                 entity_id=candidate.candidate_entity_id,
                 status=status,
                 decision_url=f"/ingestion/items/{self.item.id}/entity-resolution-candidates/{candidate.id}/decision/",
-                available_actions=["inspect", *available_resolution_actions(candidate)],
+                available_actions=available_actions,
                 evidence_status=evidence_status,
             )
             row.update(
@@ -359,6 +405,11 @@ class WorkflowSuggestionAggregator:
                     or (candidate.preview_data or {}).get("source_url"),
                     "preview_data": candidate.preview_data,
                     "supporting_properties": candidate.supporting_properties,
+                    "verify_url": (
+                        f"/catalog/admin/research/candidates/{candidate.id}/verify/"
+                        if source_tier == "research_lead" and status == "pending"
+                        else None
+                    ),
                 }
             )
             rows.append(row)
@@ -617,7 +668,7 @@ class WorkflowSuggestionAggregator:
             existing = deduplicated.get(key)
             if existing is None or row.get("confidence", 0) > existing.get("confidence", 0):
                 deduplicated[key] = row
-        rows = sorted(deduplicated.values(), key=lambda row: (-row.get("confidence", 0), row.get("source_tier", ""), row.get("label", "")))[:500]
+        rows = sorted(deduplicated.values(), key=_suggestion_sort_key)[:500]
         counts = Counter(row["source_tier"] for row in rows)
         return {
             "policy_version": WORKFLOW_SUGGESTION_POLICY_VERSION,
@@ -802,8 +853,7 @@ class WorkflowSuggestionAggregator:
                                 raise
                             except Exception as exc:
                                 logger.info("workflow research fetch failed: %s", exc.__class__.__name__)
-                        stats.setdefault("web_suggestions", []).append(
-                            _dto(
+                        web_suggestion = _dto(
                                 identifier=f"web-{request_id}-{stats['web_leads']}",
                                 step=step,
                                 field=selected[0] if selected else step,
@@ -815,10 +865,45 @@ class WorkflowSuggestionAggregator:
                                 confidence=0.66 if evidence else 0.38,
                                 reasons=reasons,
                                 evidence=evidence,
-                                available_actions=["inspect"],
+                                available_actions=(
+                                    ["inspect", "verify", "reject"]
+                                    if source_tier == "research_lead"
+                                    else ["inspect"]
+                                ),
                                 evidence_status="evidence" if evidence else "lead_only",
                             )
-                        )
+                        web_suggestion["source_url"] = result.url
+                        if source_tier == "research_lead":
+                            workflow_policy = next(
+                                (
+                                    row
+                                    for row in WORKFLOW_SUGGESTION_POLICIES.for_step(step)
+                                    if row.field in selected
+                                ),
+                                None,
+                            )
+                            target_id = (
+                                self.work.id
+                                if workflow_policy and workflow_policy.target_type == "work"
+                                else self.edition.id
+                                if workflow_policy and workflow_policy.target_type == "edition"
+                                else None
+                            )
+                            if target_id and workflow_policy and workflow_policy.enrichment_field:
+                                web_suggestion["verify_url"] = "/catalog/admin/research/leads/verify/"
+                                web_suggestion["verify_payload"] = {
+                                    "source_url": result.url,
+                                    "target_type": workflow_policy.target_type,
+                                    "target_id": str(target_id),
+                                    "field_name": workflow_policy.enrichment_field,
+                                    "form_context": context,
+                                }
+                            else:
+                                web_suggestion["available_actions"] = ["inspect", "reject"]
+                                web_suggestion["no_reliable_candidate_reason"] = (
+                                    "当前字段还没有可将网页正文规范化为可采用候选的 FieldPolicy。"
+                                )
+                        stats.setdefault("web_suggestions", []).append(web_suggestion)
             except SoftTimeLimitExceeded:
                 raise
             except (WebSearchError, OSError, TimeoutError) as exc:
@@ -836,7 +921,7 @@ class WorkflowSuggestionAggregator:
         if stats.get("web_suggestions"):
             payload["suggestions"] = sorted(
                 [*payload["suggestions"], *stats["web_suggestions"]],
-                key=lambda row: (-row.get("confidence", 0), row.get("source_tier", "")),
+                key=_suggestion_sort_key,
             )[:500]
             counts = Counter(row["source_tier"] for row in payload["suggestions"])
             payload["groups"] = [

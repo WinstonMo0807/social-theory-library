@@ -126,6 +126,8 @@ def public_work_queryset() -> QuerySet:
             Prefetch("editions", queryset=published_editions),
             "knowledge_relations__theory_school",
             "knowledge_relations__topic",
+            "node_relations__node",
+            "topic_relations__topic",
         )
     )
 
@@ -258,7 +260,9 @@ class SearchService:
                 return public_work_queryset()
             return Work.objects.all().prefetch_related("editions__contributions__person")
         if context == SearchContext.SCHOLARS:
-            queryset = ScholarProfile.objects.select_related("person")
+            queryset = ScholarProfile.objects.select_related("person").prefetch_related(
+                "person__node_relations__node"
+            )
             if public:
                 queryset = queryset.filter(
                     editorial_status="published",
@@ -285,7 +289,7 @@ class SearchService:
             ).filter(node_type__in=THEORY_NODE_TYPES)
             return queryset.filter(status="published") if public else queryset.exclude(status="archived")
         if context == SearchContext.TOPICS:
-            queryset = Topic.objects.all()
+            queryset = Topic.objects.prefetch_related("knowledge_node_links__node")
             return queryset.filter(editorial_status="published") if public else queryset
         if context == SearchContext.READING_PATHS:
             queryset = ReadingPath.objects.select_related("primary_discipline").prefetch_related(

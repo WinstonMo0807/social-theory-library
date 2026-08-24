@@ -4,6 +4,8 @@ import test from "node:test";
 
 const healthPanelUrl = new URL("../components/functional-health-panel.tsx", import.meta.url);
 const diagnosticsUrl = new URL("../components/processing-diagnostics.tsx", import.meta.url);
+const sourceRegistryUrl = new URL("../components/research-source-registry.tsx", import.meta.url);
+const processingCenterUrl = new URL("../components/processing-center.tsx", import.meta.url);
 const stylesUrl = new URL("../app/editorial-workspaces.css", import.meta.url);
 
 test("Processing Center consumes persisted projection capability and provider diagnostics", async () => {
@@ -55,4 +57,34 @@ test("Processing Center diagnostics inherit the editorial workspace and stay res
   assert.match(styles, /var\(--stl2-line\)/);
   assert.match(styles, /@media \(max-width: 1080px\)[\s\S]*\.processing-diagnostic-sections \{ grid-template-columns: 1fr/);
   assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.processing-diagnostic-details > div \{ grid-template-columns: 1fr/);
+});
+
+test("Processing Center 3.0.1 exposes product-oriented work surfaces", async () => {
+  const [processingCenter, healthPanel, diagnostics] = await Promise.all([
+    readFile(processingCenterUrl, "utf8"),
+    readFile(healthPanelUrl, "utf8"),
+    readFile(diagnosticsUrl, "utf8"),
+  ]);
+
+  for (const label of ["总览", "Research Sources", "AI 与模型", "OCR 与文档", "任务与 Worker", "Projection 一致性", "故障与恢复"]) {
+    assert.match(processingCenter, new RegExp(label));
+  }
+  assert.match(healthPanel, /<ResearchSourceRegistryPanel revision=\{revision\}/);
+  assert.match(diagnostics, /当前用户功能影响/);
+  assert.match(diagnostics, /Backlog 可领取/);
+  assert.match(diagnostics, /配置模型/);
+});
+
+test("Research Source Registry supports safe config tests and Chinese provider boundaries", async () => {
+  const sourceRegistry = await readFile(sourceRegistryUrl, "utf8");
+
+  assert.match(sourceRegistry, /\/catalog\/admin\/research-sources\//);
+  assert.match(sourceRegistry, /method: "PUT"/);
+  assert.match(sourceRegistry, /method: "POST"/);
+  assert.match(sourceRegistry, /endpoint_alias/);
+  assert.match(sourceRegistry, /credential_alias/);
+  assert.match(sourceRegistry, /只有 System Owner 可以修改/);
+  assert.match(sourceRegistry, /中文公共来源扩展/);
+  assert.match(sourceRegistry, /中文授权来源/);
+  assert.match(sourceRegistry, /密钥始终留在服务器环境中/);
 });

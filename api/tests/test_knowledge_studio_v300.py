@@ -8,7 +8,9 @@ from catalog.models import (
     ClaimEvidence,
     CuratedClaim,
     DerivedClaim,
+    Discipline,
     DocumentRevision,
+    DomainChangeEvent,
     EditorialRevision,
     Edition,
     EnrichmentCandidate,
@@ -17,11 +19,17 @@ from catalog.models import (
     KnowledgeNode,
     Page,
     Person,
+    ProjectionState,
+    ReadingPath,
+    ReadingPathItem,
+    ReadingPathStage,
     ScholarProfile,
+    Subdiscipline,
     TheoryReviewTask,
     Topic,
     Work,
     WorkNodeRelation,
+    WorkSubdisciplineRelation,
 )
 
 
@@ -284,3 +292,288 @@ def test_knowledge_studio_selection_is_type_scoped_and_reader_cannot_access(api_
 
     api_client.force_authenticate(user=reader_user)
     assert api_client.get("/api/catalog/admin/knowledge-workspace/").status_code in {401, 403}
+
+
+def _integrated_studio_fixture():
+    discipline = Discipline.objects.create(
+        name="组织制度研究",
+        code="sociology-studio-v301",
+        slug="sociology-studio-v301",
+        editorial_status="published",
+    )
+    subdiscipline = Subdiscipline.objects.create(
+        name="组织社会学",
+        foreign_name="Sociology of Organizations",
+        slug="sociology-of-organizations-studio-v301",
+        discipline=discipline,
+        research_object="组织、制度与行动者之间的关系。",
+        core_questions=["组织为何趋同？"],
+        editorial_status="published",
+    )
+    work = Work.objects.create(
+        document_type="book",
+        title="组织与制度",
+        language="zh-CN",
+        is_featured=True,
+    )
+    edition = Edition.objects.create(
+        work=work,
+        version_label="中文第一版",
+        publication_year=2020,
+        state="published",
+        public_slug="organizations-and-institutions-studio-v301",
+    )
+    WorkSubdisciplineRelation.objects.create(
+        work=work,
+        subdiscipline=subdiscipline,
+        is_primary=True,
+        review_status="approved",
+        evidence_text="本书以组织制度为主要研究对象。",
+    )
+    reading_path = ReadingPath.objects.create(
+        title="组织社会学入门",
+        slug="organization-sociology-path-studio-v301",
+        primary_discipline=discipline,
+        audience="初学者",
+        introduction="从组织与制度的基本问题开始。",
+        learning_goal="形成组织制度分析的基本框架。",
+        status="published",
+    )
+    stage = ReadingPathStage.objects.create(
+        reading_path=reading_path,
+        name="第一阶段",
+        description="理解制度与组织。",
+        position=0,
+    )
+    ReadingPathItem.objects.create(
+        reading_path=reading_path,
+        stage=stage,
+        stage_name=stage.name,
+        stage_description=stage.description,
+        work=work,
+        recommendation_reason="建立组织制度分析的基础。",
+        prerequisite="先了解社会学基本概念。",
+        reading_order=0,
+        is_required=True,
+    )
+    return subdiscipline, reading_path, work, edition
+
+
+def test_knowledge_studio_integrates_subdiscipline_reading_path_and_important_work(
+    api_client,
+    admin_user,
+):
+    subdiscipline, reading_path, work, edition = _integrated_studio_fixture()
+    api_client.force_authenticate(user=admin_user)
+
+    listing = api_client.get(
+        "/api/catalog/admin/knowledge-workspace/",
+        {"object_type": "all", "limit": 50},
+    )
+
+    assert listing.status_code == 200
+    studio = listing.data["studio"]
+    assert {row["value"] for row in studio["object_types"]} >= {
+        "subdiscipline",
+        "reading_path",
+        "work",
+    }
+    directory_keys = {
+        (row["object_type"], row["id"])
+        for row in studio["objects"]
+    }
+    assert ("subdiscipline", str(subdiscipline.id)) in directory_keys
+    assert ("reading_path", str(reading_path.id)) in directory_keys
+    assert ("work", str(work.id)) in directory_keys
+
+    subdiscipline_response = api_client.get(
+        "/api/catalog/admin/knowledge-workspace/",
+        {"selected_type": "subdiscipline", "selected_id": str(subdiscipline.id)},
+    )
+    path_response = api_client.get(
+        "/api/catalog/admin/knowledge-workspace/",
+        {"selected_type": "reading_path", "selected_id": str(reading_path.id)},
+    )
+    work_response = api_client.get(
+        "/api/catalog/admin/knowledge-workspace/",
+        {"selected_type": "work", "selected_id": str(work.id)},
+    )
+
+    assert subdiscipline_response.status_code == 200
+    selected_subdiscipline = subdiscipline_response.data["studio"]["selection"]
+    assert selected_subdiscipline["canonical"]["discipline"] == "组织制度研究"
+    assert "精选文献导读" in selected_subdiscipline["frontend_impact"]["modules"]
+    assert selected_subdiscipline["mutation_contract"]["target_type"] == "subdiscipline"
+    assert selected_subdiscipline["mutation_contract"]["published_changes_require_revision"] is True
+    assert any(
+        row["url"] == f"/subdisciplines/{subdiscipline.slug}"
+        for row in selected_subdiscipline["frontend_impact"]["targets"]
+    )
+
+    assert path_response.status_code == 200
+    selected_path = path_response.data["studio"]["selection"]
+    assert selected_path["canonical"]["learning_goal"] == "形成组织制度分析的基本框架。"
+    assert selected_path["canonical"]["stages"][0]["items"][0]["work"] == str(work.id)
+    assert selected_path["canonical"]["stages"][0]["items"][0]["prerequisite"] == "先了解社会学基本概念。"
+    assert selected_path["relations"][0]["target"] == work.title
+    assert selected_path["relations"][0]["prerequisite"] == "先了解社会学基本概念。"
+    assert selected_path["preview_url"] == f"/theories/reading-paths/{reading_path.slug}"
+
+    assert work_response.status_code == 200
+    selected_work = work_response.data["studio"]["selection"]
+    assert selected_work["canonical"]["editions"][0]["id"] == str(edition.id)
+    assert selected_work["preview_url"] == f"/works/{edition.public_slug}"
+    assert any(row["target"] == subdiscipline.name for row in selected_work["relations"])
+    assert any(
+        row["url"] == f"/works/{edition.public_slug}"
+        for row in selected_work["frontend_impact"]["targets"]
+    )
+
+
+def test_published_reading_path_explicit_semantics_publish_through_revision(
+    api_client,
+    admin_user,
+):
+    _subdiscipline, reading_path, work, _edition = _integrated_studio_fixture()
+    stage = reading_path.stages.get()
+    item = reading_path.items.get()
+    api_client.force_authenticate(user=admin_user)
+
+    drafted = api_client.patch(
+        f"/api/catalog/admin/theory-system/reading-paths/{reading_path.id}/",
+        {
+            "learning_goal": "比较组织制度理论的不同解释。",
+            "stage_groups": [
+                {
+                    "id": str(stage.id),
+                    "name": stage.name,
+                    "description": stage.description,
+                    "position": 0,
+                    "items": [
+                        {
+                            "id": str(item.id),
+                            "node": None,
+                            "work": str(work.id),
+                            "recommendation_reason": item.recommendation_reason,
+                            "prerequisite": "先读组织社会学导论。",
+                            "position": 0,
+                            "is_required": True,
+                            "editorial_note": "仅后台可见的编辑说明。",
+                        }
+                    ],
+                }
+            ],
+        },
+        format="json",
+    )
+
+    assert drafted.status_code == 202
+    assert drafted.data["learning_goal"] == "比较组织制度理论的不同解释。"
+    assert drafted.data["draft_stage_groups"][0]["items"][0]["prerequisite"] == (
+        "先读组织社会学导论。"
+    )
+    reading_path.refresh_from_db()
+    item.refresh_from_db()
+    assert reading_path.learning_goal == "形成组织制度分析的基本框架。"
+    assert item.prerequisite == "先了解社会学基本概念。"
+
+    revision_id = drafted.data["editorial_revision"]["id"]
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{revision_id}/publish/",
+        {},
+        format="json",
+    )
+
+    assert published.status_code == 200
+    reading_path.refresh_from_db()
+    item = reading_path.items.get()
+    assert reading_path.learning_goal == "比较组织制度理论的不同解释。"
+    assert item.prerequisite == "先读组织社会学导论。"
+    assert item.editorial_note == "仅后台可见的编辑说明。"
+    assert DomainChangeEvent.objects.filter(
+        object_type="reading_path",
+        object_id=reading_path.id,
+        idempotency_key=f"editorial-publish:{revision_id}",
+    ).exists()
+
+
+def test_published_subdiscipline_edit_and_lifecycle_archive_use_editorial_revision(
+    api_client,
+    admin_user,
+):
+    subdiscipline, _reading_path, _work, _edition = _integrated_studio_fixture()
+    api_client.force_authenticate(user=admin_user)
+
+    other_discipline = Discipline.objects.create(
+        name="跨学科层级检查",
+        code="cross-discipline-studio-v301",
+        slug="cross-discipline-studio-v301",
+    )
+    invalid_parent = Subdiscipline.objects.create(
+        name="错误上级候选",
+        slug="invalid-parent-studio-v301",
+        discipline=other_discipline,
+    )
+    invalid_revision = api_client.post(
+        "/api/catalog/admin/editorial-revisions/",
+        {
+            "target_type": "subdiscipline",
+            "target_id": str(subdiscipline.id),
+            "patch": {"parent": str(invalid_parent.id)},
+        },
+        format="json",
+    )
+    assert invalid_revision.status_code == 400
+    assert "同一学科" in invalid_revision.data["detail"]
+
+    drafted = api_client.patch(
+        f"/api/catalog/admin/subdisciplines/{subdiscipline.id}/",
+        {"description": "新的前台说明"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="subdiscipline-studio-draft-v301",
+    )
+
+    assert drafted.status_code == 202
+    subdiscipline.refresh_from_db()
+    assert subdiscipline.description == ""
+    revision = EditorialRevision.objects.get(
+        target_type=EditorialRevision.TargetType.SUBDISCIPLINE,
+        target_id=subdiscipline.id,
+        status=EditorialRevision.Status.DRAFT,
+    )
+    assert revision.patch == {"description": "新的前台说明"}
+    assert drafted.data["editorial_revision"]["id"] == str(revision.id)
+
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{revision.id}/publish/",
+        {},
+        format="json",
+    )
+
+    assert published.status_code == 200
+    subdiscipline.refresh_from_db()
+    assert subdiscipline.description == "新的前台说明"
+    event = DomainChangeEvent.objects.get(
+        object_type="subdiscipline",
+        object_id=subdiscipline.id,
+        idempotency_key=f"editorial-publish:{revision.id}",
+    )
+    assert ProjectionState.objects.filter(
+        object_type="subdiscipline",
+        object_id=subdiscipline.id,
+        source_revision=event.canonical_revision,
+    ).exists()
+
+    archive_draft = api_client.post(
+        f"/api/catalog/admin/lifecycle/subdiscipline/{subdiscipline.id}/",
+        {"action": "archive"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="subdiscipline-studio-archive-v301",
+    )
+    assert archive_draft.status_code == 202
+    subdiscipline.refresh_from_db()
+    assert subdiscipline.editorial_status == "published"
+    assert archive_draft.data["editorial_revision"]["status"] == "draft"
+    assert archive_draft.data["editorial_revision"]["patch"] == {
+        "editorial_status": "archived"
+    }

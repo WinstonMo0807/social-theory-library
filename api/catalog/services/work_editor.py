@@ -53,7 +53,7 @@ class WorkflowEditConflict(WorkflowEditError):
 @dataclass(frozen=True, slots=True)
 class WorkflowSectionResult:
     edition: Edition
-    decision: EditionWorkflowDecision
+    decision: EditionWorkflowDecision | None
 
 
 def _json_safe(value):
@@ -126,7 +126,15 @@ def _refresh_edition_metadata(edition: Edition) -> None:
         }[work.document_type],
         "title": work.title,
         "author": [{"literal": name} for name in authors],
-        "issued": {"date-parts": [[edition.publication_year]]} if edition.publication_year else {},
+        "issued": {
+            "date-parts": [[
+                edition.publication_date.year,
+                edition.publication_date.month,
+                edition.publication_date.day,
+            ]]
+        } if edition.publication_date else (
+            {"date-parts": [[edition.publication_year]]} if edition.publication_year else {}
+        ),
         "publisher": edition.publisher,
         "container-title": edition.journal_title,
         "volume": edition.volume,
@@ -197,6 +205,10 @@ def _save_bibliography(edition: Edition, values: dict[str, Any]) -> None:
     for field in BIBLIOGRAPHY_FIELDS:
         if field in values and field != "publisher_authority_id":
             setattr(edition, field, values[field])
+    if edition.publication_date:
+        if values.get("publication_year") not in (None, edition.publication_date.year):
+            raise WorkflowEditError("本版本出版日期与兼容出版年份不一致。")
+        edition.publication_year = edition.publication_date.year
     if publisher_authority_id is not publisher_authority_marker:
         if publisher_authority_id is None:
             edition.publisher_authority = None
@@ -518,17 +530,43 @@ def _accept_matching_metadata_candidates(
     values: dict[str, Any],
     actor,
 ) -> None:
-    if step_key not in {"work", "bibliography"}:
+    if step_key not in {"work", "bibliography", "contributors"}:
         return
     item = UploadItem.objects.filter(edition=edition).order_by("-updated_at", "-created_at").first()
     if item is None:
         return
+    candidate_payload = dict(values)
     accepted_fields = {
         field for field in values if field not in {"expected_updated_at", "expected_work_updated_at", "note"}
     }
+    if step_key == "contributors":
+        rows = [row for row in values.get("contributors", []) if isinstance(row, dict)]
+        candidate_payload = {
+            "authors": [
+                edition.contributions.get(
+                    person_id=row["person_id"],
+                    role=Contribution.Role.AUTHOR,
+                ).person.preferred_name
+                for row in rows
+                if row.get("role") == Contribution.Role.AUTHOR and row.get("person_id")
+            ],
+            "translators": [
+                edition.contributions.get(
+                    person_id=row["person_id"],
+                    role=Contribution.Role.TRANSLATOR,
+                ).person.preferred_name
+                for row in rows
+                if row.get("role") == Contribution.Role.TRANSLATOR and row.get("person_id")
+            ],
+        }
+        accepted_fields = {
+            field_name
+            for field_name, names in candidate_payload.items()
+            if names
+        }
     accept_candidates_from_review(
         item,
-        values,
+        candidate_payload,
         actor=actor,
         locked_fields=accepted_fields,
     )
@@ -541,6 +579,7 @@ def save_workflow_section(
     values: dict[str, Any],
     *,
     actor,
+    confirm_section: bool = True,
 ) -> WorkflowSectionResult:
     if step_key not in {
         "work",
@@ -578,20 +617,22 @@ def save_workflow_section(
         _save_reader(edition, values)
 
     edition.save()
-    _record_section_locks(edition, step_key, values, actor)
-    _accept_matching_metadata_candidates(edition, step_key, values, actor)
-    decision_value = (
-        EditionWorkflowDecision.Decision.SKIPPED
-        if step_key == "curation" and values.get("skip")
-        else EditionWorkflowDecision.Decision.CONFIRMED
-    )
-    decision = record_step_decision(
-        edition,
-        step_key,
-        actor=actor,
-        decision=decision_value,
-        note=note,
-    )
+    decision = None
+    if confirm_section:
+        _record_section_locks(edition, step_key, values, actor)
+        _accept_matching_metadata_candidates(edition, step_key, values, actor)
+        decision_value = (
+            EditionWorkflowDecision.Decision.SKIPPED
+            if step_key == "curation" and values.get("skip")
+            else EditionWorkflowDecision.Decision.CONFIRMED
+        )
+        decision = record_step_decision(
+            edition,
+            step_key,
+            actor=actor,
+            decision=decision_value,
+            note=note,
+        )
     return WorkflowSectionResult(edition=edition, decision=decision)
 
 

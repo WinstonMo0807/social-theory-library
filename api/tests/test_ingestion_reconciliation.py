@@ -103,6 +103,16 @@ def test_strong_isbn_reuses_existing_edition_without_overwriting_catalog(admin_u
     item.refresh_from_db()
     assert item.preflight_summary["catalog_reconciliation"]["mode"] == "existing_edition"
 
+    _create_or_update_catalog(
+        item,
+        {**selected, "title": "后续正文误识别题名", "publisher": "后续错误出版社"},
+        [],
+        "",
+    )
+    existing.refresh_from_db()
+    assert existing.work.title == "已有版本"
+    assert existing.publisher == "原出版社"
+
 
 def test_same_work_new_edition_requires_title_and_confirmed_author(admin_user):
     work = Work.objects.create(document_type="book", title="乡土中国", language="zh-CN")
@@ -135,6 +145,15 @@ def test_same_work_new_edition_requires_title_and_confirmed_author(admin_user):
     assert edition.isbn13 == "9787300000000"
     item.refresh_from_db()
     assert item.preflight_summary["catalog_reconciliation"]["mode"] == "existing_work"
+
+    _create_or_update_catalog(
+        item,
+        {**selected, "title": "后续 OCR 不应覆盖已有作品"},
+        [],
+        "",
+    )
+    work.refresh_from_db()
+    assert work.title == "乡土中国"
 
 
 def test_same_title_without_strong_identity_stays_separate_and_requests_review(admin_user):

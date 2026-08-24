@@ -3584,6 +3584,47 @@
   gap: 16px;
 }
 
+.workflow-classification-note {
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 11px;
+}
+
+.workflow-contributor-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.workflow-contributor-fixed-role {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.workflow-contributor-fixed-role span {
+  color: #35342f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workflow-contributor-fixed-role strong {
+  min-height: 40px;
+  padding: 10px 11px;
+  background: #f2eee4;
+  border: 1px solid #d2cbbd;
+}
+
+.workflow-other-contributors {
+  padding: 12px;
+  background: #f7f4ec;
+  border: 1px solid #d9d4ca;
+}
+
+.workflow-other-contributors > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .workflow-research-suggestions {
   display: grid;
   gap: 10px;
@@ -3666,6 +3707,68 @@
 .workflow-research-groups section {
   display: grid;
   gap: 4px;
+}
+
+.workflow-research-groups section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #514b41;
+  font-size: 11px;
+}
+
+.workflow-research-groups section > header h4 {
+  margin: 0;
+}
+
+.workflow-research-result-area {
+  display: grid;
+  gap: 6px;
+}
+
+.workflow-research-result-area[data-expanded="true"] {
+  max-height: 430px;
+  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.workflow-research-candidate {
+  background: #fff;
+  border: 1px solid #d8d2c5;
+}
+
+.workflow-research-candidate .workflow-research-card {
+  border: 0;
+}
+
+.workflow-research-candidate > .workflow-no-reliable-candidate {
+  padding: 0 9px 8px;
+}
+
+.workflow-research-card-actions,
+.workflow-curation-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 7px 9px;
+  border-top: 1px solid #e3ded3;
+}
+
+.workflow-research-card-actions button,
+.workflow-curation-candidate-actions button {
+  min-height: 28px;
+  padding: 4px 7px;
+  font-size: 10px;
+}
+
+.workflow-research-expand {
+  justify-self: start;
+  padding: 5px 8px;
+  color: #604426;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid #cdbb9b;
 }
 
 .workflow-research-card,
@@ -4213,6 +4316,94 @@
   padding: 14px;
   background: var(--paper, #faf8f2);
   border: 1px solid #d8d3c8;
+}
+
+.workflow-curation-knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.workflow-curation-knowledge-section {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--paper, #faf8f2);
+  border: 1px solid #d8d3c8;
+}
+
+.workflow-curation-knowledge-section > header,
+.workflow-current-placements > header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.workflow-curation-knowledge-section > header p,
+.workflow-current-placements > header p,
+.workflow-no-reliable-candidate {
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 11px;
+}
+
+.workflow-frontend-impact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.workflow-frontend-impact strong,
+.workflow-frontend-impact span {
+  padding: 4px 6px;
+  color: #544b40;
+  font-size: 10px;
+  background: #eee8dc;
+  border: 1px solid #d5cbb9;
+}
+
+.workflow-frontend-impact strong {
+  color: #fff;
+  background: #4d463d;
+  border-color: #4d463d;
+}
+
+.workflow-curation-candidate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.workflow-curation-candidate-list > article {
+  background: #fff;
+  border: 1px solid #d8d3c8;
+}
+
+.workflow-curation-candidate-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.workflow-curation-candidate-summary > span {
+  display: grid;
+  gap: 3px;
+}
+
+.workflow-curation-candidate-summary small,
+.workflow-curation-candidate-summary em {
+  color: var(--workflow-muted);
+  font-size: 10px;
+  font-style: normal;
 }
 
 .workflow-claim-curation > header {
@@ -4915,6 +5106,7 @@
   .workflow-reader-states,
   .workflow-publication-summary,
   .workflow-path-options,
+  .workflow-curation-knowledge-grid,
   .admin-work-entry-grid {
     grid-template-columns: 1fr;
   }

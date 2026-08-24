@@ -36,17 +36,29 @@ export default async function ScholarSectionPage({
   if (!titles[section]) notFound();
   const [data, schools] = await Promise.all([loadScholar(slug), loadTheorySchools()]);
   if (!data) notFound();
-  const { scholar, works, timeline, curated } = data;
+  const { scholar, works, timeline, knowledgeNodes, curated } = data;
   const essentialWorks = curated.essentialWorks.length ? curated.essentialWorks : works;
-  const relatedSchools = curated.relatedTheories.length
+  const normalizedTheories = knowledgeNodes.filter((node) => node.node_type === "theory_tradition");
+  const normalizedConcepts = knowledgeNodes.filter((node) => node.node_type === "concept");
+  const relatedSchools = normalizedTheories.length
+    ? normalizedTheories.map((node) => ({
+        ...node,
+        href: `/theories/nodes/${node.slug}`,
+        symbol: node.name.slice(0, 2),
+        description: node.summary || node.relation_label || "已确认的知识关系",
+      }))
+    : curated.relatedTheories.length
     ? curated.relatedTheories.map((school) => ({
         ...school,
+        href: `/theory-schools/${school.slug}`,
         symbol: school.symbol || school.name.slice(0, 2),
         books: 0,
         scholars: 0,
         description: school.description || "管理员确认的相关理论流派",
       }))
-    : schools.filter((school) => works.some((work) => work.theories?.some((item) => item.slug === school.slug)));
+    : schools
+        .filter((school) => works.some((work) => work.theories?.some((item) => item.slug === school.slug)))
+        .map((school) => ({ ...school, href: `/theory-schools/${school.slug}` }));
 
   return (
     <main className="page-shell secondary-detail-page">
@@ -64,13 +76,16 @@ export default async function ScholarSectionPage({
       ) : null}
       {section === "concepts" ? (
         <section className="panel definition-list">
-          {curated.keyConcepts.map((item, index) => {
+          {(curated.keyConcepts.length ? curated.keyConcepts : normalizedConcepts).map((item, index) => {
+            if (typeof item !== "string" && "node_type" in item) {
+              return <article className="definition-row" key={item.id}><b>{String(index + 1).padStart(2, "0")}</b><Link href={`/theories/nodes/${item.slug}`}><strong>{item.name}</strong></Link><p>{item.summary || "说明待管理员补充。"}</p>{item.relation_label ? <small>关系：{item.relation_label}</small> : null}</article>;
+            }
             const label = typeof item === "string" ? item : item.name || `概念 ${index + 1}`;
             const description = typeof item === "string" ? "" : item.description || "";
             const source = typeof item === "string" ? "" : item.source || "";
             return <article className="definition-row" key={`${label}-${index}`}><b>{String(index + 1).padStart(2, "0")}</b><strong>{label}</strong><p>{description || "说明待管理员补充。"}</p>{source ? <small>依据：{source}</small> : null}</article>;
           })}
-          {!curated.keyConcepts.length ? <p className="empty-state">关键概念尚待管理员编辑。</p> : null}
+          {!curated.keyConcepts.length && !normalizedConcepts.length ? <p className="empty-state">关键概念尚待管理员编辑。</p> : null}
         </section>
       ) : null}
       {section === "concept-map" ? <section className="panel"><KnowledgeMap entries={curated.conceptMap} emptyText="概念地图尚待管理员编辑。" /></section> : null}
@@ -82,7 +97,7 @@ export default async function ScholarSectionPage({
       ) : null}
       {section === "theories" ? (
         <section className="panel secondary-link-list">
-          {relatedSchools.map((school) => <Link href={`/theory-schools/${school.slug}`} key={school.slug}><span className="theory-symbol">{school.symbol}</span><p><strong>{school.name}</strong><small>{school.description}</small></p><ArrowRight size={15} /></Link>)}
+          {relatedSchools.map((school) => <Link href={school.href} key={school.slug}><span className="theory-symbol">{school.symbol}</span><p><strong>{school.name}</strong><small>{school.description}</small></p><ArrowRight size={15} /></Link>)}
           {!relatedSchools.length ? <p className="empty-state">相关理论流派尚待管理员确认。</p> : null}
         </section>
       ) : null}

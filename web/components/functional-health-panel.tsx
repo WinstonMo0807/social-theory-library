@@ -25,6 +25,7 @@ import {
   type ProcessingDiagnosticItem,
   type ProcessingDiagnosticsPayload,
 } from "./processing-diagnostics";
+import { ResearchSourceRegistryPanel } from "./research-source-registry";
 
 type HealthStatus = "healthy" | "degraded" | "failed" | "recovering" | "paused" | "unknown";
 type DimensionValue = boolean | null;
@@ -478,6 +479,8 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
             />
           ) : null}
 
+          <ResearchSourceRegistryPanel revision={revision} />
+
           <div className="functional-health-capability-grid">
             {payload.capabilities.map((capability) => (
               <article className={`functional-health-capability ${capability.status}`} key={capability.key}>
@@ -532,7 +535,7 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
             ))}
           </div>
 
-          <section className="functional-health-incidents" aria-labelledby="functional-health-incidents-title">
+          <section className="functional-health-incidents" id="processing-faults-recovery" aria-labelledby="functional-health-incidents-title">
             <header>
               <div><h3 id="functional-health-incidents-title">待处理事件</h3><p>保留故障发生次数、可能原因和受影响功能。恢复动作来自后端允许清单。</p></div>
               <strong>{payload.incidents.length}</strong>

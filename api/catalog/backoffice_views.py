@@ -367,7 +367,8 @@ class AdminWorkPagePreviewView(APIView):
     permission_classes = [CanViewEvidence]
 
     def get(self, request, edition_id):
-        from catalog.models import Edition
+        from catalog.models import Edition, EditorialRevision
+        from catalog.services.editorial_revision import serialize_editorial_revision
 
         edition = get_object_or_404(
             Edition.objects.select_related("work").prefetch_related(
@@ -387,13 +388,29 @@ class AdminWorkPagePreviewView(APIView):
             is_current=True,
             status="ready",
         ).order_by("-version").first()
+        draft_revision = EditorialRevision.objects.filter(
+            target_type=EditorialRevision.TargetType.WORK,
+            target_id=edition.work_id,
+            status=EditorialRevision.Status.DRAFT,
+        ).order_by("-revision").first()
         data = AdminWorkPagePreviewSerializer(
             edition.work,
-            context={"request": request, "preview_edition": edition},
+            context={
+                "request": request,
+                "preview_edition": edition,
+                "editorial_preview": (
+                    draft_revision.materialized_preview if draft_revision else None
+                ),
+            },
         ).data
         return Response({
             "preview_mode": True,
             "publication_state": edition.state,
+            "editorial_revision": (
+                serialize_editorial_revision(draft_revision)
+                if draft_revision is not None
+                else None
+            ),
             "public_url": f"/works/{edition.public_slug}" if edition.state == "published" and edition.public_slug else "",
             "pdf_preview_url": f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else "",
             "work": data,

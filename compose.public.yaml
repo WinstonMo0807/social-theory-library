@@ -111,7 +111,7 @@ services:
 
   api:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.1}
     build:
       context: ./api
     env_file:
@@ -140,7 +140,8 @@ services:
       DJANGO_HSTS_PRELOAD: ${DJANGO_HSTS_PRELOAD:-false}
       JWT_COOKIE_AUTH_ENABLED: "true"
       JWT_RETURN_TOKENS_IN_BODY: "false"
-      LIBRARY_OWNER_EMAIL: ${LIBRARY_OWNER_EMAIL:-owner@example.com}
+      LIBRARY_OWNER_EMAIL: ${LIBRARY_OWNER_EMAIL:-}
+      LIBRARY_OWNER_DISPLAY_NAME: ${LIBRARY_OWNER_DISPLAY_NAME:-Winston}
       PUBLIC_WEB_URL: https://${LIBRARY_DOMAIN}
       PUBLIC_API_URL: https://${LIBRARY_DOMAIN}
       ALLOW_LOCAL_PUBLIC_ASSET_ACCESS: ${ALLOW_LOCAL_PUBLIC_ASSET_ACCESS:-true}
@@ -178,7 +179,7 @@ services:
 
   worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.1}
     build:
       context: ./api
     env_file:
@@ -219,7 +220,7 @@ services:
 
   ingestion-worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.1}
     build:
       context: ./api
     env_file:
@@ -258,7 +259,7 @@ services:
 
   beat:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:2.7.1}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.1}
     build:
       context: ./api
     env_file:
@@ -316,7 +317,7 @@ services:
 
   web:
     <<: *service-hardening
-    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:2.7.1}
+    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:3.0.1}
     build:
       context: ./web
     environment:

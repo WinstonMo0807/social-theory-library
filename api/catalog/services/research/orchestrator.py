@@ -11,6 +11,7 @@ from uuid import uuid4
 from billiard.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from catalog.models import Edition, ResearchRun
@@ -33,7 +34,7 @@ from .planner import RESEARCH_PLANNER_VERSION, ResearchPlanner
 
 
 logger = logging.getLogger(__name__)
-RESEARCH_ORCHESTRATOR_VERSION = "research-orchestrator-v1"
+RESEARCH_ORCHESTRATOR_VERSION = "research-orchestrator-v2"
 MAX_ENTITY_QUERIES = 6
 MAX_BACKGROUND_STEPS = 3
 
@@ -42,6 +43,8 @@ INTAKE_REVIEW_TARGETS = {
     "work": ("work", {}),
     "knowledge_node": ("knowledge_node", {"node_type": "concept"}),
     "theory": ("knowledge_node", {"node_type": "theory_tradition"}),
+    "concept": ("knowledge_node", {"node_type": "concept"}),
+    "debate": ("knowledge_node", {"node_type": "debate"}),
     "topic": ("knowledge_node", {"node_type": "topic"}),
     "discipline": ("knowledge_node", {"node_type": "discipline"}),
     "subdiscipline": ("knowledge_node", {"node_type": "subdiscipline"}),
@@ -149,6 +152,11 @@ def _context_from_snapshot(value: dict[str, Any]) -> ResearchContext:
         "field_locks",
         "pdf_ocr_signals",
         "workflow_status",
+        "canonical_revision",
+        "draft_session_id",
+        "draft_hash",
+        "trigger_input_values",
+        "trigger_input_hash",
         "workflow_gaps",
         "changed_fields",
         "fingerprint",
@@ -311,6 +319,7 @@ class ResearchOrchestrator:
         force: bool = False,
         dispatch: bool = True,
         include_background: bool = True,
+        draft_session_id: str = "",
     ) -> tuple[ResearchRun, bool]:
         if trigger not in ResearchRun.Trigger.values:
             raise ValueError("未知 Research trigger。")
@@ -326,6 +335,7 @@ class ResearchOrchestrator:
             active_step=active_step,
             draft_data=draft_data,
             changed_fields=changed_fields,
+            draft_session_id=draft_session_id,
         )
         context, tasks = self.planner.plan(context, include_background=include_background)
         plan = [row.payload() for row in tasks]
@@ -383,6 +393,12 @@ class ResearchOrchestrator:
             "trigger": trigger,
             "status": ResearchRun.Status.QUEUED if tasks else ResearchRun.Status.COMPLETED,
             "context_fingerprint": context.fingerprint,
+            "canonical_revision": context.canonical_revision,
+            "draft_session_id": context.draft_session_id,
+            "draft_hash": context.draft_hash,
+            "trigger_input_values": context.trigger_input_values,
+            "trigger_input_hash": context.trigger_input_hash,
+            "is_current": True,
             "context_version": RESEARCH_CONTEXT_VERSION,
             "contract_version": RESEARCH_CONTRACT_VERSION,
             "planner_version": RESEARCH_PLANNER_VERSION,
@@ -398,10 +414,39 @@ class ResearchOrchestrator:
         }
         should_dispatch = False
         with transaction.atomic():
+            prior_same_context = ResearchRun.objects.select_for_update(of=("self",)).filter(
+                idempotency_key=key
+            ).first()
+            if prior_same_context is not None and not prior_same_context.is_current:
+                key = sha256(f"{key}:reactivated:{uuid4()}".encode()).hexdigest()
             run, created = ResearchRun.objects.get_or_create(
                 idempotency_key=key,
                 defaults=defaults,
             )
+            if created:
+                self._supersede_affected_runs(run)
+                # The first aggregate happens before the new run can mark prior
+                # draft-bound candidates stale. Refresh inside the same
+                # transaction so the response never advertises candidates from
+                # a superseded draft snapshot.
+                refreshed_workflow = aggregator.aggregate(
+                    step=context.active_step,
+                    query=active_query,
+                )
+                if refreshed_workflow != local_workflow:
+                    local_workflow = refreshed_workflow
+                    run.local_results = {
+                        "workflow": local_workflow,
+                        "entities": local_entities,
+                    }
+                    run_diagnostics = dict(run.diagnostics or {})
+                    candidate_counts = dict(run_diagnostics.get("candidate_counts") or {})
+                    candidate_counts["local_workflow"] = len(
+                        local_workflow.get("suggestions") or []
+                    )
+                    run_diagnostics["candidate_counts"] = candidate_counts
+                    run.diagnostics = run_diagnostics
+                    run.save(update_fields=["local_results", "diagnostics", "updated_at"])
             if tasks and dispatch:
                 if created:
                     should_dispatch = True
@@ -427,6 +472,130 @@ class ResearchOrchestrator:
         if should_dispatch:
             run.refresh_from_db()
         return run, created
+
+    @staticmethod
+    def _plan_fields(plan: list[dict[str, Any]] | tuple[dict[str, Any], ...]) -> set[str]:
+        return {
+            f"{row.get('step')}.{row.get('field')}"
+            for row in plan or []
+            if isinstance(row, dict) and row.get("step") and row.get("field")
+        }
+
+    @staticmethod
+    def _plan_by_field(plan: list[dict[str, Any]] | tuple[dict[str, Any], ...]) -> dict[str, dict[str, Any]]:
+        return {
+            f"{row.get('step')}.{row.get('field')}": row
+            for row in plan or []
+            if isinstance(row, dict) and row.get("step") and row.get("field")
+        }
+
+    @classmethod
+    def _overlapping_inputs_changed(cls, current: ResearchRun, previous: ResearchRun) -> bool:
+        current_plan = cls._plan_by_field(list(current.plan or []))
+        previous_plan = cls._plan_by_field(list(previous.plan or []))
+        overlap = set(current_plan) & set(previous_plan)
+        if not overlap:
+            return False
+        if dict(current.canonical_revision or {}) != dict(previous.canonical_revision or {}):
+            return True
+        for field_name in overlap:
+            current_task = current_plan[field_name]
+            previous_task = previous_plan[field_name]
+            if (
+                "trigger_input_values" in current_task
+                and "trigger_input_values" in previous_task
+            ):
+                if _stable_json(current_task.get("trigger_input_values") or {}) != _stable_json(
+                    previous_task.get("trigger_input_values") or {}
+                ):
+                    return True
+            elif current.trigger_input_hash != previous.trigger_input_hash:
+                # Compatibility for 3.0.0 plans that predate per-task trigger
+                # snapshots. Their global hash is conservative but safe.
+                return True
+        return False
+
+    @classmethod
+    def _supersede_affected_runs(cls, current: ResearchRun) -> None:
+        """Invalidate only prior runs whose planned outputs overlap this draft change."""
+
+        affected = cls._plan_fields(list(current.plan or []))
+        if not affected:
+            return
+        queryset = (
+            ResearchRun.objects.select_for_update(of=("self",))
+            .filter(edition_id=current.edition_id, is_current=True)
+            .exclude(pk=current.pk)
+            .order_by("created_at")
+        )
+        if current.draft_session_id:
+            # 3.0.0 ResearchRun rows have no draft session.  Include them in
+            # the first 3.0.1 comparison so old title/person candidates cannot
+            # survive a new unsaved draft merely because the legacy column was
+            # backfilled as an empty string.
+            queryset = queryset.filter(
+                Q(draft_session_id=current.draft_session_id)
+                | Q(draft_session_id="")
+            )
+        elif current.requested_by_id:
+            queryset = queryset.filter(requested_by_id=current.requested_by_id)
+        stale_run_ids: list[str] = []
+        now = timezone.now()
+        for previous in queryset:
+            if not (affected & cls._plan_fields(list(previous.plan or []))):
+                continue
+            if not cls._overlapping_inputs_changed(current, previous):
+                continue
+            previous.status = ResearchRun.Status.SUPERSEDED
+            previous.is_current = False
+            previous.superseded_by = current
+            previous.superseded_at = now
+            previous.stale_reason = "未保存草稿或触发输入已变化。"
+            previous.finished_at = previous.finished_at or now
+            previous.save(
+                update_fields=[
+                    "status",
+                    "is_current",
+                    "superseded_by",
+                    "superseded_at",
+                    "stale_reason",
+                    "finished_at",
+                    "updated_at",
+                ]
+            )
+            stale_run_ids.append(str(previous.id))
+
+        if not stale_run_ids:
+            return
+        # Automatically generated candidates remain auditable, but cannot be
+        # adopted after their draft context has been superseded.
+        from catalog.models import EnrichmentCandidate
+
+        for candidate in EnrichmentCandidate.objects.select_for_update().filter(
+            Q(target_type=EnrichmentCandidate.TargetType.WORK, target_id=current.work_id)
+            | Q(target_type=EnrichmentCandidate.TargetType.EDITION, target_id=current.edition_id),
+            status=EnrichmentCandidate.Status.PENDING,
+        ):
+            candidate_run = str((candidate.request_context or {}).get("research_run_id") or "")
+            if candidate_run in stale_run_ids:
+                request_context = dict(candidate.request_context or {})
+                request_context["is_current_context"] = False
+                request_context["stale_reason"] = "未保存草稿或触发输入已变化。"
+                candidate.status = EnrichmentCandidate.Status.SUPERSEDED
+                candidate.request_context = request_context
+                candidate.save(update_fields=["status", "request_context", "updated_at"])
+        for candidate in EntityResolutionCandidate.objects.select_for_update().filter(
+            upload_item_id=current.upload_item_id,
+            status=EntityResolutionCandidate.Status.PROPOSED,
+        ):
+            candidate_run = str((candidate.supporting_properties or {}).get("research_run_id") or "")
+            if candidate_run in stale_run_ids:
+                properties = dict(candidate.supporting_properties or {})
+                properties["stale_reason"] = "未保存草稿或触发输入已变化。"
+                properties["is_current_context"] = False
+                candidate.status = EntityResolutionCandidate.Status.STALE
+                candidate.supporting_properties = properties
+                candidate.save(update_fields=["status", "supporting_properties", "updated_at"])
 
     def retry_failed(
         self,
@@ -470,6 +639,12 @@ class ResearchOrchestrator:
             "trigger": ResearchRun.Trigger.HEALTH,
             "status": ResearchRun.Status.QUEUED if plan else ResearchRun.Status.COMPLETED,
             "context_fingerprint": failed_run.context_fingerprint,
+            "canonical_revision": dict(failed_run.canonical_revision or {}),
+            "draft_session_id": failed_run.draft_session_id,
+            "draft_hash": failed_run.draft_hash,
+            "trigger_input_values": dict(failed_run.trigger_input_values or {}),
+            "trigger_input_hash": failed_run.trigger_input_hash,
+            "is_current": failed_run.is_current,
             "context_version": failed_run.context_version,
             "contract_version": failed_run.contract_version,
             "planner_version": failed_run.planner_version,
@@ -488,6 +663,8 @@ class ResearchOrchestrator:
             source = ResearchRun.objects.select_for_update(of=("self",)).get(pk=failed_run.pk)
             if source.status != ResearchRun.Status.FAILED:
                 raise ValueError("只有 failed ResearchRun 可以重试。")
+            if not source.is_current:
+                raise ValueError("草稿上下文已经变化，不能重试过期 ResearchRun。")
             run, created = ResearchRun.objects.get_or_create(
                 idempotency_key=idempotency_key,
                 defaults=defaults,
@@ -519,6 +696,7 @@ class ResearchOrchestrator:
     def _run_enrichment(
         self,
         *,
+        run: ResearchRun,
         context: ResearchContext,
         tasks: list[dict[str, Any]],
         mode: str,
@@ -534,28 +712,40 @@ class ResearchOrchestrator:
             grouped[(str(contract.target_type), target_id)].append({"contract": contract, "task": task})
         output = []
         for (target_type, target_id), rows in grouped.items():
-            fields = tuple(dict.fromkeys(row["contract"].enrichment_field for row in rows))[:12]
-            form_context = {
-                "research_context": context.payload(),
-                "research_queries": list(dict.fromkeys(row["task"].get("query") for row in rows if row["task"].get("query"))),
-                "active_step": context.active_step,
-            }
-            result = self.enrichment_service.enrich(
-                FieldEnrichmentRequest(
-                    target_type=target_type,
-                    target_id=target_id,
-                    field_names=fields,
-                    form_context=form_context,
-                    requested_mode=mode,
-                    visibility="admin",
-                ),
-                actor=actor,
-            )
-            diagnostics.providers_attempted.extend(["structured", "searxng", "safe_web_fetcher"])
-            diagnostics.query_result_counts[f"{target_type}.enrichment"] = len(result.candidates)
-            for error in result.errors:
-                diagnostics.add_error(error.code, error.detail, field_name=error.field_name, provider=error.provider)
-            output.extend(_candidate_payload(candidate) for candidate in result.candidates)
+            all_fields = tuple(dict.fromkeys(row["contract"].enrichment_field for row in rows))
+            for offset in range(0, len(all_fields), 12):
+                fields = all_fields[offset : offset + 12]
+                form_context = {
+                    "research_context": context.payload(),
+                    "research_queries": list(dict.fromkeys(row["task"].get("query") for row in rows if row["task"].get("query"))),
+                    "active_step": context.active_step,
+                    "research_run_id": str(run.id),
+                    "research_context_fingerprint": context.fingerprint,
+                    "research_draft_session_id": context.draft_session_id,
+                    "research_draft_hash": context.draft_hash,
+                    "research_trigger_input_hash": context.trigger_input_hash,
+                    "is_current_context": True,
+                }
+                result = self.enrichment_service.enrich(
+                    FieldEnrichmentRequest(
+                        target_type=target_type,
+                        target_id=target_id,
+                        field_names=fields,
+                        form_context=form_context,
+                        requested_mode=mode,
+                        visibility="admin",
+                    ),
+                    actor=actor,
+                )
+                diagnostics.providers_attempted.extend(["structured", "searxng", "safe_web_fetcher"])
+                result_key = f"{target_type}.enrichment"
+                diagnostics.query_result_counts[result_key] = (
+                    diagnostics.query_result_counts.get(result_key, 0)
+                    + len(result.candidates)
+                )
+                for error in result.errors:
+                    diagnostics.add_error(error.code, error.detail, field_name=error.field_name, provider=error.provider)
+                output.extend(_candidate_payload(candidate) for candidate in result.candidates)
         return output
 
     def _run_entity_discovery(
@@ -617,12 +807,27 @@ class ResearchOrchestrator:
     @staticmethod
     def _persist_intake_entity_candidates(
         *,
+        run: ResearchRun | None = None,
+        context: ResearchContext | None = None,
         item: UploadItem | None,
         groups: list[dict[str, Any]],
     ) -> None:
         if item is None:
             return
+        if run is not None and context is None:
+            raise ValueError("ResearchRun candidate persistence requires its exact ResearchContext.")
         with transaction.atomic():
+            if run is not None:
+                locked_run = ResearchRun.objects.select_for_update(of=("self",)).filter(
+                    pk=run.pk,
+                    is_current=True,
+                    status=ResearchRun.Status.RUNNING,
+                    context_fingerprint=context.fingerprint,
+                    draft_hash=context.draft_hash,
+                    trigger_input_hash=context.trigger_input_hash,
+                ).first()
+                if locked_run is None:
+                    return
             locked_item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk)
             existing_rows = list(
                 EntityResolutionCandidate.objects.select_for_update(of=("self",))
@@ -656,6 +861,15 @@ class ResearchOrchestrator:
                         field_name=field_name,
                         row=row,
                     )
+                    if context is not None:
+                        context_identity = (
+                            context.fingerprint
+                            if run is not None
+                            else context.draft_hash
+                        )
+                        research_key = sha256(
+                            f"{research_key}:{context_identity}".encode("utf-8")
+                        ).hexdigest()
                     candidate = by_research_key.get(research_key)
 
                     source_record = None
@@ -664,6 +878,17 @@ class ResearchOrchestrator:
                             source_record = SourceRecord.objects.filter(pk=row["source_record_id"]).first()
                         except (TypeError, ValueError):
                             source_record = None
+                    context_properties = {}
+                    if context is not None:
+                        context_properties = {
+                            "research_context_fingerprint": context.fingerprint,
+                            "research_draft_session_id": context.draft_session_id,
+                            "research_draft_hash": context.draft_hash,
+                            "research_trigger_input_hash": context.trigger_input_hash,
+                            "is_current_context": True,
+                        }
+                    if run is not None:
+                        context_properties["research_run_id"] = str(run.id)
                     properties = {
                         **target_defaults,
                         "research_field": field_name,
@@ -673,6 +898,7 @@ class ResearchOrchestrator:
                         "provider": row.get("provider"),
                         "source_url": row.get("source_url"),
                         "evidence_status": row.get("evidence_status"),
+                        **context_properties,
                         RESEARCH_ALLOWED_RESOLUTION_ACTIONS: _resolution_actions_for_research_field(
                             field_name
                         ),
@@ -716,9 +942,48 @@ class ResearchOrchestrator:
                             or []
                         )
                         candidate.external_ids = dict(row.get("external_ids") or candidate.external_ids or {})
+                        previous_properties = dict(candidate.supporting_properties or {})
+                        preserve_verified_evidence = (
+                            previous_properties.get("evidence_status")
+                            in {"verified_text", "web_evidence", "external_evidence"}
+                            and properties.get("evidence_status")
+                            in {None, "", "none", "lead_only", "searching"}
+                        )
+                        if preserve_verified_evidence:
+                            properties["evidence_status"] = previous_properties["evidence_status"]
+                            properties["candidate_group"] = previous_properties.get(
+                                "candidate_group", properties.get("candidate_group")
+                            )
+                            for key in (
+                                "source_url",
+                                "evidence_provider",
+                                "evidence_source_class",
+                                "verified_at",
+                            ):
+                                if previous_properties.get(key):
+                                    properties[key] = previous_properties[key]
+                            # A later search pass is discovery metadata only. It
+                            # must not erase previously fetched body evidence or
+                            # the reason that made the candidate adoptable.
+                            preview_data = {
+                                **preview_data,
+                                **dict(candidate.preview_data or {}),
+                            }
+                            match_reasons = list(
+                                dict.fromkeys(
+                                    [
+                                        *(candidate.match_reasons or []),
+                                        *(row.get("match_reasons") or []),
+                                    ]
+                                )
+                            )
+                        else:
+                            match_reasons = list(
+                                row.get("match_reasons") or candidate.match_reasons or []
+                            )
                         candidate.supporting_properties = properties
                         candidate.match_score = max(candidate.match_score, float(row.get("confidence") or 0))
-                        candidate.match_reasons = list(row.get("match_reasons") or candidate.match_reasons or [])
+                        candidate.match_reasons = match_reasons
                         candidate.conflicts = list(row.get("conflicts") or candidate.conflicts or [])
                         candidate.preview_data = preview_data
                         candidate.save(update_fields=[
@@ -741,6 +1006,7 @@ class ResearchOrchestrator:
     def _run_editorial_evidence(
         self,
         *,
+        run: ResearchRun,
         edition: Edition,
         item: UploadItem | None,
         context: ResearchContext,
@@ -765,7 +1031,16 @@ class ResearchOrchestrator:
                 mode=mode,
                 query=query,
                 actor=actor,
-                form_context=context.payload(),
+                form_context={
+                    **context.payload(),
+                    "research_context": context.payload(),
+                    "research_run_id": str(run.id),
+                    "research_context_fingerprint": context.fingerprint,
+                    "research_draft_session_id": context.draft_session_id,
+                    "research_draft_hash": context.draft_hash,
+                    "research_trigger_input_hash": context.trigger_input_hash,
+                    "is_current_context": True,
+                },
             )
             diagnostics.providers_attempted.extend(["searxng", "safe_web_fetcher"])
             diagnostics.searxng_called = diagnostics.searxng_called or bool((payload.get("run") or {}).get("web_queries"))
@@ -786,6 +1061,51 @@ class ResearchOrchestrator:
             .select_related("edition__work")
         )
 
+    @staticmethod
+    def _run_is_current(run: ResearchRun, context: ResearchContext) -> bool:
+        return ResearchRun.objects.filter(
+            pk=run.pk,
+            is_current=True,
+            status=ResearchRun.Status.RUNNING,
+            context_fingerprint=context.fingerprint,
+            draft_hash=context.draft_hash,
+            trigger_input_hash=context.trigger_input_hash,
+        ).exists()
+
+    @staticmethod
+    def _field_outcomes(tasks: list[dict[str, Any]], external: dict[str, Any]) -> list[dict[str, Any]]:
+        found: set[str] = set()
+        for candidate in external.get("enrichment") or []:
+            field_name = str(candidate.get("field") or "")
+            target_type = str(candidate.get("target_type") or "")
+            step = "work" if target_type == "work" else "bibliography" if target_type == "edition" else ""
+            if step and field_name:
+                found.add(f"{step}.{field_name}")
+        for payload in external.get("entities") or []:
+            if payload.get("results"):
+                found.add(str(payload.get("field") or ""))
+        for payload in external.get("editorial_evidence") or []:
+            for candidate in payload.get("suggestions") or []:
+                step = str(candidate.get("step") or "")
+                field_name = str(candidate.get("field_name") or candidate.get("field") or "")
+                if step and field_name:
+                    found.add(f"{step}.{field_name}")
+        outcomes = []
+        for task in tasks:
+            field_key = f"{task.get('step')}.{task.get('field')}"
+            outcomes.append(
+                {
+                    "field": field_key,
+                    "status": "candidates_available" if field_key in found else "no_reliable_candidate",
+                    "reason": "" if field_key in found else str(
+                        task.get("no_reliable_candidate_reason")
+                        or "证据数量或质量未达到当前字段要求。"
+                    ),
+                    "context_fingerprint": task.get("context_fingerprint"),
+                }
+            )
+        return outcomes
+
     def execute(self, run_id: str, *, task_id: str = "") -> ResearchRun:
         expected_task_id = str(task_id or "").strip()
         with transaction.atomic():
@@ -795,7 +1115,10 @@ class ResearchOrchestrator:
                 ResearchRun.Status.DEGRADED,
                 ResearchRun.Status.FAILED,
                 ResearchRun.Status.CANCELED,
+                ResearchRun.Status.SUPERSEDED,
             }:
+                return run
+            if not run.is_current:
                 return run
             if expected_task_id and str(run.task_id or "").strip() != expected_task_id:
                 return run
@@ -821,19 +1144,30 @@ class ResearchOrchestrator:
         external: dict[str, Any] = {"enrichment": [], "entities": [], "editorial_evidence": []}
         try:
             external["enrichment"] = self._run_enrichment(
+                run=run,
                 context=context,
                 tasks=tasks,
                 mode=mode,
                 actor=run.requested_by,
                 diagnostics=diagnostics,
             )
+            if not self._run_is_current(run, context):
+                return ResearchRun.objects.get(pk=run.pk)
             external["entities"] = self._run_entity_discovery(
                 context=context,
                 tasks=tasks,
                 diagnostics=diagnostics,
             )
-            self._persist_intake_entity_candidates(item=item, groups=external["entities"])
+            if not self._run_is_current(run, context):
+                return ResearchRun.objects.get(pk=run.pk)
+            self._persist_intake_entity_candidates(
+                run=run,
+                context=context,
+                item=item,
+                groups=external["entities"],
+            )
             external["editorial_evidence"] = self._run_editorial_evidence(
+                run=run,
                 edition=run.edition,
                 item=item,
                 context=context,
@@ -842,8 +1176,11 @@ class ResearchOrchestrator:
                 actor=run.requested_by,
                 diagnostics=diagnostics,
             )
+            if not self._run_is_current(run, context):
+                return ResearchRun.objects.get(pk=run.pk)
             refreshed = WorkflowSuggestionAggregator(run.edition, item=item).aggregate(step=context.active_step)
             external["active_step_candidates"] = refreshed
+            external["field_outcomes"] = self._field_outcomes(tasks, external)
             diagnostics.candidate_counts = {
                 "enrichment": len(external["enrichment"]),
                 "entity_groups": len(external["entities"]),
@@ -856,6 +1193,7 @@ class ResearchOrchestrator:
             terminal_queryset = ResearchRun.objects.filter(
                 pk=run.pk,
                 status=ResearchRun.Status.RUNNING,
+                is_current=True,
             )
             if expected_task_id:
                 terminal_queryset = terminal_queryset.filter(task_id=expected_task_id)
@@ -878,6 +1216,7 @@ class ResearchOrchestrator:
             terminal_queryset = ResearchRun.objects.filter(
                 pk=run.pk,
                 status=ResearchRun.Status.RUNNING,
+                is_current=True,
             )
             if expected_task_id:
                 terminal_queryset = terminal_queryset.filter(task_id=expected_task_id)
@@ -905,6 +1244,15 @@ def research_run_payload(run: ResearchRun, *, include_context: bool = False) -> 
         "active_step": run.active_step,
         "changed_fields": run.changed_fields,
         "context_fingerprint": run.context_fingerprint,
+        "canonical_revision": run.canonical_revision,
+        "draft_session_id": run.draft_session_id,
+        "draft_hash": run.draft_hash,
+        "trigger_input_values": run.trigger_input_values,
+        "trigger_input_hash": run.trigger_input_hash,
+        "is_current": run.is_current,
+        "superseded_by": str(run.superseded_by_id) if run.superseded_by_id else None,
+        "superseded_at": run.superseded_at,
+        "stale_reason": run.stale_reason,
         "context_version": run.context_version,
         "contract_version": run.contract_version,
         "planner_version": run.planner_version,

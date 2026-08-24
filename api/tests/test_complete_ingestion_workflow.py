@@ -144,13 +144,10 @@ def test_complete_chinese_pdf_http_ingestion_review_publish_and_withdraw(
     dispatch.assert_called_once()
     item = UploadItem.objects.get(pk=upload_response.data["item"]["id"])
 
-    def offline_enrichment(candidates, *_args, **_kwargs):
-        return candidates, ["测试环境未调用外部书目服务，保留本地候选。"]
-
     with (
         patch(
-            "ingestion.services.pipeline.enrich_candidates_with_gateway",
-            side_effect=offline_enrichment,
+            "ingestion.services.pipeline.queue_external_enrichment_job",
+            side_effect=lambda *_args, **_kwargs: _pending_job(),
         ),
         patch(
             "ingestion.services.pipeline.index_asset",
@@ -381,8 +378,8 @@ def test_complete_chinese_journal_upload_remote_candidates_review_and_publish(
 
     with (
         patch(
-            "ingestion.services.pipeline.enrich_candidates_with_gateway",
-            side_effect=lambda candidates, *_args, **_kwargs: (candidates, []),
+            "ingestion.services.pipeline.queue_external_enrichment_job",
+            side_effect=lambda *_args, **_kwargs: _pending_job(),
         ),
         patch(
             "ingestion.services.pipeline.index_asset",

@@ -158,6 +158,7 @@ class Edition(UUIDTimeStampedModel):
     work = models.ForeignKey(Work, on_delete=models.PROTECT, related_name="editions")
     version_label = models.CharField(max_length=120, blank=True)
     publication_year = models.PositiveSmallIntegerField(null=True, blank=True, db_index=True)
+    publication_date = models.DateField(null=True, blank=True, db_index=True)
     publisher = models.CharField(max_length=300, blank=True)
     publication_place = models.CharField(max_length=200, blank=True)
     publisher_authority = models.ForeignKey(
@@ -274,11 +275,11 @@ class EditionWorkflowDecision(UUIDTimeStampedModel):
     class Step(models.TextChoices):
         WORK = "work", "作品识别"
         BIBLIOGRAPHY = "bibliography", "书目与出版"
-        CONTRIBUTORS = "contributors", "责任者与身份"
+        CONTRIBUTORS = "contributors", "作者与责任者"
         CLASSIFICATION = "classification", "社科分类"
         KNOWLEDGE = "knowledge", "理论、主题与知识关系"
         READER = "reader", "文本与阅读文件"
-        CURATION = "curation", "策展定位"
+        CURATION = "curation", "知识策展与前台联动"
 
     class Decision(models.TextChoices):
         CONFIRMED = "confirmed", "已确认"
@@ -2998,6 +2999,7 @@ class ReadingPath(UUIDTimeStampedModel):
     title = models.CharField(max_length=300)
     slug = models.SlugField(max_length=180, unique=True)
     introduction = models.TextField(blank=True)
+    learning_goal = models.TextField(blank=True)
     primary_discipline = models.ForeignKey(
         Discipline,
         null=True,
@@ -3070,6 +3072,7 @@ class ReadingPathItem(UUIDTimeStampedModel):
     reading_order = models.PositiveIntegerField(default=0)
     is_required = models.BooleanField(default=False)
     editorial_note = models.TextField(blank=True)
+    prerequisite = models.TextField(blank=True)
 
     class Meta:
         ordering = ["reading_order", "created_at"]
@@ -3363,6 +3366,8 @@ class EditorialRevision(UUIDTimeStampedModel):
         WORK = "work", "作品"
         KNOWLEDGE_NODE = "knowledge_node", "知识节点"
         SCHOLAR_PROFILE = "scholar_profile", "学者"
+        DISCIPLINE = "discipline", "学科"
+        SUBDISCIPLINE = "subdiscipline", "子学科"
         TOPIC = "topic", "主题"
         READING_PATH = "reading_path", "阅读路径"
 
@@ -4689,6 +4694,7 @@ class ResearchRun(UUIDTimeStampedModel):
         DEGRADED = "degraded", "部分来源不可用"
         FAILED = "failed", "失败"
         CANCELED = "canceled", "已取消"
+        SUPERSEDED = "superseded", "草稿变化后已过期"
 
     class Trigger(models.TextChoices):
         AUTO_LOAD = "auto_load", "页面自动研究"
@@ -4710,6 +4716,21 @@ class ResearchRun(UUIDTimeStampedModel):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED, db_index=True)
     idempotency_key = models.CharField(max_length=128, unique=True)
     context_fingerprint = models.CharField(max_length=64, db_index=True)
+    canonical_revision = models.JSONField(default=dict, blank=True)
+    draft_session_id = models.CharField(max_length=96, blank=True)
+    draft_hash = models.CharField(max_length=64, blank=True)
+    trigger_input_values = models.JSONField(default=dict, blank=True)
+    trigger_input_hash = models.CharField(max_length=64, blank=True)
+    is_current = models.BooleanField(default=True)
+    superseded_by = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="superseded_runs",
+    )
+    superseded_at = models.DateTimeField(null=True, blank=True)
+    stale_reason = models.CharField(max_length=300, blank=True)
     context_version = models.CharField(max_length=80)
     contract_version = models.CharField(max_length=80)
     planner_version = models.CharField(max_length=80)
@@ -4732,6 +4753,7 @@ class ResearchRun(UUIDTimeStampedModel):
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["work", "active_step", "created_at"]),
             models.Index(fields=["context_fingerprint", "created_at"]),
+            models.Index(fields=["edition", "draft_session_id", "is_current", "created_at"]),
         ]
 
 

@@ -30,6 +30,7 @@ def reading_path_stage_groups(path: ReadingPath) -> list[dict[str, Any]]:
                 "node": _identifier(item.node_id) or None,
                 "work": _identifier(item.work_id) or None,
                 "recommendation_reason": item.recommendation_reason,
+                "prerequisite": item.prerequisite,
                 "position": item.position,
                 "is_required": item.is_required,
                 "editorial_note": item.editorial_note,
@@ -125,6 +126,7 @@ def normalize_reading_path_stage_groups(
                     "recommendation_reason": str(
                         source_item.get("recommendation_reason") or ""
                     ),
+                    "prerequisite": str(source_item.get("prerequisite") or ""),
                     "position": item_sort,
                     "is_required": bool(source_item.get("is_required")),
                     "editorial_note": str(source_item.get("editorial_note") or ""),
@@ -181,6 +183,7 @@ def sync_reading_path_stage_groups(path: ReadingPath, groups) -> None:
                 node_id=item["node"],
                 work_id=item["work"],
                 recommendation_reason=item["recommendation_reason"],
+                prerequisite=item["prerequisite"],
                 position=item["position"],
                 reading_order=reading_order,
                 is_required=item["is_required"],
@@ -220,6 +223,7 @@ def stage_groups_from_items(path: ReadingPath, items) -> list[dict[str, Any]]:
                 "node": _identifier(row.get("node")) or None,
                 "work": _identifier(row.get("work")) or None,
                 "recommendation_reason": str(row.get("recommendation_reason") or ""),
+                "prerequisite": str(row.get("prerequisite") or ""),
                 "position": int(row.get("position", 0)),
                 "is_required": bool(row.get("is_required")),
                 "editorial_note": str(row.get("editorial_note") or ""),
@@ -234,6 +238,7 @@ def stage_groups_with_created_work(
     stage_id,
     work_id,
     recommendation_reason: str = "",
+    prerequisite: str = "",
     is_required: bool = False,
     editorial_note: str = "",
 ) -> list[dict[str, Any]]:
@@ -256,6 +261,7 @@ def stage_groups_with_created_work(
             "node": None,
             "work": _identifier(work_id),
             "recommendation_reason": recommendation_reason,
+            "prerequisite": prerequisite,
             "position": len(target["items"]),
             "is_required": is_required,
             "editorial_note": editorial_note,
@@ -283,7 +289,12 @@ def stage_groups_with_updated_item(
             break
     if item is None or source_group is None:
         raise ReadingPathStructureError("当前作品的阅读路径 placement 不存在。")
-    for field_name in ("recommendation_reason", "is_required", "editorial_note"):
+    for field_name in (
+        "recommendation_reason",
+        "prerequisite",
+        "is_required",
+        "editorial_note",
+    ):
         if field_name in changes:
             item[field_name] = changes[field_name]
     if changes.get("stage_id") and _identifier(changes["stage_id"]) != source_group["id"]:

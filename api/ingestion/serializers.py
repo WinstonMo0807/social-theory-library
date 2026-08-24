@@ -365,6 +365,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
             "public_slug": edition.public_slug,
             "version_label": edition.version_label,
             "publication_year": edition.publication_year,
+            "publication_date": edition.publication_date,
             "publisher": edition.publisher,
             "publication_place": edition.publication_place,
             "publication_place_evidence": [
@@ -830,6 +831,7 @@ class MetadataReviewSerializer(serializers.Serializer):
     document_type = serializers.ChoiceField(choices=("book", "journal_article", "thesis", "report"))
     language = serializers.ChoiceField(choices=("zh-CN", "zh-TW", "en"), default="zh-CN")
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    publication_date = serializers.DateField(required=False, allow_null=True)
     publication_year = serializers.IntegerField(min_value=1400, max_value=2100, required=False, allow_null=True)
     publisher = serializers.CharField(max_length=300, required=False, allow_blank=True)
     publication_place = serializers.CharField(max_length=200, required=False, allow_blank=True)

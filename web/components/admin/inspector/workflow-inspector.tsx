@@ -2,6 +2,7 @@
 
 import { Check, ExternalLink, FileSearch, PanelRightClose, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ActionButton } from "@/components/action-feedback";
 import { apiBlob } from "@/lib/api";
 import type { WorkflowCandidate } from "../workflow/workflow-types";
 
@@ -57,6 +58,7 @@ const actionLabels: Record<string, string> = {
   accept_with_edit: "修改后采用",
   defer: "稍后处理",
   inspect: "核对来源",
+  verify: "核实此结果",
 };
 
 export function WorkflowInspector({
@@ -64,15 +66,30 @@ export function WorkflowInspector({
   token,
   onClose,
   onDecision,
+  onVerify,
 }: {
   selection: InspectorSelection | null;
   token: string | null;
   onClose: () => void;
-  onDecision?: (candidate: WorkflowCandidate, action: string) => void;
+  onDecision?: (candidate: WorkflowCandidate, action: string) => Promise<boolean> | boolean | void;
+  onVerify?: (candidate: WorkflowCandidate) => Promise<void> | void;
 }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewError, setPreviewError] = useState("");
   const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
+  const [acting, setActing] = useState("");
+
+  const decide = async (candidate: WorkflowCandidate, action: string, claimDraft: string) => {
+    if (acting) return;
+    const key = `${candidate.id}:${action}`;
+    setActing(key);
+    try {
+      if (action === "verify") await onVerify?.(candidate);
+      else await onDecision?.(candidate.kind === "derived_claim_curation" ? { ...candidate, edited_proposition: claimDraft } : candidate, action);
+    } finally {
+      setActing("");
+    }
+  };
 
   useEffect(() => {
     if (selection?.kind !== "pdf" || !selection.pdfUrl || !token) return;
@@ -151,7 +168,7 @@ export function WorkflowInspector({
                   return <blockquote key={`${candidate.id}-evidence-${index}`}><p>{displayValue(row.supporting_text ?? row.text_quote ?? row.quote ?? entry)}</p>{url ? <a href={url} target="_blank" rel="noreferrer">查看来源 <ExternalLink size={12} /></a> : null}</blockquote>;
                 })}
                 <details><summary>词典影响</summary><ul>{lexiconImpact(candidate).map((row) => <li key={row}>{row}</li>)}</ul></details>
-                {candidate.status === "pending" && onDecision && candidate.decision_url && actions.length ? <footer>{actions.map((action) => <button className={action === "reject" ? "danger" : ""} type="button" key={action} onClick={() => onDecision(isClaimCandidate ? { ...candidate, edited_proposition: claimDraft } : candidate, action)}>{action === "reject" ? <X size={13} /> : <Check size={13} />}{actionLabels[action] ?? action}</button>)}</footer> : null}
+                {["pending", "research_lead", "proposed"].includes(String(candidate.status ?? "pending")) && actions.some((action) => action === "verify" ? Boolean(onVerify && candidate.verify_url) : Boolean(onDecision && candidate.decision_url)) ? <footer>{actions.filter((action) => action === "verify" ? Boolean(onVerify && candidate.verify_url) : Boolean(onDecision && candidate.decision_url)).map((action) => <ActionButton className={action === "reject" ? "danger" : ""} state={acting === `${candidate.id}:${action}` ? "pending" : "idle"} pendingLabel={action === "verify" ? "核实中" : "处理中"} disabled={Boolean(acting)} key={action} onClick={() => void decide(candidate, action, claimDraft)}>{action === "reject" ? <X size={13} /> : <Check size={13} />}{actionLabels[action] ?? action}</ActionButton>)}</footer> : null}
               </article>
             );
           })}

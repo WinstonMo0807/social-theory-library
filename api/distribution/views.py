@@ -10,12 +10,19 @@ from django.urls import reverse
 from django.utils.cache import patch_vary_headers
 from django.utils.http import content_disposition_header
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Asset, OcrStatus, PublicationState, ReaderRenditionPolicy
-from common.permissions import CanManageProviders, CanRunBackup, CanViewEvidence
+from accounts.ownership import is_library_owner
+from common.permissions import (
+    CanConfigureProviders,
+    CanManageProviders,
+    CanRunBackup,
+    CanViewEvidence,
+)
 
 from .models import BackupJob, CloudBudgetPolicy, CloudObject, CloudProvider, CloudUsageSnapshot
 from .serializers import BackupJobSerializer, CloudProviderSerializer, CloudUsageSnapshotSerializer
@@ -448,19 +455,36 @@ class AdminAssetPreviewView(AssetFileView):
 
 
 class CloudProviderListView(generics.ListCreateAPIView):
-    permission_classes = [CanManageProviders]
+    permission_classes = [CanConfigureProviders]
     serializer_class = CloudProviderSerializer
     queryset = CloudProvider.objects.all().order_by("-is_default", "name")
 
+    def perform_create(self, serializer):
+        if serializer.validated_data.get("credential_reference") and not is_library_owner(self.request.user):
+            raise PermissionDenied("只有 System Owner 可以设置 Provider credential alias。")
+        serializer.save()
+
 
 class CloudProviderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [CanManageProviders]
     serializer_class = CloudProviderSerializer
     queryset = CloudProvider.objects.all()
 
+    def get_permissions(self):
+        permission = CanManageProviders if self.request.method == "DELETE" else CanConfigureProviders
+        return [permission()]
+
+    def perform_update(self, serializer):
+        requested = serializer.validated_data.get(
+            "credential_reference",
+            serializer.instance.credential_reference,
+        )
+        if requested != serializer.instance.credential_reference and not is_library_owner(self.request.user):
+            raise PermissionDenied("只有 System Owner 可以修改 Provider credential alias。")
+        serializer.save()
+
 
 class CloudUsageListView(generics.ListCreateAPIView):
-    permission_classes = [CanManageProviders]
+    permission_classes = [CanConfigureProviders]
     serializer_class = CloudUsageSnapshotSerializer
 
     def get_queryset(self):

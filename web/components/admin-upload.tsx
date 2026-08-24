@@ -1208,7 +1208,7 @@ export function AdminUpload() {
           </div>
         )) : <p className="empty-row">尚未选择文件。</p>}
         <footer>
-          <p className="admin-help">上传只建立馆藏和后台处理任务。公开发布必须由管理员在馆藏详情中确认。</p>
+          <p className="admin-help">上传只建立馆藏和后台处理任务。公开发布由具备权限的 Editor 或 Administrator 在馆藏详情中确认。</p>
           <button className="button" type="button" disabled={!files.some((item) => item.status === "waiting") || pending} onClick={upload}>
             {pending ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
             开始上传

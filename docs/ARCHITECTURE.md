@@ -1,8 +1,25 @@
 # Social Theory Library 架构
 
-更新日期为 2026-08-24。本文件描述当前源码结构。生产状态来自本轮 NAS 与公网验收，仍属于有时间边界的运行快照。
+更新日期为 2026-08-25。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-当前工作树是从 `4b97a3484db0c3918f5b0fef8bfc75c35bd0dcee` 开始的 3.0 发布候选。公网在本轮切换完成前仍是 2.9.2。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:2.9.2-final-3a4733aa-20260824-014228`，Web 使用 `social-theory-library-web:2.9.2-final-34e8e016-20260824-014512`。生产 migration head 暂为 catalog 0032、ingestion 0013 和 reading 0007。3.0 目标 head 为 catalog 0034，其余 app head 不变。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
+已部署的 3.0.0 源码已提交为 `35b5cce`，并以 `v3.0.0-baseline` 标记。当前 3.0.1 工作树从该 baseline 开始，分支为 `codex/v3.0.1-product-integration`。公网仍运行 3.0.0。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:3.0.0-final-ae0f4614-20260824-150032`，Web 使用 `social-theory-library-web:3.0.0-candidate-4022b77b-20260824-140003`。生产 migration head 仍为 catalog 0034、ingestion 0013 和 reading 0007。3.0.1 候选 head 为 catalog 0038、ingestion 0014，reading 不变。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
+
+## 3.0.1 Product Integration Pass
+
+3.0.1 沿用 3.0 的模型、任务和三个后台工作面。它把现有能力接入实际编辑流程，没有建立新的 Candidate、Provider、RAG 或权限框架。
+
+- `ResearchFieldContract` 现在覆盖 Workbench 中适合自动研究的 Work、Edition、Person 与 Curation 字段。契约声明触发输入、依赖、馆内及文档来源、外部来源、任务 profile、输出、采用和失效策略。无法形成可靠候选时，接口返回原因，不以空白掩盖结果。
+- ResearchRun 身份包含 canonical revision、当前 draft session、draft hash 和 trigger input hash。草稿变化会使旧结果失效。Provider 返回后、候选持久化前和人工采用前都会再次锁定 ResearchRun 并核对这些身份值，迟到结果不能写入可采用候选或覆盖新草稿。Planner 只重排依赖字段，研究不要求先写入正式 Work。
+- `FrontMatterIntelligence` 与 `BibliographicEvidencePack` 先读取 native text、DocumentRevision 和 EvidenceSpan，再决定是否对有限前置页补 OCR，最后才让外部来源核对。UploadBatch 明确选择跳过 OCR 时，前置页分析不会重新加回 OCR 任务。Work 的首次出版日期与 Edition 的当前版本出版日期分别保存。
+- 作者与译者候选进入“作者与责任者”步骤，并保留 contribution role。管理员可以关联本馆 Person、创建带 draft ScholarProfile 的新学者主页，或只建立未发布责任者。已发布 Edition 的出版社关联先写 EditorialRevision，不直接改 Canonical。
+- Candidate workspace 展示全部结果，并提供采用、修改后采用、查看依据、拒绝和稍后处理。普通 Web 线索只有经过 SafeWebFetcher 取得正文 Evidence 后才可采用。Fetcher 对每次跳转重新解析并校验公开 IP，以已验证 IP 发起请求，同时保留原 Host 与 TLS SNI，并禁用环境代理，减少 DNS rebinding 和代理绕过风险。
+- Workbench 增加草稿退出保护、预览、发布前检查和显式发布。Knowledge Studio 按前台对象组织正式内容、Evidence、Claims、关系、Revision、影响和 Preview。Processing Center 按用户功能影响展示 Research Source、AI、OCR、Worker、Projection 与恢复状态。
+- 公开 Passage、SemanticChunk focus、Asset manifest、逐页正文、馆内全文搜索和兼容 Global Search 现在统一使用 Asset access policy。匿名、普通读者和 staff 对 public、registered、restricted、private 的正文权限与 Distribution 入口一致，拒绝时不回显受限正文。
+- `ResearchSourceAdapter` 复用既有 Crossref、OpenAlex、VIAF、OpenLibrary、Google Books、SearXNG 和 SafeWebFetcher，并支持 JSON-LD、citation meta、COinS、RDF、RIS、BibTeX 与 MARC/XML。NCPSSD 只保留经使用规则核对后的公开 metadata 扩展位置。全国联合编目要求可配置 Z39.50 endpoint 和 credential alias。CNKI、维普和万方只允许合法 Provider、授权凭据或人工 Evidence 导入，不提供绕过登录或反爬的 crawler。
+- 4070 pull 协议仍可声明多项 capability，但本版远程客户端实际只领取并完成 `claim_extraction`。claim attribution、stance、rerank 和其他任务尚未由该客户端执行。作品摘要可以返回有来源的原摘要或明确的无可靠候选状态。只基于馆内 EvidenceSpan 的 Library Synthesis 尚未实现。
+- System Owner 仍由唯一配置身份确定。个人资料、普通用户管理、公开注册和 Django 管理表单都不能修改或占用 Owner 邮箱，并使用大小写无关查重。生产切换仍需确认现有账户没有大小写重复邮箱。
+
+3.0.1 新增 catalog 0035 至 0038 与 ingestion 0014。0035 保存 Edition publication date 和 draft-aware ResearchRun 上下文。0036、0037 扩展 ReadingPath 语义与 EditorialRevision 目标。0038 是 `atomic = False` 的幂等前向回填，按 ReadingPath 分事务复制已采用 Candidate 的 learning goal 与 prerequisite，并记录 Canonical revision 和 DomainChangeEvent。它没有自动反向迁移。ingestion 0014 增加 Candidate stale 状态。
 
 ## 3.0 正式架构
 
@@ -91,7 +108,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-生产 API、Web 和 Celery 应用当前部署 2.9.2。独立 PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 和 Cloudflared 状态服务没有因本次功能发布重建。历史镜像版本只在部署记录与回退标签中保留。
+生产 API、Web 和 Celery 应用当前部署 3.0.0。独立 PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 和 Cloudflared 状态服务没有因 3.0.1 源码开发重建。3.0.0 镜像、部署记录和回退入口仍保留。
 
 ## 后端模块
 

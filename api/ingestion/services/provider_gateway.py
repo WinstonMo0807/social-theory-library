@@ -56,7 +56,12 @@ def _enabled(provider: str) -> bool:
         for value in values
         if value.strip()
     }
-    return provider.casefold() in enabled
+    from catalog.services.research_sources import research_source_enabled
+
+    return research_source_enabled(
+        provider,
+        environment_default=provider.casefold() in enabled,
+    )
 
 
 def _allowed_host(url: str) -> bool:
@@ -81,8 +86,12 @@ def _provider_url(provider: str) -> str:
         "openlibrary": "https://openlibrary.org",
         "google_books": "https://www.googleapis.com",
         "openalex": "https://api.openalex.org",
-        "grobid": getattr(settings, "GROBID_SERVICE_URL", ""),
+        "grobid": "",
     }
+    if provider == "grobid":
+        from catalog.services.research_sources import resolve_source_endpoint
+
+        return resolve_source_endpoint("grobid")
     return urls.get(provider, "")
 
 
@@ -213,8 +222,13 @@ def invoke_provider(
     if not _enabled(provider):
         return [], [f"{provider} 元数据来源已禁用"]
     provider_url = _provider_url(provider)
-    if provider == "openalex" and not getattr(settings, "OPENALEX_API_KEY", ""):
-        return [], ["openalex 元数据来源尚未配置 API Key"]
+    if provider == "openalex":
+        from catalog.services.research_sources import resolve_source_credential
+
+        if not resolve_source_credential("openalex"):
+            # Keep the established user-facing wording while allowing the
+            # secret to be supplied through a registry credential alias.
+            return [], ["openalex 元数据来源尚未配置 API Key"]
     if not provider_url:
         return [], [f"{provider} 元数据来源尚未配置"]
     if not _allowed_host(provider_url):
@@ -353,32 +367,46 @@ def refresh_remote_candidates(
     *,
     upload_item: UploadItem | None = None,
     should_continue: Callable[[], bool] | None = None,
+    context_override: dict | None = None,
 ) -> tuple[list[Candidate], list[str]]:
+    context_override = dict(context_override or {})
     candidates: list[Candidate] = []
     warnings: list[str] = []
     calls: list[tuple[str, str, dict, Resolver]] = []
-    if edition.doi:
-        calls.append(("crossref", "lookup_doi", {"doi": edition.doi}, lambda: resolve_doi(edition.doi)))
+    doi = str(context_override.get("doi") or edition.doi or "").strip()
+    isbn = str(
+        context_override.get("isbn13")
+        or context_override.get("isbn")
+        or context_override.get("isbn10")
+        or edition.isbn13
+        or edition.isbn
+        or edition.isbn10
+        or ""
+    ).strip()
+    language = str(context_override.get("language") or edition.work.language or "").strip()
+    if doi:
+        calls.append(("crossref", "lookup_doi", {"doi": doi}, lambda: resolve_doi(doi)))
         if _enabled("openalex"):
             calls.append(
-                ("openalex", "lookup_doi", {"doi": edition.doi}, lambda: resolve_openalex_doi(edition.doi))
+                ("openalex", "lookup_doi", {"doi": doi}, lambda: resolve_openalex_doi(doi))
             )
-    elif edition.isbn:
+    elif isbn:
         calls.extend(
             [
-                ("openlibrary", "lookup_isbn", {"isbn": edition.isbn}, lambda: resolve_isbn(edition.isbn)),
+                ("openlibrary", "lookup_isbn", {"isbn": isbn}, lambda: resolve_isbn(isbn)),
                 (
                     "google_books",
                     "lookup_isbn",
-                    {"isbn": edition.isbn, "language": edition.work.language},
-                    lambda: resolve_google_books_isbn(edition.isbn, language=edition.work.language),
+                    {"isbn": isbn, "language": language},
+                    lambda: resolve_google_books_isbn(isbn, language=language),
                 ),
             ]
         )
 
-    title = edition.work.title.strip()
+    title = str(context_override.get("title") or edition.work.title or "").strip()
+    document_type = str(context_override.get("document_type") or edition.work.document_type or "")
     if title and not calls:
-        if edition.work.document_type == DocumentType.JOURNAL_ARTICLE:
+        if document_type == DocumentType.JOURNAL_ARTICLE:
             calls.append(("crossref", "search_book", {"title": title}, lambda: search_crossref_title(title)))
             if _enabled("openalex"):
                 calls.append(
@@ -390,14 +418,14 @@ def refresh_remote_candidates(
                     (
                         "openlibrary",
                         "search_book",
-                        {"title": title, "language": edition.work.language},
-                        lambda: search_openlibrary_title(title, language=edition.work.language),
+                        {"title": title, "language": language},
+                        lambda: search_openlibrary_title(title, language=language),
                     ),
                     (
                         "google_books",
                         "search_book",
-                        {"title": title, "language": edition.work.language},
-                        lambda: search_google_books_title(title, language=edition.work.language),
+                        {"title": title, "language": language},
+                        lambda: search_google_books_title(title, language=language),
                     ),
                 ]
             )
@@ -424,8 +452,10 @@ def provider_configuration_health() -> list[dict]:
     values = []
     for provider in ("crossref", "openlibrary", "google_books", "openalex", "grobid"):
         url = _provider_url(provider)
+        from catalog.services.research_sources import resolve_source_credential
+
         configured = bool(url) and (
-            provider != "openalex" or bool(getattr(settings, "OPENALEX_API_KEY", ""))
+            provider != "openalex" or bool(resolve_source_credential("openalex"))
         )
         enabled = _enabled(provider)
         values.append(
