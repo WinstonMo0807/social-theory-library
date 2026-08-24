@@ -1,10 +1,10 @@
 # 开发进度
 
-更新日期为 2026-08-25。3.0 已部署到 `books.winstonmo.com`，API readiness 返回 3.0.0、database true、pending migrations 0。3.0.1 仍是发布前源码，尚未替换公网镜像或应用 migration。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
+更新日期为 2026-08-25。3.0.1 已部署到 [books.winstonmo.com](https://books.winstonmo.com)，API readiness 返回 3.0.1、database true、pending migrations 0。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
 
-## 3.0.1 Product Integration Pass 发布前状态
+## 3.0.1 Product Integration Pass 生产状态
 
-- 已部署的 3.0.0 源码已固定为 commit `35b5cce` 和 tag `v3.0.0-baseline`。当前分支 `codex/v3.0.1-product-integration` 从该提交开始。生产 3.0.0 API/Web image、pre-v300 deploy-record、fresh backup 与应用回退入口均未改动。
+- 已部署的 3.0.0 源码基线固定为 commit `35b5cce` 和 tag `v3.0.0-baseline`。3.0.1 主发布 commit 为 `fa7444d3524f99f81bc5c0c20fbbc3477e81a76e`。生产 PostgreSQL 验收发现 CuratedClaim 的锁查询缺陷后，API、默认 Worker、Ingestion Worker 与 Beat 已更新到修复 commit `4c30565c924537e3a90c54b34240b1094a909c3d` 和 image `social-theory-library-api:3.0.1-claimfix-4c30565c-20260825-071239`。Web 继续使用 `social-theory-library-web:3.0.1-fa7444d-20260825-055113`。
 - Workbench 字段已接入 `ResearchFieldContract`。ResearchRun 使用 canonical revision、draft session、draft hash、trigger values 和 trigger hash 区分未保存草稿。字段变化会让旧候选 stale，旧 run 的迟到结果被拒绝，Planner 只重跑受依赖影响的字段。
 - FrontMatterIntelligence 先消费 native text、DocumentRevision 与 EvidenceSpan，再安排有限页 OCR，最后才使用外部来源核对。显式跳过 OCR 的批次不会被前置页分析重新排队。作者和译者候选进入作者与责任者步骤，并可关联已有 Person、创建 draft ScholarProfile，或只作为责任者保留。
 - Candidate workspace 支持查看全部结果、采用、修改后采用、查看依据、拒绝和 Web 结果核实。SafeWebFetcher 已增加分类错误、逐跳 DNS/IP 校验、固定已验证 IP、原 Host/TLS SNI 保留与禁用环境代理。SearXNG snippet 继续只是 discovery lead。
@@ -13,10 +13,16 @@
 - 正常 UI 收敛到 Reader、Editor、Administrator。旧 Reviewer 账号运行时按 Editor 兼容。Owner-only 操作通过唯一 owner identity 控制，不在业务逻辑散布账户字符串。
 - Research Source Registry 已提供标准 metadata 解析和中文来源扩展边界。NCPSSD 仅允许完成使用规则核对后的公开 metadata。全国联合编目需要 Z39.50 endpoint 与 credential alias。CNKI、维普、万方只允许合法授权 Provider 或人工 Evidence 导入。
 - 4070 worker 的 heartbeat、pull、lease、WAN 断线重试、轮询下限和稳定 completion id 已进入源码。当前远程客户端只执行 `claim_extraction`。其他已注册 AI capability 尚未形成该客户端的实际执行路径。Library Synthesis 摘要尚未实现，当前只返回 Source Abstract 或带原因的 No Reliable Candidate。
-- 目标 migration 为 catalog 0035 至 0038 和 ingestion 0014。0038 是 non-atomic、幂等、仅前向的 ReadingPath 语义回填，按单条 ReadingPath 使用事务，并写 Canonical revision 与待处理 DomainChangeEvent。它没有 reverse 数据操作。
+- catalog 0035 至 0038 和 ingestion 0014 已正式应用，reading 保持 0007。0038 是 non-atomic、幂等、仅前向的 ReadingPath 语义回填，按单条 ReadingPath 使用事务，并写 Canonical revision 与待处理 DomainChangeEvent。它没有 reverse 数据操作。
 - 初轮 T3 后端完整回归出现 3 个属于本轮影响面的旧契约失败，修正后受影响 4 case 通过。发布审查随后发现 Owner identity、迟到 Research candidate 和兼容 Global Search 正文权限三项高风险问题，均已修复。一次并行修改期间启动的回归只暴露 Candidate decision 文件的临时语法状态，不计为稳定代码验收；修正后 49 项影响面测试通过。所有编辑停止后，稳定最终代码的完整后端回归为 897 passed、32 skipped，退出码 0。前端 production build 与 142 项完整 Node 测试执行一次，只有 1 个旧选择器断言失败。更新选择器后，受影响文件 7 项全部通过。
 - TypeScript、完整 lint、Django check、migration drift 和 `git diff --check` 均通过。Asset access 最终矩阵 12 项通过，并覆盖兼容 Global Search。Accounts、角色、draft-aware Research 与 Candidate 核实的最终影响面集合 49 项通过。Workbench Playwright 第一次运行时本地 API 未启动，3 项都表现为 `Internal Server Error`。启动 3.0.1 候选本地 API 后，同一套件 3 项全部通过。首次结果只记录为环境前置缺失，不计为产品通过。
-- 发布前仍需完成 fresh BackupJob、PostgreSQL 16 restore 与 migration rehearsal、3.0.0 additive-schema compatibility、候选镜像构建、生产 cutover、T4 smoke、观察和回退确认。在这些步骤完成前，3.0.1 不标记为已部署。
+- Fresh BackupJob `77b5fb3a-8c7e-42dc-b410-c6f19167b0c2`、PostgreSQL 16 restore/migration rehearsal、3.0.0 additive-schema compatibility、正式 image build、production migration、cutover、T4 只读 smoke 和观察均已完成。备份为 19,983,666 bytes，SHA-256 为 `6e77e8b88bebe678a0aa1d6bef0c9f22cae13e7f4b703d3de21fba3aa0758ef8`。
+- Page identity、8 个 ORIGINAL 的集合和活动索引均未改变。生产保持 3,135 个 Page、8 个 ORIGINAL、165,728,337 bytes，以及 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。
+- T4 已通过公网 readiness、公开目录与动态实体页、Semantic 非 fallback、Viewpoint baseline、Reader Range 206、匿名 Ask 权限、无 publication blocker 和无 stale Projection 检查。部署后 fatal pattern 为 0，除 Meilisearch 既有历史一次重启外，各服务 RestartCount 均为 0。
+- SearXNG 在 Baidu CAPTCHA 后仅以原 image 和配置安全重建。恢复后 adapter 返回 8 条、直接诊断返回 10 条。真实 lead 已由 SafeWebFetcher 转换为 HTTP 200 HTML Evidence，正文 120,000 字符，数据库写入在验证事务中回滚。
+- 生产事务回滚写入验收已证明题名草稿变更使旧 Run/Candidate stale，并只重规划 43 个受影响字段。真实 DocumentRevision/EvidencePack 生成 8 个字段候选；摘要明确返回 No Reliable Candidate；两页 OCR 只调度不执行；Person/Scholar、译者仅责任者、CuratedClaim 发布、公网页码、EditorialRevision、DomainChange、9 个 Projection 和角色权限均通过。8 个提交后回调与所有临时行均被回滚。
+- 首次验收由 PostgreSQL 暴露 `select_for_update().distinct()` 不兼容。修复改为相关 `EXISTS` 子查询并只锁 CuratedClaim 主表。候选镜像和正式部署镜像均在真实 PostgreSQL 上通过同一写入验收，没有 migration、Web rebuild、数据库恢复、PDF/OCR 或索引变更。
+- 回退记录、旧 image、Compose/env 校验、源码 archive、fresh backup 和手动回退脚本保存在 `storage/backups/pre-v301-cutover-20260825-055113/deploy-record`。Library Synthesis Candidate、真实 4070 在线领取、中文网页 Evidence 和 Claim gold benchmark 仍是明确未关闭项。
 
 ## 3.0 四个 Wave 状态
 

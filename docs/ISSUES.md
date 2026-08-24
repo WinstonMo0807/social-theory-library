@@ -2,29 +2,28 @@
 
 更新日期为 2026-08-25。状态依据当前源码、已有测试和可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
 
-## 3.0.1 发布前真实限制
+## 3.0.1 当前真实限制
 
-- 3.0.1 尚未部署。当前公网仍是 baseline commit `35b5cce`、tag `v3.0.0-baseline` 对应的 3.0.0 image family。catalog 0035 至 0038 和 ingestion 0014 尚未应用生产，fresh backup、PostgreSQL 16 restore rehearsal、候选镜像、T4 smoke 和新回退记录仍待完成。
+- 3.0.1 已部署。正式 release commit 为 `fa7444d3524f99f81bc5c0c20fbbc3477e81a76e`，catalog 0035 至 0038 和 ingestion 0014 已应用，pending migration 为 0。Fresh backup、PostgreSQL 16 restore rehearsal、3.0.0 additive-schema compatibility、正式镜像、T4 与回退记录均已完成。
 - 作品摘要的 Source Abstract 和 No Reliable Candidate 已实现。只依据馆内 PDF EvidenceSpan 生成并带引用的 Library Synthesis Candidate 尚未实现。系统会明确返回 `source_abstract_not_found_and_library_synthesis_not_completed`，不会用模型常识补写摘要。
-- 4070 pull worker 协议和客户端已落地，但当前客户端只执行 `claim_extraction`。claim attribution、claim stance、rerank、curation reasoning 和 ReadingPath generation 尚不能由这个客户端领取。真实 Laptop 仍未连接本轮候选环境，在线模型质量和断线重领继续标记为待核实。
+- 4070 pull worker 协议和客户端已落地，但当前客户端只执行 `claim_extraction`。claim attribution、claim stance、rerank、curation reasoning 和 ReadingPath generation 尚不能由这个客户端领取。真实 Laptop 尚未连接生产，在线模型质量和断线重领继续标记为待核实。
 - Research Source Registry 提供 NCPSSD、Z39.50、CNKI、维普和万方的受控扩展位置，不等于这些 Provider 已在生产可用。NCPSSD 需先核对使用规则。全国联合编目需要有效 endpoint、credential alias 和可选 Z39.50 runtime。CNKI、维普和万方需要合法授权 Provider 或人工 Evidence，源码不包含绕过登录或反爬的 crawler。
-- SafeWebFetcher 的 DNS rebinding、redirect、TLS SNI、环境代理和分类错误已有自动化。真实中文网页正向 Evidence 转换仍需在生产网络按站点使用规则核对，不能用单元测试代替。
-- Asset access 修复覆盖 Passage、SemanticChunk focus、manifest、Page 和全文搜索。12 个访问矩阵 case 已验证未授权正文不回显。生产公开、注册、受限和私有 Asset 的实际 inventory 与公网 smoke 尚未执行。
-- 初轮 T3 后端回归发现 3 个旧契约失败。发布安全审查又发现 Owner 邮箱可变更、迟到 Research 候选可采用和兼容 Global Search 正文过滤缺失，三项均已关闭。并行修复期间的一次回归遇到临时语法状态，修正后 49 项影响面测试通过；停止所有编辑后的稳定完整回归为 897 passed、32 个环境型 skip。前端完整 build 与 142 项 Node 测试发现 1 个旧选择器失败，受影响文件 7 项随后通过。
-- 应用 API、公开注册和 Django 管理表单已按大小写无关规则保护 Owner 邮箱和重复邮箱。数据库现有唯一约束仍区分大小写，因此生产切换前继续执行只读的大小写重复邮箱 inventory；发现重复时必须停止并先制定可回退的数据修正。
-- Workbench Playwright 首次因本地 API 未启动而出现 3 个 `Internal Server Error`。启动候选 API 后同套件 3 项通过。该通过证明本地候选联动，不证明公网 3.0.1 已部署。
+- SafeWebFetcher 的生产正向路径已用真实 SearXNG lead 和公开英文 HTML 验证。中文网页正文 Evidence 转换仍需按站点使用规则核对。Baidu CAPTCHA 可能再次让 SearXNG 暂时无结果，Processing Center 必须显示来源降级，不能表现为没有候选。
+- Asset access 修复覆盖 Passage、SemanticChunk focus、manifest、Page 和全文搜索。12 个访问矩阵 case 已验证未授权正文不回显，公网 normalized Reader Asset、Range 206 和匿名访问边界也已通过。公开、注册、受限和私有四类 Asset 的完整生产 inventory 仍待核实。
+- 唯一 Owner 配置已在切换时脱敏核对，identity match 为 true。应用 API、公开注册和 Django 管理表单继续按大小写无关规则保护 Owner 邮箱和重复邮箱。
+- 生产事务验收发现的 CuratedClaim `FOR UPDATE + DISTINCT` PostgreSQL 错误已由 commit `4c30565c` 修复并部署。候选镜像和正式容器均通过采用、单 Editor 发布、公开 Work 显示和真实 PDF locator 的外层事务回滚验收，没有测试数据或任务残留。
 
 ## 3.0 当前真实限制
 
-- 3.0 已部署，catalog 0033、0034、DocumentRevision/Evidence backfill、registry seed、Claim shadow scheduling、Projection reconciliation 和公网 smoke 已执行。生产 readiness 为 3.0.0，pending migration 为 0。
+- 3.0.1 已部署，catalog 0033 至 0038、ingestion 0014、DocumentRevision/Evidence backfill、registry seed、Claim shadow scheduling、Projection reconciliation 和公网 smoke 已执行。生产 readiness 为 3.0.1，pending migration 为 0。
 - 真实馆藏没有可用的 Claim gold judgment，也没有当前可消费 Claim demand 的 LLM executor。21 个 Claim shadow demand 正确等待，DerivedClaim 仍为 0。因此默认排序不能切换；Opposing Evidence Recall、Qualification Recall、Attribution Error Rate 和 stance accuracy 没有生产前后数字，公网当前只实测到 direct 组。
 - 生产 inventory 中存在 TheorySchool 到 archived KnowledgeNode 的可疑 legacy mapping。目标未发布且名称身份不匹配，migration 没有复制三条旧理论关系。该映射和关系 parity 需要研究者人工确认，不能自动改成另一个理论身份。
 - 真实 RTX 4070 worker 当前不在线。协议、权限、heartbeat、lease 与生产离线等待已验证；真实在线领取、模型输出质量和 reconnect 恢复仍待 Laptop 与专用 credential 可用后核实。
-- Processing Center 当前显示 6 个 optional Provider 降级、1 项缺失能力、21 个等待任务，blocking count 为 0，stale Projection 为 0。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
+- Processing Center 继续展示 optional Provider 降级和缺失 AI capability。T4 时 21 个 Claim demand 等待 executor，blocking count 为 0，stale Projection 为 0。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
 - 8 个 DocumentRevision 已回填，其中《社会学的基本概念》当前没有可回填 Passage，因此 EvidenceSpan 为 0；另有一条 Work 标题为空。相关文档质量已形成 critical page 信息，需要后续馆藏清理，不应通过虚构 Evidence 或重建 Page 解决。
 - 3.0 兼容表暂不删除。TheorySchool、legacy Concept、WorkKnowledgeRelation 和旧 identity adapter 只有在 mapping parity、零旧写调用和观察期完成后才可退役。
-- 普通 non-superuser Editor 的生产写入旅程仍需在不创建临时高权限账户的前提下验证。自动化覆盖 Editor capability、Revision 和发布，生产未写入测试馆藏、未接受 Candidate，也未修改已发布 Canonical。
-- 两页选择性 OCR、已发布 Theory 的生产 Draft Revision、CuratedClaim 发布到真实 Work 页、Ask 登录后 Answer Composer 和 4070 在线领取均未对正式馆藏做写入 smoke。接口、权限和增量失效已有自动化，但生产状态继续标为待核实。
+- 普通 Editor 的生产权限、Revision、Candidate、Claim 发布和公网页码已通过真实 PostgreSQL 外层事务回滚验收。它不等于已经向正式馆藏保留测试修改，持久业务数据仍只由正常编辑操作产生。
+- 有限页 OCR 调度可以在生产事务中验证，但实际 OCR 识别仍需真实上架旅程。Ask 登录后 Answer Composer 和 4070 在线领取也继续标记为待核实。
 
 ## 2.9.2 已解决项与剩余限制
 
