@@ -61,8 +61,9 @@
 - `pypinyin` 发出历史弃用警告。本次没有扩大范围处理。
 - 当前生产没有 Claim Benchmark 人工判断集。因此 Claim 排序继续保持 shadow，默认仍为 Semantic Search V2。
 - 真实 RTX 4070 Worker 尚未连接生产。生产事务回滚 smoke 证明零 llm_large executor 时任务等待、无派发、非阻断；在线真实领取仍待核实。
-- 当前 Processing Center 如实显示 6 个 optional Provider 降级、1 个缺失能力、21 个等待任务，blocking 0，stale Projection 0。
-- 普通 Editor 的正式馆藏写入、两页选择性 OCR、真实 CuratedClaim 发布和登录后的 Ask Answer Composer 没有在生产制造测试数据，继续标记为待核实。
+- 当前 Processing Center 如实显示 optional Provider 降级和缺失 AI capability。T4 有 21 个等待任务，blocking 0，stale Projection 0。
+- 普通 Editor 的关键写入路径已在生产 PostgreSQL 外层事务内完成，并验证 CuratedClaim 发布和公网页码；测试数据随后全部回滚。正式馆藏没有保留测试修改。实际两页 OCR 识别、登录后的 Ask Answer Composer 和 4070 在线领取继续标记为待核实。
+- 生产有 3 个历史 paused OCR job，task id 为空，均早于本轮 smoke，不计入 open ProcessingJob 或 publication blocker。是否恢复仍需按原文质量由管理员决定。
 - 一次前端命令曾在仓库根目录误执行并因缺少根级 `package.json` 退出。改在 `web` 目录执行后通过。这是命令目录错误，不是产品失败。
 - 一次 Django 检查从 `api` 目录误用 `\.venv` 相对路径，三条命令均未运行。改为 `..\.venv` 后 `check`、migration drift 和 migration inventory 通过。
 - 一次 pytest 包装调用只取得了后台 session，未收集测试输出。随后用同一目标命令正确轮询，测试通过；该空输出不计入通过数。

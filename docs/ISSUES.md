@@ -21,6 +21,7 @@
 - 真实 RTX 4070 worker 当前不在线。协议、权限、heartbeat、lease 与生产离线等待已验证；真实在线领取、模型输出质量和 reconnect 恢复仍待 Laptop 与专用 credential 可用后核实。
 - Processing Center 继续展示 optional Provider 降级和缺失 AI capability。T4 时 21 个 Claim demand 等待 executor，blocking count 为 0，stale Projection 为 0。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
 - 8 个 DocumentRevision 已回填，其中《社会学的基本概念》当前没有可回填 Passage，因此 EvidenceSpan 为 0；另有一条 Work 标题为空。相关文档质量已形成 critical page 信息，需要后续馆藏清理，不应通过虚构 Evidence 或重建 Page 解决。
+- 生产另有 3 个历史 paused OCR job，创建于 2026-08-08 与 2026-08-21，task id 为空，均不是 3.0.1 smoke 产生。它们不计入 open ProcessingJob，也不阻断发布；后续应由管理员根据原文质量决定恢复或归档。
 - 3.0 兼容表暂不删除。TheorySchool、legacy Concept、WorkKnowledgeRelation 和旧 identity adapter 只有在 mapping parity、零旧写调用和观察期完成后才可退役。
 - 普通 Editor 的生产权限、Revision、Candidate、Claim 发布和公网页码已通过真实 PostgreSQL 外层事务回滚验收。它不等于已经向正式馆藏保留测试修改，持久业务数据仍只由正常编辑操作产生。
 - 有限页 OCR 调度可以在生产事务中验证，但实际 OCR 识别仍需真实上架旅程。Ask 登录后 Answer Composer 和 4070 在线领取也继续标记为待核实。
