@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.utils import timezone
 
 from catalog.models import (
@@ -216,6 +216,19 @@ def high_value_claim_candidates(
     return output[:bounded_limit]
 
 
+def _publishable_draft_claims_queryset(work: Work):
+    valid_evidence = ClaimEvidence.objects.filter(
+        curated_claim_id=OuterRef("pk"),
+        evidence_span__is_stale=False,
+        evidence_span__document_revision__is_active=True,
+    )
+    return (
+        CuratedClaim.objects.select_for_update()
+        .filter(work=work, status=CuratedClaim.Status.DRAFT)
+        .filter(Exists(valid_evidence))
+    )
+
+
 @transaction.atomic
 def decide_claim_curation_candidate(
     *,
@@ -318,13 +331,7 @@ def publish_work_curated_claims(*, work: Work, actor) -> list[CuratedClaim]:
     """Publish only evidence-backed human drafts during an explicit Work publish."""
 
     now = timezone.now()
-    claims = list(
-        CuratedClaim.objects.select_for_update()
-        .filter(work=work, status=CuratedClaim.Status.DRAFT)
-        .filter(evidence_links__evidence_span__is_stale=False)
-        .filter(evidence_links__evidence_span__document_revision__is_active=True)
-        .distinct()
-    )
+    claims = list(_publishable_draft_claims_queryset(work))
     for claim in claims:
         claim.status = CuratedClaim.Status.PUBLISHED
         claim.published_by = actor
@@ -339,4 +346,3 @@ def publish_work_curated_claims(*, work: Work, actor) -> list[CuratedClaim]:
             idempotency_key=f"curated-claim-publish:{claim.id}:{now.isoformat()}",
         )
     return claims
-

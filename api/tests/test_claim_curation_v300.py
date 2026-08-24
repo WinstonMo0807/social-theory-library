@@ -6,6 +6,7 @@ import pytest
 from accounts.models import User
 from catalog.models import (
     Asset,
+    ClaimEvidence,
     CuratedClaim,
     DerivedClaim,
     DocumentRevision,
@@ -19,8 +20,10 @@ from catalog.models import (
     Work,
 )
 from catalog.services.claims.curation import (
+    _publishable_draft_claims_queryset,
     decide_claim_curation_candidate,
     high_value_claim_candidates,
+    publish_work_curated_claims,
 )
 from ingestion.services.publication import publish_edition
 
@@ -175,3 +178,48 @@ def test_claim_volume_is_compressed_to_five_decisions_then_human_adoption_publis
     )
     assert projection.source_revision >= 2
     assert projection.projected_revision < projection.source_revision
+
+
+@pytest.mark.django_db
+def test_publish_query_locks_claim_rows_without_postgres_distinct_conflict():
+    work, _edition, _revision, evidence = _source()
+    editor = User.objects.create_user(
+        username="claim-publish-lock-editor@example.test",
+        email="claim-publish-lock-editor@example.test",
+        password="Claim-Publish-Lock-2026",
+        role=User.Role.EDITOR,
+        is_staff=True,
+    )
+    publishable = CuratedClaim.objects.create(
+        work=work,
+        kind=CuratedClaim.Kind.CORE_VIEWPOINT,
+        proposition="有有效原文依据的策展命题。",
+        created_by=editor,
+    )
+    ClaimEvidence.objects.create(
+        curated_claim=publishable,
+        evidence_span=evidence,
+        role=ClaimEvidence.Role.PRIMARY,
+    )
+    without_evidence = CuratedClaim.objects.create(
+        work=work,
+        kind=CuratedClaim.Kind.MAJOR_CRITICISM,
+        proposition="没有原文依据的草稿不能发布。",
+        created_by=editor,
+    )
+
+    queryset = _publishable_draft_claims_queryset(work)
+    sql = str(queryset.query).upper()
+
+    assert queryset.query.select_for_update is True
+    assert queryset.query.distinct is False
+    assert "EXISTS" in sql
+    assert "SELECT DISTINCT" not in sql
+
+    published = publish_work_curated_claims(work=work, actor=editor)
+
+    assert [claim.id for claim in published] == [publishable.id]
+    publishable.refresh_from_db()
+    without_evidence.refresh_from_db()
+    assert publishable.status == CuratedClaim.Status.PUBLISHED
+    assert without_evidence.status == CuratedClaim.Status.DRAFT
