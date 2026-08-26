@@ -432,11 +432,19 @@ def test_field_outcome_explains_when_no_reliable_candidate_exists():
         {"enrichment": [], "entities": [], "editorial_evidence": []},
     )
 
-    assert outcomes == [
-        {
-            "field": "work.abstract",
-            "status": "no_reliable_candidate",
-            "reason": "PDF 中没有可定位摘要。",
-            "context_fingerprint": "draft-context",
-        }
-    ]
+    assert len(outcomes) == 1
+    outcome = outcomes[0]
+    assert {
+        "field": outcome["field"],
+        "status": outcome["status"],
+        "reason": outcome["reason"],
+        "context_fingerprint": outcome["context_fingerprint"],
+    } == {
+        "field": "work.abstract",
+        "status": "no_reliable_candidate",
+        "reason": "PDF 中没有可定位摘要。",
+        "context_fingerprint": "draft-context",
+    }
+    assert outcome["producer_capability"]["field"] == "abstract"
+    assert outcome["producer_capability"]["state"] == "productive"
+    assert outcome["producer_capability"]["channels"]["pdf_native"]["state"] == "productive"

@@ -349,7 +349,9 @@ class _Client:
     ("response", "expected"),
     [
         (_Response(302), "redirect"),
-        (_Response(403), "robots"),
+        (_Response(401), "auth_required"),
+        (_Response(403), "access_denied"),
+        (_Response(451), "legal_restriction"),
         (_Response(200, b"image", {"content-type": "image/png"}), "content_type"),
         (_Response(200, b"tiny", {"content-type": "text/html"}), "html"),
         (_Response(200, b"<html><body>readable body text that is longer than forty characters.</body></html>", {"content-type": "text/html; charset=not-a-real-encoding"}), "encoding"),
@@ -394,6 +396,75 @@ def test_safe_web_fetcher_reports_dns_tls_timeout_and_size(monkeypatch, settings
     fetcher = SafeWebFetcher(client_factory=lambda **kwargs: _Client([response]))
     with pytest.raises(WebFetchError) as raised:
         fetcher.fetch(f"https://example.org/size-{uuid4()}")
+    assert raised.value.code == "size"
+
+
+def test_safe_web_fetcher_persists_redacted_failure_for_processing_center(monkeypatch):
+    monkeypatch.setattr(
+        "catalog.services.field_enrichment.web._resolve_addresses",
+        lambda hostname, port: {"93.184.216.34"},
+    )
+    url = f"https://example.org/private-page?token=do-not-store-{uuid4()}"
+    fetcher = SafeWebFetcher(client_factory=lambda **kwargs: _Client([_Response(403)]))
+
+    with pytest.raises(WebFetchError) as raised:
+        fetcher.fetch(url)
+
+    assert raised.value.code == "access_denied"
+    record = SourceRecord.objects.filter(
+        provider="field_enrichment:web_fetch",
+        status=SourceRecord.Status.FAILED,
+    ).latest("retrieved_at")
+    assert record.error_code == "access_denied"
+    assert record.query == {"url": "https://example.org/private-page"}
+    assert "do-not-store" not in str(record.raw_response)
+
+
+def test_safe_web_fetcher_honors_html_robots_and_decodes_chinese_legacy_meta(monkeypatch):
+    monkeypatch.setattr(
+        "catalog.services.field_enrichment.web._resolve_addresses",
+        lambda hostname, port: {"93.184.216.34"},
+    )
+    blocked = (
+        '<html><head><meta name="robots" content="noindex, nosnippet"></head>'
+        '<body>Public-looking content that must not be retained as evidence.</body></html>'
+    ).encode("utf-8")
+    with pytest.raises(WebFetchError) as raised:
+        SafeWebFetcher(client_factory=lambda **kwargs: _Client([
+            _Response(200, blocked, {"content-type": "text/html; charset=utf-8"})
+        ])).fetch(f"https://example.org/robots-{uuid4()}")
+    assert raised.value.code == "robots"
+
+    chinese = (
+        '<html><head><meta http-equiv="Content-Type" content="text/html; charset=gb18030">'
+        '<title>中文社会科学书目</title></head><body>'
+        '这是用于验证中文网页编码、正文抽取和书目证据转换的公开内容，'
+        '并确认繁简体书名、作者、出版社与出版时间能够保持可读。'
+        '</body></html>'
+    ).encode("gb18030")
+    document = SafeWebFetcher(client_factory=lambda **kwargs: _Client([
+        _Response(200, chinese, {"content-type": "text/html"})
+    ])).fetch(f"https://example.org/chinese-{uuid4()}")
+    assert document.title == "中文社会科学书目"
+    assert "中文网页编码" in document.text
+
+
+def test_safe_web_fetcher_enforces_streamed_size_limit(monkeypatch, settings):
+    monkeypatch.setattr(
+        "catalog.services.field_enrichment.web._resolve_addresses",
+        lambda hostname, port: {"93.184.216.34"},
+    )
+    settings.FIELD_ENRICHMENT_FETCH_MAX_BYTES = 16_384
+
+    class _ChunkedResponse(_Response):
+        def iter_bytes(self):
+            yield b"x" * 10_000
+            yield b"x" * 10_000
+
+    with pytest.raises(WebFetchError) as raised:
+        SafeWebFetcher(client_factory=lambda **kwargs: _Client([
+            _ChunkedResponse(200, headers={"content-type": "text/plain"})
+        ])).fetch(f"https://example.org/chunked-{uuid4()}")
     assert raised.value.code == "size"
 
 

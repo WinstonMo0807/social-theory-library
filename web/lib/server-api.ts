@@ -11,6 +11,7 @@ import {
 import { defaultSiteConfig, type SiteConfig } from "./site-config";
 import type { SearchContext } from "./search-context";
 import { WEB_APP_VERSION } from "./version";
+import { adaptApiScholar, adaptApiScholarDetail, adaptApiTopic, adaptApiWork } from "./public-data-adapters";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -102,7 +103,7 @@ export type ApiWork = {
   outline?: { index: number; printed_label: string; chapter_title: string }[];
 };
 
-type ApiScholar = {
+export type ApiScholar = {
   slug: string;
   person: ApiPerson & { id: string };
   short_description: string;
@@ -204,7 +205,7 @@ export type ApiTheorySchool = {
   };
 };
 
-type ApiTopic = {
+export type ApiTopic = {
   id: string;
   slug: string;
   name: string;
@@ -815,8 +816,13 @@ export type SearchFilters = {
   topic?: string[];
   concept?: string[];
   author?: string[];
+  scholar?: string[];
   year?: string[];
+  yearMin?: number;
+  yearMax?: number;
   language?: string[];
+  relation?: string[];
+  sourceType?: string[];
   access?: string[];
   sort?: string;
   page?: number;
@@ -917,7 +923,10 @@ export type ViewpointSearchResult = {
   stance_reasons: string[];
   score: number;
   authors: string[];
-  work: { id: string; title: string };
+  work: { id: string; title: string; slug: string };
+  source_type: "book" | "journal" | "other" | string;
+  language: string;
+  publication_year: number | null;
   page: number;
   printed_page_label: string;
   evidence: {
@@ -957,6 +966,24 @@ export type ViewpointSearchResult = {
   ranking_source: "semantic_v2_baseline" | "claim_index_shadow" | string;
 };
 
+export type ViewpointFacetOption = {
+  id: string;
+  slug: string;
+  label: string;
+  count: number;
+};
+
+export type ViewpointFacets = {
+  relations: ViewpointFacetOption[];
+  source_types: ViewpointFacetOption[];
+  languages: ViewpointFacetOption[];
+  scholars: ViewpointFacetOption[];
+  theories: ViewpointFacetOption[];
+  topics: ViewpointFacetOption[];
+  works: ViewpointFacetOption[];
+  publication_year: { min: number | null; max: number | null };
+};
+
 export type ViewpointSearchPayload = {
   query: string;
   query_claim: {
@@ -971,6 +998,7 @@ export type ViewpointSearchPayload = {
   default_mode: "baseline" | "claim";
   results: ViewpointSearchResult[];
   groups: Record<ViewpointStance, ViewpointSearchResult[]>;
+  facets: ViewpointFacets;
   count: number;
   work_count: number;
   stance_counts: Record<ViewpointStance, number>;
@@ -1383,64 +1411,8 @@ export async function loadRecommendedScholars(
   });
 }
 
-const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
-
-export function adaptWork(value: ApiWork, index = 0): Work {
-  const authorContributions =
-    value.edition?.contributors
-      .filter((contribution) => contribution.role === "author")
-      ?? [];
-  const author = authorContributions
-    .map((contribution) => contribution.person.preferred_name)
-    .join("、") || "责任者待补";
-  return {
-    id: value.edition?.readable_asset?.id ?? value.id,
-    workId: value.id,
-    editionId: value.edition?.id,
-    slug: value.edition?.public_slug ?? value.id,
-    title: value.title,
-    originalTitle: value.subtitle || undefined,
-    author,
-    year: String(value.edition?.publication_year ?? "出版年不详"),
-    kind: ({
-      book: "图书",
-      journal_article: "期刊论文",
-      thesis: "学位论文",
-      report: "研究报告",
-    } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
-    school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
-    summary: value.abstract || "本馆已收录全文，简介待编辑。",
-    cover: coverStyles[index % coverStyles.length],
-    coverImage: value.cover || value.recommendation_image || undefined,
-    pages: value.edition?.readable_asset?.page_count ?? 0,
-    language: value.language,
-    authors: authorContributions.map((contribution) => ({
-      name: contribution.person.preferred_name,
-      slug: contribution.person.scholar_slug,
-    })),
-    theories: value.theories,
-    topics: value.topics,
-    theoryAssociations: value.theory_associations ?? [],
-    curatedClaims: value.curated_claims,
-    outline: value.outline ?? [],
-  };
-}
-
-function adaptScholar(value: ApiScholar): Scholar {
-  const birth = value.person.birth_year;
-  const death = value.person.death_year;
-  return {
-    id: value.person.id,
-    slug: value.slug,
-    name: value.person.preferred_name,
-    originalName: value.person.original_name || value.person.preferred_name,
-    portrait: value.person.portrait || undefined,
-    years: birth ? `${birth}—${death ?? ""}` : "",
-    school: "本馆收录学者",
-    concerns: value.key_concerns ?? [],
-    biography: value.person.biography || value.short_description || "本馆已建立该学者与馆藏作品的关系。",
-  };
-}
+export const adaptWork = adaptApiWork;
+const adaptScholar = adaptApiScholar;
 
 export async function loadWorks(): Promise<Work[]> {
   try {
@@ -1704,64 +1676,7 @@ export type LibraryTopic = {
   };
 };
 
-function adaptTopic(payload: ApiTopic): LibraryTopic {
-  return {
-    id: payload.id,
-    slug: payload.slug,
-    name: payload.name,
-    description: payload.description,
-    problemStatement: payload.problem_statement,
-    coreQuestions: payload.core_questions ?? [],
-    researchDimensions: payload.research_dimensions ?? [],
-    methods: payload.methods ?? [],
-    formationContext: payload.formation_context,
-    heroImage: payload.hero_image,
-    disciplines: payload.disciplines ?? [],
-    subdisciplines: payload.subdisciplines ?? [],
-    linkedTheories: payload.linked_theories ?? [],
-    knowledgeNodes: payload.knowledge_nodes ?? [],
-    concepts: payload.key_concepts ?? [],
-    timeline: payload.timeline ?? [],
-    works: (payload.works ?? []).map(adaptWork),
-    scholars: (payload.scholars ?? []).map(adaptScholar),
-    theories: (payload.theories ?? []).map((school) => ({
-      slug: school.slug,
-      name: school.name,
-      description: school.description,
-      books: school.work_count,
-      scholars: school.scholars?.length ?? 0,
-      symbol: school.symbol || school.name.slice(0, 2),
-    })),
-    passages: (payload.passages ?? []).map((passage) => ({
-      id: passage.id,
-      assetId: passage.asset_id,
-      title: passage.title,
-      pageIndex: passage.page_index,
-      printedLabel: passage.printed_label,
-      snippet: passage.snippet,
-    })),
-    workCount: payload.work_count,
-    curatedClaims: payload.curated_claims ?? {
-      core_viewpoint: [],
-      major_criticism: [],
-      major_response: [],
-    },
-    curated: {
-      heroCaption: payload.curated?.hero_caption ?? "",
-      foundationalWorks: (payload.curated?.foundational_works ?? []).map(adaptWork),
-      recentWorks: (payload.curated?.recent_works ?? []).map(adaptWork),
-      relatedScholars: payload.curated?.related_scholars ?? [],
-      linkedTheories: payload.curated?.linked_theories ?? [],
-      readingPaths: (payload.curated?.reading_paths ?? []).map((path) => ({
-        ...path,
-        works: path.works.map(adaptWork),
-      })),
-      featuredPassageId: payload.curated?.featured_passage_id ?? "",
-      featuredPassageReason: payload.curated?.featured_passage_reason ?? "",
-      featuredPassageEvidence: payload.curated?.featured_passage_evidence ?? {},
-    },
-  };
-}
+const adaptTopic = adaptApiTopic;
 
 export async function loadTopics(
   query = "",
@@ -1920,29 +1835,7 @@ export async function loadScholar(slug: string): Promise<{
     const payload = await serverRequest<ApiScholar>(
       `/catalog/scholars/${encodeURIComponent(slug)}/`,
     );
-    return {
-      scholar: adaptScholar(payload),
-      shortDescription: payload.short_description || payload.person.biography || "本馆已建立该学者与馆藏作品的关系。",
-      works: (payload.works ?? []).map(adaptWork),
-      affiliations: payload.affiliations ?? [],
-      timeline: payload.timeline ?? [],
-      featuredQuote: payload.featured_quote ?? "",
-      quoteSource: payload.quote_source ?? "",
-      curatedClaims: payload.curated_claims ?? {
-        core_viewpoint: [],
-        major_criticism: [],
-        major_response: [],
-      },
-      knowledgeNodes: payload.knowledge_nodes ?? [],
-      curated: {
-        essentialWorks: (payload.curated?.essential_works ?? []).map(adaptWork),
-        keyConcepts: payload.curated?.key_concepts ?? [],
-        conceptMap: payload.curated?.concept_map ?? [],
-        network: payload.curated?.network ?? [],
-        frequentlyReadScholars: payload.curated?.frequently_read_scholars ?? [],
-        relatedTheories: payload.curated?.related_theories ?? [],
-      },
-    };
+    return adaptApiScholarDetail(payload);
   } catch (error) {
     if (!allowDemoFallback) throw error;
     const scholar = demoScholars.find((item) => item.slug === slug);
@@ -2192,6 +2085,16 @@ function unavailableViewpointSearch(
     default_mode: "baseline",
     results: [],
     groups,
+    facets: {
+      relations: [],
+      source_types: [],
+      languages: [],
+      scholars: [],
+      theories: [],
+      topics: [],
+      works: [],
+      publication_year: { min: null, max: null },
+    },
     count: 0,
     work_count: 0,
     stance_counts: emptyViewpointCounts(),
@@ -2226,6 +2129,9 @@ export async function loadViewpointSearch(
     ["document_type", filters.documentType],
     ["language", filters.language],
     ["author", filters.author],
+    ["scholar", filters.scholar],
+    ["relation", filters.relation],
+    ["source_type", filters.sourceType],
     ["year", filters.year],
     ["theory", filters.theory],
     ["topic", filters.topic],
@@ -2234,6 +2140,8 @@ export async function loadViewpointSearch(
   ].forEach(([name, values]) => {
     (values as string[] | undefined)?.forEach((value) => parameters.append(name as string, value));
   });
+  if (filters.yearMin !== undefined) parameters.set("year_min", String(filters.yearMin));
+  if (filters.yearMax !== undefined) parameters.set("year_max", String(filters.yearMax));
   if (filters.pageSize) parameters.set("limit", String(filters.pageSize));
   if (filters.workId) parameters.set("work_id", filters.workId);
   if (filters.maxPerWork !== undefined) parameters.set("max_per_work", String(filters.maxPerWork));

@@ -506,9 +506,8 @@ def _contributors_step(edition: Edition) -> dict[str, Any]:
         issues.append(
             _issue(
                 "contributors_unresolved",
-                f"仍有 {pending} 组责任者候选需要人工决定。",
+                f"仍有 {pending} 组责任者候选可继续处理；已确认责任者不受影响。",
                 "contributors",
-                severity="blocker",
             )
         )
     approved = edition.contributions.filter(approved=True).count()
@@ -533,9 +532,8 @@ def _classification_step(edition: Edition) -> dict[str, Any]:
         issues.append(
             _issue(
                 "classification_suggestions_pending",
-                f"仍有 {suggested} 条分类建议需要人工决定。",
+                f"仍有 {suggested} 条分类建议可继续处理。",
                 "classification",
-                severity="blocker",
             )
         )
     approved = work.discipline_relations.filter(review_status=RelationReviewStatus.APPROVED)
@@ -543,9 +541,8 @@ def _classification_step(edition: Edition) -> dict[str, Any]:
         issues.append(
             _issue(
                 "primary_discipline_missing",
-                "尚未确认主要学科。",
+                "尚未确认主要学科；可按馆藏政策稍后补充。",
                 "classification",
-                severity="blocker",
             )
         )
     return _confirmed_step(

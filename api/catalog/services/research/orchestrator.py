@@ -31,6 +31,11 @@ from .contracts import (
 from .diagnostics import ResearchDiagnostics, ResearchErrorCode
 from .entity_discovery import EntityDiscoveryRequest, UniversalEntityDiscovery
 from .planner import RESEARCH_PLANNER_VERSION, ResearchPlanner
+from .producer_capabilities import (
+    ProducerState,
+    capability_for_contract,
+    producer_capability_coverage,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -235,6 +240,14 @@ class ResearchOrchestrator:
                         missing.append(f"{contract.step}.{contract.field}")
         except Exception as exc:
             missing.append(f"field_policy_registry:{exc.__class__.__name__}")
+        coverage["missing_implementations"] = missing
+        producer_coverage = producer_capability_coverage()
+        coverage["producer_capabilities"] = producer_coverage
+        missing.extend(
+            value
+            for value in producer_coverage["unavailable_enabled_fields"]
+            if value not in missing
+        )
         coverage["missing_implementations"] = missing
         coverage["healthy"] = not missing
         if missing and settings.DEBUG:
@@ -1093,15 +1106,45 @@ class ResearchOrchestrator:
         outcomes = []
         for task in tasks:
             field_key = f"{task.get('step')}.{task.get('field')}"
+            try:
+                producer = capability_for_contract(
+                    RESEARCH_CONTRACTS.get(str(task.get("step") or ""), str(task.get("field") or ""))
+                )
+            except ValueError:
+                producer = None
+            producer_unavailable = producer is None or producer.state == ProducerState.UNAVAILABLE
+            candidate_available = field_key in found
             outcomes.append(
                 {
                     "field": field_key,
-                    "status": "candidates_available" if field_key in found else "no_reliable_candidate",
-                    "reason": "" if field_key in found else str(
+                    "status": (
+                        "producer_unavailable"
+                        if producer_unavailable
+                        else "candidates_available"
+                        if candidate_available
+                        else "no_reliable_candidate"
+                    ),
+                    "reason": (
+                        str(getattr(producer, "reason", "") or "当前字段没有已注册 producer。")
+                        if producer_unavailable
+                        else ""
+                        if candidate_available
+                        else str(
                         task.get("no_reliable_candidate_reason")
                         or "证据数量或质量未达到当前字段要求。"
+                        )
                     ),
                     "context_fingerprint": task.get("context_fingerprint"),
+                    "producer_capability": (
+                        producer.payload()
+                        if producer is not None and callable(getattr(producer, "payload", None))
+                        else {
+                            "state": str(getattr(producer, "state", "unavailable")),
+                            "reason": str(getattr(producer, "reason", "") or ""),
+                        }
+                        if producer is not None
+                        else None
+                    ),
                 }
             )
         return outcomes
@@ -1181,6 +1224,17 @@ class ResearchOrchestrator:
             refreshed = WorkflowSuggestionAggregator(run.edition, item=item).aggregate(step=context.active_step)
             external["active_step_candidates"] = refreshed
             external["field_outcomes"] = self._field_outcomes(tasks, external)
+            unavailable_fields = [
+                row["field"]
+                for row in external["field_outcomes"]
+                if row["status"] == "producer_unavailable"
+            ]
+            if unavailable_fields:
+                diagnostics.add_error(
+                    ResearchErrorCode.CONTRACT_MISSING,
+                    f"字段没有可执行 producer：{', '.join(unavailable_fields)}",
+                    provider="field_producer_capability_matrix",
+                )
             diagnostics.candidate_counts = {
                 "enrichment": len(external["enrichment"]),
                 "entity_groups": len(external["entities"]),

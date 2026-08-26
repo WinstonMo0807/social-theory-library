@@ -32,6 +32,7 @@ import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
+import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import {
   AuthoritySuggestions,
   StringListEditor,
@@ -719,7 +720,7 @@ export function TaxonomyAdmin({
             </>
           ) : null}
         </section> : null}
-        {editorOnly ? <><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={save}>
+        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={save}>
           <header>
             <div>
               <Link href={draft.kind === "theory" ? "/admin/theory-schools" : "/admin/topics"}>返回列表</Link>
@@ -971,11 +972,16 @@ export function TaxonomyAdmin({
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace(draft.kind === "topic" ? "/admin/topics" : "/admin/theory-nodes?node_type=theory_tradition")}
           /> : null}
-        </form>{draft.id ? <EntityRelationsAdmin
+        </form><div className="knowledge-object-editor-rail">{draft.id ? <EntityRelationsAdmin
           kind={draft.kind}
           entityId={draft.id}
           previewHref={draft.kind === "topic" ? `/topics/${draft.slug}` : `/theory-schools/${draft.slug}`}
-        /> : null}</> : null}
+        /> : null}{draft.kind === "topic" ? <KnowledgeObjectContextPanel
+          objectType="topic"
+          objectId={draft.id}
+          refreshKey={message}
+          onChanged={detail.refresh}
+        /> : null}</div></div> : null}
       </div>
     </AdminPageFrame>
   );
@@ -1256,7 +1262,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           ))}
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
         </section> : null}
-        {editorOnly ? <form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
+        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
           <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div></header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
@@ -1396,7 +1402,12 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace("/admin/scholars")}
           /> : null}
-        </form> : null}
+        </form><div className="knowledge-object-editor-rail"><KnowledgeObjectContextPanel
+          objectType="scholar"
+          objectId={draft.id}
+          refreshKey={message}
+          onChanged={detail.refresh}
+        /></div></div> : null}
       </div>
     </AdminPageFrame>
   );

@@ -35,8 +35,19 @@ import {
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
+import {
+  KnowledgeObjectContextPanel,
+  type KnowledgeObjectType,
+} from "@/components/admin/knowledge/knowledge-object-context-panel";
 
 type Page<T> = { count: number; next?: string | null; previous?: string | null; results: T[] };
+
+function knowledgeStudioNodeType(nodeType: string): KnowledgeObjectType {
+  if (nodeType === "concept") return "concept";
+  if (nodeType === "debate") return "debate";
+  if (nodeType === "research_problem") return "research_problem";
+  return "theory";
+}
 
 function onePickerValue(id: string, name: string): EntityValue[] {
   return id ? [{ id, name: name || "已选择实体" }] : [];
@@ -636,7 +647,7 @@ export function TheoryNodesAdmin() {
       description="维护规范理论节点、子学科、概念、争论和研究问题。前台各页面从这些结构化数据自动生成。"
       actions={<button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button>}
     >
-      <div className="theory-node-admin-grid">
+      <div className="theory-node-admin-grid knowledge-object-host-layout">
         <section className="admin-panel theory-node-table-panel">
           <nav className="theory-node-tabs">
             {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { setNodeType(value); start(); }}>{label}</button>)}
@@ -659,6 +670,7 @@ export function TheoryNodesAdmin() {
           <footer className="theory-admin-count">共 {nodes.data?.count ?? 0} 个节点</footer>
         </section>
 
+        <div className="knowledge-object-editor-workspace">
         <form className="admin-panel theory-node-editor" onSubmit={saveNode}>
           <header><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建节点"}</h2><p>{editing ? `馆藏 ${editing.work_count} · 关系 ${editing.relation_count}` : "建立规范节点后再审核馆藏关系"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/theories/nodes/${editing.slug}`} target="_blank">查看条目 <ExternalLink size={14} /></Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">预览图谱 <ExternalLink size={14} /></Link></div> : null}</header>
           <div className="inline-fields"><label><span>标准中文名</span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label><label><span>节点类型</span><select value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}>{editableNodeTypeEntries.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
@@ -715,6 +727,15 @@ export function TheoryNodesAdmin() {
           <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{editing?.status === "published" ? "保存为编辑草稿" : draft.status === "published" ? "保存并发布" : "保存"}</ActionButton></div>
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
         </form>
+        <div className="knowledge-object-editor-rail">
+          <KnowledgeObjectContextPanel
+            objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)}
+            objectId={editing?.id}
+            refreshKey={editing?.updated_at}
+            onChanged={() => { nodes.refresh(); allNodes.refresh(); requestedNode.refresh(); }}
+          />
+        </div>
+        </div>
       </div>
     </AdminFrame>
   );

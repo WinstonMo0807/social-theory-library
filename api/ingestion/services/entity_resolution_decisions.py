@@ -46,6 +46,17 @@ TARGET_MODELS = {
 
 DRAFT_TARGETS = {"person", "work", "organization", "knowledge_node"}
 
+# Discipline, Subdiscipline and Topic have independent canonical identities.
+# Compatibility candidates may still mention them as KnowledgeNode values, but
+# a draft decision must never recreate those identities in the normalized node
+# table.
+CANONICAL_KNOWLEDGE_NODE_TYPES = {
+    KnowledgeNode.NodeType.THEORY_TRADITION,
+    KnowledgeNode.NodeType.CONCEPT,
+    KnowledgeNode.NodeType.DEBATE,
+    KnowledgeNode.NodeType.RESEARCH_PROBLEM,
+}
+
 
 @dataclass(frozen=True)
 class ResolutionDecisionResult:
@@ -329,8 +340,10 @@ def _create_draft(candidate: EntityResolutionCandidate, *, actor):
         candidate.label = entity.title
     elif candidate.target_type == "knowledge_node":
         node_type = str(candidate.supporting_properties.get("node_type") or "").strip()
-        if node_type not in KnowledgeNode.NodeType.values:
-            raise ResolutionDecisionError("知识实体草稿缺少有效类型，请重新生成候选。")
+        if node_type not in CANONICAL_KNOWLEDGE_NODE_TYPES:
+            raise ResolutionDecisionError(
+                "该知识类型使用独立的正式实体，不能创建重复 KnowledgeNode 草稿。"
+            )
         entity = KnowledgeNode.objects.create(
             node_type=node_type,
             canonical_name_zh=name,

@@ -1,17 +1,22 @@
 from django.db import transaction
 from django.db.models import Count, Max
 from django.shortcuts import get_object_or_404
+from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsLibraryAdmin
 
 from .models import (
+    ClaimBenchmarkJudgment,
+    DocumentRevision,
+    EvidenceSpan,
     SearchEvaluationJudgment,
     SearchEvaluationQuery,
     SearchEvaluationRun,
     SearchEvaluationSet,
 )
+from .services.claim_benchmark import claim_benchmark_gold_summary
 from .search_evaluation_serializers import (
     SearchEvaluationRunRequestSerializer,
     SearchEvaluationRunSerializer,
@@ -36,6 +41,176 @@ def evaluation_sets():
         query_count=Count("queries", distinct=True),
         judgment_count=Count("queries__judgments", distinct=True),
     ).order_by("name")
+
+
+class ClaimBenchmarkJudgmentWriteSerializer(serializers.Serializer):
+    query_id = serializers.UUIDField()
+    evidence_span_id = serializers.UUIDField()
+    expected_relation = serializers.ChoiceField(
+        choices=ClaimBenchmarkJudgment.Relation.choices,
+    )
+    expected_attribution = serializers.ChoiceField(
+        choices=ClaimBenchmarkJudgment.Attribution.choices,
+        default=ClaimBenchmarkJudgment.Attribution.UNCERTAIN,
+    )
+    relevance = serializers.IntegerField(min_value=0, max_value=3, default=2)
+    locator_verified = serializers.BooleanField(default=False)
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+
+    def validate(self, attrs):
+        query = get_object_or_404(SearchEvaluationQuery, pk=attrs.pop("query_id"))
+        evidence_span = get_object_or_404(
+            EvidenceSpan.objects.select_related(
+                "document_revision",
+                "document_revision__asset__edition__work",
+                "page",
+            ),
+            pk=attrs.pop("evidence_span_id"),
+        )
+        _validate_current_gold_evidence(evidence_span)
+        attrs["query"] = query
+        attrs["evidence_span"] = evidence_span
+        return attrs
+
+
+class ClaimBenchmarkJudgmentFilterSerializer(serializers.Serializer):
+    evaluation_set = serializers.UUIDField(required=False, allow_null=True)
+    query = serializers.UUIDField(required=False, allow_null=True)
+
+
+def _validate_current_gold_evidence(evidence_span: EvidenceSpan) -> None:
+    if evidence_span.is_stale:
+        raise serializers.ValidationError(
+            {"evidence_span_id": "已失效的 EvidenceSpan 不能作为人工 Gold judgment。"}
+        )
+    if not evidence_span.document_revision.is_active:
+        raise serializers.ValidationError(
+            {"evidence_span_id": "已 superseded 的 DocumentRevision 不能作为人工 Gold judgment。"}
+        )
+
+
+def _claim_judgment_payload(row: ClaimBenchmarkJudgment) -> dict:
+    span = row.evidence_span
+    text = span.original_text or ""
+    return {
+        "id": str(row.id),
+        "query": {
+            "id": str(row.query_id),
+            "evaluation_set_id": str(row.query.evaluation_set_id),
+            "text": row.query.query_text,
+        },
+        "evidence": {
+            "id": str(span.id),
+            "text": text[:1200],
+            "text_truncated": len(text) > 1200,
+            "locator": {
+                "page": span.page_number,
+                "printed_page_label": span.printed_page_label,
+            },
+            "quality": span.quality,
+            "document_revision_id": str(row.document_revision_id),
+            "work": {
+                "id": str(row.work_id),
+                "title": row.work.title,
+            },
+        },
+        "expected_relation": row.expected_relation,
+        "expected_attribution": row.expected_attribution,
+        "relevance": row.relevance,
+        "locator_verified": row.locator_verified,
+        "notes": row.notes,
+        "created_by": str(row.created_by_id or ""),
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+def _claim_judgments():
+    return ClaimBenchmarkJudgment.objects.select_related(
+        "query",
+        "query__evaluation_set",
+        "evidence_span",
+        "work",
+        "document_revision",
+    )
+
+
+class ClaimBenchmarkJudgmentListCreateView(APIView):
+    permission_classes = [IsLibraryAdmin]
+
+    def get(self, request):
+        rows = _claim_judgments()
+        query_params = ClaimBenchmarkJudgmentFilterSerializer(
+            data={
+                "evaluation_set": request.query_params.get("evaluation_set") or None,
+                "query": request.query_params.get("query") or None,
+            }
+        )
+        query_params.is_valid(raise_exception=True)
+        evaluation_set_id = query_params.validated_data.get("evaluation_set")
+        query_id = query_params.validated_data.get("query")
+        if evaluation_set_id:
+            rows = rows.filter(query__evaluation_set_id=evaluation_set_id)
+        if query_id:
+            rows = rows.filter(query_id=query_id)
+        total_count = rows.count()
+        rows = list(rows[:200])
+        return Response(
+            {
+                "summary": claim_benchmark_gold_summary(
+                    evaluation_set_id=evaluation_set_id or None,
+                ),
+                "count": total_count,
+                "returned_count": len(rows),
+                "truncated": total_count > len(rows),
+                "results": [_claim_judgment_payload(row) for row in rows],
+            }
+        )
+
+    def post(self, request):
+        serializer = ClaimBenchmarkJudgmentWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        query = values.pop("query")
+        evidence_span = values.pop("evidence_span")
+        with transaction.atomic():
+            document_revision = (
+                DocumentRevision.objects.select_for_update()
+                .select_related("asset__edition__work")
+                .get(pk=evidence_span.document_revision_id)
+            )
+            evidence_span = EvidenceSpan.objects.select_for_update().get(pk=evidence_span.pk)
+            evidence_span.document_revision = document_revision
+            _validate_current_gold_evidence(evidence_span)
+            row, created = ClaimBenchmarkJudgment.objects.get_or_create(
+                query=query,
+                evidence_span=evidence_span,
+                defaults={**values, "created_by": request.user},
+            )
+            if not created:
+                for field, value in values.items():
+                    setattr(row, field, value)
+                row.save(update_fields=[*values.keys(), "updated_at"])
+        row = get_object_or_404(_claim_judgments(), pk=row.pk)
+        return Response(
+            {
+                "created": created,
+                "judgment": _claim_judgment_payload(row),
+                "summary": claim_benchmark_gold_summary(
+                    evaluation_set_id=row.query.evaluation_set_id,
+                ),
+            },
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class ClaimBenchmarkJudgmentDetailView(APIView):
+    permission_classes = [IsLibraryAdmin]
+
+    def delete(self, request, pk):
+        row = get_object_or_404(ClaimBenchmarkJudgment, pk=pk)
+        row.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SearchEvaluationSetListCreateView(APIView):

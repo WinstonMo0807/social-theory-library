@@ -5171,6 +5171,34 @@ class SiteSetting(UUIDTimeStampedModel):
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
 
+class ProviderCredentialSecret(UUIDTimeStampedModel):
+    """Server-side encrypted credential addressed only by a safe alias."""
+
+    class Purpose(models.TextChoices):
+        RESEARCH_SOURCE = "research_source", "Research Source"
+        AI_RUNTIME = "ai_runtime", "AI Runtime"
+
+    alias = models.SlugField(max_length=64, unique=True)
+    purpose = models.CharField(max_length=32, choices=Purpose.choices, db_index=True)
+    provider_key = models.CharField(max_length=120, blank=True, db_index=True)
+    ciphertext = models.BinaryField()
+    key_version = models.CharField(max_length=40, default="private-data-fernet-v1")
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_provider_credential_secrets",
+    )
+    last_tested_at = models.DateTimeField(null=True, blank=True)
+    last_test_status = models.CharField(max_length=32, blank=True)
+    last_test_message = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["purpose", "alias"]
+        indexes = [models.Index(fields=["purpose", "provider_key"])]
+
+
 class FeaturedSlot(UUIDTimeStampedModel):
     key = models.CharField(max_length=120, unique=True)
     title = models.CharField(max_length=240, blank=True)

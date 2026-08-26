@@ -486,6 +486,14 @@ def _base_queryset(filters: dict):
                 condition |= item
         if condition:
             queryset = queryset.filter(condition)
+    if filters.get("year_min") is not None:
+        queryset = queryset.filter(
+            asset__edition__publication_year__gte=filters["year_min"]
+        )
+    if filters.get("year_max") is not None:
+        queryset = queryset.filter(
+            asset__edition__publication_year__lte=filters["year_max"]
+        )
     if filters.get("theories"):
         queryset = queryset.filter(
             work__knowledge_relations__theory_school__slug__in=filters["theories"],
@@ -578,6 +586,14 @@ def _passage_base_queryset(filters: dict):
                 condition |= item
         if condition:
             queryset = queryset.filter(condition)
+    if filters.get("year_min") is not None:
+        queryset = queryset.filter(
+            page__asset__edition__publication_year__gte=filters["year_min"]
+        )
+    if filters.get("year_max") is not None:
+        queryset = queryset.filter(
+            page__asset__edition__publication_year__lte=filters["year_max"]
+        )
     if filters.get("theories"):
         queryset = queryset.filter(
             page__asset__edition__work__knowledge_relations__theory_school__slug__in=filters["theories"],
@@ -695,6 +711,10 @@ def _meili_filters(
             year_groups.append("(" + " AND ".join(parts) + ")")
     if year_groups:
         output.append("(" + " OR ".join(year_groups) + ")")
+    if filters.get("year_min") is not None:
+        output.append(f"publication_year >= {int(filters['year_min'])}")
+    if filters.get("year_max") is not None:
+        output.append(f"publication_year <= {int(filters['year_max'])}")
     return output
 
 

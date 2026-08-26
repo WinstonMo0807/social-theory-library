@@ -1,10 +1,29 @@
 # 部署说明
 
-更新日期为 2026-08-25。本文件记录源码中的部署入口、安全要求和最近一次 3.0.1 生产发布快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-26。本文件记录源码中的部署入口、安全要求和 3.0.2 正式生产切换快照。任何后续部署仍需重新检查实时状态。
 
-## Version 3.0.1 production cutover
+## Version 3.0.2 production cutover
 
-当前判断为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED WITH EXPLICIT DEGRADED ITEMS`。公网 [https://books.winstonmo.com](https://books.winstonmo.com) 的 `/api/ready/` 返回 3.0.1、database true、pending migrations 0。3.0.0 源码基线仍由 commit `35b5cce` 和 tag `v3.0.0-baseline` 标识。3.0.1 主发布 commit 为 `fa7444d3524f99f81bc5c0c20fbbc3477e81a76e`，release archive SHA-256 为 `16a6d39e76ab743466406e6b8e1617e7bc129f84931c47bacf8949fd00d9db06`。生产 PostgreSQL 事务验收发现并关闭 CuratedClaim 的 `FOR UPDATE + DISTINCT` 缺陷后，API family 使用修复 commit `4c30565c924537e3a90c54b34240b1094a909c3d`。
+当前判断为 `PUBLIC DEPLOYED / PRODUCTION ACCEPTED WITH EXPLICIT DEGRADED ITEMS`。3.0.2 位于 `codex/v3.0.2-admin-convergence`，开发起点是远端 commit `88ded5412ca041312175b93307a0ed697ff6f599`。首轮生产镜像来自候选树 `f0ffad378928591691df45770ad32d3bbd062a50`。该树包含 803 个 tracked file，归档 SHA-256 为 `06d4a5f8024456ccd5fd1832f22e6071e17995de92a401b9e0703a8094598959`，archive 与 tree membership 差异为 0。正式发布随后使用本文件所在的完整 tracked tree 重建同源镜像，并把 tree identity 保存在 image label、deploy-record 和远端 release branch。公开 `/api/ready/` 返回 3.0.2、database true、pending migrations 0。
+
+- 首轮 API image 为 `social-theory-library-api:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:28b1e33d613581cbfe927e9a16ddf91edb44e84a7a2a0049c032c6f77bfaadfd`。Web image 为 `social-theory-library-web:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:60cc9c9358e980a0183265b78fa37987ce91091abe1b270cd29b2bd2462651d1`。API、默认 Worker、Ingestion Worker、Beat 与 Web 使用同一候选 revision。
+- Fresh BackupJob `aedfeac2-b56c-4ba1-ab66-f38dec131e13` 已完成。归档 SHA-256 为 `d15ed054b9a40f6a6a2e8a1c3c83e29afa7a9e1ed5fedd0f0bd11fae5c8f9820`，database dump SHA-256 为 `2385cf3c965fae592957ab7029832f547840ce0ab9f07dc183b0c21cfe8d1eee`。同一备份已在 PostgreSQL 16 disposable instance 完成 restore、migration、Django check 和馆藏 identity rehearsal。
+- catalog 0039 已正式应用。它只建立空的加密 `ProviderCredentialSecret` 表，不回填 Provider 值，不访问外部服务，也不修改馆藏、PDF、索引或 Canonical Knowledge。catalog、ingestion 与 reading 的 migration plan 为空。旧 3.0.1 image 在保留 0039 时仍可 ready，应用回退无需反向 migration，也不得删除 0039 表。
+- 生产回退标签为 `social-theory-library-api:pre-v302-20260826-201433` 与 `social-theory-library-web:pre-v302-20260826-201433`。部署记录位于 `storage/backups/pre-v302-cutover-20260826-201433/deploy-record`，其中保存 environment、Compose、镜像 ID、迁移与恢复演练、身份 hash、切换脚本和回退脚本。破坏性数据库 restore 未执行，仍需明确授权。
+- 第二次 T4 已通过首页、Explore、观点检索、Theory、Scholar、Topic、真实 Work、Reader 和登录页。Semantic 为 hybrid、`fallback_used=false` 且结果非空。Viewpoint 返回 direct 2、oppose 2、qualify 1，并提供真实 Reader locator；默认继续使用 `semantic_v2_baseline`，benchmark gate 为 false。Reader Range 返回 206、正确 Content-Range、`application/pdf` 和 PDF magic。匿名 Ask 返回预期 401。
+- Work 9、Edition 9、Asset 18、ORIGINAL 9、Page 3,679、DocumentRevision 9、EvidenceSpan 3,735。ORIGINAL 总字节为 199,016,197。切换前后 Page identity、ORIGINAL aggregate、活动语义 UID 和 3,005 条索引记录保持一致。open ProcessingJob、open ResearchRun、publication blocker 与 stale Projection 均为 0。
+- 实际上架项有 28 个待处理 Person 候选，Workspace 可见 29 个 Person 候选，正式贡献者列表只有 1 项。Person 候选没有混入 `contributors.items`，批量责任者 metadata 没有采用动作。生产 Web bundle 包含逐项候选决定与按需添加译者的实现。
+- Claim Gold、DerivedClaim 与 CuratedClaim 均为 0。21 个有效 demand 保持 `waiting_for_capability`，publication blocker 为 0。Processing Center 显示 1 类 missing capability、6 项 Provider degradation、9 项 Research Source degradation 和 0 stale Projection。4070 未部署，NLB 没有 credential。用户暂停的 6 个 OCR job 在部署前后保持 paused，切换过程没有恢复或执行 OCR。
+- 首次 smoke 的首页返回 502。Web 容器已在 3000 端口正常监听，根因是 Edge 在 Web 重建后仍持有旧容器 IP。强制重建 Edge 后，首页、Explore 与 readiness 恢复 200。cutover 和 rollback 脚本已补上 Web 重建后的 Edge 强制刷新。该事件没有触发数据库或应用回退。
+- Beat 恢复后的有界观察通过。Redis 中只出现已登记的 worker heartbeat 和健康探针维护消息；active、reserved 和 scheduled 没有 OCR、上传或 Research 任务。6 个 paused OCR job 的 inventory 保持不变，open business task、publication blocker 和 stale Projection 都为 0。
+
+包含本次生产记录的 tracked tree 已用于无 migration 的最终同源镜像替换。最终 tree、image label 和 Git commit 保持一致，并保存在 deploy-record 与 Git 中。本文件不自引用自己的 commit SHA，也不需要为了补写 SHA 再改变冻结树。
+
+最终同源镜像替换不再执行 migration、OCR、backfill、Provider mutation 或活动索引切换。替换后只复核 readiness、核心公网路由、Semantic、Viewpoint、Reader Range、馆藏 identity、paused OCR、任务状态和 fatal log。禁止 `docker compose down -v`，禁止重建或替换 PostgreSQL、Redis、Meilisearch、PDF、模型和活动索引 volume。
+
+## Version 3.0.1 previous production cutover
+
+本节是 3.0.1 的历史生产快照。3.0.0 源码基线仍由 commit `35b5cce` 和 tag `v3.0.0-baseline` 标识。3.0.1 主发布 commit 为 `fa7444d3524f99f81bc5c0c20fbbc3477e81a76e`，release archive SHA-256 为 `16a6d39e76ab743466406e6b8e1617e7bc129f84931c47bacf8949fd00d9db06`。生产 PostgreSQL 事务验收发现并关闭 CuratedClaim 的 `FOR UPDATE + DISTINCT` 缺陷后，API family 使用修复 commit `4c30565c924537e3a90c54b34240b1094a909c3d`。
 
 - API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:3.0.1-claimfix-4c30565c-20260825-071239`，image ID 为 `sha256:b64c61e89495cb96feb638605804ca24cd091e33d28754a94c7b51604977f564`。修复 archive SHA-256 为 `a3018a88215fde89dbaae8f6f92894fb0c0c058b6bbd9f20f45fcfcf5fdc7973`。Web 没有受影响，继续使用 `social-theory-library-web:3.0.1-fa7444d-20260825-055113`，image ID 为 `sha256:c9519d3dd2394e0abd0d72e2cdd75291ca74274122c50bc856a441f73a3f8378`。
 - Fresh BackupJob 为 `77b5fb3a-8c7e-42dc-b410-c6f19167b0c2`。归档为 19,983,666 bytes，SHA-256 为 `6e77e8b88bebe678a0aa1d6bef0c9f22cae13e7f4b703d3de21fba3aa0758ef8`，并通过 `pg_restore --list`。同一归档已在 PostgreSQL 16 disposable clone 完成恢复与 migration rehearsal。
@@ -18,7 +37,7 @@
 
 回退记录位于 `storage/backups/pre-v301-cutover-20260825-055113/deploy-record`。初始 API 回退标签为 `social-theory-library-api:pre-v301-20260825-055113`，Web 回退标签为 `social-theory-library-web:pre-v301-20260825-055113`。Claim 修复子记录位于该目录下的 `claim-publish-hotfix-20260825-071239`，并保留 `social-theory-library-api:pre-v301-claimfix-20260825-071239`、修复前环境、主发布源码、切换脚本和手动回退脚本。应用回退与旧 image additive-schema compatibility 已验证。生产数据库的破坏性 restore 没有执行，仍需明确授权。
 
-4070 客户端当前只执行 `claim_extraction`。其他 capability 不能因 heartbeat 声明而写成已经有执行路径。Laptop 离线时需求保持 waiting，publication 不受阻。Library Synthesis Candidate 尚未实现，不能把 Source Abstract 或模型常识冒充为该能力。
+3.0.1 发布时，4070 客户端只执行 `claim_extraction`。其他 capability 不能因 heartbeat 声明而写成已经有执行路径。Laptop 离线时需求保持 waiting，publication 不受阻。该次发布尚无 Library Synthesis Candidate，不能把 Source Abstract 或模型常识冒充为该能力。3.0.2 的后续实现记录在上节，不能倒写为 3.0.1 已具备。
 
 Research Source 扩展继续遵守源码中的边界。NCPSSD 只允许规则核对后的公开 metadata。全国联合编目必须使用配置的 Z39.50 endpoint 和 credential alias。CNKI、维普、万方只允许合法授权 Provider 或人工 Evidence 导入。Provider 缺失形成可见降级，不放宽 Candidate 与 Evidence 门槛。Baidu CAPTCHA 可能再次发生，Processing Center 必须把它呈现为来源降级。
 

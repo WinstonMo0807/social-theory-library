@@ -158,6 +158,11 @@ from .services.processing import (
     run_external_enrichment_job,
     set_processing_workload_paused,
 )
+from .services.ocr_inventory import (
+    PausedOCRDecisionError,
+    decide_paused_ocr_job,
+    paused_ocr_inventory,
+)
 from .services.review_tasks import ReviewTaskActionError, apply_review_task_action
 from .services.publication import (
     PublicationBlocked,
@@ -2899,6 +2904,7 @@ class ProcessingCenterView(APIView):
                     job_type: {"paused": processing_workload_paused(job_type)}
                     for job_type in PROCESSING_PAUSE_KEYS
                 },
+                "paused_ocr_inventory": paused_ocr_inventory(),
             }
         )
 
@@ -2917,13 +2923,16 @@ class ProcessingCenterView(APIView):
                 actor=request.user,
             )
             queued = 0
-            if not paused:
+            if not paused and workload_job_type != ProcessingJob.JobType.OCR:
                 queued = resume_paused_workload(workload_job_type, actor=request.user)
             return Response(
                 {
                     "job_type": workload_job_type,
                     "paused": paused,
                     "queued": queued,
+                    "individual_review_required": bool(
+                        not paused and workload_job_type == ProcessingJob.JobType.OCR
+                    ),
                     **counts,
                 }
             )
@@ -2970,6 +2979,25 @@ class ProcessingCenterView(APIView):
             ProcessingJob.objects.select_related("asset", "upload_item"),
             pk=job_id,
         )
+        if action == "resolve_paused_ocr":
+            try:
+                job, classification = decide_paused_ocr_job(
+                    job,
+                    decision=str(request.data.get("decision") or ""),
+                    actor=request.user,
+                    reason=str(request.data.get("reason") or ""),
+                )
+            except PausedOCRDecisionError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response(
+                {
+                    "job_id": str(job.id),
+                    "status": job.status,
+                    "category": classification.category,
+                    "decision": str(request.data.get("decision") or ""),
+                },
+                status=202 if job.status == ProcessingJob.Status.PENDING else 200,
+            )
         if action == "pause":
             try:
                 job = request_processing_job_pause(job)

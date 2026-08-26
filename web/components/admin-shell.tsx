@@ -9,14 +9,11 @@ import {
   ChartNoAxesCombined,
   Cloud,
   CircleDot,
-  GitBranch,
-  GitFork,
   GraduationCap,
   LayoutDashboard,
   Menu,
   RefreshCw,
   Search,
-  ScanSearch,
   Send,
   Sparkles,
   Tags,
@@ -34,10 +31,9 @@ import { Wordmark } from "./site-header";
 const navigation = [
   ["工作", [
     ["/admin", LayoutDashboard, "今日工作"],
-    ["/admin/uploads", Upload, "上传与批次"],
+    ["/admin/uploads", Upload, "上传与上架"],
     ["/admin/review", Boxes, "待处理"],
     ["/admin/publication", Send, "发布准备"],
-    ["/admin/candidates", CircleDot, "待候选审核"],
   ]],
   ["馆藏", [
     ["/admin/library", BookOpen, "作品"],
@@ -48,12 +44,8 @@ const navigation = [
     ["/admin/knowledge", Sparkles, "Knowledge Studio"],
     ["/admin/scholars", UserRound, "学者"],
     ["/admin/disciplines", GraduationCap, "学科"],
-    ["/admin/subdisciplines", GitBranch, "子学科"],
-    ["/admin/theory-nodes", CircleDot, "理论与概念"],
+    ["/admin/theory-nodes", CircleDot, "理论传统"],
     ["/admin/topics", Tags, "主题"],
-    ["/admin/theory-relations", GitFork, "关系与时间轴"],
-    ["/admin/query-lexicon", Search, "QueryLexicon"],
-    ["/admin/semantic-index", ScanSearch, "语义索引"],
   ]],
   ["策展", [
     ["/admin/reading-paths", BookOpen, "阅读路径"],
@@ -61,7 +53,6 @@ const navigation = [
   ]],
   ["系统", [
     ["/admin/processing", ChartNoAxesCombined, "Processing Center"],
-    ["/admin/status", Activity, "系统状态"],
     ["/admin/distribution", Cloud, "备份与存储"],
     ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
     ["/admin/users", Users, "用户与权限"],
@@ -70,6 +61,7 @@ const navigation = [
 ] as const;
 
 const routeCapabilities: Record<string, string[]> = {
+  "/admin/processing": ["can_view_system_status"],
   "/admin/status": ["can_view_system_status"],
   "/admin/system-health": ["can_view_system_status"],
   "/admin/query-lexicon": ["can_view_query_lexicon"],
@@ -84,6 +76,7 @@ const routeCapabilities: Record<string, string[]> = {
 // authority for every permission check.  It gives older session payloads a
 // safe, predictable fallback while newer payloads use the capability snapshot.
 const administratorOnlyRoutes = new Set([
+  "/admin/processing",
   "/admin/status",
   "/admin/system-health",
   "/admin/query-lexicon",
@@ -94,7 +87,7 @@ const administratorOnlyRoutes = new Set([
   "/admin/settings",
 ]);
 
-const staffRoles = ["admin", "editor", "reviewer"] as const;
+const staffRoles = ["admin", "editor"] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -242,7 +235,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏……" aria-label="搜索后台馆藏" /></label>
             <button className="sr-only" type="submit">搜索</button>
           </form>
-          <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link>
+          {canViewRoute("/admin/processing") ? <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link> : null}
           <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small></p></div>
         </header> : null}
         <div className="admin-content">{children}</div>

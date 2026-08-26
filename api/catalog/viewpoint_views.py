@@ -9,8 +9,27 @@ from rest_framework.views import APIView
 
 from common.concurrency import capacity_slot
 
+from .models import (
+    KnowledgeNode,
+    KnowledgePublicationStatus,
+    RelationReviewStatus,
+    WorkNodeRelation,
+    WorkTopicRelation,
+)
 from .services.semantic_search import viewer_access_statuses
-from .services.viewpoint_search import ViewpointSearchError, search_viewpoints_v3
+from .services.viewpoint_search import (
+    STANCE_ORDER,
+    ViewpointSearchError,
+    search_viewpoints_v3,
+)
+
+
+ZERO_UUID = "00000000-0000-0000-0000-000000000000"
+SOURCE_TYPE_DOCUMENT_TYPES = {
+    "book": ("book",),
+    "journal": ("journal_article",),
+    "other": ("thesis", "report"),
+}
 
 
 def _query_values(request, name: str) -> list[str]:
@@ -20,6 +39,67 @@ def _query_values(request, name: str) -> list[str]:
     return [value for value in values if value]
 
 
+def _uuid_values(values: list[str]) -> tuple[list[str], list[str]]:
+    identifiers: list[str] = []
+    legacy: list[str] = []
+    for value in values:
+        try:
+            identifiers.append(str(UUID(value)))
+        except (TypeError, ValueError, AttributeError):
+            legacy.append(value)
+    return list(dict.fromkeys(identifiers)), list(dict.fromkeys(legacy))
+
+
+def _bounded_year(request, name: str) -> int | None:
+    raw_value = request.query_params.get(name)
+    if raw_value in (None, ""):
+        return None
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+    return value if 0 < value <= 3000 else None
+
+
+def _intersect_work_ids(
+    current: set[str] | None,
+    candidate: set[str],
+) -> set[str]:
+    return candidate if current is None else current.intersection(candidate)
+
+
+def _canonical_work_ids(
+    *,
+    theory_ids: list[str],
+    topic_ids: list[str],
+) -> set[str] | None:
+    """Resolve normalized identities to Work IDs without requiring index changes."""
+
+    work_ids: set[str] | None = None
+    if theory_ids:
+        theory_work_ids = {
+            str(value)
+            for value in WorkNodeRelation.objects.filter(
+                node_id__in=theory_ids,
+                node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+                node__status=KnowledgePublicationStatus.PUBLISHED,
+                status=KnowledgePublicationStatus.PUBLISHED,
+            ).values_list("work_id", flat=True)
+        }
+        work_ids = _intersect_work_ids(work_ids, theory_work_ids)
+    if topic_ids:
+        topic_work_ids = {
+            str(value)
+            for value in WorkTopicRelation.objects.filter(
+                topic_id__in=topic_ids,
+                topic__editorial_status="published",
+                review_status=RelationReviewStatus.APPROVED,
+            ).values_list("work_id", flat=True)
+        }
+        work_ids = _intersect_work_ids(work_ids, topic_work_ids)
+    return work_ids
+
+
 def _public_filters(request) -> dict:
     requested_work_ids: list[str] = []
     for value in _query_values(request, "work") or _query_values(request, "work_id"):
@@ -27,6 +107,40 @@ def _public_filters(request) -> dict:
             requested_work_ids.append(str(UUID(value)))
         except (TypeError, ValueError, AttributeError):
             continue
+    scholar_ids, _legacy_scholars = _uuid_values(
+        _query_values(request, "scholar") or _query_values(request, "author")
+    )
+    theory_ids, legacy_theories = _uuid_values(_query_values(request, "theory"))
+    topic_ids, legacy_topics = _uuid_values(_query_values(request, "topic"))
+    resolved_work_ids = _canonical_work_ids(
+        theory_ids=theory_ids,
+        topic_ids=topic_ids,
+    )
+    if requested_work_ids:
+        requested = set(requested_work_ids)
+        resolved_work_ids = _intersect_work_ids(resolved_work_ids, requested)
+    if resolved_work_ids is not None:
+        requested_work_ids = sorted(resolved_work_ids) or [ZERO_UUID]
+
+    requested_source_types = [
+        value
+        for value in _query_values(request, "source_type")
+        if value in SOURCE_TYPE_DOCUMENT_TYPES
+    ]
+    document_types = list(_query_values(request, "document_type"))
+    for source_type in requested_source_types:
+        document_types.extend(SOURCE_TYPE_DOCUMENT_TYPES[source_type])
+    document_types = list(dict.fromkeys(document_types))
+
+    relations = [
+        value
+        for value in _query_values(request, "relation")
+        if value in STANCE_ORDER
+    ]
+    year_min = _bounded_year(request, "year_min")
+    year_max = _bounded_year(request, "year_max")
+    if year_min is not None and year_max is not None and year_min > year_max:
+        year_min, year_max = year_max, year_min
     authenticated = bool(request.user.is_authenticated)
     staff = bool(
         authenticated
@@ -36,12 +150,18 @@ def _public_filters(request) -> dict:
         )
     )
     return {
-        "document_types": _query_values(request, "document_type"),
+        "document_types": document_types,
+        "source_types": requested_source_types,
         "languages": _query_values(request, "language"),
-        "authors": _query_values(request, "author") or _query_values(request, "scholar"),
+        "authors": scholar_ids,
         "years": _query_values(request, "year"),
-        "theories": _query_values(request, "theory"),
-        "topics": _query_values(request, "topic"),
+        "year_min": year_min,
+        "year_max": year_max,
+        "relations": relations,
+        "theory_node_ids": theory_ids,
+        "topic_ids": topic_ids,
+        "theories": legacy_theories,
+        "topics": legacy_topics,
         "concepts": _query_values(request, "concept") or _query_values(request, "tag"),
         "access": _query_values(request, "access"),
         "work_ids": requested_work_ids,

@@ -17,13 +17,19 @@ from catalog.models import (
     DerivedClaim,
     DocumentRevision,
     Edition,
+    EvidencePack,
     EvidenceSpan,
     Page,
     PublicationState,
     Work,
 )
 from catalog.services.claims.pipeline import schedule_document_claim_extraction
+from catalog.services.evidence_envelope import evidence_span_envelope
+from catalog.services.research.evidence_pack import create_evidence_pack
+from catalog.services.research.library_synthesis import schedule_library_synthesis
+from catalog.services.research.task_profiles import resolve_task_profile
 from common.task_runtime import queue_or_wait
+from ingestion.models import MetadataCandidate, UploadBatch, UploadItem
 
 
 pytestmark = pytest.mark.django_db
@@ -105,17 +111,19 @@ def _source(*, title="Remote claim", pages=1):
     return revision, spans
 
 
-def _heartbeat_payload(*, concurrency=1):
-    return {
+def _heartbeat_payload(*, concurrency=1, capabilities=None, task_kinds=None):
+    capabilities = list(capabilities or ["llm_small"])
+    payload = {
         "executor_id": "remote-gpu:4070-test",
         "display_name": "RTX 4070 test worker",
-        "capabilities": ["llm_small"],
+        "capabilities": capabilities,
         "model_revisions": {
-            "llm_small": {
+            capability: {
                 "provider": "ollama",
                 "model": "qwen-claim-8b",
                 "revision": "model-sha-4070-test",
             }
+            for capability in capabilities
         },
         "concurrency": concurrency,
         "metadata": {
@@ -124,6 +132,13 @@ def _heartbeat_payload(*, concurrency=1):
             "secret": "must-not-be-stored",
         },
     }
+    if task_kinds is not None:
+        payload["metadata"]["task_kinds"] = list(task_kinds)
+        payload["metadata"]["task_profiles"] = {
+            task_kind: [task_kind]
+            for task_kind in task_kinds
+        }
+    return payload
 
 
 @override_settings(
@@ -284,6 +299,111 @@ def test_remote_completion_persists_claim_evidence_before_idempotent_completion(
     conflict = _post(client, url, changed)
     assert conflict.status_code == 409
     assert conflict.json()["code"] == "completion_conflict"
+
+
+@override_settings(
+    CAPABILITY_REMOTE_WORKER_ENABLED=True,
+    CAPABILITY_REMOTE_WORKER_SHARED_SECRET=WORKER_SECRET,
+)
+def test_remote_library_synthesis_protocol_persists_evidence_candidate_only(
+    client,
+    admin_user,
+):
+    revision, spans = _source(title="remote library synthesis", pages=2)
+    pack = create_evidence_pack(
+        task_profile=resolve_task_profile("library_synthesis"),
+        envelopes=[evidence_span_envelope(span).as_dict() for span in spans],
+        retrieval_snapshot={
+            "profile": "library_synthesis",
+            "field_name": "abstract",
+            "evidence_span_ids": [str(span.id) for span in spans],
+            "collection_only": True,
+        },
+        subject_type="work",
+        subject_id=str(revision.asset.edition.work_id),
+        actor=admin_user,
+    )
+    batch = UploadBatch.objects.create(created_by=admin_user, expected_count=1)
+    item = UploadItem.objects.create(
+        batch=batch,
+        source_filename="library-synthesis.pdf",
+        edition=revision.asset.edition,
+    )
+    scheduled = schedule_library_synthesis(
+        pack,
+        upload_item=item,
+        field_name="abstract",
+    )
+    demand = CapabilityDemand.objects.get(pk=scheduled["demand_id"])
+    assert demand.state == CapabilityDemand.State.WAITING_FOR_CAPABILITY
+
+    heartbeat = _heartbeat_payload(
+        capabilities=["llm_large"],
+        task_kinds=["library_synthesis"],
+    )
+    online = _post(client, reverse("remote-worker-heartbeat"), heartbeat)
+    claimed = _post(
+        client,
+        reverse("remote-worker-claim"),
+        {"executor_id": "remote-gpu:4070-test"},
+    )
+
+    assert online.status_code == 200
+    assert claimed.status_code == 200
+    lease = claimed.json()["lease"]
+    job = claimed.json()["job"]
+    assert job["task_kind"] == "library_synthesis"
+    assert job["task_profile_key"] == "library_synthesis"
+    assert job["input"]["evidence_pack_id"] == str(pack.id)
+    assert job["input"]["evidence_pack_fingerprint"] == pack.fingerprint
+    assert {row["id"] for row in job["input"]["evidence"]} == {
+        str(span.id) for span in spans
+    }
+
+    result = {
+        "provider": "ollama",
+        "model": "qwen-claim-8b",
+        "model_revision": "model-sha-4070-test",
+        "candidate": {
+            "value": "馆藏综合候选仅概括两页原文中的制度保障、失业与贫困关系。",
+            "evidence_span_ids": [str(span.id) for span in spans],
+            "rationale": "两处馆藏原文共同支持这一概括。",
+        },
+    }
+    completion_payload = {
+        "executor_id": "remote-gpu:4070-test",
+        "lease_token": lease["lease_token"],
+        "completion_id": "library-synthesis-completion-1",
+        "result": result,
+    }
+    completion_url = reverse(
+        "remote-worker-complete",
+        kwargs={"demand_id": lease["demand_id"]},
+    )
+    completed = _post(client, completion_url, completion_payload)
+    replay = _post(client, completion_url, completion_payload)
+
+    assert completed.status_code == 200
+    assert completed.json()["created"] == 1
+    assert completed.json()["claim_ids"] == []
+    assert len(completed.json()["candidate_ids"]) == 1
+    assert replay.status_code == 200
+    assert replay.json()["candidate_ids"] == completed.json()["candidate_ids"]
+    assert replay.json()["idempotent_replay"] is True
+    candidate = MetadataCandidate.objects.get(pk=completed.json()["candidate_ids"][0])
+    assert candidate.upload_item == item
+    assert candidate.field_name == "abstract"
+    assert candidate.source == "ai_library_synthesis_v1"
+    assert candidate.evidence["evidence_pack_id"] == str(pack.id)
+    assert set(candidate.evidence["evidence_span_ids"]) == {
+        str(span.id) for span in spans
+    }
+    assert candidate.evidence_records.count() == 2
+    revision.asset.edition.work.refresh_from_db()
+    assert revision.asset.edition.work.abstract == ""
+    demand.refresh_from_db()
+    assert demand.state == CapabilityDemand.State.COMPLETED
+    assert demand.publication_blocking is False
 
 
 @override_settings(

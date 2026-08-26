@@ -15,6 +15,7 @@ import {
 } from "../forms/workflow-fields";
 import { WorkCurationEditor } from "../curation/work-curation-editor";
 import { WorkflowInspector, type InspectorSelection } from "../inspector/workflow-inspector";
+import { buildCandidateActionBody, type CandidateActionDescriptor } from "../research/candidate-action-contract";
 import { ResearchEntityPicker } from "../research/research-entity-picker";
 import {
   ResearchSuggestionCapabilityContext,
@@ -25,6 +26,7 @@ import { ResearchWorkspaceContext } from "../research/research-workspace-context
 import {
   WORKFLOW_STEP_KEYS,
   WORKFLOW_STEP_LABELS,
+  WORKBENCH_STEP_KEYS,
   bibliographyFields,
   dirtyFieldCount,
   invalidatedResearchFields,
@@ -43,7 +45,6 @@ import {
 } from "./workflow-state";
 import {
   asArray,
-  asBoolean,
   asNumber,
   asRecord,
   asString,
@@ -83,33 +84,6 @@ const contributorRoleOptions = [
   { value: "subject", label: "研究对象" },
 ] as const;
 
-const nodeRoleOptions = [
-  { value: "foundational_work", label: "奠基性原著" },
-  { value: "systematic_exposition", label: "系统阐释" },
-  { value: "theoretical_development", label: "理论发展" },
-  { value: "empirical_application", label: "经验应用" },
-  { value: "comparative_study", label: "比较研究" },
-  { value: "critique", label: "批评反思" },
-  { value: "general_mention", label: "一般提及" },
-] as const;
-
-const theoryRoleOptions = [
-  { value: "foundational", label: "奠基文献" },
-  { value: "development", label: "理论发展" },
-  { value: "introduction", label: "入门综述" },
-  { value: "empirical_application", label: "经验应用" },
-  { value: "method_use", label: "方法使用" },
-  { value: "criticism", label: "理论批评" },
-  { value: "theory_history", label: "理论史研究" },
-  { value: "local_mention", label: "局部提及" },
-] as const;
-
-const strengthOptions = [
-  { value: "high", label: "高" },
-  { value: "medium", label: "中" },
-  { value: "low", label: "低" },
-] as const;
-
 function createDraftSessionId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
   return `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -136,31 +110,52 @@ function normalizeIssue(value: unknown, fallbackStep?: WorkflowStepKey): Workflo
 
 function normalizeWorkflow(value: unknown): WorkflowEvaluation {
   const row = asRecord(value);
-  const current = isWorkflowStepKey(row.current_step) ? row.current_step : "file";
+  const backendCurrent = isWorkflowStepKey(row.current_step) ? row.current_step : "file";
+  const current = backendCurrent === "knowledge" ? "curation" : backendCurrent;
   const rawSteps = asArray(row.steps);
   const supplied = new Map<WorkflowStepKey, WorkflowStep>();
+  let legacyKnowledgeStep: WorkflowStep | null = null;
   rawSteps.forEach((entry) => {
     const step = asRecord(entry);
     if (!isWorkflowStepKey(step.key)) return;
     const stepKey = step.key;
     const statusValue = asString(step.status, "pending") as WorkflowStepStatus;
-    supplied.set(stepKey, {
+    const normalizedStep: WorkflowStep = {
       key: stepKey,
       label: WORKFLOW_STEP_LABELS[stepKey],
       status: statusValue,
       issues: asArray(step.issues).map((issue) => normalizeIssue(issue, stepKey)),
       summary: step.summary as WorkflowStep["summary"],
       next_action: asString(step.next_action) || asString(asRecord(step.next_action).label) || null,
-    });
+    };
+    if (stepKey === "knowledge") legacyKnowledgeStep = normalizedStep;
+    else supplied.set(stepKey, normalizedStep);
   });
+  const absorbedKnowledgeStep = legacyKnowledgeStep as WorkflowStep | null;
+  if (absorbedKnowledgeStep) {
+    const curation = supplied.get("curation") ?? blankStep("curation", current);
+    supplied.set("curation", {
+      ...curation,
+      status: backendCurrent === "knowledge" ? absorbedKnowledgeStep.status : curation.status,
+      issues: [
+        ...absorbedKnowledgeStep.issues.map((issue) => ({ ...issue, step: "curation" as const })),
+        ...curation.issues,
+      ],
+      summary: curation.summary ?? absorbedKnowledgeStep.summary,
+      next_action: curation.next_action ?? absorbedKnowledgeStep.next_action,
+    });
+  }
   return {
     overall_status: asString(row.overall_status, "working"),
     current_step: current,
-    suggested_next_step: isWorkflowStepKey(row.suggested_next_step) ? row.suggested_next_step : null,
-    steps: WORKFLOW_STEP_KEYS.map((key) => supplied.get(key) ?? blankStep(key, current)),
+    suggested_next_step: isWorkflowStepKey(row.suggested_next_step)
+      ? row.suggested_next_step === "knowledge" ? "curation" : row.suggested_next_step
+      : null,
+    steps: WORKBENCH_STEP_KEYS.map((key) => supplied.get(key) ?? blankStep(key, current)),
     unresolved_count: asNumber(row.unresolved_count),
     warnings_count: asNumber(row.warnings_count),
     blockers_count: asNumber(row.blockers_count),
+    absorbed_legacy_knowledge_status: absorbedKnowledgeStep?.status,
   };
 }
 
@@ -363,21 +358,15 @@ function ContributorsBody({ draft, canEdit, errors, update, research }: BodyProp
     const name = asString(item.display_name);
     const rowSuggestions = suggestions.filter((candidate) => !candidate.source_name || asString(candidate.source_name) === name || asString(candidate.role) === role);
     const linked = item.person_id ? [{ id: asString(item.person_id), name }] : [];
-    return <div className="workflow-contributor-row"><CanonicalField name={`items.${index}.display_name`} label={role === "author" ? "作者姓名" : role === "translator" ? "译者姓名" : "显示名称"} value={name} onChange={(next) => setItem({ ...item, display_name: next, role })} required disabled={!canEdit} error={errorFor(errors, `items.${index}.display_name`)} />{fixedRole ? <div className="workflow-contributor-fixed-role"><span>角色</span><strong>{role === "author" ? "作者" : "译者"}</strong></div> : <CanonicalField name={`items.${index}.role`} label="角色" value={role} onChange={(next) => setItem({ ...item, role: next })} options={contributorRoleOptions.filter((option) => !["author", "translator"].includes(option.value))} required disabled={!canEdit} />}<ResearchEntityPicker disabled={!canEdit} label="学者身份" endpoint="/catalog/admin/scholars/" entityType="person" step="contributors" field="contributors" queryHint={name} idField="person_id" nameField="preferred_name" values={linked} suggestions={rowSuggestions} onInspect={(candidate) => research.onInspect([candidate], `${name || (role === "author" ? "作者" : "责任者")}的身份候选`)} onChange={(next) => { const person = next[0]; setItem({ ...item, role, person_id: person?.id ?? null, display_name: name || person?.name || "", resolution_state: person?.id ? "selected" : asString(person?.status, "unresolved") }); }} /></div>;
+    return <div className="workflow-contributor-row"><CanonicalField name={`items.${index}.display_name`} label={role === "author" ? "作者姓名" : role === "translator" ? "译者姓名" : "显示名称"} value={name} onChange={(next) => setItem({ ...item, display_name: next, role })} disabled={!canEdit} error={errorFor(errors, `items.${index}.display_name`)} />{fixedRole ? <div className="workflow-contributor-fixed-role"><span>角色</span><strong>{role === "author" ? "作者" : "译者"}</strong></div> : <CanonicalField name={`items.${index}.role`} label="角色" value={role} onChange={(next) => setItem({ ...item, role: next })} options={contributorRoleOptions.filter((option) => !["author", "translator"].includes(option.value))} disabled={!canEdit} />}<div data-field={`items.${index}.person_id`}><ResearchEntityPicker disabled={!canEdit} label="学者身份" endpoint="/catalog/admin/scholars/" entityType="person" step="contributors" field="contributors" queryHint={name} idField="person_id" nameField="preferred_name" values={linked} suggestions={rowSuggestions} onInspect={(candidate) => research.onInspect([candidate], `${name || (role === "author" ? "作者" : "责任者")}的身份候选`)} onChange={(next) => { const person = next[0]; setItem({ ...item, role, person_id: person?.id ?? null, display_name: name || person?.name || "", resolution_state: person?.id ? "selected" : asString(person?.status, "unresolved") }); }} />{errorFor(errors, `items.${index}.person_id`) ? <small className="workflow-field-error" role="alert">{errorFor(errors, `items.${index}.person_id`)}</small> : null}</div></div>;
   };
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="contributors" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><div className="workflow-contributor-groups"><RepeatableField disabled={!canEdit} label="作者" values={authorItems.length ? authorItems : [blank("author")]} create={() => blank("author")} onChange={(next) => replaceRoles(["author"], next)} addLabel="添加作者" render={(item, index, setItem) => renderContributor("author", item, index, setItem)} /><RepeatableField disabled={!canEdit} label="译者" values={translatorItems.length ? translatorItems : [blank("translator")]} create={() => blank("translator")} onChange={(next) => replaceRoles(["translator"], next)} addLabel="添加译者" render={(item, index, setItem) => renderContributor("translator", item, index, setItem)} /><details className="workflow-other-contributors" open={otherItems.length > 0}><summary>其他责任者 <span>{otherItems.length}</span></summary><RepeatableField disabled={!canEdit} label="编者、导师及其他角色" values={otherItems} create={() => blank("editor")} onChange={(next) => replaceRoles([...new Set(otherItems.map((item) => asString(item.role, "editor")))], next)} addLabel="添加其他责任者" render={(item, index, setItem) => renderContributor(undefined, item, index, setItem)} /></details></div></>;
+  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="contributors" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><div className="workflow-contributor-groups"><RepeatableField disabled={!canEdit} label="作者" values={authorItems} emptyValue={blank("author")} create={() => blank("author")} onChange={(next) => replaceRoles(["author"], next)} addLabel="添加作者" render={(item, index, setItem) => renderContributor("author", item, index, setItem)} /><RepeatableField disabled={!canEdit} label="译者" values={translatorItems} create={() => blank("translator")} onChange={(next) => replaceRoles(["translator"], next)} addLabel="添加译者" render={(item, index, setItem) => renderContributor("translator", item, index, setItem)} /><details className="workflow-other-contributors" open={otherItems.length > 0}><summary>其他责任者 <span>{otherItems.length}</span></summary><RepeatableField disabled={!canEdit} label="编者、导师及其他角色" values={otherItems} create={() => blank("editor")} onChange={(next) => replaceRoles([...new Set(otherItems.map((item) => asString(item.role, "editor")))], next)} addLabel="添加其他责任者" render={(item, index, setItem) => renderContributor(undefined, item, index, setItem)} /></details></div></>;
 }
 
 function ClassificationBody({ draft, canEdit, update, research }: BodyProps) {
   const suggestions = research.suggestions.filter((candidate) => ["primary_disciplines", "related_disciplines", "subdisciplines", "classification"].includes(asString(candidate.field_name ?? candidate.field)));
   const inspect = (candidate: WorkflowCandidate) => research.onInspect([candidate], `${asString(candidate.label, "分类建议")} · 来源检查`);
   return <div className="workflow-classification"><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="classification" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><ResearchEntityPicker disabled={!canEdit} label="主要学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="classification" field="primary_disciplines" values={entities(draft.primary_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "primary_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "primary_disciplines", next.slice(0, 1))} /><ResearchEntityPicker multiple disabled={!canEdit} label="相关学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="classification" field="related_disciplines" values={entities(draft.related_disciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "related_disciplines")} onInspect={inspect} onChange={(next) => update("classification", "related_disciplines", next)} /><ResearchEntityPicker multiple disabled={!canEdit} label="子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="classification" field="subdisciplines" values={entities(draft.subdisciplines)} suggestions={suggestions.filter((candidate) => asString(candidate.field_name) === "subdisciplines")} onInspect={inspect} onChange={(next) => update("classification", "subdisciplines", next)} /><p className="workflow-classification-note">采用候选或保存当前选择即会记录人工决定，无需再次勾选确认。</p></div>;
-}
-
-function KnowledgeBody({ draft, canEdit, errors, update, research }: BodyProps) {
-  const relations = normalizeItems(draft.relations, "name");
-  const relationSuggestions = research.suggestions.filter((candidate) => ["relations", "relation", "knowledge_node"].includes(asString(candidate.field_name ?? candidate.field)));
-  return <><ResearchSuggestionPanel mode={research.mode} itemId={research.itemId} workId={research.workId} step="knowledge" token={research.token} onInspect={research.onInspect} onUpdated={research.onUpdated} onMessage={research.onMessage} /><RepeatableField disabled={!canEdit} label="正式知识关系" values={relations} create={() => ({ id: null, target_type: "theory", target_id: null, name: "", role: "local_mention", strength: "medium", is_primary: false, review_status: "pending", evidence_summary: "" })} onChange={(next) => update("knowledge", "relations", next)} addLabel="添加理论或主题关系" render={(relation, index, setRelation) => { const targetType = asString(relation.target_type, "theory"); const relationRoleOptions = targetType === "knowledge_node" ? nodeRoleOptions : theoryRoleOptions; const defaultRole = targetType === "knowledge_node" ? "general_mention" : "local_mention"; const endpoint = targetType === "topic" ? "/catalog/admin/topics/" : targetType === "theory" ? "/catalog/admin/theory-schools/" : "/catalog/admin/theory-system/nodes/"; const picked = relation.target_id ? [{ id: asString(relation.target_id), name: asString(relation.name) }] : []; const acceptsType = (candidate: WorkflowCandidate) => { const entityType = asString(candidate.entity_type); if (!entityType) return true; if (targetType === "theory") return entityType === "theory" || entityType === "theory_school"; return entityType === targetType; }; return <div className="workflow-knowledge-relation"><CanonicalField name={`relations.${index}.target_type`} label="关联对象类型" value={targetType} onChange={(next) => setRelation({ ...relation, target_type: next, target_id: null, name: "", role: next === "knowledge_node" ? "general_mention" : "local_mention" })} options={[{ value: "theory", label: "理论" }, { value: "topic", label: "主题" }, { value: "knowledge_node", label: "知识节点" }]} disabled={!canEdit} /><ResearchEntityPicker disabled={!canEdit} label="关联对象" endpoint={endpoint} entityType={targetType} step="knowledge" field="relations" queryHint={asString(relation.name)} values={picked} suggestions={relationSuggestions.filter(acceptsType)} onInspect={(candidate) => research.onInspect([candidate], "知识关系候选与证据")} onChange={(next) => { const value = next[0]; setRelation({ ...relation, target_id: value?.id ?? null, name: value?.name ?? "", resolution_state: asString(value?.status, "unresolved") }); }} allowUnresolved /><CanonicalField name={`relations.${index}.role`} label="作品角色" value={asString(relation.role, defaultRole)} onChange={(next) => setRelation({ ...relation, role: next })} options={relationRoleOptions} disabled={!canEdit || targetType === "topic"} /><CanonicalField name={`relations.${index}.strength`} label="关联强度" value={asString(relation.strength, "medium")} onChange={(next) => setRelation({ ...relation, strength: next })} options={strengthOptions} disabled={!canEdit} /><label className="workflow-checkbox"><input type="checkbox" checked={asBoolean(relation.is_primary)} disabled={!canEdit} onChange={(event) => setRelation({ ...relation, is_primary: event.target.checked })} /><span>主要关系</span></label><CanonicalField name={`relations.${index}.evidence_summary`} label="证据摘要" value={asString(relation.evidence_summary ?? relation.evidence_text)} onChange={(next) => setRelation({ ...relation, evidence_summary: next })} multiline rows={3} disabled={!canEdit} help={`审核状态 ${asString(relation.review_status, "pending")}`} /></div>; }} /><label className="workflow-section-confirmation" data-field="confirmed"><input type="checkbox" checked={asBoolean(draft.confirmed)} disabled={!canEdit} onChange={(event) => update("knowledge", "confirmed", event.target.checked)} /><span>我已核对正式 Theory、Topic 与 KnowledgeNode 关系</span></label>{errorFor(errors, "confirmed") ? <QualityIssue message={errorFor(errors, "confirmed")!} tone="blocker" /> : null}</>;
 }
 
 function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, busy }: BodyProps) {
@@ -406,7 +395,6 @@ function WorkflowSectionBody(props: BodyProps) {
   if (props.step === "bibliography") return <BibliographyBody {...props} />;
   if (props.step === "contributors") return <ContributorsBody {...props} />;
   if (props.step === "classification") return <ClassificationBody {...props} />;
-  if (props.step === "knowledge") return <KnowledgeBody {...props} />;
   if (props.step === "reader") return <ReaderBody {...props} />;
   if (props.step === "curation") return <><ResearchSuggestionPanel mode={props.research.mode} itemId={props.research.itemId} workId={props.research.workId} step="curation" token={props.research.token} onInspect={props.research.onInspect} onUpdated={props.research.onUpdated} onMessage={props.research.onMessage} /><WorkCurationEditor workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions} onInspect={(candidate) => props.research.onInspect([candidate], "知识策展候选与依据")} /></>;
   return <PublicationBody {...props} />;
@@ -562,23 +550,11 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
         setMessage("该责任者候选没有可采用的姓名，请查看依据后手工处理。");
         return false;
       }
-      const currentItems = normalizeItems(draftsRef.current?.contributors.items, "display_name");
-      update("contributors", "items", [
-        ...currentItems.filter((item) => asString(item.role, "author") !== role),
-        ...names.map((displayName, index) => ({
-          id: null,
-          person_id: null,
-          display_name: displayName,
-          role,
-          order: index,
-          approved: false,
-          resolution_state: "candidate",
-          candidate_count: 1,
-        })),
-      ]);
-      setMessage("责任者候选已填入当前草稿。请关联馆内人物、创建学者主页或仅添加为责任者后再保存。");
+      setMessage(names.length > 1
+        ? `该来源识别出 ${names.length} 位${role === "author" ? "作者" : "译者"}。请在责任者候选中逐项核对并只采用需要的人物。`
+        : `请在责任者候选中核对${names[0]}，再关联馆内人物、创建新学者主页或仅添加为责任者。`);
       goToStep("contributors", "items.0.display_name");
-      return true;
+      return false;
     }
     const explicitStep = asString(candidate.step);
     const metadataStep: WorkflowStepKey = ["version_label", "publication_date", "publication_year", "publisher", "publication_place", "isbn10", "isbn13", "series", "extent", "responsibility_statement", "journal_title", "volume", "issue", "page_range", "doi", "degree_institution", "degree_type", "report_institution"].includes(field)
@@ -923,7 +899,18 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, refresh, token, workId]);
 
   const decideCandidate = useCallback(async (candidate: WorkflowCandidate, action: string) => {
-    if (!candidate.decision_url || !token) {
+    if (["apply_to_draft", "apply_draft", "use_value"].includes(action)) {
+      const editedValue = candidate.edited_value;
+      return applyCandidateToDraft(
+        editedValue === undefined
+          ? candidate
+          : { ...candidate, proposed_value: editedValue },
+      );
+    }
+    const descriptorRow = asRecord(candidate.decision_descriptor);
+    const descriptor = asString(descriptorRow.action) ? descriptorRow as unknown as CandidateActionDescriptor : null;
+    const decisionUrl = descriptor?.url || asString(candidate.decision_url);
+    if (!decisionUrl || !token) {
       setMessage("该候选没有提供安全的决定入口，请刷新后重试。");
       return false;
     }
@@ -935,7 +922,8 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     try {
       const entityTargetType = asString(candidate.target_type ?? candidate.candidate_entity_type ?? candidate.entity_type);
       const entityTargetId = asString(candidate.candidate_entity_id ?? candidate.entity_id);
-      const body = candidate.kind === "derived_claim_curation"
+      const editedValue = candidate.edited_value;
+      const legacyBody = candidate.kind === "derived_claim_curation"
         ? {
             action,
             proposition: action === "accept_with_edit" ? asString(candidate.edited_proposition) : "",
@@ -949,8 +937,14 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
             confirm_identity: action === "link_existing",
             reason: "馆藏工作流中的管理员决定",
           }
-        : { action };
-      await apiRequest(candidate.decision_url, { method: "POST", body: JSON.stringify(body) }, token);
+        : {
+            action,
+            ...(action === "accept_with_edit" && editedValue !== undefined ? { proposed_value: editedValue } : {}),
+          };
+      const body = descriptor
+        ? buildCandidateActionBody(descriptor, editedValue, legacyBody)
+        : legacyBody;
+      await apiRequest(decisionUrl, { method: descriptor?.method || "POST", body: JSON.stringify(body) }, token);
       setResearchSuggestions((current) => {
         const next = { ...current };
         for (const stepKey of WORKFLOW_STEP_KEYS) {
@@ -968,17 +962,18 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       setMessage(reason instanceof Error ? reason.message : "候选决定失败。");
       return false;
     } finally { finishOperation(operationKey); }
-  }, [beginOperation, finishOperation, refresh, token]);
+  }, [applyCandidateToDraft, beginOperation, finishOperation, refresh, token]);
 
   const verifyCandidate = useCallback(async (candidate: WorkflowCandidate) => {
     if (!token) return;
-    const verifyUrl = asString(candidate.verify_url) || `/catalog/admin/research/candidates/${encodeURIComponent(String(candidate.id))}/verify/`;
+    const descriptor = asRecord(candidate.decision_descriptor);
+    const verifyUrl = asString(descriptor.url) || asString(candidate.verify_url) || `/catalog/admin/research/candidates/${encodeURIComponent(String(candidate.id))}/verify/`;
     const operationKey = `candidate-verify-${candidate.id}`;
     if (!beginOperation(operationKey)) return;
     try {
       const result = asRecord(await apiRequest(verifyUrl, {
-        method: "POST",
-        body: JSON.stringify(asRecord(candidate.verify_payload)),
+        method: asString(descriptor.method, "POST"),
+        body: JSON.stringify({ ...asRecord(candidate.verify_payload), ...asRecord(descriptor.payload) }),
       }, token));
       const verified = asString(result.status) === "verified";
       setMessage(asString(result.detail, verified ? "已取得正文证据，候选现在可以采用。" : "没有取得达到要求的正文证据，候选仍不可采用。"));

@@ -10,6 +10,11 @@ export const WORKFLOW_STEP_KEYS = [
   "publication",
 ] as const;
 
+// `knowledge` remains a valid backend compatibility key while its legacy
+// TheorySchool editor is retired. The Workbench presents those decisions in
+// the curation surface and keeps the old hash as a migration alias.
+export const WORKBENCH_STEP_KEYS = WORKFLOW_STEP_KEYS.filter((key) => key !== "knowledge");
+
 export type WorkflowStepKey = (typeof WORKFLOW_STEP_KEYS)[number];
 export type WorkflowStepStatus =
   | "pending"
@@ -52,25 +57,29 @@ export function isWorkflowStepKey(value: unknown): value is WorkflowStepKey {
 
 export function stepFromHash(hash: string, fallback: WorkflowStepKey): WorkflowStepKey {
   const normalized = hash.replace(/^#/, "").trim();
-  return isWorkflowStepKey(normalized) ? normalized : fallback;
+  if (normalized === "knowledge") return "curation";
+  return isWorkflowStepKey(normalized) ? normalized : fallback === "knowledge" ? "curation" : fallback;
 }
 
 export function workflowHashUrl(url: string, step: WorkflowStepKey): string {
   const parsed = new URL(url, "http://workflow.local");
-  return `${parsed.pathname}${parsed.search}#${step}`;
+  return `${parsed.pathname}${parsed.search}#${step === "knowledge" ? "curation" : step}`;
 }
 
 export function sectionPresentations(
   steps: readonly WorkflowStepLike[],
   active: WorkflowStepKey,
 ): Record<WorkflowStepKey, WorkflowSectionPresentation> {
-  const activeIndex = WORKFLOW_STEP_KEYS.indexOf(active);
+  const visibleActive = active === "knowledge" ? "curation" : active;
+  const activeIndex = WORKBENCH_STEP_KEYS.indexOf(visibleActive);
   const statusByKey = new Map(steps.map((step) => [step.key, step.status]));
-  return Object.fromEntries(WORKFLOW_STEP_KEYS.map((key, index) => {
-    if (key === active) return [key, "current"];
-    if (index === activeIndex + 1) return [key, "preview"];
+  return Object.fromEntries(WORKFLOW_STEP_KEYS.map((key) => {
+    if (key === "knowledge") return [key, "collapsed"];
+    const visibleIndex = WORKBENCH_STEP_KEYS.indexOf(key);
+    if (key === visibleActive) return [key, "current"];
+    if (visibleIndex === activeIndex + 1) return [key, "preview"];
     const status = statusByKey.get(key);
-    if (index < activeIndex && (status === "complete" || status === "skipped")) {
+    if (visibleIndex < activeIndex && (status === "complete" || status === "skipped")) {
       return [key, "summary"];
     }
     return [key, "collapsed"];
@@ -81,10 +90,11 @@ export function nextWorkflowStep(
   active: WorkflowStepKey,
   steps: readonly WorkflowStepLike[] = [],
 ): WorkflowStepKey | null {
-  const start = WORKFLOW_STEP_KEYS.indexOf(active) + 1;
+  const visibleActive = active === "knowledge" ? "curation" : active;
+  const start = WORKBENCH_STEP_KEYS.indexOf(visibleActive) + 1;
   const statusByKey = new Map(steps.map((step) => [step.key, step.status]));
-  for (let index = start; index < WORKFLOW_STEP_KEYS.length; index += 1) {
-    const key = WORKFLOW_STEP_KEYS[index];
+  for (let index = start; index < WORKBENCH_STEP_KEYS.length; index += 1) {
+    const key = WORKBENCH_STEP_KEYS[index];
     if (statusByKey.get(key) !== "skipped") return key;
   }
   return null;
@@ -147,11 +157,18 @@ export function validateWorkflowSection(
     const contributors = Array.isArray(value.items) ? value.items : [];
     contributors.forEach((entry, index) => {
       const contributor = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
-      if (!text(contributor.display_name)) {
+      const displayName = text(contributor.display_name);
+      const personId = text(contributor.person_id);
+      const role = text(contributor.role);
+      if (!displayName && !personId) return;
+      if (!displayName) {
         issues.push({ field: `items.${index}.display_name`, message: `请填写第 ${index + 1} 位责任者名称。` });
       }
-      if (!text(contributor.role)) {
+      if (!role) {
         issues.push({ field: `items.${index}.role`, message: `请选择第 ${index + 1} 位责任者角色。` });
+      }
+      if (!personId) {
+        issues.push({ field: `items.${index}.person_id`, message: `请为第 ${index + 1} 位责任者关联馆内人物、创建新学者主页，或选择仅添加为责任者。` });
       }
     });
   }

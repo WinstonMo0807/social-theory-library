@@ -32,6 +32,7 @@ from common.task_runtime import (
     register_executor_heartbeat,
     renew_demand_lease,
 )
+from ingestion.models import ProcessingJob
 
 
 pytestmark = pytest.mark.django_db
@@ -337,3 +338,29 @@ def test_offline_remote_executor_returns_unfinished_work_to_waiting_state():
     assert demand.state == CapabilityDemand.State.WAITING_FOR_CAPABILITY
     assert demand.claimed_by is None
     assert demand.lease_token is None
+
+
+def test_reconciliation_cancels_waiting_demand_when_specialist_owner_is_terminal():
+    job = ProcessingJob.objects.create(
+        job_type=ProcessingJob.JobType.PROJECTION_REFRESH,
+        status=ProcessingJob.Status.CANCELED,
+    )
+    demand = queue_or_wait(
+        owner_type="ProcessingJob",
+        owner_key=str(job.id),
+        capability="projection",
+        idempotency_key=f"projection:stale-owner:{job.id}",
+        payload={
+            "task_kind": "projection_refresh",
+            "processing_job_id": str(job.id),
+        },
+        publication_blocking=False,
+    ).demand
+    assert demand.state == CapabilityDemand.State.WAITING_FOR_CAPABILITY
+
+    reconcile_capability_runtime()
+
+    demand.refresh_from_db()
+    assert demand.state == CapabilityDemand.State.CANCELED
+    assert demand.last_error_code == "source_superseded"
+    assert "terminal" in demand.last_error_message

@@ -6,6 +6,7 @@ from catalog.models import (
     DocumentType,
     Edition,
     EditorialRevision,
+    KnowledgeNode,
     OrganizationAuthority,
     OrganizationContribution,
     Person,
@@ -172,6 +173,36 @@ def test_create_person_draft_creates_unpublished_scholar_homepage(api_client, ad
     assert person.authority_status == Person.AuthorityStatus.DRAFT
     assert person.scholar_profile.editorial_status == "draft"
     assert candidate.status == EntityResolutionCandidate.Status.CREATE_DRAFT
+
+
+def test_independent_topic_identity_cannot_be_created_as_knowledge_node_draft(
+    api_client,
+    admin_user,
+):
+    item = make_item(admin_user)
+    candidate = next(
+        row
+        for row in persist_resolution_candidates(
+            item,
+            target_type="knowledge_node",
+            source_name="不应重复创建的主题",
+            node_types={KnowledgeNode.NodeType.TOPIC},
+        )
+        if row.candidate_entity_type == "knowledge_node_draft"
+    )
+    api_client.force_authenticate(make_editor())
+
+    response = api_client.post(
+        decision_url(item, candidate),
+        {"action": "create_draft", "target_type": "knowledge_node"},
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert "独立的正式实体" in response.data["detail"]
+    candidate.refresh_from_db()
+    assert candidate.status == EntityResolutionCandidate.Status.PROPOSED
+    assert not KnowledgeNode.objects.filter(canonical_name_zh="不应重复创建的主题").exists()
 
 
 def test_keep_unresolved_translator_adds_contributor_without_scholar_homepage(

@@ -100,6 +100,51 @@ def _claim_payload():
     }
 
 
+def _library_synthesis_payload():
+    evidence = [
+        {
+            "id": "7a1f65d7-5066-45ab-a83e-5e4fb65b0270",
+            "kind": "collection_text",
+            "source": {"document_revision_id": "revision-1"},
+            "text": "导论讨论制度保障、失业与贫困之间的条件性关系。",
+            "locator": {"page": 1},
+            "quality": {"score": 0.9},
+            "provenance": {"extraction_method": "embedded"},
+        },
+        {
+            "id": "c785e8ca-4354-478f-a2d7-2dbfece2ab61",
+            "kind": "collection_text",
+            "source": {"document_revision_id": "revision-1"},
+            "text": "结论限定这一解释仅适用于制度保障薄弱的情境。",
+            "locator": {"page": 2},
+            "quality": {"score": 0.92},
+            "provenance": {"extraction_method": "embedded"},
+        },
+    ]
+    return {
+        "lease": {
+            "demand_id": "9726d707-99bb-4b22-87a9-27f5da291a21",
+            "lease_token": "5f39ea5b-6739-42c1-8193-f5f5ea2f6ed3",
+        },
+        "job": {
+            "task_kind": "library_synthesis",
+            "task_profile_key": "library_synthesis",
+            "input": {
+                "evidence_pack_id": "dd3abf64-0b61-4604-86bf-edfb17333afb",
+                "requested_field": "abstract",
+                "evidence": evidence,
+            },
+            "prompt": {"content": "只根据 EvidencePack 生成馆藏综合候选。"},
+            "output_schema": {
+                "type": "object",
+                "required": ["candidate"],
+                "properties": {"candidate": {"type": "object"}},
+            },
+            "limits": {"max_evidence": 12, "max_output_chars": 12_000},
+        },
+    }
+
+
 def test_remote_worker_requires_https_for_non_local_server():
     with pytest.raises(RemoteWorkerClientError) as raised:
         _config(server_url="http://books.example/api/capability-worker").validated()
@@ -109,6 +154,20 @@ def test_remote_worker_requires_https_for_non_local_server():
 
 def test_remote_worker_enforces_rate_safe_poll_floor():
     assert _config(poll_seconds=1).validated().poll_seconds == 10
+
+
+def test_remote_worker_environment_can_opt_into_library_synthesis(monkeypatch):
+    monkeypatch.setenv("STL_WORKER_SERVER_URL", "https://books.example/api/capability-worker")
+    monkeypatch.setenv("STL_WORKER_TOKEN", "w" * 40)
+    monkeypatch.setenv("STL_WORKER_MODEL", "qwen-library:14b")
+    monkeypatch.setenv("STL_WORKER_MODEL_REVISION", "sha256-library-model")
+    monkeypatch.setenv("STL_WORKER_CAPABILITIES", "llm_large")
+    monkeypatch.setenv("STL_WORKER_TASK_KINDS", "library_synthesis")
+
+    config = RemoteWorkerClientConfig.from_environment()
+
+    assert config.capabilities == ("llm_large",)
+    assert config.task_kinds == ("library_synthesis",)
 
 
 def test_remote_worker_heartbeats_pulls_runs_ollama_and_completes_claim():
@@ -156,6 +215,51 @@ def test_remote_worker_heartbeats_pulls_runs_ollama_and_completes_claim():
     assert model.calls[0][0].endswith("/api/chat")
     assert model.calls[0][1]["json"]["format"] == _claim_payload()["job"]["output_schema"]
     assert "w" * 40 not in str(server.calls)
+
+
+def test_remote_worker_declares_and_executes_structured_library_synthesis():
+    claimed = _library_synthesis_payload()
+    evidence_ids = [row["id"] for row in claimed["job"]["input"]["evidence"]]
+    server = _ServerClient(claimed)
+    model = _ModelClient(
+        {
+            "message": {
+                "content": json.dumps(
+                    {
+                        "candidate": {
+                            "value": "馆藏原文把失业加剧贫困限定在制度保障薄弱的情境。",
+                            "evidence_span_ids": evidence_ids,
+                            "rationale": "导论和结论共同支持。",
+                        }
+                    },
+                    ensure_ascii=False,
+                )
+            }
+        }
+    )
+    worker = RemoteAIWorkerClient(
+        _config(
+            capabilities=("llm_large",),
+            task_kinds=("library_synthesis",),
+        ),
+        server_client=server,
+        model_client=model,
+        sleep=lambda _seconds: None,
+    )
+
+    assert worker.run_once() == "completed"
+    heartbeat = next(payload for url, payload in server.calls if url.endswith("heartbeat/"))
+    assert heartbeat["capabilities"] == ["llm_large"]
+    assert heartbeat["metadata"]["task_kinds"] == ["library_synthesis"]
+    assert heartbeat["metadata"]["task_profiles"] == {
+        "library_synthesis": ["library_synthesis"]
+    }
+    completed = next(payload for url, payload in server.calls if url.endswith("complete/"))
+    assert completed["result"]["candidate"]["evidence_span_ids"] == evidence_ids
+    assert completed["result"]["provider"] == "ollama"
+    model_prompt = model.calls[0][1]["json"]["messages"][1]["content"]
+    assert claimed["job"]["input"]["evidence_pack_id"] in model_prompt
+    assert all(evidence_id in model_prompt for evidence_id in evidence_ids)
 
 
 def test_remote_worker_offline_poll_is_idle_and_does_not_call_model():

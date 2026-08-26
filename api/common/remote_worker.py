@@ -15,16 +15,22 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from catalog.models import CapabilityDemand, CapabilityExecutor, EvidenceSpan
+from catalog.models import CapabilityDemand, CapabilityExecutor, EvidencePack, EvidenceSpan
 from catalog.services.claims.pipeline import (
     MAX_CLAIMS_PER_SPAN,
     persist_claim_candidates,
     resolve_claim_extraction_prompt,
 )
+from catalog.services.research.library_synthesis import (
+    LIBRARY_SYNTHESIS_FIELDS,
+    persist_library_synthesis_candidate,
+    resolve_library_synthesis_prompt,
+)
 from common.task_runtime import DemandLease, complete_demand
+from ingestion.models import UploadItem
 
 
-REMOTE_TASK_KINDS = frozenset({"claim_extraction"})
+REMOTE_TASK_KINDS = frozenset({"claim_extraction", "library_synthesis"})
 AI_CAPABILITIES = frozenset({"embedding", "rerank", "llm_small", "llm_large"})
 COMPLETION_MARKER_KEY = "_remote_completion"
 LEASE_CONTEXT_KEY = "_remote_lease_context"
@@ -45,6 +51,7 @@ class RemoteCompletion:
     reused: int
     invalid: int
     claim_ids: list[str]
+    candidate_ids: list[str]
     idempotent_replay: bool
     publication_blocking: bool = False
 
@@ -56,6 +63,7 @@ class RemoteCompletion:
             "reused": self.reused,
             "invalid": self.invalid,
             "claim_ids": self.claim_ids,
+            "candidate_ids": self.candidate_ids,
             "idempotent_replay": self.idempotent_replay,
             "publication_blocking": self.publication_blocking,
         }
@@ -121,6 +129,29 @@ def sanitize_metadata(raw: object) -> dict[str, Any]:
         memory = 0
     if memory > 0:
         output["gpu_memory_mb"] = min(memory, 1024 * 1024)
+    task_kinds = [
+        str(value or "").strip()
+        for value in raw.get("task_kinds") or []
+        if str(value or "").strip() in REMOTE_TASK_KINDS
+    ]
+    if task_kinds:
+        output["task_kinds"] = sorted(set(task_kinds))
+    raw_profiles = raw.get("task_profiles")
+    if isinstance(raw_profiles, dict):
+        profiles: dict[str, list[str]] = {}
+        for task_kind, values in raw_profiles.items():
+            normalized_kind = str(task_kind or "").strip()
+            if normalized_kind not in REMOTE_TASK_KINDS or not isinstance(values, (list, tuple, set)):
+                continue
+            profiles[normalized_kind] = sorted(
+                {
+                    str(value or "").strip()[:120]
+                    for value in values
+                    if str(value or "").strip()
+                }
+            )[:20]
+        if profiles:
+            output["task_profiles"] = profiles
     return output
 
 
@@ -140,8 +171,13 @@ def _immutable_prompt(payload: dict[str, Any]) -> dict[str, Any]:
             "source": str(payload.get("prompt_source") or "code_baseline")[:40],
         }
 
-    current = resolve_claim_extraction_prompt(
-        key=str(payload.get("prompt_key") or "claim_extraction")
+    task_kind = str(payload.get("task_kind") or "claim_extraction")
+    current = (
+        resolve_library_synthesis_prompt()
+        if task_kind == "library_synthesis"
+        else resolve_claim_extraction_prompt(
+            key=str(payload.get("prompt_key") or "claim_extraction")
+        )
     )
     expected_hashes = (
         str(payload.get("prompt_content_hash") or ""),
@@ -198,15 +234,109 @@ def _claim_span(demand: CapabilityDemand) -> EvidenceSpan:
     return span
 
 
-def build_remote_job(lease: DemandLease) -> dict[str, Any]:
-    demand = CapabilityDemand.objects.get(pk=lease.demand_id)
-    span = _claim_span(demand)
-    if len(span.original_text) > settings.CAPABILITY_REMOTE_WORKER_MAX_JOB_TEXT_CHARS:
+def _library_synthesis_pack(demand: CapabilityDemand) -> EvidencePack:
+    payload = dict(demand.payload or {})
+    if payload.get("task_kind") != "library_synthesis":
         raise RemoteWorkerProtocolError(
-            "job_text_too_large",
-            "The evidence span exceeds the configured remote worker text limit.",
+            "unsupported_task_kind",
+            "The remote worker cannot process this demand type.",
             status_code=409,
         )
+    pack_id = str(payload.get("evidence_pack_id") or "")
+    if demand.owner_type != "evidence_pack" or demand.owner_key != pack_id:
+        raise RemoteWorkerProtocolError(
+            "demand_owner_mismatch",
+            "The demand owner does not match its EvidencePack payload.",
+            status_code=409,
+        )
+    try:
+        pack = EvidencePack.objects.get(pk=pack_id)
+    except (EvidencePack.DoesNotExist, ValueError) as exc:
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_missing",
+            "The scheduled EvidencePack is unavailable.",
+            status_code=409,
+        ) from exc
+    if pack.task_profile_key != "library_synthesis":
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_profile_mismatch",
+            "The EvidencePack was not created for Library Synthesis.",
+            status_code=409,
+        )
+    if pack.subject_type != "work" or str(pack.subject_id) != str(payload.get("work_id") or ""):
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_subject_mismatch",
+            "The EvidencePack Work does not match the scheduled target.",
+            status_code=409,
+        )
+    field_name = str(payload.get("field_name") or "")
+    retrieval_field = str((pack.retrieval_snapshot or {}).get("field_name") or "")
+    if field_name not in LIBRARY_SYNTHESIS_FIELDS or retrieval_field != field_name:
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_field_mismatch",
+            "The EvidencePack field does not match the scheduled synthesis target.",
+            status_code=409,
+        )
+    try:
+        item = UploadItem.objects.select_related("edition__work").get(
+            pk=payload.get("upload_item_id")
+        )
+    except (UploadItem.DoesNotExist, ValueError) as exc:
+        raise RemoteWorkerProtocolError(
+            "upload_item_missing",
+            "The Library Synthesis intake item is unavailable.",
+            status_code=409,
+        ) from exc
+    if item.edition_id is None or str(item.edition.work_id) != str(pack.subject_id):
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_subject_mismatch",
+            "The intake item no longer belongs to the EvidencePack Work.",
+            status_code=409,
+        )
+    envelopes = pack.envelope_snapshot
+    if not isinstance(envelopes, list) or len(envelopes) < 2 or len(envelopes) > 12:
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_invalid",
+            "Library Synthesis requires two to twelve immutable evidence envelopes.",
+            status_code=409,
+        )
+    span_ids = {
+        str(row.get("id") or "")
+        for row in envelopes
+        if isinstance(row, dict) and str(row.get("id") or "")
+    }
+    if len(span_ids) != len(envelopes):
+        raise RemoteWorkerProtocolError(
+            "evidence_pack_invalid",
+            "Every Library Synthesis envelope must identify one EvidenceSpan.",
+            status_code=409,
+        )
+    current_ids = {
+        str(value)
+        for value in EvidenceSpan.objects.filter(
+            pk__in=span_ids,
+            is_stale=False,
+            document_revision__is_active=True,
+        ).values_list("id", flat=True)
+    }
+    if current_ids != span_ids:
+        raise RemoteWorkerProtocolError(
+            "source_revision_stale",
+            "One or more EvidencePack spans have been superseded.",
+            status_code=409,
+        )
+    text_chars = sum(len(str(row.get("text") or "")) for row in envelopes)
+    if text_chars > settings.CAPABILITY_REMOTE_WORKER_MAX_JOB_TEXT_CHARS:
+        raise RemoteWorkerProtocolError(
+            "job_text_too_large",
+            "The EvidencePack exceeds the configured remote worker text limit.",
+            status_code=409,
+        )
+    return pack
+
+
+def build_remote_job(lease: DemandLease) -> dict[str, Any]:
+    demand = CapabilityDemand.objects.get(pk=lease.demand_id)
     payload = dict(demand.payload or {})
     prompt = _immutable_prompt(payload)
     runtime = payload.get(LEASE_CONTEXT_KEY)
@@ -216,20 +346,7 @@ def build_remote_job(lease: DemandLease) -> dict[str, Any]:
             "The remote lease model context is unavailable.",
             status_code=409,
         )
-    return {
-        "task_kind": "claim_extraction",
-        "input": {
-            "document_revision_id": str(span.document_revision_id),
-            "document_revision": span.document_revision.revision,
-            "document_text_checksum": span.document_revision.text_checksum,
-            "evidence_span_id": str(span.id),
-            "evidence_content_hash": span.content_hash,
-            "text": span.original_text,
-            "language": span.language,
-            "page_number": span.page_number,
-            "printed_page_label": span.printed_page_label,
-            "section": span.section,
-        },
+    common = {
         "prompt": {
             "key": prompt["key"],
             "version": prompt["version"],
@@ -243,8 +360,54 @@ def build_remote_job(lease: DemandLease) -> dict[str, Any]:
             "model": runtime.get("model"),
             "model_revision": runtime.get("model_revision"),
         },
-        "limits": {"max_claims": MAX_CLAIMS_PER_SPAN},
     }
+    task_kind = str(payload.get("task_kind") or "")
+    if task_kind == "claim_extraction":
+        span = _claim_span(demand)
+        if len(span.original_text) > settings.CAPABILITY_REMOTE_WORKER_MAX_JOB_TEXT_CHARS:
+            raise RemoteWorkerProtocolError(
+                "job_text_too_large",
+                "The evidence span exceeds the configured remote worker text limit.",
+                status_code=409,
+            )
+        return {
+            "task_kind": task_kind,
+            "input": {
+                "document_revision_id": str(span.document_revision_id),
+                "document_revision": span.document_revision.revision,
+                "document_text_checksum": span.document_revision.text_checksum,
+                "evidence_span_id": str(span.id),
+                "evidence_content_hash": span.content_hash,
+                "text": span.original_text,
+                "language": span.language,
+                "page_number": span.page_number,
+                "printed_page_label": span.printed_page_label,
+                "section": span.section,
+            },
+            **common,
+            "limits": {"max_claims": MAX_CLAIMS_PER_SPAN},
+        }
+    if task_kind == "library_synthesis":
+        pack = _library_synthesis_pack(demand)
+        return {
+            "task_kind": task_kind,
+            "task_profile_key": "library_synthesis",
+            "input": {
+                "evidence_pack_id": str(pack.id),
+                "evidence_pack_fingerprint": pack.fingerprint,
+                "subject_type": pack.subject_type,
+                "subject_id": pack.subject_id,
+                "requested_field": str(payload.get("field_name") or ""),
+                "evidence": pack.envelope_snapshot,
+            },
+            **common,
+            "limits": {"max_evidence": 12, "max_output_chars": 12_000},
+        }
+    raise RemoteWorkerProtocolError(
+        "unsupported_task_kind",
+        "The remote worker cannot process this demand type.",
+        status_code=409,
+    )
 
 
 @transaction.atomic
@@ -348,6 +511,7 @@ def _completion_from_marker(demand: CapabilityDemand, marker: dict[str, Any]) ->
         reused=int(summary.get("reused") or 0),
         invalid=int(summary.get("invalid") or 0),
         claim_ids=[str(value) for value in (summary.get("claim_ids") or [])][:MAX_CLAIMS_PER_SPAN],
+        candidate_ids=[str(value) for value in (summary.get("candidate_ids") or [])][:12],
         idempotent_replay=True,
     )
 
@@ -394,33 +558,61 @@ def complete_remote_demand(
             "The demand lease has expired.",
             status_code=409,
         )
-    span = _claim_span(demand)
     prompt = _immutable_prompt(payload)
-    claims = result.get("claims")
-    if not isinstance(claims, list) or len(claims) > MAX_CLAIMS_PER_SPAN:
-        raise RemoteWorkerProtocolError(
-            "invalid_claim_result",
-            f"claims must be an array with at most {MAX_CLAIMS_PER_SPAN} items.",
-        )
     provider, model, model_revision = _model_identity(demand.claimed_by, demand, result)
-    persisted = persist_claim_candidates(
-        span,
-        claims,
-        prompt_key=prompt["key"],
-        prompt_version=prompt["version"],
-        provider=provider,
-        model=model,
-        model_revision=model_revision,
-        prompt_content_hash=prompt["content_hash"],
-        prompt_schema_hash=prompt["schema_hash"],
-        prompt_registry_id=prompt.get("registry_id") or "",
-        prompt_registry_version=prompt.get("registry_version"),
-        prompt_source=prompt.get("source") or "code_baseline",
-    )
-    if persisted.get("status") != "completed":
+    task_kind = str(payload.get("task_kind") or "")
+    if task_kind == "claim_extraction":
+        span = _claim_span(demand)
+        claims = result.get("claims")
+        if not isinstance(claims, list) or len(claims) > MAX_CLAIMS_PER_SPAN:
+            raise RemoteWorkerProtocolError(
+                "invalid_claim_result",
+                f"claims must be an array with at most {MAX_CLAIMS_PER_SPAN} items.",
+            )
+        persisted = persist_claim_candidates(
+            span,
+            claims,
+            prompt_key=prompt["key"],
+            prompt_version=prompt["version"],
+            provider=provider,
+            model=model,
+            model_revision=model_revision,
+            prompt_content_hash=prompt["content_hash"],
+            prompt_schema_hash=prompt["schema_hash"],
+            prompt_registry_id=prompt.get("registry_id") or "",
+            prompt_registry_version=prompt.get("registry_version"),
+            prompt_source=prompt.get("source") or "code_baseline",
+        )
+        if persisted.get("status") != "completed":
+            raise RemoteWorkerProtocolError(
+                str(persisted.get("error_code") or "claim_persistence_failed"),
+                "The claim result could not be attached to current evidence.",
+                status_code=409,
+            )
+        claim_ids = [str(value) for value in (persisted.get("claim_ids") or [])]
+        candidate_ids: list[str] = []
+    elif task_kind == "library_synthesis":
+        _library_synthesis_pack(demand)
+        try:
+            persisted = persist_library_synthesis_candidate(
+                demand,
+                result,
+                provider=provider,
+                model=model,
+                model_revision=model_revision,
+            )
+        except ValueError as exc:
+            raise RemoteWorkerProtocolError(
+                "invalid_library_synthesis_result",
+                str(exc),
+                status_code=409,
+            ) from exc
+        claim_ids = []
+        candidate_ids = [str(persisted["candidate_id"])]
+    else:
         raise RemoteWorkerProtocolError(
-            str(persisted.get("error_code") or "claim_persistence_failed"),
-            "The claim result could not be attached to current evidence.",
+            "unsupported_task_kind",
+            "The remote worker cannot complete this demand type.",
             status_code=409,
         )
     completed = complete_demand(
@@ -432,7 +624,8 @@ def complete_remote_demand(
         "created": int(persisted.get("created") or 0),
         "reused": int(persisted.get("reused") or 0),
         "invalid": int(persisted.get("invalid") or 0),
-        "claim_ids": [str(value) for value in (persisted.get("claim_ids") or [])],
+        "claim_ids": claim_ids,
+        "candidate_ids": candidate_ids,
     }
     completed_payload = dict(completed.payload or {})
     completed_payload[COMPLETION_MARKER_KEY] = {
@@ -451,5 +644,6 @@ def complete_remote_demand(
         reused=summary["reused"],
         invalid=summary["invalid"],
         claim_ids=summary["claim_ids"],
+        candidate_ids=summary["candidate_ids"],
         idempotent_replay=False,
     )

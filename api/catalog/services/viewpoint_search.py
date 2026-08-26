@@ -1,11 +1,22 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 import re
 from typing import Any
 
-from catalog.models import Contribution, DerivedClaim, EvidenceSpan
+from catalog.models import (
+    Contribution,
+    DerivedClaim,
+    Edition,
+    EvidenceSpan,
+    KnowledgeNode,
+    KnowledgePublicationStatus,
+    RelationReviewStatus,
+    ScholarProfile,
+    WorkNodeRelation,
+    WorkTopicRelation,
+)
 from catalog.services.claim_benchmark import claim_viewpoint_activation_state
 from catalog.services.claims.indexing import search_claim_index, visible_claim_queryset
 from catalog.services.claims.stance import ClaimStatement, ClaimStance, classify_stance
@@ -30,6 +41,11 @@ STANCE_LABELS = {
     ClaimStance.CRITIQUE.value: "批评",
     ClaimStance.EXTEND.value: "延展",
     ClaimStance.REFRAME.value: "重新界定",
+}
+SOURCE_TYPE_LABELS = {
+    "book": "图书",
+    "journal": "期刊",
+    "other": "其他",
 }
 
 _CAUSAL_ZH_RE = re.compile(
@@ -130,6 +146,15 @@ def _normalized(value: object) -> str:
     return _NORMALIZE_RE.sub("", str(value or "").casefold())
 
 
+def _source_type(document_type: object) -> str:
+    value = str(document_type or "")
+    if value == "book":
+        return "book"
+    if value == "journal_article":
+        return "journal"
+    return "other"
+
+
 def _matching_evidence_span(row: dict) -> EvidenceSpan | None:
     asset_id = str(row.get("asset_id") or "").strip()
     try:
@@ -192,6 +217,8 @@ def _semantic_result(
         return None
     stance = classify_stance(query_statement, statement)
     envelope = evidence_span_envelope(span).as_dict()
+    pdf_url = f"/api/distribution/assets/{envelope['source']['asset_id']}/file/"
+    envelope["pdf_url"] = pdf_url
     base_score = max(0.0, 1.0 - ((rank - 1) / max(1, total)))
     return {
         "id": f"semantic:{row.get('id')}",
@@ -207,12 +234,16 @@ def _semantic_result(
         "work": {
             "id": str(row.get("work_id") or ""),
             "title": str(row.get("title") or ""),
+            "slug": str(row.get("edition_slug") or ""),
         },
+        "source_type": _source_type(row.get("document_type")),
+        "language": str(row.get("language") or "unknown"),
+        "publication_year": row.get("publication_year"),
         "page": envelope["locator"].get("page"),
         "printed_page_label": envelope["locator"].get("printed_page_label"),
         "evidence": envelope,
         "reader_url": envelope["reader_url"],
-        "pdf_url": envelope["pdf_url"],
+        "pdf_url": pdf_url,
         "attribution": DerivedClaim.Attribution.UNCERTAIN,
         "claim_type": DerivedClaim.ClaimType.ASSERTION,
         "quality_score": span.quality,
@@ -230,6 +261,8 @@ def _claim_result(
 ) -> dict:
     stance = classify_stance(query_statement, _claim_statement(claim))
     envelope = evidence_span_envelope(claim.primary_evidence).as_dict()
+    pdf_url = f"/api/distribution/assets/{envelope['source']['asset_id']}/file/"
+    envelope["pdf_url"] = pdf_url
     try:
         index_score = float(index_hit.get("_rankingScore") or 0)
     except (TypeError, ValueError):
@@ -259,12 +292,19 @@ def _claim_result(
         "stance_reasons": list(stance.reasons),
         "score": round(score, 6),
         "authors": authors,
-        "work": {"id": str(claim.work_id), "title": claim.work.title},
+        "work": {
+            "id": str(claim.work_id),
+            "title": claim.work.title,
+            "slug": claim.edition.public_slug or "",
+        },
+        "source_type": _source_type(claim.work.document_type),
+        "language": claim.primary_evidence.language or claim.work.language,
+        "publication_year": claim.edition.publication_year,
         "page": envelope["locator"].get("page"),
         "printed_page_label": envelope["locator"].get("printed_page_label"),
         "evidence": envelope,
         "reader_url": envelope["reader_url"],
-        "pdf_url": envelope["pdf_url"],
+        "pdf_url": pdf_url,
         "attribution": claim.attribution,
         "claim_type": claim.claim_type,
         "quality_score": claim.quality_score,
@@ -374,6 +414,173 @@ def _groups(rows: list[dict]) -> dict[str, list[dict]]:
     return grouped
 
 
+def _facet_options(rows: list[dict], *, labels: dict[str, str] | None = None) -> list[dict]:
+    labels = labels or {}
+    return [
+        {
+            "id": value,
+            "slug": value,
+            "label": labels.get(value, value),
+            "count": count,
+        }
+        for value, count in sorted(
+            Counter(str(row) for row in rows if row not in (None, "")).items(),
+            key=lambda item: (-item[1], labels.get(item[0], item[0])),
+        )
+    ]
+
+
+def _entity_facet_options(
+    associations,
+    *,
+    work_counts: Counter[str],
+    id_key: str,
+    slug_key: str,
+    label_key: str,
+    work_key: str,
+) -> list[dict]:
+    aggregated: dict[str, dict] = {}
+    seen: set[tuple[str, str]] = set()
+    for association in associations:
+        identifier = str(association[id_key])
+        work_id = str(association[work_key])
+        pair = (identifier, work_id)
+        if pair in seen:
+            continue
+        seen.add(pair)
+        row = aggregated.setdefault(
+            identifier,
+            {
+                "id": identifier,
+                "slug": str(association[slug_key] or ""),
+                "label": str(association[label_key] or ""),
+                "count": 0,
+            },
+        )
+        row["count"] += int(work_counts.get(work_id, 0))
+    return sorted(
+        aggregated.values(),
+        key=lambda row: (-int(row["count"]), row["label"], row["id"]),
+    )
+
+
+def _viewpoint_facets(rows: list[dict]) -> dict[str, Any]:
+    work_counts = Counter(str(row.get("work", {}).get("id") or "") for row in rows)
+    work_counts.pop("", None)
+    work_ids = list(work_counts)
+    work_options = []
+    seen_works: set[str] = set()
+    if work_ids:
+        editions = Edition.objects.filter(
+            work_id__in=work_ids,
+            state="published",
+            is_primary=True,
+        ).select_related("work").order_by("work__title", "-publication_year")
+        for edition in editions:
+            work_id = str(edition.work_id)
+            if work_id in seen_works:
+                continue
+            seen_works.add(work_id)
+            work_options.append(
+                {
+                    "id": work_id,
+                    "slug": edition.public_slug or "",
+                    "label": edition.work.title,
+                    "count": int(work_counts[work_id]),
+                }
+            )
+
+    scholar_rows = []
+    theory_rows = []
+    topic_rows = []
+    if work_ids:
+        scholar_rows = list(
+            ScholarProfile.objects.filter(
+                editorial_status="published",
+                person__contributions__edition__work_id__in=work_ids,
+                person__contributions__edition__state="published",
+                person__contributions__edition__is_primary=True,
+                person__contributions__approved=True,
+                person__contributions__role=Contribution.Role.AUTHOR,
+            )
+            .values(
+                "person_id",
+                "slug",
+                "person__preferred_name",
+                "person__contributions__edition__work_id",
+            )
+            .distinct()
+        )
+        theory_rows = list(
+            WorkNodeRelation.objects.filter(
+                work_id__in=work_ids,
+                node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
+                node__status=KnowledgePublicationStatus.PUBLISHED,
+                status=KnowledgePublicationStatus.PUBLISHED,
+            )
+            .values("node_id", "node__slug", "node__canonical_name_zh", "work_id")
+            .distinct()
+        )
+        topic_rows = list(
+            WorkTopicRelation.objects.filter(
+                work_id__in=work_ids,
+                topic__editorial_status="published",
+                review_status=RelationReviewStatus.APPROVED,
+            )
+            .values("topic_id", "topic__slug", "topic__name", "work_id")
+            .distinct()
+        )
+
+    years = [
+        int(row["publication_year"])
+        for row in rows
+        if row.get("publication_year") not in (None, "")
+    ]
+    return {
+        "relations": _facet_options(
+            [row.get("stance") for row in rows],
+            labels=STANCE_LABELS,
+        ),
+        "source_types": _facet_options(
+            [row.get("source_type") for row in rows],
+            labels=SOURCE_TYPE_LABELS,
+        ),
+        "languages": _facet_options([row.get("language") for row in rows]),
+        "scholars": _entity_facet_options(
+            scholar_rows,
+            work_counts=work_counts,
+            id_key="person_id",
+            slug_key="slug",
+            label_key="person__preferred_name",
+            work_key="person__contributions__edition__work_id",
+        ),
+        "theories": _entity_facet_options(
+            theory_rows,
+            work_counts=work_counts,
+            id_key="node_id",
+            slug_key="node__slug",
+            label_key="node__canonical_name_zh",
+            work_key="work_id",
+        ),
+        "topics": _entity_facet_options(
+            topic_rows,
+            work_counts=work_counts,
+            id_key="topic_id",
+            slug_key="topic__slug",
+            label_key="topic__name",
+            work_key="work_id",
+        ),
+        "works": sorted(
+            work_options,
+            key=lambda row: (-int(row["count"]), row["label"], row["id"]),
+        ),
+        "publication_year": {
+            "min": min(years) if years else None,
+            "max": max(years) if years else None,
+        },
+    }
+
+
 def viewpoint_search(
     query: str,
     *,
@@ -445,6 +652,20 @@ def viewpoint_search(
 
     activation = claim_viewpoint_activation_state()
     gate_passed = bool(activation.get("active"))
+    facet_rows = shadow_rows if gate_passed else baseline_rows
+    facets = _viewpoint_facets(facet_rows)
+    requested_relations = {
+        str(value)
+        for value in (normalized_filters.get("relations") or [])
+        if str(value) in STANCE_ORDER
+    }
+    if requested_relations:
+        baseline_rows = [
+            row for row in baseline_rows if row["stance"] in requested_relations
+        ]
+        shadow_rows = [
+            row for row in shadow_rows if row["stance"] in requested_relations
+        ]
     default_rows = shadow_rows if gate_passed else baseline_rows
     default_mode = "claim" if gate_passed else "baseline"
     return {
@@ -461,6 +682,7 @@ def viewpoint_search(
         "default_mode": default_mode,
         "results": default_rows,
         "groups": _groups(default_rows),
+        "facets": facets,
         "baseline": {
             "results": baseline_rows,
             "groups": _groups(baseline_rows),

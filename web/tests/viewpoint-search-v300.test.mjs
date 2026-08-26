@@ -17,7 +17,10 @@ test("viewpoint search uses the dedicated EvidenceSpan-backed public contract", 
   assert.match(page, /loadViewpointSearch\(query, filters\)/);
   assert.match(page, /item\.evidence\.text/);
   assert.match(page, /href=\{item\.reader_url\}/);
-  assert.match(page, /查看原文并跳转 PDF/);
+  assert.match(page, /href=\{item\.pdf_url\}/);
+  assert.match(page, /进入 Reader/);
+  assert.match(page, /打开 PDF/);
+  assert.doesNotMatch(page, /Math\.round\(item\.quality_score/);
 });
 
 test("viewpoint UI groups relations and keeps the benchmark-gated baseline visible", async () => {
@@ -36,4 +39,27 @@ test("viewpoint UI groups relations and keeps the benchmark-gated baseline visib
   assert.doesNotMatch(page, /聊天|发送消息|assistant-message/);
   assert.match(styles, /\.evidenceCard\[data-stance="oppose"\]/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("viewpoint filters round-trip canonical IDs and bounded public fields in the URL", async () => {
+  const [serverApi, page, styles] = await Promise.all([
+    read("../lib/server-api.ts"),
+    read("../app/explore/opinions/page.tsx"),
+    read("../app/explore/opinions/viewpoint-search.module.css"),
+  ]);
+
+  for (const parameter of ["relation", "source_type", "scholar", "theory", "topic", "language", "year_min", "year_max", "work"]) {
+    assert.match(page, new RegExp(`name=["'{]${parameter}`));
+  }
+  assert.match(serverApi, /\["relation", filters\.relation\]/);
+  assert.match(serverApi, /\["source_type", filters\.sourceType\]/);
+  assert.match(serverApi, /\["scholar", filters\.scholar\]/);
+  assert.match(serverApi, /parameters\.set\("year_min"/);
+  assert.match(serverApi, /parameters\.set\("year_max"/);
+  assert.match(serverApi, /filters\.workId/);
+  assert.match(serverApi, /type ViewpointFacetOption/);
+  assert.match(serverApi, /scholars: ViewpointFacetOption\[\]/);
+  assert.match(serverApi, /theories: ViewpointFacetOption\[\]/);
+  assert.match(serverApi, /topics: ViewpointFacetOption\[\]/);
+  assert.match(styles, /\.filters/);
 });

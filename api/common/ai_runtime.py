@@ -543,7 +543,15 @@ def resolve_credential(alias: str) -> str:
     if alias == "default":
         return str(getattr(settings, "AI_API_KEY", "") or "")
     key = "AI_CREDENTIAL_" + alias.upper().replace("-", "_")
-    return str(os.getenv(key, "") or "")
+    environment_value = str(os.getenv(key, "") or "")
+    if environment_value:
+        return environment_value
+    try:
+        from catalog.services.provider_secrets import resolve_provider_secret
+
+        return resolve_provider_secret(alias, purpose="ai_runtime")
+    except (DatabaseError, RuntimeError):
+        return ""
 
 
 def profile_environment_status(profile: AIRuntimeProfile) -> dict:

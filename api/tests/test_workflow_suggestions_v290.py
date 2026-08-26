@@ -10,6 +10,7 @@ from django.utils import timezone
 from accounts.models import User
 from catalog.models import (
     Asset,
+    Contribution,
     Discipline,
     DocumentType,
     Edition,
@@ -17,6 +18,7 @@ from catalog.models import (
     EnrichmentSourceClass,
     KnowledgeNode,
     Page,
+    Person,
     QueryLexiconCandidate,
     QueryLexiconCandidateEvidence,
     QueryLexiconChangeEvent,
@@ -72,6 +74,41 @@ def _item(admin_user, edition):
         status=UploadItem.Status.NEEDS_REVIEW,
         workflow_state=UploadItem.WorkflowState.NEEDS_REVIEW,
     )
+
+
+def test_research_context_keeps_contributor_roles_separate():
+    _work, edition = _edition()
+    people = {
+        role: Person.objects.create(
+            preferred_name=name,
+            sort_name=name,
+            authority_status=Person.AuthorityStatus.DRAFT,
+        )
+        for role, name in {
+            Contribution.Role.AUTHOR: "作者甲",
+            Contribution.Role.TRANSLATOR: "译者乙",
+            Contribution.Role.EDITOR: "编者丙",
+        }.items()
+    }
+    for order, (role, person) in enumerate(people.items()):
+        Contribution.objects.create(
+            edition=edition,
+            person=person,
+            role=role,
+            order=order,
+            approved=True,
+        )
+
+    context = WorkflowSuggestionAggregator(edition)._research_context(
+        "contributors",
+        ["authors", "translators", "other_contributors"],
+    )
+
+    assert context["authors"] == ["作者甲"]
+    assert context["translators"] == ["译者乙"]
+    assert context["other_contributors"] == [
+        {"name": "编者丙", "role": Contribution.Role.EDITOR}
+    ]
 
 
 def _asset(work, edition, text="候选研究作品讨论历史社会学和国家形成。"):

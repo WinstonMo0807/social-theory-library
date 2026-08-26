@@ -30,7 +30,7 @@ from catalog.models import (
     WorkSubdisciplineRelation,
     WorkTopicRelation,
 )
-from ingestion.models import EntityResolutionCandidate, FieldLock, UploadItem
+from ingestion.models import FieldLock, UploadItem
 from ingestion.services.candidate_decisions import accept_candidates_from_review
 from ingestion.services.files import canonical_pdf_filename
 
@@ -225,13 +225,11 @@ def _save_bibliography(edition: Edition, values: dict[str, Any]) -> None:
 
 
 def _save_contributors(edition: Edition, values: dict[str, Any], actor) -> None:
-    pending = EntityResolutionCandidate.objects.select_for_update().filter(
-        upload_item__edition=edition,
-        target_type="person",
-        status=EntityResolutionCandidate.Status.PROPOSED,
-    )
-    if pending.exists():
-        raise WorkflowEditError("仍有责任者候选未决定，请先关联、创建草稿、保留未解析或拒绝。")
+    # A proposed resolution candidate is advice, not publication truth.  An
+    # editor may save the contributors they have actually selected while
+    # leaving alternative candidates for later review.  The candidates remain
+    # proposed and auditable; this save only replaces canonical Contribution
+    # rows with the explicit form selection below.
     rows = values.get("contributors", [])
     people = _require_all(Person, [row["person_id"] for row in rows], "责任者")
     edition.contributions.select_for_update().all().delete()

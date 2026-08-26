@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import timedelta
 from hashlib import sha256
 import json
+import re
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -24,9 +25,11 @@ from .metadata import (
     resolve_google_books_isbn,
     resolve_grobid,
     resolve_isbn,
+    resolve_nlb_singapore_isbn,
     resolve_openalex_doi,
     search_crossref_title,
     search_google_books_title,
+    search_nlb_singapore_title,
     search_openalex_title,
     search_openlibrary_title,
 )
@@ -87,6 +90,7 @@ def _provider_url(provider: str) -> str:
         "google_books": "https://www.googleapis.com",
         "openalex": "https://api.openalex.org",
         "grobid": "",
+        "nlb_singapore": "https://openweb.nlb.gov.sg",
     }
     if provider == "grobid":
         from catalog.services.research_sources import resolve_source_endpoint
@@ -222,13 +226,15 @@ def invoke_provider(
     if not _enabled(provider):
         return [], [f"{provider} 元数据来源已禁用"]
     provider_url = _provider_url(provider)
-    if provider == "openalex":
+    if provider in {"openalex", "nlb_singapore"}:
         from catalog.services.research_sources import resolve_source_credential
 
-        if not resolve_source_credential("openalex"):
+        if not resolve_source_credential(provider):
             # Keep the established user-facing wording while allowing the
             # secret to be supplied through a registry credential alias.
-            return [], ["openalex 元数据来源尚未配置 API Key"]
+            if provider == "openalex":
+                return [], ["openalex 元数据来源尚未配置 API Key"]
+            return [], [f"{provider} 元数据来源尚未配置 credential"]
     if not provider_url:
         return [], [f"{provider} 元数据来源尚未配置"]
     if not _allowed_host(provider_url):
@@ -337,6 +343,15 @@ def enrich_candidates_with_gateway(
                 ),
             ]
         )
+        if _enabled("nlb_singapore"):
+            calls.append(
+                (
+                    "nlb_singapore",
+                    "lookup_isbn",
+                    {"isbn": str(isbn)},
+                    lambda: resolve_nlb_singapore_isbn(str(isbn)),
+                )
+            )
     document_type = next(
         (
             candidate.value
@@ -402,6 +417,15 @@ def refresh_remote_candidates(
                 ),
             ]
         )
+        if _enabled("nlb_singapore"):
+            calls.append(
+                (
+                    "nlb_singapore",
+                    "lookup_isbn",
+                    {"isbn": isbn},
+                    lambda: resolve_nlb_singapore_isbn(isbn),
+                )
+            )
 
     title = str(context_override.get("title") or edition.work.title or "").strip()
     document_type = str(context_override.get("document_type") or edition.work.document_type or "")
@@ -429,6 +453,18 @@ def refresh_remote_candidates(
                     ),
                 ]
             )
+            if _enabled("nlb_singapore") and (
+                str(language).casefold().startswith("zh")
+                or bool(re.search(r"[\u3400-\u9fff]", title))
+            ):
+                calls.append(
+                    (
+                        "nlb_singapore",
+                        "search_book",
+                        {"title": title, "language": language},
+                        lambda: search_nlb_singapore_title(title),
+                    )
+                )
 
     for provider, operation, query, resolver in calls:
         if should_continue is not None and not should_continue():
@@ -450,12 +486,13 @@ def provider_configuration_health() -> list[dict]:
     """Cheap configuration health. This deliberately performs no network request."""
 
     values = []
-    for provider in ("crossref", "openlibrary", "google_books", "openalex", "grobid"):
+    for provider in ("crossref", "openlibrary", "google_books", "openalex", "grobid", "nlb_singapore"):
         url = _provider_url(provider)
         from catalog.services.research_sources import resolve_source_credential
 
         configured = bool(url) and (
-            provider != "openalex" or bool(resolve_source_credential("openalex"))
+            provider not in {"openalex", "nlb_singapore"}
+            or bool(resolve_source_credential(provider))
         )
         enabled = _enabled(provider)
         values.append(

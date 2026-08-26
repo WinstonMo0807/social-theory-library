@@ -1,8 +1,21 @@
 # 当前问题
 
-更新日期为 2026-08-25。状态依据当前源码、已有测试和可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
+更新日期为 2026-08-26。状态依据当前源码、已有测试和可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
 
-## 3.0.1 当前真实限制
+## 3.0.2 当前真实限制
+
+- 3.0.2 已完成 catalog 0039、fresh backup、回退标签、公开 T4 和同源发布。候选树 `f0ffad378928591691df45770ad32d3bbd062a50` 保留为首轮 T4 快照。正式发布的 tracked tree、最终镜像 label 与远端 release branch 保持一致；源码文档不自引用自己的 commit SHA。
+- Library Synthesis 的代码路径已经完成，但生产没有可执行的 LLM executor 时只会显示等待。尚无生产采用样本，不能写成摘要或策展候选质量已通过。
+- NLB Singapore Catalogue v2 adapter 已有 fixture 与完整 provider gateway 路径，但生产尚未配置合法 credential，也没有真实中文书目的质量抽样。NCPSSD、Z39.50、CNKI、维普和万方继续按既有合法使用边界降级。
+- Claim Gold 管理接口不等于已有 Gold。当前 benchmark 尚未 ready，Claim 默认排序不能开启；support、oppose、qualify、locator 与 attribution 仍没有新的生产前后指标。
+- 4070 按本轮要求没有部署。生产有 21 个有效 demand 处于 `waiting_for_capability`，publication blocker 为 0。真实 Laptop 在线领取、模型输出质量和断线重领仍待核实。
+- 受控 OCR 测试验证了文本进入 EvidenceSpan 和候选，但不等于真实生产 PaddleOCR 已执行。用户已暂停的 6 个 OCR job 在切换前后保持 paused。本轮没有恢复、重排或执行它们；后续只能逐项判断，不能 Resume All。
+- SafeWebFetcher 现在会执行响应头和 HTML 页面 robots 指令、SSRF、固定 IP、内容类型、大小、编码与中文正文检查。它没有通用站点授权能力，也不会绕过登录、付费墙或反爬；Provider 使用规则仍需由相应 adapter 与管理员配置保证。
+- Knowledge preview 对标量、Person、关系和 ReadingPath 阶段采用只读内存 overlay，不会临时写库。任何仍无法由公开 serializer 完整物化的特殊字段必须明确标记 partial，不得以后台模拟卡片冒充正式页面。
+- legacy TheorySchool、legacy Concept、WorkKnowledgeRelation 和旧 route 继续只读或 advanced 兼容。退役仍以 mapping parity、零旧写调用、公开页不再依赖和观察期完成为条件。
+- 上架工作流曾把未处理的 Person 候选加入正式 `contributors.items`，并默认创建作者、译者表单行，导致候选很多且空译者也像必填项。该问题已在 3.0.2 生产候选中关闭。实际上架项有 28 个待处理 Person 候选，Workspace 可见 29 个 Person 候选，正式贡献者列表只有 1 项；候选没有进入正式草稿，批量责任者 metadata 也不能直接采用。作者区保留一个尚未落库的空输入，译者按需添加，空行不阻止保存。
+
+## 3.0.1 发布时的真实限制
 
 - 3.0.1 已部署。正式 release commit 为 `fa7444d3524f99f81bc5c0c20fbbc3477e81a76e`，catalog 0035 至 0038 和 ingestion 0014 已应用，pending migration 为 0。Fresh backup、PostgreSQL 16 restore rehearsal、3.0.0 additive-schema compatibility、正式镜像、T4 与回退记录均已完成。
 - 作品摘要的 Source Abstract 和 No Reliable Candidate 已实现。只依据馆内 PDF EvidenceSpan 生成并带引用的 Library Synthesis Candidate 尚未实现。系统会明确返回 `source_abstract_not_found_and_library_synthesis_not_completed`，不会用模型常识补写摘要。
@@ -15,13 +28,13 @@
 
 ## 3.0 当前真实限制
 
-- 3.0.1 已部署，catalog 0033 至 0038、ingestion 0014、DocumentRevision/Evidence backfill、registry seed、Claim shadow scheduling、Projection reconciliation 和公网 smoke 已执行。生产 readiness 为 3.0.1，pending migration 为 0。
-- 真实馆藏没有可用的 Claim gold judgment，也没有当前可消费 Claim demand 的 LLM executor。21 个 Claim shadow demand 正确等待，DerivedClaim 仍为 0。因此默认排序不能切换；Opposing Evidence Recall、Qualification Recall、Attribution Error Rate 和 stance accuracy 没有生产前后数字，公网当前只实测到 direct 组。
+- 3.0.2 已正式部署。catalog 0033 至 0039、ingestion 0014、DocumentRevision/Evidence backfill、registry seed、Claim shadow scheduling、Projection reconciliation 和公网 smoke 已执行。生产 readiness 为 3.0.2，pending migration 为 0。最终 tracked tree、部署镜像 label 与远端 release branch 通过发布记录绑定。
+- 真实馆藏没有可用的 Claim gold judgment，也没有当前可消费 Claim demand 的 LLM executor。21 个 Claim shadow demand 正确等待，DerivedClaim 与 CuratedClaim 均为 0。因此默认排序不能切换；Opposing Evidence Recall、Qualification Recall、Attribution Error Rate 和 stance accuracy 仍没有 benchmark 前后数字。公开 T4 已看到 direct 2、oppose 2、qualify 1，但这只是查询结果分组，不能替代人工 Gold 或正式质量指标。
 - 生产 inventory 中存在 TheorySchool 到 archived KnowledgeNode 的可疑 legacy mapping。目标未发布且名称身份不匹配，migration 没有复制三条旧理论关系。该映射和关系 parity 需要研究者人工确认，不能自动改成另一个理论身份。
 - 真实 RTX 4070 worker 当前不在线。协议、权限、heartbeat、lease 与生产离线等待已验证；真实在线领取、模型输出质量和 reconnect 恢复仍待 Laptop 与专用 credential 可用后核实。
-- Processing Center 继续展示 optional Provider 降级和缺失 AI capability。T4 时 21 个 Claim demand 等待 executor，blocking count 为 0，stale Projection 为 0。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
-- 8 个 DocumentRevision 已回填，其中《社会学的基本概念》当前没有可回填 Passage，因此 EvidenceSpan 为 0；另有一条 Work 标题为空。相关文档质量已形成 critical page 信息，需要后续馆藏清理，不应通过虚构 Evidence 或重建 Page 解决。
-- 生产另有 3 个历史 paused OCR job，创建于 2026-08-08 与 2026-08-21，task id 为空，均不是 3.0.1 smoke 产生。它们不计入 open ProcessingJob，也不阻断发布；后续应由管理员根据原文质量决定恢复或归档。
+- Processing Center 继续展示 optional Provider 降级和缺失 AI capability。T4 时有 21 个 demand 等待 executor，blocking count 为 0，stale Projection 为 0；汇总同时显示 1 类缺失 capability、6 项 Provider 降级和 9 项 Research Source 降级。NLB 没有生产 credential。外部 Provider 不能阻止上传、编辑和发布，也不能把 snippet 当成正式 Evidence。
+- 生产已有 9 个 DocumentRevision 和 3,735 个 EvidenceSpan。DerivedClaim、CuratedClaim 与 Claim Gold 均为 0。现存文档质量问题需要通过有限页 OCR 或馆藏清理处理，不应通过虚构 Evidence 或重建 Page 解决。
+- 生产有 6 个 paused OCR job，均在本轮切换前已被用户暂停。它们不计入 open ProcessingJob，也不阻断发布；切换过程没有恢复或执行 OCR。
 - 3.0 兼容表暂不删除。TheorySchool、legacy Concept、WorkKnowledgeRelation 和旧 identity adapter 只有在 mapping parity、零旧写调用和观察期完成后才可退役。
 - 普通 Editor 的生产权限、Revision、Candidate、Claim 发布和公网页码已通过真实 PostgreSQL 外层事务回滚验收。它不等于已经向正式馆藏保留测试修改，持久业务数据仍只由正常编辑操作产生。
 - 有限页 OCR 调度可以在生产事务中验证，但实际 OCR 识别仍需真实上架旅程。Ask 登录后 Answer Composer 和 4070 在线领取也继续标记为待核实。

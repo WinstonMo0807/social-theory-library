@@ -256,7 +256,7 @@ def _web_status() -> dict[str, Any]:
             ),
             "health": "unknown",
         }
-        for provider in ("crossref", "openlibrary", "google_books", "grobid")
+        for provider in ("crossref", "openlibrary", "google_books", "grobid", "nlb_singapore")
     }
     return {
         "general_web": {

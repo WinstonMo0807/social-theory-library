@@ -109,6 +109,7 @@ class AdminKnowledgeWorkspaceView(APIView):
             selected_type=request.query_params.get("selected_type", ""),
             selected_id=request.query_params.get("selected_id", ""),
             limit=request.query_params.get("limit", 40),
+            reviewer=request.user,
         )
         return Response(payload)
 
@@ -415,6 +416,32 @@ class AdminWorkPagePreviewView(APIView):
             "pdf_preview_url": f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else "",
             "work": data,
         })
+
+
+class AdminKnowledgeObjectPreviewView(APIView):
+    """Protected draft/public preview backed by the public serializer contract."""
+
+    permission_classes = [CanViewEvidence]
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+    def get(self, request, object_type, object_id):
+        from catalog.services.knowledge_studio import knowledge_object_preview_payload
+
+        payload = knowledge_object_preview_payload(
+            object_type=object_type,
+            object_id=str(object_id),
+            reviewer=request.user,
+        )
+        if payload is None:
+            return Response(
+                {"detail": "知识对象不存在，或对象类型与标识不匹配。"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(payload)
 
 
 class AdminProjectionRefreshView(APIView):

@@ -45,6 +45,7 @@ from .backoffice_views import (
     AdminFunctionalHealthView,
     AdminIntakeWorkspaceView,
     AdminKnowledgeWorkspaceView,
+    AdminKnowledgeObjectPreviewView,
     AdminPromptRegistryView,
     AdminProjectionRefreshView,
     AdminProjectionStatusView,
@@ -81,11 +82,15 @@ from .research_views import (
     ResearchContractView,
     ResearchEntityDecisionView,
     ResearchEntityDiscoveryView,
+    ResearchGeneratedCandidateDecisionView,
     ResearchRunDetailView,
     WorkResearchView,
 )
 from .research_source_views import AdminResearchSourceRegistryView
+from .provider_secret_views import AdminProviderSecretView
 from .search_evaluation_views import (
+    ClaimBenchmarkJudgmentDetailView,
+    ClaimBenchmarkJudgmentListCreateView,
     SearchEvaluationRunDetailView,
     SearchEvaluationRunListCreateView,
     SearchEvaluationQueryListCreateView,
@@ -268,6 +273,11 @@ urlpatterns = [
         name="admin-research-contracts",
     ),
     path(
+        "admin/research/generated-candidates/<str:candidate_kind>/<uuid:candidate_id>/decision/",
+        ResearchGeneratedCandidateDecisionView.as_view(),
+        name="admin-research-generated-candidate-decision",
+    ),
+    path(
         "admin/works/<uuid:work_id>/curation/",
         WorkCurationSummaryView.as_view(),
         name="admin-work-curation-summary",
@@ -328,9 +338,19 @@ urlpatterns = [
         name="admin-research-source-registry",
     ),
     path(
+        "admin/provider-secrets/",
+        AdminProviderSecretView.as_view(),
+        name="admin-provider-secrets",
+    ),
+    path(
         "admin/page-preview/editions/<uuid:edition_id>/",
         AdminWorkPagePreviewView.as_view(),
         name="admin-work-page-preview",
+    ),
+    path(
+        "admin/knowledge-preview/<str:object_type>/<uuid:object_id>/",
+        AdminKnowledgeObjectPreviewView.as_view(),
+        name="admin-knowledge-object-preview",
     ),
     path(
         "admin/projection-status/<str:target_type>/<uuid:target_id>/",
@@ -561,6 +581,16 @@ urlpatterns = [
         "admin/search-evaluations/runs/<uuid:pk>/",
         SearchEvaluationRunDetailView.as_view(),
         name="admin-search-evaluation-run-detail",
+    ),
+    path(
+        "admin/claim-benchmark/judgments/",
+        ClaimBenchmarkJudgmentListCreateView.as_view(),
+        name="admin-claim-benchmark-judgment-list",
+    ),
+    path(
+        "admin/claim-benchmark/judgments/<uuid:pk>/",
+        ClaimBenchmarkJudgmentDetailView.as_view(),
+        name="admin-claim-benchmark-judgment-detail",
     ),
     path("admin/usage-analytics/", AdminUsageAnalyticsView.as_view(), name="admin-usage-analytics"),
     path(

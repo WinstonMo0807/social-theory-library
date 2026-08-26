@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from django.utils import timezone
 
-from catalog.models import CapabilityDemand, CapabilityExecutor, SiteSetting
+from catalog.models import (
+    CapabilityDemand,
+    CapabilityExecutor,
+    ProviderCredentialSecret,
+    SiteSetting,
+)
 from catalog.services.processing_center_diagnostics import processing_center_diagnostics
 from catalog.services.research_sources import (
     RESEARCH_SOURCE_ADAPTERS,
@@ -14,6 +20,7 @@ from catalog.services.research_sources import (
     STANDARD_BIBLIOGRAPHIC_FORMATS,
     extract_standard_metadata,
     research_source_enabled,
+    resolve_source_credential,
 )
 from ingestion.models import AuditEvent, SourceRecord
 
@@ -193,6 +200,141 @@ def test_owner_can_store_alias_reference_without_api_disclosure(
     assert "ncpssd-public" not in str(response.data)
     assert "https://example.org/ncpssd" not in str(response.data)
     assert response.data["permissions"]["can_edit_sensitive_aliases"] is True
+
+
+def test_owner_can_store_encrypted_provider_credential_without_readback(
+    api_client,
+    superadmin_user,
+):
+    api_client.force_authenticate(superadmin_user)
+
+    stored = api_client.post(
+        "/api/catalog/admin/provider-secrets/",
+        {
+            "action": "set",
+            "alias": "openalex-owner",
+            "purpose": "research_source",
+            "provider_key": "openalex",
+            "secret": "owner-only-provider-secret",
+        },
+        format="json",
+    )
+    configured = api_client.put(
+        "/api/catalog/admin/research-sources/",
+        {
+            "adapters": [
+                {
+                    "key": "openalex",
+                    "enabled": True,
+                    "credential_alias": "openalex-owner",
+                }
+            ]
+        },
+        format="json",
+    )
+
+    assert stored.status_code == 200
+    assert stored.data["secret_values_exposed"] is False
+    assert "owner-only-provider-secret" not in str(stored.data)
+    assert stored.data["secrets"][0]["configured"] is True
+    row = ProviderCredentialSecret.objects.get(alias="openalex-owner")
+    assert b"owner-only-provider-secret" not in bytes(row.ciphertext)
+    assert resolve_source_credential("openalex") == "owner-only-provider-secret"
+    assert configured.status_code == 200
+    openalex = next(row for row in configured.data["adapters"] if row["key"] == "openalex")
+    assert openalex["credential_configured"] is True
+    assert "openalex-owner" not in str(configured.data)
+    assert "owner-only-provider-secret" not in str(configured.data)
+
+
+def test_research_source_test_records_safe_credential_result_without_changing_secret_update_time(
+    api_client,
+    superadmin_user,
+    monkeypatch,
+):
+    api_client.force_authenticate(superadmin_user)
+    stored = api_client.post(
+        "/api/catalog/admin/provider-secrets/",
+        {
+            "action": "set",
+            "alias": "openalex-health",
+            "purpose": "research_source",
+            "provider_key": "openalex",
+            "secret": "health-test-secret",
+        },
+        format="json",
+    )
+    configured = api_client.put(
+        "/api/catalog/admin/research-sources/",
+        {
+            "adapters": [
+                {
+                    "key": "openalex",
+                    "enabled": True,
+                    "credential_alias": "openalex-health",
+                }
+            ]
+        },
+        format="json",
+    )
+    row = ProviderCredentialSecret.objects.get(alias="openalex-health")
+    credential_updated_at = row.updated_at
+    checked_at = timezone.now()
+    monkeypatch.setattr(
+        "catalog.services.system_health.run_health_probe",
+        lambda *args, **kwargs: SimpleNamespace(
+            status="healthy",
+            functional=True,
+            productive=True,
+            error_code="",
+            finished_at=checked_at,
+            created_at=checked_at,
+            details={"credential": "accepted"},
+        ),
+    )
+
+    tested = api_client.post(
+        "/api/catalog/admin/research-sources/",
+        {"action": "test", "source_key": "openalex"},
+        format="json",
+    )
+    registry = api_client.get("/api/catalog/admin/research-sources/")
+
+    assert stored.status_code == 200
+    assert configured.status_code == 200
+    assert tested.status_code == 200
+    assert tested.data["status"] == "healthy"
+    row.refresh_from_db()
+    assert row.updated_at == credential_updated_at
+    assert row.last_tested_at is not None
+    assert row.last_test_status == "healthy"
+    assert row.last_test_message == ""
+    openalex = next(item for item in registry.data["adapters"] if item["key"] == "openalex")
+    assert openalex["credential_updated_at"] == credential_updated_at
+    assert openalex["credential_last_tested_at"] == row.last_tested_at
+    assert openalex["credential_last_test_status"] == "healthy"
+    assert openalex["credential_last_test_message"] == ""
+    assert "openalex-health" not in str(registry.data)
+    assert "health-test-secret" not in str(registry.data)
+
+
+def test_administrator_cannot_manage_provider_secret_values(api_client, admin_user):
+    api_client.force_authenticate(admin_user)
+
+    response = api_client.post(
+        "/api/catalog/admin/provider-secrets/",
+        {
+            "action": "set",
+            "alias": "forbidden-admin",
+            "purpose": "research_source",
+            "provider_key": "openalex",
+            "secret": "must-not-be-stored",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert not ProviderCredentialSecret.objects.filter(alias="forbidden-admin").exists()
 
 
 def test_searxng_endpoint_alias_is_consumed_without_returning_its_value(

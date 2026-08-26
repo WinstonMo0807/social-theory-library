@@ -98,6 +98,24 @@ type ProcessingJobsPayload = {
   results: ProcessingJob[];
   counts: Record<string, number>;
   workloads: Record<string, { paused: boolean }>;
+  paused_ocr_inventory?: PausedOCRInventory;
+};
+type PausedOCRInventoryItem = {
+  job_id: string;
+  asset_id: string;
+  category: "obsolete" | "superseded" | "completed_by_newer_revision" | "recoverable" | "genuinely_failed";
+  reasons: string[];
+  target_page_indexes: number[];
+  remaining_page_indexes: number[];
+  newer_job_id: string;
+  newer_revision_id: string;
+};
+type PausedOCRInventory = {
+  total: number;
+  returned: number;
+  truncated: boolean;
+  counts: Record<string, number>;
+  items: PausedOCRInventoryItem[];
 };
 type ReviewTask = {
   id: string;
@@ -161,6 +179,28 @@ const statusLabels: Record<string, string> = {
   canceled: "已取消",
 };
 
+const ocrCategoryLabels: Record<PausedOCRInventoryItem["category"], string> = {
+  obsolete: "已失去执行条件",
+  superseded: "已被较新任务或文件取代",
+  completed_by_newer_revision: "已由较新识别结果完成",
+  recoverable: "仍可安全恢复",
+  genuinely_failed: "确认不可恢复",
+};
+
+const ocrReasonLabels: Record<string, string> = {
+  asset_missing: "资产已不存在",
+  asset_is_not_normalized: "任务目标不是可识别的阅读版本",
+  document_has_no_pages: "文档没有可处理页面",
+  no_ocr_targets: "没有待识别页面",
+  normalized_asset_superseded: "阅读版本已被替换",
+  newer_ocr_job_present: "已有更新的 OCR 任务",
+  all_target_pages_completed: "目标页面均已完成",
+  newer_ocr_result_present: "已有更新的 OCR 修订",
+  current_asset_has_unprocessed_targets: "当前阅读版本仍有未处理页面",
+  non_retryable_error: "错误不可重试",
+  attempts_exhausted: "已达到最大尝试次数",
+};
+
 const reviewStatusLabels: Record<string, string> = {
   pending: "待领取",
   in_progress: "处理中",
@@ -210,6 +250,8 @@ export function ProcessingCenter() {
   const [semanticHealth, setSemanticHealth] = useState<SemanticHealthPayload | null>(null);
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
   const [workloads, setWorkloads] = useState<Record<string, { paused: boolean }>>({});
+  const [pausedOCRInventory, setPausedOCRInventory] = useState<PausedOCRInventory | null>(null);
+  const [ocrDecisionReasons, setOCRDecisionReasons] = useState<Record<string, string>>({});
   const [reviewTasks, setReviewTasks] = useState<ReviewTask[]>([]);
   const [reviewCounts, setReviewCounts] = useState<Record<string, number>>({});
   const [canManageReviewTasks, setCanManageReviewTasks] = useState(false);
@@ -259,6 +301,7 @@ export function ProcessingCenter() {
       setSemanticHealth(semanticResult.status === "fulfilled" ? semanticResult.value : null);
       setJobs(jobsResult.status === "fulfilled" ? jobsResult.value.results : []);
       setWorkloads(jobsResult.status === "fulfilled" ? (jobsResult.value.workloads ?? {}) : {});
+      setPausedOCRInventory(jobsResult.status === "fulfilled" ? (jobsResult.value.paused_ocr_inventory ?? null) : null);
       if (reviewResult.status === "fulfilled") {
         setReviewTasks(reviewResult.value.results);
         setReviewCounts(reviewResult.value.counts);
@@ -436,10 +479,47 @@ export function ProcessingCenter() {
           job_type: type,
         }),
       }, token);
-      setFeedback({ state: "success", message: paused ? `${jobLabels[type]} 已请求暂停。当前批次保存后生效。` : `${jobLabels[type]} 已恢复，已保存任务会继续运行。`, actionKey });
+      setFeedback({ state: "success", message: paused
+        ? `${jobLabels[type]} 已请求暂停。当前批次保存后生效。`
+        : type === "ocr"
+          ? "已允许新的 OCR 任务运行。历史暂停任务仍需逐条核对后处理。"
+          : `${jobLabels[type]} 已恢复，已保存任务会继续运行。`, actionKey });
       setRevision((value) => value + 1);
     } catch (reason) {
       setFeedback({ state: "error", message: reason instanceof Error ? reason.message : "任务负载操作失败。", actionKey });
+    } finally {
+      finishOperation(actionKey);
+    }
+  }
+
+  async function resolvePausedOCR(item: PausedOCRInventoryItem, decision: "close" | "resume" | "acknowledge_failure") {
+    const token = getServerSessionCredential();
+    const actionKey = `ocr-inventory:${decision}:${item.job_id}`;
+    const reason = (ocrDecisionReasons[item.job_id] ?? "").trim();
+    if (!token) {
+      setFeedback({ state: "error", message: "登录状态尚未就绪，无法处理 OCR 任务。", actionKey });
+      return;
+    }
+    if (!reason) {
+      setFeedback({ state: "error", message: "请先填写本次处理理由。", actionKey });
+      return;
+    }
+    if (!beginOperation(actionKey, "正在记录 OCR 任务决定。")) return;
+    try {
+      await apiRequest("/ingestion/processing-center/", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "resolve_paused_ocr",
+          source: "processing_job",
+          job_id: item.job_id,
+          decision,
+          reason,
+        }),
+      }, token);
+      setFeedback({ state: "success", message: decision === "resume" ? "OCR 任务已按当前运行配置恢复。" : decision === "close" ? "历史 OCR 任务已安全关闭。" : "OCR 失败已确认并留下审计记录。", actionKey });
+      setRevision((value) => value + 1);
+    } catch (reasonValue) {
+      setFeedback({ state: "error", message: reasonValue instanceof Error ? reasonValue.message : "OCR 任务处理失败。", actionKey });
     } finally {
       finishOperation(actionKey);
     }
@@ -559,17 +639,44 @@ export function ProcessingCenter() {
                 key={type}
                 state={operationState(`workload:${type}`)}
                 pressed={paused}
-                pendingLabel={paused ? `正在恢复${jobLabels[type]}` : `正在暂停${jobLabels[type]}`}
+                pendingLabel={paused ? `正在允许${jobLabels[type]}` : `正在暂停${jobLabels[type]}`}
                 successLabel="操作已提交"
                 errorLabel="重试操作"
                 disabled={Boolean(pendingOperation)}
                 onClick={() => void workloadAction(type, !paused)}
               >
                 {paused ? <Play size={15} /> : <PauseCircle size={15} />}
-                {paused ? `恢复${jobLabels[type]}` : `暂停${jobLabels[type]}`}
+                {paused ? type === "ocr" ? "允许新 OCR 任务" : `恢复${jobLabels[type]}` : `暂停${jobLabels[type]}`}
               </ActionButton>
             );
           })}
+        </div>
+      </section>
+      <section className="processing-list admin-panel processing-ocr-inventory" aria-labelledby="paused-ocr-inventory-title">
+        <header className="processing-job-toolbar">
+          <div><h2 id="paused-ocr-inventory-title">历史暂停 OCR</h2><p>系统按当前文件、页面和 DocumentRevision 事实逐条分类。每项决定都需要理由并写入审计记录。</p></div>
+          <span>{pausedOCRInventory?.total ?? 0} 项</span>
+        </header>
+        <div className="processing-job-cards">
+          {(pausedOCRInventory?.items ?? []).map((item) => {
+            const decision = item.category === "recoverable" ? "resume" : item.category === "genuinely_failed" ? "acknowledge_failure" : "close";
+            const actionLabel = decision === "resume" ? "按当前配置恢复" : decision === "close" ? "安全关闭" : "确认失败";
+            return (
+              <article className={`processing-job-card paused ocr-inventory-${item.category}`} key={item.job_id}>
+                <header><span>OCR · {item.job_id.slice(0, 8)}</span><b>{ocrCategoryLabels[item.category]}</b></header>
+                <p>{item.reasons.map((reason) => ocrReasonLabels[reason] ?? (reason.startsWith("error:") ? `错误代码 ${reason.slice(6)}` : reason)).join("；")}</p>
+                <dl>
+                  <div><dt>目标页</dt><dd>{item.target_page_indexes.join("、") || "无"}</dd></div>
+                  <div><dt>待处理页</dt><dd>{item.remaining_page_indexes.join("、") || "无"}</dd></div>
+                  <div><dt>较新任务</dt><dd>{item.newer_job_id ? item.newer_job_id.slice(0, 8) : "无"}</dd></div>
+                  <div><dt>较新修订</dt><dd>{item.newer_revision_id ? item.newer_revision_id.slice(0, 8) : "无"}</dd></div>
+                </dl>
+                <label><span>处理理由</span><input value={ocrDecisionReasons[item.job_id] ?? ""} onChange={(event) => setOCRDecisionReasons((current) => ({ ...current, [item.job_id]: event.target.value }))} placeholder="说明依据，保存到审计记录" /></label>
+                <footer><ActionButton state={operationState(`ocr-inventory:${decision}:${item.job_id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim()} onClick={() => void resolvePausedOCR(item, decision)}>{decision === "resume" ? <Play size={14} /> : decision === "close" ? <XCircle size={14} /> : <AlertCircle size={14} />}{actionLabel}</ActionButton></footer>
+              </article>
+            );
+          })}
+          {!loading && !(pausedOCRInventory?.items.length) ? <p className="admin-list-state">当前没有来源不明的历史暂停 OCR 任务。</p> : null}
         </div>
       </section>
       {loading && !items.length && !jobs.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
@@ -631,8 +738,8 @@ export function ProcessingCenter() {
                 <footer>
                   {job.status === "failed" ? <ActionButton state={operationState(`job:retry:${job.source}:${job.id}`)} pendingLabel="正在重试" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "retry")}><RotateCcw size={14} />重试</ActionButton> : null}
                   {(job.status === "pending" || job.status === "running") && (job.job_type === "ocr" || job.job_type === "external_enrichment") ? <ActionButton state={operationState(`job:pause:${job.source}:${job.id}`)} pendingLabel="正在暂停" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "pause")}><PauseCircle size={14} />安全暂停</ActionButton> : null}
-                  {job.status === "paused" ? <ActionButton state={operationState(`job:resume:${job.source}:${job.id}`)} pendingLabel="正在继续" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "resume")}><Play size={14} />继续</ActionButton> : null}
-                  {(job.status === "pending" || job.status === "paused") ? <ActionButton state={operationState(`job:cancel:${job.source}:${job.id}`)} pendingLabel="正在取消" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "cancel")}><XCircle size={14} />取消等待</ActionButton> : null}
+                  {job.status === "paused" && job.job_type !== "ocr" ? <ActionButton state={operationState(`job:resume:${job.source}:${job.id}`)} pendingLabel="正在继续" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "resume")}><Play size={14} />继续</ActionButton> : null}
+                  {(job.status === "pending" || (job.status === "paused" && job.job_type !== "ocr")) ? <ActionButton state={operationState(`job:cancel:${job.source}:${job.id}`)} pendingLabel="正在取消" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "cancel")}><XCircle size={14} />取消等待</ActionButton> : null}
                 </footer>
               ) : null}
             </article>

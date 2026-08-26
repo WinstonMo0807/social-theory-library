@@ -390,7 +390,7 @@ test("homepage and scholar directory consume only valid scholars from the shared
   assert.match(scholarSource, /loadRecommendedScholars\(bundle, 3\)/);
 
   const helperStart = apiSource.indexOf("export async function loadRecommendedScholars");
-  const helperEnd = apiSource.indexOf("const coverStyles", helperStart);
+  const helperEnd = apiSource.indexOf("export const adaptWork", helperStart);
   assert.ok(helperStart >= 0 && helperEnd > helperStart);
   const helperSource = apiSource.slice(helperStart, helperEnd);
   assert.match(helperSource, /recommendationSlugs\(bundle, "home_scholars", "scholar"\)/);

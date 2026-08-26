@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from django.db.models import Count, Q
@@ -44,6 +43,12 @@ from catalog.services.work_curation import (
     build_work_curation_summary,
 )
 from catalog.services.claims.curation import high_value_claim_candidates
+from catalog.services.candidate_decision_protocol import (
+    attach_candidate_action_descriptors,
+)
+from ingestion.services.entity_resolution_decisions import (
+    available_resolution_actions,
+)
 
 
 QUEUE_STATUSES = (
@@ -79,8 +84,10 @@ def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
     rows = item.metadata_candidates.prefetch_related("evidence_records").order_by(
         "field_name", "-confidence", "created_at"
     )
-    return [
-        {
+    output: list[dict[str, Any]] = []
+    for row in rows:
+        evidence_records = _candidate_evidence(row)
+        payload = {
             "id": str(row.id),
             "field_name": row.field_name,
             "value": row.value,
@@ -90,13 +97,18 @@ def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
             "source": row.source,
             "confidence": row.confidence,
             "evidence": row.evidence,
-            "evidence_records": _candidate_evidence(row),
+            "evidence_records": evidence_records,
+            "evidence_count": len(evidence_records),
+            "evidence_status": "evidence" if evidence_records else "none",
             "is_locked": row.is_locked,
             "decision_url": f"/ingestion/items/{item.id}/metadata-candidates/{row.id}/decision/",
             "available_actions": (
-                ["reject"]
+                ["inspect", "reject"]
+                if row.field_name in {"authors", "translators"}
+                and row.lifecycle == MetadataCandidate.Lifecycle.PROPOSED
+                else ["inspect", "apply_to_draft", "reject"]
                 if row.lifecycle == MetadataCandidate.Lifecycle.PROPOSED
-                else ["reopen"]
+                else ["inspect", "reopen"]
                 if row.lifecycle in {
                     MetadataCandidate.Lifecycle.REJECTED,
                     MetadataCandidate.Lifecycle.SUPERSEDED,
@@ -104,8 +116,8 @@ def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
                 else []
             ),
         }
-        for row in rows
-    ]
+        output.append(attach_candidate_action_descriptors(payload))
+    return output
 
 
 def _entity_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
@@ -114,8 +126,36 @@ def _entity_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
     rows = item.entity_resolution_candidates.order_by(
         "target_type", "source_name", "-match_score", "created_at"
     )
-    return [
-        {
+    output: list[dict[str, Any]] = []
+    for row in rows:
+        properties = dict(row.supporting_properties or {})
+        candidate_group = str(properties.get("candidate_group") or "").casefold()
+        evidence_status = str(properties.get("evidence_status") or "").casefold()
+        provider = str(properties.get("provider") or "").casefold()
+        is_lead = (
+            candidate_group in {"external_web", "research_lead"}
+            or provider in {"searxng", "web_search", "searching"}
+        ) and evidence_status not in {"verified_text", "web_evidence"}
+        actions = ["inspect", *available_resolution_actions(row)]
+        verify_url = ""
+        if is_lead and row.status == EntityResolutionCandidate.Status.PROPOSED:
+            actions.insert(1, "verify")
+            verify_url = f"/catalog/admin/research/candidates/{row.id}/verify/"
+        has_evidence = bool(
+            not is_lead
+            and (
+                row.candidate_entity_id
+                or row.match_reasons
+                or row.preview_data
+                or evidence_status in {"verified_text", "web_evidence", "structured_evidence"}
+            )
+        )
+        contribution_role = str(
+            properties.get("contribution_role") or Contribution.Role.AUTHOR
+        )
+        if contribution_role not in Contribution.Role.values:
+            contribution_role = Contribution.Role.AUTHOR
+        payload = {
             "id": str(row.id),
             "field_name": "contributors" if row.target_type == "person" else row.target_type,
             "source_name": row.source_name,
@@ -133,14 +173,18 @@ def _entity_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
                 "supporting_properties": row.supporting_properties,
             },
             "decision_url": f"/ingestion/items/{item.id}/entity-resolution-candidates/{row.id}/decision/",
-            "available_actions": (
-                ["link_existing", "create_draft", "keep_unresolved", "reject"]
-                if row.status == EntityResolutionCandidate.Status.PROPOSED
-                else []
+            "verify_url": verify_url or None,
+            "available_actions": actions,
+            "role": (
+                contribution_role
+                if row.target_type == "person"
+                else ""
             ),
+            "evidence_count": 1 if has_evidence else 0,
+            "evidence_status": "lead_only" if is_lead else "evidence" if has_evidence else "none",
         }
-        for row in rows
-    ]
+        output.append(attach_candidate_action_descriptors(payload))
+    return output
 
 
 def _enrichment_candidates(work: Work, edition: Edition) -> list[dict[str, Any]]:
@@ -148,8 +192,20 @@ def _enrichment_candidates(work: Work, edition: Edition) -> list[dict[str, Any]]
         Q(target_type=EnrichmentCandidate.TargetType.WORK, target_id=work.id)
         | Q(target_type=EnrichmentCandidate.TargetType.EDITION, target_id=edition.id)
     ).prefetch_related("evidence_records").order_by("field_name", "-confidence", "created_at")[:100]
-    return [
-        {
+    output: list[dict[str, Any]] = []
+    for row in rows:
+        evidence_records = [
+            {
+                "id": str(evidence.id),
+                "source_title": evidence.source_title,
+                "canonical_url": evidence.canonical_url,
+                "supporting_text": evidence.supporting_text,
+                "source_class": evidence.source_class,
+                "retrieved_at": evidence.retrieved_at,
+            }
+            for evidence in row.evidence_records.filter(is_current=True)[:20]
+        ]
+        payload = {
             "id": str(row.id),
             "field_name": row.field_name,
             "proposed_value": row.proposed_value,
@@ -157,22 +213,75 @@ def _enrichment_candidates(work: Work, edition: Edition) -> list[dict[str, Any]]
             "status": row.status,
             "source": row.source_class,
             "confidence": row.confidence,
-            "evidence_records": [
-                {
-                    "id": str(evidence.id),
-                    "source_title": evidence.source_title,
-                    "canonical_url": evidence.canonical_url,
-                    "supporting_text": evidence.supporting_text,
-                    "source_class": evidence.source_class,
-                    "retrieved_at": evidence.retrieved_at,
-                }
-                for evidence in row.evidence_records.filter(is_current=True)[:20]
-            ],
+            "evidence_records": evidence_records,
+            "evidence_count": len(evidence_records),
+            "evidence_status": "evidence" if evidence_records else "lead_only",
             "decision_url": f"/catalog/admin/field-enrichment/candidates/{row.id}/decision/",
-            "available_actions": ["accept", "reject"] if row.status == EnrichmentCandidate.Status.PENDING else [],
+            "available_actions": ["inspect", "accept", "reject"] if row.status == EnrichmentCandidate.Status.PENDING else ["inspect"],
         }
-        for row in rows
-    ]
+        output.append(attach_candidate_action_descriptors(payload))
+    return output
+
+
+def _theory_candidates(work: Work) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    pending_states = {
+        TheoryReviewTask.TaskStatus.PENDING,
+        TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
+        TheoryReviewTask.TaskStatus.INSUFFICIENT_EVIDENCE,
+    }
+    for row in TheoryReviewTask.objects.filter(work=work).select_related(
+        "candidate_node"
+    )[:100]:
+        label = row.suggested_node_name or (
+            row.candidate_node.canonical_name_zh
+            if row.candidate_node
+            else "知识关系"
+        )
+        actions = ["inspect"]
+        action_payloads: dict[str, dict[str, Any]] = {}
+        if row.status in pending_states:
+            if (
+                row.task_type == TheoryReviewTask.TaskType.WORK_NODE
+                and row.candidate_node_id
+            ):
+                actions.append("accept")
+                action_payloads["accept"] = {
+                    "action": "confirm",
+                    "candidate_node": str(row.candidate_node_id),
+                    "relation_type": row.suggested_relation_type,
+                }
+            elif row.task_type == TheoryReviewTask.TaskType.NEW_NODE:
+                actions.append("create_draft")
+                action_payloads["create_draft"] = {
+                    "action": "create_node",
+                    "canonical_name_zh": row.suggested_node_name,
+                }
+            actions.extend(["reject", "defer"])
+        evidence_count = 1 if row.evidence_text or row.evidence_pages else 0
+        payload = {
+            "id": str(row.id),
+            "field_name": "relations",
+            "kind": "theory_review",
+            "label": label,
+            "proposed_value": {
+                "target_id": str(row.candidate_node_id) if row.candidate_node_id else None,
+                "name": label,
+                "relation_type": row.suggested_relation_type,
+            },
+            "status": "pending" if row.status in pending_states else row.status,
+            "source": "theory_review",
+            "source_tier": "pdf_evidence",
+            "confidence": row.confidence,
+            "evidence": {"pages": row.evidence_pages, "text": row.evidence_text},
+            "evidence_count": evidence_count,
+            "evidence_status": "evidence" if evidence_count else "none",
+            "decision_url": f"/catalog/admin/theory-system/review-tasks/{row.id}/action/",
+            "available_actions": actions,
+            "action_payloads": action_payloads,
+        }
+        output.append(attach_candidate_action_descriptors(payload))
+    return output
 
 
 def _file_data(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
@@ -226,7 +335,7 @@ def _bibliography_data(work: Work, edition: Edition) -> dict[str, Any]:
     }
 
 
-def _contributors_data(edition: Edition, item: UploadItem | None) -> dict[str, Any]:
+def _contributors_data(edition: Edition) -> dict[str, Any]:
     rows = [
         {
             "id": str(contribution.id),
@@ -240,52 +349,6 @@ def _contributors_data(edition: Edition, item: UploadItem | None) -> dict[str, A
         }
         for contribution in edition.contributions.select_related("person").order_by("order", "created_at")
     ]
-    if item:
-        candidate_rows = list(
-            item.entity_resolution_candidates.filter(
-                target_type="person",
-                status__in=[
-                    EntityResolutionCandidate.Status.PROPOSED,
-                    EntityResolutionCandidate.Status.LINKED,
-                    EntityResolutionCandidate.Status.CREATE_DRAFT,
-                    EntityResolutionCandidate.Status.UNRESOLVED,
-                ],
-            )
-        )
-        counts = Counter(row.source_name for row in candidate_rows)
-        linked_names = {str(row["display_name"]).casefold() for row in rows}
-        linked_person_ids = {str(row["person_id"]) for row in rows if row["person_id"]}
-        for candidate in candidate_rows:
-            contribution_role = str(
-                (candidate.supporting_properties or {}).get("contribution_role")
-                or Contribution.Role.AUTHOR
-            )
-            if contribution_role not in Contribution.Role.values:
-                contribution_role = Contribution.Role.AUTHOR
-            if (
-                candidate.source_name.casefold() in linked_names
-                or (
-                    candidate.status in {
-                        EntityResolutionCandidate.Status.LINKED,
-                        EntityResolutionCandidate.Status.CREATE_DRAFT,
-                    }
-                    and candidate.candidate_entity_id in linked_person_ids
-                )
-            ):
-                continue
-            rows.append(
-                {
-                    "id": None,
-                    "person_id": None,
-                    "display_name": candidate.source_name,
-                    "role": contribution_role,
-                    "order": len(rows),
-                    "approved": False,
-                    "resolution_state": candidate.status,
-                    "candidate_count": counts[candidate.source_name],
-                }
-            )
-            linked_names.add(candidate.source_name.casefold())
     return {
         "items": rows,
         "expected_updated_at": edition.updated_at,
@@ -786,19 +849,7 @@ def build_admin_workspace(
         "metadata": _metadata_candidates(item),
         "entities": _entity_candidates(item),
         "enrichment": _enrichment_candidates(work, edition),
-        "theory": [
-            {
-                "id": str(row.id),
-                "field_name": "relations",
-                "label": row.suggested_node_name or (row.candidate_node.canonical_name_zh if row.candidate_node else "知识关系"),
-                "status": "pending" if row.status == TheoryReviewTask.TaskStatus.PENDING else row.status,
-                "source": "theory_review",
-                "confidence": row.confidence,
-                "evidence": {"pages": row.evidence_pages, "text": row.evidence_text},
-                "available_actions": [],
-            }
-            for row in TheoryReviewTask.objects.filter(work=work).select_related("candidate_node")[:100]
-        ],
+        "theory": _theory_candidates(work),
         # Machine claim volume is deliberately compressed to no more than five
         # current human decisions.  DerivedClaim remains shadow data until an
         # Editor explicitly adopts it as CuratedClaim.
@@ -809,13 +860,43 @@ def build_admin_workspace(
         "work": _work_data(work, edition),
         "edition": _bibliography_data(work, edition),
         "bibliography": _bibliography_data(work, edition),
-        "contributors": _contributors_data(edition, item),
+        "contributors": _contributors_data(edition),
         "classification": _classification_data(workflow, edition),
         "knowledge": _knowledge_data(workflow, edition),
         "reader": _reader_data(edition),
         "curation": _curation_data(workflow, work),
         "publication": _publication_data(workflow, edition),
     }
+    from catalog.services.knowledge_studio import knowledge_object_editor_snapshot
+
+    knowledge_snapshot = knowledge_object_editor_snapshot(
+        object_type="work",
+        object_id=str(work.id),
+        reviewer=user,
+    )
+    if knowledge_snapshot:
+        data["curation"]["frontend_impact"] = knowledge_snapshot.get(
+            "frontend_impact", {}
+        )
+        data["curation"]["preview"] = knowledge_snapshot.get("preview", {})
+        data["curation"]["preview_perspectives"] = knowledge_snapshot.get(
+            "preview_perspectives", {}
+        )
+        data["curation"]["preview_url"] = knowledge_snapshot.get(
+            "preview_url", ""
+        )
+        data["curation"]["knowledge_update_suggestions"] = knowledge_snapshot.get(
+            "knowledge_update_suggestions", []
+        )
+        data["curation"]["knowledge_update_signal_counts"] = knowledge_snapshot.get(
+            "knowledge_update_signal_counts", {}
+        )
+        data["curation"]["knowledge_update_read_model"] = knowledge_snapshot.get(
+            "knowledge_update_read_model", {}
+        )
+        candidates["knowledge_updates"] = knowledge_snapshot.get(
+            "knowledge_update_suggestions", []
+        )
     pending_revision = None
     if mode == "maintenance":
         pending_revision = EditorialRevision.objects.filter(

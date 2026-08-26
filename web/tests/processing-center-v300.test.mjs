@@ -73,6 +73,10 @@ test("Processing Center 3.0.1 exposes product-oriented work surfaces", async () 
   assert.match(diagnostics, /当前用户功能影响/);
   assert.match(diagnostics, /Backlog 可领取/);
   assert.match(diagnostics, /配置模型/);
+  assert.match(processingCenter, /历史暂停 OCR/);
+  assert.match(processingCenter, /resolve_paused_ocr/);
+  assert.match(processingCenter, /处理理由/);
+  assert.doesNotMatch(processingCenter, /job\.status === "paused" \? <ActionButton[\s\S]*?>继续<\/ActionButton>/);
 });
 
 test("Research Source Registry supports safe config tests and Chinese provider boundaries", async () => {
@@ -87,4 +91,8 @@ test("Research Source Registry supports safe config tests and Chinese provider b
   assert.match(sourceRegistry, /中文公共来源扩展/);
   assert.match(sourceRegistry, /中文授权来源/);
   assert.match(sourceRegistry, /密钥始终留在服务器环境中/);
+  assert.match(sourceRegistry, /credential_updated_at/);
+  assert.match(sourceRegistry, /credential_last_tested_at/);
+  assert.match(sourceRegistry, /凭据更新/);
+  assert.match(sourceRegistry, /凭据测试/);
 });

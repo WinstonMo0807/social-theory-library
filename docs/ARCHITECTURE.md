@@ -1,8 +1,22 @@
 # Social Theory Library 架构
 
-更新日期为 2026-08-25。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
+更新日期为 2026-08-26。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
 
-已部署的 3.0.0 源码已提交为 `35b5cce`，并以 `v3.0.0-baseline` 标记。当前 3.0.1 工作树从该 baseline 开始，分支为 `codex/v3.0.1-product-integration`。公网仍运行 3.0.0。生产 API、默认 Worker、Ingestion Worker 与 Beat 使用 `social-theory-library-api:3.0.0-final-ae0f4614-20260824-150032`，Web 使用 `social-theory-library-web:3.0.0-candidate-4022b77b-20260824-140003`。生产 migration head 仍为 catalog 0034、ingestion 0013 和 reading 0007。3.0.1 候选 head 为 catalog 0038、ingestion 0014，reading 不变。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
+当前 3.0.2 分支为 `codex/v3.0.2-admin-convergence`，起点是远端 `88ded5412ca041312175b93307a0ed697ff6f599`。该提交包含已在生产验证的 Web revision `fa7444d` 与 PostgreSQL Claim 修复 `4c30565c`。公网在本节更新时仍运行 3.0.1。API、默认 Worker、Ingestion Worker 与 Beat 的 source revision 为 `4c30565c`，Web 为 `fa7444d`。3.0.2 候选 migration head 为 catalog 0039、ingestion 0014、reading 0007。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
+
+## 3.0.2 产品收敛层
+
+3.0.2 没有增加第二套 Candidate、Knowledge、Preview、Provider 或任务数据库。它在现有服务上增加统一适配层。
+
+- `CandidateDecisionProtocol` 把候选已有的决定服务翻译成统一动作描述。前端只执行后端返回的动作，不自行决定证据是否足够。
+- `FieldProducerCapabilityMatrix` 从 Research Field Contract、Document Intelligence、Provider Registry 和 AI runtime 汇总字段真实生产能力。Contract 表示允许研究，Matrix 表示当前能否产生可靠候选。
+- Library Synthesis 继续写现有 MetadataCandidate。输入只能是 active EvidenceSpan 组成的 EvidencePack，输出带 Evidence 引用；没有 executor 时只创建等待需求。
+- `KnowledgeObjectEditorAdapter` 复用现有专业 mutation 与 EditorialRevision。ContentCompleteness 来自真实公开 serializer 与前台模块字段。Frontend Impact 来自 Dependency Resolver 和 ProjectionState。
+- Knowledge Growth 是有界派生读模型。它读取新的 EvidenceSpan、DerivedClaim、EnrichmentCandidate、DebateCandidate 和 ReadingPathCandidate，最多呈现少量当前建议，不新增 `KnowledgeUpdateSuggestion` 表，也不自动修改 Canonical。
+- 受保护 Preview 选择 EditorialRevision、未发布 canonical draft 或已发布内容，使用同一公开 serializer 和公开详情组件。预览响应 private、no-store；公开 queryset 仍只返回 published 对象。
+- `ProviderCredentialSecret` 只保存服务端加密 ciphertext、alias、用途、key version 和测试状态。加密主密钥来自环境或 Docker secret，明文不进入 SiteSetting、前端、日志或 API 响应。
+- Claim Gold 工作面使用现有 ClaimBenchmarkJudgment，并要求引用 active、未 stale 的 EvidenceSpan。它不自动生成 gold，也不改变 Semantic V2 默认排序。
+- SafeWebFetcher 把失败保存为无 query-string 的 SourceRecord，供 Processing Center 显示真实最近错误。页面 robots 指令、SSRF、逐跳固定 IP、内容类型、大小、HTML 与中文编码检查都在取得 Evidence 前执行。
 
 ## 3.0.1 Product Integration Pass
 
@@ -108,7 +122,7 @@ flowchart LR
 | 文件存储 | NAS 保存原件、公开副本、上传临时文件、备份和模型。S3 适配器可承担 intake 与公开分发 | `api/distribution`、`api/ingestion` |
 | 边缘代理 | Nginx 负责同源 API、限流、X-Accel 和 PDF Range。Caddy 或 Cloudflare Tunnel 提供外部入口 | `deploy`、`compose.public.yaml`、`compose.cloudflare.yaml` |
 
-生产 API、Web 和 Celery 应用当前部署 3.0.0。独立 PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 和 Cloudflared 状态服务没有因 3.0.1 源码开发重建。3.0.0 镜像、部署记录和回退入口仍保留。
+生产 API、Web 和 Celery 应用当前部署 3.0.1。独立 PostgreSQL、Redis、Meilisearch、PaddleOCR、SearXNG 和 Cloudflared 状态服务没有因 3.0.2 源码开发重建。3.0.1 镜像、部署记录和回退入口仍保留。
 
 ## 后端模块
 

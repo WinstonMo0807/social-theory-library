@@ -162,6 +162,60 @@ def executor_matches_demand(
     return True
 
 
+def _stale_demand_reason(demand: CapabilityDemand) -> str:
+    """Return a reason only when the specialist source is provably obsolete."""
+
+    payload = demand.payload if isinstance(demand.payload, dict) else {}
+    task_kind = _demand_task_kind(payload)
+    if task_kind == "claim_extraction":
+        from catalog.models import EvidenceSpan
+
+        span_id = str(payload.get("evidence_span_id") or demand.owner_key or "")
+        if not EvidenceSpan.objects.filter(
+            pk=span_id,
+            is_stale=False,
+            document_revision__is_active=True,
+        ).exists():
+            return "claim evidence was superseded or removed"
+    elif task_kind == "library_synthesis":
+        from catalog.models import EvidencePack, EvidenceSpan
+
+        pack_id = str(payload.get("evidence_pack_id") or demand.owner_key or "")
+        pack = EvidencePack.objects.filter(pk=pack_id).select_related("research_run").only(
+            "envelope_snapshot",
+            "research_run_id",
+            "research_run__is_current",
+        ).first()
+        if pack is None:
+            return "library synthesis evidence pack no longer exists"
+        if pack.research_run_id and not pack.research_run.is_current:
+            return "library synthesis draft research context was superseded"
+        span_ids = {
+            str(row.get("id") or "")
+            for row in (pack.envelope_snapshot or [])
+            if isinstance(row, dict) and str(row.get("id") or "")
+        }
+        current_count = EvidenceSpan.objects.filter(
+            pk__in=span_ids,
+            is_stale=False,
+            document_revision__is_active=True,
+        ).count()
+        if not span_ids or current_count != len(span_ids):
+            return "library synthesis evidence was superseded"
+    elif task_kind == "projection_refresh":
+        from ingestion.models import ProcessingJob
+
+        job_id = str(payload.get("processing_job_id") or demand.owner_key or "")
+        job = ProcessingJob.objects.filter(pk=job_id).only("status").first()
+        if job is None or job.status in {
+            ProcessingJob.Status.SUCCEEDED,
+            ProcessingJob.Status.FAILED,
+            ProcessingJob.Status.CANCELED,
+        }:
+            return "projection owner job is already terminal or missing"
+    return ""
+
+
 def live_executors(
     capability: str | None = None,
     *,
@@ -864,6 +918,26 @@ def reconcile_capability_runtime(*, at=None) -> dict[str, int]:
         .order_by("created_at")
     )
     for demand in unresolved.iterator(chunk_size=200):
+        stale_reason = _stale_demand_reason(demand)
+        if stale_reason:
+            demand.state = CapabilityDemand.State.CANCELED
+            demand.claimed_by = None
+            demand.lease_token = None
+            demand.lease_expires_at = None
+            demand.last_error_code = "source_superseded"
+            demand.last_error_message = stale_reason
+            demand.save(
+                update_fields=[
+                    "state",
+                    "claimed_by",
+                    "lease_token",
+                    "lease_expires_at",
+                    "last_error_code",
+                    "last_error_message",
+                    "updated_at",
+                ]
+            )
+            continue
         matching = any(
             executor_matches_demand(executor, demand)
             for executor in live

@@ -28,6 +28,7 @@ from common.ai_runtime import (
     validate_runtime_profile,
 )
 from catalog.services.research.feedback import feedback_calibration_snapshot
+from catalog.services.claim_benchmark import claim_benchmark_gold_summary
 
 
 DIAGNOSTICS_VERSION = "processing-center-diagnostics-v1"
@@ -632,6 +633,7 @@ def processing_center_diagnostics() -> dict[str, Any]:
 
     research_sources = research_source_registry_payload()
     feedback_calibration = feedback_calibration_snapshot()[:VISIBLE_LIMIT]
+    claim_benchmark = claim_benchmark_gold_summary()
     prompt_rows = list(
         PromptRegistryEntry.objects.filter(
             status=PromptRegistryEntry.Status.ACTIVE,
@@ -685,6 +687,8 @@ def processing_center_diagnostics() -> dict[str, Any]:
             "missing_capability_count": len(capabilities),
             "provider_degradation_count": len(providers),
             "research_source_degradation_count": research_sources["summary"]["degraded"],
+            "claim_gold_query_count": claim_benchmark["gold_query_count"],
+            "claim_benchmark_ready": claim_benchmark["benchmark_ready"],
         },
         "functional_impacts": impact_rows[:8],
         "sections": [
@@ -733,4 +737,5 @@ def processing_center_diagnostics() -> dict[str, Any]:
             "management_endpoint": "/api/catalog/admin/prompt-registry/",
         },
         "feedback_calibration": feedback_calibration,
+        "claim_benchmark": claim_benchmark,
     }

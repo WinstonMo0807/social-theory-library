@@ -22,6 +22,7 @@ import { ResearchEntityPicker } from "@/components/admin/research/research-entit
 import type { EntityValue } from "@/components/admin/forms/workflow-fields";
 import { AuthoritySuggestions, StringListEditor } from "@/components/structured-editors";
 import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
+import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type Page<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
@@ -216,6 +217,7 @@ export function DisciplinesAdmin() {
             </article>
           ))}
         </section>
+        <div className="knowledge-object-editor-workspace">
         <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={save}>
           <header><div><h2>{editing ? `编辑 ${editing.name}` : "新增学科"}</h2><p>前台学科入口、统计和关联内容由这里的规范实体自动生成。</p></div></header>
           <fieldset>
@@ -244,6 +246,15 @@ export function DisciplinesAdmin() {
           {editing ? <EntityLifecycleActions kind="discipline" id={editing.id} name={editing.name} status={draft.editorial_status} previewHref={`/theories/disciplines/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, editorial_status: snapshot.status })); setEditing((current) => current ? { ...current, editorial_status: snapshot.status } : current); resource.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyDiscipline }); resource.refresh(); }} /> : null}
           <footer className="knowledge-editor-actions"><button className="button" type="submit"><Save size={15} />保存学科</button><Notice>{message}</Notice></footer>
         </form>
+        <div className="knowledge-object-editor-rail">
+          <KnowledgeObjectContextPanel
+            objectType="discipline"
+            objectId={editing?.id}
+            refreshKey={message}
+            onChanged={resource.refresh}
+          />
+        </div>
+        </div>
       </div>
     </Frame>
   );

@@ -1,9 +1,8 @@
-"""Runnable pull worker for an opportunistic local GPU.
+"""Runnable pull worker for bounded, evidence-only local GPU tasks.
 
-The client deliberately supports only the server's first bounded task,
-``claim_extraction``.  It talks to a local Ollama or OpenAI-compatible model,
-then submits structured candidates through the leased completion endpoint.
-It never connects directly to PostgreSQL and never stores the worker token.
+The default remains claim extraction with ``llm_small``.  An operator may
+explicitly declare the ``llm_large`` and ``library_synthesis`` protocol through
+environment configuration.  The worker never connects directly to PostgreSQL.
 """
 
 from __future__ import annotations
@@ -24,8 +23,24 @@ import uuid
 import httpx
 
 
-WORKER_VERSION = "3.0.1"
+WORKER_VERSION = "3.0.2"
 SUPPORTED_PROVIDERS = {"ollama", "openai_compatible", "vllm"}
+SUPPORTED_CAPABILITIES = {"llm_small", "llm_large"}
+SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis"}
+TASK_CAPABILITY = {
+    "claim_extraction": "llm_small",
+    "library_synthesis": "llm_large",
+}
+
+
+def _environment_list(name: str, default: str) -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys(
+            value.strip().casefold()
+            for value in os.getenv(name, default).split(",")
+            if value.strip()
+        )
+    )
 
 
 class RemoteWorkerClientError(RuntimeError):
@@ -52,6 +67,8 @@ class RemoteWorkerClientConfig:
     model_url: str
     model: str
     model_revision: str
+    capabilities: tuple[str, ...] = ("llm_small",)
+    task_kinds: tuple[str, ...] = ("claim_extraction",)
     model_api_key: str = ""
     display_name: str = "RTX 4070 worker"
     gpu_name: str = "RTX 4070"
@@ -71,6 +88,8 @@ class RemoteWorkerClientConfig:
             model_url=os.getenv("STL_WORKER_MODEL_URL", "http://127.0.0.1:11434"),
             model=os.getenv("STL_WORKER_MODEL", ""),
             model_revision=os.getenv("STL_WORKER_MODEL_REVISION", ""),
+            capabilities=_environment_list("STL_WORKER_CAPABILITIES", "llm_small"),
+            task_kinds=_environment_list("STL_WORKER_TASK_KINDS", "claim_extraction"),
             model_api_key=os.getenv("STL_WORKER_MODEL_API_KEY", ""),
             display_name=os.getenv("STL_WORKER_DISPLAY_NAME", "RTX 4070 worker"),
             gpu_name=os.getenv("STL_WORKER_GPU_NAME", "RTX 4070"),
@@ -105,6 +124,19 @@ class RemoteWorkerClientConfig:
             raise RemoteWorkerClientError("invalid_model_url", "STL_WORKER_MODEL_URL 必须是完整 URL。", retryable=False)
         if not str(self.model or "").strip() or not str(self.model_revision or "").strip():
             raise RemoteWorkerClientError("model_identity_missing", "模型名称与不可变 revision 都必须配置。", retryable=False)
+        capabilities = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.capabilities))
+        task_kinds = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.task_kinds))
+        if not capabilities or any(value not in SUPPORTED_CAPABILITIES for value in capabilities):
+            raise RemoteWorkerClientError("capability_unsupported", "Worker capability 配置无效。", retryable=False)
+        if not task_kinds or any(value not in SUPPORTED_TASK_KINDS for value in task_kinds):
+            raise RemoteWorkerClientError("task_kind_unsupported", "Worker task kind 配置无效。", retryable=False)
+        for task_kind in task_kinds:
+            if TASK_CAPABILITY[task_kind] not in capabilities:
+                raise RemoteWorkerClientError(
+                    "task_capability_mismatch",
+                    f"{task_kind} 需要 {TASK_CAPABILITY[task_kind]} capability。",
+                    retryable=False,
+                )
         if not 1 <= int(self.concurrency) <= 16:
             raise RemoteWorkerClientError("invalid_concurrency", "Worker concurrency 必须在 1 到 16 之间。", retryable=False)
         return RemoteWorkerClientConfig(
@@ -115,6 +147,8 @@ class RemoteWorkerClientConfig:
             model_url=model_url,
             model=str(self.model).strip()[:240],
             model_revision=str(self.model_revision).strip()[:160],
+            capabilities=capabilities,
+            task_kinds=task_kinds,
             model_api_key=str(self.model_api_key or ""),
             display_name=str(self.display_name or "")[:240],
             gpu_name=str(self.gpu_name or "")[:160],
@@ -228,18 +262,20 @@ class RemoteAIWorkerClient:
         return response
 
     def heartbeat(self) -> dict[str, Any]:
+        model_revision = {
+            "provider": self.config.provider,
+            "model": self.config.model,
+            "revision": self.config.model_revision,
+        }
         response = self._server_post(
             "heartbeat/",
             {
                 "executor_id": self.config.executor_id,
                 "display_name": self.config.display_name,
-                "capabilities": ["llm_small"],
+                "capabilities": list(self.config.capabilities),
                 "model_revisions": {
-                    "llm_small": {
-                        "provider": self.config.provider,
-                        "model": self.config.model,
-                        "revision": self.config.model_revision,
-                    }
+                    capability: dict(model_revision)
+                    for capability in self.config.capabilities
                 },
                 "concurrency": self.config.concurrency,
                 "metadata": {
@@ -247,6 +283,11 @@ class RemoteAIWorkerClient:
                     "runtime": self.config.provider,
                     "gpu_name": self.config.gpu_name,
                     "host_label": socket.gethostname(),
+                    "task_kinds": list(self.config.task_kinds),
+                    "task_profiles": {
+                        task_kind: [task_kind]
+                        for task_kind in self.config.task_kinds
+                    },
                 },
             },
         )
@@ -333,19 +374,48 @@ class RemoteAIWorkerClient:
             raise RemoteWorkerClientError("model_unavailable", "本地模型当前不可连接。") from exc
 
     def run_model(self, job: dict[str, Any]) -> dict[str, Any]:
-        if str(job.get("task_kind") or "") != "claim_extraction":
-            raise RemoteWorkerClientError("unsupported_task_kind", "Worker 只执行 claim_extraction。", retryable=False)
+        task_kind = str(job.get("task_kind") or "").strip()
+        if task_kind not in self.config.task_kinds:
+            raise RemoteWorkerClientError("unsupported_task_kind", "Worker 未声明该 task kind。", retryable=False)
         prompt = dict(job.get("prompt") or {})
         source = dict(job.get("input") or {})
         schema = dict(job.get("output_schema") or {})
         system_prompt = str(prompt.get("content") or "")
-        document_text = str(source.get("text") or "")
-        if not system_prompt or not document_text or not schema:
-            raise RemoteWorkerClientError("job_payload_invalid", "任务缺少 Prompt、EvidenceSpan 或输出 schema。", retryable=False)
-        user_prompt = (
-            "只分析以下馆藏原文。严格按给定 JSON schema 返回，不使用外部常识。\n\n"
-            f"{document_text}"
-        )
+        if not system_prompt or not schema:
+            raise RemoteWorkerClientError("job_payload_invalid", "任务缺少 Prompt 或输出 schema。", retryable=False)
+        if task_kind == "claim_extraction":
+            document_text = str(source.get("text") or "")
+            if not document_text:
+                raise RemoteWorkerClientError("job_payload_invalid", "任务缺少 EvidenceSpan。", retryable=False)
+            user_prompt = (
+                "只分析以下馆藏原文。严格按给定 JSON schema 返回，不使用外部常识。\n\n"
+                f"{document_text}"
+            )
+        else:
+            evidence = source.get("evidence")
+            if not isinstance(evidence, list) or not 2 <= len(evidence) <= 12:
+                raise RemoteWorkerClientError("job_payload_invalid", "Library Synthesis 缺少有界的 EvidencePack。", retryable=False)
+            evidence_ids = {
+                str(row.get("id") or "")
+                for row in evidence
+                if isinstance(row, dict) and str(row.get("id") or "") and str(row.get("text") or "").strip()
+            }
+            if len(evidence_ids) != len(evidence) or not str(source.get("evidence_pack_id") or ""):
+                raise RemoteWorkerClientError("job_payload_invalid", "EvidencePack 缺少原文或稳定标识。", retryable=False)
+            user_prompt = (
+                "只使用下列 EvidencePack 馆藏原文生成候选。"
+                "evidence_span_ids 只能引用列出的 id，不得使用外部常识。"
+                "严格按给定 JSON schema 返回。\n\n"
+                + json.dumps(
+                    {
+                        "evidence_pack_id": source["evidence_pack_id"],
+                        "requested_field": source.get("requested_field"),
+                        "evidence": evidence,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+            )
         if self.config.provider == "ollama":
             response = self._model_post(
                 "api/chat",
@@ -383,17 +453,42 @@ class RemoteAIWorkerClient:
             choices = payload.get("choices") or []
             content = ((choices[0].get("message") or {}).get("content") if choices and isinstance(choices[0], dict) else "")
             result = _json_content(content)
-        claims = result.get("claims")
-        if not isinstance(claims, list):
-            raise RemoteWorkerClientError("model_schema_invalid", "模型结果缺少 claims 数组。")
-        max_claims = max(1, min(int((job.get("limits") or {}).get("max_claims") or 24), 24))
-        if len(claims) > max_claims:
-            raise RemoteWorkerClientError("model_schema_invalid", "模型返回的 Claim 数量超过任务上限。")
-        return {
+        identity = {
             "provider": self.config.provider,
             "model": self.config.model,
             "model_revision": self.config.model_revision,
-            "claims": claims,
+        }
+        if task_kind == "claim_extraction":
+            claims = result.get("claims")
+            if not isinstance(claims, list):
+                raise RemoteWorkerClientError("model_schema_invalid", "模型结果缺少 claims 数组。")
+            max_claims = max(1, min(int((job.get("limits") or {}).get("max_claims") or 24), 24))
+            if len(claims) > max_claims:
+                raise RemoteWorkerClientError("model_schema_invalid", "模型返回的 Claim 数量超过任务上限。")
+            return {**identity, "claims": claims}
+        candidate = result.get("candidate")
+        if not isinstance(candidate, dict):
+            raise RemoteWorkerClientError("model_schema_invalid", "模型结果缺少 candidate 对象。")
+        value = " ".join(str(candidate.get("value") or "").split())
+        rationale = " ".join(str(candidate.get("rationale") or "").split())
+        selected_ids = [str(value) for value in candidate.get("evidence_span_ids") or [] if str(value)]
+        allowed_ids = {str(row["id"]) for row in source["evidence"]}
+        max_output_chars = max(1, min(int((job.get("limits") or {}).get("max_output_chars") or 12_000), 12_000))
+        if (
+            not value
+            or len(value) > max_output_chars
+            or not selected_ids
+            or len(selected_ids) > 12
+            or any(value not in allowed_ids for value in selected_ids)
+        ):
+            raise RemoteWorkerClientError("model_schema_invalid", "Library Synthesis 结果未受 EvidencePack 约束。")
+        return {
+            **identity,
+            "candidate": {
+                "value": value,
+                "evidence_span_ids": selected_ids,
+                "rationale": rationale,
+            },
         }
 
     def run_once(self) -> str:
@@ -458,7 +553,7 @@ class RemoteAIWorkerClient:
             try:
                 state = self.run_once()
                 if state == "completed":
-                    print("claim_extraction completed", flush=True)
+                    print("remote evidence task completed", flush=True)
                     continue
             except RemoteWorkerClientError as exc:
                 print(f"worker degraded: {exc.code}", file=sys.stderr, flush=True)

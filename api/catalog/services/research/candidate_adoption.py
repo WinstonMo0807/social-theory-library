@@ -36,6 +36,12 @@ def _require_editor(actor) -> None:
         raise PermissionError("候选决定必须记录真实 Editor。")
 
 
+def _require_evidence_pack(candidate, label: str) -> None:
+    pack = candidate.evidence_pack
+    if pack is None or not list(pack.envelope_snapshot or []):
+        raise ValueError(f"采用 {label} 前必须有可定位的 EvidencePack。")
+
+
 @transaction.atomic
 def decide_debate_candidate(
     *,
@@ -56,6 +62,7 @@ def decide_debate_candidate(
     now = timezone.now()
     adopted_node = None
     if decision in {IntelligenceFeedback.Decision.ACCEPT, IntelligenceFeedback.Decision.ACCEPT_WITH_EDIT}:
+        _require_evidence_pack(locked, "DebateCandidate")
         final_title = str(title or locked.title).strip()
         final_question = str(canonical_question or locked.canonical_question).strip()
         final_summary = str(summary or locked.summary).strip()
@@ -134,6 +141,7 @@ def decide_reading_path_candidate(
     adopted_path = None
     final_stages = list(stages if stages is not None else locked.stages)
     if decision in {IntelligenceFeedback.Decision.ACCEPT, IntelligenceFeedback.Decision.ACCEPT_WITH_EDIT}:
+        _require_evidence_pack(locked, "ReadingPathCandidate")
         final_title = str(title or locked.title).strip()
         final_audience = str(target_audience or locked.target_audience).strip()
         final_goal = str(learning_goal or locked.learning_goal).strip()

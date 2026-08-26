@@ -1,9 +1,11 @@
 "use client";
 
-import { Check, ExternalLink, FileSearch, PanelRightClose, X } from "lucide-react";
+import { FileSearch, PanelRightClose } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ActionButton } from "@/components/action-feedback";
 import { apiBlob } from "@/lib/api";
+import { type CandidateActionDescriptor } from "../research/candidate-action-contract";
+import { CandidateDecisionBar } from "../research/candidate-decision-bar";
+import { EvidenceEnvelopeCard } from "../research/evidence-envelope-card";
 import type { WorkflowCandidate } from "../workflow/workflow-types";
 
 export type InspectorSelection = {
@@ -48,19 +50,6 @@ function lexiconImpact(candidate: WorkflowCandidate): string[] {
   return ["当前操作不会直接改写 QueryLexicon", "正式实体、分类和知识关系仍需人工确认"];
 }
 
-const actionLabels: Record<string, string> = {
-  link_existing: "关联现有实体",
-  create_draft: "创建草稿实体",
-  keep_unresolved: "保留当前未解析值",
-  reject: "拒绝候选",
-  reopen: "恢复待审",
-  accept: "接受候选",
-  accept_with_edit: "修改后采用",
-  defer: "稍后处理",
-  inspect: "核对来源",
-  verify: "核实此结果",
-};
-
 export function WorkflowInspector({
   selection,
   token,
@@ -76,16 +65,22 @@ export function WorkflowInspector({
 }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewError, setPreviewError] = useState("");
-  const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [acting, setActing] = useState("");
 
-  const decide = async (candidate: WorkflowCandidate, action: string, claimDraft: string) => {
+  const decide = async (candidate: WorkflowCandidate, descriptor: CandidateActionDescriptor, editedValue?: unknown) => {
     if (acting) return;
-    const key = `${candidate.id}:${action}`;
+    const key = `${candidate.id}:${descriptor.action}`;
     setActing(key);
     try {
-      if (action === "verify") await onVerify?.(candidate);
-      else await onDecision?.(candidate.kind === "derived_claim_curation" ? { ...candidate, edited_proposition: claimDraft } : candidate, action);
+      if (descriptor.action === "verify") await onVerify?.({ ...candidate, decision_descriptor: descriptor });
+      else await onDecision?.({
+        ...candidate,
+        decision_descriptor: descriptor,
+        ...(editedValue === undefined ? {} : {
+          edited_value: editedValue,
+          ...(candidate.kind === "derived_claim_curation" ? { edited_proposition: editedValue } : {}),
+        }),
+      }, descriptor.action);
     } finally {
       setActing("");
     }
@@ -143,16 +138,12 @@ export function WorkflowInspector({
             const evidence = evidenceRows(candidate);
             const reasons = stringRows(candidate.match_reasons ?? candidate.reasons);
             const conflicts = stringRows(candidate.conflicts);
-            const actions = (candidate.available_actions ?? []).filter((action) => action !== "inspect");
             const leadOnly = candidate.evidence_status === "lead_only" || candidate.source_tier === "research_lead";
-            const isClaimCandidate = candidate.kind === "derived_claim_curation";
-            const claimDraft = claimDrafts[candidate.id] ?? String(candidate.proposed_value ?? candidate.label ?? "");
             return (
               <article key={candidate.id}>
                 <header><strong>{candidate.label || candidate.field_name || "候选"}</strong><span>{candidate.status || "pending"}</span></header>
                 {leadOnly ? <p className="workflow-inspector-lead-warning">这是研究线索。搜索摘要不是 Evidence，不能直接接受为正式知识。</p> : null}
                 {candidate.current_value !== undefined ? <div className="workflow-inspector-comparison"><section><small>当前值</small><pre>{displayValue(candidate.current_value)}</pre></section><section><small>候选值</small><pre>{displayValue(proposed)}</pre></section></div> : <pre>{displayValue(proposed)}</pre>}
-                {isClaimCandidate ? <label className="workflow-inspector-claim-edit"><span>采用时使用的命题文本</span><textarea rows={4} value={claimDraft} onChange={(event) => setClaimDrafts((current) => ({ ...current, [candidate.id]: event.target.value }))} /></label> : null}
                 <dl>
                   {candidate.source_tier_label || candidate.source_tier ? <div><dt>来源层级</dt><dd>{String(candidate.source_tier_label ?? candidate.source_tier)}</dd></div> : null}
                   {candidate.source_class || candidate.source ? <div><dt>来源</dt><dd>{String(candidate.source_class ?? candidate.source)}</dd></div> : null}
@@ -162,13 +153,17 @@ export function WorkflowInspector({
                 {reasons.length ? <details open><summary>匹配依据</summary><ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
                 {conflicts.length ? <details open className="workflow-inspector-conflicts"><summary>冲突</summary><ul>{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul></details> : null}
                 {evidence.length ? <h3>证据</h3> : null}
-                {evidence.map((entry, index) => {
-                  const row = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
-                  const url = typeof row.canonical_url === "string" ? row.canonical_url : typeof row.url === "string" ? row.url : "";
-                  return <blockquote key={`${candidate.id}-evidence-${index}`}><p>{displayValue(row.supporting_text ?? row.text_quote ?? row.quote ?? entry)}</p>{url ? <a href={url} target="_blank" rel="noreferrer">查看来源 <ExternalLink size={12} /></a> : null}</blockquote>;
-                })}
+                {evidence.map((entry, index) => <EvidenceEnvelopeCard evidence={entry} compact key={`${candidate.id}-evidence-${index}`} />)}
                 <details><summary>词典影响</summary><ul>{lexiconImpact(candidate).map((row) => <li key={row}>{row}</li>)}</ul></details>
-                {["pending", "research_lead", "proposed"].includes(String(candidate.status ?? "pending")) && actions.some((action) => action === "verify" ? Boolean(onVerify && candidate.verify_url) : Boolean(onDecision && candidate.decision_url)) ? <footer>{actions.filter((action) => action === "verify" ? Boolean(onVerify && candidate.verify_url) : Boolean(onDecision && candidate.decision_url)).map((action) => <ActionButton className={action === "reject" ? "danger" : ""} state={acting === `${candidate.id}:${action}` ? "pending" : "idle"} pendingLabel={action === "verify" ? "核实中" : "处理中"} disabled={Boolean(acting)} key={action} onClick={() => void decide(candidate, action, claimDraft)}>{action === "reject" ? <X size={13} /> : <Check size={13} />}{actionLabels[action] ?? action}</ActionButton>)}</footer> : null}
+                {["pending", "research_lead", "proposed"].includes(String(candidate.status ?? "pending")) ? <CandidateDecisionBar
+                  candidate={candidate}
+                  className="workflow-inspector-decisions"
+                  showInspect={false}
+                  busyAction={acting.startsWith(`${candidate.id}:`) ? acting.slice(String(candidate.id).length + 1) : ""}
+                  disabled={Boolean(acting)}
+                  actionFilter={(descriptor) => descriptor.action === "verify" ? Boolean(onVerify) : descriptor.action !== "inspect" && Boolean(onDecision)}
+                  onAction={(descriptor, editedValue) => void decide(candidate, descriptor, editedValue)}
+                /> : null}
               </article>
             );
           })}

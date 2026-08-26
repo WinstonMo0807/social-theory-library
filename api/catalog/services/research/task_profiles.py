@@ -149,6 +149,41 @@ BUILTIN_TASK_PROFILES: dict[str, TaskProfileSpec] = {
             schema={"type": "object", "required": ["relation", "confidence", "rationale"]},
         ),
         _profile(
+            "library_synthesis",
+            "馆藏证据综合候选",
+            context=("work", "evidence_pack", "requested_field"),
+            retrieval="curation",
+            sources=("collection",),
+            minimum={
+                "collection_evidence_count": 2,
+                "locator_required": True,
+                "external_knowledge_forbidden": True,
+            },
+            capability="curation_reasoning",
+            schema={
+                "type": "object",
+                "required": ["candidate"],
+                "properties": {
+                    "candidate": {
+                        "type": "object",
+                        "required": ["value", "evidence_span_ids", "rationale"],
+                        "properties": {
+                            "value": {"type": "string"},
+                            "evidence_span_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "maxItems": 12,
+                            },
+                            "rationale": {"type": "string"},
+                        },
+                        "additionalProperties": False,
+                    }
+                },
+                "additionalProperties": False,
+            },
+            ranking={"order": ["evidence_coverage", "locator_quality"], "max_active_decisions": 1},
+        ),
+        _profile(
             "core_viewpoint",
             "核心观点候选",
             context=("work", "claim_clusters", "collection_evidence"),

@@ -36,6 +36,8 @@ def _source_reliability(source: str) -> float:
         return 0.9
     if value.startswith("google_books"):
         return 0.88
+    if value == "nlb_singapore":
+        return 0.94
     if value in {"grobid", "pdf_copyright_page", "pdf_title_page"}:
         return 0.9
     if value == "pdf_metadata":

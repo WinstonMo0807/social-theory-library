@@ -33,6 +33,7 @@ from catalog.services.query_lexicon.candidates import (
 )
 from catalog.services.field_enrichment.policies import FIELD_POLICIES
 from catalog.services.knowledge_growth import decide_new_authority_candidate, refresh_unknown_candidate
+from catalog.services.candidate_decision_protocol import attach_candidate_action_descriptors
 from common.permissions import CanReviewCandidate, CanReviewCandidateOrCreateAuthority, CanViewEvidence, IsCatalogEditor
 
 
@@ -61,6 +62,33 @@ def _with_review_status(payload: dict, raw_status: str | None = None) -> dict:
     if payload["status"] != raw:
         payload["review_substatus"] = raw
     return payload
+
+
+def _with_review_actions(payload: dict) -> dict:
+    """Add one action description envelope without changing review endpoints."""
+
+    kind = str(payload.get("review_kind") or payload.get("candidate_kind") or "").strip()
+    pending = str(payload.get("status") or "").strip() == "pending"
+    candidate_id = str(payload.get("id") or "").strip()
+    decision_url = ""
+    actions = ["inspect"]
+    if pending and kind == "field_enrichment":
+        actions.extend(["accept", "reject"])
+    elif pending and kind == "query_lexicon":
+        if str(payload.get("linking_status") or "") == QueryLexiconCandidate.LinkingStatus.LINKED:
+            actions.append("accept")
+        actions.append("reject")
+    elif pending and kind == "new_authority":
+        actions.extend(["match_existing", "create_draft", "reject"])
+    if len(actions) > 1 and candidate_id:
+        decision_url = f"/catalog/admin/candidate-review/{kind}/{candidate_id}/decision/"
+    payload["available_actions"] = actions
+    payload["decision_url"] = decision_url or None
+    payload.setdefault(
+        "evidence_status",
+        "evidence" if int(payload.get("evidence_count") or 0) > 0 else "lead_only",
+    )
+    return attach_candidate_action_descriptors(payload)
 
 
 def _status_filter_values(kind: str, status_filter: str) -> set[str] | None:
@@ -341,6 +369,8 @@ class AdminCandidateReviewView(APIView):
                         "created_at": row.created_at,
                     })
                 )
+        for row in rows:
+            _with_review_actions(row)
         rows.sort(
             key=lambda row: (
                 -float(row.get("confidence") or 0),

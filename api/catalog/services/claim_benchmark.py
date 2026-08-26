@@ -18,6 +18,113 @@ from common.capabilities import Capability, has_capability
 RELEVANT_THRESHOLD = 2
 BENCHMARK_RUN_KEY_PREFIX = "claim_viewpoint_benchmark_run_"
 BENCHMARK_ACTIVATION_KEY = "claim_viewpoint_benchmark_activation"
+GOLD_MINIMUM_QUERY_COUNT = 10
+GOLD_REQUIRED_RELATIONS = ("direct", "support", "oppose", "qualify")
+
+
+def claim_benchmark_gold_summary(*, evaluation_set_id=None) -> dict[str, Any]:
+    """Describe the human gold corpus without running or activating a benchmark."""
+
+    from django.db.models import Count, Q
+
+    from catalog.models import ClaimBenchmarkJudgment
+
+    rows = ClaimBenchmarkJudgment.objects.all()
+    if evaluation_set_id:
+        rows = rows.filter(query__evaluation_set_id=evaluation_set_id)
+
+    relation_counts = {
+        relation: 0
+        for relation, _label in ClaimBenchmarkJudgment.Relation.choices
+    }
+    for row in rows.order_by().values("expected_relation").annotate(total=Count("id")):
+        relation_counts[str(row["expected_relation"])] = int(row["total"])
+
+    gold_query_count = rows.values("query_id").distinct().count()
+    relevant_query_count = (
+        rows.filter(relevance__gte=RELEVANT_THRESHOLD)
+        .values("query_id")
+        .distinct()
+        .count()
+    )
+    judgment_count = rows.count()
+    stale_evidence_count = rows.filter(
+        Q(evidence_span__is_stale=True)
+        | Q(document_revision__is_active=False)
+    ).count()
+    unverified_relevant_locator_count = rows.filter(
+        relevance__gte=RELEVANT_THRESHOLD,
+        locator_verified=False,
+    ).count()
+    missing_required_relations = [
+        relation
+        for relation in GOLD_REQUIRED_RELATIONS
+        if relation_counts.get(relation, 0) == 0
+    ]
+
+    blockers: list[dict[str, Any]] = []
+    if gold_query_count < GOLD_MINIMUM_QUERY_COUNT:
+        blockers.append(
+            {
+                "code": "insufficient_gold_queries",
+                "required": GOLD_MINIMUM_QUERY_COUNT,
+                "actual": gold_query_count,
+            }
+        )
+    if relevant_query_count < gold_query_count:
+        blockers.append(
+            {
+                "code": "queries_without_relevant_gold",
+                "count": gold_query_count - relevant_query_count,
+            }
+        )
+    if missing_required_relations:
+        blockers.append(
+            {
+                "code": "missing_required_stance_coverage",
+                "relations": missing_required_relations,
+            }
+        )
+    if unverified_relevant_locator_count:
+        blockers.append(
+            {
+                "code": "unverified_relevant_locators",
+                "count": unverified_relevant_locator_count,
+            }
+        )
+    if stale_evidence_count:
+        blockers.append(
+            {
+                "code": "stale_or_superseded_evidence",
+                "count": stale_evidence_count,
+            }
+        )
+
+    return {
+        "gold_query_count": gold_query_count,
+        "relevant_gold_query_count": relevant_query_count,
+        "judgment_count": judgment_count,
+        "verified_locator_count": rows.filter(locator_verified=True).count(),
+        "stance_coverage": {
+            "counts": relation_counts,
+            "required": list(GOLD_REQUIRED_RELATIONS),
+            "missing_required": missing_required_relations,
+        },
+        "benchmark_ready": not blockers,
+        "blockers": blockers,
+        "policy": {
+            "minimum_gold_queries": GOLD_MINIMUM_QUERY_COUNT,
+            "relevant_threshold": RELEVANT_THRESHOLD,
+            "requires_verified_relevant_locators": True,
+            "requires_active_evidence": True,
+        },
+        "ranking": {
+            "default": "semantic_v2_baseline",
+            "claim_mode": "shadow",
+            "changed": False,
+        },
+        "management_endpoint": "/api/catalog/admin/claim-benchmark/judgments/",
+    }
 
 
 @dataclass(frozen=True, slots=True)

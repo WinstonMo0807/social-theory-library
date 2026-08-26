@@ -26,6 +26,7 @@ export type WorkflowEvaluation = {
   unresolved_count: number;
   warnings_count: number;
   blockers_count: number;
+  absorbed_legacy_knowledge_status?: WorkflowStepStatus;
 };
 
 export type WorkflowContext = {

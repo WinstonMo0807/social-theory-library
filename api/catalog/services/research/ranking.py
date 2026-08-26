@@ -35,6 +35,7 @@ SOURCE_QUALITY = {
     "viaf": 0.95,
     "loc": 0.95,
     "openalex": 0.88,
+    "nlb_singapore": 0.94,
     "structured": 0.90,
     "pdf": 0.82,
     "academic": 0.82,

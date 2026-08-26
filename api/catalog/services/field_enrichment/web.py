@@ -7,6 +7,7 @@ from hashlib import sha256
 from html.parser import HTMLParser
 import ipaddress
 import json
+import logging
 import re
 import socket
 import ssl
@@ -25,6 +26,9 @@ from ingestion.models import SourceRecord
 from .policies import FieldPolicy
 from .types import EnrichmentError, FetchedDocument, SearchResult
 from .values import stable_json
+
+
+logger = logging.getLogger(__name__)
 
 
 class WebSearchError(RuntimeError):
@@ -277,6 +281,7 @@ class _PageParser(HTMLParser):
         self.title_parts: list[str] = []
         self.text_parts: list[str] = []
         self.canonical_href = ""
+        self.robots_directives: list[str] = []
 
     def handle_starttag(self, tag, attrs):
         tag = tag.casefold()
@@ -288,6 +293,14 @@ class _PageParser(HTMLParser):
             values = {str(key).casefold(): str(value or "") for key, value in attrs}
             if "canonical" in values.get("rel", "").casefold() and values.get("href"):
                 self.canonical_href = values["href"]
+        if tag == "meta":
+            values = {str(key).casefold(): str(value or "") for key, value in attrs}
+            name = values.get("name", "").casefold()
+            http_equiv = values.get("http-equiv", "").casefold()
+            if name in {"robots", "googlebot", "bingbot"} or http_equiv == "x-robots-tag":
+                content = values.get("content", "").strip()
+                if content:
+                    self.robots_directives.append(content)
         if tag in {"p", "div", "section", "article", "li", "br", "h1", "h2", "h3", "h4", "tr"}:
             self.text_parts.append("\n")
 
@@ -318,6 +331,10 @@ _META_CHARSET_RE = re.compile(
     br"<meta[^>]+charset\s*=\s*[\"']?\s*([a-zA-Z0-9._-]+)",
     re.I,
 )
+_META_HTTP_EQUIV_CHARSET_RE = re.compile(
+    br"<meta[^>]+http-equiv\s*=\s*[\"']?content-type[\"']?[^>]+content\s*=\s*[\"'][^\"']*charset\s*=\s*([a-zA-Z0-9._-]+)",
+    re.I,
+)
 
 
 def _decode_page_bytes(body: bytes, content_type_header: str) -> tuple[str, str]:
@@ -329,6 +346,8 @@ def _decode_page_bytes(body: bytes, content_type_header: str) -> tuple[str, str]
         declared = header_match.group(1).strip()
     if not declared:
         meta_match = _META_CHARSET_RE.search(body[:8192])
+        if not meta_match:
+            meta_match = _META_HTTP_EQUIV_CHARSET_RE.search(body[:8192])
         if meta_match:
             declared = meta_match.group(1).decode("ascii", errors="ignore").strip()
 
@@ -422,7 +441,47 @@ class SafeWebFetcher:
         except (KeyError, TypeError, ValueError):
             return None
 
+    @staticmethod
+    def _record_failure(url: str, error: WebFetchError) -> None:
+        """Persist an actionable failure without retaining query-string secrets."""
+
+        raw = str(url or "").strip()
+        fingerprint = sha256(raw.encode("utf-8")).hexdigest()
+        try:
+            parsed = urlsplit(canonicalize_url(raw))
+            redacted_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+        except (TypeError, ValueError, WebFetchError):
+            redacted_url = ""
+        try:
+            SourceRecord.objects.create(
+                provider="field_enrichment:web_fetch",
+                operation="fetch_page",
+                query={"url": redacted_url},
+                request_fingerprint=fingerprint,
+                external_id=redacted_url[:255],
+                raw_response={
+                    "error": {"code": error.code, "detail": str(error)[:500]},
+                    "source_url_is_redacted": True,
+                },
+                provider_version="safe-web-fetch-v1",
+                retrieved_at=timezone.now(),
+                status=SourceRecord.Status.FAILED,
+                error_code=error.code,
+                error_message=str(error)[:1000],
+            )
+        except Exception:
+            # Diagnostic persistence must never replace the actionable fetch
+            # error returned to the candidate verification workflow.
+            logger.warning("SafeWebFetcher failure record could not be persisted", exc_info=True)
+
     def fetch(self, url: str) -> FetchedDocument:
+        try:
+            return self._fetch(url)
+        except WebFetchError as exc:
+            self._record_failure(url, exc)
+            raise
+
+    def _fetch(self, url: str) -> FetchedDocument:
         from catalog.services.research_sources import source_configuration
 
         source_config = source_configuration("safe_web_fetcher")
@@ -479,8 +538,12 @@ class SafeWebFetcher:
                             continue
                         if status_code == 429:
                             raise WebFetchError("rate_limited", "来源页面请求频率受限。")
-                        if status_code in {401, 403, 451}:
-                            raise WebFetchError("robots", "来源站点的访问或使用规则拒绝正文读取。")
+                        if status_code == 401:
+                            raise WebFetchError("auth_required", "来源页面需要登录或授权。")
+                        if status_code == 403:
+                            raise WebFetchError("access_denied", "来源站点拒绝当前正文读取请求。")
+                        if status_code == 451:
+                            raise WebFetchError("legal_restriction", "来源页面因法律或使用限制不可读取。")
                         response.raise_for_status()
                         robots_directive = str(response.headers.get("x-robots-tag", "") or "").casefold()
                         if any(token in robots_directive for token in ("noindex", "nosnippet", "noai")):
@@ -526,6 +589,9 @@ class SafeWebFetcher:
             parsed_title = " ".join("".join(parser.title_parts).split())
             if parsed_title:
                 title = parsed_title[:1000]
+            robots_directives = " ".join(parser.robots_directives).casefold()
+            if any(token in robots_directives for token in ("noindex", "nosnippet", "noai")):
+                raise WebFetchError("robots", "来源页面的 robots 指令禁止索引、摘录或 AI 使用。")
             if parser.canonical_href:
                 try:
                     canonical_url = validate_public_url(urljoin(current_url, parser.canonical_href))

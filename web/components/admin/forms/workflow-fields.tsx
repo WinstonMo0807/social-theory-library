@@ -125,6 +125,7 @@ export function RepeatableField<T>({
   label,
   values,
   create,
+  emptyValue,
   render,
   onChange,
   addLabel = "添加一项",
@@ -133,18 +134,21 @@ export function RepeatableField<T>({
   label: string;
   values: T[];
   create: () => T;
+  emptyValue?: T;
   render: (value: T, index: number, update: (value: T) => void) => ReactNode;
   onChange: (values: T[]) => void;
   addLabel?: string;
   disabled?: boolean;
 }) {
+  const showsEmptyValue = values.length === 0 && emptyValue !== undefined;
+  const visibleValues = showsEmptyValue ? [emptyValue] : values;
   return (
     <section className="workflow-repeatable-field">
       <header><strong>{label}</strong><button type="button" disabled={disabled} onClick={() => onChange([...values, create()])}><Plus size={14} />{addLabel}</button></header>
-      <div>{values.map((value, index) => (
+      <div>{visibleValues.map((value, index) => (
         <article key={index}>
-          {render(value, index, (next) => onChange(values.map((entry, entryIndex) => entryIndex === index ? next : entry)))}
-          <button className="workflow-repeatable-remove" type="button" disabled={disabled} aria-label={`移除${label} ${index + 1}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}><Trash2 size={14} /></button>
+          {render(value, index, (next) => onChange(showsEmptyValue ? [next] : values.map((entry, entryIndex) => entryIndex === index ? next : entry)))}
+          {!showsEmptyValue ? <button className="workflow-repeatable-remove" type="button" disabled={disabled} aria-label={`移除${label} ${index + 1}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}><Trash2 size={14} /></button> : null}
         </article>
       ))}</div>
     </section>

@@ -8,6 +8,7 @@ endpoints linked from each object.
 
 from __future__ import annotations
 
+from copy import copy
 from typing import Any
 from uuid import UUID
 
@@ -19,9 +20,11 @@ from catalog.models import (
     CuratedClaim,
     DebateCandidate,
     DerivedClaim,
+    Discipline,
     EditorialRevision,
     EnrichmentCandidate,
     EvidenceSnippet,
+    EvidenceSpan,
     KnowledgeNode,
     KnowledgePublicationStatus,
     ProjectionState,
@@ -35,6 +38,9 @@ from catalog.models import (
     Work,
 )
 from catalog.services.evidence_envelope import evidence_span_envelope
+from catalog.services.candidate_decision_protocol import (
+    attach_candidate_action_descriptors,
+)
 from catalog.services.reading_paths import reading_path_stage_groups
 
 
@@ -47,6 +53,7 @@ NODE_OBJECT_TYPES = {
 OBJECT_TYPES = (
     *NODE_OBJECT_TYPES,
     "scholar",
+    "discipline",
     "subdiscipline",
     "topic",
     "reading_path",
@@ -55,6 +62,81 @@ OBJECT_TYPES = (
 DEFAULT_DIRECTORY_LIMIT = 40
 MAX_DIRECTORY_LIMIT = 50
 MAX_SECTION_ROWS = 12
+KNOWLEDGE_UPDATE_LIMIT = 5
+GLOBAL_KNOWLEDGE_UPDATE_LIMIT = 8
+
+
+PUBLIC_MODULE_FIELDS = {
+    "theory": (
+        ("定义", ("definition",)),
+        ("核心问题", ("core_questions",)),
+        ("发展脉络", ("start_year", "end_year", "period_label", "direct_relations")),
+        ("主要人物", ("representative_scholars",)),
+        ("核心概念", ("topic_links", "subdiscipline_links")),
+        ("主要批评", ("curated_claims",)),
+        ("代表作品", ("work_groups",)),
+    ),
+    "concept": (
+        ("定义", ("definition",)),
+        ("核心问题", ("core_questions",)),
+        ("理论边界", ("theoretical_boundary",)),
+        ("相关理论与主题", ("direct_relations", "topic_links")),
+        ("代表作品", ("work_groups",)),
+    ),
+    "debate": (
+        ("Canonical question", ("definition", "core_questions")),
+        ("Support / Oppose / Qualify", ("curated_claims",)),
+        ("代表作品", ("work_groups",)),
+        ("原文证据", ("evidence",)),
+    ),
+    "research_problem": (
+        ("研究问题", ("definition", "core_questions")),
+        ("理论解释", ("direct_relations",)),
+        ("代表作品", ("work_groups",)),
+    ),
+    "scholar": (
+        ("身份与译名", ("person",)),
+        ("学术位置", ("short_description", "affiliations", "key_concerns")),
+        ("核心作品", ("works",)),
+        ("核心观点与批评回应", ("curated_claims",)),
+        ("理论贡献", ("knowledge_nodes",)),
+        ("建议阅读顺序", ("curated",)),
+    ),
+    "discipline": (
+        ("学科介绍", ("description", "introduction")),
+        ("子学科目录", ("subdiscipline_count",)),
+        ("理论与主题", ("theory_count", "topic_count")),
+        ("作品与学者", ("work_count", "scholar_count")),
+    ),
+    "subdiscipline": (
+        ("研究对象与核心问题", ("research_object", "core_questions")),
+        ("形成与发展", ("formation_period",)),
+        ("主要研究方向", ("research_directions",)),
+        ("常用方法", ("methods",)),
+        ("代表性议题", ("representative_issues", "topics")),
+        ("相关理论传统", ("theories",)),
+        ("精选文献导读", ("works",)),
+    ),
+    "topic": (
+        ("范围与核心问题", ("description", "problem_statement", "core_questions")),
+        ("理论视角", ("knowledge_nodes", "linked_theories")),
+        ("作品与观点", ("curated", "curated_claims")),
+        ("研究路径", ("research_dimensions", "methods")),
+    ),
+    "reading_path": (
+        ("目标读者", ("audience",)),
+        ("学习目标", ("learning_goal",)),
+        ("阶段", ("stages",)),
+        ("作品与节点", ("items",)),
+        ("推荐理由与先后逻辑", ("items",)),
+    ),
+    "work": (
+        ("书目与阅读", ("edition", "editions", "outline")),
+        ("核心观点 / 批评 / 回应", ("curated_claims",)),
+        ("理论与知识关系", ("theory_associations", "theories", "topics")),
+        ("学科与子学科", ("disciplines", "subdisciplines")),
+    ),
+}
 
 
 def _bounded_limit(value: Any) -> int:
@@ -95,6 +177,727 @@ def _bounded_json(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, str):
         return _clip(value)
     return value
+
+
+def _has_public_content(value: Any) -> bool:
+    if value is None or value == "":
+        return False
+    if isinstance(value, (list, tuple, dict)):
+        return bool(value)
+    if isinstance(value, (int, float)):
+        return value > 0
+    return True
+
+
+class KnowledgeObjectEditorAdapter:
+    """Expose established public and editorial contracts through one read model."""
+
+    TARGET_TYPES = {
+        "theory": EditorialRevision.TargetType.KNOWLEDGE_NODE,
+        "concept": EditorialRevision.TargetType.KNOWLEDGE_NODE,
+        "debate": EditorialRevision.TargetType.KNOWLEDGE_NODE,
+        "research_problem": EditorialRevision.TargetType.KNOWLEDGE_NODE,
+        "scholar": EditorialRevision.TargetType.SCHOLAR_PROFILE,
+        "discipline": EditorialRevision.TargetType.DISCIPLINE,
+        "subdiscipline": EditorialRevision.TargetType.SUBDISCIPLINE,
+        "topic": EditorialRevision.TargetType.TOPIC,
+        "reading_path": EditorialRevision.TargetType.READING_PATH,
+        "work": EditorialRevision.TargetType.WORK,
+    }
+
+    @classmethod
+    def _serializer(cls, object_type: str):
+        from catalog.serializers import (
+            DisciplineSerializer,
+            ScholarProfileSerializer,
+            SubdisciplineSerializer,
+            TopicSerializer,
+            WorkDetailSerializer,
+        )
+        from catalog.theory_serializers import (
+            KnowledgeNodeDetailSerializer,
+            ReadingPathSerializer,
+        )
+
+        if object_type in NODE_OBJECT_TYPES:
+            return KnowledgeNodeDetailSerializer
+        return {
+            "scholar": ScholarProfileSerializer,
+            "discipline": DisciplineSerializer,
+            "subdiscipline": SubdisciplineSerializer,
+            "topic": TopicSerializer,
+            "reading_path": ReadingPathSerializer,
+            "work": WorkDetailSerializer,
+        }[object_type]
+
+    @classmethod
+    def _is_public(cls, object_type: str, target) -> bool:
+        if object_type in NODE_OBJECT_TYPES or object_type == "reading_path":
+            return target.status == KnowledgePublicationStatus.PUBLISHED
+        if object_type in {"scholar", "discipline", "subdiscipline", "topic"}:
+            return target.editorial_status == KnowledgePublicationStatus.PUBLISHED
+        return target.editions.filter(state=PublicationState.PUBLISHED).exists()
+
+    @classmethod
+    def _draft_target(cls, target_type: str, target, revision: EditorialRevision):
+        from catalog.services.editorial_revision import SPECIAL_FIELDS, TARGET_POLICIES
+
+        preview = copy(target)
+        policy = TARGET_POLICIES[target_type]
+        for field_name, value in dict(revision.materialized_preview or {}).items():
+            if field_name in SPECIAL_FIELDS or field_name not in policy.editable_fields:
+                continue
+            try:
+                field = target._meta.get_field(field_name)
+                if field.many_to_one:
+                    setattr(preview, field.attname, value or None)
+                else:
+                    setattr(preview, field_name, field.to_python(value))
+            except (TypeError, ValueError):
+                continue
+        return preview
+
+    @classmethod
+    def _related_objects(cls, model, identifiers) -> dict[str, Any]:
+        normalized = [str(value or "").strip() for value in identifiers]
+        if any(not value for value in normalized) or len(normalized) != len(
+            set(normalized)
+        ):
+            raise ValueError("preview relation identifiers are empty or duplicated")
+        objects = {
+            str(row.pk): row
+            for row in model.objects.filter(pk__in=normalized)
+        }
+        if len(objects) != len(normalized):
+            raise ValueError("preview relation references a missing canonical object")
+        return objects
+
+    @classmethod
+    def _node_special_overlay(
+        cls,
+        *,
+        target: KnowledgeNode,
+        field_name: str,
+        value,
+        data: dict[str, Any],
+    ) -> None:
+        from catalog.models import (
+            KnowledgeNodeAlias,
+            KnowledgeNodeDiscipline,
+            KnowledgeNodeSubdiscipline,
+            KnowledgeNodeTopic,
+        )
+        from catalog.theory_serializers import (
+            KnowledgeNodeAliasSerializer,
+            KnowledgeNodeDisciplineSerializer,
+            KnowledgeNodeSubdisciplineSerializer,
+            KnowledgeNodeTopicSerializer,
+        )
+
+        if not isinstance(value, list) or any(not isinstance(row, dict) for row in value):
+            raise ValueError(f"{field_name} preview is not a list of objects")
+
+        if field_name == "aliases":
+            aliases = [
+                KnowledgeNodeAlias(
+                    id=None,
+                    node=target,
+                    alias=str(row.get("alias") or "").strip(),
+                    language=str(row.get("language") or "zh-CN")[:16],
+                    alias_type=str(
+                        row.get("alias_type") or KnowledgeNodeAlias.AliasType.ALIAS
+                    ),
+                    normalized_alias=" ".join(
+                        str(row.get("alias") or "").casefold().split()
+                    ),
+                    source_kind=str(
+                        row.get("source_kind")
+                        or KnowledgeNodeAlias.SourceKind.EDITORIAL
+                    ),
+                    is_verified=bool(row.get("is_verified", True)),
+                )
+                for row in value
+            ]
+            if any(not row.alias for row in aliases):
+                raise ValueError("alias preview contains an empty name")
+            aliases.sort(key=lambda row: row.alias)
+            data["aliases"] = list(
+                KnowledgeNodeAliasSerializer(aliases, many=True, context={}).data
+            )
+            data["aliases_count"] = len(data["aliases"])
+            return
+
+        if field_name == "discipline_links":
+            related = cls._related_objects(
+                Discipline,
+                [row.get("discipline_id") for row in value],
+            )
+            links = [
+                KnowledgeNodeDiscipline(
+                    id=None,
+                    node=target,
+                    discipline=related[str(row["discipline_id"])],
+                    relation_type=str(row.get("relation_type") or "related"),
+                    discipline_specific_summary=str(
+                        row.get("discipline_specific_summary") or ""
+                    ),
+                    sort_order=int(row.get("sort_order") or 0),
+                    status=str(row.get("status") or KnowledgePublicationStatus.PENDING),
+                )
+                for row in value
+            ]
+            links.sort(
+                key=lambda row: (
+                    row.sort_order,
+                    row.discipline.sort_order,
+                    row.discipline.name,
+                )
+            )
+            published_links = [
+                row
+                for row in links
+                if row.status == KnowledgePublicationStatus.PUBLISHED
+            ]
+            data["discipline_links"] = list(
+                KnowledgeNodeDisciplineSerializer(
+                    published_links,
+                    many=True,
+                    context={},
+                ).data
+            )
+            data["related_disciplines"] = [
+                row["discipline"]
+                for row in data["discipline_links"]
+                if row["relation_type"] != "primary"
+            ]
+            return
+
+        relation_specs = {
+            "subdiscipline_links": (
+                Subdiscipline,
+                "subdiscipline_id",
+                KnowledgeNodeSubdiscipline,
+                KnowledgeNodeSubdisciplineSerializer,
+            ),
+            "topic_links": (
+                Topic,
+                "topic_id",
+                KnowledgeNodeTopic,
+                KnowledgeNodeTopicSerializer,
+            ),
+        }
+        related_model, id_field, relation_model, serializer_class = relation_specs[
+            field_name
+        ]
+        related = cls._related_objects(
+            related_model,
+            [row.get(id_field) for row in value],
+        )
+        links = []
+        for row in value:
+            common = {
+                "id": None,
+                "node": target,
+                id_field.removesuffix("_id"): related[str(row[id_field])],
+                "source": str(row.get("source") or ""),
+                "confidence": float(row.get("confidence") or 0),
+                "sort_order": int(row.get("sort_order") or 0),
+                "status": str(
+                    row.get("status") or KnowledgePublicationStatus.PENDING
+                ),
+            }
+            if field_name == "subdiscipline_links":
+                common.update(
+                    {
+                        "is_primary": bool(row.get("is_primary", False)),
+                        "relation_role": str(row.get("relation_role") or ""),
+                    }
+                )
+            else:
+                common["relation_label"] = str(row.get("relation_label") or "")
+            links.append(relation_model(**common))
+        links.sort(
+            key=lambda row: (
+                row.sort_order,
+                getattr(
+                    getattr(
+                        row,
+                        "subdiscipline"
+                        if field_name == "subdiscipline_links"
+                        else "topic",
+                    ),
+                    "name",
+                    "",
+                ),
+            )
+        )
+        # These two public serializer methods intentionally expose only
+        # published relations.  Apply the same visibility rule to the draft.
+        published_links = [
+            row
+            for row in links
+            if row.status == KnowledgePublicationStatus.PUBLISHED
+        ]
+        data[field_name] = list(
+            serializer_class(published_links, many=True, context={}).data
+        )
+
+    @classmethod
+    def _topic_special_overlay(
+        cls,
+        *,
+        field_name: str,
+        value,
+        data: dict[str, Any],
+    ) -> None:
+        from catalog.models import RelationReviewStatus, TheorySchool
+
+        if not isinstance(value, list) or any(not isinstance(row, dict) for row in value):
+            raise ValueError(f"{field_name} preview is not a list of objects")
+        specs = {
+            "discipline_relations": (Discipline, "discipline_id", "disciplines"),
+            "theory_relations": (TheorySchool, "theory_school_id", "linked_theories"),
+            "subdiscipline_relations": (
+                Subdiscipline,
+                "subdiscipline_id",
+                "subdisciplines",
+            ),
+        }
+        model, id_field, output_field = specs[field_name]
+        related = cls._related_objects(model, [row.get(id_field) for row in value])
+        output = []
+        for row in value:
+            item = related[str(row[id_field])]
+            if (
+                str(row.get("review_status") or RelationReviewStatus.SUGGESTED)
+                != RelationReviewStatus.APPROVED
+                or item.editorial_status != KnowledgePublicationStatus.PUBLISHED
+            ):
+                continue
+            materialized = {
+                "id": str(item.id),
+                "name": item.name,
+                "slug": item.slug,
+            }
+            if field_name == "discipline_relations":
+                materialized["is_primary"] = bool(row.get("is_primary", False))
+            else:
+                materialized["relation_label"] = str(
+                    row.get("relation_label") or ""
+                )
+            output.append(materialized)
+        data[output_field] = output
+
+    @classmethod
+    def _reading_path_special_overlay(
+        cls,
+        *,
+        target: ReadingPath,
+        value,
+        data: dict[str, Any],
+    ) -> None:
+        from uuid import NAMESPACE_URL, uuid5
+
+        from catalog.models import ReadingPathItem, ReadingPathStage
+        from catalog.theory_serializers import (
+            ReadingPathItemSerializer,
+            ReadingPathStageSerializer,
+        )
+
+        if not isinstance(value, list) or any(not isinstance(row, dict) for row in value):
+            raise ValueError("stage_groups preview is not a list of objects")
+        if any(
+            not isinstance(item, dict)
+            for group in value
+            for item in (group.get("items") or [])
+        ):
+            raise ValueError("stage_groups preview contains an invalid item")
+
+        existing_stages = {
+            str(row.pk): row
+            for row in target.stages.all()
+        }
+        node_ids = [
+            item.get("node")
+            for group in value
+            for item in (group.get("items") or [])
+            if item.get("node")
+        ]
+        work_ids = [
+            item.get("work")
+            for group in value
+            for item in (group.get("items") or [])
+            if item.get("work")
+        ]
+        nodes = cls._related_objects(KnowledgeNode, node_ids) if node_ids else {}
+        works = cls._related_objects(Work, work_ids) if work_ids else {}
+
+        stages = []
+        items = []
+        reading_order = 0
+        for fallback_position, group in enumerate(value):
+            stage_id = str(group.get("id") or "").strip()
+            if stage_id:
+                canonical_stage = existing_stages.get(stage_id)
+                if canonical_stage is None:
+                    raise ValueError("stage_groups preview references a missing stage")
+                stage = copy(canonical_stage)
+            else:
+                stage = ReadingPathStage(
+                    id=uuid5(
+                        NAMESPACE_URL,
+                        f"knowledge-preview:{target.pk}:stage:{fallback_position}",
+                    ),
+                    reading_path=target,
+                )
+                stage.created_at = None
+                stage.updated_at = None
+            stage.name = str(group.get("name") or "").strip()
+            if not stage.name:
+                raise ValueError("stage_groups preview contains an empty stage name")
+            stage.description = str(group.get("description") or "")
+            stage.position = int(group.get("position", fallback_position))
+            stages.append((fallback_position, stage))
+
+            source_items = list(group.get("items") or [])
+            for item_fallback, row in sorted(
+                enumerate(source_items),
+                key=lambda entry: int(entry[1].get("position", entry[0])),
+            ):
+                node_id = str(row.get("node") or "").strip()
+                work_id = str(row.get("work") or "").strip()
+                if bool(node_id) == bool(work_id):
+                    raise ValueError(
+                        "stage_groups preview item must reference one canonical object"
+                    )
+                item = ReadingPathItem(
+                    id=uuid5(
+                        NAMESPACE_URL,
+                        (
+                            f"knowledge-preview:{target.pk}:stage:{stage.pk}:"
+                            f"item:{reading_order}"
+                        ),
+                    ),
+                    reading_path=target,
+                    stage=stage,
+                    stage_name=stage.name,
+                    stage_description=stage.description,
+                    node=nodes.get(node_id),
+                    work=works.get(work_id),
+                    recommendation_reason=str(
+                        row.get("recommendation_reason") or ""
+                    ),
+                    prerequisite=str(row.get("prerequisite") or ""),
+                    position=int(row.get("position", item_fallback)),
+                    reading_order=reading_order,
+                    is_required=bool(row.get("is_required", False)),
+                    editorial_note=str(row.get("editorial_note") or ""),
+                )
+                items.append(item)
+                reading_order += 1
+
+        ordered_stages = [
+            stage
+            for _fallback, stage in sorted(
+                stages,
+                key=lambda entry: (entry[1].position, entry[0]),
+            )
+        ]
+        data["stages"] = list(
+            ReadingPathStageSerializer(ordered_stages, many=True, context={}).data
+        )
+        data["items"] = list(
+            ReadingPathItemSerializer(items, many=True, context={}).data
+        )
+        public_items = []
+        public_stage_ids = set()
+        for row in data["items"]:
+            work_is_public = bool(row.get("work") and row.get("work_data"))
+            node_data = row.get("node_data") or {}
+            node_is_public = bool(
+                row.get("node")
+                and node_data.get("status") == KnowledgePublicationStatus.PUBLISHED
+            )
+            if not (work_is_public or node_is_public):
+                continue
+            public_items.append(row)
+            if row.get("stage"):
+                public_stage_ids.add(str(row["stage"]))
+        data["items"] = public_items
+        data["stages"] = [
+            stage
+            for stage in data["stages"]
+            if str(stage.get("id")) in public_stage_ids
+        ]
+
+    @classmethod
+    def _special_overlay(
+        cls,
+        *,
+        object_type: str,
+        target,
+        revision: EditorialRevision,
+        data: dict[str, Any],
+    ) -> tuple[dict[str, Any], list[str]]:
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from catalog.services.editorial_revision import SPECIAL_FIELDS
+
+        requested = (
+            set(revision.changed_fields or [])
+            | set((revision.patch or {}).keys())
+        ) & SPECIAL_FIELDS
+        preview = dict(revision.materialized_preview or {})
+        patch = dict(revision.patch or {})
+        supported = {
+            **{
+                kind: {
+                    "aliases",
+                    "discipline_links",
+                    "subdiscipline_links",
+                    "topic_links",
+                }
+                for kind in NODE_OBJECT_TYPES
+            },
+            "scholar": {"person"},
+            "topic": {
+                "discipline_relations",
+                "theory_relations",
+                "subdiscipline_relations",
+            },
+            "reading_path": {"stage_groups"},
+        }.get(object_type, set())
+        unsupported = set(requested - supported)
+        materialized = dict(data)
+        for field_name in sorted(requested & supported):
+            if field_name in preview:
+                value = preview[field_name]
+            elif field_name in patch:
+                value = patch[field_name]
+            else:
+                unsupported.add(field_name)
+                continue
+            try:
+                if object_type in NODE_OBJECT_TYPES:
+                    cls._node_special_overlay(
+                        target=target,
+                        field_name=field_name,
+                        value=value,
+                        data=materialized,
+                    )
+                elif object_type == "scholar":
+                    if not isinstance(value, dict):
+                        raise ValueError("person preview is not an object")
+                    person = dict(materialized.get("person") or {})
+                    for key in (
+                        "preferred_name",
+                        "original_name",
+                        "aliases",
+                        "birth_year",
+                        "death_year",
+                        "biography",
+                    ):
+                        if key in value:
+                            person[key] = value[key]
+                    from catalog.services.aliases import search_aliases
+
+                    person["aliases"] = search_aliases(
+                        person.get("preferred_name", ""),
+                        person.get("original_name", ""),
+                        *(person.get("aliases") or []),
+                    )
+                    materialized["person"] = person
+                elif object_type == "topic":
+                    cls._topic_special_overlay(
+                        field_name=field_name,
+                        value=value,
+                        data=materialized,
+                    )
+                else:
+                    cls._reading_path_special_overlay(
+                        target=target,
+                        value=value,
+                        data=materialized,
+                    )
+            except (
+                AttributeError,
+                DjangoValidationError,
+                KeyError,
+                TypeError,
+                ValueError,
+            ):
+                unsupported.add(field_name)
+        return materialized, sorted(unsupported)
+
+    @classmethod
+    def _serialize(cls, object_type: str, target, *, revision=None) -> tuple[dict, str, list[str]]:
+        serializer_class = cls._serializer(object_type)
+        unsupported_fields: list[str] = []
+        if revision is not None:
+            if object_type == "work":
+                from catalog.serializers import AdminWorkPagePreviewSerializer
+
+                edition = (
+                    target.editions.filter(is_primary=True).order_by(
+                        "-published_at", "-publication_year", "-created_at"
+                    ).first()
+                    or target.editions.order_by("-created_at").first()
+                )
+                if edition is None:
+                    return {}, AdminWorkPagePreviewSerializer.__name__, ["edition"]
+                unsupported_fields = sorted(
+                    set(revision.changed_fields or []) & {"reader"}
+                )
+                return (
+                    dict(
+                        AdminWorkPagePreviewSerializer(
+                            target,
+                            context={
+                                "preview_edition": edition,
+                                "editorial_preview": revision.materialized_preview,
+                            },
+                        ).data
+                    ),
+                    AdminWorkPagePreviewSerializer.__name__,
+                    unsupported_fields,
+                )
+            target = cls._draft_target(cls.TARGET_TYPES[object_type], target, revision)
+        serialized = dict(serializer_class(target, context={}).data)
+        if revision is not None:
+            serialized, unsupported_fields = cls._special_overlay(
+                object_type=object_type,
+                target=target,
+                revision=revision,
+                data=serialized,
+            )
+        return serialized, serializer_class.__name__, unsupported_fields
+
+    @classmethod
+    def enrich(cls, *, object_type: str, target, selection: dict[str, Any]) -> dict[str, Any]:
+        from catalog.services.dependency_engine import projection_types_for
+        from catalog.services.editorial_revision import TARGET_POLICIES
+
+        target_type = cls.TARGET_TYPES.get(object_type)
+        policy = TARGET_POLICIES.get(target_type)
+        revision = EditorialRevision.objects.filter(
+            target_type=target_type,
+            target_id=target.pk,
+            status=EditorialRevision.Status.DRAFT,
+        ).order_by("-revision").first()
+        canonical_public, serializer_name, _unsupported = cls._serialize(object_type, target)
+        is_public = cls._is_public(object_type, target)
+        draft_public: dict[str, Any] | None = None
+        draft_serializer = serializer_name
+        unsupported_fields: list[str] = []
+        draft_source = "editorial_revision"
+        if revision is not None:
+            draft_public, draft_serializer, unsupported_fields = cls._serialize(
+                object_type,
+                target,
+                revision=revision,
+            )
+        elif not is_public:
+            # An unpublished canonical row is itself the current editable
+            # draft.  It must remain previewable before the first revision is
+            # needed, while the published perspective stays unavailable.
+            draft_public = canonical_public
+            draft_source = "canonical_draft"
+
+        completeness_source = draft_public if draft_public is not None else canonical_public
+        modules = []
+        for label, fields in PUBLIC_MODULE_FIELDS[object_type]:
+            populated = [field for field in fields if _has_public_content(completeness_source.get(field))]
+            modules.append(
+                {
+                    "label": label,
+                    "serializer_fields": list(fields),
+                    "populated_fields": populated,
+                    "missing_fields": [field for field in fields if field not in populated],
+                    "complete": len(populated) == len(fields),
+                    "available": bool(populated),
+                }
+            )
+
+        draft_available = draft_public is not None and bool(draft_public)
+        selection["content_completeness"] = {
+            "source": "public_serializer",
+            "serializer": draft_serializer if draft_available else serializer_name,
+            "perspective": "draft" if draft_available else "published",
+            "perspective_source": draft_source if draft_available else "published",
+            "complete_module_count": sum(row["complete"] for row in modules),
+            "module_count": len(modules),
+            "unsupported_preview_fields": unsupported_fields,
+            "modules": modules,
+        }
+        selection["preview_perspectives"] = {
+            "published": {
+                "source": "published",
+                "available": is_public,
+                "serializer": serializer_name,
+                "data": canonical_public if is_public else None,
+                "reason": "" if is_public else "object_not_published",
+            },
+            "draft": {
+                "source": draft_source,
+                "available": draft_available,
+                "complete": draft_available and not unsupported_fields,
+                "serializer": draft_serializer,
+                "revision_id": str(revision.id) if revision else None,
+                "data": draft_public if draft_available else None,
+                "unsupported_preview_fields": unsupported_fields,
+                "reason": (
+                    "partial_preview_unsupported_fields"
+                    if draft_available and unsupported_fields
+                    else ""
+                    if draft_available
+                    else "no_draft_revision"
+                    if revision is None
+                    else "public_serializer_preview_unavailable"
+                ),
+            },
+        }
+        published_route = selection.get("preview_url", "") if is_public else ""
+        draft_route = f"/admin/preview/knowledge/{object_type}/{target.pk}"
+        if object_type == "work":
+            edition = (
+                target.editions.filter(is_primary=True).order_by(
+                    "-published_at", "-publication_year", "-created_at"
+                ).first()
+                or target.editions.order_by("-created_at").first()
+            )
+            if edition is not None:
+                draft_route = f"/admin/preview/works/{edition.pk}"
+        selection["preview_perspectives"]["published"]["route"] = published_route
+        selection["preview_perspectives"]["draft"]["route"] = draft_route
+        selection["preview_routes"] = {
+            "published": published_route,
+            "draft": draft_route,
+            "draft_is_protected": True,
+            "uses_public_serializer": True,
+        }
+        selection["editor_adapter"] = {
+            "name": "KnowledgeObjectEditorAdapter",
+            "available": policy is not None,
+            "reason": "" if policy is not None else "mature_mutation_service_unavailable",
+            "target_type": target_type,
+            "editable_fields": sorted(policy.editable_fields) if policy else [],
+            "mutation_mode": "editorial_revision" if policy else "unavailable",
+            "create_revision": (
+                {"method": "POST", "url": "/catalog/admin/editorial-revisions/"}
+                if policy
+                else None
+            ),
+            "canonical_endpoint": selection.get("editor_url", ""),
+        }
+        projection_types = list(projection_types_for(target_type))
+        impact = selection.setdefault("frontend_impact", {})
+        impact["source"] = "dependency_engine_and_public_serializer"
+        impact["dependency_object_type"] = target_type
+        impact["projection_types"] = projection_types
+        impact["public_serializer"] = serializer_name
+        impact["modules"] = [row["label"] for row in modules]
+        impact["module_readiness"] = modules
+        return selection
 
 
 def _node_directory(query: str, object_type: str, limit: int) -> list[dict[str, Any]]:
@@ -160,6 +963,29 @@ def _topic_directory(query: str, limit: int) -> list[dict[str, Any]]:
             "updated_at": row.updated_at,
         }
         for row in queryset.order_by("name")[:limit]
+    ]
+
+
+def _discipline_directory(query: str, limit: int) -> list[dict[str, Any]]:
+    queryset = Discipline.objects.all()
+    if query:
+        queryset = queryset.filter(
+            Q(name__icontains=query)
+            | Q(foreign_name__icontains=query)
+            | Q(code__icontains=query)
+            | Q(slug__icontains=query)
+            | Q(search_aliases__icontains=query)
+        )
+    return [
+        {
+            "id": str(row.id),
+            "object_type": "discipline",
+            "label": row.name,
+            "secondary_label": row.foreign_name or row.code,
+            "status": row.editorial_status,
+            "updated_at": row.updated_at,
+        }
+        for row in queryset.order_by("sort_order", "name")[:limit]
     ]
 
 
@@ -265,6 +1091,7 @@ def _directory(*, query: str, object_type: str, limit: int) -> tuple[list[dict[s
     counts = {
         **node_counts,
         "scholar": ScholarProfile.objects.count(),
+        "discipline": Discipline.objects.count(),
         "subdiscipline": Subdiscipline.objects.count(),
         "topic": Topic.objects.count(),
         "reading_path": ReadingPath.objects.count(),
@@ -281,6 +1108,8 @@ def _directory(*, query: str, object_type: str, limit: int) -> tuple[list[dict[s
             rows.extend(_scholar_directory(query, limit))
         elif kind == "topic":
             rows.extend(_topic_directory(query, limit))
+        elif kind == "discipline":
+            rows.extend(_discipline_directory(query, limit))
         elif kind == "subdiscipline":
             rows.extend(_subdiscipline_directory(query, limit))
         elif kind == "reading_path":
@@ -560,8 +1389,19 @@ def _latest_preview(target_type: str, target_id, canonical: dict[str, Any]) -> d
     }
 
 
-def _enrichment_candidates(target_type: str, target_id) -> list[dict[str, Any]]:
-    return [
+def _enrichment_candidate_payload(row: EnrichmentCandidate) -> dict[str, Any]:
+    evidence = [
+        {
+            "id": str(item.id),
+            "source_title": item.source_title,
+            "canonical_url": item.canonical_url,
+            "supporting_text": _clip(item.supporting_text, 1200),
+            "source_class": item.source_class,
+            "retrieved_at": item.retrieved_at,
+        }
+        for item in row.evidence_records.filter(is_current=True)[:8]
+    ]
+    return attach_candidate_action_descriptors(
         {
             "id": str(row.id),
             "candidate_type": "enrichment",
@@ -572,13 +1412,569 @@ def _enrichment_candidates(target_type: str, target_id) -> list[dict[str, Any]]:
             "conflicts": _bounded_json(row.conflicts),
             "status": row.status,
             "source": row.source_class,
+            "evidence": evidence,
+            "evidence_count": len(evidence),
+            "evidence_status": "evidence" if evidence else "lead_only",
+            "decision_url": f"/catalog/admin/field-enrichment/candidates/{row.id}/decision/",
+            "available_actions": ["inspect", "accept", "reject"],
         }
-        for row in EnrichmentCandidate.objects.filter(
-            target_type=target_type,
-            target_id=target_id,
-            status=EnrichmentCandidate.Status.PENDING,
-        ).order_by("-confidence", "created_at")[:MAX_SECTION_ROWS]
+    )
+
+
+def _enrichment_candidates(target_type: str, target_id) -> list[dict[str, Any]]:
+    rows = EnrichmentCandidate.objects.filter(
+        target_type=target_type,
+        target_id=target_id,
+        status=EnrichmentCandidate.Status.PENDING,
+    ).prefetch_related("evidence_records").order_by(
+        "-confidence", "created_at"
+    )[:MAX_SECTION_ROWS]
+    return [_enrichment_candidate_payload(row) for row in rows]
+
+
+def _theory_review_candidate(row: TheoryReviewTask) -> dict[str, Any]:
+    pending = row.status in {
+        TheoryReviewTask.TaskStatus.PENDING,
+        TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
+        TheoryReviewTask.TaskStatus.INSUFFICIENT_EVIDENCE,
+    }
+    label = row.suggested_node_name or (
+        row.candidate_node.canonical_name_zh if row.candidate_node_id else "知识关系"
+    )
+    actions = ["inspect"]
+    action_payloads: dict[str, dict[str, Any]] = {}
+    if pending:
+        if row.task_type == TheoryReviewTask.TaskType.WORK_NODE and row.candidate_node_id:
+            actions.append("accept")
+            action_payloads["accept"] = {
+                "action": "confirm",
+                "candidate_node": str(row.candidate_node_id),
+                "relation_type": row.suggested_relation_type,
+            }
+        elif row.task_type == TheoryReviewTask.TaskType.NEW_NODE:
+            actions.append("create_draft")
+            action_payloads["create_draft"] = {
+                "action": "create_node",
+                "canonical_name_zh": row.suggested_node_name,
+            }
+        actions.extend(["reject", "defer"])
+    evidence = []
+    if row.evidence_text or row.evidence_pages:
+        evidence.append(
+            {
+                "supporting_text": _clip(row.evidence_text, 1200),
+                "locator": {"pages": list(row.evidence_pages or [])[:20]},
+                "source_class": "pdf_evidence",
+            }
+        )
+    return attach_candidate_action_descriptors(
+        {
+            "id": str(row.id),
+            "candidate_type": "theory_review",
+            "field_name": row.task_type,
+            "proposed_value": label or row.suggested_relation_type,
+            "confidence": row.confidence,
+            "conflicts": [],
+            "status": "pending" if pending else row.status,
+            "source": "library_research",
+            "evidence": evidence,
+            "evidence_count": len(evidence),
+            "evidence_status": "evidence" if evidence else "none",
+            "decision_url": f"/catalog/admin/theory-system/review-tasks/{row.id}/action/",
+            "available_actions": actions,
+            "action_payloads": action_payloads,
+        }
+    )
+
+
+def _debate_candidate_payload(row: DebateCandidate) -> dict[str, Any]:
+    evidence = _bounded_json(
+        row.evidence_pack.envelope_snapshot[:8] if row.evidence_pack_id else []
+    )
+    pending = row.status == DebateCandidate.Status.PENDING
+    return attach_candidate_action_descriptors(
+        {
+            "id": str(row.id),
+            "candidate_type": "debate_discovery",
+            "field_name": "canonical_question",
+            "label": row.title,
+            "proposed_value": _clip(row.canonical_question, 1200),
+            "confidence": row.quality_score,
+            "importance": row.importance_score,
+            "conflicts": {"score": row.conflict_score},
+            "status": row.status,
+            "source": "debate_discovery",
+            "evidence": evidence,
+            "evidence_count": len(evidence),
+            "evidence_status": "evidence" if evidence else "none",
+            "decision_url": f"/catalog/admin/research/generated-candidates/debate/{row.id}/decision/",
+            "available_actions": (
+                ["inspect", "accept", "accept_with_edit", "defer", "reject"]
+                if pending
+                else ["inspect"]
+            ),
+            "action_payloads": {
+                "accept": {
+                    "title": row.title,
+                    "canonical_question": row.canonical_question,
+                    "summary": row.summary,
+                },
+                "accept_with_edit": {
+                    "title": row.title,
+                    "canonical_question": row.canonical_question,
+                    "summary": row.summary,
+                },
+            },
+            "action_options": {
+                "accept_with_edit": {
+                    "editable": True,
+                    "value_field": "canonical_question",
+                }
+            },
+        }
+    )
+
+
+def _reading_path_candidate_payload(row: ReadingPathCandidate) -> dict[str, Any]:
+    evidence = _bounded_json(
+        row.evidence_pack.envelope_snapshot[:8] if row.evidence_pack_id else []
+    )
+    pending = row.status == ReadingPathCandidate.Status.PENDING
+    return attach_candidate_action_descriptors(
+        {
+            "id": str(row.id),
+            "candidate_type": "reading_path_generation",
+            "field_name": "stages",
+            "label": row.title,
+            "proposed_value": _bounded_json(row.stages),
+            "confidence": row.quality_score,
+            "importance": row.importance_score,
+            "conflicts": [],
+            "status": row.status,
+            "source": "reading_path_generation",
+            "evidence": evidence,
+            "evidence_count": len(evidence),
+            "evidence_status": "evidence" if evidence else "none",
+            "decision_url": f"/catalog/admin/research/generated-candidates/reading_path/{row.id}/decision/",
+            "available_actions": (
+                ["inspect", "accept", "accept_with_edit", "defer", "reject"]
+                if pending
+                else ["inspect"]
+            ),
+            "action_payloads": {
+                "accept": {
+                    "title": row.title,
+                    "target_audience": row.target_audience,
+                    "learning_goal": row.learning_goal,
+                    "stages": row.stages,
+                },
+                "accept_with_edit": {
+                    "title": row.title,
+                    "target_audience": row.target_audience,
+                    "learning_goal": row.learning_goal,
+                    "stages": row.stages,
+                },
+            },
+            "action_options": {
+                "accept_with_edit": {
+                    "editable": True,
+                    "value_field": "learning_goal",
+                }
+            },
+        }
+    )
+
+
+def _related_work_ids(object_type: str, target) -> list[UUID]:
+    if target is None:
+        return []
+    if object_type == "work":
+        return [target.id]
+    if object_type in NODE_OBJECT_TYPES:
+        queryset = target.work_relations.values_list("work_id", flat=True)
+    elif object_type == "scholar":
+        queryset = target.person.contributions.filter(approved=True).values_list(
+            "edition__work_id", flat=True
+        )
+    elif object_type in {"discipline", "subdiscipline", "topic"}:
+        queryset = target.work_relations.values_list("work_id", flat=True)
+    elif object_type == "reading_path":
+        queryset = target.items.filter(work_id__isnull=False).values_list(
+            "work_id", flat=True
+        )
+    else:
+        return []
+    return list(dict.fromkeys(queryset[:100]))
+
+
+def _enrichment_target(object_type: str, target) -> tuple[str, UUID] | None:
+    if target is None:
+        return None
+    if object_type in NODE_OBJECT_TYPES:
+        return EnrichmentCandidate.TargetType.KNOWLEDGE_NODE, target.id
+    if object_type == "scholar":
+        return EnrichmentCandidate.TargetType.PERSON, target.person_id
+    target_types = {
+        "work": EnrichmentCandidate.TargetType.WORK,
+        "discipline": EnrichmentCandidate.TargetType.DISCIPLINE,
+        "subdiscipline": EnrichmentCandidate.TargetType.SUBDISCIPLINE,
+        "topic": EnrichmentCandidate.TargetType.TOPIC,
+        "reading_path": EnrichmentCandidate.TargetType.READING_PATH,
+    }
+    target_type = target_types.get(object_type)
+    return (target_type, target.id) if target_type else None
+
+
+def _evidence_pack_subjects(object_type: str, target) -> list[tuple[str, str]]:
+    if target is None:
+        return []
+    subjects = [(object_type, str(target.id))]
+    if object_type in NODE_OBJECT_TYPES:
+        subjects.append(("knowledge_node", str(target.id)))
+    elif object_type == "scholar":
+        subjects.extend(
+            [
+                ("person", str(target.person_id)),
+                ("scholar_profile", str(target.id)),
+            ]
+        )
+    return list(dict.fromkeys(subjects))
+
+
+def _evidence_pack_filter(object_type: str, target) -> Q:
+    query = Q(pk__isnull=True)
+    for subject_type, subject_id in _evidence_pack_subjects(object_type, target):
+        query |= Q(
+            evidence_pack__subject_type=subject_type,
+            evidence_pack__subject_id=subject_id,
+        )
+    return query
+
+
+def _pending_generated_candidates(object_type: str, target, work_ids: list[UUID]):
+    if target is None:
+        debates = DebateCandidate.objects.filter(status=DebateCandidate.Status.PENDING)
+        reading_paths = ReadingPathCandidate.objects.filter(
+            status=ReadingPathCandidate.Status.PENDING
+        )
+    else:
+        debate_filter = _evidence_pack_filter(object_type, target)
+        if object_type in NODE_OBJECT_TYPES:
+            debate_filter |= Q(suggested_node_id=target.id)
+        if work_ids:
+            debate_filter |= Q(claim_links__claim__work_id__in=work_ids)
+        debates = DebateCandidate.objects.filter(
+            debate_filter,
+            status=DebateCandidate.Status.PENDING,
+        ).distinct()
+        reading_paths = ReadingPathCandidate.objects.filter(
+            _evidence_pack_filter(object_type, target),
+            status=ReadingPathCandidate.Status.PENDING,
+        ).distinct()
+    return (
+        debates.select_related("evidence_pack").order_by(
+            "-importance_score", "-quality_score", "created_at"
+        ),
+        reading_paths.select_related("evidence_pack").order_by(
+            "-importance_score", "-quality_score", "created_at"
+        ),
+    )
+
+
+def _unconsumed_evidence(work_ids: list[UUID] | None = None):
+    queryset = EvidenceSpan.objects.filter(
+        is_stale=False,
+        document_revision__is_active=True,
+    ).exclude(
+        primary_for_claims__status=DerivedClaim.Status.ACTIVE,
+    ).exclude(
+        claim_links__derived_claim__status=DerivedClaim.Status.ACTIVE,
+    ).exclude(
+        claim_links__curated_claim__status__in=(
+            CuratedClaim.Status.DRAFT,
+            CuratedClaim.Status.PUBLISHED,
+        ),
+    )
+    if work_ids is not None:
+        if not work_ids:
+            return queryset.none()
+        queryset = queryset.filter(
+            document_revision__asset__edition__work_id__in=work_ids
+        )
+    return queryset.select_related(
+        "page",
+        "document_revision__asset__edition__work",
+    ).prefetch_related(
+        "document_revision__asset__edition__contributions__person"
+    ).distinct().order_by("-created_at", "-quality")
+
+
+def _knowledge_update_payload(
+    payload: dict[str, Any],
+    *,
+    update_kind: str,
+    signal_sources: list[str],
+    why_now: str,
+    priority: float,
+    decision_target: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    output = dict(payload)
+    output.update(
+        {
+            "knowledge_update_id": f"{update_kind}:{payload.get('id', '')}",
+            "knowledge_update_kind": update_kind,
+            "signal_sources": signal_sources,
+            "why_now": why_now,
+            "knowledge_update_priority": round(max(0.0, min(float(priority), 1.0)), 6),
+            "decision_target": decision_target or {},
+            "canonical_write_policy": "human_decision_only",
+            "derived_read_model": True,
+        }
+    )
+    return output
+
+
+def _claim_update_candidates(
+    work_ids: list[UUID],
+    *,
+    reviewer=None,
+    limit: int = 3,
+) -> list[dict[str, Any]]:
+    from catalog.services.claims.curation import high_value_claim_candidates
+
+    output: list[dict[str, Any]] = []
+    works = {
+        row.id: row
+        for row in Work.objects.filter(pk__in=work_ids).only("id", "title")
+    }
+    for work_id in work_ids:
+        work = works.get(work_id)
+        if work is None:
+            continue
+        for payload in high_value_claim_candidates(
+            work,
+            reviewer=reviewer,
+            limit=KNOWLEDGE_UPDATE_LIMIT,
+        ):
+            output.append(
+                _knowledge_update_payload(
+                    payload,
+                    update_kind="claim_curation",
+                    signal_sources=["derived_claim", "evidence_span"],
+                    why_now="机器命题已通过原文定位、去重和重要性排序，可由 Editor 决定是否策展。",
+                    priority=float(payload.get("confidence") or 0),
+                    decision_target={
+                        "object_type": "work",
+                        "object_id": str(work.id),
+                        "label": work.title,
+                    },
+                )
+            )
+    output.sort(
+        key=lambda row: (-float(row.get("knowledge_update_priority") or 0), row["knowledge_update_id"])
+    )
+    return output[:limit]
+
+
+def _evidence_update_candidates(
+    work_ids: list[UUID] | None,
+    *,
+    limit: int = 1,
+) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for span in _unconsumed_evidence(work_ids)[:limit]:
+        envelope = _evidence_payload(span)
+        payload = attach_candidate_action_descriptors(
+            {
+                "id": str(span.id),
+                "candidate_type": "evidence_review",
+                "field_name": "knowledge_evidence",
+                "label": _clip(span.section, 160) or "尚未形成 Claim 的馆藏原文",
+                "proposed_value": _clip(span.original_text, 1200),
+                "status": "pending",
+                "source": "evidence_span",
+                "confidence": span.quality,
+                "conflicts": [],
+                "evidence": [envelope],
+                "evidence_count": 1,
+                "evidence_status": "evidence",
+                "available_actions": ["inspect"],
+            }
+        )
+        output.append(
+            _knowledge_update_payload(
+                payload,
+                update_kind="evidence_review",
+                signal_sources=["evidence_span"],
+                why_now="该原文已有稳定页码和 provenance，但尚未被有效 Claim 消费。",
+                priority=span.quality * 0.75,
+                decision_target={
+                    "object_type": "work",
+                    "object_id": envelope["source"]["work_id"],
+                    "label": envelope["source"]["work_title"],
+                },
+            )
+        )
+    return output
+
+
+def _bounded_diverse_suggestions(
+    buckets: list[list[dict[str, Any]]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    chosen: list[dict[str, Any]] = []
+    remaining: list[dict[str, Any]] = []
+    for bucket in buckets:
+        if bucket:
+            chosen.append(bucket[0])
+            remaining.extend(bucket[1:])
+    remaining.sort(
+        key=lambda row: (-float(row.get("knowledge_update_priority") or 0), row["knowledge_update_id"])
+    )
+    chosen.extend(remaining)
+    output: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in chosen:
+        identifier = str(row.get("knowledge_update_id") or "")
+        if not identifier or identifier in seen:
+            continue
+        seen.add(identifier)
+        output.append(row)
+        if len(output) >= limit:
+            break
+    return output
+
+
+def _knowledge_update_bundle(
+    *,
+    object_type: str = "",
+    target=None,
+    reviewer=None,
+    global_scope: bool = False,
+) -> dict[str, Any]:
+    work_ids = _related_work_ids(object_type, target)
+    if global_scope:
+        work_ids = []
+        for work_id in DerivedClaim.objects.filter(
+            status=DerivedClaim.Status.ACTIVE,
+            document_revision__is_active=True,
+            primary_evidence__is_stale=False,
+        ).order_by("-importance_score", "-quality_score").values_list(
+            "work_id", flat=True
+        )[:100]:
+            if work_id not in work_ids:
+                work_ids.append(work_id)
+            if len(work_ids) >= 8:
+                break
+
+    enrichment_target = _enrichment_target(object_type, target)
+    enrichment_queryset = EnrichmentCandidate.objects.filter(
+        status=EnrichmentCandidate.Status.PENDING,
+    )
+    if not global_scope:
+        if enrichment_target is None:
+            enrichment_queryset = enrichment_queryset.none()
+        else:
+            enrichment_queryset = enrichment_queryset.filter(
+                target_type=enrichment_target[0],
+                target_id=enrichment_target[1],
+            )
+    enrichment_queryset = enrichment_queryset.prefetch_related(
+        "evidence_records"
+    ).order_by("-confidence", "created_at")
+    enrichment_updates = [
+        _knowledge_update_payload(
+            _enrichment_candidate_payload(row),
+            update_kind="field_enrichment",
+            signal_sources=["enrichment_candidate"],
+            why_now="字段研究已有待处理候选；采用仍由现有字段决策端点校验证据与身份。",
+            priority=row.confidence,
+            decision_target={
+                "object_type": row.target_type,
+                "object_id": str(row.target_id),
+                "field_name": row.field_name,
+            },
+        )
+        for row in enrichment_queryset[:3]
     ]
+
+    claim_updates = _claim_update_candidates(
+        work_ids,
+        reviewer=reviewer,
+        limit=3,
+    )
+    debates, reading_paths = _pending_generated_candidates(
+        "" if global_scope else object_type,
+        None if global_scope else target,
+        work_ids,
+    )
+    debate_updates = [
+        _knowledge_update_payload(
+            _debate_candidate_payload(row),
+            update_kind="debate_discovery",
+            signal_sources=["debate_candidate", "derived_claim", "evidence_span"],
+            why_now="馆藏 Claim 已形成支持、相斥或限定结构，可由 Editor 决定是否建立争论草稿。",
+            priority=max(row.importance_score, row.quality_score),
+            decision_target={
+                "object_type": "knowledge_node",
+                "object_id": str(row.suggested_node_id or ""),
+            },
+        )
+        for row in debates[:2]
+    ]
+    reading_updates = [
+        _knowledge_update_payload(
+            _reading_path_candidate_payload(row),
+            update_kind="reading_path_generation",
+            signal_sources=["reading_path_candidate", "evidence_span"],
+            why_now="研究任务已生成完整路径草案，可整体采用为草稿后再编辑。",
+            priority=max(row.importance_score, row.quality_score),
+            decision_target={"object_type": "reading_path", "object_id": ""},
+        )
+        for row in reading_paths[:2]
+    ]
+    evidence_updates = _evidence_update_candidates(
+        None if global_scope else work_ids,
+        limit=1,
+    )
+
+    claim_queryset = DerivedClaim.objects.filter(
+        status=DerivedClaim.Status.ACTIVE,
+        document_revision__is_active=True,
+        primary_evidence__is_stale=False,
+    )
+    if not global_scope:
+        claim_queryset = claim_queryset.filter(work_id__in=work_ids) if work_ids else claim_queryset.none()
+    counts = {
+        "evidence_spans": _unconsumed_evidence(
+            None if global_scope else work_ids
+        ).count(),
+        "derived_claims": claim_queryset.count(),
+        "enrichment_candidates": enrichment_queryset.count(),
+        "debate_candidates": debates.count(),
+        "reading_path_candidates": reading_paths.count(),
+    }
+    limit = GLOBAL_KNOWLEDGE_UPDATE_LIMIT if global_scope else KNOWLEDGE_UPDATE_LIMIT
+    items = _bounded_diverse_suggestions(
+        [
+            enrichment_updates,
+            claim_updates,
+            debate_updates,
+            reading_updates,
+            evidence_updates,
+        ],
+        limit=limit,
+    )
+    return {
+        "items": items,
+        "signal_counts": counts,
+        "visible_count": len(items),
+        "limit": limit,
+        "derived_read_model": True,
+        "persistent_model": None,
+        "canonical_write_policy": "human_decision_only",
+    }
 
 
 def _node_selection(node: KnowledgeNode, object_type: str) -> dict[str, Any]:
@@ -677,39 +2073,20 @@ def _node_selection(node: KnowledgeNode, object_type: str) -> dict[str, Any]:
     derived_claims = _derived_claims(derived)
     candidates = _enrichment_candidates(EnrichmentCandidate.TargetType.KNOWLEDGE_NODE, node.id)
     candidates.extend(
-        {
-            "id": str(row.id),
-            "candidate_type": "theory_review",
-            "field_name": row.task_type,
-            "proposed_value": row.suggested_node_name or row.suggested_relation_type,
-            "confidence": row.confidence,
-            "conflicts": [],
-            "status": row.status,
-            "source": "library_research",
-            "evidence": _clip(row.evidence_text, 1200),
-            "evidence_pages": row.evidence_pages[:20],
-        }
-        for row in node.review_tasks.filter(
+        _theory_review_candidate(row)
+        for row in node.review_tasks.select_related("candidate_node").filter(
             status__in=[TheoryReviewTask.TaskStatus.PENDING, TheoryReviewTask.TaskStatus.NEEDS_CHANGES]
         ).order_by("-confidence", "created_at")[:MAX_SECTION_ROWS]
     )
     if object_type == "debate":
         candidates.extend(
-            {
-                "id": str(row.id),
-                "candidate_type": "debate_discovery",
-                "field_name": "canonical_question",
-                "proposed_value": _clip(row.canonical_question, 1200),
-                "confidence": row.quality_score,
-                "importance": row.importance_score,
-                "conflicts": {"score": row.conflict_score},
-                "status": row.status,
-                "source": "debate_discovery",
-            }
+            _debate_candidate_payload(row)
             for row in DebateCandidate.objects.filter(
                 suggested_node=node,
                 status=DebateCandidate.Status.PENDING,
-            ).order_by("-importance_score", "created_at")[:MAX_SECTION_ROWS]
+            ).select_related("evidence_pack").order_by(
+                "-importance_score", "created_at"
+            )[:MAX_SECTION_ROWS]
         )
     target_type = EditorialRevision.TargetType.KNOWLEDGE_NODE
     public_modules = {
@@ -924,6 +2301,73 @@ def _topic_selection(topic: Topic) -> dict[str, Any]:
     }
 
 
+def _discipline_selection(discipline: Discipline) -> dict[str, Any]:
+    canonical = {
+        "code": discipline.code,
+        "name": discipline.name,
+        "foreign_name": discipline.foreign_name,
+        "slug": discipline.slug,
+        "description": discipline.description,
+        "introduction": discipline.introduction,
+        "sort_order": discipline.sort_order,
+        "curation_level": discipline.curation_level,
+        "editorial_status": discipline.editorial_status,
+    }
+    relations = [
+        {
+            "id": str(row.id),
+            "kind": "discipline_subdiscipline",
+            "label": "子学科",
+            "target": row.name,
+            "status": row.editorial_status,
+        }
+        for row in discipline.subdisciplines.order_by("name")[:MAX_SECTION_ROWS]
+    ]
+    target_type = EditorialRevision.TargetType.DISCIPLINE
+    modules = ["学科介绍", "子学科目录", "理论与主题", "作品与学者"]
+    return {
+        "id": str(discipline.id),
+        "object_type": "discipline",
+        "label": discipline.name,
+        "status": discipline.editorial_status,
+        "canonical": _bounded_json(canonical),
+        "relations": relations,
+        "evidence": [],
+        "claims": {"curated": [], "derived": [], "derived_is_machine_only": True},
+        "ai_candidates": [],
+        "revisions": _revision_rows(target_type, discipline.id),
+        "preview": _latest_preview(target_type, discipline.id, canonical),
+        "frontend_impact": _frontend_impact(
+            object_type=target_type,
+            object_id=discipline.id,
+            public_visibility=(
+                discipline.editorial_status == KnowledgePublicationStatus.PUBLISHED
+            ),
+            modules=modules,
+            targets=[
+                {
+                    "label": "学科公开页",
+                    "url": f"/theories/disciplines/{discipline.slug}",
+                    "modules": modules,
+                }
+            ],
+        ),
+        "mutation_contract": _mutation_contract(
+            target_type,
+            discipline.id,
+            published=(
+                discipline.editorial_status == KnowledgePublicationStatus.PUBLISHED
+            ),
+        ),
+        "editor_url": f"/admin/disciplines/{discipline.id}",
+        "preview_url": f"/theories/disciplines/{discipline.slug}",
+        "related_editor_urls": [
+            {"label": "子学科", "url": "/admin/subdisciplines"},
+            {"label": "理论节点", "url": "/admin/theory-nodes"},
+        ],
+    }
+
+
 def _subdiscipline_selection(subdiscipline: Subdiscipline) -> dict[str, Any]:
     canonical = {
         "name": subdiscipline.name,
@@ -1126,17 +2570,7 @@ def _reading_path_selection(path: ReadingPath) -> dict[str, Any]:
         path.id,
     )
     candidates.extend(
-        {
-            "id": str(row.id),
-            "candidate_type": "reading_path_generation",
-            "field_name": "stage_groups",
-            "proposed_value": _bounded_json(row.stages),
-            "confidence": row.quality_score,
-            "importance": row.importance_score,
-            "conflicts": [],
-            "status": row.status,
-            "source": "reading_path_generation",
-        }
+        _reading_path_candidate_payload(row)
         for row in path.source_candidates.select_related("evidence_pack").order_by(
             "-importance_score", "created_at"
         )[:MAX_SECTION_ROWS]
@@ -1288,19 +2722,8 @@ def _work_selection(work: Work) -> dict[str, Any]:
     derived_claims = _derived_claims(DerivedClaim.objects.filter(work=work))
     candidates = _enrichment_candidates(EnrichmentCandidate.TargetType.WORK, work.id)
     candidates.extend(
-        {
-            "id": str(row.id),
-            "candidate_type": "theory_review",
-            "field_name": row.task_type,
-            "proposed_value": row.suggested_node_name or row.suggested_relation_type,
-            "confidence": row.confidence,
-            "conflicts": [],
-            "status": row.status,
-            "source": "library_research",
-            "evidence": _clip(row.evidence_text, 1200),
-            "evidence_pages": row.evidence_pages[:20],
-        }
-        for row in work.theory_review_tasks.filter(
+        _theory_review_candidate(row)
+        for row in work.theory_review_tasks.select_related("candidate_node").filter(
             status__in=[
                 TheoryReviewTask.TaskStatus.PENDING,
                 TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
@@ -1397,36 +2820,127 @@ def _work_selection(work: Work) -> dict[str, Any]:
     }
 
 
-def _selection(object_type: str, object_id: str) -> dict[str, Any] | None:
+def _selection(
+    object_type: str,
+    object_id: str,
+    *,
+    reviewer=None,
+) -> dict[str, Any] | None:
     identifier = _valid_uuid(object_id)
     if object_type not in OBJECT_TYPES or identifier is None:
         return None
+    target = None
+    selection = None
     if object_type in NODE_OBJECT_TYPES:
         node = KnowledgeNode.objects.select_related("primary_discipline").filter(
             pk=identifier,
             node_type=NODE_OBJECT_TYPES[object_type],
         ).first()
-        return _node_selection(node, object_type) if node else None
-    if object_type == "scholar":
-        profile = ScholarProfile.objects.select_related("person").filter(pk=identifier).first()
-        return _scholar_selection(profile) if profile else None
-    if object_type == "topic":
-        topic = Topic.objects.filter(pk=identifier).first()
-        return _topic_selection(topic) if topic else None
-    if object_type == "subdiscipline":
-        subdiscipline = Subdiscipline.objects.select_related(
+        target = node
+        selection = _node_selection(node, object_type) if node else None
+    elif object_type == "scholar":
+        target = ScholarProfile.objects.select_related("person").filter(pk=identifier).first()
+        selection = _scholar_selection(target) if target else None
+    elif object_type == "discipline":
+        target = Discipline.objects.filter(pk=identifier).first()
+        selection = _discipline_selection(target) if target else None
+    elif object_type == "topic":
+        target = Topic.objects.filter(pk=identifier).first()
+        selection = _topic_selection(target) if target else None
+    elif object_type == "subdiscipline":
+        target = Subdiscipline.objects.select_related(
             "discipline", "parent"
         ).filter(pk=identifier).first()
-        return _subdiscipline_selection(subdiscipline) if subdiscipline else None
-    if object_type == "reading_path":
-        path = ReadingPath.objects.select_related("primary_discipline").filter(
+        selection = _subdiscipline_selection(target) if target else None
+    elif object_type == "reading_path":
+        target = ReadingPath.objects.select_related("primary_discipline").filter(
             pk=identifier
         ).first()
-        return _reading_path_selection(path) if path else None
-    work = Work.objects.prefetch_related(
-        "editions__contributions__person",
-    ).filter(pk=identifier).first()
-    return _work_selection(work) if work else None
+        selection = _reading_path_selection(target) if target else None
+    else:
+        target = Work.objects.prefetch_related(
+            "editions__contributions__person",
+        ).filter(pk=identifier).first()
+        selection = _work_selection(target) if target else None
+    if target is None or selection is None:
+        return None
+    selection = KnowledgeObjectEditorAdapter.enrich(
+        object_type=object_type,
+        target=target,
+        selection=selection,
+    )
+    knowledge_updates = _knowledge_update_bundle(
+        object_type=object_type,
+        target=target,
+        reviewer=reviewer,
+    )
+    selection["knowledge_update_suggestions"] = knowledge_updates["items"]
+    selection["knowledge_update_signal_counts"] = knowledge_updates["signal_counts"]
+    selection["knowledge_update_read_model"] = {
+        key: knowledge_updates[key]
+        for key in (
+            "visible_count",
+            "limit",
+            "derived_read_model",
+            "persistent_model",
+            "canonical_write_policy",
+        )
+    }
+    return selection
+
+
+def knowledge_object_editor_snapshot(
+    *,
+    object_type: str,
+    object_id: str,
+    reviewer=None,
+) -> dict[str, Any] | None:
+    """Expose the same adapter used by Knowledge Studio to other admin shells.
+
+    Workbench uses this bounded snapshot for preview and frontend-impact copy,
+    so those claims cannot drift into a second hard-coded UI mapping.
+    """
+
+    return _selection(object_type, object_id, reviewer=reviewer)
+
+
+def knowledge_object_preview_payload(
+    *,
+    object_type: str,
+    object_id: str,
+    reviewer=None,
+) -> dict[str, Any] | None:
+    """Return the protected preview contract used by the admin preview route.
+
+    The payload is deliberately sourced from ``KnowledgeObjectEditorAdapter``.
+    It therefore uses the same public serializers as the public pages and does
+    not create a second preview-only knowledge representation.
+    """
+
+    selection = _selection(object_type, object_id, reviewer=reviewer)
+    if selection is None:
+        return None
+    perspectives = selection.get("preview_perspectives") or {}
+    draft = perspectives.get("draft") or {}
+    published = perspectives.get("published") or {}
+    active = "draft" if draft.get("available") else "published"
+    active_payload = draft if active == "draft" else published
+    return {
+        "preview_mode": True,
+        "protected": True,
+        "object_type": selection["object_type"],
+        "object_id": selection["id"],
+        "label": selection["label"],
+        "status": selection["status"],
+        "active_perspective": active,
+        "source": active_payload.get("source") or active,
+        "perspective": active_payload,
+        "perspectives": perspectives,
+        "preview_routes": selection.get("preview_routes") or {},
+        "frontend_impact": selection.get("frontend_impact") or {},
+        "content_completeness": selection.get("content_completeness") or {},
+        "editor_adapter": selection.get("editor_adapter") or {},
+    }
 
 
 def knowledge_studio_workspace(
@@ -1436,8 +2950,9 @@ def knowledge_studio_workspace(
     selected_type: str = "",
     selected_id: str = "",
     limit: Any = DEFAULT_DIRECTORY_LIMIT,
+    reviewer=None,
 ) -> dict[str, Any]:
-    """Return the read-only Knowledge Studio directory and selected object."""
+    """Return the Knowledge Studio directory and selected editor workspace."""
 
     normalized_query = _clip(query, 160)
     normalized_type = object_type if object_type in OBJECT_TYPES else "all"
@@ -1448,9 +2963,33 @@ def knowledge_studio_workspace(
         limit=bounded,
     )
     explicit_selection = bool(str(selected_type).strip() or str(selected_id).strip())
-    selection = _selection(selected_type, selected_id)
+    selection = _selection(selected_type, selected_id, reviewer=reviewer)
     if selection is None and objects and not explicit_selection:
-        selection = _selection(objects[0]["object_type"], objects[0]["id"])
+        selection = _selection(
+            objects[0]["object_type"],
+            objects[0]["id"],
+            reviewer=reviewer,
+        )
+    generated_candidates = [
+        _debate_candidate_payload(row)
+        for row in DebateCandidate.objects.filter(
+            status=DebateCandidate.Status.PENDING
+        ).select_related("evidence_pack").order_by(
+            "-importance_score", "created_at"
+        )[:10]
+    ]
+    generated_candidates.extend(
+        _reading_path_candidate_payload(row)
+        for row in ReadingPathCandidate.objects.filter(
+            status=ReadingPathCandidate.Status.PENDING
+        ).select_related("evidence_pack").order_by(
+            "-importance_score", "created_at"
+        )[:10]
+    )
+    knowledge_updates = _knowledge_update_bundle(
+        reviewer=reviewer,
+        global_scope=True,
+    )
     return {
         "object_types": [
             {"value": "all", "label": "全部对象"},
@@ -1459,6 +2998,7 @@ def knowledge_studio_workspace(
             {"value": "debate", "label": "争论"},
             {"value": "research_problem", "label": "研究问题"},
             {"value": "scholar", "label": "学者"},
+            {"value": "discipline", "label": "学科"},
             {"value": "subdiscipline", "label": "子学科"},
             {"value": "topic", "label": "主题"},
             {"value": "reading_path", "label": "阅读路径"},
@@ -1473,6 +3013,21 @@ def knowledge_studio_workspace(
             "debates": DebateCandidate.objects.filter(status=DebateCandidate.Status.PENDING).count(),
             "reading_paths": ReadingPathCandidate.objects.filter(status=ReadingPathCandidate.Status.PENDING).count(),
         },
+        "generated_candidates": generated_candidates,
+        "knowledge_update_suggestions": knowledge_updates["items"],
+        "knowledge_update_signal_counts": knowledge_updates["signal_counts"],
+        "knowledge_update_read_model": {
+            key: knowledge_updates[key]
+            for key in (
+                "visible_count",
+                "limit",
+                "derived_read_model",
+                "persistent_model",
+                "canonical_write_policy",
+            )
+        },
+        "workspace_mode": "knowledge_control_center",
+        "mutations_via_existing_adapters": True,
         "read_only_aggregation": True,
         "machine_claims_are_canonical": False,
     }

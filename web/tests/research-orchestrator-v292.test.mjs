@@ -67,6 +67,18 @@ test("research panel auto-runs, debounces draft changes, polls, and forces manua
   assert.match(panel, /<AsyncStatus/);
 });
 
+test("research panel explains field producer channels when no reliable candidate exists", async () => {
+  const panel = await readFile(new URL("../components/admin/research/research-suggestion-panel.tsx", import.meta.url), "utf8");
+
+  assert.match(panel, /字段生产能力/);
+  assert.match(panel, /没有可靠候选/);
+  for (const channel of ["pdf_native", "ocr", "local_catalog", "authority", "structured_provider", "verified_web", "ai_synthesis"]) {
+    assert.match(panel, new RegExp(channel));
+  }
+  assert.match(panel, /unresolvedOutcomes/);
+  assert.match(panel, /value\.state !== "unavailable"/);
+});
+
 test("universal picker separates groups and requires explicit external decisions", async () => {
   const picker = await readFile(new URL("../components/admin/research/research-entity-picker.tsx", import.meta.url), "utf8");
   assert.match(picker, /\["local", "local_draft", "authority", "external_web", "unresolved"\]/);
@@ -114,7 +126,10 @@ test("entity discovery keeps exact edition context and degrades without dropping
 
 test("text candidates use canonical labels and unsupported persistent decisions stay hidden", async () => {
   const picker = await readFile(new URL("../components/admin/research/research-entity-picker.tsx", import.meta.url), "utf8");
-  assert.match(picker, /use_value: "使用规范文本"/);
+  const actionContract = await readFile(new URL("../components/admin/research/candidate-action-contract.ts", import.meta.url), "utf8");
+  assert.match(actionContract, /use_value: "采用规范文本"/);
+  assert.match(picker, /CandidateDecisionBar/);
+  assert.match(picker, /resolveCandidateActionDescriptors/);
   assert.match(picker, /onUseValue\(name, candidate\)/);
   assert.match(picker, /DIRECT_ENTITY_DECISION_ACTIONS\.has\(action\)/);
   assert.match(picker, /DIRECT_ENTITY_DECISION_TYPES\.has\(candidateEntityType\)/);
@@ -145,7 +160,7 @@ test("workflow editor provides unsaved drafts and decision handling to research 
   assert.match(editor, /<AsyncStatus/);
   assert.match(editor, /entityType="person" step="contributors" field="contributors"/);
   assert.match(editor, /entityType="discipline" step="classification" field="primary_disciplines"/);
-  assert.match(editor, /entityType=\{targetType\} step="knowledge" field="relations"/);
+  assert.match(editor, /<WorkCurationEditor/);
   assert.match(editor, /editionId: asString|editionId,/);
   assert.match(editor, /entityType="work" step="work" field="translation_of"/);
   assert.match(editor, /endpoint="\/catalog\/admin\/library\/works\/" queryParam="q" nameField="title" entityType="work"/);

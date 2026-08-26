@@ -3,9 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("public Work adapts CuratedClaim envelopes without exposing DerivedClaim", async () => {
-  const [data, serverApi] = await Promise.all([
+  const [data, serverApi, adapters] = await Promise.all([
     readFile(new URL("../lib/data.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server-api.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/public-data-adapters.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(data, /export type EvidenceEnvelope/);
@@ -13,7 +14,7 @@ test("public Work adapts CuratedClaim envelopes without exposing DerivedClaim", 
   assert.match(data, /pdf_url: string/);
   assert.match(data, /core_viewpoint: CuratedWorkClaim\[\]/);
   assert.match(serverApi, /curated_claims\?:/);
-  assert.match(serverApi, /curatedClaims: value\.curated_claims/);
+  assert.match(adapters, /curatedClaims: value\.curated_claims/);
   assert.doesNotMatch(serverApi, /derived_claims/);
 });
 

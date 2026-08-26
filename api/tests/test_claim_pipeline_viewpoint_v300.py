@@ -588,8 +588,26 @@ def test_viewpoint_search_keeps_baseline_default_and_groups_validated_claim_shad
     assert all(
         row["evidence"]["kind"] == "collection_text"
         and row["reader_url"].endswith(f"?page={row['page']}")
+        and row["pdf_url"].endswith("/file/")
         for row in result["shadow"]["results"]
     )
+    assert result["facets"]["relations"][0]["id"] == "direct"
+    assert {"id", "slug", "label", "count"}.issubset(
+        result["facets"]["relations"][0]
+    )
+
+    relation_filtered = viewpoint_search(
+        "贫困导致犯罪",
+        filters={"relations": ["oppose"]},
+        retrieval_backend=retrieve,
+        claim_search_backend=claim_search,
+    )
+
+    assert relation_filtered["default_mode"] == "baseline"
+    assert relation_filtered["results"] == []
+    assert [
+        row["claim_id"] for row in relation_filtered["shadow"]["results"]
+    ] == [str(negative.id)]
 
 
 @override_settings(VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED=True)

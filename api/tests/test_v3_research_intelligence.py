@@ -181,10 +181,26 @@ def test_evidence_pack_is_locator_bound_and_content_idempotent():
 def test_candidate_adoption_creates_complete_drafts_and_records_human_feedback():
     editor = _user(suffix="candidate-editor")
     work = Work.objects.create(title="国家与社会", document_type="book", language="zh-CN")
+    envelope = {
+        "kind": "collection_text",
+        "source": {"document_revision_id": "revision-candidate", "work_id": str(work.id)},
+        "text": "国家能力与发展关系需要结合具体制度条件理解。",
+        "locator": {"page": 8},
+        "quality": {"score": 0.9},
+        "provenance": {"parser_version": "test"},
+        "reader_url": "/reader/asset-candidate?page=8",
+        "pdf_url": "/api/catalog/assets/asset-candidate/manifest/",
+    }
+    debate_pack = create_evidence_pack(
+        task_profile=builtin_task_profile("debate_discovery").payload(),
+        envelopes=[envelope],
+        retrieval_snapshot={"query": "国家能力与发展"},
+    )
     debate = DebateCandidate.objects.create(
         title="国家能力是否必然促进发展",
         canonical_question="国家能力是否必然促进经济与社会发展？",
         summary="候选摘要",
+        evidence_pack=debate_pack,
     )
     decided_debate = decide_debate_candidate(
         candidate=debate,
@@ -197,6 +213,11 @@ def test_candidate_adoption_creates_complete_drafts_and_records_human_feedback()
     assert node.status == KnowledgePublicationStatus.DRAFT
     assert node.core_questions == ["国家能力是否必然促进经济与社会发展？"]
 
+    reading_pack = create_evidence_pack(
+        task_profile=builtin_task_profile("reading_path_generation").payload(),
+        envelopes=[envelope],
+        retrieval_snapshot={"query": "国家理论入门"},
+    )
     reading = ReadingPathCandidate.objects.create(
         title="国家理论入门",
         target_audience="初学者",
@@ -214,6 +235,7 @@ def test_candidate_adoption_creates_complete_drafts_and_records_human_feedback()
                 ],
             }
         ],
+        evidence_pack=reading_pack,
     )
     decided_path = decide_reading_path_candidate(
         candidate=reading,

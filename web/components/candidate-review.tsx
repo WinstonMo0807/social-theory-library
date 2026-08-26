@@ -1,8 +1,15 @@
 "use client";
 
-import { Check, ExternalLink, Filter, LoaderCircle, X } from "lucide-react";
+import { Filter, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import {
+  buildCandidateActionBody,
+  type CandidateActionDescriptor,
+  type CandidateActionSource,
+} from "./admin/research/candidate-action-contract";
+import { CandidateDecisionBar } from "./admin/research/candidate-decision-bar";
+import { EvidenceEnvelopeCard } from "./admin/research/evidence-envelope-card";
 
 type Evidence = {
   id: string;
@@ -15,6 +22,11 @@ type Evidence = {
   page_number?: number | null;
   printed_page_label?: string;
   is_current?: boolean;
+  locator?: Record<string, unknown>;
+  quality?: Record<string, unknown>;
+  provenance?: Record<string, unknown>;
+  reader_url?: string;
+  pdf_url?: string;
 };
 
 type Candidate = {
@@ -43,6 +55,10 @@ type Candidate = {
   upload_item_id?: string | null;
   possible_matches?: Array<{ entity_type?: string; entity_id?: string; label?: string; canonical_label?: string }>;
   work_id?: string | null;
+  action_descriptors?: unknown;
+  actions?: unknown;
+  available_actions?: string[];
+  decision_url?: string;
 };
 
 type ReviewEnvelope = {
@@ -74,6 +90,27 @@ function statusLabel(value: string) {
 
 function entityLabel(value?: string) {
   return ({ person: "学者", work: "作品", edition: "版本", discipline: "学科", subdiscipline: "子学科", knowledge_node: "理论节点", topic: "主题", reading_path: "阅读路径" } as Record<string, string>)[value || ""] ?? (value || "未解析");
+}
+
+function decisionCandidate(candidate: Candidate): Candidate & CandidateActionSource {
+  if (candidate.action_descriptors || (Array.isArray(candidate.actions) && candidate.actions.some((row) => row && typeof row === "object"))) {
+    return candidate;
+  }
+  const availableActions = candidate.available_actions ?? (
+    candidate.status !== "pending"
+      ? []
+      : candidate.review_kind === "new_authority"
+        ? ["match_existing", "create_draft", "reject"]
+        : ["field_enrichment", "query_lexicon"].includes(candidate.review_kind)
+          ? ["accept", "reject"]
+          : []
+  );
+  const decisionUrl = candidate.decision_url || (
+    ["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind)
+      ? `/catalog/admin/candidate-review/${candidate.review_kind}/${candidate.id}/decision/`
+      : ""
+  );
+  return { ...candidate, available_actions: availableActions, decision_url: decisionUrl };
 }
 
 export function CandidateReview() {
@@ -108,29 +145,32 @@ export function CandidateReview() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  async function decide(candidate: Candidate, action: "accept" | "reject" | "match_existing" | "create_draft") {
-    if (!["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind)) {
+  async function decide(candidate: Candidate, descriptor: CandidateActionDescriptor, editedValue?: unknown) {
+    const action = descriptor.action;
+    if (descriptor.source !== "descriptor" && !["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind)) {
       setMessage("该条记录请从 Intake 或专用理论审核页面处理，统一列表只展示证据和入口。");
       return;
     }
-    setBusy(candidate.id);
+    setBusy(`${candidate.id}:${action}`);
     setMessage("");
     try {
-      const body: Record<string, unknown> = { action, reason: `统一候选审核 ${action}` };
+      const fallbackBody: Record<string, unknown> = { action, reason: `统一候选审核 ${action}` };
       if (action === "match_existing") {
         const match = candidate.possible_matches?.[0];
         if (!match?.entity_id) {
           setMessage("当前没有可安全选择的已有实体，请打开 Knowledge Workspace 后再决定。");
           return;
         }
-        body.target_type = match.entity_type;
-        body.target_id = match.entity_id;
+        fallbackBody.target_type = match.entity_type;
+        fallbackBody.target_id = match.entity_id;
       }
-      if (action === "create_draft") body.confirm_new = true;
+      if (action === "create_draft") fallbackBody.confirm_new = true;
+      const body = buildCandidateActionBody(descriptor, editedValue, fallbackBody);
+      const decisionUrl = descriptor.url || candidate.decision_url || `/catalog/admin/candidate-review/${candidate.review_kind}/${candidate.id}/decision/`;
       const updated = await apiRequest<Candidate>(
-        `/catalog/admin/candidate-review/${candidate.review_kind}/${candidate.id}/decision/`,
+        decisionUrl,
         {
-          method: "POST",
+          method: descriptor.method || "POST",
           body: JSON.stringify(body),
         },
         getServerSessionCredential(),
@@ -174,13 +214,16 @@ export function CandidateReview() {
             {candidate.conflicts?.length ? <details><summary>来源冲突</summary><pre>{valueText(candidate.conflicts)}</pre></details> : null}
             {candidate.confidence_factors ? <details><summary>置信度因素</summary><pre>{valueText(candidate.confidence_factors)}</pre></details> : null}
             <div className="candidate-review-evidence">
-              {(candidate.evidence_records ?? []).filter((evidence) => evidence.is_current !== false).map((evidence) => {
-                const quote = evidence.supporting_text || evidence.evidence_text || "未提供支撑片段";
-                const readerHref = evidence.asset && evidence.page_number ? `/reader/${evidence.asset}?page=${evidence.page_number}` : "";
-                return <blockquote key={evidence.id}><header><span>{evidence.source_title || evidence.work_title || "馆藏证据"}</span>{evidence.canonical_url ? <a href={evidence.canonical_url} target="_blank" rel="noreferrer" aria-label="打开来源"><ExternalLink size={13} /></a> : null}</header><p>{quote}</p><footer>{evidence.page_number ? `第 ${evidence.printed_page_label || evidence.page_number} 页` : "页码待补充"}{readerHref ? <a href={readerHref} target="_blank" rel="noreferrer">回到阅读器</a> : null}</footer></blockquote>;
-              })}
+              {(candidate.evidence_records ?? []).filter((evidence) => evidence.is_current !== false).map((evidence) => <EvidenceEnvelopeCard evidence={evidence} key={evidence.id} />)}
             </div>
-            {candidate.status === "pending" && candidate.review_kind === "new_authority" ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "match_existing")}><Check size={14} />匹配已有对象</button><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "create_draft")}><Check size={14} />创建草稿</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.status === "pending" && ["field_enrichment", "query_lexicon"].includes(candidate.review_kind) ? <footer className="candidate-review-actions"><button type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "accept")}><Check size={14} />接受</button><button className="danger" type="button" disabled={busy === candidate.id} onClick={() => void decide(candidate, "reject")}><X size={14} />拒绝</button></footer> : candidate.review_action === "open_intake_workspace" && candidate.upload_item_id ? <footer className="candidate-review-actions"><a href={`/admin/intake/${candidate.upload_item_id}`}>打开上架工作台</a></footer> : null}
+            {candidate.status === "pending" && (["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind) || candidate.action_descriptors || candidate.actions) ? <CandidateDecisionBar
+              candidate={decisionCandidate(candidate)}
+              className="candidate-review-actions"
+              showInspect={false}
+              busyAction={busy.startsWith(`${candidate.id}:`) ? busy.slice(candidate.id.length + 1) : ""}
+              disabled={Boolean(busy)}
+              onAction={(descriptor, editedValue) => void decide(candidate, descriptor, editedValue)}
+            /> : candidate.review_action === "open_intake_workspace" && candidate.upload_item_id ? <footer className="candidate-review-actions"><a href={`/admin/intake/${candidate.upload_item_id}`}>打开上架工作台</a></footer> : null}
           </article>
         ))}
       </div>

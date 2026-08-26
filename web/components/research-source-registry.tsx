@@ -24,6 +24,10 @@ type ResearchSource = {
   credential_alias_set: boolean;
   endpoint_alias_supported: boolean;
   credential_alias_supported: boolean;
+  credential_updated_at: string | null;
+  credential_last_tested_at: string | null;
+  credential_last_test_status: string;
+  credential_last_test_message: string;
   last_success_at: string | null;
   last_failure_at: string | null;
   last_error_code: string;
@@ -50,8 +54,22 @@ type RegistryPayload = {
   secret_values_exposed: false;
 };
 
-type AliasDraft = { endpointAlias: string; credentialAlias: string };
+type AliasDraft = { endpointAlias: string; credentialAlias: string; credentialValue: string };
 type Feedback = { state: ActionState; actionKey: string; message: string };
+
+type ProviderSecretRegistry = {
+  secrets: Array<{
+    alias: string;
+    purpose: "research_source" | "ai_runtime";
+    provider_key: string;
+    configured: boolean;
+    updated_at: string;
+    last_tested_at: string | null;
+    last_test_status: string;
+    secret_values_exposed: false;
+  }>;
+  secret_values_exposed: false;
+};
 
 const EMPTY_FEEDBACK: Feedback = { state: "idle", actionKey: "", message: "" };
 
@@ -78,6 +96,12 @@ function timeLabel(value: string | null) {
   return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
 }
 
+function credentialTimeLabel(value: string | null, emptyLabel: string) {
+  if (!value) return emptyLabel;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
+}
+
 export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: number }) {
   const [payload, setPayload] = useState<RegistryPayload | null>(null);
   const [drafts, setDrafts] = useState<Record<string, AliasDraft>>({});
@@ -99,9 +123,26 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
       try {
         const result = await apiRequest<RegistryPayload>("/catalog/admin/research-sources/", {}, token);
         setPayload(result);
+        let storedAliases: Record<string, string> = {};
+        if (result.permissions.can_edit_sensitive_aliases) {
+          const secretRegistry = await apiRequest<ProviderSecretRegistry>(
+            "/catalog/admin/provider-secrets/",
+            {},
+            token,
+          );
+          storedAliases = Object.fromEntries(
+            secretRegistry.secrets
+              .filter((row) => row.purpose === "research_source" && row.configured && row.provider_key)
+              .map((row) => [row.provider_key, row.alias]),
+          );
+        }
         setDrafts((current) => Object.fromEntries(result.adapters.map((row) => [
           row.key,
-          current[row.key] ?? { endpointAlias: "", credentialAlias: "" },
+          current[row.key] ?? {
+            endpointAlias: "",
+            credentialAlias: storedAliases[row.key] ?? "",
+            credentialValue: "",
+          },
         ])));
         setError("");
       } catch (reason) {
@@ -152,10 +193,87 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
         token,
       );
       setPayload(result);
-      setDrafts((current) => ({ ...current, [source.key]: { endpointAlias: "", credentialAlias: "" } }));
+      setDrafts((current) => ({
+        ...current,
+        [source.key]: {
+          endpointAlias: "",
+          credentialAlias: current[source.key]?.credentialAlias ?? "",
+          credentialValue: "",
+        },
+      }));
       setFeedback({ state: "success", actionKey, message: `${source.label} 配置已保存。` });
     } catch (reason) {
       setFeedback({ state: "error", actionKey, message: reason instanceof Error ? reason.message : "来源配置保存失败。" });
+    } finally {
+      setPendingAction("");
+    }
+  }
+
+  async function storeCredential(source: ResearchSource) {
+    const token = getServerSessionCredential();
+    const draft = drafts[source.key];
+    const actionKey = `credential:${source.key}`;
+    if (!token || !draft?.credentialValue || pendingAction) return;
+    const alias = draft.credentialAlias.trim() || `source-${source.key.replaceAll("_", "-")}`;
+    setPendingAction(actionKey);
+    setFeedback({ state: "pending", actionKey, message: `正在安全保存 ${source.label} 凭据。` });
+    try {
+      await apiRequest<ProviderSecretRegistry>(
+        "/catalog/admin/provider-secrets/",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "set",
+            alias,
+            purpose: "research_source",
+            provider_key: source.key,
+            secret: draft.credentialValue,
+          }),
+        },
+        token,
+      );
+      const result = await apiRequest<RegistryPayload>(
+        "/catalog/admin/research-sources/",
+        {
+          method: "PUT",
+          body: JSON.stringify({ adapters: [{ key: source.key, enabled: true, credential_alias: alias }] }),
+        },
+        token,
+      );
+      setPayload(result);
+      setDrafts((current) => ({
+        ...current,
+        [source.key]: { ...current[source.key], credentialAlias: alias, credentialValue: "" },
+      }));
+      setFeedback({ state: "success", actionKey, message: `${source.label} 凭据已加密保存，浏览器不会读取原值。` });
+    } catch (reason) {
+      setFeedback({ state: "error", actionKey, message: reason instanceof Error ? reason.message : "凭据保存失败。" });
+    } finally {
+      setPendingAction("");
+    }
+  }
+
+  async function deleteCredential(source: ResearchSource) {
+    const token = getServerSessionCredential();
+    const alias = drafts[source.key]?.credentialAlias.trim();
+    const actionKey = `credential-delete:${source.key}`;
+    if (!token || !alias || pendingAction) return;
+    setPendingAction(actionKey);
+    setFeedback({ state: "pending", actionKey, message: `正在删除 ${source.label} 的服务器凭据。` });
+    try {
+      await apiRequest<ProviderSecretRegistry>(
+        "/catalog/admin/provider-secrets/",
+        { method: "POST", body: JSON.stringify({ action: "delete", alias }) },
+        token,
+      );
+      setDrafts((current) => ({
+        ...current,
+        [source.key]: { ...current[source.key], credentialAlias: "", credentialValue: "" },
+      }));
+      setFeedback({ state: "success", actionKey, message: `${source.label} 的服务器凭据已删除。` });
+      await load();
+    } catch (reason) {
+      setFeedback({ state: "error", actionKey, message: reason instanceof Error ? reason.message : "凭据删除失败。" });
     } finally {
       setPendingAction("");
     }
@@ -197,7 +315,7 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
         <div>
           <p>Research Sources</p>
           <h2 id="research-source-registry-title">研究来源与证据入口</h2>
-          <span>先说明用途、配置和用户功能影响。测试只在明确点击后进行，密钥始终留在服务器环境中。</span>
+          <span>先说明用途、配置和用户功能影响。测试只在明确点击后进行，密钥始终留在服务器环境中；凭据加密保存且不会回传浏览器。</span>
         </div>
         {payload ? <span className={payload.summary.degraded ? "warning" : "healthy"}>{payload.summary.degraded ? `${payload.summary.degraded} 项降级` : `${payload.summary.configured} 项可用`}</span> : null}
       </header>
@@ -225,7 +343,7 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
                 <header><div><ServerCog size={17} /><h3>{CATEGORY_LABELS[category] ?? category}</h3></div><span>{sources.length} 个 adapter</span><strong>{sources.filter((row) => row.enabled).length}</strong></header>
                 <div className="processing-diagnostic-list">
                   {sources.map((source) => {
-                    const draft = drafts[source.key] ?? { endpointAlias: "", credentialAlias: "" };
+                    const draft = drafts[source.key] ?? { endpointAlias: "", credentialAlias: "", credentialValue: "" };
                     const saveChanges: Record<string, unknown> = {};
                     if (draft.endpointAlias.trim()) saveChanges.endpoint_alias = draft.endpointAlias.trim();
                     if (draft.credentialAlias.trim()) saveChanges.credential_alias = draft.credentialAlias.trim();
@@ -238,6 +356,8 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
                           <div><dt>配置需求</dt><dd>{source.configuration_requirements.join("、") || "无需额外配置"}</dd></div>
                           <div><dt>Endpoint</dt><dd>{source.endpoint_configured ? "已在服务器配置" : source.endpoint_alias_supported ? "未配置" : "固定来源或无需单独配置"}</dd></div>
                           <div><dt>Credential</dt><dd>{source.credential_configured ? "已在服务器配置" : source.credential_alias_set ? "alias 已设置，环境值缺失" : source.credential_alias_supported ? "未配置" : "无需 credential"}</dd></div>
+                          {source.credential_alias_supported ? <div><dt>凭据更新</dt><dd>{credentialTimeLabel(source.credential_updated_at, "尚未加密保存")}</dd></div> : null}
+                          {source.credential_alias_supported ? <div><dt>凭据测试</dt><dd>{source.credential_last_tested_at ? `${credentialTimeLabel(source.credential_last_tested_at, "")}·${source.credential_last_test_status || "状态未知"}${source.credential_last_test_message ? `·${source.credential_last_test_message}` : ""}` : "尚未测试"}</dd></div> : null}
                           <div><dt>最近成功</dt><dd>{timeLabel(source.last_success_at)}</dd></div>
                           <div><dt>最近错误</dt><dd>{source.last_error_category || "无持久化错误"}</dd></div>
                           <div><dt>使用边界</dt><dd>{source.usage_policy}</dd></div>
@@ -251,6 +371,24 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
                               {source.credential_alias_supported ? <label><span>Credential alias</span><input value={draft.credentialAlias} placeholder={source.credential_alias_set ? "已设置，留空保持不变" : "只填环境变量别名"} onChange={(event) => setDrafts((current) => ({ ...current, [source.key]: { ...draft, credentialAlias: event.target.value } }))} /></label> : null}
                             </div>
                             <ActionButton className="button secondary" state={actionState(`save-alias:${source.key}`)} pendingLabel="正在保存" disabled={!Object.keys(saveChanges).length || Boolean(pendingAction)} onClick={() => void updateSource(source, saveChanges, `save-alias:${source.key}`)}><Save size={14} />保存 alias</ActionButton>
+                            {source.credential_alias_supported ? (
+                              <div className="processing-runtime-rows">
+                                <label>
+                                  <span>Provider credential</span>
+                                  <input
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={draft.credentialValue}
+                                    placeholder={source.credential_configured ? "输入新值可更新，原值不会显示" : "输入 API Key 或 Token"}
+                                    onChange={(event) => setDrafts((current) => ({ ...current, [source.key]: { ...draft, credentialValue: event.target.value } }))}
+                                  />
+                                </label>
+                                <div className="admin-action-row">
+                                  <ActionButton className="button secondary" state={actionState(`credential:${source.key}`)} pendingLabel="正在加密保存" disabled={!draft.credentialValue || Boolean(pendingAction)} onClick={() => void storeCredential(source)}>更新凭据</ActionButton>
+                                  <ActionButton className="button secondary" state={actionState(`credential-delete:${source.key}`)} pendingLabel="正在删除" disabled={!draft.credentialAlias || Boolean(pendingAction)} onClick={() => void deleteCredential(source)}>删除凭据</ActionButton>
+                                </div>
+                              </div>
+                            ) : null}
                           </details>
                         ) : <p><strong>敏感配置</strong>只有 System Owner 可以修改 endpoint 或 credential alias。</p>}
                         <footer>

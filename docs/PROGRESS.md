@@ -1,6 +1,31 @@
 # 开发进度
 
-更新日期为 2026-08-25。3.0.1 已部署到 [books.winstonmo.com](https://books.winstonmo.com)，API readiness 返回 3.0.1、database true、pending migrations 0。本文区分源码、演练和生产事实，历史记录不替代本轮实时验收。
+更新日期为 2026-08-26。3.0.2 已部署到 [books.winstonmo.com](https://books.winstonmo.com)。API readiness 返回 3.0.2、database true、pending migrations 0。公开 T4 已通过。首轮候选树及镜像保留在部署记录中；正式发布使用本文件所在的完整 tracked tree，同一 tree identity 写入最终镜像 label、部署记录和远端 release 分支，不在源码文档中自引用尚未生成的 commit SHA。
+
+## 3.0.2 Admin Experience、Knowledge Convergence 与 Product Completion
+
+- 3.0.2 从远端 `88ded5412ca041312175b93307a0ed697ff6f599` 开始。该提交完整包含已在生产验证的 `fa7444d` Web 源码和 `4c30565c` PostgreSQL Claim 修复，因而没有用旧分支覆盖正式修复。
+- `CandidateDecisionProtocol` 现在由后端为 Metadata、Entity Resolution、Enrichment、Theory review、DerivedClaim、Debate、ReadingPath 和 QueryLexicon 候选返回可用动作、端点、Evidence 要求及动作参数。Workbench、Inspector、Knowledge Studio 和实体 Picker 共用这些描述，React 不再自行猜测是否可采用。
+- `FieldProducerCapabilityMatrix` 把字段契约与真实 producer 分开显示，覆盖 PDF/native、OCR、本馆目录、authority、structured provider、verified Web 和 AI synthesis。没有可靠生产能力的字段返回原因，不再静默空白。
+- Library Synthesis 已以现有 EvidenceSpan、EvidencePack、ResearchTaskProfile 和 MetadataCandidate 实现 shadow 流程。它只允许馆藏 Evidence，保存 Evidence 引用，没有 executor 时保持等待，不用模型常识生成摘要或策展内容。
+- Knowledge Studio 已成为对象控制工作面。`KnowledgeObjectEditorAdapter` 复用现有 mutation 和 EditorialRevision；ContentCompleteness 来自真实公开 serializer；Knowledge Growth 是 EvidenceSpan、DerivedClaim 及既有候选组成的有界派生读模型，不新增第二套知识表，也不自动修改 Canonical。
+- Scholar、Discipline、Subdiscipline、Theory、Concept、Topic、Debate、ReadingPath 和重要 Work 的一级编辑页已接入同一 Context Inspector，显示 Evidence、Claims、候选、Revision、真实 Frontend Impact、Projection 状态和预览入口。普通 Sidebar 已把旧 Candidate、QueryLexicon、Semantic 和状态页收进 advanced/compatibility 入口。
+- 受保护 Preview API 和路由复用公开 serializer。Work 继续使用成熟 `WorkDetailView`；Discipline、Subdiscipline、Theory/Concept/Debate/Research Problem、Scholar、Topic 与 ReadingPath 已复用各自真实公开详情组件。未发布对象在没有 EditorialRevision 时也可预览当前 canonical draft。Scholar person、KnowledgeNode aliases 与三类 relation、Topic 三类 relation、ReadingPath stage groups 已通过只读内存 overlay 转为公开字段形态，不临时写库。Preview API 对成功与拒绝响应均返回 `Cache-Control: private, no-store`，定向后端测试 5 项通过。正式页面仍只读取 published queryset。
+- SafeWebFetcher 增加 HTML robots 指令、中文 legacy charset、流式大小边界和失败 SourceRecord。认证、拒绝、法律限制、DNS、TLS、重定向、内容类型、超时、大小、HTML 与编码均保留可操作分类；失败记录不保存 URL query。
+- Provider credential 使用 catalog 0039 的 `ProviderCredentialSecret` 加密保存。主密钥来自服务端环境，浏览器只能看到 configured、更新时间和测试状态。普通 profile 与 secret 继续分层，只有 Owner 可以更新或删除敏感凭据。
+- Research Source 新增可配置的 NLB Singapore Catalogue v2 adapter，完成 search、detail、normalize、Evidence 和 Candidate 的代码与 fixture。生产没有配置该凭据，因此仍显示降级，不能宣称中文来源质量已经通过。
+- Claim Gold 工作面只允许人工引用当前、未失效的 EvidenceSpan。当前真实 gold 仍为空，Semantic V2 继续是默认 Viewpoint 排序，Claim 只处于 shadow/augmentation。
+- selective OCR 的受控执行测试已证明 OCR 文本进入新 DocumentRevision、EvidenceSpan 和书目候选，同时保持 Page ID、ORIGINAL 与 normalized bytes 不变。生产切换没有恢复或执行 OCR。用户暂停的 6 个 OCR job 在切换前后保持 paused，不能用受控测试替代真实生产 PaddleOCR 旅程。
+- capability runtime 会按当前 draft 和 DocumentRevision 重新判断等待需求。失效需求可 supersede；有效需求在缺少 executor 时继续等待，并明确不阻断上传、全文检索或发布。3.0.2 不部署 4070。
+- 作者与责任者已重新划清正式草稿和研究候选。Workbench 的正式列表只读取已保存的 `Contribution`，不再把 OCR、Front Matter 或 Entity Resolution 的全部人物候选自动填入。作者区默认显示一个尚未落库的空输入，译者区按需添加；空行不阻止保存，候选必须逐项核对后采用。后端定向 2 项、前端 18 项、TypeScript、定向 ESLint、`compileall` 与 `git diff --check` 均已通过。生产上架项 `133ebe00-e2f8-4b71-92da-3be2094f1677` 有 28 个待处理 Person 候选，Workspace 可见 29 个 Person 候选，但正式贡献者列表只有 1 项。候选未进入正式草稿，批量责任者 metadata 也没有采用动作。
+- 版本、Compose 默认 image tag 和公开站点标签已更新到 3.0.2。Changed-surface 验证包括两组后端 78 与 82 项、Knowledge 后端 6 项、Research Source 与 NLB 20 项，以及前端改动面 77 项，均已通过。最终门槛中 Django check、migration drift、`compileall`、TypeScript、完整 lint、production build 和 `git diff --check` 通过。后端完整 suite 执行一次，唯一失败是旧 exact-dict 断言，修正后只重跑该项并通过，保留 32 项环境依赖 skip。前端完整 Node suite 执行一次，5 条旧源码位置断言修正后受影响 4 个文件 24/24 通过，Auth 21/21 通过。Workbench Playwright 3/3 通过；受保护 Knowledge Preview 已在浏览器中用 EditorialRevision 渲染真实 Discipline 公开组件，控制台无错误。
+- 首轮生产镜像来自 803 个 tracked file 的候选树 `f0ffad378928591691df45770ad32d3bbd062a50`。归档 SHA-256 为 `06d4a5f8024456ccd5fd1832f22e6071e17995de92a401b9e0703a8094598959`。API image 为 `social-theory-library-api:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:28b1e33d613581cbfe927e9a16ddf91edb44e84a7a2a0049c032c6f77bfaadfd`。Web image 为 `social-theory-library-web:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:60cc9c9358e980a0183265b78fa37987ce91091abe1b270cd29b2bd2462651d1`。API、Worker、Ingestion Worker、Web 和随后恢复的 Beat 均使用该 API/Web revision。
+- Fresh BackupJob `aedfeac2-b56c-4ba1-ab66-f38dec131e13` 已完成。归档 SHA-256 为 `d15ed054b9a40f6a6a2e8a1c3c83e29afa7a9e1ed5fedd0f0bd11fae5c8f9820`，数据库 dump SHA-256 为 `2385cf3c965fae592957ab7029832f547840ce0ab9f07dc183b0c21cfe8d1eee`。PostgreSQL 16 restore、catalog 0039 migration、Django check、馆藏 identity 比对和旧 3.0.1 image additive-schema readiness 均通过。回退标签为 `social-theory-library-api:pre-v302-20260826-201433` 与 `social-theory-library-web:pre-v302-20260826-201433`，记录位于 `storage/backups/pre-v302-cutover-20260826-201433/deploy-record`。
+- 首次公网 smoke 的首页返回 502。Web 容器实际已在 3000 端口正常监听，根因是 Edge 在 Web 重建后仍持有旧容器 IP。强制重建 Edge 后，首页、Explore 与 readiness 恢复 200。切换和回退脚本都已补上 Web 重建后的 Edge 强制刷新，未执行数据库或应用回退。
+- 第二次 T4 通过公开首页、Explore、观点检索、Theory、Scholar、Topic、真实 Work、Reader 和登录页。Semantic 为 hybrid、非 fallback、结果非空。Viewpoint 返回 direct 2、oppose 2、qualify 1，均有真实 Reader locator；默认仍是 `semantic_v2_baseline`，benchmark gate 为 false。Reader Range 返回 206、正确 Content-Range、`application/pdf` 和 PDF magic。publication blocker、open ProcessingJob、open ResearchRun、stale Projection 均为 0，活动语义记录与 Meilisearch 实际数均为 3,005。
+- Beat 恢复后的最终观察通过。Redis 中两个排队项和一个 unacked 项都属于已登记的 heartbeat 或健康探针任务。active、reserved 和 scheduled 中没有 OCR、上传或 Research 任务；open ProcessingJob、ResearchRun 和 UploadItem 均为 0。6 个 OCR job 的完整 inventory 与 Beat 启动前一致，继续保持 paused。
+- 生产现有 Work 9、Edition 9、Asset 18、ORIGINAL 9、Page 3,679、DocumentRevision 9、EvidenceSpan 3,735。ORIGINAL 总字节为 199,016,197。切换前后 Page identity、ORIGINAL aggregate 和活动语义索引保持一致。DerivedClaim、CuratedClaim 和 Claim Gold 均为 0；21 个有效 demand 保持 `waiting_for_capability`，publication blocker 为 0。Processing Center 如实显示 1 类缺失 capability、6 项 Provider 降级和 9 项 Research Source 降级。NLB 没有生产凭据，4070 没有部署。
+- 正式发布以本文件所在的完整 tracked tree 重建 API/Web，并执行无 migration 的同源镜像替换、定向公网复核、tree parity 检查和远端分支推送。本段中的 `f0ffad37` 仅标识已通过首轮 T4 的候选快照；最终 tree、image ID 和 commit 的对应关系保存在 deploy-record 与发布报告中。
 
 ## 3.0.1 Product Integration Pass 生产状态
 
@@ -20,6 +45,8 @@
 - Page identity、8 个 ORIGINAL 的集合和活动索引均未改变。生产保持 3,135 个 Page、8 个 ORIGINAL、165,728,337 bytes，以及 `semantic_passages_20260818210650_4cf87bc9|3005|3005`。
 - T4 已通过公网 readiness、公开目录与动态实体页、Semantic 非 fallback、Viewpoint baseline、Reader Range 206、匿名 Ask 权限、无 publication blocker 和无 stale Projection 检查。部署后 fatal pattern 为 0，除 Meilisearch 既有历史一次重启外，各服务 RestartCount 均为 0。
 - SearXNG 在 Baidu CAPTCHA 后仅以原 image 和配置安全重建。恢复后 adapter 返回 8 条、直接诊断返回 10 条。真实 lead 已由 SafeWebFetcher 转换为 HTTP 200 HTML Evidence，正文 120,000 字符，数据库写入在验证事务中回滚。
+- 3.0.2 源码新增了现有 `ClaimBenchmarkJudgment` 的管理员人工 Gold API。它只能引用 active DocumentRevision 上未失效的真实 EvidenceSpan，并支持人工创建、修订、查看和删除，不会自动生成 Gold。Processing Center 只读汇总 gold query 数、七类 stance 覆盖、locator 完整度和 benchmark ready 状态。缺少十条有效 query、direct/support/oppose/qualify 覆盖或已核实 locator 时会明确报告 blocker。Semantic V2 仍是默认排序，Claim 继续处于 shadow mode。
+- Knowledge Studio 后端已用 `KnowledgeObjectEditorAdapter` 收敛 Theory、Concept、Scholar、Discipline、Subdiscipline、Topic、Debate、ReadingPath 与重要 Work。统一对象 payload 复用现有 EditorialRevision mutation，内容完整度由真实 public serializer 字段计算，Frontend Impact 使用 Dependency Engine 的 projection metadata，published/draft 两种预览都由既有 public serializer 生成。旧 Knowledge Workspace 路由保持兼容，没有增加第二套写 API。
 - 生产事务回滚写入验收已证明题名草稿变更使旧 Run/Candidate stale，并只重规划 43 个受影响字段。真实 DocumentRevision/EvidencePack 生成 8 个字段候选；摘要明确返回 No Reliable Candidate；两页 OCR 只调度不执行；Person/Scholar、译者仅责任者、CuratedClaim 发布、公网页码、EditorialRevision、DomainChange、9 个 Projection 和角色权限均通过。8 个提交后回调与所有临时行均被回滚。
 - 首次验收由 PostgreSQL 暴露 `select_for_update().distinct()` 不兼容。修复改为相关 `EXISTS` 子查询并只锁 CuratedClaim 主表。候选镜像和正式部署镜像均在真实 PostgreSQL 上通过同一写入验收，没有 migration、Web rebuild、数据库恢复、PDF/OCR 或索引变更。
 - 回退记录、旧 image、Compose/env 校验、源码 archive、fresh backup 和手动回退脚本保存在 `storage/backups/pre-v301-cutover-20260825-055113/deploy-record`。Library Synthesis Candidate、真实 4070 在线领取、中文网页 Evidence 和 Claim gold benchmark 仍是明确未关闭项。

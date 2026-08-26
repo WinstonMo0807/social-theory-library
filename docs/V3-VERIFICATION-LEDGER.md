@@ -1,8 +1,36 @@
 # Social Theory Library 3.0 Verification Ledger
 
-更新时间：2026-08-25
+更新时间：2026-08-26
 
 本记录只登记实际执行的检查。环境依赖、生产验证和真实馆藏质量评估在完成前均标为待核实。工程严格按四个 Wave 推进，不再拆分子 Phase。
+
+## 3.0.2 Product Convergence
+
+| 改动 | 风险 | 已执行验证 | 为什么足够 | 最终综合验收 |
+| --- | --- | --- | --- | --- |
+| 生产源码 reconciliation | 高 | Git ancestry、远端 `88ded54`、生产 source revision 与 image ID 只读核对；803 个 tracked file 冻结为候选树 `f0ffad378928591691df45770ad32d3bbd062a50`，归档 SHA-256 为 `06d4a5f8024456ccd5fd1832f22e6071e17995de92a401b9e0703a8094598959`，archive 与 tree membership 差异为 0 | 证明 `fa7444d` 与 `4c30565c` 已包含在开发基线，且首轮生产镜像来自严格 tracked tree | 正式发布重新冻结包含生产记录的完整 tree，并核对同源镜像 label、部署记录与最终 Git commit tree |
+| CandidateDecisionProtocol 与 Field Producer Matrix | 高 | Candidate、Provider、OCR 与 remote worker 组合 78 项通过；Research、Viewpoint、Dependency 与 publication 组合 82 项通过；改动面前端 77 项通过；生产 Workbench bundle 与实际候选 payload 已核对 | 覆盖多类候选动作、local-first、producer 状态、discovery lead 转换及三个管理工作面的同一动作契约 | 已完成首轮生产只读 smoke；真实业务采用质量继续由正常编辑操作积累 |
+| KnowledgeObjectEditorAdapter、Completeness 与 Knowledge Growth | 高 | Knowledge Studio 与 Growth 后端 6 项通过；前端 Knowledge Studio 9 项通过，并验证六类公开详情页与受保护预览共用组件 | 覆盖公开 serializer、EditorialRevision、Dependency metadata、有界派生读模型、Canonical 不变和 private/no-store | 对象发布与公网反向验证 |
+| SafeWebFetcher 分类与持久化 | 高 | SafeWebFetcher 所在 Candidate/Provider 组合通过，含 DNS、TLS、redirect、HTML robots、GB18030、流式大小、失败 SourceRecord 与 URL query 脱敏 | 覆盖中文正文可读、页面使用指令、无 Content-Length 大响应和可操作诊断 | 生产合法公开来源正向与失败 smoke |
+| Library Synthesis | 高 | Evidence-only synthesis、task profile、远程 worker 服务端与客户端均包含在 78 项组合中并通过 | 只接受馆内 EvidencePack，没有 executor 时保留 waiting | 生产 waiting 解释；若有 executor 再验证采用与 Evidence refs |
+| ProviderCredentialSecret 与 NLB adapter | 高 | Research Source 与 NLB 20 项通过；密文、Owner 权限、不回显、更新时间、测试结果、search/detail/normalize/Evidence/Candidate 均覆盖；migration drift 通过 | 证明 secret 与普通配置分层，测试状态可见且不改变凭据更新时间；NLB fixture 不替代 live 凭据 | 无生产凭据时验证明确降级，不伪造 productive |
+| Claim Gold workflow | 中 | Claim Gold 管理 API 包含在 78 项组合中并通过；active revision、stale Evidence、locator 与空 gold gate 均覆盖；生产 inventory 为 Claim Gold 0、DerivedClaim 0、CuratedClaim 0、benchmark ready false | 只允许人工引用当前 EvidenceSpan，不自动创建 Gold，也不改变默认 ranking | 已确认 Viewpoint 继续使用 `semantic_v2_baseline`；正式 benchmark 指标仍待人工 Gold |
+| selective OCR consumption | 高 | selective OCR、paused inventory 与单任务处置包含在 78 项组合中并通过；生产切换前后 paused OCR job 均为 6 | 受控 OCR 输出已进入 DocumentRevision、EvidenceSpan 和字段候选，同时保持 stable Page 与 ORIGINAL bytes；生产部署没有恢复 OCR | 真实生产 PaddleOCR 识别仍待管理员逐项恢复，禁止 Resume All |
+| 责任者草稿与候选分离 | 高 | 后端定向 2 项、前端 Node 18/18、TypeScript、定向 ESLint、`compileall` 与 `git diff --check` 通过；生产上架项有 28 个待处理 Person 候选、Workspace 可见 29 个 Person 候选、正式贡献者 1 项 | 大量候选仍在 Candidate workspace，但不进入正式责任者列表；批量 metadata 没有采用动作，空译者不阻止保存；ResearchContext 正确区分作者、译者和其他责任者 | 首轮生产核对完成，单项实际采用仍由正常编辑操作验证 |
+| 版本、Django 与前端综合门槛 | 中 | `manage.py check`、migration drift、`compileall`、TypeScript、完整 lint、production build 与 `git diff --check` 通过；后端完整 suite 执行一次，唯一失败是旧 exact-dict 断言，修正后只重跑该项并通过，保留 32 项环境依赖 skip；前端完整 Node suite 执行一次，5 条旧源码位置断言随公开组件抽取而失效，修正后受影响 4 个文件 24/24 通过，Auth 21/21 通过 | 真实记录完整门槛暴露的问题及受影响重跑，没有把初次执行写成全绿，也没有为小范围断言修正重复执行全量 suite | 已复核候选与最终 tracked tree、归档和镜像身份 |
+| 关键 Playwright | 高 | Workbench 3/3 通过，覆盖保存并前进、dirty canonical 离开提示、期刊与可选策展和带警告发布；受保护 Knowledge Preview 浏览器 smoke 通过，EditorialRevision 成功渲染 Discipline 公开组件，控制台 0 error；部署后公开核心路由、Reader 与静态 bundle 通过 | 验证管理员实际操作、Preview 的公开组件复用和生产 bundle，不以 API 200 代替全部页面行为 | 最终同源镜像替换后已复核受影响公网路径 |
+| Production cutover | 高 | 候选树 `f0ffad37` 首轮切换完成；fresh backup、PostgreSQL 16 restore、catalog 0039、旧 3.0.1 additive-schema readiness、候选镜像、readiness、公开 T4、馆藏 identity、回退标签和脚本均已核对；最终 tracked tree 完成无 migration 同源镜像替换与定向复核 | 证明 NAS、Cloudflare、PostgreSQL、Reader、Semantic、Viewpoint、Projection 与降级状态在真实生产可用；首次首页 502 定位为 Edge 缓存旧 Web 容器 IP，强制刷新 Edge 后恢复且脚本已纠正 | 已核对最终镜像 label、部署记录、公网状态与 Git commit tree |
+
+### 3.0.2 首轮生产切换记录
+
+- 候选 API 为 `social-theory-library-api:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:28b1e33d613581cbfe927e9a16ddf91edb44e84a7a2a0049c032c6f77bfaadfd`。候选 Web 为 `social-theory-library-web:3.0.2-f0ffad37-20260826-201433`，image ID `sha256:60cc9c9358e980a0183265b78fa37987ce91091abe1b270cd29b2bd2462651d1`。
+- Fresh BackupJob 为 `aedfeac2-b56c-4ba1-ab66-f38dec131e13`。归档 SHA-256 为 `d15ed054b9a40f6a6a2e8a1c3c83e29afa7a9e1ed5fedd0f0bd11fae5c8f9820`，database dump SHA-256 为 `2385cf3c965fae592957ab7029832f547840ce0ab9f07dc183b0c21cfe8d1eee`。部署记录位于 `storage/backups/pre-v302-cutover-20260826-201433/deploy-record`。API/Web 回退标签分别为 `social-theory-library-api:pre-v302-20260826-201433` 与 `social-theory-library-web:pre-v302-20260826-201433`。
+- catalog 0039 已应用，catalog、ingestion 与 reading 的 migration plan 为空。PostgreSQL 16 恢复演练、0039 migration、Django check、馆藏 identity hash 和旧 3.0.1 image readiness 均通过。0039 只建立空的加密 Provider secret 表，没有 backfill、外部访问或 Canonical 变更。
+- 第二次 T4 中公开首页、Explore、观点检索、Theory、Scholar、Topic、真实 Work、Reader 和登录页均返回 200。Semantic 为 hybrid、`fallback_used=false` 且结果非空。Viewpoint 返回 direct 2、oppose 2、qualify 1，真实 Reader locator 可用。Reader Range 为 206。匿名 Ask 为预期 401。
+- 生产有 Work 9、Edition 9、Asset 18、ORIGINAL 9、Page 3,679、DocumentRevision 9 和 EvidenceSpan 3,735。ORIGINAL 总字节为 199,016,197。Page 与 ORIGINAL identity hash、活动语义 UID 以及 3,005 条实际索引记录在切换前后保持一致。open ProcessingJob、open ResearchRun、publication blocker 和 stale Projection 均为 0。
+- Claim Gold、DerivedClaim 和 CuratedClaim 均为 0。21 个有效 demand 保持 `waiting_for_capability`。Processing Center 为 blocking 0、missing capability 1、Provider degradation 6、Research Source degradation 9、stale Projection 0。4070 未部署，NLB 没有 credential。用户暂停的 6 个 OCR job 未恢复，发布不受影响。
+- 首次 smoke 的首页 502 来自 Edge 持有 Web 重建前的容器 IP，Web 自身已在 3000 端口正常监听。强制重建 Edge 后公网恢复。cutover 和 rollback 脚本已补上 Web 重建后的 Edge 强制刷新。未执行数据库回退或破坏性 restore。
+- Beat 恢复后的观察中，两个 queued heartbeat 与一个 unacked health probe 都属于已登记维护任务。active、reserved 和 scheduled 没有 OCR、上传或 Research 任务。6 个 OCR job 的 inventory 未改变，open business task、publication blocker 和 stale Projection 均为 0。
 
 ## Wave 1  Knowledge and Data Foundation
 

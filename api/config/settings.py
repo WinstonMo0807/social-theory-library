@@ -672,7 +672,7 @@ METADATA_PROVIDER_ENABLED = os.getenv(
 )
 METADATA_PROVIDER_ALLOWED_HOSTS = os.getenv(
     "METADATA_PROVIDER_ALLOWED_HOSTS",
-    "api.crossref.org,openlibrary.org,www.googleapis.com,api.openalex.org",
+    "api.crossref.org,openlibrary.org,www.googleapis.com,api.openalex.org,openweb.nlb.gov.sg",
 )
 CROSSREF_MAILTO = os.getenv("CROSSREF_MAILTO", "").strip()
 FIELD_ENRICHMENT_WEB_SEARCH_ADAPTER = os.getenv(

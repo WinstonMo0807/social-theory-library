@@ -25,6 +25,7 @@ PROVIDER_SOURCE_CLASSES = {
     "crossref": EnrichmentSourceClass.IDENTIFIER_REGISTRY,
     "openlibrary": EnrichmentSourceClass.LIBRARY_CATALOG,
     "google_books": EnrichmentSourceClass.LIBRARY_CATALOG,
+    "nlb_singapore": EnrichmentSourceClass.NATIONAL_LIBRARY,
     "grobid": EnrichmentSourceClass.ACADEMIC_JOURNAL,
 }
 
@@ -241,6 +242,7 @@ def _bibliographic_source_url(provider: str, evidence: dict) -> str:
         "crossref": "https://api.crossref.org",
         "openlibrary": "https://openlibrary.org",
         "google_books": "https://books.google.com",
+        "nlb_singapore": "https://openweb.nlb.gov.sg/api/swagger/index.html",
         "openalex": "https://openalex.org",
         "grobid": "https://grobid.readthedocs.io",
     }.get(provider, "https://example.invalid")

@@ -22,7 +22,7 @@ from django.conf import settings
 from django.db import DatabaseError, transaction
 from django.utils import timezone
 
-from catalog.models import SiteSetting
+from catalog.models import ProviderCredentialSecret, SiteSetting
 from ingestion.models import AuditEvent, SourceRecord
 
 
@@ -198,7 +198,7 @@ SOURCE_SPECS = (
         ("field_enrichment:web_fetch",),
         default_enabled=True,
         execution_mode="verified_fetch",
-        usage_policy="robots_ssrf_and_size_bounded",
+        usage_policy="page_directives_ssrf_and_size_bounded",
         test_probe="safe_web_fetcher",
         configuration_requirements=("可用 discovery 来源", "公开 HTTP 或 HTTPS 页面"),
     ),
@@ -230,6 +230,26 @@ SOURCE_SPECS = (
         execution_mode="public_metadata_extension",
         usage_policy="public_metadata_only_after_usage_review",
         configuration_requirements=("经过使用规则核对的 endpoint alias", "仅公开 metadata"),
+    ),
+    ResearchSourceSpec(
+        "nlb_singapore",
+        "新加坡国家图书馆中文馆藏 API",
+        "chinese_bibliographic",
+        "通过国家图书馆正式 Catalogue API 核对中文图书题名、责任者与版本信息",
+        ("中文图书版本候选", "作者与责任者", "Research Evidence"),
+        ("json",),
+        ("nlb_singapore",),
+        credential_required=True,
+        fixed_endpoint=True,
+        default_enabled=False,
+        execution_mode="credentialed_official_api",
+        usage_policy="official_catalogue_api_only",
+        test_probe="metadata.nlb_singapore",
+        configuration_requirements=(
+            "NLB Open Web Service API Key",
+            "NLB App Code",
+            "加密凭据格式为包含 api_key 与 app_code 的 JSON",
+        ),
     ),
     ResearchSourceSpec(
         "union_catalog_z3950",
@@ -380,6 +400,15 @@ def resolve_source_credential(source_key: str) -> str:
     alias_value = _alias_environment("RESEARCH_SOURCE_CREDENTIAL_", config["credential_alias"])
     if alias_value:
         return alias_value
+    if config["credential_alias"]:
+        from catalog.services.provider_secrets import resolve_provider_secret
+
+        stored_value = resolve_provider_secret(
+            config["credential_alias"],
+            purpose="research_source",
+        )
+        if stored_value:
+            return stored_value
     if spec.credential_setting:
         return str(getattr(settings, spec.credential_setting, "") or "")
     return ""
@@ -659,10 +688,11 @@ class ResearchSourceAdapter:
             from ingestion.services.metadata import search_openalex_title
 
             return [row.__dict__ for row in search_openalex_title(query, limit=limit)]
-        if self.key in {"crossref", "openlibrary", "google_books"}:
+        if self.key in {"crossref", "openlibrary", "google_books", "nlb_singapore"}:
             from ingestion.services.metadata import (
                 search_crossref_title,
                 search_google_books_title,
+                search_nlb_singapore_title,
                 search_openlibrary_title,
             )
 
@@ -670,6 +700,7 @@ class ResearchSourceAdapter:
                 "crossref": lambda: search_crossref_title(query, limit=limit),
                 "openlibrary": lambda: search_openlibrary_title(query, limit=limit),
                 "google_books": lambda: search_google_books_title(query, language="", limit=limit),
+                "nlb_singapore": lambda: search_nlb_singapore_title(query, limit=limit),
             }[self.key]
             return [row.__dict__ for row in resolver()]
         if self.key == "searxng":
@@ -689,9 +720,17 @@ class ResearchSourceAdapter:
             from catalog.services.field_enrichment.web import SafeWebFetcher
 
             return SafeWebFetcher().fetch(identifier)
+        if self.key == "nlb_singapore":
+            from ingestion.services.metadata import fetch_nlb_singapore_title
+
+            return fetch_nlb_singapore_title(identifier)
         raise ResearchSourceError("fetch_not_available", f"{self.spec.label} 没有通用匿名 fetch。")
 
     def extract_metadata(self, payload: object, *, content_type: str = "") -> dict[str, Any]:
+        if self.key == "nlb_singapore":
+            from ingestion.services.metadata import normalize_nlb_singapore_record
+
+            return normalize_nlb_singapore_record(payload)
         return extract_standard_metadata(payload, content_type)
 
     def normalize(self, metadata: dict[str, Any]) -> dict[str, Any]:
@@ -724,6 +763,19 @@ class ResearchSourceAdapter:
         return source_registry_row(self.spec)
 
     def test_fixture(self) -> dict[str, Any]:
+        if self.key == "nlb_singapore":
+            return {
+                "query": "乡土中国",
+                "content_type": "application/json",
+                "metadata": {
+                    "brn": 200001,
+                    "nativeTitle": "乡土中国",
+                    "nativeAuthor": "费孝通",
+                    "isbns": ["9787108062156"],
+                    "nativePublisher": ["北京 : 商务印书馆"],
+                    "publishDate": "2018",
+                },
+            }
         return {
             "query": "Mind Self and Society" if self.spec.category != "authority" else "George Herbert Mead",
             "content_type": "text/html",
@@ -759,6 +811,24 @@ def source_registry_row(spec: ResearchSourceSpec) -> dict[str, Any]:
     config = source_configuration(spec.key)
     endpoint_configured = bool(resolve_source_endpoint(spec.key))
     credential_configured = bool(resolve_source_credential(spec.key))
+    credential_status = None
+    if config["credential_alias"]:
+        try:
+            credential_status = (
+                ProviderCredentialSecret.objects.filter(
+                    alias=config["credential_alias"],
+                    purpose=ProviderCredentialSecret.Purpose.RESEARCH_SOURCE,
+                )
+                .only(
+                    "updated_at",
+                    "last_tested_at",
+                    "last_test_status",
+                    "last_test_message",
+                )
+                .first()
+            )
+        except (DatabaseError, RuntimeError):
+            credential_status = None
     latest_success = _latest_record(spec, SourceRecord.Status.SUCCEEDED)
     latest_failure = _latest_record(spec, SourceRecord.Status.FAILED)
     requirements_met = (
@@ -794,6 +864,10 @@ def source_registry_row(spec: ResearchSourceSpec) -> dict[str, Any]:
         "credential_alias_set": bool(config["credential_alias"]),
         "endpoint_alias_supported": bool(not spec.fixed_endpoint and (spec.endpoint_required or spec.endpoint_setting)),
         "credential_alias_supported": bool(spec.credential_required or spec.credential_setting),
+        "credential_updated_at": credential_status.updated_at if credential_status else None,
+        "credential_last_tested_at": credential_status.last_tested_at if credential_status else None,
+        "credential_last_test_status": credential_status.last_test_status if credential_status else "",
+        "credential_last_test_message": credential_status.last_test_message if credential_status else "",
         "last_success_at": latest_success.retrieved_at if latest_success else None,
         "last_failure_at": latest_failure.retrieved_at if latest_failure else None,
         "last_error_code": latest_failure.error_code if latest_failure else "",
@@ -911,40 +985,71 @@ def update_research_source_registry(
     return document
 
 
+def _record_research_source_credential_test(
+    adapter: ResearchSourceAdapter,
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    alias = source_configuration(adapter.key)["credential_alias"]
+    if alias:
+        from catalog.services.provider_secrets import record_provider_secret_test
+
+        record_provider_secret_test(
+            alias=alias,
+            status=str(result.get("status") or "unknown"),
+            message=str(result.get("detail") or result.get("error_code") or ""),
+        )
+    return result
+
+
 def test_research_source(source_key: str, *, actor=None) -> dict[str, Any]:
     adapter = source_adapter(source_key)
     row = adapter.health()
     if not row["enabled"]:
-        return {"key": adapter.key, "status": "disabled", "functional": False, "productive": False, "error_code": "source_disabled"}
+        return _record_research_source_credential_test(
+            adapter,
+            {"key": adapter.key, "status": "disabled", "functional": False, "productive": False, "error_code": "source_disabled"},
+        )
     if row["status"] == "not_configured":
-        return {"key": adapter.key, "status": "not_configured", "functional": False, "productive": False, "error_code": "source_not_configured"}
+        return _record_research_source_credential_test(
+            adapter,
+            {"key": adapter.key, "status": "not_configured", "functional": False, "productive": False, "error_code": "source_not_configured"},
+        )
     if adapter.spec.test_probe:
         from catalog.services.system_health import run_health_probe
 
         run = run_health_probe(adapter.spec.test_probe, source="manual", actor=actor)
-        return {
-            "key": adapter.key,
-            "status": run.status,
-            "functional": run.functional,
-            "productive": run.productive,
-            "error_code": run.error_code,
-            "checked_at": run.finished_at or run.created_at,
-            "details": dict(run.details or {}),
-        }
+        return _record_research_source_credential_test(
+            adapter,
+            {
+                "key": adapter.key,
+                "status": run.status,
+                "functional": run.functional,
+                "productive": run.productive,
+                "error_code": run.error_code,
+                "checked_at": run.finished_at or run.created_at,
+                "details": dict(run.details or {}),
+            },
+        )
     if adapter.spec.execution_mode in {"licensed_or_manual", "configured_z3950"}:
-        return {
+        return _record_research_source_credential_test(
+            adapter,
+            {
+                "key": adapter.key,
+                "status": "degraded",
+                "functional": False,
+                "productive": False,
+                "error_code": "adapter_runtime_not_installed",
+                "detail": "配置位置已建立，当前部署未启用授权 connector。人工 Evidence 导入仍可使用。",
+            },
+        )
+    return _record_research_source_credential_test(
+        adapter,
+        {
             "key": adapter.key,
-            "status": "degraded",
-            "functional": False,
-            "productive": False,
-            "error_code": "adapter_runtime_not_installed",
-            "detail": "配置位置已建立，当前部署未启用授权 connector。人工 Evidence 导入仍可使用。",
-        }
-    return {
-        "key": adapter.key,
-        "status": "configured",
-        "functional": True,
-        "productive": None,
-        "error_code": "live_test_not_defined",
-        "detail": "来源配置有效，但尚无获准的匿名 live fixture。",
-    }
+            "status": "configured",
+            "functional": True,
+            "productive": None,
+            "error_code": "live_test_not_defined",
+            "detail": "来源配置有效，但尚无获准的匿名 live fixture。",
+        },
+    )

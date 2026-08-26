@@ -60,7 +60,7 @@ test("hybrid progressive workflow collapses completed steps and previews only th
 });
 
 test("workflow hash uses replaceable single-page step addresses", () => {
-  assert.equal(stepFromHash("#knowledge", "file"), "knowledge");
+  assert.equal(stepFromHash("#knowledge", "file"), "curation");
   assert.equal(stepFromHash("#not-a-step", "bibliography"), "bibliography");
   assert.equal(
     workflowHashUrl("https://library.test/admin/intake/abc?q=1#file", "reader"),
@@ -122,6 +122,30 @@ test("section validation blocks continuation before backend save", () => {
     validateWorkflowSection("knowledge", { confirmed: true }).length,
     0,
   );
+  assert.equal(
+    validateWorkflowSection("contributors", { items: [] }).length,
+    0,
+  );
+  assert.equal(
+    validateWorkflowSection("contributors", { items: [{ display_name: "", role: "translator", person_id: null }] }).length,
+    0,
+  );
+  assert.deepEqual(
+    validateWorkflowSection("contributors", { items: [{ display_name: "候选作者", role: "author", person_id: null }] }),
+    [{ field: "items.0.person_id", message: "请为第 1 位责任者关联馆内人物、创建新学者主页，或选择仅添加为责任者。" }],
+  );
+});
+
+test("contributor editor keeps unresolved candidates outside canonical rows", async () => {
+  const [editor, fields] = await Promise.all([
+    readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin/forms/workflow-fields.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(editor, /label="作者" values=\{authorItems\} emptyValue=\{blank\("author"\)\}/);
+  assert.match(editor, /label="译者" values=\{translatorItems\} create=\{\(\) => blank\("translator"\)\}/);
+  assert.doesNotMatch(editor, /translatorItems\.length \? translatorItems : \[blank\("translator"\)\]/);
+  assert.match(editor, /请在责任者候选中逐项核对并只采用需要的人物/);
+  assert.match(fields, /showsEmptyValue/);
 });
 
 test("focus mode, contextual curation and publication choices use canonical routes", async () => {

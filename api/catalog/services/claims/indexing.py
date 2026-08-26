@@ -515,6 +515,10 @@ def _search_filters(filters: dict) -> list[str]:
             year_groups.append("(" + " AND ".join(parts) + ")")
     if year_groups:
         output.append("(" + " OR ".join(year_groups) + ")")
+    if filters.get("year_min") is not None:
+        output.append(f"publication_year >= {int(filters['year_min'])}")
+    if filters.get("year_max") is not None:
+        output.append(f"publication_year <= {int(filters['year_max'])}")
     return output
 
 
@@ -560,6 +564,10 @@ def visible_claim_queryset(filters: dict | None = None):
                 condition |= branch
         if condition:
             rows = rows.filter(condition)
+    if filters.get("year_min") is not None:
+        rows = rows.filter(edition__publication_year__gte=filters["year_min"])
+    if filters.get("year_max") is not None:
+        rows = rows.filter(edition__publication_year__lte=filters["year_max"])
     return rows.distinct()
 
 

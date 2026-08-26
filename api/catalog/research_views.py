@@ -6,7 +6,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from catalog.models import Edition, ResearchRun, ScholarProfile
+from catalog.models import (
+    DebateCandidate,
+    Edition,
+    IntelligenceFeedback,
+    ReadingPathCandidate,
+    ResearchRun,
+    ScholarProfile,
+)
 from ingestion.models import AuditEvent, EntityResolutionCandidate
 from ingestion.serializers import EntityResolutionCandidateSerializer
 from ingestion.services.entity_resolution_decisions import (
@@ -20,6 +27,10 @@ from catalog.services.research.contracts import (
     contract_payload,
     validate_contract_coverage,
 )
+from catalog.services.research.producer_capabilities import (
+    producer_capability_coverage,
+    producer_capability_matrix,
+)
 from catalog.services.research.entity_discovery import EntityDiscoveryRequest, UniversalEntityDiscovery
 from catalog.services.research.orchestrator import (
     INTAKE_REVIEW_TARGETS,
@@ -27,7 +38,24 @@ from catalog.services.research.orchestrator import (
     research_run_payload,
 )
 from catalog.services.research.recovery import cancel_research_run
-from common.permissions import CanAccessBackOffice, CanRunEnrichment, CanViewEvidence
+from catalog.services.research.candidate_adoption import (
+    decide_debate_candidate,
+    decide_reading_path_candidate,
+)
+from catalog.services.candidate_decision_protocol import (
+    attach_candidate_action_descriptors,
+)
+from catalog.services.candidate_verification import (
+    CandidateVerificationError,
+    verify_research_candidate,
+)
+from catalog.services.workflow_suggestions import WorkflowSuggestionAggregator
+from common.permissions import (
+    CanAccessBackOffice,
+    CanReviewCandidate,
+    CanRunEnrichment,
+    CanViewEvidence,
+)
 from ingestion.models import UploadItem
 
 
@@ -161,7 +189,7 @@ def _constrain_direct_discovery_payload(
             actions = [
                 value
                 for value in actions
-                if value not in {"create_draft", "keep_unresolved", "reject"}
+                if value not in {"verify", "create_draft", "keep_unresolved", "reject"}
             ]
         if not allow_persistent_decisions:
             actions = [
@@ -171,8 +199,49 @@ def _constrain_direct_discovery_payload(
             ]
         if contract.output_type == "scalar" and row.get("candidate_group") in {"local", "local_draft"}:
             actions = ["inspect", "use_value"]
+        elif row.get("candidate_group") in {"local", "local_draft"}:
+            actions = [
+                "apply_to_draft" if value == "link_existing" else value
+                for value in actions
+            ]
+        if not allow_persistent_decisions:
+            actions = [value for value in actions if value != "verify"]
         row["available_actions"] = actions or ["inspect"]
-        results.append(row)
+        server_actions = {
+            "verify",
+            "create_draft",
+            "keep_unresolved",
+            "reject",
+        }
+        has_server_action = any(value in server_actions for value in row["available_actions"])
+        row["decision_url"] = (
+            "/catalog/admin/research/entity-decisions/"
+            if has_server_action and allow_persistent_decisions
+            else None
+        )
+        row["verify_url"] = (
+            row["decision_url"] if "verify" in row["available_actions"] else None
+        )
+        row["action_payloads"] = {
+            action: {
+                "candidate_id": row.get("id"),
+                "entity_type": entity_type,
+                "field": expected_field,
+                "query": str((payload or {}).get("query") or ""),
+            }
+            for action in row["available_actions"]
+            if action in server_actions
+        }
+        row["action_options"] = {
+            "apply_to_draft": {
+                "label": (
+                    "关联已有学者"
+                    if entity_type == "person"
+                    else "关联馆内实体"
+                )
+            }
+        }
+        results.append(attach_candidate_action_descriptors(row))
 
     counts = {}
     for row in results:
@@ -397,9 +466,9 @@ class ResearchEntityDecisionView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
         action = str(request.data.get("action") or "").strip().casefold()
-        if action not in {"create_draft", "keep_unresolved", "reject"}:
+        if action not in {"verify", "create_draft", "keep_unresolved", "reject"}:
             return Response(
-                {"detail": "外部研究候选仅支持 create_draft、keep_unresolved 或 reject。"},
+                {"detail": "外部研究候选仅支持核实、创建草稿、保留未解析或不采用。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         candidate_id = str(request.data.get("candidate_id") or "").strip()
@@ -478,6 +547,65 @@ class ResearchEntityDecisionView(APIView):
             pk=review_candidate_id,
             upload_item=item,
         )
+        if action == "verify":
+            try:
+                result = verify_research_candidate(candidate)
+            except CandidateVerificationError as exc:
+                return Response(
+                    {
+                        "status": (
+                            "no_reliable_candidate"
+                            if exc.code == "no_reliable_candidate"
+                            else "failed"
+                        ),
+                        "code": exc.code,
+                        "detail": str(exc),
+                    },
+                    status=exc.http_status,
+                )
+            result.candidate.refresh_from_db()
+            raw_candidate = EntityResolutionCandidateSerializer(
+                result.candidate
+            ).data
+            suggestions = WorkflowSuggestionAggregator(
+                edition,
+                item=item,
+            ).aggregate(step=step)["suggestions"]
+            candidate_payload = next(
+                (
+                    row
+                    for row in suggestions
+                    if row["id"] == str(result.candidate.id)
+                ),
+                raw_candidate,
+            )
+            if not result.idempotent:
+                AuditEvent.objects.create(
+                    actor=request.user,
+                    action="research_entity_lead_verified",
+                    object_type="EntityResolutionCandidate",
+                    object_id=str(result.candidate.id),
+                    before={"evidence_status": "lead_only"},
+                    after={
+                        "evidence_status": "verified_text",
+                        "source_record_id": str(
+                            result.candidate.source_record_id or ""
+                        ),
+                    },
+                    request_id=str(
+                        request.META.get("HTTP_X_REQUEST_ID") or ""
+                    )[:128],
+                )
+            return Response(
+                {
+                    "status": result.status,
+                    "code": result.code,
+                    "detail": result.detail,
+                    "candidate": candidate_payload,
+                    "entity_candidate": raw_candidate,
+                    "idempotent": result.idempotent,
+                }
+            )
         before = {
             "status": candidate.status,
             "candidate_entity_type": candidate.candidate_entity_type,
@@ -527,5 +655,84 @@ class ResearchContractView(APIView):
         contracts = RESEARCH_CONTRACTS.for_step(step) if step else RESEARCH_CONTRACTS.all()
         return Response({
             "coverage": validate_contract_coverage(),
+            "producer_coverage": producer_capability_coverage(),
+            "producer_matrix": producer_capability_matrix(contracts),
             "contracts": [contract_payload(row) for row in contracts],
         })
+
+
+class ResearchGeneratedCandidateDecisionView(APIView):
+    """Expose the established Debate/ReadingPath adoption services to admin UI."""
+
+    permission_classes = [CanReviewCandidate]
+
+    def post(self, request, *, candidate_kind: str, candidate_id):
+        decision = str(
+            request.data.get("action") or request.data.get("decision") or ""
+        ).strip().casefold()
+        if decision not in IntelligenceFeedback.Decision.values:
+            return Response(
+                {"detail": "候选操作仅支持采用、修改后采用、稍后处理或不采用。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            if candidate_kind == "debate":
+                candidate = get_object_or_404(DebateCandidate, pk=candidate_id)
+                decided = decide_debate_candidate(
+                    candidate=candidate,
+                    decision=decision,
+                    actor=request.user,
+                    title=str(request.data.get("title") or "")[:300],
+                    canonical_question=str(
+                        request.data.get("canonical_question") or ""
+                    ),
+                    summary=str(request.data.get("summary") or ""),
+                    review_note=str(request.data.get("review_note") or "")[:4000],
+                )
+                return Response(
+                    {
+                        "id": str(decided.id),
+                        "kind": "debate_candidate",
+                        "status": decided.status,
+                        "draft_node_id": (
+                            str(decided.suggested_node_id)
+                            if decided.suggested_node_id
+                            else None
+                        ),
+                    }
+                )
+            if candidate_kind == "reading_path":
+                candidate = get_object_or_404(ReadingPathCandidate, pk=candidate_id)
+                stages = request.data.get("stages")
+                if stages is not None and not isinstance(stages, list):
+                    return Response(
+                        {"detail": "Reading Path stages 必须是数组。"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                decided = decide_reading_path_candidate(
+                    candidate=candidate,
+                    decision=decision,
+                    actor=request.user,
+                    title=str(request.data.get("title") or "")[:300],
+                    target_audience=str(
+                        request.data.get("target_audience") or ""
+                    )[:300],
+                    learning_goal=str(request.data.get("learning_goal") or ""),
+                    stages=stages,
+                    review_note=str(request.data.get("review_note") or "")[:4000],
+                )
+                return Response(
+                    {
+                        "id": str(decided.id),
+                        "kind": "reading_path_candidate",
+                        "status": decided.status,
+                        "draft_reading_path_id": (
+                            str(decided.adopted_reading_path_id)
+                            if decided.adopted_reading_path_id
+                            else None
+                        ),
+                    }
+                )
+        except (PermissionError, ValueError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        raise Http404

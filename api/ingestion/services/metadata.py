@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import json
 import re
 from pathlib import Path
 from urllib.parse import quote, urlencode
@@ -595,6 +596,218 @@ def search_google_books_title(title: str, *, language: str = "", limit: int = 3)
         ),
         raw_response={"items": raw_response},
         provider_version="google-books-v1",
+    )
+
+
+NLB_SINGAPORE_CATALOGUE_URL = "https://openweb.nlb.gov.sg/api/v2/Catalogue"
+
+
+def _nlb_singapore_headers() -> dict[str, str]:
+    """Resolve the two official NLB credentials without exposing them to candidates."""
+
+    from catalog.services.research_sources import resolve_source_credential
+
+    raw_value = resolve_source_credential("nlb_singapore").strip()
+    try:
+        value = json.loads(raw_value) if raw_value else {}
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("NLB credential 必须是包含 api_key 与 app_code 的 JSON。") from exc
+    if not isinstance(value, dict):
+        value = {}
+    api_key = str(value.get("api_key") or "").strip()
+    app_code = str(value.get("app_code") or "").strip()
+    if not api_key or not app_code:
+        raise ValueError("NLB credential 缺少 api_key 或 app_code。")
+    return {
+        "Accept": "application/json",
+        "User-Agent": "SocialTheoryLibrary/3.0 bibliographic-research",
+        "X-Api-Key": api_key,
+        "X-App-Code": app_code,
+    }
+
+
+def _nlb_singapore_get(path: str, *, params: dict[str, object]) -> dict:
+    response = httpx.get(
+        f"{NLB_SINGAPORE_CATALOGUE_URL}/{path}",
+        params=params,
+        headers=_nlb_singapore_headers(),
+        timeout=settings.METADATA_PROVIDER_TIMEOUT_SECONDS,
+        follow_redirects=False,
+    )
+    response.raise_for_status()
+    if len(response.content) > settings.METADATA_PROVIDER_MAX_RESPONSE_BYTES:
+        raise ValueError("NLB Catalogue 响应超过安全大小限制。")
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("NLB Catalogue 返回格式无效。")
+    return payload
+
+
+def _nlb_text_list(value: object) -> list[str]:
+    values = value if isinstance(value, list) else [value]
+    return [" ".join(str(item).split()).strip() for item in values if str(item or "").strip()]
+
+
+def _nlb_clean_title(value: object) -> str:
+    text = " ".join(str(value or "").split()).strip().rstrip(" /")
+    # NLB documents that title strings may suffix a statement of responsibility.
+    # That statement is represented separately by the author fields.
+    return text.split(" / ", 1)[0].strip().rstrip(" /")
+
+
+def normalize_nlb_singapore_record(payload: object) -> dict[str, object]:
+    """Normalize one official Catalogue v2 title/detail response."""
+
+    if not isinstance(payload, dict):
+        return {}
+    value = dict(payload)
+    titles = value.get("titles")
+    if isinstance(titles, list) and titles and isinstance(titles[0], dict):
+        value = dict(titles[0])
+    title = _nlb_clean_title(value.get("nativeTitle") or value.get("title"))
+    authors: list[str] = []
+    for raw in (
+        value.get("nativeAuthor"),
+        value.get("author"),
+        *(_nlb_text_list(value.get("nativeOtherAuthors"))),
+        *(_nlb_text_list(value.get("otherAuthors"))),
+    ):
+        for author in _split_authors(str(raw or "")):
+            if author and author not in authors:
+                authors.append(author)
+
+    publisher_statements = _nlb_text_list(value.get("nativePublisher")) or _nlb_text_list(value.get("publisher"))
+    publisher_statement = publisher_statements[0] if publisher_statements else ""
+    publication_place = ""
+    publisher = publisher_statement
+    if ":" in publisher_statement:
+        place_value, publisher_value = publisher_statement.split(":", 1)
+        publication_place = place_value.strip().strip("[]")
+        publisher = publisher_value.strip()
+    publisher = re.sub(r"[,，]\s*(?:18|19|20)\d{2}.*$", "", publisher).strip(" ,，")
+
+    identifiers = []
+    for raw in _nlb_text_list(value.get("isbns")):
+        identifier = re.sub(r"[^0-9Xx]", "", raw).upper()
+        if len(identifier) in {10, 13} and identifier not in identifiers:
+            identifiers.append(identifier)
+    publication_date = " ".join(str(value.get("publishDate") or "").split()).strip().rstrip("-")
+    year_match = YEAR_RE.search(publication_date)
+    series_values = _nlb_text_list(value.get("nativeSeriesTitle")) or _nlb_text_list(value.get("seriesTitle"))
+    edition_values = _nlb_text_list(value.get("nativeEdition")) or _nlb_text_list(value.get("edition"))
+    summaries = _nlb_text_list(value.get("nativeSummary")) or _nlb_text_list(value.get("summary"))
+    language_values = _nlb_text_list(value.get("languages") or value.get("language"))
+    has_cjk = bool(re.search(r"[\u3400-\u9fff]", title))
+    return {
+        key: item
+        for key, item in {
+            "brn": value.get("brn"),
+            "title": title,
+            "authors": authors,
+            "abstract": summaries[0] if summaries else "",
+            "publication_date": publication_date,
+            "publication_year": int(year_match.group()) if year_match else None,
+            "publication_place": publication_place,
+            "publisher": publisher,
+            "isbn": next((item for item in identifiers if len(item) == 13), identifiers[0] if identifiers else ""),
+            "isbn10": next((item for item in identifiers if len(item) == 10), ""),
+            "isbn13": next((item for item in identifiers if len(item) == 13), ""),
+            "series": series_values[0] if series_values else "",
+            "version_label": edition_values[0] if edition_values else "",
+            "language": "zh-CN" if has_cjk else (language_values[0] if language_values else ""),
+            "source_format": "nlb_catalogue_v2_json",
+        }.items()
+        if item not in (None, "", [])
+    }
+
+
+def fetch_nlb_singapore_title(identifier: object) -> dict:
+    value = str(identifier or "").strip()
+    folded = value.casefold()
+    if folded.startswith("brn:"):
+        raw_brn = value.split(":", 1)[1].strip()
+        if not raw_brn.isdigit():
+            raise ValueError("NLB BRN 格式无效。")
+        return _nlb_singapore_get("GetTitleDetails", params={"BRN": int(raw_brn)})
+    if folded.startswith("isbn:"):
+        raw_isbn = re.sub(r"[^0-9Xx]", "", value.split(":", 1)[1]).upper()
+        if len(raw_isbn) not in {10, 13}:
+            raise ValueError("NLB ISBN 格式无效。")
+        return _nlb_singapore_get("GetTitleDetails", params={"ISBN": raw_isbn})
+    if value.isdigit() and len(value) < 10:
+        return _nlb_singapore_get("GetTitleDetails", params={"BRN": int(value)})
+    raise ValueError("NLB title identifier 必须是 brn:<number> 或 isbn:<number>。")
+
+
+def _nlb_singapore_candidates(records: list[dict], *, query: str) -> list[Candidate]:
+    candidates: list[Candidate] = []
+    for rank, record in enumerate(records, start=1):
+        metadata = normalize_nlb_singapore_record(record)
+        title = str(metadata.get("title") or "")
+        confidence, match_type = _title_match_confidence(query, title, rank)
+        brn = str(metadata.get("brn") or "").strip()
+        evidence = {
+            "query": query,
+            "rank": rank,
+            "brn": brn,
+            "record_url": "https://openweb.nlb.gov.sg/api/swagger/index.html",
+            "match_type": match_type,
+            "source_format": "nlb_catalogue_v2_json",
+        }
+        for field_name in (
+            "title",
+            "authors",
+            "abstract",
+            "publication_date",
+            "publication_year",
+            "publication_place",
+            "publisher",
+            "isbn",
+            "isbn10",
+            "isbn13",
+            "series",
+            "version_label",
+            "language",
+        ):
+            field_value = metadata.get(field_name)
+            if field_value not in (None, "", []):
+                candidates.append(Candidate(field_name, field_value, "nlb_singapore", confidence, evidence))
+    return candidates
+
+
+def search_nlb_singapore_title(title: str, *, limit: int = 3) -> list[Candidate]:
+    limit = max(1, min(int(limit), 5))
+    search_payload = _nlb_singapore_get(
+        "GetTitles",
+        params={"Title": " ".join(str(title or "").split())[:200], "Limit": limit},
+    )
+    search_rows = [row for row in search_payload.get("titles") or [] if isinstance(row, dict)][:limit]
+    records: list[dict] = []
+    detail_payloads: list[dict] = []
+    for row in search_rows:
+        brn = str(row.get("brn") or "").strip()
+        if brn.isdigit():
+            detail = fetch_nlb_singapore_title(f"brn:{brn}")
+            detail_payloads.append(detail)
+            records.append({**row, **detail})
+        else:
+            records.append(row)
+    return ProviderCandidates(
+        _nlb_singapore_candidates(records, query=title),
+        raw_response={"search": search_payload, "details": detail_payloads},
+        external_id=str((records[0] if records else {}).get("brn") or ""),
+        provider_version="nlb-catalogue-v2",
+    )
+
+
+def resolve_nlb_singapore_isbn(isbn: str) -> list[Candidate]:
+    normalized = re.sub(r"[^0-9Xx]", "", str(isbn or "")).upper()
+    detail = fetch_nlb_singapore_title(f"isbn:{normalized}")
+    return ProviderCandidates(
+        _nlb_singapore_candidates([detail], query=normalized),
+        raw_response={"detail": detail},
+        external_id=str(detail.get("brn") or normalized),
+        provider_version="nlb-catalogue-v2",
     )
 
 

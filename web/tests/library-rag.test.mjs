@@ -23,9 +23,9 @@ test("Reader and public entity pages use one scoped Ask link contract", async ()
   const [shared, reader, scholar, theory, topic, explore] = await Promise.all([
     "../components/ask-library-link.tsx",
     "../components/reader-shell.tsx",
-    "../app/scholars/[slug]/page.tsx",
-    "../app/theories/nodes/[slug]/page.tsx",
-    "../app/topics/[slug]/page.tsx",
+    "../components/public/scholar-public-view.tsx",
+    "../components/public/knowledge-node-public-view.tsx",
+    "../components/public/topic-public-view.tsx",
     "../app/explore/page.tsx",
   ].map((path) => readFile(new URL(path, import.meta.url), "utf8")));
 

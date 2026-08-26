@@ -216,13 +216,17 @@ def _register(
         if step in {"work", "bibliography", "contributors", "classification", "knowledge", "curation"}
         else ()
     )
-    resolved_authorities = authority_providers if authority_providers is not None else (
-        "crossref",
-        "openalex",
-        "viaf",
-        "openlibrary",
-        "google_books",
-    )
+    if authority_providers is not None:
+        resolved_authorities = authority_providers
+    else:
+        resolved_authorities = (
+            "crossref",
+            "openalex",
+            "viaf",
+            "openlibrary",
+            "google_books",
+            *(("nlb_singapore",) if step in {"work", "bibliography", "contributors"} else ()),
+        )
     resolved_external = external_providers if external_providers is not None else ("safe_web_fetcher", "searxng_discovery_lead")
     RESEARCH_CONTRACTS.register(
         ResearchFieldContract(
@@ -645,6 +649,8 @@ def validate_contract_coverage() -> dict[str, object]:
 
 
 def contract_payload(contract: ResearchFieldContract) -> dict[str, object]:
+    from .producer_capabilities import capability_for_contract
+
     return {
         "step": contract.step,
         "field": contract.field,
@@ -681,5 +687,6 @@ def contract_payload(contract: ResearchFieldContract) -> dict[str, object]:
             "reason": contract.no_reliable_candidate_reason,
         },
         "description": contract.description,
+        "producer_capability": capability_for_contract(contract).payload(),
         "version": contract.version,
     }

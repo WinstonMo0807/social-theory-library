@@ -1,12 +1,17 @@
 "use client";
 
-import { Check, ExternalLink, LoaderCircle, Plus, Search, X } from "lucide-react";
+import { ExternalLink, LoaderCircle, Search, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { type EntityValue } from "../forms/workflow-fields";
 import type { WorkflowCandidate } from "../workflow/workflow-types";
 import { prefixedResearchChangedFields, RESEARCH_SUGGESTION_REFRESH_EVENT } from "./research-suggestion-state";
 import { useResearchWorkspace } from "./research-workspace-context";
+import {
+  resolveCandidateActionDescriptors,
+  type CandidateActionDescriptor,
+} from "./candidate-action-contract";
+import { CandidateDecisionBar } from "./candidate-decision-bar";
 
 type DiscoveryGroup = "local" | "local_draft" | "authority" | "external_web" | "unresolved";
 
@@ -56,26 +61,6 @@ const GROUP_LABELS: Record<DiscoveryGroup, string> = {
   external_web: "一般网络候选",
   unresolved: "保留未解析",
 };
-const ACTION_LABELS: Record<string, string> = {
-  inspect: "核对来源",
-  link_existing: "关联馆内实体",
-  use_value: "使用规范文本",
-  create_draft: "创建实体草稿",
-  keep_unresolved: "保留未解析",
-  reject: "不采用",
-  accept: "接受候选",
-  reopen: "恢复待审",
-};
-
-function entityActionLabel(action: string, entityType: string, hasTextTarget: boolean): string {
-  if (action === "link_existing" && hasTextTarget) return "使用规范文本";
-  if (entityType === "person") {
-    if (action === "link_existing") return "关联已有学者";
-    if (action === "create_draft") return "创建新学者主页";
-    if (action === "keep_unresolved") return "仅添加为责任者";
-  }
-  return ACTION_LABELS[action] ?? action;
-}
 const DIRECT_ENTITY_DECISION_ACTIONS = new Set(["create_draft", "keep_unresolved", "reject"]);
 const DIRECT_ENTITY_DECISION_TYPES = new Set(["person", "work", "knowledge_node", "organization", "publisher"]);
 
@@ -116,9 +101,7 @@ function normalizeCandidate(candidate: WorkflowCandidate, index: number): Discov
   const entityType = normalizedEntityType(candidate.entity_type ?? candidate.target_type ?? candidate.candidate_entity_type);
   const actions = Array.isArray(candidate.available_actions)
     ? candidate.available_actions.map(String)
-    : group === "local" || group === "local_draft"
-      ? ["inspect", entityId ? "link_existing" : "use_value"]
-      : ["inspect", "keep_unresolved", "reject"];
+    : ["inspect"];
   return {
     ...candidate,
     id: String(candidate.id ?? `entity-suggestion-${index}`),
@@ -403,23 +386,28 @@ export function ResearchEntityPicker({
     setHiddenCandidates((current) => new Set(current).add(candidate.id));
   };
 
-  const decideExternal = async (candidate: DiscoveryCandidate, action: string) => {
+  const decideExternal = async (candidate: DiscoveryCandidate, descriptor: CandidateActionDescriptor) => {
+    const action = descriptor.action;
     if (disabled) return;
     if (action === "inspect") {
       inspectCandidate(candidate);
       return;
     }
-    if (action === "use_value") {
+    if (["use_value", "apply_to_draft"].includes(action)) {
       if (onUseValue) selectExisting(candidate);
+      else selectExisting(candidate);
       return;
     }
-    if (candidate.decision_url && workspace?.onCandidateDecision) {
+    if (candidate.kind !== "entity_discovery" && candidate.decision_url && workspace?.onCandidateDecision) {
       const actionKey = `${candidate.id}:${action}`;
       if (decisionInFlight.current) return;
       decisionInFlight.current = actionKey;
       setActing(actionKey);
       try {
-        const succeeded = await workspace.onCandidateDecision(candidate, action);
+        const succeeded = await workspace.onCandidateDecision(
+          { ...candidate, decision_descriptor: descriptor },
+          action,
+        );
         if (!succeeded) {
           setAnnouncement("候选决定未写入，候选仍保留。请查看页面提示后重试。");
           return;
@@ -449,9 +437,10 @@ export function ResearchEntityPicker({
     decisionInFlight.current = actionKey;
     setActing(actionKey);
     try {
-      await apiRequest(ENTITY_DECISION_ENDPOINT, {
-        method: "POST",
+      const result = await apiRequest<Record<string, unknown>>(descriptor.url || ENTITY_DECISION_ENDPOINT, {
+        method: descriptor.method || "POST",
         body: JSON.stringify({
+          ...descriptor.payload,
           item_id: workspace.itemId,
           work_id: workspace.workId,
           edition_id: workspace.editionId,
@@ -470,7 +459,9 @@ export function ResearchEntityPicker({
       hideCandidate(candidate);
       await workspace.onUpdated?.();
       window.dispatchEvent(new Event(RESEARCH_SUGGESTION_REFRESH_EVENT));
-      const message = action === "create_draft"
+      const message = action === "verify"
+        ? String(result.detail ?? "已取得正文 Evidence。刷新后可对核实后的候选作出决定。")
+        : action === "create_draft"
         ? "实体草稿已创建，但尚未自动关联。刷新候选后请明确选择馆内草稿。"
         : action === "keep_unresolved"
           ? "已保留为未解析决定，正式关系没有改变。"
@@ -492,7 +483,7 @@ export function ResearchEntityPicker({
 
   const primaryAction = (candidate: DiscoveryCandidate) => {
     if (disabled) return;
-    const actions = candidate.available_actions ?? [];
+    const actions = resolveCandidateActionDescriptors(candidate).map((row) => row.action);
     const canUseLocalValue = Boolean(onUseValue && actions.some((action) => action === "use_value" || action === "link_existing"));
     if ((candidate.candidate_group === "local" || candidate.candidate_group === "local_draft") && !candidate.decision_url && (candidate.entity_id || canUseLocalValue)) {
       selectExisting(candidate);
@@ -563,21 +554,24 @@ export function ResearchEntityPicker({
             ? Boolean(textValue.trim() && textValue.trim().toLocaleLowerCase() === String(candidate.primary_name ?? candidate.label ?? "").trim().toLocaleLowerCase())
             : Boolean(candidate.entity_id && values.some((value) => value.id === String(candidate.entity_id)));
           const candidateEntityType = normalizedEntityType(candidate.entity_type ?? resolvedEntityType);
-          const actions = (candidate.available_actions ?? []).filter((action, actionIndex, all) => {
-            if (all.indexOf(action) !== actionIndex) return false;
+          const selfReference = field === "translation_of"
+            && Boolean(candidate.entity_id && String(candidate.entity_id) === workspace?.workId);
+          const actionAllowed = (descriptor: CandidateActionDescriptor) => {
+            const action = descriptor.action;
             if (action === "inspect") return true;
-            if (action === "use_value") return Boolean(onUseValue);
+            if (["use_value", "apply_to_draft"].includes(action)) return !selected && !selfReference && Boolean(candidate.entity_id || onUseValue);
             if (action === "link_existing") {
+              if (selected || selfReference) return false;
               if (candidate.decision_url) return Boolean(workspace?.onCandidateDecision);
               return Boolean(candidate.entity_id || onUseValue);
             }
-            if (candidate.decision_url) return Boolean(workspace?.onCandidateDecision);
+            if (candidate.kind !== "entity_discovery" && candidate.decision_url) return Boolean(workspace?.onCandidateDecision);
             return Boolean(
               workspace?.itemId
-              && DIRECT_ENTITY_DECISION_ACTIONS.has(action)
+              && (DIRECT_ENTITY_DECISION_ACTIONS.has(action) || action === "verify")
               && DIRECT_ENTITY_DECISION_TYPES.has(candidateEntityType),
             );
-          });
+          };
           const reasons = stringRows(candidate.match_reasons ?? candidate.reasons);
           const conflicts = stringRows(candidate.conflicts);
           const entityStatus = String(candidate.entity_status ?? candidate.status ?? "待核对");
@@ -589,15 +583,15 @@ export function ResearchEntityPicker({
             </button>
             {inspectedCandidate?.id === candidate.id ? <div className="workflow-universal-entity-inline-inspector" role="region" aria-label={`${String(candidate.primary_name ?? candidate.label ?? "候选")}详情`}><dl><div><dt>实体状态</dt><dd>{entityStatus}</dd></div><div><dt>来源</dt><dd>{source}</dd></div></dl>{reasons.length ? <div><strong>匹配依据</strong><ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></div> : null}{conflicts.length ? <div className="has-conflict"><strong>冲突</strong><ul>{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul></div> : null}{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer">打开来源 <ExternalLink size={12} /></a> : null}</div> : null}
             <div className="workflow-universal-entity-actions">
-              {actions.map((action) => {
-                const pending = acting === `${candidate.id}:${action}`;
-                const selfReference = field === "translation_of" && Boolean(candidate.entity_id && String(candidate.entity_id) === workspace?.workId) && ["link_existing", "use_value"].includes(action);
-                const unavailable = selfReference;
-                const disabledReason = selfReference ? "当前作品不能作为自己的原作" : undefined;
-                const baseLabel = entityActionLabel(action, candidateEntityType, Boolean(onUseValue));
-                const selectedLabel = action === "link_existing" && selected ? onUseValue ? "已使用该文本" : "已加入表单" : action === "use_value" && selected ? "已使用该文本" : baseLabel;
-                return <button type="button" data-action={action} disabled={disabled || Boolean(acting) || pending || unavailable || (["link_existing", "use_value"].includes(action) && selected)} title={disabledReason} key={action} onClick={() => void decideExternal(candidate, action)}>{pending ? <LoaderCircle className="spin" size={12} /> : ["link_existing", "use_value"].includes(action) && selected ? <Check size={12} /> : action === "create_draft" ? <Plus size={12} /> : action === "inspect" ? <Search size={12} /> : action === "reject" ? <X size={12} /> : <ExternalLink size={12} />}{unavailable ? `${selectedLabel}（当前不可用）` : selectedLabel}</button>;
-              })}
+              {selfReference ? <p className="workflow-universal-entity-degraded">当前作品不能作为自己的原作。</p> : null}
+              <CandidateDecisionBar
+                candidate={candidate}
+                busyAction={acting.startsWith(`${candidate.id}:`) ? acting.slice(candidate.id.length + 1) : ""}
+                disabled={disabled || Boolean(acting)}
+                onInspect={() => inspectCandidate(candidate)}
+                actionFilter={actionAllowed}
+                onAction={(descriptor) => void decideExternal(candidate, descriptor)}
+              />
             </div>
           </article>;
         })}</section>)}

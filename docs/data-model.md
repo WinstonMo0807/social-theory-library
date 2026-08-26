@@ -1,6 +1,6 @@
 # 数据模型与权限
 
-更新日期为 2026-08-24。以下 3.0 模型是当前发布候选的正式职责划分。旧章节保留基础对象说明。
+更新日期为 2026-08-26。以下 3.0.2 模型延续 3.0 的正式职责划分。旧章节保留基础对象说明。
 
 ## 3.0 分层
 
@@ -20,6 +20,9 @@
 - DerivedClaim 保存原子命题、subject、predicate、object、polarity、modality、qualifier、三类 scope、attribution、claim type、prompt 和 model provenance。
 - CandidateEvidence、EnrichmentEvidence、QueryLexiconCandidateEvidence、EvidenceSnippet 与 UnknownEntityObservation 继续按各自职责保留，不合并成万能 Evidence 表。
 - ResearchTaskProfile、EvidencePack、PromptRegistryEntry、DebateCandidate、ReadingPathCandidate 和 IntelligenceFeedback 支持研究任务、候选与人工校准。
+- Library Synthesis 不增加新知识表。它把馆内 EvidenceSpan 组成 EvidencePack，经 task-specific synthesis 后写入现有 MetadataCandidate，并保存 Evidence 引用。人工采用前始终属于 Derived。
+- Knowledge Growth 没有持久化 `KnowledgeUpdateSuggestion` 表。它是 EvidenceSpan、DerivedClaim、EnrichmentCandidate、DebateCandidate 与 ReadingPathCandidate 的有界派生读模型。
+- ClaimBenchmarkJudgment 保存人工 Gold，只能引用当前 active DocumentRevision 上未失效的 EvidenceSpan。它用于 benchmark 和 gate，不是公开知识。
 
 ### Projection 与执行状态
 
@@ -113,6 +116,7 @@ TheorySchool、legacy Concept 与 WorkKnowledgeRelation 停止新增正式写入
 - `PublicationEvent` 发布、修改、下架和删除事件
 - `AuditEvent` 用户及管理员操作
 - `SiteSetting` 可编辑网站名称、导航、首页文案和投稿邮箱
+- `ProviderCredentialSecret` 保存 Provider credential alias、用途、加密 ciphertext、key version、更新时间和测试状态。catalog 0039 只新增该表；主密钥来自服务端环境，API 不返回明文
 - `FeaturedSlot` 首页与各页面策展位置
 - `BackupJob` 手动备份记录
 
@@ -125,7 +129,7 @@ TheorySchool、legacy Concept 与 WorkKnowledgeRelation 停止新增正式写入
 
 ## 权限
 
-| 能力 | 访客 | 读者 | Editor | Admin | Superadmin |
+| 能力 | 访客 | Reader | Editor | Administrator | System Owner |
 | --- | :---: | :---: | :---: | :---: | :---: |
 | 浏览、搜索、在线阅读 | 是 | 是 | 是 | 是 | 是 |
 | 下载、复制、引用 | 是 | 是 | 是 | 是 | 是 |
@@ -135,8 +139,9 @@ TheorySchool、legacy Concept 与 WorkKnowledgeRelation 停止新增正式写入
 | 上传、编辑、候选决定与研究 | 否 | 否 | 是 | 是 | 是 |
 | 授权范围内单人发布 | 否 | 否 | 是 | 是 | 是 |
 | 任务重试、状态与审计查看 | 否 | 否 | 否 | 是 | 是 |
-| Authority merge、Provider、模型、Prompt | 否 | 否 | 否 | 否 | 是 |
-| 全局 Projection、恢复、用户与角色 | 否 | 否 | 否 | 否 | 是 |
+| Knowledge administration、Processing Center、普通用户、安全恢复 | 否 | 否 | 否 | 是 | 是 |
+| Provider secret、敏感 AI runtime、破坏性 Prompt、Authority merge | 否 | 否 | 否 | 否 | 是 |
+| 全局破坏性 Projection、backup/restore、角色提升 | 否 | 否 | 否 | 否 | 是 |
 | 备份和破坏性维护 | 否 | 否 | 否 | 否 | 是 |
 | 查看其他用户笔记正文 | 否 | 否 | 否 | 否 | 否 |
 

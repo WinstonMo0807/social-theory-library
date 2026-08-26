@@ -395,6 +395,7 @@ def _metadata_provider_probe(provider: str) -> ProbeResult:
     from ingestion.services.metadata import (
         search_crossref_title,
         search_google_books_title,
+        search_nlb_singapore_title,
         search_openlibrary_title,
     )
     from ingestion.services.provider_gateway import invoke_provider, provider_configuration_health
@@ -406,6 +407,7 @@ def _metadata_provider_probe(provider: str) -> ProbeResult:
         "crossref": lambda: search_crossref_title("Mind Self and Society", limit=2),
         "openlibrary": lambda: search_openlibrary_title("Mind Self and Society", language="en", limit=2),
         "google_books": lambda: search_google_books_title("Mind Self and Society", language="en", limit=2),
+        "nlb_singapore": lambda: search_nlb_singapore_title("乡土中国", limit=2),
     }
     values, warnings = invoke_provider(
         provider=provider,
@@ -527,7 +529,7 @@ def _register_probes() -> None:
     ]
     for provider in ("wikidata", "viaf", "loc", "openalex"):
         values.append(HealthProbe(f"authority.{provider}", "external_research", f"{provider} authority", 1800, lambda value=provider: _authority_probe(value), ("实体身份候选",), ("Provider 不可达", "限流或查询失败")))
-    for provider in ("crossref", "openlibrary", "google_books"):
+    for provider in ("crossref", "openlibrary", "google_books", "nlb_singapore"):
         values.append(HealthProbe(f"metadata.{provider}", "external_research", f"{provider} metadata", 1800, lambda value=provider: _metadata_provider_probe(value), ("书目候选",), ("Provider 不可达", "限流或查询失败")))
     for value in values:
         HEALTH_CHECKS.register(value)

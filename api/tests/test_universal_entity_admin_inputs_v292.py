@@ -96,7 +96,9 @@ def test_backoffice_reviewer_can_discover_maintenance_entities_without_work_cont
     assert response.status_code == 200
     local = next(row for row in response.data["results"] if row.get("entity_id"))
     assert local["entity_id"] == str(discipline.id)
-    assert local["available_actions"] == ["inspect", "link_existing"]
+    assert local["available_actions"] == ["inspect", "apply_to_draft"]
+    assert local["action_descriptors"][1]["method"] == "CLIENT"
+    assert local["action_descriptors"][1]["label"] == "关联馆内实体"
     assert not EntityResolutionCandidate.objects.exists()
 
 

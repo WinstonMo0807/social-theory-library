@@ -14,6 +14,7 @@ import { SearchField } from "@/components/ui";
 import {
   loadViewpointSearch,
   type SearchFilters,
+  type ViewpointFacetOption,
   type ViewpointSearchPayload,
   type ViewpointSearchResult,
   type ViewpointStance,
@@ -54,15 +55,32 @@ export default async function OpinionSearchPage({
 }) {
   const params = await searchParams;
   const query = firstParam(params.q).trim();
+  const selected = {
+    relation: firstParam(params.relation),
+    sourceType: firstParam(params.source_type),
+    scholar: firstParam(params.scholar),
+    theory: firstParam(params.theory),
+    topic: firstParam(params.topic),
+    language: firstParam(params.language),
+    work: firstParam(params.work) || firstParam(params.work_id),
+    yearMin: firstParam(params.year_min),
+    yearMax: firstParam(params.year_max),
+  };
   const filters: SearchFilters = {
     documentType: listParam(params.document_type),
     language: listParam(params.language),
     author: listParam(params.author),
+    scholar: listParam(params.scholar),
     year: listParam(params.year),
+    yearMin: numberParam(params.year_min),
+    yearMax: numberParam(params.year_max),
+    relation: listParam(params.relation),
+    sourceType: listParam(params.source_type),
     theory: listParam(params.theory),
     topic: listParam(params.topic),
     concept: listParam(params.concept),
     access: listParam(params.access),
+    workId: selected.work || undefined,
     sort: firstParam(params.sort) || "relevance",
   };
   const payload = await loadViewpointSearch(query, filters);
@@ -88,9 +106,16 @@ export default async function OpinionSearchPage({
             <p>输入一个完整的社会科学命题。结果会区分直接回应、支持、相斥、限定与批评，并回到 PDF 页核对。</p>
           </div>
           <div className={styles.queryArea}>
-            <form className={`explore-search ${styles.search}`} action="/explore/opinions">
-              <SearchField defaultValue={query} placeholder="例如：市场化会削弱地方共同体的互助关系" />
-              <button className="button" type="submit">查找馆藏观点</button>
+            <form className={styles.searchForm} action="/explore/opinions">
+              <div className={`explore-search ${styles.search}`}>
+                <SearchField defaultValue={query} placeholder="例如：市场化会削弱地方共同体的互助关系" />
+                <button className="button" type="submit">查找馆藏观点</button>
+              </div>
+              <ViewpointFilters
+                facets={payload.facets}
+                query={query}
+                selected={selected}
+              />
             </form>
             <SearchModeSwitch query={query} />
           </div>
@@ -199,6 +224,116 @@ function SearchModeSwitch({ query }: { query: string }) {
   );
 }
 
+type SelectedViewpointFilters = {
+  relation: string;
+  sourceType: string;
+  scholar: string;
+  theory: string;
+  topic: string;
+  language: string;
+  work: string;
+  yearMin: string;
+  yearMax: string;
+};
+
+function ViewpointFilters({
+  facets,
+  query,
+  selected,
+}: {
+  facets: ViewpointSearchPayload["facets"];
+  query: string;
+  selected: SelectedViewpointFilters;
+}) {
+  return (
+    <fieldset className={styles.filters}>
+      <legend>筛选已验证原文</legend>
+      <label>
+        <span>关系</span>
+        <select name="relation" defaultValue={selected.relation}>
+          <option value="">全部关系</option>
+          {stanceSections.map((item) => (
+            <option value={item.key} key={item.key}>{item.label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>来源类型</span>
+        <select name="source_type" defaultValue={selected.sourceType}>
+          <option value="">全部来源</option>
+          <option value="book">图书</option>
+          <option value="journal">期刊</option>
+          <option value="other">其他</option>
+        </select>
+      </label>
+      <FacetSelect name="scholar" label="学者" emptyLabel="全部学者" options={facets.scholars} value={selected.scholar} />
+      <FacetSelect name="theory" label="理论" emptyLabel="全部理论" options={facets.theories} value={selected.theory} />
+      <FacetSelect name="topic" label="主题" emptyLabel="全部主题" options={facets.topics} value={selected.topic} />
+      <label>
+        <span>语言</span>
+        <select name="language" defaultValue={selected.language}>
+          <option value="">全部语言</option>
+          <option value="zh-CN">中文</option>
+          <option value="en">英文</option>
+          <option value="mixed">中英混合</option>
+        </select>
+      </label>
+      <FacetSelect name="work" label="作品" emptyLabel="全部作品" options={facets.works} value={selected.work} />
+      <label>
+        <span>出版年起</span>
+        <input
+          type="number"
+          name="year_min"
+          min="1"
+          max="3000"
+          defaultValue={selected.yearMin}
+          placeholder={facets.publication_year.min ? String(facets.publication_year.min) : "不限"}
+        />
+      </label>
+      <label>
+        <span>出版年止</span>
+        <input
+          type="number"
+          name="year_max"
+          min="1"
+          max="3000"
+          defaultValue={selected.yearMax}
+          placeholder={facets.publication_year.max ? String(facets.publication_year.max) : "不限"}
+        />
+      </label>
+      {query ? <Link className={styles.clearFilters} href={`/explore/opinions?q=${encodeURIComponent(query)}`}>清除筛选</Link> : null}
+    </fieldset>
+  );
+}
+
+function FacetSelect({
+  name,
+  label,
+  emptyLabel,
+  options,
+  value,
+}: {
+  name: string;
+  label: string;
+  emptyLabel: string;
+  options: ViewpointFacetOption[];
+  value: string;
+}) {
+  const selectedIsMissing = Boolean(value && !options.some((option) => option.id === value));
+  return (
+    <label>
+      <span>{label}</span>
+      <select name={name} defaultValue={value}>
+        <option value="">{emptyLabel}</option>
+        {selectedIsMissing ? <option value={value}>当前选择</option> : null}
+        {options.map((option) => (
+          <option value={option.id} key={option.id}>{option.label}（{option.count}）</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function QueryClaim({ payload }: { payload: ViewpointSearchPayload }) {
   const claim = payload.query_claim;
   const hasStructure = Boolean(claim.subject || claim.predicate || claim.object);
@@ -246,11 +381,14 @@ function EvidenceCard({ item, index }: { item: ViewpointSearchResult; index: num
       <footer>
         <details>
           <summary>证据与版本</summary>
-          <p>文本质量 {Math.round(item.quality_score * 100)}% · DocumentRevision {revision || "待核对"} · {extraction}</p>
+          <p>EvidenceSpan 已校验 · DocumentRevision {revision || "待核对"} · {extraction}</p>
         </details>
-        <Link className="button secondary" href={item.reader_url}>
-          查看原文并跳转 PDF <ArrowRight size={15} />
-        </Link>
+        <div className={styles.evidenceActions}>
+          <Link className="button secondary" href={item.reader_url}>
+            进入 Reader <ArrowRight size={15} />
+          </Link>
+          <Link className="button secondary" href={item.pdf_url}>打开 PDF</Link>
+        </div>
       </footer>
     </article>
   );
@@ -266,4 +404,9 @@ function listParam(value: string | string[] | undefined): string[] {
     .flatMap((item) => item.split(","))
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function numberParam(value: string | string[] | undefined): number | undefined {
+  const parsed = Number(firstParam(value));
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 3000 ? parsed : undefined;
 }

@@ -22,6 +22,7 @@ from django.db.models import Q
 
 from catalog.models import (
     Asset,
+    Contribution,
     Edition,
     EnrichmentCandidate,
     EnrichmentSourceClass,
@@ -40,6 +41,7 @@ from ingestion.services.entity_resolution_decisions import available_resolution_
 
 from .query_lexicon.registry import EntityKey, describe_entity
 from .research.contracts import WORKFLOW_FIELDS
+from .candidate_decision_protocol import attach_candidate_action_descriptors
 from .workflow_suggestion_policies import (
     SOURCE_PROFILES,
     SOURCE_PROFILE_VERSION,
@@ -138,6 +140,7 @@ def _metadata_tier(candidate: MetadataCandidate) -> tuple[str, str, bool]:
             "z39",
             "marc",
             "ncpssd",
+            "nlb_singapore",
         )
     ) or candidate.source_record_id:
         return "structured_source", value or "structured_provider", True
@@ -259,7 +262,7 @@ def _dto(
     if profile is None:
         profile = next((row for row in SOURCE_PROFILES.all() if row.tier == source_tier), SOURCE_PROFILES.get("general_web"))
     evidence_rows = evidence or []
-    return {
+    return attach_candidate_action_descriptors({
         "id": str(identifier),
         "step": step,
         "field": field,
@@ -288,7 +291,7 @@ def _dto(
         "verify_url": None,
         "available_actions": list(available_actions or ["inspect"]),
         "human_confirmation_required": True,
-    }
+    })
 
 
 class WorkflowSuggestionAggregator:
@@ -412,6 +415,7 @@ class WorkflowSuggestionAggregator:
                     ),
                 }
             )
+            attach_candidate_action_descriptors(row)
             rows.append(row)
         return rows
 
@@ -669,6 +673,8 @@ class WorkflowSuggestionAggregator:
             if existing is None or row.get("confidence", 0) > existing.get("confidence", 0):
                 deduplicated[key] = row
         rows = sorted(deduplicated.values(), key=_suggestion_sort_key)[:500]
+        for row in rows:
+            attach_candidate_action_descriptors(row)
         counts = Counter(row["source_tier"] for row in rows)
         return {
             "policy_version": WORKFLOW_SUGGESTION_POLICY_VERSION,
@@ -694,12 +700,25 @@ class WorkflowSuggestionAggregator:
         *,
         form_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        contributions = list(self.edition.contributions.select_related("person").values_list("person__preferred_name", flat=True)[:8])
+        contributions = list(
+            self.edition.contributions.select_related("person")
+            .order_by("order", "created_at")
+            .values_list("role", "person__preferred_name")[:24]
+        )
+        authors = [name for role, name in contributions if role == Contribution.Role.AUTHOR]
+        translators = [name for role, name in contributions if role == Contribution.Role.TRANSLATOR]
+        other_contributors = [
+            {"name": name, "role": role}
+            for role, name in contributions
+            if role not in {Contribution.Role.AUTHOR, Contribution.Role.TRANSLATOR}
+        ]
         context = {
             "title": self.work.title,
             "original_title": self.work.original_title,
             "canonical_terms": [value for value in (self.work.title, self.work.original_title, self.work.uniform_title) if value],
-            "authors": contributions,
+            "authors": authors,
+            "translators": translators,
+            "other_contributors": other_contributors,
             "publisher": self.edition.publisher,
             "journal_title": self.edition.journal_title,
             "publication_year": self.edition.publication_year,
@@ -903,6 +922,7 @@ class WorkflowSuggestionAggregator:
                                 web_suggestion["no_reliable_candidate_reason"] = (
                                     "当前字段还没有可将网页正文规范化为可采用候选的 FieldPolicy。"
                                 )
+                            attach_candidate_action_descriptors(web_suggestion)
                         stats.setdefault("web_suggestions", []).append(web_suggestion)
             except SoftTimeLimitExceeded:
                 raise
@@ -923,6 +943,8 @@ class WorkflowSuggestionAggregator:
                 [*payload["suggestions"], *stats["web_suggestions"]],
                 key=_suggestion_sort_key,
             )[:500]
+            for row in payload["suggestions"]:
+                attach_candidate_action_descriptors(row)
             counts = Counter(row["source_tier"] for row in payload["suggestions"])
             payload["groups"] = [
                 {"key": key, "label": SOURCE_TIER_LABELS[key], "count": counts.get(key, 0)}

@@ -226,6 +226,125 @@ def test_journal_bibliography_and_role_aware_contributors_save_independently(
 
 
 @pytest.mark.django_db
+def test_pending_contributor_and_optional_classification_are_advisory(
+    api_client,
+    admin_user,
+    settings,
+    tmp_path,
+):
+    _work, edition, _original, _normalized = create_item_with_files(
+        settings,
+        tmp_path,
+        title="候选不阻断人工保存",
+    )
+    item = make_item(admin_user, edition)
+    from catalog.models import Person
+
+    selected = Person.objects.create(
+        preferred_name="人工确认作者",
+        sort_name="人工确认作者",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
+    pending = EntityResolutionCandidate.objects.create(
+        upload_item=item,
+        target_type="person",
+        source_name="另一个 OCR 候选",
+        candidate_entity_type="person_draft",
+        label="新建草稿：另一个 OCR 候选",
+        match_score=0.35,
+    )
+    for index in range(9):
+        EntityResolutionCandidate.objects.create(
+            upload_item=item,
+            target_type="person",
+            source_name=f"未采用责任者候选 {index + 2}",
+            candidate_entity_type="person_draft",
+            label=f"新建草稿：未采用责任者候选 {index + 2}",
+            match_score=0.3,
+            supporting_properties={
+                "contribution_role": (
+                    Contribution.Role.TRANSLATOR
+                    if index % 2
+                    else Contribution.Role.AUTHOR
+                )
+            },
+        )
+    MetadataCandidate.objects.create(
+        upload_item=item,
+        field_name="authors",
+        value=["批量候选甲", "批量候选乙", "批量候选丙"],
+        source="front_matter_native_v1",
+        confidence=0.88,
+    )
+    api_client.force_authenticate(admin_user)
+
+    opened = api_client.get(f"/api/catalog/admin/intake/{item.id}/")
+    assert opened.data["data"]["contributors"]["items"] == []
+    person_candidates = [
+        row
+        for row in opened.data["candidates"]["entities"]
+        if row["target_type"] == "person"
+    ]
+    assert len(person_candidates) == 10
+    assert {row["role"] for row in person_candidates} == {
+        Contribution.Role.AUTHOR,
+        Contribution.Role.TRANSLATOR,
+    }
+    author_bundle = next(
+        row
+        for row in opened.data["candidates"]["metadata"]
+        if row["field_name"] == "authors"
+    )
+    assert author_bundle["available_actions"] == ["inspect", "reject"]
+    response = api_client.patch(
+        f"/api/catalog/admin/intake/{item.id}/sections/contributors/",
+        {
+            "data": {
+                "items": [
+                    {
+                        "person_id": str(selected.id),
+                        "role": Contribution.Role.AUTHOR,
+                        "order": 0,
+                    }
+                ],
+                "expected_updated_at": opened.data["data"]["contributors"]["expected_updated_at"],
+                "expected_work_updated_at": opened.data["data"]["contributors"]["expected_work_updated_at"],
+            }
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert Contribution.objects.filter(
+        edition=edition,
+        person=selected,
+        approved=True,
+    ).exists()
+    assert len(response.data["data"]["contributors"]["items"]) == 1
+    assert response.data["data"]["contributors"]["items"][0]["person_id"] == str(
+        selected.id
+    )
+    pending.refresh_from_db()
+    assert pending.status == EntityResolutionCandidate.Status.PROPOSED
+    contributor_step = next(
+        row for row in response.data["workflow"]["steps"] if row["key"] == "contributors"
+    )
+    assert contributor_step["status"] == "complete"
+    unresolved = next(
+        row for row in contributor_step["issues"] if row["code"] == "contributors_unresolved"
+    )
+    assert unresolved["severity"] == "warning"
+    classification_step = next(
+        row for row in response.data["workflow"]["steps"] if row["key"] == "classification"
+    )
+    primary_missing = next(
+        row for row in classification_step["issues"] if row["code"] == "primary_discipline_missing"
+    )
+    assert classification_step["status"] != "blocked"
+    assert primary_missing["severity"] == "warning"
+
+
+@pytest.mark.django_db
 def test_maintenance_mode_work_library_and_permissions(
     api_client,
     admin_user,

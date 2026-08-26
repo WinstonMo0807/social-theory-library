@@ -18,6 +18,9 @@ from catalog.models import (
 from catalog.services.dependency_engine import record_canonical_change
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.research.feedback import record_intelligence_feedback
+from catalog.services.candidate_decision_protocol import (
+    attach_candidate_action_descriptors,
+)
 
 
 MAX_ACTIVE_DECISIONS = 5
@@ -204,14 +207,14 @@ def high_value_claim_candidates(
     ):
         selected = next((row for row in candidates if row[2]["curated_kind"] == kind), None)
         if selected:
-            output.append(selected[2])
+            output.append(attach_candidate_action_descriptors(selected[2]))
             chosen_ids.add(str(selected[1].id))
     for _score, claim, payload in candidates:
         if len(output) >= bounded_limit:
             break
         if str(claim.id) in chosen_ids:
             continue
-        output.append(payload)
+        output.append(attach_candidate_action_descriptors(payload))
         chosen_ids.add(str(claim.id))
     return output[:bounded_limit]
 

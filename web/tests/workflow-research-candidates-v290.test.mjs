@@ -42,31 +42,38 @@ test("research leads cannot be selected or treated as evidence", () => {
   assert.equal(canDirectlySelectResearchSuggestion({ id: "pdf", entity_id: "entity", source_tier: "pdf_evidence" }), false);
 });
 
-test("classification and knowledge use the research picker without manual UUID fields", async () => {
+test("classification and converged curation use research-backed object pickers", async () => {
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
+  const curation = await readFile(new URL("../components/admin/curation/work-curation-editor.tsx", import.meta.url), "utf8");
   assert.match(editor, /ResearchSuggestionPanel[\s\S]*step="classification"/);
   assert.match(editor, /ResearchEntityPicker[\s\S]*?label="主要学科"/);
-  assert.match(editor, /ResearchEntityPicker[\s\S]*?label="关联对象"/);
   assert.doesNotMatch(editor, /label="正式对象 ID"/);
   assert.match(editor, /step="curation"/);
   assert.match(editor, /step="bibliography"/);
+  assert.match(editor, /<WorkCurationEditor/);
+  assert.match(curation, /知识策展与前台联动/);
+  assert.match(curation, /CandidateDecisionBar/);
+  assert.match(curation, /ResearchEntityPicker[\s\S]*搜索现有阅读路径/);
 });
 
-test("front matter authors and translators enter the contributor draft with explicit roles", async () => {
+test("front matter authors and translators stay role-aware and require an individual decision", async () => {
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
   assert.match(editor, /\["authors", "translators"\]\.includes\(field\)/);
   assert.match(editor, /field === "authors" \? "author" : "translator"/);
-  assert.match(editor, /update\("contributors", "items"/);
-  assert.match(editor, /创建学者主页或仅添加为责任者/);
+  assert.match(editor, /请在责任者候选中逐项核对并只采用需要的人物/);
+  assert.match(editor, /创建新学者主页或仅添加为责任者/);
 });
 
 test("candidate inspector separates evidence, match basis and lexicon impact", async () => {
   const inspector = await readFile(new URL("../components/admin/inspector/workflow-inspector.tsx", import.meta.url), "utf8");
+  const actions = await readFile(new URL("../components/admin/research/candidate-action-contract.ts", import.meta.url), "utf8");
   assert.match(inspector, /匹配依据/);
   assert.match(inspector, /词典影响/);
   assert.match(inspector, /搜索摘要不是 Evidence/);
   assert.match(inspector, /QueryLexicon sync/);
-  assert.match(inspector, /candidate\.decision_url/);
+  assert.match(inspector, /decision_descriptor/);
+  assert.match(inspector, /EvidenceEnvelopeCard/);
+  assert.match(actions, /candidate\.decision_url/);
 });
 
 test("entity picker supports keyboard entry and human-readable status", async () => {
@@ -90,15 +97,21 @@ test("step research is a shared action and does not navigate away from workflow"
 
 test("candidate workspace exposes every result and converts evidenced web leads before adoption", async () => {
   const panel = await readFile(new URL("../components/admin/research/research-suggestion-panel.tsx", import.meta.url), "utf8");
+  const decisionBar = await readFile(new URL("../components/admin/research/candidate-decision-bar.tsx", import.meta.url), "utf8");
+  const actionContract = await readFile(new URL("../components/admin/research/candidate-action-contract.ts", import.meta.url), "utf8");
+  const shared = `${panel}\n${decisionBar}\n${actionContract}`;
   assert.match(panel, /expanded \? rows : rows\.slice\(0, 5\)/);
   assert.match(panel, /展开全部 \$\{rows\.length\} 项/);
   assert.match(panel, /candidate\.verify_url/);
   assert.match(panel, /candidate\.verify_payload/);
   assert.match(panel, /research\/candidates\/\$\{encodeURIComponent/);
-  assert.match(panel, /核实此结果/);
-  assert.match(panel, /修改后采用/);
-  assert.match(panel, /查看依据/);
-  assert.match(panel, /拒绝\/不采用/);
+  assert.match(shared, /核实此结果/);
+  assert.match(shared, /修改后采用/);
+  assert.match(shared, /查看依据/);
+  assert.match(shared, /拒绝\/不采用/);
+  assert.match(panel, /<CandidateDecisionBar/);
+  assert.match(decisionBar, /确认修改并采用/);
+  assert.match(actionContract, /action_descriptors/);
   assert.match(panel, /ToastHost/);
 });
 

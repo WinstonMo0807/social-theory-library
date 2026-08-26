@@ -1,12 +1,12 @@
 # 后台管理员使用指南
 
-更新日期：2026-08-19
-适用版本：2.8.0 源码与本地预览；生产仍为 2.7.1
+更新日期：2026-08-26
+适用版本：3.0.2 源码。3.0.2 生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 为准
 
 ## 1. 使用边界
 
 - [SOURCE] 本指南只描述当前代码中已经存在的页面、权限和操作。
-- [LIVE] 2.8 尚未部署。下列页面已通过本地真实浏览器，生产仍需在每次发布后用真实角色重新核对，不能用本地截图代替公网权限验证。
+- [LIVE] 3.0.1 当前已部署。3.0.2 的新页面和动作需在正式切换后用真实角色重新核对，不能用本地测试代替公网权限验证。
 - [SOURCE] 上传、元数据复核、发布、OCR、页码和语义索引使用同一套馆藏记录。保存元数据不会自动发布。
 - [SOURCE] 原始 PDF、人工锁定字段、已确认关系、读者笔记和数据卷不得因日常操作被覆盖或删除。
 
@@ -14,10 +14,10 @@
 
 | 角色 | 当前可执行的主要操作 | 不能执行的操作 |
 | --- | --- | --- |
-| 管理员 `admin` | 查看全部后台页；上传、复核、重试、替换；最终发布、下架、移除入库记录；系统健康、语义索引、设置和用户管理 | 无额外业务限制，仍受技术 blocker 和服务端校验约束 |
-| 编辑 `editor` | 创建上传批次、上传文件、导入标准书目、复核元数据、处理实体候选、刷新外部候选、重试处理；维护现有权限允许的馆藏和知识内容 | 不能最终发布、下架或移除入库记录；管理员专用页面不在导航中显示 |
-| 审核者 `reviewer` | 查看上架记录和处理状态；执行当前 API 允许的元数据与知识审核 | 不能上传、重试、替换、发布、下架或移除入库记录；管理员专用页面不显示 |
-| 读者 `reader` | 使用公开站点和本人阅读中心 | 不能进入后台 |
+| Administrator | Editor 的全部操作；全馆 Knowledge 管理、Processing Center、普通用户管理和安全恢复 | Provider secret、角色提升、backup/restore 和破坏性全局维护仍只属于 Owner |
+| Editor | 上传、编辑、Research、Candidate decision、策展，以及授权范围内的单人发布 | 不能管理敏感 Provider、角色提升和破坏性系统操作 |
+| Reader | 使用公开站点和本人阅读中心 | 不能进入后台 |
+| System Owner | 当前唯一 Winston 身份；可管理 Provider secret、敏感 AI runtime、破坏性 Prompt、Authority merge、backup/restore 与角色提升 | 不是可分配的普通角色 |
 
 后台前端会按 capability 隐藏无权限入口，服务端仍会再次校验。角色只用于组织一组 capability，不要只依赖按钮是否显示或直接比较角色名称。
 
@@ -27,11 +27,11 @@
 
 | 分组 | 页面 |
 | --- | --- |
-| 工作 | 今日工作、上传与批次、待处理、发布准备、候选审核 |
+| 工作 | 今日工作、上传与上架、待处理、发布准备 |
 | 馆藏 | 作品、版本与文件、馆藏质量 |
-| 知识 | 学者、学科、子学科、理论与概念、主题、关系与时间轴、QueryLexicon、语义索引 |
+| 知识 | Knowledge Studio、学者、学科、理论传统、主题 |
 | 策展 | 阅读路径、推荐 |
-| 系统 | Processing、System Status、Backup / Storage、Audit、Users / Permissions、Runtime Settings。无 capability 的入口不显示 |
+| 系统 | Processing Center、备份与存储、审计与统计、用户与权限、系统设置。无 capability 的入口不显示 |
 
 各入口的日常职责、source-of-truth 与兼容情况见 [back-office-function-matrix.md](back-office-function-matrix.md)。页面存在不等于当前角色有 mutation 权限，QueryLexicon 和 Semantic Index 对普通 Admin 可以只读。
 
@@ -39,9 +39,19 @@
 
 上传完成并建立 Work / Edition 后，进入 `/admin/intake/<itemId>`。正常操作不再跳转 Scholar、Theory、Reading Path 或 Publication 页面。左侧 step rail 可回到任何步骤，当前步骤展开，已完成步骤折叠，下一步骤显示提示。保存并继续会重新读取后端 workflow；存在 blocker 时留在原步骤并定位问题。
 
-固定顺序为文件与识别、作品、书目与出版、责任者、社科分类、理论与主题、阅读文件、策展、发布。策展可以选择“暂不策展并继续”，不构成发布 blocker。发布可选择处理下一项或留在当前项；留在当前项会进入 `/admin/library/works/<workId>`，继续使用同一 Editor Engine。
+固定顺序为文件与识别、作品与版本、作者与责任者、学科与理论定位、核心观点与批评回应、主题与争论、阅读路径、发布与投影。后四类知识策展默认不构成发布 blocker。最后一步提供保存草稿、预览、发布前检查和发布作品。
 
-候选和 evidence 通过右侧 Inspector 核对。正式 Person、Discipline、Theory、Topic、KnowledgeNode 与解释性关系仍需人工决定；置信度不会自动变成 canonical knowledge。Canonical 字段保存前显示未保存计数，Ctrl/Cmd+S 可保存，离开未保存工作会提示。
+候选和 Evidence 通过当前工作面及右侧 Inspector 核对。两处都使用后端 `CandidateDecisionProtocol` 返回的采用、修改后采用、查看依据、稍后处理、不采用或核实此结果。Web discovery lead 在取得正文 Evidence 前不能采用。正式 Person、Discipline、Theory、Topic、KnowledgeNode 与解释性关系仍需人工决定；置信度不会自动变成 Canonical。离开未保存工作时可以保存草稿并退出、不保存并退出或继续编辑。
+
+## 3.1 五种页面模式
+
+- Directory 用于 Scholar、Discipline、Theory、Topic 和 Work 查找与状态浏览。
+- Object Workspace 在同页提供正式内容、草稿、Evidence、Claims、关系、Candidate、Frontend Impact 和 Preview。
+- Queue 与 Inspector 用于待处理、发布准备、关系审核和知识更新。
+- Workbench 完成一本作品从文件到发布的全部工作。
+- Processing Center 解释 Research Source、AI、OCR、Worker、Projection 与恢复对用户功能的影响。
+
+Knowledge Studio 是知识健康与跨对象控制工作面，不取代四个一级对象入口。Knowledge Growth 只显示少量新的 Evidence、Claim 与候选信号；采用仍调用原有专业决定服务。Provider credential 只有 Owner 可以更新，前端不会回显原值。Claim Gold 由管理员逐条标注真实查询和 Evidence，不是自动生成任务。
 
 ### 4.1 创建上传批次
 
