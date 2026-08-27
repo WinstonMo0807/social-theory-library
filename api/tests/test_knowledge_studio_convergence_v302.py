@@ -68,7 +68,10 @@ def _objects():
         definition="争论问题",
         status="published",
     )
-    person = Person.objects.create(preferred_name="Studio 学者")
+    person = Person.objects.create(
+        preferred_name="Studio 学者",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
     scholar = ScholarProfile.objects.create(
         person=person,
         slug="studio-scholar-v302",

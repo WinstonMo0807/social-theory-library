@@ -132,6 +132,15 @@ def public_work_queryset() -> QuerySet:
     )
 
 
+def public_scholar_queryset() -> QuerySet:
+    """The single public-visibility rule for ScholarProfile consumers."""
+
+    return ScholarProfile.objects.filter(
+        editorial_status="published",
+        person__authority_status=Person.AuthorityStatus.VERIFIED,
+    ).select_related("person")
+
+
 def _lexicon_entity_ids(
     query: str,
     *,
@@ -265,8 +274,7 @@ class SearchService:
             )
             if public:
                 queryset = queryset.filter(
-                    editorial_status="published",
-                    person__authority_status=Person.AuthorityStatus.VERIFIED,
+                    pk__in=public_scholar_queryset().values("pk")
                 )
             else:
                 queryset = queryset.exclude(

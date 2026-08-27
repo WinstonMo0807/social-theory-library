@@ -294,7 +294,10 @@ def test_semantic_index_job_is_partial_when_vector_backend_fails(settings):
 @pytest.mark.django_db
 def test_site_stats_are_dynamic_and_include_version(api_client):
     create_asset("动态统计", "g")
-    person = Person.objects.create(preferred_name="测试学者")
+    person = Person.objects.create(
+        preferred_name="测试学者",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
     ScholarProfile.objects.create(person=person, slug="test-scholar", editorial_status="published")
     TheorySchool.objects.create(name="测试流派", slug="test-theory", editorial_status="published")
     Topic.objects.create(name="测试专题", slug="test-topic", editorial_status="published")
@@ -303,7 +306,7 @@ def test_site_stats_are_dynamic_and_include_version(api_client):
     assert response.data["documents"] == 1
     assert response.data["scholars"] == 1
     assert response.data["knowledge_objects"] == 2
-    assert response.data["version"] == "3.0.2"
+    assert response.data["version"] == "3.0.3"
     assert "年" in response.data["last_updated_label"]
 
 

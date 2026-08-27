@@ -551,7 +551,7 @@ export function KnowledgeWorkspace() {
       </header>
 
       <section className="knowledge-studio-quick-links" aria-label="知识专门工作区">
-        <Link href="/admin/theory-nodes">理论与概念</Link><Link href="/admin/scholars">学者</Link><Link href="/admin/subdisciplines">子学科</Link><Link href="/admin/topics">主题</Link><Link href="/admin/library">重要作品</Link><Link href="/admin/theory-relations">关系</Link><Link href="/admin/theory-timeline">时间轴</Link><Link href="/admin/reading-paths">阅读路径</Link>
+        <Link href="/admin/theories">理论与概念</Link><Link href="/admin/scholars">学者</Link><Link href="/admin/subdisciplines">子学科</Link><Link href="/admin/topics">主题</Link><Link href="/admin/library">重要作品</Link><Link href="/admin/theory-relations">关系</Link><Link href="/admin/theory-timeline">时间轴</Link><Link href="/admin/reading-paths">阅读路径</Link>
       </section>
 
       {payload ? <section className="knowledge-studio-overview">

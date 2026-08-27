@@ -27,7 +27,7 @@ import {
   type ActionState,
 } from "./action-feedback";
 import { ConfirmDialog } from "./confirm-dialog";
-import { FunctionalHealthPanel } from "./functional-health-panel";
+import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 
 type Attempt = {
   id: string;
@@ -216,6 +216,22 @@ const reviewTypeLabels: Record<string, string> = {
   publication: "发布检查",
 };
 
+const PROCESSING_SURFACES = [
+  { key: "overview", label: "总览" },
+  { key: "research-sources", label: "Research Sources" },
+  { key: "ai-models", label: "AI 与模型" },
+  { key: "documents", label: "OCR 与文档" },
+  { key: "workers", label: "任务与 Worker" },
+  { key: "projections", label: "Projection 一致性" },
+  { key: "faults", label: "故障与恢复" },
+] as const;
+
+type ProcessingSurface = (typeof PROCESSING_SURFACES)[number]["key"];
+
+function isProcessingSurface(value: string | null): value is ProcessingSurface {
+  return PROCESSING_SURFACES.some((surface) => surface.key === value);
+}
+
 const stageLabels: Record<string, string> = {
   received: "等待处理",
   validating: "校验 PDF",
@@ -259,6 +275,7 @@ export function ProcessingCenter() {
   const [jobType, setJobType] = useState("");
   const [jobStatus, setJobStatus] = useState("");
   const [filtersReady, setFiltersReady] = useState(false);
+  const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("overview");
   const [revision, setRevision] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<ProcessingItem | null>(null);
   const [actionPending, setActionPending] = useState(false);
@@ -348,6 +365,8 @@ export function ProcessingCenter() {
       setJobType(parameters.get("type") ?? "");
       setJobStatus(parameters.get("status") ?? "");
       setReviewStatus(parameters.get("review_status") ?? "pending");
+      const requestedSurface = parameters.get("surface");
+      if (isProcessingSurface(requestedSurface)) setActiveSurface(requestedSurface);
       setFiltersReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -359,8 +378,9 @@ export function ProcessingCenter() {
     if (jobType) url.searchParams.set("type", jobType); else url.searchParams.delete("type");
     if (jobStatus) url.searchParams.set("status", jobStatus); else url.searchParams.delete("status");
     if (reviewStatus) url.searchParams.set("review_status", reviewStatus); else url.searchParams.delete("review_status");
+    if (activeSurface === "overview") url.searchParams.delete("surface"); else url.searchParams.set("surface", activeSurface);
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }, [filtersReady, jobStatus, jobType, reviewStatus]);
+  }, [activeSurface, filtersReady, jobStatus, jobType, reviewStatus]);
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => void load(), 0);
@@ -570,6 +590,7 @@ export function ProcessingCenter() {
     failed: statusCounts.failed,
     succeeded: statusCounts.succeeded,
   }), [items, statusCounts]);
+  const healthSurface: FunctionalHealthSurface | null = activeSurface === "documents" ? null : activeSurface;
 
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
@@ -587,51 +608,63 @@ export function ProcessingCenter() {
           ><RefreshCw size={15} />刷新</ActionButton>
         </div>
       </header>
-      <nav className="processing-type-tabs" aria-label="Processing Center 工作面">
-        {[
-          ["processing-overview", "总览"],
-          ["processing-research-sources", "Research Sources"],
-          ["processing-ai-models", "AI 与模型"],
-          ["processing-documents", "OCR 与文档"],
-          ["processing-workers", "任务与 Worker"],
-          ["processing-projections", "Projection 一致性"],
-          ["processing-faults-recovery", "故障与恢复"],
-        ].map(([target, label]) => (
-          <button type="button" key={target} onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{label}</button>
+      <nav className="processing-type-tabs processing-center-surfaces" aria-label="Processing Center 工作面" role="tablist">
+        {PROCESSING_SURFACES.map((surface) => (
+          <button
+            type="button"
+            id={`processing-surface-tab-${surface.key}`}
+            className={activeSurface === surface.key ? "active" : ""}
+            aria-controls={`processing-surface-${surface.key}`}
+            aria-selected={activeSurface === surface.key}
+            role="tab"
+            key={surface.key}
+            onClick={() => setActiveSurface(surface.key)}
+          >
+            {surface.label}
+          </button>
         ))}
       </nav>
-      <FunctionalHealthPanel revision={revision} />
-      <section className="processing-summary" id="processing-documents">
+      <div
+        className="processing-center-surface"
+        id={`processing-surface-${activeSurface}`}
+        role="tabpanel"
+        aria-labelledby={`processing-surface-tab-${activeSurface}`}
+        tabIndex={0}
+      >
+      {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
+      {activeSurface === "overview" ? <section className="processing-summary">
         <article><Clock3 size={18} /><strong>{summary.active}</strong><span>等待或运行</span></article>
         <article><FileText size={18} /><strong>{summary.review}</strong><span>待复核</span></article>
         <article><AlertCircle size={18} /><strong>{summary.failed}</strong><span>失败</span></article>
         <article><CheckCircle2 size={18} /><strong>{summary.succeeded}</strong><span>成功</span></article>
-      </section>
-      <div className="processing-health-grid">
-        {queueHealth ? (
+      </section> : null}
+      {activeSurface === "overview" || activeSurface === "workers" || activeSurface === "ai-models" || activeSurface === "documents" ? (
+      <div className={`processing-health-grid ${activeSurface === "overview" ? "" : "single"}`}>
+        {(activeSurface === "overview" || activeSurface === "workers" || activeSurface === "documents") && queueHealth ? (
           <section className={`processing-health ${!queueHealth.healthy || queueHealth.stalled_count ? "warning" : ""}`} role="status">
             <Cpu size={18} /><div><strong>{queueHealth.mode === "inline" ? "本地同步处理" : "后台工作者"}</strong><span>{queueHealth.message}</span></div>
             <dl><div><dt>worker</dt><dd>{queueHealth.worker_online ? "在线" : "未确认"}</dd></div><div><dt>OCR</dt><dd>{queueHealth.ocr.reachable ? "可用" : queueHealth.ocr.detail}</dd></div></dl>
           </section>
         ) : null}
-        <section className={`processing-semantic-health ${semanticHealth?.model_health.available === false ? "warning" : ""}`}>
+        {activeSurface === "overview" || activeSurface === "ai-models" ? <section className={`processing-semantic-health ${semanticHealth?.model_health.available === false ? "warning" : ""}`}>
           <Search size={18} />
           <div><strong>{semanticHealth?.model_health.available === true ? "当前语义模型可用" : semanticHealth?.model_health.available === false ? "当前语义模型不可用" : "语义模型状态待确认"}</strong><span>{semanticHealth?.model_health.reason || "未能读取当前运行配置。"}</span></div>
           {semanticHealth ? <dl><div><dt>模型</dt><dd>{semanticHealth.runtime.model_repo_id || semanticHealth.runtime.model}</dd></div><div><dt>混合检索权重</dt><dd>{Math.round(semanticHealth.runtime.semantic_ratio * 100)}%</dd></div><div><dt>运行方式</dt><dd>{semanticHealth.runtime.offline_mode ? "NAS 离线模型" : "允许联网"}</dd></div></dl> : null}
           {semanticHealth ? <p>混合检索权重只表示关键词与语义结果的融合参数，不是检索质量分数。</p> : null}
           {semanticHealth?.model_health.available === true && historicalNetworkFailures ? <p>下方仍有 {historicalNetworkFailures} 条旧的 Hugging Face 网络错误。它们是历史任务记录，不代表当前离线模型失效。</p> : null}
           <Link href="/admin/semantic-index">打开语义索引诊断 <ChevronRight size={14} /></Link>
-        </section>
+        </section> : null}
       </div>
-      <section className="processing-list admin-panel" aria-labelledby="workload-controls-title">
+      ) : null}
+      {activeSurface === "documents" || activeSurface === "research-sources" ? <section className="processing-list admin-panel" aria-labelledby="workload-controls-title">
         <header className="processing-job-toolbar">
           <div>
-            <h2 id="workload-controls-title">NAS 负载控制</h2>
-            <p>暂停不会强制终止 worker。OCR 会先保存当前页批次，联网补充会在下一个来源请求前停下。</p>
+            <h2 id="workload-controls-title">{activeSurface === "documents" ? "OCR 负载控制" : "联网研究负载"}</h2>
+            <p>{activeSurface === "documents" ? "暂停不会强制终止 worker。OCR 会先保存当前页批次。" : "联网补充会在下一个来源请求前停下，不会丢失已取得的 Evidence。"}</p>
           </div>
         </header>
         <div className="admin-action-row">
-          {(["ocr", "external_enrichment"] as const).map((type) => {
+          {(activeSurface === "documents" ? ["ocr"] as const : ["external_enrichment"] as const).map((type) => {
             const paused = Boolean(workloads[type]?.paused);
             return (
               <ActionButton
@@ -651,8 +684,8 @@ export function ProcessingCenter() {
             );
           })}
         </div>
-      </section>
-      <section className="processing-list admin-panel processing-ocr-inventory" aria-labelledby="paused-ocr-inventory-title">
+      </section> : null}
+      {activeSurface === "documents" ? <section className="processing-list admin-panel processing-ocr-inventory" aria-labelledby="paused-ocr-inventory-title">
         <header className="processing-job-toolbar">
           <div><h2 id="paused-ocr-inventory-title">历史暂停 OCR</h2><p>系统按当前文件、页面和 DocumentRevision 事实逐条分类。每项决定都需要理由并写入审计记录。</p></div>
           <span>{pausedOCRInventory?.total ?? 0} 项</span>
@@ -678,10 +711,10 @@ export function ProcessingCenter() {
           })}
           {!loading && !(pausedOCRInventory?.items.length) ? <p className="admin-list-state">当前没有来源不明的历史暂停 OCR 任务。</p> : null}
         </div>
-      </section>
+      </section> : null}
       {loading && !items.length && !jobs.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
       <AsyncStatus state="error" message={error} assertive />
-      <section className="processing-list admin-panel processing-review-queue" aria-labelledby="processing-review-title">
+      {activeSurface === "workers" ? <section className="processing-list admin-panel processing-review-queue" aria-labelledby="processing-review-title">
         <header className="processing-job-toolbar">
           <div><h2 id="processing-review-title">人工审核队列</h2><p>元数据冲突、同名人物、实体消歧和页码问题集中在这里处理。</p></div>
           <span>{reviewTasks.length} 项</span>
@@ -715,8 +748,8 @@ export function ProcessingCenter() {
           ))}
           {!loading && !reviewTasks.length ? <p className="admin-list-state">当前状态下没有人工审核任务。</p> : null}
         </div>
-      </section>
-      <section className="processing-list admin-panel processing-job-list" id="processing-task-list">
+      </section> : null}
+      {activeSurface === "workers" ? <section className="processing-list admin-panel processing-job-list" id="processing-task-list">
         <header className="processing-job-toolbar"><div><h2>后台任务</h2><p>先选择类型，再按运行状态缩小范围。</p></div><span>{filteredJobs.length} / {jobs.length} 项</span></header>
         <nav className="processing-type-tabs" aria-label="任务类型筛选">
           <button type="button" className={!jobType ? "active" : ""} aria-pressed={!jobType} onClick={() => setJobType("")}>全部 <strong>{jobs.length}</strong></button>
@@ -746,8 +779,8 @@ export function ProcessingCenter() {
           ))}
           {!loading && !filteredJobs.length ? <p className="admin-list-state">当前筛选条件下没有任务。</p> : null}
         </div>
-      </section>
-      <section className="processing-list admin-panel processing-upload-list">
+      </section> : null}
+      {activeSurface === "documents" ? <section className="processing-list admin-panel processing-upload-list">
         <header><div><h2>上传流程记录</h2><p>这里保留文件入库、复核和发布入口，处理任务在上方查看。</p></div></header>
         {items.map((item) => {
           const latest = item.attempts[0];
@@ -760,7 +793,8 @@ export function ProcessingCenter() {
           );
         })}
         {!loading && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
-      </section>
+      </section> : null}
+      </div>
       <ToastHost
         items={feedback.message ? [{ id: feedback.actionKey || "processing", state: feedback.state === "idle" ? "success" : feedback.state, message: feedback.message }] : []}
         onDismiss={() => setFeedback(EMPTY_PROCESSING_FEEDBACK)}

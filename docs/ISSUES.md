@@ -1,6 +1,16 @@
 # 当前问题
 
-更新日期为 2026-08-26。状态依据当前源码、已有测试和可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
+更新日期为 2026-08-28。状态依据当前源码、已有测试和可重复的生产检查。`待核实` 表示本轮没有运行对应环境或权限路径，不能改写为通过。
+
+## 3.0.3 当前真实限制
+
+- 公开 Scholar 缺失的根因已确认。生产有 4 个 published ScholarProfile，但对应 Person 均为 draft。源码修复和有界收敛命令已完成。正式 apply 只能在 fresh backup、dry-run 数量匹配和新镜像就绪后执行。
+- PublicPageContract 当前覆盖 Scholar 9 页、Theory 7 页、Topic 8 页，路由与管理字段审计均为 100%。旧 `/theory-schools` 路由、Topic 的旧 Theory 补充和 Scholar curation 中的旧 Theory ID 仍是明确兼容层。退役需要 normalized mapping 完整并连续观察没有旧读取需求。
+- Reader focus 的生产 EvidenceSpan 共有 3,735 条，active 且 bbox 为空的数量为 0。源码与测试已覆盖 passage locator 和拒绝无关同页匹配。部署后仍需用真实 Viewpoint、原文检索和 Ask 结果逐条核对高亮，不能只以 URL 包含参数认定通过。
+- Claim Gold 仍为空，21 个 `llm_small` demand 继续等待 capability，且全部不阻断发布。3.0.3 不启用 AI、4070 或 Claim 默认排序。
+- OCR 全局暂停仍为 true，6 个 OCR job 为 paused。部署必须保持这些 ID 和状态不变，不得 Resume All。
+- NLB、NCPSSD、Z39.50、CNKI、维普和万方的合法凭据或使用规则仍未补齐。Processing Center 应显示降级，不得把缺少 optional Provider 写成核心书库不可用。
+- 正常 Administrator 登录下的 protected Preview 和 Processing Center 需要部署后浏览器验收。匿名路径只能证明拒绝访问，不能替代真实管理员会话。
 
 ## 3.0.2 当前真实限制
 

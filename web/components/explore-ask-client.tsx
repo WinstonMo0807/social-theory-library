@@ -20,6 +20,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { ApiRequestError, apiRequest, apiStreamRequest, getServerSessionCredential } from "@/lib/api";
+import { SearchModeSwitch } from "@/components/search-mode-switch";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 
 type AssistMode = "auto" | "on" | "off";
@@ -108,22 +109,11 @@ function collectionResults<T>(payload: Collection<T>) {
   return Array.isArray(payload) ? payload : payload.results ?? [];
 }
 
-function AskModeSwitch({ query }: { query: string }) {
-  const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
-  return (
-    <nav className="search-mode-switch" aria-label="检索方式">
-      <Link href={`/explore/original${suffix}`}><span><strong>原文检索</strong></span></Link>
-      <Link href={`/explore/opinions${suffix}`}><span><strong>观点检索</strong></span></Link>
-      <Link className="active" href={`/explore/ask${suffix}`} aria-current="page"><span><strong>向书库提问</strong></span></Link>
-    </nav>
-  );
-}
-
 function AskLibraryIntro({ query }: { query: string }) {
   return (
     <section className="ask-library-intro">
       <div>
-        <AskModeSwitch query={query} />
+        <SearchModeSwitch mode="ask" query={query} />
         <h1>向书库提问</h1>
         <span aria-hidden="true" />
         <p>基于已发布馆藏继续追问，并逐条核对回答所依据的来源。</p>
@@ -684,7 +674,7 @@ export function ExploreAskClient({
     return (
       <section className="ask-configuration-workspace" aria-labelledby="ask-configuration-heading">
         <aside className="ask-configuration-steps">
-          <AskModeSwitch query={initialQuestion} />
+          <SearchModeSwitch mode="ask" query={initialQuestion} />
           <h1 id="ask-configuration-heading">向书库提问</h1>
           <span aria-hidden="true" />
           <p>注册读者可以在本页配置自己的云端模型。密钥只会在本次请求中提交给书库服务器，并以加密形式保存，页面不会回显。</p>

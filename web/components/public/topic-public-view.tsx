@@ -49,8 +49,8 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
     <>
       <main className="page-shell topic-problem-page">
         <p className="breadcrumbs"><Link href="/topics">研究主题</Link> / {topic.name}</p>
-        <section className="topic-problem-hero">
-          <div>
+        <section className="topic-problem-hero" data-module-id="topic-identity">
+          <div data-module-id="topic-problem">
             <p className="eyebrow">研究主题</p>
             <h1>{topic.name}</h1>
             <p>{topic.problemStatement || topic.description || "该研究主题的说明尚待管理员编辑。"}</p>
@@ -73,11 +73,11 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
           <SaveTopicButton topicId={topic.id} />
         </section>
 
-        <CuratedClaimSections groups={topic.curatedClaims} />
+        <div data-module-id="topic-curated-claims"><CuratedClaimSections groups={topic.curatedClaims} /></div>
 
         <div className="topic-problem-layout">
           <div className="topic-problem-main">
-            <section className="topic-analysis-grid">
+            <section className="topic-analysis-grid" data-module-id="topic-framework">
               <article className="panel"><MessagesSquare size={22} /><SectionHeading title="研究对象与核心问题" /><TextItems items={topic.coreQuestions} empty="核心问题尚待管理员确认。" /></article>
               <article className="panel"><CircleDot size={22} /><SectionHeading title="形成与发展" /><p>{topic.formationContext || "形成背景尚待管理员编辑。"}</p></article>
               <article className="panel"><Grid2X2 size={22} /><SectionHeading title="主要研究维度" /><TextItems items={topic.researchDimensions} empty="研究维度尚待管理员确认。" /></article>
@@ -85,7 +85,7 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
             </section>
 
             <section className="topic-relations-row">
-              <article className="panel">
+              <article className="panel" data-module-id="topic-theories">
                 <SectionHeading title="理论、概念与争论" href={`/topics/${topic.slug}/theory-schools`} />
                 {theorySchools.slice(0, 3).map((theory) => (
                   <Link className="topic-relation-link" href={theory.href} key={theory.slug}>
@@ -100,7 +100,7 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
                 ))}
                 {!theorySchools.length && !relatedKnowledge.length ? <p className="empty-state">尚无经过确认的知识关系。</p> : null}
               </article>
-              <article className="panel">
+              <article className="panel" data-module-id="topic-subdisciplines">
                 <SectionHeading title="相关子学科" href="/subdisciplines" />
                 {topic.subdisciplines.slice(0, 5).map((item) => (
                   <Link className="topic-relation-link" href={`/subdisciplines/${item.slug}`} key={item.id}>
@@ -109,7 +109,7 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
                 ))}
                 {!topic.subdisciplines.length ? <p className="empty-state">尚无经过确认的子学科关系。</p> : null}
               </article>
-              <article className="panel">
+              <article className="panel" data-module-id="topic-scholars">
                 <SectionHeading title="代表学者" href={`/topics/${topic.slug}/scholars`} />
                 {scholars.slice(0, 4).map((scholar) => (
                   <Link className="topic-scholar-link" href={`/scholars/${scholar.slug}`} key={scholar.slug}>
@@ -121,25 +121,25 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
             </section>
 
             {excerpt ? (
-              <section className="panel topic-evidence-spotlight">
+            <section className="panel topic-evidence-spotlight" data-module-id="topic-evidence">
                 <SectionHeading title="主题相关原文" />
                 <blockquote><Quote size={24} />{excerpt.snippet}</blockquote>
                 {topic.curated.featuredPassageReason ? <p>入选说明：{topic.curated.featuredPassageReason}</p> : null}
                 <cite>《{excerpt.title}》，PDF 第 {excerpt.pageIndex} 页</cite>
-                <Link className="button secondary" href={`/reader/${excerpt.assetId}?page=${excerpt.pageIndex}`}>回到原页 <ArrowRight size={16} /></Link>
+                <Link className="button secondary" href={`/reader/${excerpt.assetId}?page=${excerpt.pageIndex}&passage=${encodeURIComponent(excerpt.id)}`}>阅读原文 <ArrowRight size={16} /></Link>
               </section>
             ) : null}
           </div>
 
           <aside className="topic-problem-aside">
-            <section className="panel">
+            <section className="panel" data-module-id="topic-works">
               <SectionHeading title="入门阅读" href={`/topics/${topic.slug}/works`} />
               {(topic.curated.foundationalWorks.length ? topic.curated.foundationalWorks : works).slice(0, 5).map((work) => (
                 <BookCard work={work} dense key={work.id} />
               ))}
               {!works.length ? <p className="empty-state">尚无已确认馆藏。</p> : null}
             </section>
-            <section className="panel">
+            <section className="panel" data-module-id="topic-reading-paths">
               <SectionHeading title="策展阅读路径" href={`/topics/${topic.slug}/reading-paths`} />
               {topic.curated.readingPaths.map((path) => (
                 <Link className="reading-path-row" href={`/topics/${topic.slug}/reading-paths`} key={path.title}>

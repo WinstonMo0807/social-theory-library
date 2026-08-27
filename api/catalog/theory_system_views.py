@@ -408,6 +408,8 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
         scholar_ids = PersonNodeRelation.objects.filter(
             node__in=nodes,
             status="published",
+            person__authority_status="verified",
+            person__scholar_profile__editorial_status="published",
         ).values("person_id").distinct()
         reading_paths = ReadingPath.objects.filter(
             status="published",
@@ -614,6 +616,7 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
                 status="published",
                 is_representative=True,
                 person__scholar_profile__editorial_status="published",
+                person__authority_status="verified",
             ).select_related("person", "person__scholar_profile")[: max(0, limit - len(graph_nodes))]
             for relation in people:
                 graph_nodes.append(

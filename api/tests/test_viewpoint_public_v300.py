@@ -261,7 +261,10 @@ def test_viewpoint_facets_use_canonical_ids_slugs_labels_and_result_counts():
         state=PublicationState.PUBLISHED,
         is_primary=True,
     )
-    person = Person.objects.create(preferred_name="测试学者")
+    person = Person.objects.create(
+        preferred_name="测试学者",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
     ScholarProfile.objects.create(
         person=person,
         slug="test-scholar-viewpoint",

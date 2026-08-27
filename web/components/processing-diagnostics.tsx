@@ -41,6 +41,8 @@ type DiagnosticSection = {
   summary: Record<string, number>;
 };
 
+export type ProcessingDiagnosticsView = "overview" | "ai-models" | "workers" | "projections";
+
 type ExecutorSnapshot = {
   id: string;
   executor_id: string;
@@ -160,37 +162,67 @@ export function ProcessingDiagnosticsPanel({
   pendingAction,
   actionState,
   onAction,
+  view = "overview",
 }: {
   diagnostics: ProcessingDiagnosticsPayload;
   pendingAction: string;
   actionState: (actionKey: string) => ActionState;
   onAction: (item: ProcessingDiagnosticItem, action: ProcessingDiagnosticAction) => void;
+  view?: ProcessingDiagnosticsView;
 }) {
+  const visibleSections = view === "ai-models"
+    ? diagnostics.sections.filter((section) => section.key === "providers")
+    : view === "workers"
+      ? diagnostics.sections.filter((section) => section.key === "capabilities")
+      : view === "projections"
+        ? diagnostics.sections.filter((section) => section.key === "projections")
+        : [];
+  const visibleItems = visibleSections.flatMap((section) => section.items);
+  const issueCount = view === "overview" ? diagnostics.summary.issue_count : visibleItems.length;
+  const blockingCount = view === "overview"
+    ? diagnostics.summary.blocking_count
+    : visibleItems.filter((item) => item.publication_blocking).length;
+  const title = view === "overview"
+    ? "知识与智能新鲜度"
+    : view === "ai-models"
+      ? "AI Runtime 与模型配置"
+      : view === "workers"
+        ? "任务能力与 Worker"
+        : "Projection 一致性";
+  const description = view === "overview"
+    ? "从持久化 revision、任务需求和脱敏 Provider 配置判断下游是否真的可用。"
+    : view === "ai-models"
+      ? "查看模型 profile、Provider 状态、Prompt 和真实人工接受表现。Secret 不会返回前端。"
+      : view === "workers"
+        ? "查看 capability 缺口、executor heartbeat、当前负载和可领取 backlog。"
+        : "比较 source revision 与 projected revision，定位落后或失败的公开投影。";
+  const titleId = `processing-diagnostics-title-${view}`;
+
   return (
-    <section className="processing-diagnostics admin-panel" aria-labelledby="processing-diagnostics-title">
+    <section className="processing-diagnostics admin-panel" aria-labelledby={titleId}>
       <header>
         <div>
           <p>Processing Center 3.0</p>
-          <h2 id="processing-diagnostics-title">知识与智能新鲜度</h2>
-          <span>从持久化 revision、任务需求和脱敏 Provider 配置判断下游是否真的可用。</span>
+          <h2 id={titleId}>{title}</h2>
+          <span>{description}</span>
         </div>
-        <span className={diagnostics.summary.blocking_count ? "blocking" : diagnostics.summary.issue_count ? "warning" : "healthy"}>
-          {diagnostics.summary.blocking_count
-            ? `${diagnostics.summary.blocking_count} 项阻断`
-            : diagnostics.summary.issue_count
-              ? `${diagnostics.summary.issue_count} 项需处理`
+        <span className={blockingCount ? "blocking" : issueCount ? "warning" : "healthy"}>
+          {blockingCount
+            ? `${blockingCount} 项阻断`
+            : issueCount
+              ? `${issueCount} 项需处理`
               : "当前一致"}
         </span>
       </header>
 
-      <div className="processing-diagnostics-summary" aria-label="处理中心诊断摘要">
+      {view === "overview" ? <div className="processing-diagnostics-summary" aria-label="处理中心诊断摘要">
         <div><DatabaseZap size={17} /><span>落后投影</span><strong>{diagnostics.summary.stale_projection_count}</strong></div>
         <div><Cpu size={17} /><span>缺少能力</span><strong>{diagnostics.summary.missing_capability_count}</strong></div>
         <div><ServerCog size={17} /><span>Provider 降级</span><strong>{diagnostics.summary.provider_degradation_count}</strong></div>
         <div>{diagnostics.summary.blocking_count ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}<span>发布阻断</span><strong>{diagnostics.summary.blocking_count}</strong></div>
-      </div>
+      </div> : null}
 
-      {(diagnostics.functional_impacts ?? []).length ? (
+      {view === "overview" && (diagnostics.functional_impacts ?? []).length ? (
         <section className="processing-diagnostic-section" id="processing-overview" aria-labelledby="processing-functional-impact-title">
           <header><div><AlertTriangle size={17} /><h3 id="processing-functional-impact-title">当前用户功能影响</h3></div><span>先判断读者和编辑者会遇到什么，再查看依赖详情。</span><strong>{diagnostics.functional_impacts?.length ?? 0}</strong></header>
           <div className="processing-diagnostic-list">
@@ -205,8 +237,8 @@ export function ProcessingDiagnosticsPanel({
         </section>
       ) : null}
 
-      <div className="processing-diagnostic-sections">
-        {diagnostics.sections.map((section) => {
+      {visibleSections.length ? <div className="processing-diagnostic-sections">
+        {visibleSections.map((section) => {
           const SectionIcon = SECTION_ICONS[section.key];
           return (
             <section className="processing-diagnostic-section" id={section.key === "projections" ? "processing-projections" : section.key === "capabilities" ? "processing-workers" : "processing-ai-models"} key={section.key} aria-labelledby={`diagnostic-${section.key}`}>
@@ -274,10 +306,10 @@ export function ProcessingDiagnosticsPanel({
             </section>
           );
         })}
-      </div>
+      </div> : null}
 
-      <div className="processing-runtime-inventory">
-        <details id="processing-worker-inventory">
+      {view === "workers" ? <div className="processing-runtime-inventory">
+        <details id="processing-worker-inventory" open>
           <summary>Executor heartbeat <strong>{diagnostics.executors.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.executors.map((executor) => (
@@ -292,7 +324,13 @@ export function ProcessingDiagnosticsPanel({
             {!diagnostics.executors.length ? <p>尚无已登记 executor。</p> : null}
           </div>
         </details>
-        <details id="processing-ai-runtime">
+      </div> : null}
+
+      {view === "ai-models" ? <div className="processing-runtime-inventory">
+        <p className="processing-configuration-boundary" role="note">
+          此处只显示脱敏状态和可安全修改的入口。Provider Secret、AI endpoint 与运行时敏感配置需由 System Owner 在服务器环境或受保护设置中完成，页面不会读取或回显密钥。
+        </p>
+        <details id="processing-ai-runtime" open>
           <summary>AI Runtime profiles <strong>{diagnostics.provider_profiles.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.provider_profiles.map((profile) => (
@@ -337,7 +375,7 @@ export function ProcessingDiagnosticsPanel({
             {!(diagnostics.feedback_calibration ?? []).length ? <p>尚无可校准的人工决定。</p> : null}
           </div>
         </details>
-      </div>
+      </div> : null}
     </section>
   );
 }

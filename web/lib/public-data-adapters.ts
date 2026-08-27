@@ -173,7 +173,7 @@ export function adaptApiTopic(payload: ApiTopic): LibraryTopic {
       linkedTheories: payload.curated?.linked_theories ?? [],
       readingPaths: (payload.curated?.reading_paths ?? []).map((path) => ({
         ...path,
-        works: path.works.map(adaptApiWork),
+        works: (path.works ?? []).map(adaptApiWork),
       })),
       featuredPassageId: payload.curated?.featured_passage_id ?? "",
       featuredPassageReason: payload.curated?.featured_passage_reason ?? "",

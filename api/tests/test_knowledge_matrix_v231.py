@@ -431,7 +431,10 @@ def test_public_subdiscipline_list_serializes_related_scholars(api_client):
         slug="urban-sociology-test",
         editorial_status="published",
     )
-    person = Person.objects.create(preferred_name="城市学者测试")
+    person = Person.objects.create(
+        preferred_name="城市学者测试",
+        authority_status=Person.AuthorityStatus.VERIFIED,
+    )
     scholar = ScholarProfile.objects.create(
         person=person,
         slug="urban-scholar-test",

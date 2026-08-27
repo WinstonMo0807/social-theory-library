@@ -9,8 +9,8 @@ test("Topic and Scholar pages prefer normalized Knowledge Core relations", async
     read("../lib/server-api.ts"),
     read("../components/public/topic-public-view.tsx"),
     read("../components/public/scholar-public-view.tsx"),
-    read("../app/topics/[slug]/[section]/page.tsx"),
-    read("../app/scholars/[slug]/[section]/page.tsx"),
+    read("../components/public/topic-section-public-view.tsx"),
+    read("../components/public/scholar-section-public-view.tsx"),
   ]);
 
   assert.match(serverApi, /knowledge_nodes\?: PublicKnowledgeNodeLink\[\]/);

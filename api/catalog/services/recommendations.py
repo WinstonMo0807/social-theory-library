@@ -19,6 +19,7 @@ from catalog.models import (
     Topic,
     Work,
 )
+from catalog.services.scoped_search import public_scholar_queryset
 
 
 PLACEMENT_TARGETS = {
@@ -92,7 +93,7 @@ def _queryset_for_policy(policy):
     if target == "topic":
         return Topic.objects.filter(editorial_status="published").order_by("id")
     if target == "scholar":
-        return ScholarProfile.objects.filter(editorial_status="published").select_related("person").order_by("id")
+        return public_scholar_queryset().order_by("id")
     return Work.objects.none()
 
 
@@ -283,10 +284,7 @@ def _snapshot_scholars_are_public(policy, snapshot):
     if any(identifier is None for identifier in scholar_ids):
         return False
     published_ids = set(
-        ScholarProfile.objects.filter(
-            pk__in=scholar_ids,
-            editorial_status="published",
-        ).values_list("pk", flat=True)
+        public_scholar_queryset().filter(pk__in=scholar_ids).values_list("pk", flat=True)
     )
     return all(identifier in published_ids for identifier in scholar_ids)
 
@@ -300,10 +298,7 @@ def _valid_manual_scholars(snapshot):
         if item.scholar_id and item.reason == "管理员策展"
     ]
     published_ids = set(
-        ScholarProfile.objects.filter(
-            pk__in=scholar_ids,
-            editorial_status="published",
-        ).values_list("pk", flat=True)
+        public_scholar_queryset().filter(pk__in=scholar_ids).values_list("pk", flat=True)
     )
     return [
         item.scholar

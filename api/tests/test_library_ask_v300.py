@@ -162,7 +162,9 @@ def test_semantic_hit_is_rehydrated_from_current_evidence_span():
     assert len(evidence) == 1
     assert evidence[0].original_passage == span.original_text
     assert evidence[0].page_id == str(page.id)
-    assert evidence[0].reader_url == f"/reader/{asset.id}?page=3"
+    assert evidence[0].reader_url == (
+        f"/reader/{asset.id}?page=3&passage={span.id}"
+    )
     assert evidence[0].retrieval_provenance["evidence_span_id"] == str(span.id)
     assert evidence[0].retrieval_provenance["document_revision_id"] == str(revision.id)
 

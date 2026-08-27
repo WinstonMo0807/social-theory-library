@@ -26,6 +26,7 @@ from .models import (
     CoverCandidate,
     DocumentType,
     Edition,
+    EvidenceSpan,
     KnowledgePublicationStatus,
     LegacyKnowledgeMapping,
     Page,
@@ -100,6 +101,7 @@ from .services.scoped_search import (
     SearchRequest,
     SearchService,
     SearchVisibility,
+    public_scholar_queryset,
     public_work_queryset,
 )
 from .services.text import clean_page_label, clipboard_payload, normalize_search_text, passage_snippet
@@ -773,9 +775,7 @@ class SiteStatsView(APIView):
         return Response(
             {
                 "documents": published.count(),
-                "scholars": ScholarProfile.objects.filter(
-                    editorial_status="published"
-                ).count(),
+                "scholars": public_scholar_queryset().count(),
                 "knowledge_objects": (
                     TheorySchool.objects.filter(editorial_status="published").count()
                     + Topic.objects.filter(editorial_status="published").count()
@@ -1364,6 +1364,16 @@ class AdminScholarListView(generics.ListCreateAPIView):
             )
 
             record_admin_canonical_change(
+                object_type="person",
+                target=scholar.person,
+                change_kind="publish",
+                changed_fields=["authority_status"],
+                actor=self.request.user,
+                request_idempotency_key=self.request.headers.get(
+                    "Idempotency-Key", ""
+                ),
+            )
+            record_admin_canonical_change(
                 object_type="scholar_profile",
                 target=scholar,
                 change_kind="publish",
@@ -1640,6 +1650,7 @@ class TheorySchoolListView(generics.ListAPIView):
                 status=KnowledgePublicationStatus.PUBLISHED,
                 work__editions__contributions__approved=True,
                 work__editions__contributions__person__scholar_profile__editorial_status="published",
+                work__editions__contributions__person__authority_status="verified",
                 node__node_type="theory_tradition",
             ).values_list("node_id", flat=True)
             normalized_legacy_ids = _legacy_theory_ids_for_normalized_nodes(
@@ -1649,11 +1660,13 @@ class TheorySchoolListView(generics.ListAPIView):
                 Q(
                     personknowledgerelation__approved=True,
                     personknowledgerelation__person__scholar_profile__editorial_status="published",
+                    personknowledgerelation__person__authority_status="verified",
                 )
                 | Q(
                     workknowledgerelation__approved=True,
                     workknowledgerelation__work__editions__contributions__approved=True,
                     workknowledgerelation__work__editions__contributions__person__scholar_profile__editorial_status="published",
+                    workknowledgerelation__work__editions__contributions__person__authority_status="verified",
                 )
                 | Q(pk__in=normalized_legacy_ids)
             )
@@ -1707,9 +1720,7 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
             | normalized_work_filter
         ).distinct()
         data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
-        scholars = ScholarProfile.objects.filter(
-            editorial_status="published",
-        ).filter(
+        scholars = public_scholar_queryset().filter(
             Q(
                 person__knowledge_relations__theory_school=instance,
                 person__knowledge_relations__approved=True,
@@ -1841,9 +1852,7 @@ class TopicDetailView(generics.RetrieveAPIView):
             topic_relations__review_status=RelationReviewStatus.APPROVED,
         ).distinct()
         data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
-        scholars = ScholarProfile.objects.filter(
-            editorial_status="published",
-        ).filter(
+        scholars = public_scholar_queryset().filter(
             Q(
                 person__topic_relations__topic=instance,
                 person__topic_relations__review_status=RelationReviewStatus.APPROVED,
@@ -3110,6 +3119,45 @@ class PassageFocusView(APIView):
                     "text": passage.text,
                 }
             )
+        span = EvidenceSpan.objects.select_related(
+            "page__asset__edition__work",
+            "document_revision",
+        ).filter(
+            pk=pk,
+            is_stale=False,
+            document_revision__is_active=True,
+            page__asset__edition__state=PublicationState.PUBLISHED,
+            page__asset__edition__is_primary=True,
+            page__asset__kind=Asset.Kind.NORMALIZED,
+            page__asset__status=Asset.Status.READY,
+            page__asset__is_current=True,
+            page__asset__access_status__in=allowed_access_statuses,
+        ).first()
+        if span is not None:
+            raw_bbox = span.bbox or []
+            if isinstance(raw_bbox, dict):
+                raw_bbox = raw_bbox.get("rect") or raw_bbox.get("bbox") or []
+            if (
+                isinstance(raw_bbox, list)
+                and raw_bbox
+                and isinstance(raw_bbox[0], list)
+            ):
+                raw_bbox = raw_bbox[0]
+            return Response(
+                {
+                    "id": str(span.id),
+                    "asset_id": str(span.page.asset_id),
+                    "title": span.page.asset.edition.work.title,
+                    "page_index": span.page.index,
+                    "printed_label": span.printed_page_label
+                    or clean_page_label(span.page.printed_label),
+                    "width": span.page.width,
+                    "height": span.page.height,
+                    "bbox": raw_bbox if isinstance(raw_bbox, list) else [],
+                    "text": span.original_text,
+                    "locator_kind": "evidence_span",
+                }
+            )
         chunk = get_object_or_404(
             SemanticChunk.objects.select_related("asset__edition__work"),
             pk=pk,
@@ -3152,8 +3200,7 @@ class PublicAssetManifestView(APIView):
             access_status__in=_viewer_asset_access_statuses(request),
         )
         chapter_pages = asset.pages.exclude(chapter_title="").order_by("index")
-        author_profiles = ScholarProfile.objects.filter(
-            editorial_status="published",
+        author_profiles = public_scholar_queryset().filter(
             person__contributions__edition=asset.edition,
             person__contributions__role=Contribution.Role.AUTHOR,
             person__contributions__approved=True,

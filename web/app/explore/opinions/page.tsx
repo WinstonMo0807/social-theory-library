@@ -19,6 +19,7 @@ import {
   type ViewpointSearchResult,
   type ViewpointStance,
 } from "@/lib/server-api";
+import { SearchModeSwitch } from "@/components/search-mode-switch";
 import styles from "./viewpoint-search.module.css";
 
 export const metadata: Metadata = { title: "观点检索" };
@@ -87,6 +88,7 @@ export default async function OpinionSearchPage({
   const populatedSections = stanceSections.filter(
     ({ key }) => payload.groups[key].length > 0,
   );
+  const activeFilterCount = Object.values(selected).filter(Boolean).length;
 
   return (
     <>
@@ -99,27 +101,26 @@ export default async function OpinionSearchPage({
       />
       <SearchClickTracker query={query} source="viewpoint_search_v3" />
       <div className={`page-shell explore-page ${styles.page}`}>
-        <header className={styles.hero}>
-          <div className={styles.intro}>
-            <p className={styles.eyebrow}>馆藏原文 · 命题关系</p>
+        <header className="explore-workbench-head exact-workbench-head viewpoint-workbench-head">
+          <div className="explore-workbench-title">
             <h1>观点检索</h1>
             <p>输入一个完整的社会科学命题。结果会区分直接回应、支持、相斥、限定与批评，并回到 PDF 页核对。</p>
           </div>
-          <div className={styles.queryArea}>
-            <form className={styles.searchForm} action="/explore/opinions">
-              <div className={`explore-search ${styles.search}`}>
-                <SearchField defaultValue={query} placeholder="例如：市场化会削弱地方共同体的互助关系" />
-                <button className="button" type="submit">查找馆藏观点</button>
-              </div>
-              <ViewpointFilters
-                facets={payload.facets}
-                query={query}
-                selected={selected}
-              />
+          <div className="explore-query-column">
+            <form className={`explore-search ${styles.searchForm}`} action="/explore/opinions">
+              <SearchField defaultValue={query} placeholder="例如：市场化会削弱地方共同体的互助关系" />
+              <button className="button" type="submit">查找观点</button>
             </form>
-            <SearchModeSwitch query={query} />
           </div>
+          <SearchModeSwitch mode="semantic" query={query} />
         </header>
+
+        <ViewpointMobileFilters
+          activeFilterCount={activeFilterCount}
+          facets={payload.facets}
+          query={query}
+          selected={selected}
+        />
 
         {query ? <QueryClaim payload={payload} /> : null}
 
@@ -138,7 +139,17 @@ export default async function OpinionSearchPage({
           })}
         </section>
 
-        <div className={styles.layout}>
+        <div className="search-layout">
+          <form className="filter-sidebar viewpoint-filter-sidebar" action="/explore/opinions">
+            {query ? <input type="hidden" name="q" value={query} /> : null}
+            <div className="filter-title">
+              <strong>筛选已验证原文{activeFilterCount ? ` · ${activeFilterCount}` : ""}</strong>
+              {activeFilterCount ? <Link href={query ? `/explore/opinions?q=${encodeURIComponent(query)}` : "/explore/opinions"}>清除</Link> : null}
+            </div>
+            <ViewpointFilters facets={payload.facets} selected={selected} />
+            <button className="button filter-submit" type="submit">应用筛选</button>
+          </form>
+
           <main className={styles.results}>
             <header className={styles.resultsHeader}>
               <div>
@@ -185,7 +196,7 @@ export default async function OpinionSearchPage({
             ) : null}
           </main>
 
-          <aside className={styles.inspector}>
+          <aside className={`search-aside ${styles.inspector}`}>
             <section>
               <ShieldCheck size={18} aria-hidden="true" />
               <h2>证据边界</h2>
@@ -213,14 +224,32 @@ export default async function OpinionSearchPage({
   );
 }
 
-function SearchModeSwitch({ query }: { query: string }) {
-  const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
+function ViewpointMobileFilters({
+  activeFilterCount,
+  facets,
+  query,
+  selected,
+}: {
+  activeFilterCount: number;
+  facets: ViewpointSearchPayload["facets"];
+  query: string;
+  selected: SelectedViewpointFilters;
+}) {
   return (
-    <nav className="search-mode-switch" aria-label="检索方式">
-      <Link href={`/explore/original?context=global${query ? `&q=${encodeURIComponent(query)}` : ""}`}><strong>原文检索</strong></Link>
-      <Link className="active" href={`/explore/opinions${suffix}`}><strong>观点检索</strong></Link>
-      <Link href={`/explore/ask${suffix}`}><strong>向书库提问</strong></Link>
-    </nav>
+    <details className="mobile-filter-disclosure viewpoint-mobile-filters">
+      <summary>
+        <strong>筛选已验证原文</strong>
+        <span>{activeFilterCount ? `已选 ${activeFilterCount} 项` : "未限定"}</span>
+      </summary>
+      <form action="/explore/opinions">
+        {query ? <input type="hidden" name="q" value={query} /> : null}
+        <ViewpointFilters facets={facets} selected={selected} />
+        <div className={styles.mobileFilterActions}>
+          <button className="button" type="submit">应用筛选</button>
+          {activeFilterCount ? <Link className="button secondary" href={query ? `/explore/opinions?q=${encodeURIComponent(query)}` : "/explore/opinions"}>清除筛选</Link> : null}
+        </div>
+      </form>
+    </details>
   );
 }
 
@@ -238,16 +267,14 @@ type SelectedViewpointFilters = {
 
 function ViewpointFilters({
   facets,
-  query,
   selected,
 }: {
   facets: ViewpointSearchPayload["facets"];
-  query: string;
   selected: SelectedViewpointFilters;
 }) {
   return (
     <fieldset className={styles.filters}>
-      <legend>筛选已验证原文</legend>
+      <legend className="sr-only">筛选已验证原文</legend>
       <label>
         <span>关系</span>
         <select name="relation" defaultValue={selected.relation}>
@@ -286,6 +313,8 @@ function ViewpointFilters({
           name="year_min"
           min="1"
           max="3000"
+          inputMode="numeric"
+          autoComplete="off"
           defaultValue={selected.yearMin}
           placeholder={facets.publication_year.min ? String(facets.publication_year.min) : "不限"}
         />
@@ -297,11 +326,12 @@ function ViewpointFilters({
           name="year_max"
           min="1"
           max="3000"
+          inputMode="numeric"
+          autoComplete="off"
           defaultValue={selected.yearMax}
           placeholder={facets.publication_year.max ? String(facets.publication_year.max) : "不限"}
         />
       </label>
-      {query ? <Link className={styles.clearFilters} href={`/explore/opinions?q=${encodeURIComponent(query)}`}>清除筛选</Link> : null}
     </fieldset>
   );
 }
@@ -385,7 +415,7 @@ function EvidenceCard({ item, index }: { item: ViewpointSearchResult; index: num
         </details>
         <div className={styles.evidenceActions}>
           <Link className="button secondary" href={item.reader_url}>
-            进入 Reader <ArrowRight size={15} />
+            阅读原文 <ArrowRight size={15} />
           </Link>
           <Link className="button secondary" href={item.pdf_url}>打开 PDF</Link>
         </div>

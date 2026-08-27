@@ -22,6 +22,7 @@ import { ExploreLanding } from "@/components/explore-landing";
 import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
 import { semanticResponseLabel } from "@/lib/semantic-search-ui";
+import { SearchModeSwitch } from "@/components/search-mode-switch";
 import {
   loadHotSearches,
   loadSearch,
@@ -457,29 +458,6 @@ export default async function ExplorePage({
       </div>
       <SiteFooter />
     </>
-  );
-}
-
-function SearchModeSwitch({
-  mode,
-  query,
-}: {
-  mode: "exact" | "semantic" | "ask";
-  query: string;
-}) {
-  const encodedQuery = query ? `?q=${encodeURIComponent(query)}` : "";
-  return (
-    <nav className="search-mode-switch" aria-label="检索方式">
-      <Link className={mode === "exact" ? "active" : ""} href={`/explore/original?context=global${query ? `&q=${encodeURIComponent(query)}` : ""}`}>
-        <span><strong>原文检索</strong></span>
-      </Link>
-      <Link className={mode === "semantic" ? "active" : ""} href={`/explore/opinions${encodedQuery}`}>
-        <span><strong>观点检索</strong></span>
-      </Link>
-      <Link className={mode === "ask" ? "active" : ""} href={`/explore/ask${encodedQuery}`}>
-        <span><strong>向书库提问</strong></span>
-      </Link>
-    </nav>
   );
 }
 

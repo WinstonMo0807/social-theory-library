@@ -352,11 +352,11 @@ function nodeToDraft(node: KnowledgeNode): NodeDraft {
   };
 }
 
-export function TheoryNodesAdmin() {
+export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: string }) {
   const [nodeType, setNodeType] = useState("theory_tradition");
   const [legacyId, setLegacyId] = useState("");
   const [legacyOpened, setLegacyOpened] = useState(false);
-  const [requestedNodeId, setRequestedNodeId] = useState("");
+  const [requestedNodeId, setRequestedNodeId] = useState(initialNodeId);
   const [requestedNodeOpened, setRequestedNodeOpened] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [disciplineFilter, setDisciplineFilter] = useState("");
@@ -391,7 +391,7 @@ export function TheoryNodesAdmin() {
     const search = new URLSearchParams(window.location.search);
     const requested = search.get("node_type");
     const requestedLegacyId = search.get("legacy_id") || "";
-    const requestedNode = search.get("node") || "";
+    const requestedNode = search.get("node") || initialNodeId;
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
@@ -405,7 +405,7 @@ export function TheoryNodesAdmin() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialNodeId]);
 
   useEffect(() => {
     const mapped = nodes.data?.results[0];

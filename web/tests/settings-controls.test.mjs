@@ -16,14 +16,14 @@ test("user administration exposes only Reader Editor and Administrator roles", a
   assert.match(sections, /只有 System Owner 可以授予或撤销 Administrator/);
 });
 
-test("admin footer uses the shared 3.0.2 admin convergence version", async () => {
+test("admin footer uses the shared 3.0.3 public knowledge control version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "3\.0\.2"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.2 管理体验与知识收敛"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.3"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.3 公共知识控制"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
@@ -128,7 +128,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
       "/admin/knowledge",
       "/admin/scholars",
       "/admin/disciplines",
-      "/admin/theory-nodes",
+      "/admin/theories",
       "/admin/topics",
     ]],
     ["策展", ["/admin/reading-paths", "/admin/recommendations"]],
@@ -169,7 +169,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
   assert.doesNotMatch(navigationSource, /"\/admin\/query-lexicon"/);
   assert.doesNotMatch(navigationSource, /"\/admin\/semantic-index"/);
   assert.match(navigationSource, /\["\/admin\/uploads", Upload, "上传与上架"\]/);
-  assert.match(navigationSource, /\["\/admin\/theory-nodes", CircleDot, "理论传统"\]/);
+  assert.match(navigationSource, /\["\/admin\/theories", CircleDot, "理论传统"\]/);
   await Promise.all(allRoutes.map((href) => {
     const pathname = href.split("?")[0];
     return access(new URL(

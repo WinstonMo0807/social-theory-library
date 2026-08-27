@@ -178,7 +178,9 @@ def test_work_detail_exposes_only_published_evidence_backed_curated_claims(api_c
     assert envelope["locator"]["page_id"] == str(evidence.page_id)
     assert envelope["locator"]["printed_page_label"] == "3"
     assert envelope["quality"]["stale"] is False
-    assert envelope["reader_url"] == f"/reader/{asset.id}?page=7"
+    assert envelope["reader_url"] == (
+        f"/reader/{asset.id}?page=7&passage={evidence.id}"
+    )
     assert envelope["pdf_url"] == f"/api/catalog/assets/{asset.id}/manifest/"
 
 
@@ -311,7 +313,9 @@ def test_debate_node_exposes_human_positions_with_current_pdf_evidence(api_clien
     rows = response.data["curated_claims"]["debate_position"]
     assert len(rows) == 1
     assert rows[0]["position"] == "support"
-    assert rows[0]["evidence"][0]["reader_url"] == f"/reader/{asset.id}?page=7"
+    assert rows[0]["evidence"][0]["reader_url"] == (
+        f"/reader/{asset.id}?page=7&passage={evidence.id}"
+    )
 
 
 @pytest.mark.django_db

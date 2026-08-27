@@ -1425,6 +1425,16 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         raise EditorialRevisionError(f"草稿不能发布：{message}") from exc
     target.save()
     _apply_special_fields(target, patch, actor)
+    if isinstance(target, ScholarProfile) and next_status == "published":
+        from catalog.services.scholar_publication import (
+            ScholarPublicationError,
+            ensure_scholar_public_authority,
+        )
+
+        try:
+            ensure_scholar_public_authority(target, actor=actor)
+        except ScholarPublicationError as exc:
+            raise EditorialRevisionError(str(exc)) from exc
     if isinstance(target, KnowledgeNode):
         from catalog.services.knowledge_nodes import record_node_version
 

@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/research/candidate-action-contract";
 import { CandidateDecisionBar } from "@/components/admin/research/candidate-decision-bar";
 import { EvidenceEnvelopeCard } from "@/components/admin/research/evidence-envelope-card";
+import { PublicPageTree, type PublicControl } from "@/components/admin/knowledge/public-page-tree";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export type KnowledgeObjectType =
@@ -152,6 +153,7 @@ type KnowledgeSelection = {
     published_changes_require_revision?: boolean;
   };
   preview_url?: string;
+  public_control?: PublicControl;
 };
 
 type KnowledgeWorkspacePayload = {
@@ -372,6 +374,7 @@ export function KnowledgeObjectContextPanel({
   const publishedPreview = selection?.preview_perspectives?.published;
   const draftPreview = selection?.preview_perspectives?.draft;
   const previewRoutes = selection?.preview_routes;
+  const publicControl = selection?.public_control;
   const studioHref = `/admin/knowledge?selected_type=${encodeURIComponent(objectType)}&selected_id=${encodeURIComponent(objectId)}`;
 
   return (
@@ -385,13 +388,26 @@ export function KnowledgeObjectContextPanel({
       {loading && !selection ? <p className="knowledge-object-context-state">正在读取真实知识上下文……</p> : null}
 
       {selection ? <>
-        <section className="knowledge-object-completeness" aria-label="前台内容完整度">
+        {publicControl ? <PublicPageTree control={publicControl} /> : null}
+
+        {publicControl?.public_appearances?.length ? <details open className="knowledge-object-context-section public-appearances">
+          <summary><ExternalLink size={14} /><span>公开出现位置</span><b>{publicControl.public_appearances.length}</b></summary>
+          <div className="knowledge-object-context-list">{publicControl.public_appearances.map((row) => <article key={`${row.page_id}:${row.route}`}><header><strong>{row.label}</strong><span>{row.count}</span></header><Link href={row.route} target="_blank">预览公开位置 <ExternalLink size={12} /></Link></article>)}</div>
+        </details> : null}
+
+        {publicControl?.draft_published_diff?.length ? <details open className="knowledge-object-context-section">
+          <summary><FileClock size={14} /><span>草稿与公开版变化</span><b>{publicControl.draft_published_diff.length}</b></summary>
+          <div className="knowledge-object-context-list">{publicControl.draft_published_diff.map((row) => <article key={row.field}><header><strong>{row.field}</strong><span>{row.kind === "collection" ? "集合变化" : "已修改"}</span></header>{row.added?.length ? <small>新增 {row.added.length} 项</small> : null}{row.removed?.length ? <small>删除 {row.removed.length} 项</small> : null}</article>)}</div>
+        </details> : null}
+
+        {!publicControl ? <section className="knowledge-object-completeness" aria-label="前台内容完整度">
           <header><strong>前台内容完整度</strong><span>{completeness ? `${completeness.complete_module_count}/${completeness.module_count}` : "未接通"}</span></header>
           {completeness ? <div>{completeness.modules.map((module) => <article className={module.complete ? "is-complete" : module.available ? "is-partial" : "is-empty"} key={module.label}><span>{module.label}</span><b>{module.complete ? "完整" : module.available ? "待补" : "缺失"}</b>{module.missing_fields.length ? <small>缺少 {module.missing_fields.join("、")}</small> : null}</article>)}</div> : <p className="knowledge-object-context-state">API 尚未返回基于公开 serializer 的完整度。</p>}
-        </section>
+        </section> : null}
 
         <details open className="knowledge-object-context-section">
           <summary><Sparkles size={14} /><span>AI / Research 候选</span><b>{candidates.length}</b></summary>
+          <p className="knowledge-object-context-state">{publicControl?.ai_status?.workspace_message || "自动建议会在启用后显示，不影响人工编辑和发布。"}</p>
           <div className="knowledge-object-context-list">{candidates.map((candidate) => {
             const rows = evidenceRows(candidate.evidence);
             const busyPrefix = `${candidate.id}:`;

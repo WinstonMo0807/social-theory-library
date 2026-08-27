@@ -13,7 +13,6 @@ from catalog.models import (
     KnowledgeNode,
     KnowledgePublicationStatus,
     RelationReviewStatus,
-    ScholarProfile,
     WorkNodeRelation,
     WorkTopicRelation,
 )
@@ -22,6 +21,7 @@ from catalog.services.claims.indexing import search_claim_index, visible_claim_q
 from catalog.services.claims.stance import ClaimStatement, ClaimStance, classify_stance
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.retrieval import unified_retrieve
+from catalog.services.scoped_search import public_scholar_queryset
 
 
 STANCE_ORDER = (
@@ -146,6 +146,19 @@ def _normalized(value: object) -> str:
     return _NORMALIZE_RE.sub("", str(value or "").casefold())
 
 
+def _character_overlap(left: str, right: str) -> float:
+    """Measure bounded lexical overlap without treating same-page text as evidence."""
+
+    if not left or not right:
+        return 0.0
+    width = 2 if min(len(left), len(right)) >= 2 else 1
+    left_units = {left[index:index + width] for index in range(len(left) - width + 1)}
+    right_units = {right[index:index + width] for index in range(len(right) - width + 1)}
+    if not left_units or not right_units:
+        return 0.0
+    return len(left_units & right_units) / min(len(left_units), len(right_units))
+
+
 def _source_type(document_type: object) -> str:
     value = str(document_type or "")
     if value == "book":
@@ -177,7 +190,7 @@ def _matching_evidence_span(row: dict) -> EvidenceSpan | None:
         return None
     snippet = _normalized(row.get("snippet"))
     if not snippet:
-        return spans[0]
+        return None
     exact = [
         span
         for span in spans
@@ -186,20 +199,25 @@ def _matching_evidence_span(row: dict) -> EvidenceSpan | None:
     ]
     if exact:
         return max(exact, key=lambda span: span.quality)
-    scored = [
-        (
+    scored = []
+    for span in spans:
+        normalized_text = _normalized(span.original_text)
+        scored.append((
             SequenceMatcher(
                 None,
                 snippet[:1600],
-                _normalized(span.original_text)[:2400],
+                normalized_text[:2400],
             ).ratio(),
+            _character_overlap(snippet[:1600], normalized_text[:2400]),
             span.quality,
             span,
-        )
-        for span in spans
-    ]
-    scored.sort(key=lambda value: (value[0], value[1]), reverse=True)
-    return scored[0][2] if scored and scored[0][0] >= 0.22 else None
+        ))
+    scored.sort(key=lambda value: (value[0], value[1], value[2]), reverse=True)
+    return (
+        scored[0][3]
+        if scored and scored[0][0] >= 0.45 and scored[0][1] >= 0.35
+        else None
+    )
 
 
 def _semantic_result(
@@ -495,8 +513,7 @@ def _viewpoint_facets(rows: list[dict]) -> dict[str, Any]:
     topic_rows = []
     if work_ids:
         scholar_rows = list(
-            ScholarProfile.objects.filter(
-                editorial_status="published",
+            public_scholar_queryset().filter(
                 person__contributions__edition__work_id__in=work_ids,
                 person__contributions__edition__state="published",
                 person__contributions__edition__is_primary=True,

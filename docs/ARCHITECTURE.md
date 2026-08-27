@@ -1,6 +1,22 @@
 # Social Theory Library 架构
 
-更新日期为 2026-08-26。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
+更新日期为 2026-08-28。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
+
+当前 3.0.3 分支为 `codex/v3.0.3-public-knowledge-control`。它从已部署 3.0.2 的完整 tracked tree `7ff73f028a1f97d1678faff8008fdc841a8c4447` 开始。源码冻结前，公网仍运行 3.0.2。最终切换结果以 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record` 和公网 readiness 为准。
+
+## 3.0.3 Public Knowledge Control Plane
+
+3.0.3 没有增加新数据库、搜索服务或平行管理后台。它收敛公开知识资格、后台预览、原文定位和处理中心的信息架构。
+
+- Scholar 的公开资格统一为 `ScholarProfile.editorial_status=published`，且 Person 必须为 `verified`。直接发布与 EditorialRevision 发布在同一事务中提升 Person 资格，并记录 Person DomainChange。公开列表、详情、检索、推荐、时间线和 Frontend Impact 使用同一资格判断。
+- `PublicPageContract` 登记 Scholar 9 页、Theory 7 页、Topic 8 页。后台 Preview 使用公开 serializer 和公开组件，同时保留草稿视角及 `private, no-store`。匿名请求不能读取草稿。
+- Theory、Concept、Debate 的正式身份继续来自 KnowledgeNode。旧 TheorySchool 页面与 Topic、Scholar 的旧关系只作只读补充。审计命令会报告仍依赖旧来源的模块及退役条件。
+- EvidenceEnvelope 的 Reader locator 同时保留页码和 Passage 或 EvidenceSpan 身份。Reader focus 再次检查公开版本、Asset access、active DocumentRevision 和 Evidence stale 状态。无可靠片段匹配时不把同页任意 EvidenceSpan 当成依据。
+- 原文检索、观点检索和向书库提问共用检索模式切换和 Reader 定位约定。观点检索仍保留独立的立场分组与 Evidence validation，默认排序继续使用 Semantic V2。
+- Processing Center 使用七个可保留 URL 状态的工作面，分别呈现总览、Research Sources、AI 与模型、OCR 与文档、任务与 Worker、Projection 一致性、故障与恢复。Provider secret 仍只保存在服务端，前端只显示配置状态。
+- Explore 与其他公开知识页面继续使用现有暖纸色、字体、间距和 motion token。3.0.3 没有建立新设计系统。
+
+本版没有数据库 migration。它不恢复 OCR，不启用 4070 或 LLM，也不改变 Claim benchmark gate、活动语义索引或 ORIGINAL PDF。
 
 当前 3.0.2 分支为 `codex/v3.0.2-admin-convergence`，起点是远端 `88ded5412ca041312175b93307a0ed697ff6f599`。该提交包含已在生产验证的 Web revision `fa7444d` 与 PostgreSQL Claim 修复 `4c30565c`。公网在本节更新时仍运行 3.0.1。API、默认 Worker、Ingestion Worker 与 Beat 的 source revision 为 `4c30565c`，Web 为 `fa7444d`。3.0.2 候选 migration head 为 catalog 0039、ingestion 0014、reading 0007。最终生产状态以 [DEPLOYMENT.md](DEPLOYMENT.md) 的最新记录为准。
 

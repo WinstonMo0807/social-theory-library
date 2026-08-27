@@ -18,7 +18,7 @@ test("viewpoint search uses the dedicated EvidenceSpan-backed public contract", 
   assert.match(page, /item\.evidence\.text/);
   assert.match(page, /href=\{item\.reader_url\}/);
   assert.match(page, /href=\{item\.pdf_url\}/);
-  assert.match(page, /进入 Reader/);
+  assert.match(page, /阅读原文/);
   assert.match(page, /打开 PDF/);
   assert.doesNotMatch(page, /Math\.round\(item\.quality_score/);
 });

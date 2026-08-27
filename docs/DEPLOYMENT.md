@@ -1,6 +1,18 @@
 # 部署说明
 
-更新日期为 2026-08-26。本文件记录源码中的部署入口、安全要求和 3.0.2 正式生产切换快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-08-28。本文件记录源码中的部署入口、安全要求和正式生产切换快照。任何后续部署仍需重新检查实时状态。
+
+## Version 3.0.3 production cutover
+
+3.0.3 使用现有 `social-science-library` Compose project、`compose.public.yaml` 和 `compose.cloudflare.yaml`。它没有 migration，不改 PostgreSQL schema，不重建 Meilisearch，不恢复 PaddleOCR，也不启用 AI worker。源码冻结前生产仍运行 3.0.2，最终结果以公网 readiness 与本节对应 deploy-record 为准。
+
+- 切换记录目录为 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record`。
+- Fresh BackupJob 为 `a6ec015b-ef36-46c7-9cc2-735920120461`。归档 SHA-256 为 `e2171e337c34bee1d727389abc8438e101728204c3038dfc6543cb3a83487532`，database dump SHA-256 为 `7a0d09a005a6cd87bb6ccdf0030f940854ecc13b7f9e6db675ff40ab1c3ba46d`。归档不含 ORIGINAL PDF，已通过 checksum、`pg_restore --list`、隔离 PostgreSQL 16 实际恢复、Django check、空 migration plan 和馆藏 identity 比对。
+- 应用回退标签为 `social-theory-library-api:pre-v303-20260828-012030` 与 `social-theory-library-web:pre-v303-20260828-012030`。回退只恢复记录中的 `.env`、Compose 和旧镜像，然后依次重建 API、Worker、Ingestion Worker、Web、Edge 与 Beat。除非确认数据损坏并获得明确授权，不恢复数据库。
+- 切换前必须确认 Scholar 收敛 dry-run 仅包含 4 个可核验 Person，blocked 为 0。应用后需要等待 DomainChange 与 Projection 完成，再核对公开 Scholar API。
+- 切换前后必须逐项比较 6 个 paused OCR job 的 ID，并确认 `ocr_processing_paused=true`。不得构建 PaddleOCR image 或启用 `ocr` profile。
+- Web 或 API 重建后必须重建 Edge，避免 Nginx 保留旧容器地址。禁止 `docker compose down -v`。
+- 最终 smoke 包括 readiness 3.0.3、迁移 0、PublicPageContract 9/7/8、公开 Scholar、protected Preview 权限、三种检索的 Reader locator、Range 206、Semantic 非 fallback、Processing Center 七分区、Projection 一致性和观察窗口错误。
 
 ## Version 3.0.2 production cutover
 

@@ -29,6 +29,7 @@ import { ResearchSourceRegistryPanel } from "./research-source-registry";
 
 type HealthStatus = "healthy" | "degraded" | "failed" | "recovering" | "paused" | "unknown";
 type DimensionValue = boolean | null;
+export type FunctionalHealthSurface = "overview" | "research-sources" | "ai-models" | "workers" | "projections" | "faults";
 
 type HealthDependency = {
   probe_key: string;
@@ -209,7 +210,13 @@ function StatusIcon({ status }: { status: HealthStatus }) {
   return <CircleHelp aria-hidden="true" size={17} />;
 }
 
-export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
+export function FunctionalHealthPanel({
+  revision = 0,
+  surface = "overview",
+}: {
+  revision?: number;
+  surface?: FunctionalHealthSurface;
+}) {
   const [payload, setPayload] = useState<FunctionalHealthPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -427,13 +434,30 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
     return feedback.actionKey === actionKey ? feedback.state : "idle";
   }
 
+  const surfaceCopy = surface === "research-sources"
+    ? ["Research Sources", "检查来源用途、配置要求、最近成功和受影响功能。页面不会回显 Secret。"]
+    : surface === "ai-models"
+      ? ["AI 与模型", "检查 runtime profile、Provider、Prompt 和人工接受表现。"]
+      : surface === "workers"
+        ? ["任务与 Worker", "检查 capability 缺口、executor heartbeat、backlog 和负载。"]
+        : surface === "projections"
+          ? ["Projection 一致性", "检查 source revision、projected revision 和公开功能影响。"]
+          : surface === "faults"
+            ? ["故障与恢复", "保留真实故障、探测依据和后端允许的安全恢复动作。"]
+            : ["从读者功能查看系统是否真正可用", "页面读取最近一次探测结果，不会在打开时连接外部服务。探测和恢复只在明确点击后执行。"];
+  const diagnosticsView = surface === "ai-models" || surface === "workers" || surface === "projections"
+    ? surface
+    : surface === "overview"
+      ? "overview"
+      : null;
+
   return (
     <section className="functional-health-panel admin-panel" aria-labelledby="functional-health-title" aria-busy={loading || Boolean(pendingAction)}>
       <header>
         <div>
           <p className="functional-health-kicker">功能健康</p>
-          <h2 id="functional-health-title">从读者功能查看系统是否真正可用</h2>
-          <span>页面读取最近一次探测结果，不会在打开时连接外部服务。探测和恢复只在明确点击后执行。</span>
+          <h2 id="functional-health-title">{surfaceCopy[0]}</h2>
+          <span>{surfaceCopy[1]}</span>
         </div>
         <div className="functional-health-header-actions">
           {payload ? (
@@ -463,25 +487,26 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
 
       {payload ? (
         <>
-          <div className="functional-health-overview" aria-label="功能健康摘要">
+          {surface === "overview" ? <div className="functional-health-overview" aria-label="功能健康摘要">
             <div><Activity size={16} /><span>功能</span><strong>{payload.capabilities.length}</strong></div>
             <div><ShieldAlert size={16} /><span>待处理事件</span><strong>{payload.incidents.length}</strong></div>
             <div><Clock3 size={16} /><span>快照时间</span><strong>{timeLabel(payload.generated_at)}</strong></div>
             <div><Wrench size={16} /><span>已登记探测</span><strong>{payload.probe_count}</strong></div>
-          </div>
+          </div> : null}
 
-          {payload.diagnostics ? (
+          {payload.diagnostics && diagnosticsView ? (
             <ProcessingDiagnosticsPanel
               diagnostics={payload.diagnostics}
               pendingAction={pendingAction}
               actionState={actionState}
               onAction={(item, action) => void runDiagnosticAction(item, action)}
+              view={diagnosticsView}
             />
           ) : null}
 
-          <ResearchSourceRegistryPanel revision={revision} />
+          {surface === "research-sources" ? <ResearchSourceRegistryPanel revision={revision} /> : null}
 
-          <div className="functional-health-capability-grid">
+          {surface === "faults" ? <div className="functional-health-capability-grid">
             {payload.capabilities.map((capability) => (
               <article className={`functional-health-capability ${capability.status}`} key={capability.key}>
                 <header>
@@ -533,9 +558,9 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
                 </div>
               </article>
             ))}
-          </div>
+          </div> : null}
 
-          <section className="functional-health-incidents" id="processing-faults-recovery" aria-labelledby="functional-health-incidents-title">
+          {surface === "faults" ? <section className="functional-health-incidents" id="processing-faults-recovery" aria-labelledby="functional-health-incidents-title">
             <header>
               <div><h3 id="functional-health-incidents-title">待处理事件</h3><p>保留故障发生次数、可能原因和受影响功能。恢复动作来自后端允许清单。</p></div>
               <strong>{payload.incidents.length}</strong>
@@ -584,9 +609,9 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
                 ))}
               </div>
             ) : <p className="functional-health-empty"><CheckCircle2 size={17} />当前没有待处理的功能健康事件。</p>}
-          </section>
+          </section> : null}
 
-          <section className="functional-health-recoveries" aria-labelledby="functional-health-recoveries-title">
+          {surface === "faults" ? <section className="functional-health-recoveries" aria-labelledby="functional-health-recoveries-title">
             <header><div><h3 id="functional-health-recoveries-title">最近恢复记录</h3><p>显示最近请求及其执行结果，不会因刷新页面重复执行。</p></div><strong>{payload.recoveries.length}</strong></header>
             {payload.recoveries.length ? (
               <div className="functional-health-recovery-list">
@@ -600,7 +625,7 @@ export function FunctionalHealthPanel({ revision = 0 }: { revision?: number }) {
                 ))}
               </div>
             ) : <p className="functional-health-empty">尚无恢复操作记录。</p>}
-          </section>
+          </section> : null}
         </>
       ) : null}
     </section>

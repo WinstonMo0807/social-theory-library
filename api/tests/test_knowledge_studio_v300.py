@@ -241,7 +241,7 @@ def test_knowledge_studio_aggregates_objects_without_promoting_machine_claims(ap
     assert {row["kind"] for row in selected["evidence"]} >= {"collection_text"}
     assert selected["ai_candidates"]
     assert selected["revisions"][0]["changed_fields"] == ["definition"]
-    assert selected["editor_url"].startswith("/admin/theory-nodes?node=")
+    assert selected["editor_url"] == f"/admin/theories/{theory.id}"
     assert "Knowledge Graph" in selected["frontend_impact"]["projections"]
     assert studio["read_only_aggregation"] is True
     assert studio["machine_claims_are_canonical"] is False

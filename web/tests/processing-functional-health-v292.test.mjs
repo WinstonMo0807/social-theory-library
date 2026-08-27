@@ -15,7 +15,10 @@ test("processing center leads with persisted functional health", async () => {
   assert.match(panel, /"\/catalog\/admin\/functional-health\/"/);
   assert.match(panel, /page_load_performs_live_probes: boolean/);
   assert.match(panel, /页面读取最近一次探测结果，不会在打开时连接外部服务/);
-  assert.match(processing, /<FunctionalHealthPanel revision=\{revision\} \/>/);
+  assert.match(
+    processing,
+    /<FunctionalHealthPanel revision=\{revision\} surface=\{healthSurface\} \/>/,
+  );
   assert.ok(
     processing.indexOf("<FunctionalHealthPanel") < processing.indexOf('<section className="processing-summary"'),
     "functional health should appear before queue totals",

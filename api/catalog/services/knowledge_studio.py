@@ -31,8 +31,11 @@ from catalog.models import (
     PublicationState,
     ReadingPath,
     ReadingPathCandidate,
+    RelationReviewStatus,
     ScholarProfile,
     Subdiscipline,
+    TheorySchool,
+    TheoryTimelineEvent,
     TheoryReviewTask,
     Topic,
     Work,
@@ -234,7 +237,18 @@ class KnowledgeObjectEditorAdapter:
     def _is_public(cls, object_type: str, target) -> bool:
         if object_type in NODE_OBJECT_TYPES or object_type == "reading_path":
             return target.status == KnowledgePublicationStatus.PUBLISHED
-        if object_type in {"scholar", "discipline", "subdiscipline", "topic"}:
+        if object_type == "scholar":
+            # Public Scholar endpoints require both an explicitly published
+            # profile and a verified Person authority record.  Knowledge
+            # Studio must use the same rule or it advertises a public URL that
+            # the anonymous API correctly rejects.
+            from catalog.models import Person
+
+            return (
+                target.editorial_status == KnowledgePublicationStatus.PUBLISHED
+                and target.person.authority_status == Person.AuthorityStatus.VERIFIED
+            )
+        if object_type in {"discipline", "subdiscipline", "topic"}:
             return target.editorial_status == KnowledgePublicationStatus.PUBLISHED
         return target.editions.filter(state=PublicationState.PUBLISHED).exists()
 
@@ -897,6 +911,31 @@ class KnowledgeObjectEditorAdapter:
         impact["public_serializer"] = serializer_name
         impact["modules"] = [row["label"] for row in modules]
         impact["module_readiness"] = modules
+        if object_type in {"scholar", "theory", "topic"}:
+            from catalog.services.public_knowledge_control import (
+                build_public_control,
+            )
+
+            public_control = build_public_control(
+                object_type=object_type,
+                target=target,
+                published_data=canonical_public if is_public else None,
+                draft_data=draft_public if draft_available else None,
+                revision=revision,
+                candidate_available=bool(selection.get("ai_candidates")),
+                evidence_available=bool(selection.get("evidence")),
+            )
+            selection["public_control"] = public_control
+            impact["public_visibility"] = public_control["eligibility"]["eligible"]
+            impact["targets"] = [
+                {
+                    "label": row["display_name"],
+                    "url": row["route"],
+                    "modules": [module["display_name"] for module in row["modules"]],
+                    "preview_url": row["preview"]["draft_route"],
+                }
+                for row in public_control["page_tree"]
+            ]
         return selection
 
 
@@ -2138,7 +2177,7 @@ def _node_selection(node: KnowledgeNode, object_type: str) -> dict[str, Any]:
             node.id,
             published=node.status == KnowledgePublicationStatus.PUBLISHED,
         ),
-        "editor_url": f"/admin/theory-nodes?node={node.id}&node_type={node.node_type}",
+        "editor_url": f"/admin/theories/{node.id}",
         "preview_url": f"/theories/nodes/{node.slug}",
         "related_editor_urls": [
             {"label": "关系", "url": f"/admin/theory-relations?node={node.id}"},
@@ -2904,6 +2943,204 @@ def knowledge_object_editor_snapshot(
     return _selection(object_type, object_id, reviewer=reviewer)
 
 
+def _theory_graph_preview(data: dict[str, Any]) -> dict[str, Any]:
+    """Build the protected graph context from the public node serializer.
+
+    The public graph endpoint and this preview both consume canonical,
+    published relations.  The preview keeps the center node's draft-facing
+    identity fields so an editor can see how the pending node copy will sit in
+    that real relation context without exposing the draft anonymously.
+    """
+
+    center_id = str(data.get("id") or "")
+    if not center_id:
+        return {
+            "center": None,
+            "nodes": [],
+            "edges": [],
+            "depth": 1,
+            "limit": 20,
+            "truncated": False,
+        }
+    nodes: dict[str, dict[str, Any]] = {
+        center_id: {
+            "id": center_id,
+            "kind": "knowledge_node",
+            "node_type": data.get("node_type") or "theory_tradition",
+            "name": data.get("canonical_name_zh") or "未命名理论",
+            "foreign_name": data.get("canonical_name_en") or "",
+            "slug": data.get("slug") or "",
+            "summary": data.get("summary") or data.get("definition") or "",
+            "period_label": data.get("period_label") or "",
+            "is_center": True,
+        }
+    }
+    edges: list[dict[str, Any]] = []
+    for relation in list(data.get("direct_relations") or [])[:18]:
+        source_id = str(relation.get("source_node") or "")
+        target_id = str(relation.get("target_node") or "")
+        if not source_id or not target_id:
+            continue
+        for node_id, name_key, slug_key in (
+            (source_id, "source_name", "source_slug"),
+            (target_id, "target_name", "target_slug"),
+        ):
+            if node_id == center_id or node_id in nodes:
+                continue
+            nodes[node_id] = {
+                "id": node_id,
+                "kind": "knowledge_node",
+                "name": relation.get(name_key) or "未命名知识节点",
+                "slug": relation.get(slug_key) or "",
+                "is_center": False,
+            }
+        edges.append(
+            {
+                "id": str(relation.get("id") or f"{source_id}:{target_id}"),
+                "source": source_id,
+                "target": target_id,
+                "relation_type": relation.get("relation_type") or "related",
+                "relation_label": relation.get("relation_label") or "相关",
+                "direction": relation.get("direction") or "undirected",
+                "description": relation.get("description") or "",
+            }
+        )
+    for scholar in list(data.get("representative_scholars") or []):
+        if len(nodes) >= 20:
+            break
+        scholar_id = f"person:{scholar.get('id')}"
+        if scholar_id in nodes:
+            continue
+        nodes[scholar_id] = {
+            "id": scholar_id,
+            "kind": "scholar",
+            "name": scholar.get("name") or "未命名学者",
+            "slug": scholar.get("scholar_slug") or "",
+        }
+        edges.append(
+            {
+                "id": f"preview-scholar:{center_id}:{scholar_id}",
+                "source": center_id,
+                "target": scholar_id,
+                "relation_type": "representative_scholar",
+                "relation_label": scholar.get("relation_label") or "代表学者",
+                "direction": "undirected",
+            }
+        )
+    for relations in (data.get("work_groups") or {}).values():
+        for relation in relations or []:
+            if len(nodes) >= 20:
+                break
+            work = relation.get("work_data") or {}
+            work_id = str(work.get("id") or relation.get("work") or "")
+            if not work_id:
+                continue
+            graph_id = f"work:{work_id}"
+            if graph_id in nodes:
+                continue
+            nodes[graph_id] = {
+                "id": graph_id,
+                "kind": "work",
+                "name": work.get("title") or "未命名馆藏",
+                "work": work,
+            }
+            edges.append(
+                {
+                    "id": f"preview-work:{center_id}:{graph_id}",
+                    "source": center_id,
+                    "target": graph_id,
+                    "relation_type": relation.get("role") or "related_work",
+                    "relation_label": relation.get("role_label") or "相关馆藏",
+                    "direction": "undirected",
+                }
+            )
+        if len(nodes) >= 20:
+            break
+    return {
+        "center": center_id,
+        "nodes": list(nodes.values()),
+        "edges": edges,
+        "depth": 1,
+        "limit": 20,
+        "truncated": False,
+    }
+
+
+def _theory_secondary_preview(
+    *,
+    object_id: str,
+    active_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Return real secondary-page inputs for the protected Theory preview."""
+
+    from catalog.theory_serializers import (
+        NormalizedTimelineEventSerializer,
+        ReadingPathSerializer,
+    )
+
+    target = KnowledgeNode.objects.filter(pk=object_id).first()
+    if target is None:
+        return {"graph": _theory_graph_preview(active_data), "timeline": [], "reading_paths": []}
+    timeline = (
+        TheoryTimelineEvent.objects.filter(
+            review_status=RelationReviewStatus.APPROVED,
+            normalized_relations__node=target,
+        )
+        .prefetch_related(
+            "normalized_relations__node",
+            "normalized_relations__discipline",
+            "normalized_relations__scholar__person",
+            "normalized_relations__work",
+        )
+        .distinct()
+        .order_by("start_year", "display_order", "title")[:24]
+    )
+    paths = (
+        ReadingPath.objects.filter(
+            status=KnowledgePublicationStatus.PUBLISHED,
+            items__node=target,
+        )
+        .select_related("primary_discipline")
+        .prefetch_related("stages", "items__stage", "items__node", "items__work")
+        .distinct()
+        .order_by("sort_order", "title")[:6]
+    )
+    return {
+        "graph": _theory_graph_preview(active_data),
+        "timeline": list(
+            NormalizedTimelineEventSerializer(timeline, many=True, context={}).data
+        ),
+        "reading_paths": list(
+            ReadingPathSerializer(
+                paths,
+                many=True,
+                context={"include_unpublished_items": True},
+            ).data
+        ),
+    }
+
+
+def _scholar_secondary_preview() -> dict[str, Any]:
+    """Return the published legacy TheorySchool fallback used by public pages."""
+
+    rows = TheorySchool.objects.filter(
+        editorial_status=KnowledgePublicationStatus.PUBLISHED,
+    ).order_by("name")[:50]
+    return {
+        "legacy_theory_schools": [
+            {
+                "slug": row.slug,
+                "name": row.name,
+                "description": row.description or "馆藏关联理论流派",
+                "books": 0,
+                "scholars": 0,
+                "symbol": row.symbol or row.name[:2],
+            }
+            for row in rows
+        ]
+    }
+
+
 def knowledge_object_preview_payload(
     *,
     object_type: str,
@@ -2925,7 +3162,7 @@ def knowledge_object_preview_payload(
     published = perspectives.get("published") or {}
     active = "draft" if draft.get("available") else "published"
     active_payload = draft if active == "draft" else published
-    return {
+    payload = {
         "preview_mode": True,
         "protected": True,
         "object_type": selection["object_type"],
@@ -2940,7 +3177,20 @@ def knowledge_object_preview_payload(
         "frontend_impact": selection.get("frontend_impact") or {},
         "content_completeness": selection.get("content_completeness") or {},
         "editor_adapter": selection.get("editor_adapter") or {},
+        "public_control": selection.get("public_control") or {},
     }
+    if selection["object_type"] == "theory" and isinstance(
+        active_payload.get("data"), dict
+    ):
+        payload["secondary_preview"] = _theory_secondary_preview(
+            object_id=selection["id"],
+            active_data=dict(active_payload["data"]),
+        )
+    elif selection["object_type"] == "scholar" and isinstance(
+        active_payload.get("data"), dict
+    ):
+        payload["secondary_preview"] = _scholar_secondary_preview()
+    return payload
 
 
 def knowledge_studio_workspace(
@@ -2990,6 +3240,10 @@ def knowledge_studio_workspace(
         reviewer=reviewer,
         global_scope=True,
     )
+    from catalog.services.public_knowledge_control import (
+        public_management_coverage,
+    )
+
     return {
         "object_types": [
             {"value": "all", "label": "全部对象"},
@@ -3030,4 +3284,5 @@ def knowledge_studio_workspace(
         "mutations_via_existing_adapters": True,
         "read_only_aggregation": True,
         "machine_claims_are_canonical": False,
+        "public_management_coverage": public_management_coverage(),
     }

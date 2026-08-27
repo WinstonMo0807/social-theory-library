@@ -24,6 +24,7 @@ from catalog.models import (
     KnowledgeNodeVersion,
     KnowledgeRelation,
     KnowledgeRelationVersion,
+    Person,
     PersonNodeRelation,
     PublicationState,
     ReadingPath,
@@ -46,6 +47,7 @@ from catalog.services.relation_registry import (
 )
 from catalog.services.evidence_envelope import public_curated_claim_groups
 from catalog.services.semantic_search import viewer_access_statuses
+from catalog.services.scholar_publication import scholar_public_eligibility
 
 
 def _media_url(request, field):
@@ -288,7 +290,13 @@ class PersonNodeSerializer(serializers.ModelSerializer):
 
     def get_scholar_slug(self, obj):
         profile = getattr(obj.person, "scholar_profile", None)
-        return profile.slug if profile and profile.editorial_status == "published" else ""
+        return (
+            profile.slug
+            if profile
+            and profile.editorial_status == "published"
+            and obj.person.authority_status == Person.AuthorityStatus.VERIFIED
+            else ""
+        )
 
 
 class EvidenceSnippetSerializer(serializers.ModelSerializer):
@@ -519,6 +527,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
         queryset = obj.person_relations.filter(
             status="published",
             is_representative=True,
+            person__authority_status=Person.AuthorityStatus.VERIFIED,
         ).select_related("person", "person__scholar_profile")[:5]
         return PersonNodeSerializer(queryset, many=True, context=self.context).data
 
@@ -1314,6 +1323,8 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
                     "slug": relation.discipline.slug,
                 }
             elif relation.scholar_id:
+                if not scholar_public_eligibility(relation.scholar)["eligible"]:
+                    continue
                 target = {
                     "type": "scholar",
                     "id": str(relation.scholar_id),

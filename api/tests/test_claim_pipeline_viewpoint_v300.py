@@ -37,7 +37,11 @@ from catalog.services.claims.pipeline import (
     schedule_document_claim_extraction,
 )
 from catalog.tasks import execute_claim_extraction_demand
-from catalog.services.viewpoint_search import query_claim, viewpoint_search
+from catalog.services.viewpoint_search import (
+    _matching_evidence_span,
+    query_claim,
+    viewpoint_search,
+)
 from ingestion.services.ai_client import AIServiceUnavailable
 from common.task_runtime import (
     claim_demand,
@@ -162,6 +166,26 @@ def _claim(revision, span, *, proposition, polarity, fingerprint):
         status=DerivedClaim.Status.ACTIVE,
         shadow=True,
     )
+
+
+def test_viewpoint_evidence_matching_rejects_unrelated_same_page_text():
+    _work, _edition, asset, _revision, spans = _source(
+        title="观点定位词面校验",
+        pages=1,
+    )
+    unrelated = _matching_evidence_span({
+        "asset_id": str(asset.id),
+        "page_start": 1,
+        "snippet": "教育制度与家庭背景形成另一段完全不同的讨论。",
+    })
+    close_match = _matching_evidence_span({
+        "asset_id": str(asset.id),
+        "page_start": 1,
+        "snippet": "贫困会导致犯罪。",
+    })
+
+    assert unrelated is None
+    assert close_match == spans[0]
 
 
 def test_claim_extraction_is_shadow_idempotent_and_preserves_qualifiers():
@@ -587,7 +611,9 @@ def test_viewpoint_search_keeps_baseline_default_and_groups_validated_claim_shad
     assert result["shadow"]["groups"]["oppose"][0]["claim_id"] == str(negative.id)
     assert all(
         row["evidence"]["kind"] == "collection_text"
-        and row["reader_url"].endswith(f"?page={row['page']}")
+        and row["reader_url"].startswith(
+            f"/reader/{row['evidence']['source']['asset_id']}?page={row['page']}&passage="
+        )
         and row["pdf_url"].endswith("/file/")
         for row in result["shadow"]["results"]
     )

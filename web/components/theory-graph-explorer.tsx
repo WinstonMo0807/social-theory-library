@@ -55,7 +55,7 @@ export function TheoryGraphExplorer({ graph }: { graph: LocalTheoryGraph }) {
   }
 
   return (
-    <div className="theory-graph-explorer">
+    <div className="theory-graph-explorer" data-module-id="theory-relations">
       <div className="theory-graph-canvas" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} onWheel={handleWheel}>
         <div className="graph-toolbar">
           <button type="button" onClick={() => setZoom((value) => Math.min(1.65, value + .1))} aria-label="放大"><Plus size={18} /></button>

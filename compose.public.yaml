@@ -111,7 +111,7 @@ services:
 
   api:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.2}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.3}
     build:
       context: ./api
     env_file:
@@ -179,7 +179,7 @@ services:
 
   worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.2}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.3}
     build:
       context: ./api
     env_file:
@@ -220,7 +220,7 @@ services:
 
   ingestion-worker:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.2}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.3}
     build:
       context: ./api
     env_file:
@@ -259,7 +259,7 @@ services:
 
   beat:
     <<: *service-hardening
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.2}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.3}
     build:
       context: ./api
     env_file:
@@ -317,7 +317,7 @@ services:
 
   web:
     <<: *service-hardening
-    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:3.0.2}
+    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:3.0.3}
     build:
       context: ./web
     environment:

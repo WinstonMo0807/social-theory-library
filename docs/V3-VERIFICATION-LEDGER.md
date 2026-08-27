@@ -1,8 +1,22 @@
 # Social Theory Library 3.0 Verification Ledger
 
-更新时间：2026-08-26
+更新时间：2026-08-28
 
 本记录只登记实际执行的检查。环境依赖、生产验证和真实馆藏质量评估在完成前均标为待核实。工程严格按四个 Wave 推进，不再拆分子 Phase。
+
+## 3.0.3 Public Knowledge Control
+
+| 改动 | 风险 | 已执行验证 | 为什么足够 | 生产综合验收 |
+| --- | --- | --- | --- | --- |
+| Scholar 公开资格与发布传播 | 高 | 公开资格、直接发布、EditorialRevision、收敛 dry-run、DomainChange、旧时间线与推荐消费者定向测试通过；生产只读盘点为 published 4、eligible 0、Person draft 4 | 覆盖单一资格规则、阻止 rejected 或 merged 恢复，以及 Person 变化的依赖传播 | fresh backup 后有界 apply，公开 API、页面和 Projection 反向核对 |
+| PublicPageContract 与受保护 Preview | 高 | 后端 13 项定向通过；管理审计返回 status ok、Scholar 9、Theory 7、Topic 8，路由和字段均 100%；前端公共页面与 Preview 测试通过 | 同一 serializer、同一公开组件、草稿状态、no-store 和匿名拒绝均有契约 | 正常 Administrator 会话预览与匿名拒绝 |
+| Reader Evidence 定位 | 高 | EvidenceSpan locator、Passage focus、Viewpoint 无关同页拒绝、Ask 与 CuratedClaim Reader URL 定向测试通过；生产 active EvidenceSpan 3,735，空 bbox 0 | 覆盖页面、访问权限、active revision、stale 与文字匹配边界 | 原文、观点、Ask 各取真实结果，核对 focus text、bbox、Range 206 与可见高亮 |
+| 检索页面与 Explore 视觉收敛 | 中 | 观点检索和公共页面 Node 测试通过；TypeScript 与完整 lint 退出 0；production build 成功 | 共用模式切换与筛选外壳，同时保留观点立场分组；暖纸色来自现有 token | 公网路由、窄屏和模式切换 smoke |
+| Processing Center 七工作面 | 中 | Processing Center、Provider 设置与功能健康改动面通过；首次完整 Node suite 仅旧组件调用断言失败，更新后受影响文件 7/7 通过 | URL 状态、功能影响、OCR 健康、焦点样式、Provider 删除确认均覆盖 | 正常 Administrator 会话核对七分区、Provider 降级和 Worker 状态 |
+| 综合代码门槛 | 高 | 后端完整 `api/tests` 回归退出 0；Django check、migration drift、PublicPageContract audit、TypeScript、完整 ESLint、前端 production build 与 `git diff --check` 通过 | 只对首次完整前端执行暴露的过期断言重跑受影响文件，符合风险驱动规则 | 同源 tree、镜像 label、部署记录和最终 Git tree 一致 |
+| 备份与回退 | 高 | BackupJob `a6ec015b-ef36-46c7-9cc2-735920120461` 完成；archive SHA-256 `e2171e337c34bee1d727389abc8438e101728204c3038dfc6543cb3a83487532`；database SHA-256 `7a0d09a005a6cd87bb6ccdf0030f940854ecc13b7f9e6db675ff40ab1c3ba46d`；隔离 PostgreSQL 16 实际恢复、Django check、空 migration plan、馆藏及 identity hash 匹配 | 证明数据库备份可读且旧 3.0.2 image 可直接作为应用回退，无需反向 migration | 切换后验证回退脚本、旧标签和 readiness；不执行破坏性 restore |
+
+生产源码冻结前确认 OCR 全局暂停，6 个 OCR job 为 paused；21 个 `llm_small` demand 等待 capability，publication blocking 为 0；14 个 ProjectionState 全部 current；活动语义索引为 3,005/3,005。3.0.3 不改变这些策略。
 
 ## 3.0.2 Product Convergence
 

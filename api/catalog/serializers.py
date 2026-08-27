@@ -53,6 +53,8 @@ from .services.evidence_envelope import (
     public_curated_claim_groups,
 )
 from .services.semantic_search import viewer_access_statuses
+from .services.scoped_search import public_scholar_queryset
+from .services.scholar_publication import scholar_public_eligibility
 from .services.text import clean_page_label, normalize_search_text
 
 
@@ -162,7 +164,15 @@ def _relation_work_rows(queryset, label):
     return rows
 
 
-def _scholar_rows(queryset, reason="相关馆藏的作者或研究对象", source_label="作者贡献关系"):
+def _scholar_rows(
+    queryset,
+    reason="相关馆藏的作者或研究对象",
+    source_label="作者贡献关系",
+    *,
+    public_only=True,
+):
+    if public_only:
+        queryset = queryset.filter(pk__in=public_scholar_queryset().values("pk"))
     return [
         {
             "id": str(profile.id),
@@ -339,7 +349,11 @@ class PersonCompactSerializer(serializers.ModelSerializer):
 
     def get_scholar_slug(self, obj):
         profile = getattr(obj, "scholar_profile", None)
-        if profile and profile.editorial_status == "published":
+        if (
+            profile
+            and profile.editorial_status == "published"
+            and obj.authority_status == Person.AuthorityStatus.VERIFIED
+        ):
             return profile.slug
         return None
 
@@ -1113,7 +1127,7 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
 
     def get_scholar_count(self, obj):
         return (
-            ScholarProfile.objects.filter(editorial_status="published")
+            public_scholar_queryset()
             .filter(
                 Q(
                     person__knowledge_relations__theory_school=obj,
@@ -1141,7 +1155,7 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
             curation.get("curated_reading_work_ids", []),
         )
         scholars = _ordered_objects(
-            ScholarProfile.objects.filter(editorial_status="published").select_related("person"),
+            public_scholar_queryset(),
             curation.get("key_scholar_ids", []),
         )
         neighbors = _ordered_objects(
@@ -1295,7 +1309,7 @@ class TopicSerializer(serializers.ModelSerializer):
             curation.get("recent_work_ids", []),
         )
         scholars = _ordered_objects(
-            ScholarProfile.objects.filter(editorial_status="published").select_related("person"),
+            public_scholar_queryset(),
             curation.get("related_scholar_ids", []),
         )
         theories = _ordered_objects(
@@ -1382,7 +1396,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             curation.get("essential_work_ids", []),
         )
         frequent = _ordered_objects(
-            ScholarProfile.objects.filter(editorial_status="published").select_related("person"),
+            public_scholar_queryset(),
             curation.get("frequently_read_scholar_ids", []),
         )
         related_theories = _ordered_objects(
@@ -1398,10 +1412,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
         ]
         profiles = {
             str(profile.id): profile
-            for profile in ScholarProfile.objects.filter(
-                pk__in=profile_ids,
-                editorial_status="published",
-            ).select_related("person")
+            for profile in public_scholar_queryset().filter(pk__in=profile_ids)
         }
         for entry in network_entries:
             if not isinstance(entry, dict):
@@ -1562,6 +1573,7 @@ class DisciplineSerializer(serializers.ModelSerializer):
         direct = obj.person_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
             person__scholar_profile__editorial_status="published",
+            person__authority_status=Person.AuthorityStatus.VERIFIED,
         ).values("person_id")
         return direct.distinct().count()
 
@@ -1691,7 +1703,7 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
         return self._named(obj.subdiscipline)
 
     def get_scholar(self, obj):
-        if obj.scholar is None:
+        if obj.scholar is None or not scholar_public_eligibility(obj.scholar)["eligible"]:
             return None
         return {
             "id": str(obj.scholar_id),
@@ -1746,7 +1758,7 @@ class RecommendationSnapshotSerializer(serializers.ModelSerializer):
                     "hero_image": public_url(item.topic.hero_image),
                 }
             elif item.scholar_id:
-                if item.scholar.editorial_status != "published":
+                if not scholar_public_eligibility(item.scholar)["eligible"]:
                     continue
                 target_type = "scholar"
                 target = {
@@ -2401,7 +2413,7 @@ class AdminTheorySchoolSerializer(serializers.ModelSerializer):
         ).exclude(pk=obj.pk)
         return {
             "works": _relation_work_rows(relations, "流派关系"),
-            "scholars": _scholar_rows(scholars),
+            "scholars": _scholar_rows(scholars, public_only=False),
             "neighbors": _knowledge_rows(neighbors),
             "concepts": _concept_rows(works, obj.key_themes),
         }
@@ -2522,7 +2534,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
         )
         return {
             "works": _relation_work_rows(relations, "主题关系"),
-            "scholars": _scholar_rows(scholars),
+            "scholars": _scholar_rows(scholars, public_only=False),
             "theories": _knowledge_rows(theories),
             "passages": _ranked_passage_rows(
                 works,
@@ -2588,12 +2600,18 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     portrait = serializers.ImageField(source="person.portrait", required=False, allow_null=True)
     slug = serializers.SlugField(required=False, allow_blank=True)
     suggestions = serializers.SerializerMethodField()
+    authority_status = serializers.CharField(source="person.authority_status", read_only=True)
+    public_eligible = serializers.SerializerMethodField()
+    public_visibility_reason = serializers.SerializerMethodField()
 
     class Meta:
         model = ScholarProfile
         fields = (
             "id",
             "person_id",
+            "authority_status",
+            "public_eligible",
+            "public_visibility_reason",
             "slug",
             "preferred_name",
             "original_name",
@@ -2641,9 +2659,19 @@ class AdminScholarSerializer(serializers.ModelSerializer):
             ),
             "theories": _knowledge_rows(theories),
             "topics": _knowledge_rows(topics),
-            "related_scholars": _scholar_rows(related),
+            "related_scholars": _scholar_rows(related, public_only=False),
             "concepts": _concept_rows(works, obj.key_concerns),
         }
+
+    def get_public_eligible(self, obj):
+        from catalog.services.scholar_publication import scholar_public_eligibility
+
+        return bool(scholar_public_eligibility(obj)["eligible"])
+
+    def get_public_visibility_reason(self, obj):
+        from catalog.services.scholar_publication import scholar_public_eligibility
+
+        return str(scholar_public_eligibility(obj)["reason"])
 
     def validate_curation(self, value):
         value = value if isinstance(value, dict) else {}
@@ -2683,12 +2711,23 @@ class AdminScholarSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "当前账户不能发布或下线学者。"
             )
+        if value == "published" and self.instance is not None:
+            from catalog.services.scholar_publication import (
+                PUBLICATION_REVIEWABLE_STATUSES,
+            )
+
+            if self.instance.person.authority_status not in PUBLICATION_REVIEWABLE_STATUSES:
+                raise serializers.ValidationError(
+                    "该人物的权威记录已拒绝、合并或归档，请先完成身份处理。"
+                )
         return value
 
     @transaction.atomic
     def create(self, validated_data):
         person_data = validated_data.pop("person")
         preferred_name = person_data["preferred_name"]
+        if validated_data.get("editorial_status") == "published":
+            person_data["authority_status"] = Person.AuthorityStatus.VERIFIED
         person = Person.objects.create(
             sort_name=preferred_name,
             **person_data,
@@ -2714,4 +2753,19 @@ class AdminScholarSerializer(serializers.ModelSerializer):
                 person_data.get("preferred_name", instance.person.preferred_name),
                 instance,
             )
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        if instance.editorial_status == "published":
+            from catalog.services.scholar_publication import (
+                ScholarPublicationError,
+                ensure_scholar_public_authority,
+            )
+
+            try:
+                request = self.context.get("request") if isinstance(self.context, dict) else None
+                ensure_scholar_public_authority(
+                    instance,
+                    actor=getattr(request, "user", None),
+                )
+            except ScholarPublicationError as exc:
+                raise serializers.ValidationError(str(exc)) from exc
+        return instance

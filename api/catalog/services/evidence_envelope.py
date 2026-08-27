@@ -44,6 +44,7 @@ def evidence_span_envelope(span: EvidenceSpan) -> EvidenceEnvelope:
         and contribution.role == "author"
         and contribution.person_id
     ]
+    focus_id = span.passage_id or span.id
     return EvidenceEnvelope(
         id=str(span.id),
         kind="collection_text",
@@ -60,6 +61,8 @@ def evidence_span_envelope(span: EvidenceSpan) -> EvidenceEnvelope:
         locator={
             "page": page,
             "page_id": str(span.page_id),
+            "passage_id": str(span.passage_id) if span.passage_id else None,
+            "evidence_span_id": str(span.id),
             "printed_page_label": span.printed_page_label,
             "start_offset": span.start_offset,
             "end_offset": span.end_offset,
@@ -83,7 +86,10 @@ def evidence_span_envelope(span: EvidenceSpan) -> EvidenceEnvelope:
             "ocr_version": revision.ocr_version,
             "ocr": span.ocr_provenance,
         },
-        reader_url=f"/reader/{asset.id}?page={page}",
+        # Reader's passage focus endpoint also accepts EvidenceSpan ids as a
+        # locator fallback. This keeps Viewpoint Search and Ask Library on the
+        # same verifiable highlight path as full-text search.
+        reader_url=f"/reader/{asset.id}?page={page}&passage={focus_id}",
         pdf_url=f"/api/catalog/assets/{asset.id}/manifest/",
     )
 

@@ -1,6 +1,19 @@
 # 开发进度
 
-更新日期为 2026-08-26。3.0.2 已部署到 [books.winstonmo.com](https://books.winstonmo.com)。API readiness 返回 3.0.2、database true、pending migrations 0。公开 T4 已通过。首轮候选树及镜像保留在部署记录中；正式发布使用本文件所在的完整 tracked tree，同一 tree identity 写入最终镜像 label、部署记录和远端 release 分支，不在源码文档中自引用尚未生成的 commit SHA。
+更新日期为 2026-08-28。源码冻结前，[books.winstonmo.com](https://books.winstonmo.com) 运行 3.0.2，database true、pending migrations 0。3.0.3 的最终生产结果记录在 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record`。正式发布使用本文件所在的完整 tracked tree，同一 tree identity 写入镜像 label、部署记录和远端 release 分支，不在源码文档中自引用尚未生成的 commit SHA。
+
+## 3.0.3 Public Knowledge Control Plane
+
+- 已完成公开 Scholar 资格收敛。生产只读盘点发现 4 个 published ScholarProfile 对应的 Person 全部仍为 draft，解释了后台显示公开而前台为空。新发布路径会原子核验 Person，并记录统一依赖事件。收敛命令默认 dry-run，拒绝、已合并和已归档 Person 不会被恢复。
+- 已建立 Scholar 9 页、Theory 7 页和 Topic 8 页的 PublicPageContract。路由覆盖和后台字段分类均为 100%。受保护 Preview 复用真实公开 serializer 与组件，并补齐 Scholar 的旧理论只读补充、Theory 时间线和 Reading Path。草稿预览不再显示“已审核并公开”。
+- 已修复公开 Scholar 在旧时间线、推荐、Theory 计数和 Frontend Impact 中的资格遗漏。Work contributor 仍可显示责任者姓名，但不会为不具备公开资格的人生成 Scholar 链接。
+- EvidenceSpan 与 Reader 的定位包含页码、Passage 或 EvidenceSpan 身份。观点检索的同页模糊匹配提高了词面重叠要求，空文本或无关文本不会绑定到第一条 EvidenceSpan。原文检索、观点检索和向书库提问继续共用同一 Reader focus 接口。
+- 观点检索使用与原文检索一致的模式切换和筛选外壳，同时保留 direct、support、oppose、qualify 等独立结果体验。Explore 背景已对齐公开站点暖纸色。
+- Processing Center 已拆为七个可直接定位的工作面。OCR 与文档获得独立健康摘要，键盘焦点样式恢复，Provider credential 删除增加确认。Provider 状态、用途、配置要求、最近成功、影响功能与降级原因仍来自真实后端数据。
+- 作者与译者问题复核后没有扩大修改。正式列表只读取已保存 Contribution。作者默认空输入不落库，译者按需添加，空行不阻止保存；OCR 和研究人物继续只作为候选。
+- 本地最终检查中，后端完整 `api/tests` 回归退出 0。Django check、migration drift、24 个 PublicPageContract 审计、TypeScript、完整 ESLint 和 `git diff --check` 通过。前端完整 Node suite 与 production build 首次只暴露一个 Processing Center 旧源码形态断言，更新后只重跑受影响文件，7 项全部通过。
+- 切换前正式 BackupJob 为 `a6ec015b-ef36-46c7-9cc2-735920120461`。归档 SHA-256 为 `e2171e337c34bee1d727389abc8438e101728204c3038dfc6543cb3a83487532`，database dump SHA-256 为 `7a0d09a005a6cd87bb6ccdf0030f940854ecc13b7f9e6db675ff40ab1c3ba46d`。同一归档已在隔离 PostgreSQL 16 中实际恢复，Django check、空 migration plan、馆藏数量、Page identity 与 ORIGINAL identity 均匹配。
+- 3.0.2 回退标签为 `social-theory-library-api:pre-v303-20260828-012030` 和 `social-theory-library-web:pre-v303-20260828-012030`。本轮不执行数据库反向迁移或破坏性 restore。
 
 ## 3.0.2 Admin Experience、Knowledge Convergence 与 Product Completion
 

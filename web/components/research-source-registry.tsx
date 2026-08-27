@@ -258,6 +258,7 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
     const alias = drafts[source.key]?.credentialAlias.trim();
     const actionKey = `credential-delete:${source.key}`;
     if (!token || !alias || pendingAction) return;
+    if (!window.confirm(`确认删除 ${source.label} 的服务器凭据吗？删除后，依赖该凭据的研究功能会降级，原值无法从浏览器恢复。`)) return;
     setPendingAction(actionKey);
     setFeedback({ state: "pending", actionKey, message: `正在删除 ${source.label} 的服务器凭据。` });
     try {

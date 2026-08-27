@@ -63,9 +63,9 @@ export function ScholarPublicView({
   return (
     <>
       <div className="page-shell scholar-detail">
-        <section className="scholar-hero">
+        <section className="scholar-hero" data-module-id="scholar-identity">
           <ScholarPortrait scholar={scholar} large />
-          <div className="scholar-intro">
+          <div className="scholar-intro" data-module-id="scholar-position">
             <h1>{scholar.originalName}</h1>
             <p className="scholar-years">{scholar.years}</p>
             <p>{scholar.school}</p>
@@ -83,7 +83,7 @@ export function ScholarPublicView({
               </div>
             </div>
           </div>
-          <div className="scholar-timeline">
+          <div className="scholar-timeline" data-module-id="scholar-timeline">
             <SectionHeading title="生平与主要著作" href={`/scholars/${slug}/timeline`} action="查看完整时间线" />
             {timeline.map(([year, event]) => (
               <p key={`${year}-${event}`}><time>{year}</time><span>{event}</span></p>
@@ -91,18 +91,18 @@ export function ScholarPublicView({
             {!timeline.length ? <p className="muted-row">时间线尚未由编辑确认。</p> : null}
           </div>
           {featuredQuote ? (
-            <blockquote className="scholar-quote">
+            <blockquote className="scholar-quote" data-module-id="scholar-quote">
               <Quote size={28} fill="currentColor" />
               {featuredQuote}
               <cite>— {quoteSource || scholar.originalName}</cite>
             </blockquote>
-          ) : <div className="scholar-quote empty-state">尚无经过来源核对的公开引语。</div>}
+          ) : <div className="scholar-quote empty-state" data-module-id="scholar-quote">尚无经过来源核对的公开引语。</div>}
         </section>
 
-        <CuratedClaimSections groups={curatedClaims} />
+        <div data-module-id="scholar-curated-claims"><CuratedClaimSections groups={curatedClaims} /></div>
 
         <div className="scholar-body-grid">
-          <section className="essential-texts panel">
+          <section className="essential-texts panel" data-module-id="scholar-representative-works">
             <SectionHeading title="重要文献" href={`/scholars/${slug}/works`} />
             {essentialWorks.map((work) => (
               <Link href={`/works/${work.slug}`} key={work.id}>
@@ -112,11 +112,11 @@ export function ScholarPublicView({
             ))}
           </section>
 
-          <section className="about-scholar panel">
+          <section className="about-scholar panel" data-module-id="scholar-biography">
             <SectionHeading title={`关于${scholar.name}`} href={`/scholars/${slug}/biography`} action="查看完整传记" />
             <p>{scholar.biography}</p>
             <div className="scholar-key-grid">
-              <div>
+              <div data-module-id="scholar-concepts">
                 <SectionHeading title="关键概念" href={`/scholars/${slug}/concepts`} action="查看全部" />
                 {keyConcepts.map((concept, index) => {
                   const name = typeof concept === "string" ? concept : concept.name || `概念 ${index + 1}`;
@@ -134,7 +134,7 @@ export function ScholarPublicView({
                   </div>;
                 })}
               </div>
-              <div>
+              <div data-module-id="scholar-theories">
                 <SectionHeading title="相关理论流派" href={`/scholars/${slug}/theories`} action="查看全部" />
                 {relatedSchools.slice(0, 5).map((school) => (
                   <Link className="school-link-row" href={school.href} key={school.slug}>
@@ -148,7 +148,7 @@ export function ScholarPublicView({
             </div>
           </section>
 
-          <section className="concept-map panel">
+          <section className="concept-map panel" data-module-id="scholar-concept-map">
             <SectionHeading title="概念图" href={`/scholars/${slug}/concept-map`} action="查看交互图" />
             <div className="bourdieu-map">
               <span className="map-center">{scholar.name}<small>馆藏学者</small></span>
@@ -171,7 +171,7 @@ export function ScholarPublicView({
             {curated.conceptMap.length ? <KnowledgeMap entries={curated.conceptMap.slice(0, 2)} /> : null}
           </section>
 
-          <section className="network-connections panel">
+          <section className="network-connections panel" data-module-id="scholar-network">
             <SectionHeading title="学术关系" href={`/scholars/${slug}/network`} action="查看完整网络" />
             {curated.network.map((connection) => (
               <Link className="connection-row" href={`/scholars/${connection.scholar.slug}`} key={connection.scholar.id}>
@@ -194,7 +194,7 @@ export function ScholarPublicView({
             ))}
           </section> : null}
 
-          <section className="curated-works panel">
+          <section className="curated-works panel" data-module-id="scholar-works">
             <SectionHeading title="馆藏作品" href={`/explore?q=${scholar.name}`} action={`查看全部 ${scholarWorks.length} 部`} />
             <div className="curated-cover-row">
               {scholarWorks.map((work) => (
@@ -206,7 +206,7 @@ export function ScholarPublicView({
             </div>
           </section>
 
-          <section className="frequently-read panel">
+          <section className="frequently-read panel" data-module-id="scholar-frequently-read">
             <SectionHeading title="经常连着阅读" href={`/scholars/${slug}/frequently-read`} action="查看全部" />
             <div className="frequent-scholar-row">
               {curated.frequentlyReadScholars.map((profile) => (

@@ -32,7 +32,7 @@ test("Knowledge Studio is the primary knowledge entry and reuses specialist edit
   ]);
 
   assert.match(shell, /\["\/admin\/knowledge", Sparkles, "Knowledge Studio"\]/);
-  assert.match(studio, /href="\/admin\/theory-nodes"/);
+  assert.match(studio, /href="\/admin\/theories"/);
   assert.match(studio, /href="\/admin\/scholars"/);
   assert.match(studio, /href="\/admin\/topics"/);
   assert.match(studio, /进入专门编辑器/);

@@ -990,6 +990,9 @@ export function TaxonomyAdmin({
 type AdminScholar = {
   id: string;
   person_id: string;
+  authority_status: string;
+  public_eligible: boolean;
+  public_visibility_reason: string;
   slug: string;
   preferred_name: string;
   original_name: string;
@@ -1256,8 +1259,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               <span>{scholar.original_name || "—"}</span>
               <span>{scholar.birth_year ? `${scholar.birth_year}—${scholar.death_year ?? ""}` : "—"}</span>
               <span>{scholar.key_concerns.slice(0, 2).join("、") || "待补"}</span>
-              <b>{scholar.editorial_status === "published" ? "已公开" : "草稿"}</b>
-              <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link>{scholar.editorial_status === "published" ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
+              <b>{scholar.public_eligible ? "已公开" : scholar.editorial_status === "published" ? "公开资格待处理" : "草稿"}</b>
+              <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link>{scholar.public_eligible ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
             </article>
           ))}
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
@@ -1265,6 +1268,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
           <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div></header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
+          {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message={`学者档案已标记发布，但人物权威状态为 ${detail.data.authority_status}。发布资格收敛后才会出现在公开站点。`} /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <AuthoritySuggestions
             entityType="person"
