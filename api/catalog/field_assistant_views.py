@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers, status
 from rest_framework.response import Response
@@ -10,7 +12,9 @@ from catalog.services.field_assistant import (
     FieldAssistantRequest,
     FieldAssistantService,
 )
-from common.permissions import IsCatalogEditor
+from common.permissions import CanRunEnrichment, IsCatalogEditor
+
+logger = logging.getLogger(__name__)
 
 
 class FieldAssistantLookupSerializer(serializers.Serializer):
@@ -24,6 +28,8 @@ class FieldAssistantLookupSerializer(serializers.Serializer):
     authority_type = serializers.CharField(max_length=40, required=False, allow_blank=True)
     current_value = serializers.JSONField(required=False, allow_null=True)
     form_context = serializers.JSONField(required=False)
+    refresh = serializers.BooleanField(required=False, default=False)
+    allow_external = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
         if attrs.get("scope") == "catalog" and attrs["object_type"] in {"work", "edition"} and not attrs.get("object_id"):
@@ -57,6 +63,11 @@ class _FieldAssistantView(APIView):
     permission_classes = [IsCatalogEditor]
     service = FieldAssistantService()
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        return response
+
     @staticmethod
     def _error(exc: Exception) -> Response:
         code = status.HTTP_404_NOT_FOUND if isinstance(exc, ObjectDoesNotExist) else status.HTTP_400_BAD_REQUEST
@@ -79,19 +90,34 @@ class AdminFieldAssistantLookupView(_FieldAssistantView):
                     current_value=data.get("current_value"), form_context=data.get("form_context", {}),
                     actor=request.user,
                 ))
-            result = self.service.lookup(
-                FieldAssistantRequest(
+            field_request = FieldAssistantRequest(
                     object_type=data["object_type"],
                     object_id=data["object_id"],
                     field_name=data["field_name"],
                     query=data.get("query", ""),
                     confirmed_context=data.get("confirmed_context", {}),
                     upload_item_id=data.get("upload_item_id"),
-                )
+                    allow_external=data["allow_external"],
             )
+            refresh = None
+            if data["refresh"]:
+                if not CanRunEnrichment().has_permission(request, self):
+                    refresh = {"state": "local", "message": "已查找馆内记录和已有依据。当前账户没有外部查找权限，仍可手工填写。"}
+                else:
+                    from catalog.services.field_assistant.refresh import request_field_refresh
+
+                    try:
+                        refresh = request_field_refresh(field_request, actor=request.user)
+                    except (ValueError, RuntimeError):
+                        logger.warning("Field research could not be prepared", exc_info=True)
+                        refresh = {"state": "unavailable", "message": "新的建议暂时无法准备，仍可使用馆内记录、已有依据或手工填写。"}
+            result = self.service.lookup(field_request)
         except (FieldAssistantError, ValueError, ObjectDoesNotExist) as exc:
             return self._error(exc)
-        return Response(result.as_dict())
+        payload = result.as_dict()
+        if refresh is not None:
+            payload["refresh"] = refresh
+        return Response(payload)
 
 
 class AdminFieldAssistantAdoptView(_FieldAssistantView):

@@ -63,9 +63,17 @@ export async function cachedAssistantRequest<T>(key: string, path: string, optio
   });
 }
 
-export function lookupFieldSuggestions<T>({ editionId, fieldName, query = "", contextKey = "", token, signal }: {
-  editionId: string; fieldName: string; query?: string; contextKey?: string; token: string | null; signal?: AbortSignal;
+export function lookupFieldSuggestions<T>({ editionId, fieldName, query = "", contextKey = "", token, signal, refresh = false }: {
+  editionId: string; fieldName: string; query?: string; contextKey?: string; token: string | null; signal?: AbortSignal; refresh?: boolean;
 }) {
+  if (refresh) {
+    // Only a direct user action schedules external research. Prefetch and
+    // initial cached rendering never request it; the server deduplicates runs.
+    invalidateAssistantCache(editionId);
+    return apiRequest<T>("/catalog/admin/field-assistant/lookup/", {
+      method: "POST", signal, body: JSON.stringify({ object_type: "edition", object_id: editionId, field_name: fieldName, query, refresh: true, allow_external: true }),
+    }, token);
+  }
   return cachedAssistantRequest<T>(assistantCacheKey(editionId, fieldName, query, contextKey), "/catalog/admin/field-assistant/lookup/", {
     method: "POST", body: JSON.stringify({ object_type: "edition", object_id: editionId, field_name: fieldName, query }),
   }, token, signal);

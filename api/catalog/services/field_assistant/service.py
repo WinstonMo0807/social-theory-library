@@ -288,12 +288,30 @@ def _raw_candidate(
     }
 
 
+def _research_candidate_is_current(properties, edition, policy, checked=None):
+    properties = dict(properties or {})
+    if properties.get("is_current_context") is False:
+        return False
+    run_id = properties.get("research_run_id")
+    if not run_id:
+        return True
+    from .refresh import research_context_is_current
+
+    checked = checked if checked is not None else {}
+    key = str(run_id)
+    if key not in checked:
+        run = ResearchRun.objects.filter(pk=run_id, edition=edition).first()
+        checked[key] = research_context_is_current(run, edition, policy)
+    return checked[key]
+
+
 def _prepared_candidates(
     policy: AssistantFieldPolicy,
     edition,
     item: UploadItem | None,
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
+    checked_runs = {}
     if item is not None:
         metadata = item.metadata_candidates.filter(
             field_name__in=policy.metadata_fields,
@@ -316,6 +334,8 @@ def _prepared_candidates(
             status=EntityResolutionCandidate.Status.PROPOSED,
         )
         for candidate in entity_rows:
+            if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, checked_runs):
+                continue
             if not {"link_existing", "create_draft"}.intersection(available_resolution_actions(candidate)):
                 continue
             if policy.contribution_role:
@@ -354,6 +374,8 @@ def _prepared_candidates(
         status=EnrichmentCandidate.Status.PENDING,
     ).prefetch_related("evidence_records")
     for candidate in enrichment:
+        if not _research_candidate_is_current(candidate.request_context, edition, policy, checked_runs):
+            continue
         if not candidate.evidence_records.filter(is_current=True).exclude(supporting_text="").exists():
             continue
         for label, value in _value_rows(candidate.proposed_value):
@@ -1479,6 +1501,8 @@ class FieldAssistantService:
             )
             if candidate.upload_item.edition_id != edition.pk:
                 raise FieldAssistantError("实体建议不属于当前版本。")
+            if not _research_candidate_is_current(candidate.supporting_properties, edition, policy):
+                raise FieldAssistantError("当前编目信息已变化，请重新查找后再采用。")
             if candidate.target_type not in policy.entity_target_types:
                 raise FieldAssistantError("实体建议不适用于当前字段。")
             if policy.contribution_role:
@@ -1559,6 +1583,8 @@ class FieldAssistantService:
             candidate = EnrichmentCandidate.objects.select_for_update().prefetch_related(
                 "evidence_records"
             ).get(pk=source_id)
+            if not _research_candidate_is_current(candidate.request_context, edition, policy):
+                raise FieldAssistantError("当前编目信息已变化，请重新查找后再采用。")
             if not (
                 candidate.field_name in policy.enrichment_fields
                 and (

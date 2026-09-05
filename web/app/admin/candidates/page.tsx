@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { CandidateReview } from "@/components/candidate-review";
-
-export const metadata: Metadata = { title: "候选审核" };
+import { redirect } from "next/navigation";
 
 export default function CandidateReviewPage() {
-  return <CandidateReview />;
+  redirect("/admin/knowledge");
 }

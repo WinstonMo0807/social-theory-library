@@ -8,9 +8,14 @@ activated snapshot remains the serving boundary.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from django.db.models import F, Q, QuerySet
 
-from catalog.models import CatalogPublicationRevision, Edition, PublicationState
+from catalog.models import (
+    CatalogPublicationRevision, Discipline, Edition, KnowledgeNode,
+    PublicationState, Subdiscipline, Topic,
+)
 
 
 def _path(prefix: str, field: str) -> str:
@@ -52,6 +57,43 @@ def public_editions(*, require_fulltext: bool = False) -> QuerySet:
     )
 
 
+def public_taxonomy_snapshot(snapshot: dict) -> dict:
+    """Mask withdrawn taxonomy at read time without rewriting past revisions.
+
+    An approved relationship cannot publish its endpoint. Snapshots preserve
+    the confirmed labels, but current entity eligibility remains mandatory.
+    No process-wide cache is used so withdrawal takes effect on the next read.
+    """
+    result = dict(snapshot)
+    for section, field, model, status_field in (
+        ("classification", "disciplines", Discipline, "editorial_status"),
+        ("classification", "subdisciplines", Subdiscipline, "editorial_status"),
+        ("knowledge", "topics", Topic, "editorial_status"),
+        ("knowledge", "nodes", KnowledgeNode, "status"),
+    ):
+        values = result.get(section)
+        if not isinstance(values, dict) or field not in values:
+            continue
+        rows = values.get(field)
+        rows = [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+        identifiers = set()
+        for row in rows:
+            try:
+                identifiers.add(UUID(str(row.get("id"))))
+            except (ValueError, TypeError, AttributeError):
+                continue
+        published = {
+            str(value) for value in model.objects.filter(
+                pk__in=identifiers, **{status_field: "published"},
+            ).values_list("pk", flat=True)
+        } if identifiers else set()
+        result[section] = {
+            **values,
+            field: [row for row in rows if str(row.get("id")) in published],
+        }
+    return result
+
+
 def active_catalog_snapshot(
     edition: Edition | None,
     *,
@@ -70,7 +112,7 @@ def active_catalog_snapshot(
         or (require_fulltext and revision.document_revision_id is None)
     ):
         return {}
-    return revision.snapshot if isinstance(revision.snapshot, dict) else {}
+    return public_taxonomy_snapshot(revision.snapshot) if isinstance(revision.snapshot, dict) else {}
 
 
 def active_asset_q(*, asset_prefix: str, require_fulltext: bool = False) -> Q:

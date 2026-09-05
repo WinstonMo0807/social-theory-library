@@ -4,6 +4,7 @@ import httpx
 from django.conf import settings
 
 from catalog.models import Asset
+from catalog.services.publication_eligibility import public_taxonomy_snapshot
 
 
 def _headers():
@@ -176,7 +177,7 @@ def index_asset(asset: Asset, *, is_public: bool | None = None, catalog_revision
         return {"backend": "staging-only", "documents": 0, "reason": "awaiting_formal_fulltext_publication"}
     is_public = eligible_revision and is_public is not False
     revision_id = str(revision.pk)
-    snapshot = dict(revision.snapshot or {})
+    snapshot = public_taxonomy_snapshot(dict(revision.snapshot or {}))
     work_snapshot = snapshot.get("work") or {}
     edition_snapshot = snapshot.get("edition") or {}
     authors = list(

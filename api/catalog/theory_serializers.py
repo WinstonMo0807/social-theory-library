@@ -468,7 +468,8 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
 
 
 class KnowledgeNodeListSerializer(serializers.ModelSerializer):
-    primary_discipline = DisciplineCompactSerializer(read_only=True)
+    primary_discipline = serializers.SerializerMethodField()
+    parent = serializers.SerializerMethodField()
     related_disciplines = serializers.SerializerMethodField()
     aliases_count = serializers.IntegerField(source="aliases.count", read_only=True)
     work_count = serializers.SerializerMethodField()
@@ -502,12 +503,29 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
+    def get_primary_discipline(self, obj):
+        discipline = obj.primary_discipline
+        if discipline is None or (
+            not self.context.get("include_unpublished_items")
+            and discipline.editorial_status != "published"
+        ):
+            return None
+        return DisciplineCompactSerializer(discipline, context=self.context).data
+
+    def get_parent(self, obj):
+        if obj.parent_id and (
+            self.context.get("include_unpublished_items") or obj.parent.status == "published"
+        ):
+            return str(obj.parent_id)
+        return None
+
     def get_related_disciplines(self, obj):
         return DisciplineCompactSerializer(
             [
                 link.discipline
                 for link in obj.discipline_links.all()
                 if link.status == "published" and link.relation_type != "primary"
+                and (self.context.get("include_unpublished_items") or link.discipline.editorial_status == "published")
             ],
             many=True,
             context=self.context,
@@ -539,7 +557,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
 
 class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
     aliases = KnowledgeNodeAliasSerializer(many=True, read_only=True)
-    discipline_links = KnowledgeNodeDisciplineSerializer(many=True, read_only=True)
+    discipline_links = serializers.SerializerMethodField()
     subdiscipline_links = serializers.SerializerMethodField()
     topic_links = serializers.SerializerMethodField()
     definition = serializers.CharField()
@@ -566,11 +584,17 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
             "published_at",
         )
 
+    def get_discipline_links(self, obj):
+        rows = [row for row in obj.discipline_links.all() if row.status == "published"
+                and (self.context.get("include_unpublished_items") or row.discipline.editorial_status == "published")]
+        return KnowledgeNodeDisciplineSerializer(rows, many=True, context=self.context).data
+
     def get_subdiscipline_links(self, obj):
         rows = [
             row
             for row in obj.subdiscipline_links.all()
             if row.status == "published"
+            and (self.context.get("include_unpublished_items") or row.subdiscipline.editorial_status == "published")
         ]
         return KnowledgeNodeSubdisciplineSerializer(
             rows,
@@ -579,7 +603,8 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
         ).data
 
     def get_topic_links(self, obj):
-        rows = [row for row in obj.topic_links.all() if row.status == "published"]
+        rows = [row for row in obj.topic_links.all() if row.status == "published"
+                and (self.context.get("include_unpublished_items") or row.topic.editorial_status == "published")]
         return KnowledgeNodeTopicSerializer(
             rows,
             many=True,

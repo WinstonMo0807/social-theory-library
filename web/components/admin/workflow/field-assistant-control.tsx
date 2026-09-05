@@ -17,6 +17,7 @@ type Suggestion = {
 };
 
 type LookupResult = {
+  refresh?: { state: string; message: string };
   field: { lookup_label: string; adopt_label: string; create_label: string };
   results: Suggestion[];
   more_results?: Suggestion[];
@@ -104,9 +105,10 @@ export function FieldAssistantControl({
       request = new AbortController();
       requestRef.current = request;
       const requestKey = lookupKeyRef.current;
-      const result = await lookupFieldSuggestions<LookupResult>({ ...lookupContextRef.current, token, signal: request.signal });
+      const result = await lookupFieldSuggestions<LookupResult>({ ...lookupContextRef.current, token, signal: request.signal, refresh: true });
       if (request.signal.aborted || requestKey !== lookupKeyRef.current) return;
       setData(result);
+      if (result.refresh?.message) setMessage(result.refresh.message);
     } catch (reason) {
       if (request?.signal.aborted) return;
       setOpen(true);

@@ -4,7 +4,7 @@
 
 ## Version 3.0.4 production cutover
 
-3.0.4 继续使用现有 `social-science-library` Compose project、`compose.public.yaml` 和 `compose.cloudflare.yaml`。目标 migration 为 `catalog.0040_v304_cataloging_intelligence`。它是 additive migration，但包含历史已发布 Edition 的初始馆藏 revision 回填，因此必须先用 fresh BackupJob 在隔离 PostgreSQL 16 中完成恢复和 migration rehearsal。
+3.0.4 继续使用现有 `social-science-library` Compose project、`compose.public.yaml` 和 `compose.cloudflare.yaml`。目标 migration 为 catalog 0040、0041、0042，分别建立编目发布结构、独立正文解释版本和期刊目录关系。0040 包含历史已发布 Edition 的初始馆藏 revision 及人工确认草稿发布包回填，因此必须先用 fresh BackupJob 在隔离 PostgreSQL 16 中完成恢复和迁移演练。
 
 - 源码冻结前记录 Git tree、release archive SHA、依赖锁、当前 Compose、非敏感环境摘要、所有容器 image ID 与 RestartCount。
 - 保存 Work、Edition、Asset、ORIGINAL、Page、DocumentRevision、EvidenceSpan、SemanticChunk、Person、Topic、KnowledgeNode 的计数与身份摘要，并记录活动 Semantic UID 和 QueryLexicon generation。

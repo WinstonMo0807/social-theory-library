@@ -104,22 +104,28 @@ def backfill_published_catalog_revisions(apps, schema_editor):
             .order_by("order", "created_at")
         )
         disciplines = list(
-            edition.work.discipline_relations.filter(review_status="approved")
+            edition.work.discipline_relations.filter(
+                review_status="approved", discipline__editorial_status="published",
+            )
             .select_related("discipline")
             .order_by("-is_primary", "discipline_id")
         )
         subdisciplines = list(
-            edition.work.subdiscipline_relations.filter(review_status="approved")
+            edition.work.subdiscipline_relations.filter(
+                review_status="approved", subdiscipline__editorial_status="published",
+            )
             .select_related("subdiscipline")
             .order_by("-is_primary", "subdiscipline_id")
         )
         topics = list(
-            edition.work.topic_relations.filter(review_status="approved")
+            edition.work.topic_relations.filter(
+                review_status="approved", topic__editorial_status="published",
+            )
             .select_related("topic")
             .order_by("-is_primary", "topic_id")
         )
         nodes = list(
-            edition.work.node_relations.filter(status="published")
+            edition.work.node_relations.filter(status="published", node__status="published")
             .select_related("node")
             .order_by("-is_primary", "node_id", "role")
         )

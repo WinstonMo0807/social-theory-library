@@ -220,7 +220,9 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "slug": row.discipline.slug,
             "is_primary": row.is_primary,
         }
-        for row in work.discipline_relations.filter(review_status="approved")
+        for row in work.discipline_relations.filter(
+            review_status="approved", discipline__editorial_status="published",
+        )
         .select_related("discipline")
         .order_by("-is_primary", "discipline_id")
     ]
@@ -231,7 +233,9 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "slug": row.subdiscipline.slug,
             "is_primary": row.is_primary,
         }
-        for row in work.subdiscipline_relations.filter(review_status="approved")
+        for row in work.subdiscipline_relations.filter(
+            review_status="approved", subdiscipline__editorial_status="published",
+        )
         .select_related("subdiscipline")
         .order_by("-is_primary", "subdiscipline_id")
     ]
@@ -242,7 +246,9 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "slug": row.topic.slug,
             "is_primary": row.is_primary,
         }
-        for row in work.topic_relations.filter(review_status="approved")
+        for row in work.topic_relations.filter(
+            review_status="approved", topic__editorial_status="published",
+        )
         .select_related("topic")
         .order_by("-is_primary", "topic_id")
     ]
@@ -256,7 +262,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "role": row.role,
             "is_primary": row.is_primary,
         }
-        for row in work.node_relations.filter(status="published")
+        for row in work.node_relations.filter(status="published", node__status="published")
         .select_related("node")
         .order_by("-is_primary", "node_id", "role")
     ]

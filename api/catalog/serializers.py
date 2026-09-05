@@ -580,17 +580,30 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "subdisciplines",
         )
 
-    def _public_edition(self, obj):
+    def _public_catalog(self, obj):
         if self.context.get("preview_edition") is not None:
-            return None
-        for edition in obj.editions.all():
-            if edition.is_primary and active_catalog_snapshot(edition):
-                return edition
-        return None
+            return None, {}
+        # One eligibility read per Work in this response. Never cache across
+        # requests: an endpoint withdrawal must mask old snapshot links.
+        if not hasattr(self, "_public_catalog_cache"):
+            self._public_catalog_cache = {}
+        if obj.pk not in self._public_catalog_cache:
+            current = None, {}
+            for edition in obj.editions.all():
+                if not edition.is_primary:
+                    continue
+                snapshot = active_catalog_snapshot(edition)
+                if snapshot:
+                    current = edition, snapshot
+                    break
+            self._public_catalog_cache[obj.pk] = current
+        return self._public_catalog_cache[obj.pk]
+
+    def _public_edition(self, obj):
+        return self._public_catalog(obj)[0]
 
     def _public_snapshot(self, obj):
-        edition = self._public_edition(obj)
-        return active_catalog_snapshot(edition) if edition is not None else {}
+        return self._public_catalog(obj)[1]
 
     def get_cover(self, obj):
         snapshot = self._public_snapshot(obj)
@@ -633,7 +646,10 @@ class WorkCardSerializer(serializers.ModelSerializer):
             if not relation.approved or relation.kind != kind:
                 continue
             target = getattr(relation, kind)
-            if target:
+            if target and (
+                self.context.get("preview_edition") is not None
+                or getattr(target, "editorial_status", None) == "published"
+            ):
                 values.append({"id": str(target.id), "name": target.name, "slug": target.slug})
         return values
 
@@ -718,6 +734,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             }
             for relation in obj.discipline_relations.filter(
                 review_status=RelationReviewStatus.APPROVED,
+                **({} if self.context.get("preview_edition") is not None else {"discipline__editorial_status": "published"}),
             ).select_related("discipline")
         ]
 
@@ -736,6 +753,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             }
             for relation in obj.subdiscipline_relations.filter(
                 review_status=RelationReviewStatus.APPROVED,
+                **({} if self.context.get("preview_edition") is not None else {"subdiscipline__editorial_status": "published"}),
             ).select_related("subdiscipline")
         ]
 
@@ -1738,7 +1756,7 @@ class DisciplineSerializer(serializers.ModelSerializer):
 
 
 class SubdisciplineSerializer(serializers.ModelSerializer):
-    discipline = DisciplineSerializer(read_only=True)
+    discipline = serializers.SerializerMethodField()
     parent = serializers.SerializerMethodField()
     theories = serializers.SerializerMethodField()
     topics = serializers.SerializerMethodField()
@@ -1768,8 +1786,19 @@ class SubdisciplineSerializer(serializers.ModelSerializer):
             "scholars",
         )
 
+    def get_discipline(self, obj):
+        if obj.discipline is None or (
+            not self.context.get("include_unpublished_items")
+            and obj.discipline.editorial_status != "published"
+        ):
+            return None
+        return DisciplineSerializer(obj.discipline, context=self.context).data
+
     def get_parent(self, obj):
-        if not obj.parent:
+        if not obj.parent or (
+            not self.context.get("include_unpublished_items")
+            and obj.parent.editorial_status != "published"
+        ):
             return None
         return {"id": str(obj.parent_id), "name": obj.parent.name, "slug": obj.parent.slug}
 

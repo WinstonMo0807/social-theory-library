@@ -30,6 +30,7 @@ from catalog.services.semantic_chunks import (
     build_semantic_chunks,
 )
 from catalog.services.passage_language import language_detector_config
+from catalog.services.publication_eligibility import public_taxonomy_snapshot
 from ingestion.services.indexing import _headers, _wait_task
 
 
@@ -602,7 +603,7 @@ def semantic_documents(
     )
     relations = _relations(work)
     catalog_revision = None if staging_only else catalog_revision or edition.active_catalog_revision
-    snapshot = catalog_revision.snapshot if catalog_revision else {}
+    snapshot = public_taxonomy_snapshot(catalog_revision.snapshot) if catalog_revision else {}
     work_values = snapshot.get("work") or {}
     edition_values = snapshot.get("edition") or {}
     knowledge = snapshot.get("knowledge") or {}

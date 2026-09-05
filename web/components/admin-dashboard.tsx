@@ -191,9 +191,8 @@ export function AdminDashboard() {
         <WorkflowQueuePanel title="异常" items={workflowQueue?.exception_items ?? workflowQueue?.exceptions ?? []} empty="当前没有处理异常。" tone="danger" />
         <WorkflowQueuePanel title="待发布" items={workflowQueue?.publication_ready ?? []} empty="当前没有完成发布准备的项目。" step="publication" />
         <section className="admin-panel admin-work-queue-panel">
-          <header><h2>待候选审核</h2><Link href="/admin/candidates">打开队列 <ArrowRight size={13} /></Link></header>
-          <strong className="admin-work-queue-count">{workflowQueue?.candidate_review_count ?? 0}</strong>
-          <p>候选保持待审核，不会因置信度高自动写入正式知识。</p>
+          <header><h2>知识策展</h2><Link href="/admin/knowledge">打开字段工作台 <ArrowRight size={13} /></Link></header>
+          <p>选择作品、学者、主题或理论，在需要补充的字段中查看依据并确认修改。</p>
         </section>
         <WorkflowQueuePanel title="最近处理" items={workflowQueue?.recent_items ?? []} empty="尚无最近处理记录。" />
       </section>

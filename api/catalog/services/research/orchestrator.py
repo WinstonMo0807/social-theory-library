@@ -695,10 +695,10 @@ class ResearchOrchestrator:
         return run, created
 
     @staticmethod
-    def _person_queries(context: ResearchContext, fallback: str) -> list[str]:
+    def _person_queries(context: ResearchContext, fallback: str, *, role: str = "") -> list[str]:
         output = []
         for contributor in (context.draft_data.get("contributors") or {}).get("items") or []:
-            if isinstance(contributor, dict):
+            if isinstance(contributor, dict) and (not role or str(contributor.get("role") or "author") == role):
                 value = str(contributor.get("display_name") or "").strip()
                 if value:
                     output.append(value)
@@ -778,7 +778,8 @@ class ResearchOrchestrator:
             }:
                 continue
             base_query = str(task.get("query") or "").strip()
-            queries = self._person_queries(context, base_query) if "person" in contract.entity_types else [base_query]
+            role = {"authors": "author", "translators": "translator"}.get(task["field"], "")
+            queries = self._person_queries(context, base_query, role=role) if "person" in contract.entity_types else [base_query]
             for entity_type in contract.entity_types:
                 for query in queries:
                     if not query:
@@ -793,8 +794,8 @@ class ResearchOrchestrator:
                             field=f"{task['step']}.{task['field']}",
                             query=query,
                             context=context,
-                            include_external=True,
-                            include_web=True,
+                            include_external=bool(task.get("allow_external", True) and task.get("allow_authority", True)),
+                            include_web=bool(task.get("allow_external", True) and task.get("allow_web", True)),
                             limit=12,
                         )
                     )
@@ -924,6 +925,8 @@ class ResearchOrchestrator:
                             if field_name.endswith("report_institution")
                             else "issuing_body"
                         )
+                    if target_type == "person" and field_name in {"contributors.authors", "contributors.translators"}:
+                        properties["contribution_role"] = "translator" if field_name.endswith("translators") else "author"
                     preview_data = {
                         "secondary_identity": row.get("secondary_identity"),
                         "source": row.get("source"),
