@@ -63,7 +63,7 @@ def research_context_is_current(run, edition, policy) -> bool:
     return fingerprint == marker.get("fingerprint")
 
 
-@dataclass
+@dataclass(frozen=True)
 class FieldResearchTask(ResearchTask):
     allow_external: bool = True
     allow_web: bool = True
