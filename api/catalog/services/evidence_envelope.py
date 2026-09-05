@@ -10,9 +10,13 @@ from catalog.models import (
     ClaimEvidence,
     CuratedClaim,
     EvidenceSpan,
-    PublicationState,
 )
 from catalog.services.semantic_search import viewer_access_statuses
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_revision_q,
+    public_editions,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,26 +35,46 @@ class EvidenceEnvelope:
         return asdict(self)
 
 
-def evidence_span_envelope(span: EvidenceSpan) -> EvidenceEnvelope:
+def evidence_span_envelope(
+    span: EvidenceSpan,
+    *,
+    public_metadata: bool = True,
+) -> EvidenceEnvelope:
     revision = span.document_revision
     asset = revision.asset
     edition = asset.edition
     work = edition.work
     page = span.page_number or span.page.index
-    authors = [
-        contribution.person.preferred_name
-        for contribution in edition.contributions.all()
-        if contribution.approved
-        and contribution.role == "author"
-        and contribution.person_id
-    ]
+    snapshot = (
+        active_catalog_snapshot(edition, require_fulltext=True)
+        if public_metadata
+        else {}
+    )
+    if snapshot:
+        authors = [
+            str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
+            for row in snapshot.get("contributions") or []
+            if isinstance(row, dict)
+            and row.get("role") == "author"
+            and ((row.get("person") or {}).get("preferred_name") or row.get("name"))
+        ]
+        work_title = str((snapshot.get("work") or {}).get("title") or "未题名")
+    else:
+        authors = [
+            contribution.person.preferred_name
+            for contribution in edition.contributions.all()
+            if contribution.approved
+            and contribution.role == "author"
+            and contribution.person_id
+        ]
+        work_title = work.title
     focus_id = span.passage_id or span.id
     return EvidenceEnvelope(
         id=str(span.id),
         kind="collection_text",
         source={
             "work_id": str(work.id),
-            "work_title": work.title,
+            "work_title": work_title,
             "edition_id": str(edition.id),
             "asset_id": str(asset.id),
             "authors": authors,
@@ -99,6 +123,7 @@ def _serialize_curated_claim_groups(
     *,
     evidence_attribute: str,
     allowed_kinds: tuple[str, ...],
+    public_metadata: bool = True,
 ) -> dict[str, list[dict[str, Any]]]:
     groups = {kind: [] for kind in allowed_kinds}
     position_map = {
@@ -110,7 +135,10 @@ def _serialize_curated_claim_groups(
         evidence = []
         positions: list[str] = []
         for link in getattr(claim, evidence_attribute):
-            envelope = evidence_span_envelope(link.evidence_span).as_dict()
+            envelope = evidence_span_envelope(
+                link.evidence_span,
+                public_metadata=public_metadata,
+            ).as_dict()
             envelope.update(
                 {
                     "claim_role": link.role,
@@ -153,12 +181,14 @@ def public_curated_claim_groups(
     public_links = (
         ClaimEvidence.objects.filter(
             evidence_span__is_stale=False,
-            evidence_span__document_revision__is_active=True,
             evidence_span__document_revision__asset__kind=Asset.Kind.NORMALIZED,
             evidence_span__document_revision__asset__status=Asset.Status.READY,
-            evidence_span__document_revision__asset__is_current=True,
             evidence_span__document_revision__asset__access_status__in=viewer_access_statuses(),
-            evidence_span__document_revision__asset__edition__state=PublicationState.PUBLISHED,
+        )
+        .filter(
+            active_document_revision_q(
+                revision_prefix="evidence_span__document_revision"
+            )
         )
         .select_related(
             "evidence_span__page",
@@ -188,6 +218,16 @@ def public_curated_claim_groups(
         )
         .order_by("kind", "sort_order", "created_at")
     )
+    if target_field == "work":
+        # A newly confirmed claim may already have a canonical published row
+        # while the new catalog revision is preparing. Readers keep the
+        # previously activated selection until all required consumers finish.
+        active_ids = {
+            str(identifier)
+            for edition in public_editions(require_fulltext=True).filter(work_id=target_id)
+            for identifier in (edition.active_catalog_revision.snapshot or {}).get("curated_claim_ids", [])
+        }
+        claims = claims.filter(pk__in=active_ids)
     return _serialize_curated_claim_groups(
         claims,
         evidence_attribute="public_evidence_links",
@@ -246,4 +286,5 @@ def admin_preview_curated_claim_groups(
         claims,
         evidence_attribute="preview_evidence_links",
         allowed_kinds=allowed_kinds,
+        public_metadata=False,
     )

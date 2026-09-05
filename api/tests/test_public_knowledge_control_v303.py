@@ -40,6 +40,7 @@ from reading.library_assistant import persist_sources
 from reading.library_retrieval import _hydrate_evidence
 from reading.library_serializers import LibraryMessageSourceSerializer
 from reading.models import LibraryConversation, LibraryMessage
+from tests.v304_helpers import activate_catalog_revision
 
 
 pytestmark = pytest.mark.django_db
@@ -135,6 +136,11 @@ def _evidence_source(*, seed: str, with_passage: bool):
         content_hash=sha256(f"span-{seed}".encode("utf-8")).hexdigest(),
         quality=0.96,
         extraction_method="embedded",
+    )
+    activate_catalog_revision(
+        edition,
+        reader_asset=asset,
+        document_revision=revision,
     )
     return work, edition, asset, page, passage, span
 

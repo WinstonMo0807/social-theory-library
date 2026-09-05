@@ -16,14 +16,14 @@ test("user administration exposes only Reader Editor and Administrator roles", a
   assert.match(sections, /只有 System Owner 可以授予或撤销 Administrator/);
 });
 
-test("admin footer uses the shared 3.0.3 public knowledge control version", async () => {
+test("admin footer uses the shared 3.0.4 cataloging intelligence version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "3\.0\.3"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.3 公共知识控制"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.4"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.4 智能编目与知识发布"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);

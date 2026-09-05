@@ -1,12 +1,13 @@
 /*
  * Social Theory Library editorial interface, v2.
  *
- * Every selector is route-scoped so the frozen Explore tree continues to use
- * the legacy design system unchanged. Tokens intentionally use the --stl2-
- * prefix and inherit the existing reader display preferences where possible.
+ * Layout selectors stay route-scoped. Explore retains its search workspace
+ * layout while sharing the public site's paper palette and page canvas.
+ * Tokens inherit the existing reader display preferences where possible.
  */
 
-[data-ui-scope="editorial-v2"] {
+[data-ui-scope="editorial-v2"],
+[data-ui-scope="explore-frozen"] {
   --stl2-paper: #f4f0e9;
   --stl2-paper-strong: #faf8f3;
   --stl2-paper-deep: #e9e2d8;
@@ -50,9 +51,40 @@
 [data-ui-scope="editorial-v2"].route-content-transition {
   min-height: calc(100vh - 84px);
   overflow: clip;
+}
+
+[data-ui-scope="editorial-v2"].route-content-transition,
+[data-ui-scope="explore-frozen"].route-content-transition {
   background:
     radial-gradient(circle at 82% 3%, rgba(165, 149, 128, 0.09), transparent 27rem),
     var(--stl2-paper);
+}
+
+/* The shared route scope also covers opinion, question and passage detail pages. */
+[data-ui-scope="explore-frozen"] {
+  --paper: var(--stl2-paper);
+  --surface: var(--stl2-paper-strong);
+  --wash: var(--stl2-paper-deep);
+  --ink: var(--stl2-ink);
+  --muted: var(--stl2-muted);
+  --line: var(--stl2-line);
+  --line-dark: var(--stl2-line-strong);
+}
+
+[data-ui-scope="explore-frozen"].route-content-transition {
+  min-height: calc(100svh - var(--header-height));
+}
+
+[data-ui-scope="explore-frozen"] :is(.explore-landing-page, .explore-page, .semantic-work-detail-page) {
+  background: transparent;
+}
+
+[data-ui-scope="explore-frozen"] .explore-landing-hero {
+  background: var(--stl2-paper);
+}
+
+[data-ui-scope="explore-frozen"] .explore-landing-hero::after {
+  background: linear-gradient(90deg, var(--stl2-paper) 0%, color-mix(in srgb, var(--stl2-paper) 96%, transparent) 33%, color-mix(in srgb, var(--stl2-paper) 25%, transparent) 61%, transparent 76%);
 }
 
 [data-ui-scope="editorial-v2"] :where(h1, h2, h3, h4, blockquote) {
@@ -249,7 +281,8 @@
   border-color: rgba(34, 31, 27, 0.14);
 }
 
-[data-ui-scope="editorial-v2"] .site-footer {
+[data-ui-scope="editorial-v2"] .site-footer,
+[data-ui-scope="explore-frozen"] .site-footer {
   color: var(--stl2-ink-soft);
   background: var(--stl2-paper-deep);
   border-color: var(--stl2-line);

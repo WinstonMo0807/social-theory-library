@@ -10,15 +10,18 @@ from uuid import UUID
 from catalog.models import (
     Concept,
     Discipline,
+    Edition,
     KnowledgeNode,
     KnowledgeNodeAlias,
     LegacyKnowledgeMapping,
     Person,
     PersonNameVariant,
     QueryLexiconEntry,
+    PublicationState,
     Subdiscipline,
     TheorySchool,
     Topic,
+    Work,
 )
 from catalog.services.query_lexicon.normalization import (
     GENERATED_VARIANT_VERSION,
@@ -29,8 +32,18 @@ from catalog.services.query_lexicon.normalization import (
 )
 
 
-SOURCE_REGISTRY_VERSION = "query-lexicon-registry-v1"
-SUPPORTED_SOURCE_REGISTRY_VERSIONS = {SOURCE_REGISTRY_VERSION}
+LEGACY_SOURCE_REGISTRY_VERSION = "query-lexicon-registry-v1"
+SOURCE_REGISTRY_VERSION = "query-lexicon-registry-v2"
+SUPPORTED_SOURCE_REGISTRY_VERSIONS = {
+    LEGACY_SOURCE_REGISTRY_VERSION,
+    SOURCE_REGISTRY_VERSION,
+}
+WORK_ENTITY_TYPE = getattr(QueryLexiconEntry.EntityType, "WORK", "work")
+WORK_SOURCE_KIND = getattr(
+    QueryLexiconEntry.SourceKind,
+    "WORK_FIELD",
+    QueryLexiconEntry.SourceKind.AUTHORITY_FIELD,
+)
 
 
 @dataclass(frozen=True, order=True)
@@ -70,7 +83,7 @@ LEGACY_MODELS = {
     "Concept": (Concept, QueryLexiconEntry.EntityType.CONCEPT),
 }
 
-ENTITY_MODELS = {
+LEGACY_ENTITY_MODELS = {
     QueryLexiconEntry.EntityType.PERSON: Person,
     QueryLexiconEntry.EntityType.KNOWLEDGE_NODE: KnowledgeNode,
     QueryLexiconEntry.EntityType.DISCIPLINE: Discipline,
@@ -78,6 +91,23 @@ ENTITY_MODELS = {
     QueryLexiconEntry.EntityType.TOPIC: Topic,
     QueryLexiconEntry.EntityType.CONCEPT: Concept,
     QueryLexiconEntry.EntityType.SUBDISCIPLINE: Subdiscipline,
+}
+ENTITY_MODELS = {
+    **LEGACY_ENTITY_MODELS,
+    WORK_ENTITY_TYPE: Work,
+}
+
+FORMAL_PERSON_VARIANT_SOURCES = {
+    PersonNameVariant.SourceKind.EDITORIAL,
+    PersonNameVariant.SourceKind.AUTHORITY_IMPORT,
+    PersonNameVariant.SourceKind.LEGACY_REVIEW,
+    PersonNameVariant.SourceKind.OTHER,
+}
+FORMAL_KNOWLEDGE_ALIAS_SOURCES = {
+    KnowledgeNodeAlias.SourceKind.EDITORIAL,
+    KnowledgeNodeAlias.SourceKind.AUTHORITY_IMPORT,
+    KnowledgeNodeAlias.SourceKind.LEGACY_REVIEW,
+    KnowledgeNodeAlias.SourceKind.OTHER,
 }
 
 _TERM_PRIORITY = {
@@ -258,8 +288,18 @@ def _mapped_node_for_legacy(instance) -> KnowledgeNode | None:
     return mapping.node if mapping else None
 
 
-def entity_keys_for_source(instance) -> set[EntityKey]:
-    """Return every canonical entity that may change when one source row changes."""
+def _entity_models_for_version(source_registry_version: str) -> dict:
+    if source_registry_version == LEGACY_SOURCE_REGISTRY_VERSION:
+        return LEGACY_ENTITY_MODELS
+    if source_registry_version == SOURCE_REGISTRY_VERSION:
+        return ENTITY_MODELS
+    raise ValueError(
+        f"当前代码不支持 Source Registry version：{source_registry_version}"
+    )
+
+
+def _legacy_entity_keys_for_source(instance) -> set[EntityKey]:
+    """Keep v1 event identity semantics available during an atomic upgrade."""
 
     keys: set[EntityKey] = set()
     if isinstance(instance, Person):
@@ -299,24 +339,166 @@ def entity_keys_for_source(instance) -> set[EntityKey]:
     return keys
 
 
+def _work_has_published_edition(work: Work) -> bool:
+    return work.editions.filter(state=PublicationState.PUBLISHED).exists()
+
+
+def source_is_formal(instance) -> bool:
+    """Return whether a source row may contribute facts to registry v2.
+
+    Generated search spellings are allowed only after their base source passes
+    this gate. PDF/web observations remain evidence until an editorial publish
+    operation promotes them to a formal authority source.
+    """
+
+    if isinstance(instance, Work):
+        return _work_has_published_edition(instance)
+    if isinstance(instance, Edition):
+        return instance.state == PublicationState.PUBLISHED
+    if isinstance(instance, Person):
+        return instance.authority_status == Person.AuthorityStatus.VERIFIED
+    if isinstance(instance, PersonNameVariant):
+        return bool(
+            instance.person.authority_status == Person.AuthorityStatus.VERIFIED
+            and instance.is_verified
+            and instance.source_kind in FORMAL_PERSON_VARIANT_SOURCES
+        )
+    if isinstance(instance, KnowledgeNode):
+        return instance.status == "published"
+    if isinstance(instance, KnowledgeNodeAlias):
+        return bool(
+            instance.node.status == "published"
+            and instance.is_verified
+            and instance.source_kind in FORMAL_KNOWLEDGE_ALIAS_SOURCES
+        )
+    if isinstance(instance, LegacyKnowledgeMapping):
+        if instance.migration_status != LegacyKnowledgeMapping.MigrationStatus.MAPPED:
+            return False
+        config = LEGACY_MODELS.get(instance.legacy_model)
+        if config is None or instance.node.status != "published":
+            return False
+        model, _entity_type = config
+        legacy = model.objects.filter(pk=instance.legacy_id).first()
+        return bool(legacy and getattr(legacy, "editorial_status", "") == "published")
+    if isinstance(
+        instance,
+        (Discipline, TheorySchool, Topic, Concept, Subdiscipline),
+    ):
+        return getattr(instance, "editorial_status", "") == "published"
+    return False
+
+
+def entity_keys_for_source(
+    instance,
+    *,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
+) -> set[EntityKey]:
+    """Return formal entity identities affected by one source mutation.
+
+    The mutation wrapper unions before and after snapshots. A transition away
+    from a formal state therefore still emits the removal event, while a draft
+    create/update emits no QueryLexicon event at all.
+    """
+
+    if source_registry_version == LEGACY_SOURCE_REGISTRY_VERSION:
+        return _legacy_entity_keys_for_source(instance)
+    _entity_models_for_version(source_registry_version)
+
+    keys: set[EntityKey] = set()
+    if isinstance(instance, Person):
+        if source_is_formal(instance):
+            keys.add(_entity_key(QueryLexiconEntry.EntityType.PERSON, instance.pk))
+        if instance.authority_status == Person.AuthorityStatus.MERGED:
+            # The source key removes a formerly verified row. The terminal key
+            # receives the reviewed historical identity after the merge.
+            keys.add(_entity_key(QueryLexiconEntry.EntityType.PERSON, instance.pk))
+            terminal = _person_terminal(instance)
+            if terminal and source_is_formal(terminal):
+                keys.add(_entity_key(QueryLexiconEntry.EntityType.PERSON, terminal.pk))
+        return keys
+    if isinstance(instance, PersonNameVariant):
+        if source_is_formal(instance):
+            keys.add(_entity_key(QueryLexiconEntry.EntityType.PERSON, instance.person_id))
+        return keys
+    if isinstance(instance, KnowledgeNode):
+        if source_is_formal(instance):
+            keys.add(_entity_key(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, instance.pk))
+        return keys
+    if isinstance(instance, KnowledgeNodeAlias):
+        if source_is_formal(instance):
+            keys.add(_entity_key(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, instance.node_id))
+        return keys
+    if isinstance(instance, LegacyKnowledgeMapping):
+        if not source_is_formal(instance):
+            return keys
+        config = LEGACY_MODELS.get(instance.legacy_model)
+        if config:
+            _model, entity_type = config
+            keys.add(_entity_key(entity_type, instance.legacy_id))
+        keys.add(_entity_key(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, instance.node_id))
+        return keys
+    if isinstance(instance, Work):
+        if source_is_formal(instance):
+            keys.add(_entity_key(WORK_ENTITY_TYPE, instance.pk))
+        return keys
+    if isinstance(instance, Edition):
+        if source_is_formal(instance):
+            keys.add(_entity_key(WORK_ENTITY_TYPE, instance.work_id))
+        return keys
+    for _model_name, (model, entity_type) in LEGACY_MODELS.items():
+        if isinstance(instance, model):
+            if not source_is_formal(instance):
+                return keys
+            keys.add(_entity_key(entity_type, instance.pk))
+            node = _mapped_node_for_legacy(instance)
+            if node and source_is_formal(node):
+                keys.add(_entity_key(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, node.pk))
+            return keys
+    if isinstance(instance, Discipline) and source_is_formal(instance):
+        return {_entity_key(QueryLexiconEntry.EntityType.DISCIPLINE, instance.pk)}
+    if isinstance(instance, Topic) and source_is_formal(instance):
+        return {_entity_key(QueryLexiconEntry.EntityType.TOPIC, instance.pk)}
+    return keys
+
+
 def all_entity_keys(
     *,
     entity_type: str | None = None,
     entity_id: UUID | str | None = None,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
 ) -> list[EntityKey]:
-    validated_id = validate_entity_filter(entity_type=entity_type, entity_id=entity_id)
+    validated_id = validate_entity_filter(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        source_registry_version=source_registry_version,
+    )
     entity_id = validated_id
 
     if entity_id is not None:
         return [_entity_key(entity_type, entity_id)]
 
-    selected = [entity_type] if entity_type else sorted(ENTITY_MODELS)
+    models = _entity_models_for_version(source_registry_version)
+    selected = [entity_type] if entity_type else sorted(models)
     keys: set[EntityKey] = set()
     for current_type in selected:
-        model = ENTITY_MODELS[current_type]
+        model = models[current_type]
+        queryset = model.objects.order_by("pk")
+        if source_registry_version == SOURCE_REGISTRY_VERSION:
+            if model is Person:
+                queryset = queryset.filter(
+                    authority_status=Person.AuthorityStatus.VERIFIED
+                )
+            elif model is KnowledgeNode:
+                queryset = queryset.filter(status="published")
+            elif model is Work:
+                queryset = queryset.filter(
+                    editions__state=PublicationState.PUBLISHED
+                ).distinct()
+            else:
+                queryset = queryset.filter(editorial_status="published")
         keys.update(
             _entity_key(current_type, pk)
-            for pk in model.objects.order_by("pk").values_list("pk", flat=True)
+            for pk in queryset.values_list("pk", flat=True)
         )
     return sorted(keys)
 
@@ -325,10 +507,12 @@ def validate_entity_filter(
     *,
     entity_type: str | None = None,
     entity_id: UUID | str | None = None,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
 ) -> UUID | None:
     """Validate a reconciliation selector without reading or writing authority rows."""
 
-    if entity_type and entity_type not in ENTITY_MODELS:
+    models = _entity_models_for_version(source_registry_version)
+    if entity_type and entity_type not in models:
         raise ValueError(f"未知 QueryLexicon entity type：{entity_type}")
     if entity_id is not None:
         if not entity_type:
@@ -513,14 +697,24 @@ def _merged_person_sources(person: Person) -> list[Person]:
     return result
 
 
-def _build_person(person: Person) -> tuple[list[TermCandidate], dict[str, int]]:
+def _build_person(
+    person: Person,
+    *,
+    source_registry_version: str,
+) -> tuple[list[TermCandidate], dict[str, int]]:
     audit = defaultdict(int)
     if person.authority_status == Person.AuthorityStatus.MERGED:
         if not _person_terminal(person):
             audit["merge_target_missing_or_invalid"] += 1
         return [], dict(audit)
 
+    strict = source_registry_version == SOURCE_REGISTRY_VERSION
+    if strict and not source_is_formal(person):
+        return [], {"unpublished_entity_suppressed": 1}
     public_active, admin_resolvable, status_issue = _status_flags(person)
+    if strict:
+        public_active = True
+        admin_resolvable = True
     if status_issue:
         audit[status_issue] += 1
     candidates: list[TermCandidate] = []
@@ -555,6 +749,9 @@ def _build_person(person: Person) -> tuple[list[TermCandidate], dict[str, int]]:
     )
 
     for variant in person.name_variants.order_by("pk"):
+        if strict and not source_is_formal(variant):
+            audit["unpublished_alias_suppressed"] += 1
+            continue
         variant_public = public_active and variant.is_verified
         _append(
             candidates,
@@ -584,17 +781,20 @@ def _build_person(person: Person) -> tuple[list[TermCandidate], dict[str, int]]:
             ),
         )
 
-    generated_values = _known_generated_normalized(canonical_terms)
-    legacy, legacy_audit = _legacy_alias_candidates(
-        person.aliases,
-        generated_values=generated_values,
-        source_ref="catalog.Person.aliases",
-        public_active=public_active,
-        admin_resolvable=admin_resolvable,
-    )
-    candidates.extend(legacy)
-    for key, value in legacy_audit.items():
-        audit[key] += value
+    if strict:
+        audit["unconfirmed_legacy_alias_suppressed"] += len(person.aliases or [])
+    else:
+        generated_values = _known_generated_normalized(canonical_terms)
+        legacy, legacy_audit = _legacy_alias_candidates(
+            person.aliases,
+            generated_values=generated_values,
+            source_ref="catalog.Person.aliases",
+            public_active=public_active,
+            admin_resolvable=admin_resolvable,
+        )
+        candidates.extend(legacy)
+        for key, value in legacy_audit.items():
+            audit[key] += value
 
     for merged in _merged_person_sources(person):
         merged_terms = [merged.preferred_name, merged.original_name]
@@ -617,18 +817,29 @@ def _build_person(person: Person) -> tuple[list[TermCandidate], dict[str, int]]:
                     provenance={"merged_person_id": str(merged.pk)},
                 ),
             )
-        merged_generated = _known_generated_normalized(merged_terms)
-        merged_legacy, merged_audit = _legacy_alias_candidates(
-            merged.aliases,
-            generated_values=merged_generated,
-            source_ref=f"catalog.Person:{merged.pk}:aliases",
-            public_active=public_active,
-            admin_resolvable=admin_resolvable,
-        )
-        candidates.extend(merged_legacy)
-        for key, value in merged_audit.items():
-            audit[key] += value
+        if strict:
+            audit["unconfirmed_legacy_alias_suppressed"] += len(
+                merged.aliases or []
+            )
+        else:
+            merged_generated = _known_generated_normalized(merged_terms)
+            merged_legacy, merged_audit = _legacy_alias_candidates(
+                merged.aliases,
+                generated_values=merged_generated,
+                source_ref=f"catalog.Person:{merged.pk}:aliases",
+                public_active=public_active,
+                admin_resolvable=admin_resolvable,
+            )
+            candidates.extend(merged_legacy)
+            for key, value in merged_audit.items():
+                audit[key] += value
         for variant in merged.name_variants.order_by("pk"):
+            if strict and not (
+                variant.is_verified
+                and variant.source_kind in FORMAL_PERSON_VARIANT_SOURCES
+            ):
+                audit["unpublished_alias_suppressed"] += 1
+                continue
             _append(
                 candidates,
                 _candidate(
@@ -701,8 +912,18 @@ def _seed_alias_values(node: KnowledgeNode, legacy_rows) -> set[str]:
     return values
 
 
-def _build_knowledge_node(node: KnowledgeNode) -> tuple[list[TermCandidate], dict[str, int]]:
+def _build_knowledge_node(
+    node: KnowledgeNode,
+    *,
+    source_registry_version: str,
+) -> tuple[list[TermCandidate], dict[str, int]]:
+    strict = source_registry_version == SOURCE_REGISTRY_VERSION
+    if strict and not source_is_formal(node):
+        return [], {"unpublished_entity_suppressed": 1}
     public_active, admin_resolvable, status_issue = _status_flags(node)
+    if strict:
+        public_active = True
+        admin_resolvable = True
     audit = defaultdict(int)
     if status_issue:
         audit[status_issue] += 1
@@ -732,6 +953,9 @@ def _build_knowledge_node(node: KnowledgeNode) -> tuple[list[TermCandidate], dic
         [node.canonical_name_zh, node.canonical_name_en]
     )
     for alias in node.aliases.order_by("pk"):
+        if strict and not source_is_formal(alias):
+            audit["unpublished_alias_suppressed"] += 1
+            continue
         normalized = normalize_term(alias.alias)
         suspected_seed = normalized in seed_values
         generated_seed = suspected_seed and normalized in generated_values
@@ -788,6 +1012,9 @@ def _build_knowledge_node(node: KnowledgeNode) -> tuple[list[TermCandidate], dic
                 "unknown_legacy_model" if mapping.legacy_model not in LEGACY_MODELS else "orphan_mapping"
             ] += 1
             continue
+        if strict and not source_is_formal(mapping):
+            audit["unpublished_legacy_mapping_suppressed"] += 1
+            continue
         source_public, source_admin, source_issue = _status_flags(instance)
         if source_issue:
             audit[source_issue] += 1
@@ -823,19 +1050,24 @@ def _build_knowledge_node(node: KnowledgeNode) -> tuple[list[TermCandidate], dic
                     },
                 ),
             )
-        legacy_generated = _known_generated_normalized(
-            [instance.name, getattr(instance, "foreign_name", "")]
-        )
-        legacy_candidates, legacy_audit = _legacy_alias_candidates(
-            instance.search_aliases,
-            generated_values=legacy_generated,
-            source_ref=f"catalog.{mapping.legacy_model}:{instance.pk}:search_aliases",
-            public_active=effective_public,
-            admin_resolvable=effective_admin,
-        )
-        candidates.extend(legacy_candidates)
-        for key, value in legacy_audit.items():
-            audit[key] += value
+        if strict:
+            audit["unconfirmed_legacy_alias_suppressed"] += len(
+                instance.search_aliases or []
+            )
+        else:
+            legacy_generated = _known_generated_normalized(
+                [instance.name, getattr(instance, "foreign_name", "")]
+            )
+            legacy_candidates, legacy_audit = _legacy_alias_candidates(
+                instance.search_aliases,
+                generated_values=legacy_generated,
+                source_ref=f"catalog.{mapping.legacy_model}:{instance.pk}:search_aliases",
+                public_active=effective_public,
+                admin_resolvable=effective_admin,
+            )
+            candidates.extend(legacy_candidates)
+            for key, value in legacy_audit.items():
+                audit[key] += value
 
     candidates.extend(
         _generated_candidates(candidates)
@@ -843,7 +1075,11 @@ def _build_knowledge_node(node: KnowledgeNode) -> tuple[list[TermCandidate], dic
     return candidates, dict(audit)
 
 
-def _build_named(instance) -> tuple[list[TermCandidate], dict[str, int]]:
+def _build_named(
+    instance,
+    *,
+    source_registry_version: str,
+) -> tuple[list[TermCandidate], dict[str, int]]:
     mapped = (
         _mapped_node_for_legacy(instance)
         if instance.__class__.__name__ in LEGACY_MODELS
@@ -851,7 +1087,13 @@ def _build_named(instance) -> tuple[list[TermCandidate], dict[str, int]]:
     )
     if mapped:
         return [], {"mapped_legacy_identity_suppressed": 1}
+    strict = source_registry_version == SOURCE_REGISTRY_VERSION
+    if strict and not source_is_formal(instance):
+        return [], {"unpublished_entity_suppressed": 1}
     public_active, admin_resolvable, status_issue = _status_flags(instance)
+    if strict:
+        public_active = True
+        admin_resolvable = True
     audit = defaultdict(int)
     if status_issue:
         audit[status_issue] += 1
@@ -886,20 +1128,167 @@ def _build_named(instance) -> tuple[list[TermCandidate], dict[str, int]]:
             admin_resolvable=admin_resolvable,
         ),
     )
-    generated_values = _known_generated_normalized([instance.name, foreign_name])
-    legacy, legacy_audit = _legacy_alias_candidates(
-        instance.search_aliases,
-        generated_values=generated_values,
-        source_ref=f"catalog.{entity_name}.search_aliases",
-        public_active=public_active,
-        admin_resolvable=admin_resolvable,
-    )
-    candidates.extend(legacy)
-    for key, value in legacy_audit.items():
-        audit[key] += value
+    if strict:
+        audit["unconfirmed_legacy_alias_suppressed"] += len(
+            instance.search_aliases or []
+        )
+        curation = getattr(instance, "curation", None) or {}
+        confirmed_aliases = curation.get("confirmed_aliases", []) if isinstance(curation, dict) else []
+        for alias in confirmed_aliases if isinstance(confirmed_aliases, list) else []:
+            if not isinstance(alias, dict) or alias.get("source") != "editorial" or not alias.get("confirmed_by") or not alias.get("confirmed_at"):
+                audit["unconfirmed_editorial_alias_suppressed"] += 1
+                continue
+            _append(
+                candidates,
+                _candidate(
+                    alias.get("name"), language=None,
+                    term_type=QueryLexiconEntry.TermType.ALIAS,
+                    source_kind=QueryLexiconEntry.SourceKind.AUTHORITY_FIELD,
+                    trust_level=QueryLexiconEntry.TrustLevel.VERIFIED,
+                    source_ref=f"catalog.{entity_name}:{instance.pk}:confirmed_aliases",
+                    displayable=True, public_active=public_active,
+                    admin_resolvable=admin_resolvable, provenance=alias,
+                ),
+            )
+    else:
+        generated_values = _known_generated_normalized([instance.name, foreign_name])
+        legacy, legacy_audit = _legacy_alias_candidates(
+            instance.search_aliases,
+            generated_values=generated_values,
+            source_ref=f"catalog.{entity_name}.search_aliases",
+            public_active=public_active,
+            admin_resolvable=admin_resolvable,
+        )
+        candidates.extend(legacy)
+        for key, value in legacy_audit.items():
+            audit[key] += value
     candidates.extend(
         _generated_candidates(candidates)
     )
+    return candidates, dict(audit)
+
+
+def _published_work_sources(work: Work) -> tuple[list[dict], dict[str, int]]:
+    """Read only stable published snapshots for a Work identity.
+
+    A current Work row can contain the next editorial draft. Once any
+    published Edition has an active revision pointer, falling back to that row
+    would leak the draft title into the public lexicon. The compatibility path
+    is therefore limited to legacy published Editions with no revision pointer
+    at all.
+    """
+
+    audit = defaultdict(int)
+    editions = list(
+        work.editions.filter(state=PublicationState.PUBLISHED)
+        .select_related("active_catalog_revision")
+        .order_by("created_at", "pk")
+    )
+    if not editions:
+        return [], {"unpublished_entity_suppressed": 1}
+
+    has_revision_pointer = any(row.active_catalog_revision_id for row in editions)
+    sources: list[dict] = []
+    if has_revision_pointer:
+        for edition in editions:
+            revision = edition.active_catalog_revision
+            if revision is None:
+                audit["legacy_edition_ignored_after_revision_activation"] += 1
+                continue
+            if revision.status != "active" or not revision.metadata_ready:
+                audit["inactive_catalog_revision_suppressed"] += 1
+                continue
+            snapshot = revision.snapshot if isinstance(revision.snapshot, dict) else {}
+            values = snapshot.get("work")
+            if not isinstance(values, dict):
+                audit["invalid_catalog_revision_snapshot"] += 1
+                continue
+            snapshot_work_id = str(values.get("id") or "")
+            if snapshot_work_id and snapshot_work_id != str(work.pk):
+                audit["mismatched_catalog_revision_snapshot"] += 1
+                continue
+            sources.append(
+                {
+                    "values": values,
+                    "source_prefix": (
+                        f"catalog.CatalogPublicationRevision:{revision.pk}:work"
+                    ),
+                    "provenance": {
+                        "catalog_revision_id": str(revision.pk),
+                        "catalog_revision": revision.revision,
+                        "edition_id": str(edition.pk),
+                        "compatibility_fallback": False,
+                    },
+                }
+            )
+            audit["published_revision_sources"] += 1
+        return sources, dict(audit)
+
+    # Safe compatibility for published holdings created before 3.0.4. This
+    # path disappears naturally after their first catalog revision activation.
+    sources.append(
+        {
+            "values": {
+                "id": str(work.pk),
+                "title": work.title,
+                "original_title": work.original_title,
+                "uniform_title": work.uniform_title,
+                "language": work.language,
+                "original_language": work.original_language,
+            },
+            "source_prefix": f"catalog.Work:{work.pk}:legacy_published",
+            "provenance": {
+                "edition_ids": [str(row.pk) for row in editions],
+                "compatibility_fallback": True,
+            },
+        }
+    )
+    audit["legacy_published_work_fallback"] += 1
+    return sources, dict(audit)
+
+
+def _build_work(work: Work) -> tuple[list[TermCandidate], dict[str, int]]:
+    sources, source_audit = _published_work_sources(work)
+    audit = defaultdict(int, source_audit)
+    candidates: list[TermCandidate] = []
+    for source in sources:
+        values = source["values"]
+        prefix = source["source_prefix"]
+        provenance = source["provenance"]
+        for field_name, term_type, language in (
+            (
+                "title",
+                QueryLexiconEntry.TermType.CANONICAL,
+                values.get("language"),
+            ),
+            (
+                "original_title",
+                QueryLexiconEntry.TermType.CANONICAL,
+                values.get("original_language"),
+            ),
+            (
+                "uniform_title",
+                QueryLexiconEntry.TermType.ALIAS,
+                values.get("language"),
+            ),
+        ):
+            value = values.get(field_name)
+            _append(
+                candidates,
+                _candidate(
+                    value,
+                    language=language or detect_language(value),
+                    term_type=term_type,
+                    source_kind=WORK_SOURCE_KIND,
+                    trust_level=QueryLexiconEntry.TrustLevel.AUTHORITATIVE,
+                    source_ref=f"{prefix}.{field_name}",
+                    displayable=True,
+                    public_active=True,
+                    admin_resolvable=True,
+                    provenance={**provenance, "field": field_name},
+                ),
+            )
+    candidates.extend(_generated_candidates(candidates))
     return candidates, dict(audit)
 
 
@@ -913,7 +1302,12 @@ def _candidate_sort_key(candidate: TermCandidate):
     )
 
 
-def _merge_candidates(key: EntityKey, candidates: Iterable[TermCandidate]) -> list[dict]:
+def _merge_candidates(
+    key: EntityKey,
+    candidates: Iterable[TermCandidate],
+    *,
+    source_registry_version: str,
+) -> list[dict]:
     grouped: dict[str, list[TermCandidate]] = defaultdict(list)
     for candidate in candidates:
         if candidate.normalized_term:
@@ -939,7 +1333,10 @@ def _merge_candidates(key: EntityKey, candidates: Iterable[TermCandidate]) -> li
                     **row.provenance,
                 }
             )
-        provenance = {"sources": sources, "registry_version": SOURCE_REGISTRY_VERSION}
+        provenance = {
+            "sources": sources,
+            "registry_version": source_registry_version,
+        }
         fingerprint_payload = {
             "entity_type": key.entity_type,
             "entity_id": str(key.entity_id),
@@ -983,9 +1380,23 @@ def _merge_candidates(key: EntityKey, candidates: Iterable[TermCandidate]) -> li
     return entries
 
 
-def build_entity(key: EntityKey) -> EntityBuild:
-    model = ENTITY_MODELS.get(key.entity_type)
+def build_entity(
+    key: EntityKey,
+    *,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
+) -> EntityBuild:
+    models = _entity_models_for_version(source_registry_version)
+    model = models.get(key.entity_type)
     if model is None:
+        if (
+            source_registry_version == LEGACY_SOURCE_REGISTRY_VERSION
+            and key.entity_type in ENTITY_MODELS
+        ):
+            return EntityBuild(
+                key=key,
+                entries=[],
+                audit={"unsupported_in_registry_version": 1},
+            )
         raise ValueError(f"未注册的 QueryLexicon entity type：{key.entity_type}")
     queryset = model.objects
     if model is Person:
@@ -994,16 +1405,39 @@ def build_entity(key: EntityKey) -> EntityBuild:
     if instance is None:
         return EntityBuild(key=key, entries=[], audit={"missing_entity": 1})
     if isinstance(instance, Person):
-        candidates, audit = _build_person(instance)
+        candidates, audit = _build_person(
+            instance,
+            source_registry_version=source_registry_version,
+        )
     elif isinstance(instance, KnowledgeNode):
-        candidates, audit = _build_knowledge_node(instance)
+        candidates, audit = _build_knowledge_node(
+            instance,
+            source_registry_version=source_registry_version,
+        )
+    elif isinstance(instance, Work):
+        candidates, audit = _build_work(instance)
     else:
-        candidates, audit = _build_named(instance)
-    return EntityBuild(key=key, entries=_merge_candidates(key, candidates), audit=audit)
+        candidates, audit = _build_named(
+            instance,
+            source_registry_version=source_registry_version,
+        )
+    return EntityBuild(
+        key=key,
+        entries=_merge_candidates(
+            key,
+            candidates,
+            source_registry_version=source_registry_version,
+        ),
+        audit=audit,
+    )
 
 
-def describe_entity(key: EntityKey) -> dict | None:
-    model = ENTITY_MODELS.get(key.entity_type)
+def describe_entity(
+    key: EntityKey,
+    *,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
+) -> dict | None:
+    model = _entity_models_for_version(source_registry_version).get(key.entity_type)
     if model is None:
         return None
     instance = model.objects.filter(pk=key.entity_id).first()
@@ -1014,12 +1448,42 @@ def describe_entity(key: EntityKey) -> dict | None:
         if terminal is None:
             return None
         instance = terminal
+        if (
+            source_registry_version == SOURCE_REGISTRY_VERSION
+            and not source_is_formal(instance)
+        ):
+            return None
         label = instance.preferred_name
         status = instance.authority_status
     elif isinstance(instance, KnowledgeNode):
+        if (
+            source_registry_version == SOURCE_REGISTRY_VERSION
+            and not source_is_formal(instance)
+        ):
+            return None
         label = instance.canonical_name_zh or instance.canonical_name_en
         status = instance.status
+    elif isinstance(instance, Work):
+        sources, _audit = _published_work_sources(instance)
+        if not sources:
+            return None
+        label = next(
+            (
+                str(row["values"].get("title") or "").strip()
+                for row in sources
+                if str(row["values"].get("title") or "").strip()
+            ),
+            "",
+        )
+        if not label:
+            return None
+        status = PublicationState.PUBLISHED
     else:
+        if (
+            source_registry_version == SOURCE_REGISTRY_VERSION
+            and not source_is_formal(instance)
+        ):
+            return None
         label = instance.name
         status = instance.editorial_status
     return {

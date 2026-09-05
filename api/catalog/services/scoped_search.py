@@ -23,6 +23,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.query_lexicon.normalization import normalize_term
+from catalog.services.publication_eligibility import public_editions
 
 
 IMPLEMENTATION_VERSION = "scoped-search-v1"
@@ -115,10 +116,10 @@ class SearchRequest:
 
 
 def public_work_queryset() -> QuerySet:
-    published_editions = Edition.objects.filter(
-        state="published",
-        is_primary=True,
-    ).prefetch_related("contributions__person", "assets")
+    published_editions = public_editions().filter(is_primary=True).prefetch_related(
+        "contributions__person",
+        "assets",
+    )
     return (
         Work.objects.filter(editions__in=published_editions)
         .distinct()
@@ -225,6 +226,7 @@ def _fields_for_context(context: SearchContext) -> tuple[tuple[str, ...], tuple[
 
 def _entity_type_for_context(context: SearchContext) -> str | None:
     return {
+        SearchContext.WORKS: QueryLexiconEntry.EntityType.WORK,
         SearchContext.SCHOLARS: QueryLexiconEntry.EntityType.PERSON,
         SearchContext.DISCIPLINES: QueryLexiconEntry.EntityType.DISCIPLINE,
         SearchContext.THEORIES: QueryLexiconEntry.EntityType.KNOWLEDGE_NODE,
@@ -318,6 +320,19 @@ class SearchService:
         if not query:
             return queryset.order_by(*_order_for_context(context))
         canonical, descriptive = _fields_for_context(context)
+        if context == SearchContext.WORKS and visibility == SearchVisibility.PUBLIC:
+            # Current Work rows may already contain the next editorial revision.
+            # Public search must continue to match the activated snapshot until
+            # projection processing completes and the pointer is switched.
+            canonical = (
+                "editions__active_catalog_revision__snapshot__work__title",
+                "editions__active_catalog_revision__snapshot__work__original_title",
+                "editions__active_catalog_revision__snapshot__work__uniform_title",
+            )
+            descriptive = (
+                "editions__active_catalog_revision__snapshot__work__subtitle",
+                "editions__active_catalog_revision__snapshot__work__abstract",
+            )
         exact_q = _lookup_q(canonical, "iexact", query)
         prefix_q = _lookup_q(canonical, "istartswith", query)
         contains_q = _lookup_q((*canonical, *descriptive), "icontains", query)

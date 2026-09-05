@@ -9,6 +9,7 @@ from common.capabilities import Capability, has_capability
 from common.permissions import CanAccessBackOffice
 
 from .models import CanonicalObjectRevision, EditorialRevision
+from .editorial_read import AdminPrivateResponseMixin
 from .services.editorial_revision import (
     EditorialRevisionConflict,
     EditorialRevisionError,
@@ -23,21 +24,25 @@ from .services.editorial_revision import (
 
 EDIT_CAPABILITY = {
     EditorialRevision.TargetType.WORK: Capability.EDIT_METADATA,
+    EditorialRevision.TargetType.EDITION: Capability.EDIT_METADATA,
     EditorialRevision.TargetType.KNOWLEDGE_NODE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.SCHOLAR_PROFILE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.DISCIPLINE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.SUBDISCIPLINE: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.TOPIC: Capability.EDIT_DRAFT_AUTHORITY,
+    EditorialRevision.TargetType.PUBLISHER: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.EDIT_DRAFT_AUTHORITY,
 }
 
 PUBLISH_CAPABILITY = {
     EditorialRevision.TargetType.WORK: Capability.PUBLISH_WORK,
+    EditorialRevision.TargetType.EDITION: Capability.PUBLISH_WORK,
     EditorialRevision.TargetType.KNOWLEDGE_NODE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.SCHOLAR_PROFILE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.DISCIPLINE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.SUBDISCIPLINE: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.TOPIC: Capability.PUBLISH_AUTHORITY,
+    EditorialRevision.TargetType.PUBLISHER: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.PUBLISH_AUTHORITY,
 }
 
@@ -70,7 +75,7 @@ def _error_response(error: EditorialRevisionError):
     )
 
 
-class AdminEditorialRevisionListCreateView(APIView):
+class AdminEditorialRevisionListCreateView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request):
@@ -150,7 +155,7 @@ class AdminEditorialRevisionListCreateView(APIView):
         return Response(serialize_editorial_revision(revision), status=status.HTTP_201_CREATED)
 
 
-class AdminEditorialRevisionDetailView(APIView):
+class AdminEditorialRevisionDetailView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, pk):

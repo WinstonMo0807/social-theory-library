@@ -92,7 +92,7 @@ const staffRoles = ["admin", "editor"] as const;
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const focusMode = /^\/admin\/(?:intake\/[^/]+|library\/works\/[^/]+)\/?$/.test(pathname);
+  const focusMode = /^\/admin\/(?:intake\/[^/]+|library\/works\/[^/]+|preview\/works\/[^/]+)\/?$/.test(pathname);
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);

@@ -1,6 +1,26 @@
 # 部署说明
 
-更新日期为 2026-08-28。本文件记录源码中的部署入口、安全要求和正式生产切换快照。任何后续部署仍需重新检查实时状态。
+更新日期为 2026-09-05。本文件记录源码中的部署入口、安全要求和正式生产切换快照。任何后续部署仍需重新检查实时状态。
+
+## Version 3.0.4 production cutover
+
+3.0.4 继续使用现有 `social-science-library` Compose project、`compose.public.yaml` 和 `compose.cloudflare.yaml`。目标 migration 为 `catalog.0040_v304_cataloging_intelligence`。它是 additive migration，但包含历史已发布 Edition 的初始馆藏 revision 回填，因此必须先用 fresh BackupJob 在隔离 PostgreSQL 16 中完成恢复和 migration rehearsal。
+
+- 源码冻结前记录 Git tree、release archive SHA、依赖锁、当前 Compose、非敏感环境摘要、所有容器 image ID 与 RestartCount。
+- 保存 Work、Edition、Asset、ORIGINAL、Page、DocumentRevision、EvidenceSpan、SemanticChunk、Person、Topic、KnowledgeNode 的计数与身份摘要，并记录活动 Semantic UID 和 QueryLexicon generation。
+- 运行 3.0.4 只读一致性审计。报告不能自动触发 Person 或 Topic 合并、候选接受、OCR、索引删除或历史馆藏改写。
+- 使用候选 API image 在恢复副本中执行 `migrate --plan`、catalog 0040、Django check、馆藏身份比对和旧 3.0.3 image 的 additive-schema readiness。
+- 确认上传、发布、OCR 和研究写任务没有运行后，暂停 Beat 和相关 Worker。不得强制结束真实馆藏任务来制造切换窗口。
+- 正式应用 catalog 0040 后，依次滚动替换 API、默认 Worker、Ingestion Worker、Web、Edge 与 Beat。Web 或 API 地址变化后必须重建 Edge。禁止 `docker compose down -v`。
+- 公开检查至少覆盖 readiness 3.0.4、pending migration 0、已发布馆藏活动 revision、草稿 404、公开 Work、Reader Range 206、全文、Semantic、观点检索和 Ask 的 revision 资格，以及普通 Admin 的字段助手、非线性编辑和完整草稿预览。
+- 查询词典和各类投影只允许由正式发布事件推进。保存草稿、拒绝候选或创建 bundle 草稿实体不能改变公开 generation 或公开检索结果。
+- 回退保留 catalog 0040 schema，优先恢复升级前 API 与 Web image，并保留旧活动 revision 和索引。不得执行 down migration 或用旧数据库覆盖当前数据库。
+
+详细升级语义见 [V3.0.4_UPGRADE.md](V3.0.4_UPGRADE.md)。本文更新时尚未执行 fresh backup、生产 migration、镜像切换或公网验收。
+
+### 3.0.4 最终生产记录
+
+本节预留给实际 deploy-record、BackupJob、校验值、镜像、migration、回退标签、公网检查和观察结果。只有对应操作真实完成后才能填写。
 
 ## Version 3.0.3 production cutover
 

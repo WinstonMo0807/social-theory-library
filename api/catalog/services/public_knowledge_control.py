@@ -913,7 +913,7 @@ def build_public_control(
             }
         )
     return {
-        "contract_version": "3.0.3",
+        "contract_version": "3.0.4",
         "object_type": object_type,
         "eligibility": _public_eligibility(object_type, target),
         "page_tree": pages,

@@ -1,4 +1,5 @@
 import pytest
+from hashlib import sha256
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
@@ -6,6 +7,7 @@ from accounts.models import User
 from catalog.models import (
     CanonicalObjectRevision,
     Asset,
+    CatalogPublicationRevision,
     Contribution,
     CuratedClaim,
     DerivedClaim,
@@ -15,18 +17,26 @@ from catalog.models import (
     Edition,
     EditorialRevision,
     EvidenceSpan,
+    IntelligenceStatus,
+    KnowledgeProjectionDelivery,
+    KnowledgePublicationEvent,
     KnowledgeNode,
     KnowledgeNodeSubdiscipline,
     KnowledgeNodeTopic,
     ProjectionState,
     PublicationState,
     Person,
+    PublisherAuthority,
     Page,
     Subdiscipline,
     Topic,
     Work,
 )
 from catalog.services.dependency_engine import record_canonical_change
+from catalog.services.knowledge_publication import (
+    create_catalog_publication_event,
+    process_knowledge_event,
+)
 
 
 pytestmark = pytest.mark.django_db
@@ -51,6 +61,31 @@ def _published_work(title="正式作品原题"):
         published_at=timezone.now(),
     )
     return work, edition
+
+
+def _active_catalog_revision(edition, *, title=None):
+    revision = CatalogPublicationRevision.objects.create(
+        edition=edition,
+        revision=1,
+        status=CatalogPublicationRevision.Status.ACTIVE,
+        snapshot={"work": {"id": str(edition.work_id), "title": title or edition.work.title}},
+        changed_fields=["catalog_publish"],
+        content_fingerprint=sha256(f"{edition.id}:active".encode()).hexdigest(),
+        metadata_ready=True,
+        activated_at=timezone.now(),
+    )
+    edition.active_catalog_revision = revision
+    edition.metadata_ready_at = timezone.now()
+    edition.intelligence_status = IntelligenceStatus.ACTIVE
+    edition.save(
+        update_fields=[
+            "active_catalog_revision",
+            "metadata_ready_at",
+            "intelligence_status",
+            "updated_at",
+        ]
+    )
+    return revision
 
 
 def test_published_work_maintenance_creates_preview_then_editor_publishes_atomically(api_client):
@@ -97,7 +132,7 @@ def test_published_work_maintenance_creates_preview_then_editor_publishes_atomic
     event = DomainChangeEvent.objects.get(
         object_type="work",
         object_id=work.id,
-        change_kind=DomainChangeEvent.ChangeKind.PUBLISH,
+        change_kind=DomainChangeEvent.ChangeKind.UPDATE,
     )
     assert event.changed_fields == ["title"]
     assert event.canonical_revision == 1
@@ -106,6 +141,103 @@ def test_published_work_maintenance_creates_preview_then_editor_publishes_atomic
         object_id=work.id,
         status=ProjectionState.Status.STALE,
     ).exists()
+
+
+def test_work_draft_isolated_then_catalog_event_preserves_active_on_failure(
+    api_client,
+    settings,
+):
+    settings.KNOWLEDGE_EVENT_MAX_ATTEMPTS = 1
+    editor = _user(User.Role.EDITOR, "work-catalog-event")
+    work, edition = _published_work("仍在服务的正式题名")
+    previous = _active_catalog_revision(edition)
+    api_client.force_authenticate(editor)
+
+    created = api_client.post(
+        "/api/catalog/admin/editorial-revisions/",
+        {
+            "target_type": "work",
+            "target_id": str(work.id),
+            "patch": {"title": "等待投影切换的新题名"},
+        },
+        format="json",
+    )
+
+    assert created.status_code == 201
+    assert KnowledgePublicationEvent.objects.count() == 0
+    assert CatalogPublicationRevision.objects.filter(edition=edition).count() == 1
+    work.refresh_from_db()
+    assert work.title == "仍在服务的正式题名"
+
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{created.data['id']}/publish/",
+        {},
+        format="json",
+    )
+
+    assert published.status_code == 200
+    event = KnowledgePublicationEvent.objects.get(
+        object_type="work",
+        object_id=work.id,
+        event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+    )
+    assert event.domain_event.object_type == "work"
+    assert event.domain_event.catalog_revision_id == event.catalog_revision_id
+    assert event.catalog_revision.snapshot["work"]["title"] == "等待投影切换的新题名"
+    assert event.catalog_revision.provenance["editorial_revision_id"] == created.data["id"]
+    edition.refresh_from_db()
+    previous.refresh_from_db()
+    assert edition.active_catalog_revision_id == previous.id
+    assert previous.status == CatalogPublicationRevision.Status.ACTIVE
+    assert event.catalog_revision.status == CatalogPublicationRevision.Status.PREPARING
+
+    ProjectionState.objects.filter(
+        object_type="work",
+        object_id=work.id,
+    ).update(status=ProjectionState.Status.FAILED)
+    processed = process_knowledge_event(event.id)
+
+    edition.refresh_from_db()
+    previous.refresh_from_db()
+    processed.catalog_revision.refresh_from_db()
+    assert processed.status == KnowledgePublicationEvent.Status.DEAD_LETTER
+    assert processed.catalog_revision.status == CatalogPublicationRevision.Status.FAILED
+    assert edition.active_catalog_revision_id == previous.id
+    assert previous.status == CatalogPublicationRevision.Status.ACTIVE
+
+
+def test_workbench_followup_edition_publish_reuses_editorial_catalog_event(api_client):
+    editor = _user(User.Role.EDITOR, "work-event-coalesce")
+    work, edition = _published_work("合并前题名")
+    api_client.force_authenticate(editor)
+    created = api_client.post(
+        "/api/catalog/admin/editorial-revisions/",
+        {
+            "target_type": "work",
+            "target_id": str(work.id),
+            "patch": {"title": "合并后的题名"},
+        },
+        format="json",
+    )
+    published = api_client.post(
+        f"/api/catalog/admin/editorial-revisions/{created.data['id']}/publish/",
+        {},
+        format="json",
+    )
+    assert published.status_code == 200
+    first = KnowledgePublicationEvent.objects.get()
+
+    followup = create_catalog_publication_event(
+        edition,
+        event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+        changed_fields=["catalog_publish"],
+        actor=editor,
+        idempotency_key=f"test-followup-edition-publish:{edition.id}",
+    )
+
+    assert followup.id == first.id
+    assert KnowledgePublicationEvent.objects.count() == 1
+    assert CatalogPublicationRevision.objects.filter(edition=edition).count() == 1
 
 
 def test_published_workbench_sections_merge_into_one_publishable_revision(api_client):
@@ -222,7 +354,7 @@ def test_published_workbench_sections_merge_into_one_publishable_revision(api_cl
     event = DomainChangeEvent.objects.get(
         object_type="work",
         object_id=work.id,
-        change_kind=DomainChangeEvent.ChangeKind.PUBLISH,
+        change_kind=DomainChangeEvent.ChangeKind.UPDATE,
     )
     assert set(event.changed_fields) == {
         "title",

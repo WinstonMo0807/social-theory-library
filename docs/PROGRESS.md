@@ -1,6 +1,29 @@
 # 开发进度
 
-更新日期为 2026-08-28。源码冻结前，[books.winstonmo.com](https://books.winstonmo.com) 运行 3.0.2，database true、pending migrations 0。3.0.3 的最终生产结果记录在 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record`。正式发布使用本文件所在的完整 tracked tree，同一 tree identity 写入镜像 label、部署记录和远端 release 分支，不在源码文档中自引用尚未生成的 commit SHA。
+当前续接入口为 [CURRENT_PROGRESS.md](../CURRENT_PROGRESS.md)。2026-09-05 逐项核对发现字段保存、已发布对象候选采用、发布检查与直接索引入口仍有实现缺口。下文的已落盘服务不能视为整个 3.0.4 完成；具体未完成项以该入口为准。
+
+更新日期为 2026-09-05。3.0.3 的最终生产结果记录在 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record`。3.0.4 正在完成源码收口，本文不把尚未执行的生产切换写成完成。正式发布使用本文件所在的完整 tracked tree，同一 tree identity 写入镜像 label、部署记录和远端 release 分支，不在源码文档中自引用尚未生成的 commit SHA。
+
+## 3.0.4 智能编目与知识发布
+
+- 2026-09-05 Knowledge Studio 普通页面已改为对象字段工作面，复用现有 `CurationFieldAssistant` 与事务采用接口。草稿分类关系解析为可读名称，作品入口支持 URL 直接定位，尚未有关联的草稿作品也可进入目录。旧来源、评分、全局候选与索引诊断移到独立受保护的 `/admin/system-health/knowledge`，保留原排查能力。馆藏与实体的智能状态及重试共用原控件。该项未运行测试、未上线。
+- 已补仅针对明确人工作者/知识关系的历史草稿 bundle 回填。普通字段确认保存与已发布编辑草稿确认也会登记当前管理员确认的草稿实体，不要求绕去其他页面。正式发布重新核对当前关系，已移除对象明确排除。别名提升仅认精确已审核候选或新建表单明确输入，不批量提升 PDF/Web 来源。
+- 发布事件失败或停止自动重试后，管理员可通过发布权限控制的重新处理入口恢复。普通工作台已挂载状态条和按钮。恢复使用原事件、原修订和原协调任务，保留完成消费者、旧活动内容及错误审计，阻止过时修订复活。数据迁移和新代码按用户要求未测试，未执行生产写入。
+- 2026-09-05 已统一实体管理正式发布事件。草稿实体与字段候选采用不再投递共享知识事件；已发布学者姓名异体和理论别名进入编辑修订。别名发布保留未变行的身份与来源，不把旧自动别名随其他字段一起提升。Node 合并与回滚已补关联作品的理论字段更新，合并中的人工关系冲突和未完成草稿明确阻断。按用户要求未运行测试。
+- 只读一致性报告已扩展项目模型物理表/列与数量清单、核心外键存在性、正式关系端点资格、书目年份和 ISBN/DOI 冲突、跨人物或节点别名重叠、发布包及修订引用、字段决定和发布消费者状态。缺少 schema 时明确跳过数据检查，不报告全库健康。新增 `--schema-only` 和 PostgreSQL `--database-read-only`，后者使用数据库强制只读的可重复读快照。报告区分可在备份后重建的派生项与须人工决定的内容项，不自动写库。此处记录源码实现，不代表已经执行真实数据库审计。
+- Topic 合并已接现有管理权限、合并影响预览和主题编辑页。事务迁移 12 类真实关联、去重收藏与关系，并保存完整 AuditEvent。存在人工确认/拒绝冲突、正在编辑的关联草稿或未完成馆藏发布时明确阻断。源实体归档且普通接口不可恢复或删除。目标确认同义词进入 QueryLexicon 的正式来源，受影响馆藏创建仅主题字段的更新事件。2026-09-05 只完成源码实施，用户要求未运行测试，生产待核实。
+- 2026-09-05 恢复开发后已补逐字段保存、依赖失效及已发布直接写保护，非线性前端禁存规则已移除。最新修改尚未测试，剩余整合项持续记录在根目录当前进度页。
+- 已完成现有 Work、Edition、Person、Contribution、Evidence、FieldPolicy、候选、OCR、QueryLexicon、全文、Semantic、Ask/RAG、发布流程和关键 Admin 页面代码审计。保留、封装、替换、废弃和迁移清单位于 [V3.0.4_ARCHITECTURE.md](V3.0.4_ARCHITECTURE.md)。
+- catalog 0040 已增加 CatalogFieldDecision、PublicationBundle、CatalogPublicationRevision、KnowledgePublicationEvent、KnowledgeProjectionDelivery，以及 Edition 的活动 revision、metadata ready、fulltext ready 和智能处理状态。迁移只安全回填可证明的历史 published Edition，不自动合并或改写人工数据。
+- 已建立统一 Field Assistant 服务和管理员 API。服务聚合馆内对象及现有 Metadata、Entity Resolution、Enrichment 证据，默认只返回三项可读建议，不返回原始评分。采用动作会在事务内写入真实草稿字段或关系、决定、依赖失效和审计。拒绝只保留反馈，不进入正式知识。
+- 编目内可搜索、创建并立即关联 Person、Topic、KnowledgeNode 和 PublisherAuthority。重复对象会先提示。新对象记录在当前 PublicationBundle，发布前保持草稿资格。
+- 已建立正式知识发布事件和逐消费者投递。首次发布、更新、撤回与 EditorialRevision 使用正式 revision；封面、书目关系、分类和正文变化按影响映射更新相关模块。正文投影失败时保留上一活动 revision。
+- QueryLexicon registry v2 已收敛为正式来源。公开词典从已发布 Person、KnowledgeNode、Topic、Discipline、Subdiscipline 和活动作品快照重建，排除草稿、PDF 或 Web 自动别名、拒绝候选和未经确认内容。
+- 公开详情、Reader、全文、Semantic、观点检索和 Ask/RAG 已接入活动馆藏 revision 资格。书目使用 metadata ready，正文还要求 fulltext ready，并核对活动 Asset 和 DocumentRevision。保存草稿不会取得这些公开资格。
+- 已新增只读 `audit_v304_catalog_consistency`，覆盖候选已接受但字段为空、关系不一致、可疑重复实体、已发布无活动 revision、搜索标记缺失、非正式当前投影、QueryLexicon 混入非正式词条，以及不具公开资格的 ready Semantic 内容。命令默认不修复，也不覆盖既有报告。
+- 工作台已开始改为字段旁智能查找，并明确作者、译者、主编、编者、校注、摄影和其他贡献者。普通 Inspector 隐藏原始百分比分数和 QueryLexicon 等实现词汇。紧凑预览在工作台内显示，完整草稿预览隐藏 Admin 侧栏并复用公开 `WorkDetailView`。
+- API、远程 Worker、Web、Compose 默认镜像和公开契约版本已更新为 3.0.4。Admin 版本标签为“v3.0.4 智能编目与知识发布”。升级步骤和回退边界见 [V3.0.4_UPGRADE.md](V3.0.4_UPGRADE.md)。
+- 本轮较早阶段已有 Field Assistant、发布 revision、EditorialRevision、QueryLexicon、公开资格、审计和前端改动面的定向结果。最终源码继续变化后，用户明确要求不再运行测试，因此这些历史结果不能替代最终工作树验证。生产 migration、真实任务、管理员写入流程和公网检查在部署完成前均保持待核实。
 
 ## 3.0.3 Public Knowledge Control Plane
 

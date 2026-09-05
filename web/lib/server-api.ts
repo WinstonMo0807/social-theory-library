@@ -60,7 +60,7 @@ export type PublicKnowledgeNodeLink = {
 
 export type ApiWork = {
   id: string;
-  document_type: "book" | "journal_article" | "thesis" | "report";
+  document_type: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
   title: string;
   subtitle: string;
   abstract: string;
@@ -73,6 +73,7 @@ export type ApiWork = {
     publication_year: number | null;
     publisher: string;
     journal_title: string;
+    journal_contents?: import("./data").Work["journalContents"];
     contributors: { role: string; person: ApiPerson }[];
     readable_asset: { id: string; page_count: number } | null;
   } | null;

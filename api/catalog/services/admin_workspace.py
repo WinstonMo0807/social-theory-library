@@ -322,8 +322,11 @@ def _work_data(work: Work, edition: Edition) -> dict[str, Any]:
 
 
 def _bibliography_data(work: Work, edition: Edition) -> dict[str, Any]:
+    from catalog.services.journal_issues import journal_contents_snapshot
+
     return {
         **{field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS},
+        "journal_contents": journal_contents_snapshot(edition),
         "publisher_authority_name": (
             edition.publisher_authority.canonical_name
             if edition.publisher_authority_id
@@ -400,6 +403,8 @@ def _classification_data(workflow: dict[str, Any], edition: Edition) -> dict[str
 
 
 def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any]:
+    from catalog.services.editorial_revision import _work_node_relation_snapshot
+
     relations: list[dict[str, Any]] = []
     node_relations = list(
         edition.work.node_relations.select_related("node").order_by("node__canonical_name_zh")
@@ -489,6 +494,7 @@ def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any
     for relation in node_relations:
         relations.append(
             {
+                **_work_node_relation_snapshot(relation),
                 "id": str(relation.id),
                 "target_type": "knowledge_node",
                 "target_id": str(relation.node_id),
@@ -503,6 +509,9 @@ def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any
         )
     return {
         "relations": relations,
+        "theories": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "theory"],
+        "topics": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "topic"],
+        "nodes": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "knowledge_node"],
         "confirmed": _step_status(workflow, "knowledge") == "complete",
         "expected_updated_at": edition.updated_at,
         "expected_work_updated_at": edition.work.updated_at,
@@ -662,7 +671,13 @@ def _apply_work_revision_preview(
                 )
             )
         data["knowledge"].update(
-            {"relations": relations, "draft_revision": True}
+            {
+                "relations": relations,
+                "theories": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "theory"],
+                "topics": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "topic"],
+                "nodes": [{**row, "id": row["target_id"]} for row in relations if row["target_type"] == "knowledge_node"],
+                "draft_revision": True,
+            }
         )
 
     for section_name in ("bibliography", "contributors", "reader"):
@@ -898,6 +913,7 @@ def build_admin_workspace(
             "knowledge_update_suggestions", []
         )
     pending_revision = None
+    edition_revision = None
     if mode == "maintenance":
         pending_revision = EditorialRevision.objects.filter(
             target_type=EditorialRevision.TargetType.WORK,
@@ -910,11 +926,29 @@ def build_admin_workspace(
                 pending_revision.materialized_preview,
                 edition,
             )
+        edition_revision = EditorialRevision.objects.filter(
+            target_type=EditorialRevision.TargetType.EDITION,
+            target_id=edition.id,
+            status=EditorialRevision.Status.DRAFT,
+        ).order_by("-revision").first()
+        if edition_revision is not None:
+            # Only explicit changed Edition fields may shadow a Work draft;
+            # the full Edition snapshot also contains unchanged canonical data.
+            edition_values = dict(edition_revision.patch or {})
+            for section_name in ("bibliography", "edition"):
+                data[section_name].update({
+                    key: value for key, value in edition_values.items()
+                    if key in data[section_name]
+                })
+                data[section_name]["draft_revision"] = True
+            if "reader_rendition_policy" in edition_values:
+                data["reader"]["reader_rendition_policy"] = edition_values["reader_rendition_policy"]
     serialized_revision = None
-    if pending_revision is not None:
+    if pending_revision is not None or edition_revision is not None:
         from catalog.services.editorial_revision import serialize_editorial_revision
 
-        serialized_revision = serialize_editorial_revision(pending_revision)
+        if pending_revision is not None:
+            serialized_revision = serialize_editorial_revision(pending_revision)
     return {
         "mode": mode,
         "context": {
@@ -942,6 +976,7 @@ def build_admin_workspace(
         "permissions": _permissions(user),
         "queue": _queue_for(item),
         "editorial_revision": serialized_revision,
+        "edition_editorial_revision": serialize_editorial_revision(edition_revision) if edition_revision is not None else None,
     }
 
 

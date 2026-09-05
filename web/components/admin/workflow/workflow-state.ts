@@ -41,12 +41,12 @@ export const WORKFLOW_STEP_LABELS: Record<WorkflowStepKey, string> = {
   file: "文件与识别",
   work: "作品与原作",
   bibliography: "书目与版本",
-  contributors: "作者与责任者",
+  contributors: "作者与译者",
   classification: "学科与子学科",
   knowledge: "理论、主题与争论",
   reader: "阅读与定位",
-  curation: "知识策展与前台联动（可选）",
-  publication: "发布与投影",
+  curation: "理论与主题",
+  publication: "发布",
 };
 
 const STEP_SET = new Set<string>(WORKFLOW_STEP_KEYS);
@@ -105,6 +105,9 @@ export function bibliographyFields(documentType: string): readonly string[] {
   if (documentType === "journal_article") {
     return [...common, "journal_title", "volume", "issue", "page_range", "doi"];
   }
+  if (documentType === "journal_issue") {
+    return [...common, "journal_title", "volume", "issue", "publisher", "journal_contents"];
+  }
   if (documentType === "thesis") {
     return [...common, "degree_institution", "degree_type"];
   }
@@ -125,7 +128,7 @@ export function bibliographyFields(documentType: string): readonly string[] {
 }
 
 function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? value.trim() : typeof value === "number" && Number.isFinite(value) ? String(value) : "";
 }
 
 export function validateWorkflowSection(
@@ -149,7 +152,21 @@ export function validateWorkflowSection(
     requireText("language", "请选择作品语言。");
   }
   if (step === "bibliography") {
-    if (documentType === "journal_article") requireText("journal_title", "请填写期刊名。");
+    if (["journal_article", "journal_issue"].includes(documentType)) requireText("journal_title", "请填写期刊名。");
+    if (documentType === "journal_issue") {
+      requireText("publication_year", "请填写本期年份。");
+      requireText("volume", "请填写卷号。");
+      requireText("issue", "请填写期号。");
+      const rows = Array.isArray(value.journal_contents) ? value.journal_contents : [];
+      const linked = new Set<string>();
+      rows.forEach((entry, index) => {
+        const row = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+        if (!text(row.title)) issues.push({ field: `journal_contents.${index}.title`, message: "请填写论文题名，或删除这项目录。" });
+        const identifier = text(row.article_work_id);
+        if (identifier && linked.has(identifier)) issues.push({ field: `journal_contents.${index}.title`, message: "这篇馆内论文已在本期目录中，请勿重复关联。" });
+        if (identifier) linked.add(identifier);
+      });
+    }
     if (documentType === "thesis") requireText("degree_institution", "请填写学位授予单位。");
     if (documentType === "report") requireText("report_institution", "请填写报告责任机构。");
   }
@@ -162,13 +179,13 @@ export function validateWorkflowSection(
       const role = text(contributor.role);
       if (!displayName && !personId) return;
       if (!displayName) {
-        issues.push({ field: `items.${index}.display_name`, message: `请填写第 ${index + 1} 位责任者名称。` });
+        issues.push({ field: `items.${index}.display_name`, message: `请填写第 ${index + 1} 位贡献者姓名。` });
       }
       if (!role) {
-        issues.push({ field: `items.${index}.role`, message: `请选择第 ${index + 1} 位责任者角色。` });
+        issues.push({ field: `items.${index}.role`, message: `请选择第 ${index + 1} 位贡献者的角色。` });
       }
       if (!personId) {
-        issues.push({ field: `items.${index}.person_id`, message: `请为第 ${index + 1} 位责任者关联馆内人物、创建新学者主页，或选择仅添加为责任者。` });
+        issues.push({ field: `items.${index}.person_id`, message: `请为第 ${index + 1} 位贡献者关联馆内学者，或直接新建并关联。` });
       }
     });
   }

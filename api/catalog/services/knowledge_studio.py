@@ -294,6 +294,7 @@ class KnowledgeObjectEditorAdapter:
         field_name: str,
         value,
         data: dict[str, Any],
+        include_unpublished: bool = False,
     ) -> None:
         from catalog.models import (
             KnowledgeNodeAlias,
@@ -370,7 +371,7 @@ class KnowledgeObjectEditorAdapter:
             published_links = [
                 row
                 for row in links
-                if row.status == KnowledgePublicationStatus.PUBLISHED
+                if include_unpublished or row.status == KnowledgePublicationStatus.PUBLISHED
             ]
             data["discipline_links"] = list(
                 KnowledgeNodeDisciplineSerializer(
@@ -450,7 +451,7 @@ class KnowledgeObjectEditorAdapter:
         published_links = [
             row
             for row in links
-            if row.status == KnowledgePublicationStatus.PUBLISHED
+            if include_unpublished or row.status == KnowledgePublicationStatus.PUBLISHED
         ]
         data[field_name] = list(
             serializer_class(published_links, many=True, context={}).data
@@ -463,6 +464,7 @@ class KnowledgeObjectEditorAdapter:
         field_name: str,
         value,
         data: dict[str, Any],
+        include_unpublished: bool = False,
     ) -> None:
         from catalog.models import RelationReviewStatus, TheorySchool
 
@@ -479,6 +481,22 @@ class KnowledgeObjectEditorAdapter:
         }
         model, id_field, output_field = specs[field_name]
         related = cls._related_objects(model, [row.get(id_field) for row in value])
+        if include_unpublished:
+            admin_key = {"discipline_relations": "disciplines", "theory_relations": "theories", "subdiscipline_relations": "subdisciplines"}[field_name]
+            admin_id_field = "theory_id" if field_name == "theory_relations" else id_field
+            normalized = dict(data.get("normalized_relations") or {})
+            existing = {str(row.get(admin_id_field)): row for row in normalized.get(admin_key, [])}
+            normalized[admin_key] = [
+                {
+                    **existing.get(str(row[id_field]), {}),
+                    **row,
+                    admin_id_field: str(row[id_field]),
+                    "name": related[str(row[id_field])].name,
+                }
+                for row in value
+            ]
+            data["normalized_relations"] = normalized
+            return
         output = []
         for row in value:
             item = related[str(row[id_field])]
@@ -509,6 +527,7 @@ class KnowledgeObjectEditorAdapter:
         target: ReadingPath,
         value,
         data: dict[str, Any],
+        include_unpublished: bool = False,
     ) -> None:
         from uuid import NAMESPACE_URL, uuid5
 
@@ -543,7 +562,7 @@ class KnowledgeObjectEditorAdapter:
             for item in (group.get("items") or [])
             if item.get("work")
         ]
-        nodes = cls._related_objects(KnowledgeNode, node_ids) if node_ids else {}
+        nodes = cls._related_objects(KnowledgeNode, list(dict.fromkeys(node_ids))) if node_ids else {}
         works = cls._related_objects(Work, work_ids) if work_ids else {}
 
         stages = []
@@ -621,8 +640,13 @@ class KnowledgeObjectEditorAdapter:
             ReadingPathStageSerializer(ordered_stages, many=True, context={}).data
         )
         data["items"] = list(
-            ReadingPathItemSerializer(items, many=True, context={}).data
+            ReadingPathItemSerializer(items, many=True, context={"include_unpublished_items": include_unpublished}).data
         )
+        if include_unpublished:
+            # Preserve absent IDs on newly added stages. Synthetic preview IDs
+            # must never be submitted later as existing database identities.
+            data["draft_stage_groups"] = value
+            return
         public_items = []
         public_stage_ids = set()
         for row in data["items"]:
@@ -652,6 +676,7 @@ class KnowledgeObjectEditorAdapter:
         target,
         revision: EditorialRevision,
         data: dict[str, Any],
+        include_unpublished: bool = False,
     ) -> tuple[dict[str, Any], list[str]]:
         from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -698,6 +723,7 @@ class KnowledgeObjectEditorAdapter:
                         field_name=field_name,
                         value=value,
                         data=materialized,
+                        include_unpublished=include_unpublished,
                     )
                 elif object_type == "scholar":
                     if not isinstance(value, dict):
@@ -710,6 +736,7 @@ class KnowledgeObjectEditorAdapter:
                         "birth_year",
                         "death_year",
                         "biography",
+                        "name_variants",
                     ):
                         if key in value:
                             person[key] = value[key]
@@ -726,12 +753,14 @@ class KnowledgeObjectEditorAdapter:
                         field_name=field_name,
                         value=value,
                         data=materialized,
+                        include_unpublished=include_unpublished,
                     )
                 else:
                     cls._reading_path_special_overlay(
                         target=target,
                         value=value,
                         data=materialized,
+                        include_unpublished=include_unpublished,
                     )
             except (
                 AttributeError,
@@ -742,6 +771,36 @@ class KnowledgeObjectEditorAdapter:
             ):
                 unsupported.add(field_name)
         return materialized, sorted(unsupported)
+
+    @classmethod
+    def serialize_admin_draft(cls, *, target_type: str, target, revision, serializer) -> dict[str, Any]:
+        """Use the existing preview materializer with the protected Admin contract.
+
+        `serializer` is the caller's established serializer factory. This
+        method never persists the copied object or changes public serializers.
+        """
+        from catalog.services.editorial_revision import serialize_editorial_revision
+
+        draft_target = cls._draft_target(target_type, target, revision)
+        data = dict(serializer(draft_target).data)
+        object_type = next((name for name, kind in cls.TARGET_TYPES.items() if kind == target_type), None)
+        if object_type is None:
+            raise ValueError("该对象的编辑草稿暂不能安全显示，请返回编辑版本查看。")
+        data, unsupported = cls._special_overlay(
+            object_type=object_type, target=draft_target, revision=revision,
+            data=data, include_unpublished=True,
+        )
+        if unsupported:
+            raise ValueError("部分编辑草稿字段暂不能安全显示，请在编辑版本中检查后再继续。")
+        if object_type == "scholar":
+            # AdminScholarSerializer flattens Person fields; public previews
+            # retain a nested Person. Keep both existing contracts unchanged.
+            person = data.pop("person", {})
+            for field_name, value in person.items():
+                if field_name in data or field_name == "name_variants":
+                    data[field_name] = value
+        data["editorial_revision"] = serialize_editorial_revision(revision)
+        return data
 
     @classmethod
     def _serialize(cls, object_type: str, target, *, revision=None) -> tuple[dict, str, list[str]]:
@@ -1078,16 +1137,9 @@ def _reading_path_directory(query: str, limit: int) -> list[dict[str, Any]]:
     ]
 
 
-def _important_work_queryset() -> QuerySet[Work]:
-    """Works with an explicit Knowledge Core or public-curation signal."""
-
-    return Work.objects.filter(
-        Q(is_featured=True)
-        | Q(curated_claims__isnull=False)
-        | Q(node_relations__isnull=False)
-        | Q(topic_relations__isnull=False)
-        | Q(reading_path_items__isnull=False)
-    ).distinct()
+def _catalog_work_queryset() -> QuerySet[Work]:
+    """Admin curation includes new drafts before any knowledge links exist."""
+    return Work.objects.all()
 
 
 def _work_status(work: Work) -> str:
@@ -1096,11 +1148,13 @@ def _work_status(work: Work) -> str:
         return PublicationState.PUBLISHED
     if PublicationState.READY in states:
         return PublicationState.READY
+    if states and all(state == PublicationState.WITHDRAWN for state in states):
+        return PublicationState.WITHDRAWN
     return PublicationState.DRAFT
 
 
 def _work_directory(query: str, limit: int) -> list[dict[str, Any]]:
-    queryset = _important_work_queryset().prefetch_related("editions")
+    queryset = _catalog_work_queryset().prefetch_related("editions")
     if query:
         queryset = queryset.filter(
             Q(title__icontains=query)
@@ -1134,7 +1188,7 @@ def _directory(*, query: str, object_type: str, limit: int) -> tuple[list[dict[s
         "subdiscipline": Subdiscipline.objects.count(),
         "topic": Topic.objects.count(),
         "reading_path": ReadingPath.objects.count(),
-        "work": _important_work_queryset().count(),
+        "work": _catalog_work_queryset().count(),
     }
     requested_types = [object_type] if object_type in OBJECT_TYPES else list(OBJECT_TYPES)
     rows: list[dict[str, Any]] = []
@@ -2021,6 +2075,7 @@ def _node_selection(node: KnowledgeNode, object_type: str) -> dict[str, Any]:
         "canonical_name_zh": node.canonical_name_zh,
         "canonical_name_en": node.canonical_name_en,
         "node_type": node.node_type,
+        "aliases": list(node.aliases.filter(is_verified=True).values_list("alias", flat=True)),
         "slug": node.slug,
         "summary": node.summary,
         "definition": node.definition,
@@ -2193,6 +2248,7 @@ def _scholar_selection(profile: ScholarProfile) -> dict[str, Any]:
         "preferred_name": person.preferred_name,
         "original_name": person.original_name,
         "aliases": person.aliases,
+        "name_variants": list(person.name_variants.filter(is_verified=True).values_list("name", flat=True)),
         "birth_year": person.birth_year,
         "death_year": person.death_year,
         "biography": person.biography,
@@ -2859,6 +2915,36 @@ def _work_selection(work: Work) -> dict[str, Any]:
     }
 
 
+def _assistant_field_values(object_type: str, target, selection: dict[str, Any]) -> dict[str, Any]:
+    """Present stored draft relations by name, without changing public data."""
+    draft = (selection.get("preview") or {}).get("materialized") or {}
+    values: dict[str, Any] = {}
+    specs = []
+    if object_type == "work" and isinstance(draft.get("classification"), dict):
+        classification = draft["classification"]
+        specs = [("discipline", Discipline, classification.get("disciplines"), "id"),
+                 ("subdiscipline", Subdiscipline, classification.get("subdisciplines"), "id")]
+    elif object_type in NODE_OBJECT_TYPES:
+        specs = [("primary_discipline", Discipline, draft.get("discipline_links"), "discipline_id"),
+                 ("subdiscipline", Subdiscipline, draft.get("subdiscipline_links"), "subdiscipline_id")]
+        events = list(TheoryTimelineEvent.objects.filter(
+            normalized_relations__node=target,
+        ).exclude(review_status="rejected").distinct().order_by("start_year", "created_at")[:MAX_SECTION_ROWS])
+        values["timeline_fact"] = [f"{row.title}（{'已确认' if row.review_status == 'approved' else '待确认'}）" for row in events]
+        values["timeline_interpretation"] = [row.description for row in events if row.description]
+    elif object_type == "topic":
+        specs = [("discipline", Discipline, draft.get("discipline_relations"), "discipline_id")]
+    elif object_type == "reading_path" and isinstance(draft.get("stage_groups"), list):
+        values["stages"] = draft["stage_groups"]
+    for field_name, model, rows, id_field in specs:
+        if not isinstance(rows, list):
+            continue
+        identifiers = [_valid_uuid(row.get(id_field)) for row in rows if isinstance(row, dict)]
+        names = {str(row.pk): row.name for row in model.objects.filter(pk__in=[value for value in identifiers if value])}
+        values[field_name] = [names.get(identifier, "关联对象需要核对") for identifier in identifiers]
+    return values
+
+
 def _selection(
     object_type: str,
     object_id: str,
@@ -2903,11 +2989,18 @@ def _selection(
         selection = _work_selection(target) if target else None
     if target is None or selection is None:
         return None
+    assistant_target = _enrichment_target(object_type, target)
+    if assistant_target is not None:
+        selection["field_assistant_target"] = {
+            "object_type": assistant_target[0],
+            "object_id": str(assistant_target[1]),
+        }
     selection = KnowledgeObjectEditorAdapter.enrich(
         object_type=object_type,
         target=target,
         selection=selection,
     )
+    selection["field_assistant_values"] = _assistant_field_values(object_type, target, selection)
     knowledge_updates = _knowledge_update_bundle(
         object_type=object_type,
         target=target,

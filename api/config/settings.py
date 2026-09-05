@@ -294,6 +294,8 @@ CELERY_TASK_ROUTES = {
     "catalog.tasks.execute_claim_extraction_demand": {"queue": "celery"},
     "catalog.tasks.execute_projection_demand": {"queue": "celery"},
     "catalog.tasks.recover_projection_queue": {"queue": "celery"},
+    "catalog.tasks.process_knowledge_publication_event": {"queue": "celery"},
+    "catalog.tasks.recover_knowledge_publication_events": {"queue": "celery"},
 }
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = None
@@ -329,6 +331,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "catalog.tasks.recover_projection_queue",
         "schedule": 60,
     },
+    "recover-knowledge-publication-events": {
+        "task": "catalog.tasks.recover_knowledge_publication_events",
+        "schedule": max(
+            1,
+            int(os.getenv("KNOWLEDGE_EVENT_RECOVERY_INTERVAL_SECONDS", "60")),
+        ),
+    },
     "recover-query-lexicon-events": {
         "task": "catalog.tasks.recover_query_lexicon_events",
         "schedule": max(
@@ -349,6 +358,14 @@ PROCESS_INGESTION_INLINE = env_bool("PROCESS_INGESTION_INLINE", DEBUG)
 CELERY_TASK_ALWAYS_EAGER = env_bool(
     "CELERY_TASK_ALWAYS_EAGER",
     PROCESS_INGESTION_INLINE,
+)
+KNOWLEDGE_EVENT_LEASE_SECONDS = max(
+    30,
+    int(os.getenv("KNOWLEDGE_EVENT_LEASE_SECONDS", "300")),
+)
+KNOWLEDGE_EVENT_MAX_ATTEMPTS = max(
+    1,
+    int(os.getenv("KNOWLEDGE_EVENT_MAX_ATTEMPTS", "8")),
 )
 QUERY_LEXICON_EVENT_BATCH_SIZE = max(
     1,

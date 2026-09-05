@@ -8,8 +8,9 @@ import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/admin-ui";
-import { ResearchEntityPicker } from "../research/research-entity-picker";
+import { EntityPicker } from "../forms/workflow-fields";
 import { asArray, asRecord, asString } from "../workflow/workflow-types";
+import { CurationFieldAssistant } from "./curation-field-assistant";
 
 type PathItemDraft = {
   key: string;
@@ -122,7 +123,10 @@ function pathStages(path: ReadingPathRow): StageDraft[] {
         description: asString(stage.description),
         items: asArray(stage.items).map((value) => {
           const item = asRecord(value);
-          const canonical = canonicalItems.get(asString(item.id)) ?? {};
+          const canonical = canonicalItems.get(asString(item.id)) ?? path.items.find((row) =>
+            (item.work && asString(row.work) === asString(item.work)) ||
+            (item.node && asString(row.node) === asString(item.node)),
+          ) ?? {};
           const nodeData = asRecord(canonical.node_data);
           const workData = asRecord(canonical.work_data);
           return {
@@ -243,7 +247,7 @@ export function ReadingPathWorkbench() {
       setPrimaryDisciplineName(path.primary_discipline_name);
       setStages(pathStages(path));
       setCover(null);
-      setMessage("已从 Knowledge Studio 打开这条阅读路径。");
+      setMessage("已打开当前阅读路径。");
       setMessageState("success");
     }).catch((error) => {
       if (!active) return;
@@ -289,17 +293,18 @@ export function ReadingPathWorkbench() {
 
   const itemCount = useMemo(() => stages.reduce((count, stage) => count + stage.items.length, 0), [stages]);
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent, draftOnly = false) {
+    event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token) return false;
     const actionKey = "save-reading-path";
-    if (!startAction(actionKey)) return;
+    if (!startAction(actionKey)) return false;
     setMessage("正在保存阅读路径……");
     setMessageState("pending");
     try {
       const payload = {
         ...draft,
+        status: draftOnly ? (editing?.status ?? "draft") : draft.status,
         primary_discipline: draft.primary_discipline || null,
         expected_updated_at: editing?.updated_at,
         stage_groups: stages.map((stage, stagePosition) => ({
@@ -331,16 +336,27 @@ export function ReadingPathWorkbench() {
       }
       start(saved);
       setMessage(saved.editorial_revision
-        ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
-        : "阅读路径已保存。阶段和阶段内作品分别排序，单项策展 placement 已保留。");
+        ? "阅读路径的编辑草稿已保存，确认发布后更新公开页面。"
+        : "阅读路径草稿已保存。阶段顺序和作品安排已保留。");
       setMessageState("success");
       await loadPaths();
+      return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "阅读路径保存失败。");
       setMessageState("error");
+      return false;
     } finally {
       finishAction(actionKey);
     }
+  }
+
+  async function refreshAcceptedItems() {
+    if (!editing) return;
+    const result = await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`, {}, getServerSessionCredential());
+    start(normalizePath(result));
+    await loadPaths();
+    setMessage("阅读内容建议已保存到当前编辑草稿，发布后生效。");
+    setMessageState("success");
   }
 
   async function removePath() {
@@ -355,7 +371,7 @@ export function ReadingPathWorkbench() {
       const response = asRecord(await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`, { method: "DELETE" }, token));
       const revision = asRecord(response.editorial_revision);
       if (asString(revision.id)) {
-        setMessage(`已建立 Revision ${Number(revision.revision ?? 0)} 下线草稿。正式页面尚未改变。`);
+        setMessage("已保存撤回草稿，确认发布后从公开页面撤回。");
       } else {
         start();
         setMessage("阅读路径已删除。");
@@ -402,17 +418,18 @@ export function ReadingPathWorkbench() {
           <div className="inline-fields"><label><span>标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} /></label></div>
           <label><span>路径介绍</span><textarea rows={4} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label>
           <label><span>学习目标</span><textarea rows={3} value={draft.learning_goal} onChange={(event) => setDraft({ ...draft, learning_goal: event.target.value })} /></label>
-          <div className="inline-fields three"><ResearchEntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" queryParam="q" nameField="name" entityType="discipline" step="classification" field="primary_disciplines" values={draft.primary_discipline ? [{ id: draft.primary_discipline, name: primaryDisciplineName || "已选择主要学科" }] : []} onChange={(next) => { const selected = next.at(-1); setDraft({ ...draft, primary_discipline: selected?.id ?? "" }); setPrimaryDisciplineName(selected?.name ?? ""); }} /><label><span>适合人群</span><input value={draft.audience} onChange={(event) => setDraft({ ...draft, audience: event.target.value })} /></label><label><span>难度</span><select value={draft.difficulty} onChange={(event) => setDraft({ ...draft, difficulty: event.target.value })}><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">深入</option></select></label></div>
+          <div className="inline-fields three"><EntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" queryParam="q" nameField="name" values={draft.primary_discipline ? [{ id: draft.primary_discipline, name: primaryDisciplineName || "已选择主要学科" }] : []} onChange={(next) => { const selected = next.at(-1); setDraft({ ...draft, primary_discipline: selected?.id ?? "" }); setPrimaryDisciplineName(selected?.name ?? ""); }} /><label><span>适合人群</span><input value={draft.audience} onChange={(event) => setDraft({ ...draft, audience: event.target.value })} /></label><label><span>难度</span><select value={draft.difficulty} onChange={(event) => setDraft({ ...draft, difficulty: event.target.value })}><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">深入</option></select></label></div>
           <div className="inline-fields three"><label><span>预计阅读量</span><input value={draft.estimated_reading} onChange={(event) => setDraft({ ...draft, estimated_reading: event.target.value })} /></label><label><span>状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="archived">归档</option></select></label><label><span>路径排序</span><input type="number" value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
-          <label className="knowledge-image-upload"><ImagePlus size={17} /><span>{editing?.status === "published" ? "已发布路径的封面暂不支持进入 Revision" : cover?.name || "更新路径封面"}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={editing?.status === "published"} onChange={(event) => setCover(event.target.files?.[0] ?? null)} /></label>
+          <label className="knowledge-image-upload"><ImagePlus size={17} /><span>{editing?.status === "published" ? "已发布路径的封面暂不支持草稿修改" : cover?.name || "更新路径封面"}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={editing?.status === "published"} onChange={(event) => setCover(event.target.files?.[0] ?? null)} /></label>
           <section className="reading-path-v280-stages">
+            <div className="workflow-field-assistant-row"><strong>阅读内容</strong><CurationFieldAssistant label="阅读内容" targetType="reading_path" targetId={editing?.id} fieldName="item" query={draft.title} currentValue={stages.flatMap((stage) => stage.items.map((item) => ({ work_id: item.work, node_id: item.node })))} formContext={{ language: "zh", learning_goal: draft.learning_goal }} lookupLabel="推荐关联" beforeAction={() => save(undefined, true)} onAccepted={refreshAcceptedItems} /></div>
             <header><div><h3>阶段与项目</h3><p>先排阶段，再在每个阶段内排作品。空阶段可以保留。</p></div><button type="button" onClick={() => setStages((current) => [...current, emptyStage(current.length)])}><Plus size={13} />添加阶段</button></header>
             {stages.map((stage, stageIndex) => <article className="reading-path-v280-stage" key={stage.key}>
               <header><span>{stageIndex + 1}</span><input aria-label={`第 ${stageIndex + 1} 阶段名称`} value={stage.name} onChange={(event) => patchStage(stageIndex, { name: event.target.value })} /><div><button type="button" aria-label="上移阶段" disabled={stageIndex === 0} onClick={() => setStages((current) => move(current, stageIndex, stageIndex - 1))}><ArrowUp size={12} /></button><button type="button" aria-label="下移阶段" disabled={stageIndex === stages.length - 1} onClick={() => setStages((current) => move(current, stageIndex, stageIndex + 1))}><ArrowDown size={12} /></button><button type="button" aria-label="删除阶段" onClick={() => setStages((current) => current.filter((_row, index) => index !== stageIndex))}><Trash2 size={12} /></button></div></header>
               <textarea aria-label={`${stage.name}阶段说明`} rows={2} value={stage.description} onChange={(event) => patchStage(stageIndex, { description: event.target.value })} />
               <div className="reading-path-v280-items">{stage.items.map((item, itemIndex) => <section key={item.key}>
                 <header><strong>项目 {itemIndex + 1}</strong><div><button type="button" aria-label="上移项目" disabled={itemIndex === 0} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex - 1) })}><ArrowUp size={12} /></button><button type="button" aria-label="下移项目" disabled={itemIndex === stage.items.length - 1} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex + 1) })}><ArrowDown size={12} /></button><button type="button" aria-label="移除项目" onClick={() => patchStage(stageIndex, { items: stage.items.filter((_row, index) => index !== itemIndex) })}><Trash2 size={12} /></button></div></header>
-                <div className="inline-fields reading-path-v292-entity-fields"><ResearchEntityPicker label="馆藏作品" endpoint="/catalog/admin/library/works/" entityType="work" step="curation" field="reading_path_placements" queryParam="q" nameField="title" values={item.work ? [{ id: item.work, name: item.work_name || "已选择馆藏作品" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { work: selected?.id ?? null, work_name: selected?.name ?? "", node: null, node_name: "" }); }} /><ResearchEntityPicker label="知识节点" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="curation" field="reading_path_placements" queryParam="q" nameField="canonical_name_zh" values={item.node ? [{ id: item.node, name: item.node_name || "已选择知识节点" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { node: selected?.id ?? null, node_name: selected?.name ?? "", work: null, work_name: "" }); }} /></div>
+                <div className="inline-fields reading-path-v292-entity-fields"><EntityPicker label="馆藏作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={item.work ? [{ id: item.work, name: item.work_name || "已选择馆藏作品" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { work: selected?.id ?? null, work_name: selected?.name ?? "", node: null, node_name: "" }); }} /><EntityPicker label="知识节点" endpoint="/catalog/admin/theory-system/nodes/" queryParam="q" nameField="canonical_name_zh" values={item.node ? [{ id: item.node, name: item.node_name || "已选择知识节点" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { node: selected?.id ?? null, node_name: selected?.name ?? "", work: null, work_name: "" }); }} /></div>
                 <label><span>推荐理由</span><textarea rows={2} value={item.recommendation_reason} onChange={(event) => patchItem(stageIndex, itemIndex, { recommendation_reason: event.target.value })} /></label>
                 <label><span>前置要求</span><textarea rows={2} value={item.prerequisite} onChange={(event) => patchItem(stageIndex, itemIndex, { prerequisite: event.target.value })} /></label>
                 <label><span>编辑备注（仅后台）</span><textarea rows={2} value={item.editorial_note} onChange={(event) => patchItem(stageIndex, itemIndex, { editorial_note: event.target.value })} /></label>

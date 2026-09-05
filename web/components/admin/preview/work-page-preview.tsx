@@ -19,6 +19,7 @@ type PreviewPayload = {
   } | null;
   public_url: string;
   pdf_preview_url: string;
+  return_url: string;
   work: ApiWork;
 };
 
@@ -33,11 +34,11 @@ function adaptPreviewWork(value: ApiWork): Work {
     slug: value.edition?.public_slug || value.id,
     title: value.title,
     originalTitle: value.subtitle || undefined,
-    author: authors.map((row) => row.person.preferred_name).join("、") || "责任者待补",
+    author: authors.map((row) => row.person.preferred_name).join("、") || "作者待确认",
     year: String(value.edition?.publication_year ?? "出版年不详"),
-    kind: ({ book: "图书", journal_article: "期刊论文", thesis: "学位论文", report: "研究报告" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
+    kind: ({ book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "研究报告" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
-    summary: value.abstract || "本馆已收录全文，简介待编辑。",
+    summary: value.abstract || "简介待编辑。",
     cover: coverStyles[0],
     coverImage: normalizePublicResourceUrl(value.cover || value.recommendation_image || "") || undefined,
     pages: value.edition?.readable_asset?.page_count ?? 0,
@@ -115,6 +116,7 @@ export function AdminWorkPagePreview({
       preview={{
         publicationState: payload.publication_state,
         pdfPreviewUrl: normalizePublicResourceUrl(payload.pdf_preview_url),
+        returnHref: payload.return_url,
         draftRevision: payload.editorial_revision
           ? {
               revision: payload.editorial_revision.revision,

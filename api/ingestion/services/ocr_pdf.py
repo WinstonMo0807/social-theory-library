@@ -118,6 +118,7 @@ def create_searchable_ocr_pdf(
     )
     if asset.kind != Asset.Kind.NORMALIZED or asset.status != Asset.Status.READY:
         raise OcrPdfValidationError("只有已验证的规范阅读 PDF 可以生成 OCR 下载副本。")
+    staging = bool(asset.text_revision and not asset.is_current)
 
     source_path, cleanup_source = materialize_field_file(asset.file)
     temporary = tempfile.NamedTemporaryFile(prefix="library-ocr-pdf-", suffix=".pdf", delete=False)
@@ -134,8 +135,11 @@ def create_searchable_ocr_pdf(
             edition=asset.edition,
             kind=Asset.Kind.OCR_PDF,
             sha256=digest,
+            text_revision=asset.text_revision if staging else 0,
         ).first()
         if existing is not None:
+            if staging:
+                return existing
             Asset.objects.filter(
                 edition=asset.edition,
                 kind=Asset.Kind.OCR_PDF,
@@ -172,9 +176,10 @@ def create_searchable_ocr_pdf(
             page_count=page_count,
             status=Asset.Status.READY,
             extraction_method=processor,
-            is_current=True,
+            is_current=not staging,
             version=version,
-            source_asset=asset.source_asset or asset,
+            text_revision=asset.text_revision if staging else 0,
+            source_asset=asset if staging else asset.source_asset or asset,
             processor=processor,
             processor_version=processor_version,
             validation_status=Asset.ValidationStatus.VALID,
@@ -193,11 +198,12 @@ def create_searchable_ocr_pdf(
             derivative.file.save(filename, File(handle), save=False)
         saved_name = derivative.file.name
         derivative.save()
-        Asset.objects.filter(
-            edition=asset.edition,
-            kind=Asset.Kind.OCR_PDF,
-            is_current=True,
-        ).exclude(pk=derivative.pk).update(is_current=False, updated_at=timezone.now())
+        if not staging:
+            Asset.objects.filter(
+                edition=asset.edition,
+                kind=Asset.Kind.OCR_PDF,
+                is_current=True,
+            ).exclude(pk=derivative.pk).update(is_current=False, updated_at=timezone.now())
         return derivative
     except Exception:
         if saved_name:

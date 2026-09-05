@@ -24,6 +24,8 @@ from common.permissions import (
 )
 from ingestion.models import AuditEvent
 
+from .editorial_read import AdminEditorialDraftReadMixin
+
 from .models import (
     Asset,
     Discipline,
@@ -214,6 +216,36 @@ def _published_work_node_relation_requires_revision(work=None):
         },
         status=status.HTTP_409_CONFLICT,
     )
+
+
+def _node_alias_revision_from_review_task(task, node, alias, actor):
+    from catalog.services.editorial_revision import create_editorial_revision, editorial_target_snapshot
+
+    latest = EditorialRevision.objects.select_for_update().filter(
+        target_type="knowledge_node", target_id=node.pk, status="draft",
+    ).order_by("-revision").first()
+    current = CanonicalObjectRevision.objects.filter(
+        object_type="knowledge_node", object_id=node.pk,
+    ).values_list("current_revision", flat=True).first() or 0
+    if latest is not None and latest.base_revision != current:
+        raise ValueError("正式理论内容已经变化，请先更新编辑草稿。")
+    snapshot = editorial_target_snapshot(target_type="knowledge_node", target=node)
+    patch = dict(latest.patch or {}) if latest is not None else {}
+    aliases = list(patch.get("aliases", snapshot.get("aliases", [])))
+    normalized = " ".join(alias.casefold().split())
+    if not any(" ".join(str(row.get("alias", "")).casefold().split()) == normalized for row in aliases):
+        aliases.append({"alias": alias, "language": "zh-CN", "alias_type": "alias",
+                        "source_kind": KnowledgeNodeAlias.SourceKind.PDF_EVIDENCE, "is_verified": True})
+    patch["aliases"] = aliases
+    revision = create_editorial_revision(
+        target_type="knowledge_node", target_id=node.pk, patch=patch, actor=actor,
+        idempotency_key=f"theory-review-task:{task.id}:node-alias",
+        change_note="采用本书中的理论别名，等待正式发布",
+    )
+    if latest is not None and latest.pk != revision.pk:
+        latest.status = EditorialRevision.Status.SUPERSEDED
+        latest.save(update_fields=["status", "updated_at"])
+    return revision
 
 
 def _work_relation_revision_from_review_task(task, node, relation_type, actor):
@@ -705,7 +737,8 @@ class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
     ).prefetch_related("stages", "items__stage", "items__node", "items__work")
 
 
-class AdminKnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminKnowledgeNodeListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+    editorial_target_type = "knowledge_node"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeNodeSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -730,9 +763,11 @@ class AdminKnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListCreateAP
 
 
 class AdminKnowledgeNodeDetailView(
+    AdminEditorialDraftReadMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
+    editorial_target_type = "knowledge_node"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeNodeSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -819,7 +854,7 @@ class AdminKnowledgeNodeDetailView(
                 patch=values,
             )
             if not patch:
-                return Response(self.get_serializer(node).data)
+                return Response(self._draft_read_rows([node])[0])
             current_revision = (
                 CanonicalObjectRevision.objects.filter(
                     object_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
@@ -849,17 +884,7 @@ class AdminKnowledgeNodeDetailView(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        payload = dict(self.get_serializer(node).data)
-        for field_name, value in revision.patch.items():
-            if field_name not in {
-                "aliases",
-                "discipline_links",
-                "subdiscipline_links",
-                "topic_links",
-            }:
-                payload[field_name] = value
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+        return Response(self._draft_read_rows([node])[0], status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         node = self.get_object()
@@ -1314,7 +1339,9 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
                 return Response({"action": ["只有新增节点建议可以归并为已有节点别名。"]}, status=400)
             if not request.data.get("candidate_node"):
                 return Response({"candidate_node": ["请选择已有规范节点。"]}, status=400)
-            node = get_object_or_404(KnowledgeNode, pk=request.data["candidate_node"])
+            node = get_object_or_404(KnowledgeNode.objects.select_for_update(), pk=request.data["candidate_node"])
+            if node.status == "archived":
+                return Response({"candidate_node": ["该理论节点已经下线，请选择其他节点。"]}, status=409)
             alias = task.suggested_node_name.strip()
             if alias and alias.casefold() != node.canonical_name_zh.casefold():
                 normalized = " ".join(alias.casefold().split())
@@ -1326,18 +1353,20 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
                         {"candidate_node": [f"该别名已属于“{conflict.node.canonical_name_zh}”。"]},
                         status=400,
                     )
-                KnowledgeNodeAlias.objects.get_or_create(
-                    node=node,
-                    normalized_alias=normalized,
-                    defaults={
-                        "alias": alias,
-                        "language": "zh-CN",
-                        "alias_type": KnowledgeNodeAlias.AliasType.ALIAS,
-                        "is_verified": True,
-                        "created_by": request.user,
-                    },
-                )
-                record_node_version(node, request.user, f"确认 PDF 候选别名 {alias}")
+                if node.status == "published":
+                    try:
+                        pending_revision = _node_alias_revision_from_review_task(task, node, alias, request.user)
+                    except ValueError as exc:
+                        return Response({"detail": str(exc), "code": "editorial_revision_error"}, status=409)
+                else:
+                    KnowledgeNodeAlias.objects.get_or_create(
+                        node=node, normalized_alias=normalized,
+                        defaults={"alias": alias, "language": "zh-CN",
+                                  "alias_type": KnowledgeNodeAlias.AliasType.ALIAS,
+                                  "source_kind": KnowledgeNodeAlias.SourceKind.PDF_EVIDENCE,
+                                  "is_verified": True, "created_by": request.user},
+                    )
+                    record_node_version(node, request.user, f"确认 PDF 候选别名 {alias}")
             task.candidate_node = node
             self._create_work_followup(
                 task,
@@ -1436,7 +1465,8 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
         return Response(payload)
 
 
-class AdminReadingPathListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+    editorial_target_type = "reading_path"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = ReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -1463,9 +1493,11 @@ class AdminReadingPathListView(TheorySystemFeatureMixin, generics.ListCreateAPIV
 
 
 class AdminReadingPathDetailView(
+    AdminEditorialDraftReadMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
+    editorial_target_type = "reading_path"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = ReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -1528,7 +1560,7 @@ class AdminReadingPathDetailView(
                 patch=values,
             )
             if not patch:
-                return Response(self.get_serializer(path).data)
+                return Response(self._draft_read_rows([path])[0])
             current_revision = (
                 CanonicalObjectRevision.objects.filter(
                     object_type=EditorialRevision.TargetType.READING_PATH,
@@ -1559,14 +1591,7 @@ class AdminReadingPathDetailView(
                 {"detail": str(error), "code": "editorial_revision_error"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        payload = dict(self.get_serializer(path).data)
-        for field_name, value in revision.patch.items():
-            if field_name == "stage_groups":
-                payload["draft_stage_groups"] = value
-            else:
-                payload[field_name] = value
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+        return Response(self._draft_read_rows([path])[0], status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         path = self.get_object()

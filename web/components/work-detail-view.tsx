@@ -13,6 +13,7 @@ type WorkDetailViewProps = {
   preview?: {
     publicationState: string;
     pdfPreviewUrl: string;
+    returnHref: string;
     draftRevision?: {
       revision: number;
       changedFields: string[];
@@ -46,16 +47,13 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
         {preview ? (
           <div className="admin-page-preview-banner" role="status">
             <ShieldCheck size={16} />
-            <strong>管理员页面预览</strong>
-            <span>
-              {preview.draftRevision
-                ? `正在预览已保存的第 ${preview.draftRevision.revision} 版草稿，包含 ${preview.draftRevision.changedFields.length} 项待发布变更。${preview.draftRevision.hasConflict ? "正式内容已变化，请返回工作台处理冲突。" : "普通访客仍看到正式版本。"}`
-                : `当前版本状态为 ${preview.publicationState}。此页面需要后台权限，普通访客仍无法访问。`}
-            </span>
+            <strong>草稿预览</strong>
+            <span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span>
+            <Link href={preview.returnHref}>返回编辑</Link>
           </div>
         ) : null}
         <p className="breadcrumbs">
-          {preview ? <><Link href="/admin/library">馆藏管理</Link> / 页面预览 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
+          {preview ? <>前台页面效果 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
         </p>
         <section className="work-hero">
           <BookCover work={work} size="large" />
@@ -76,7 +74,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
               <div><dt>出版年份</dt><dd>{work.year}</dd></div>
               <div><dt>文献类型</dt><dd>{work.kind}</dd></div>
               <div><dt>页数</dt><dd>{work.pages}</dd></div>
-              <div><dt>文本状态</dt><dd>{work.pages ? "全文可检索" : "待处理"}</dd></div>
+              <div><dt>文件状态</dt><dd>{work.pages ? "可在线阅读" : "准备中"}</dd></div>
               <div><dt>语言</dt><dd>{languageLabel}</dd></div>
             </dl>
             {preview ? (
@@ -99,8 +97,11 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
         <div className="work-body">
           <section className="panel">
             <SectionHeading title="内容简介" />
-            <p>{work.summary} 馆藏版本已经建立逐页规范文本。全文搜索结果、文档内搜索、干净复制和页码引用均使用同一份页级记录。</p>
-            <h2>目录</h2>
+            <p>{work.summary}</p>
+            <h2>{work.kind === "整期期刊" ? "本期目录与论文" : "目录"}</h2>
+            {(work.kind === "整期期刊" ? work.journalContents ?? [] : []).map((item, index) => <div className="toc-row" key={item.id || `issue-${index}`}>
+              <span>{String(index + 1).padStart(2, "0")}</span><div>{item.article_href && !preview ? <Link href={item.article_href}><strong>{item.title}</strong></Link> : <strong>{item.title}</strong>}{item.author_display ? <p>{item.author_display}</p> : null}</div><small>{item.page_range}</small>
+            </div>)}
             {(work.outline ?? []).map((item, index) => (
               preview ? (
                 <div className="toc-row" key={`${item.index}-${item.chapter_title}`}>
@@ -112,7 +113,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
                 </Link>
               )
             ))}
-            {!work.outline?.length ? <p className="empty-state">该 PDF 没有可识别的目录书签。</p> : null}
+            {!work.outline?.length && !work.journalContents?.length ? <p className="empty-state">{work.kind === "整期期刊" ? "本期目录尚待补充。" : "该 PDF 没有可识别的目录书签。"}</p> : null}
           </section>
           {preview ? (
             <section className="panel admin-preview-note">

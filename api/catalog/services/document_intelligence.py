@@ -12,13 +12,17 @@ from django.utils import timezone
 
 from catalog.models import (
     Asset,
+    CatalogPublicationRevision,
     ClaimEvidence,
     DerivedClaim,
     DocumentQualityAssessment,
     DocumentRevision,
     EvidenceSpan,
+    Edition,
     Page,
+    PageLabelSegment,
     Passage,
+    TextBlock,
 )
 
 
@@ -28,6 +32,88 @@ NATIVE_EXTRACTION_VERSION = "native-page-blocks-v1"
 OCR_EXTRACTION_VERSION = "selective-page-ocr-v1"
 QUALITY_ASSESSOR = "document-intelligence"
 QUALITY_ASSESSOR_VERSION = "quality-v1"
+
+
+def document_asset_is_published(asset: Asset) -> bool:
+    """A served interpretation remains immutable after later activation."""
+    return CatalogPublicationRevision.objects.filter(reader_asset_id=asset.pk).exists()
+
+
+@transaction.atomic
+def stage_document_asset(asset: Asset, *, stage_key: str, reset_ocr: bool = False) -> Asset:
+    """Copy a text interpretation, sharing immutable PDF bytes with its source.
+
+    Page, passage and evidence identities on the published asset remain intact.
+    The caller owns activation through a catalog publication event.
+    """
+    Edition.objects.select_for_update().get(pk=asset.edition_id)
+    source = Asset.objects.select_for_update().get(pk=asset.pk)
+    existing = Asset.objects.filter(
+        edition_id=source.edition_id, kind=Asset.Kind.NORMALIZED,
+        validation_details__text_stage_key=stage_key,
+    ).first()
+    if existing:
+        return existing
+    if not document_asset_is_published(source):
+        return source
+    if source.kind != Asset.Kind.NORMALIZED:
+        raise ValueError("正文修订必须从规范阅读文件创建。")
+    next_text_revision = (Asset.objects.filter(
+        edition_id=source.edition_id, kind=source.kind,
+    ).aggregate(value=Max("text_revision"))["value"] or 0) + 1
+    next_version = (Asset.objects.filter(
+        edition_id=source.edition_id, kind=source.kind,
+    ).aggregate(value=Max("version"))["value"] or 0) + 1
+    fields = {
+        field.attname: getattr(source, field.attname)
+        for field in Asset._meta.concrete_fields
+        if field.name not in {"id", "created_at", "updated_at", "version", "text_revision", "source_asset", "is_current", "validation_details"}
+    }
+    fields["file"] = source.file.name
+    details = dict(source.validation_details or {})
+    details.pop("ocr_progress", None)
+    details.update(text_stage_key=stage_key, text_source_asset_id=str(source.pk), text_publication_state="staging")
+    staged = Asset.objects.create(
+        **fields, version=next_version, text_revision=next_text_revision,
+        source_asset=source, is_current=False, validation_details=details,
+    )
+    page_map = {}
+    for page in source.pages.order_by("index").iterator(chunk_size=200):
+        values = {
+            field.attname: getattr(page, field.attname)
+            for field in Page._meta.concrete_fields
+            if field.name not in {"id", "created_at", "updated_at", "asset"}
+        }
+        clone = Page.objects.create(asset=staged, **values)
+        page_map[page.pk] = clone.pk
+    for segment in source.page_label_segments.order_by("start_file_page_index"):
+        values = {
+            field.attname: getattr(segment, field.attname)
+            for field in PageLabelSegment._meta.concrete_fields
+            if field.name not in {"id", "created_at", "updated_at", "asset"}
+        }
+        PageLabelSegment.objects.create(asset=staged, **values)
+    for model in (TextBlock, Passage):
+        batch = []
+        for row in model.objects.filter(page__asset=source).iterator(chunk_size=500):
+            values = {
+                field.attname: getattr(row, field.attname)
+                for field in model._meta.concrete_fields
+                if field.name not in {"id", "created_at", "updated_at", "page"}
+            }
+            batch.append(model(page_id=page_map[row.page_id], **values))
+            if len(batch) >= 500:
+                model.objects.bulk_create(batch, batch_size=500)
+                batch = []
+        if batch:
+            model.objects.bulk_create(batch, batch_size=500)
+    if reset_ocr:
+        targets = details.get("ocr_required_page_indexes")
+        pages = staged.pages.all()
+        if isinstance(targets, list):
+            pages = pages.filter(index__in=targets)
+        pages.update(text_source=Page.TextSource.NONE, updated_at=timezone.now())
+    return staged
 
 
 def _pymupdf_version() -> str:
@@ -630,6 +716,8 @@ def synchronize_document_revision(
     carried_curated_links = 0
     previous = None
     if created:
+        if active is not None and document_asset_is_published(locked_asset):
+            raise ValueError("已发布正文解释不能原位替换，请先创建正文草稿文件。")
         previous = active
         if previous is not None:
             previous.is_active = False

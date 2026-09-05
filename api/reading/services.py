@@ -4,7 +4,8 @@ import hashlib
 from cryptography.fernet import Fernet
 from django.conf import settings
 
-from catalog.models import Asset, PublicationState
+from catalog.models import Asset
+from catalog.services.publication_eligibility import active_asset_q
 
 from .models import ReadingProgress
 
@@ -39,11 +40,9 @@ def readable_progress_for_user(user):
 
     return ReadingProgress.objects.filter(
         user=user,
-        asset__edition__state=PublicationState.PUBLISHED,
         asset__kind=Asset.Kind.NORMALIZED,
         asset__status=Asset.Status.READY,
-        asset__is_current=True,
-    )
+    ).filter(active_asset_q(asset_prefix="asset"))
 
 
 def current_reader_asset_for_work(work):
@@ -52,11 +51,10 @@ def current_reader_asset_for_work(work):
     return (
         Asset.objects.filter(
             edition__work=work,
-            edition__state=PublicationState.PUBLISHED,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
         )
+        .filter(active_asset_q(asset_prefix=""))
         .order_by(
             "-edition__is_primary",
             "-edition__last_published_at",

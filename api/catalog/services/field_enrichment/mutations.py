@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from catalog.models import (
     Discipline,
+    CanonicalObjectRevision,
     Edition,
     EditorialRevision,
     EnrichmentCandidate,
@@ -83,9 +84,17 @@ def _published_revision_target(target_type: str, target):
         return EditorialRevision.TargetType.WORK, target
     if target_type == "knowledge_node" and target.status == "published":
         return EditorialRevision.TargetType.KNOWLEDGE_NODE, target
+    if target_type == "edition" and target.state == "published":
+        return EditorialRevision.TargetType.WORK, target.work
+    if target_type in {"topic", "discipline", "subdiscipline"} and target.editorial_status == "published":
+        return target_type, target
     if target_type == "person":
         profile = getattr(target, "scholar_profile", None)
         if profile is not None and profile.editorial_status == "published":
+            return EditorialRevision.TargetType.SCHOLAR_PROFILE, profile
+        if target.authority_status == "verified":
+            if profile is None:
+                raise ValueError("请先建立该人物的学者资料，再把新建议写入编辑草稿。")
             return EditorialRevision.TargetType.SCHOLAR_PROFILE, profile
     if target_type == "reading_path" and target.status == "published":
         return EditorialRevision.TargetType.READING_PATH, target
@@ -137,12 +146,42 @@ def _revision_patch_for_candidate(
     target,
     candidate: EnrichmentCandidate,
     value,
+    snapshot=None,
 ) -> dict | None:
-    snapshot = editorial_target_snapshot(target_type=revision_type, target=target)
+    snapshot = snapshot or editorial_target_snapshot(target_type=revision_type, target=target)
     adapter = FIELD_POLICIES.get(
         candidate.target_type,
         candidate.field_name,
     ).mutation_adapter
+    if candidate.target_type == "edition" and revision_type == EditorialRevision.TargetType.WORK and adapter.startswith("edition_"):
+        edition_id = str(candidate.target_id)
+        if not target.editions.filter(pk=edition_id).exists():
+            raise ValueError("候选所属版本不属于当前作品，未保存成功。")
+        for section_name in ("bibliography", "contributors", "reader"):
+            section = snapshot.get(section_name)
+            if isinstance(section, dict) and section.get("edition_id") and str(section["edition_id"]) != edition_id:
+                raise ValueError("当前作品已有另一版本的编辑草稿，请先处理该草稿再采用本版本建议。")
+        bibliography = deepcopy(snapshot.get("bibliography") or {})
+        field_name = adapter.removeprefix("edition_")
+        values = {**dict(bibliography.get("values") or {}), field_name: value}
+        if field_name == "publication_date":
+            from datetime import date
+
+            values["publication_year"] = date.fromisoformat(str(value)).year
+        return {"bibliography": {"edition_id": edition_id, "values": values}}
+    if revision_type in {EditorialRevision.TargetType.DISCIPLINE, EditorialRevision.TargetType.SUBDISCIPLINE} and adapter.endswith("_foreign_name"):
+        return {"foreign_name": value}
+    if revision_type == EditorialRevision.TargetType.TOPIC and adapter == "topic_discipline":
+        links = deepcopy(snapshot.get("discipline_relations") or [])
+        identifier = str(value["discipline_id"])
+        existing = next((row for row in links if str(row["discipline_id"]) == identifier), None)
+        if existing and existing.get("review_status") == "rejected":
+            raise ValueError("该学科关系曾被人工拒绝，请先处理冲突。")
+        if existing is None:
+            links.append({"discipline_id": identifier, "is_primary": value.get("relation_type") == "primary", "review_status": "approved"})
+        else:
+            existing["review_status"] = "approved"
+        return {"discipline_relations": links}
     if revision_type == EditorialRevision.TargetType.WORK:
         if adapter == "work_discipline":
             return {
@@ -172,6 +211,17 @@ def _revision_patch_for_candidate(
         }:
             return {candidate.field_name: value}
     if revision_type == EditorialRevision.TargetType.SCHOLAR_PROFILE:
+        if adapter == "person_name_variant":
+            person = deepcopy(snapshot.get("person") or {})
+            variants = list(person.get("name_variants") or [])
+            name = value["name"]
+            if not any(normalize_term(row.get("name")) == normalize_term(name) for row in variants):
+                variants.append({
+                    "name": name, "language": value["language"], "variant_type": value["variant_type"],
+                    "source_kind": PersonNameVariant.SourceKind.OTHER, "source_note": _source_note(candidate),
+                    "displayable": True, "is_verified": True,
+                })
+            return {"person": {"name_variants": variants}}
         if adapter == "person_affiliation":
             affiliations = list(snapshot.get("affiliations") or [])
             if value["name"] not in affiliations:
@@ -266,24 +316,50 @@ def _create_revision_for_published_target(
     if resolved is None:
         return None
     revision_type, revision_target = resolved
+    adapter = FIELD_POLICIES.get(candidate.target_type, candidate.field_name).mutation_adapter
+    # These adapters create an independently reviewable relation/event draft;
+    # they do not mutate the already published Node or publish that new row.
+    if adapter in {"knowledge_relation", "knowledge_node_timeline_fact", "knowledge_node_timeline_interpretation"}:
+        return None
+    revision_target = revision_target.__class__.objects.select_for_update().get(pk=revision_target.pk)
+    latest = EditorialRevision.objects.select_for_update().filter(
+        target_type=revision_type, target_id=revision_target.pk, status=EditorialRevision.Status.DRAFT,
+    ).order_by("-revision").first()
+    current_revision = CanonicalObjectRevision.objects.filter(object_type=revision_type, object_id=revision_target.pk).values_list("current_revision", flat=True).first() or 0
+    if latest is not None and latest.base_revision != current_revision:
+        raise ValueError("正式内容已经变化，请先更新编辑草稿后再采用建议。")
+    snapshot = editorial_target_snapshot(target_type=revision_type, target=revision_target)
+    if latest is not None:
+        latest_patch = deepcopy(latest.patch or {})
+        if "person" in latest_patch:
+            latest_patch["person"] = {**dict(snapshot.get("person") or {}), **latest_patch["person"]}
+        snapshot.update(latest_patch)
     patch = _revision_patch_for_candidate(
         revision_type=revision_type,
         target=revision_target,
         candidate=candidate,
         value=value,
+        snapshot=snapshot,
     )
     if patch is None:
-        return None
+        raise ValueError("该字段尚不能写入编辑草稿，未保存成功。请在对应字段手动编辑。")
+    combined = deepcopy(latest.patch or {}) if latest is not None else {}
+    if "person" in patch:
+        patch["person"] = {**dict(combined.get("person") or {}), **patch["person"]}
+    combined.update(patch)
     revision = create_editorial_revision(
         target_type=revision_type,
         target_id=revision_target.id,
-        patch=patch,
+        patch=combined,
         actor=actor,
         idempotency_key=f"field-enrichment:{candidate.id}:{candidate.policy_version}",
         change_note=(
             f"采用研究候选 {candidate.field_name}。{str(reason or '').strip()}"
         )[:500],
     )
+    if latest is not None and latest.pk != revision.pk:
+        latest.status = EditorialRevision.Status.SUPERSEDED
+        latest.save(update_fields=["status", "updated_at"])
     return MutationResult("catalog.EditorialRevision", revision.id, True, True)
 
 
@@ -295,6 +371,8 @@ def _record_direct_canonical_change(
     actor,
 ) -> None:
     if not result.changed:
+        return
+    if result.authority_model in {"catalog.KnowledgeRelation", "catalog.TheoryTimelineEvent"}:
         return
     object_type = candidate.target_type
     canonical_target = target
@@ -890,6 +968,9 @@ def _accept_locked_enrichment_candidate(
     _validate_evidence(candidate, policy)
     value = normalize_candidate_value(policy.mutation_adapter, candidate.proposed_value)
     target = get_target(candidate.target_type, candidate.target_id, for_update=True)
+    target_status = getattr(target, "editorial_status", getattr(target, "authority_status", getattr(target, "status", "")))
+    if target_status in {"archived", "merged", "rejected"}:
+        raise ValueError("该对象已经下线或拒绝，不能继续采用建议。")
     current = current_field_value(candidate.target_type, target, candidate.field_name)
     if stable_json(current) != stable_json(candidate.current_value):
         raise ValueError("authority 字段已在候选生成后变化，请重新核对。")

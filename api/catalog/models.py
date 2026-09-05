@@ -12,6 +12,7 @@ from common.models import UUIDTimeStampedModel
 class DocumentType(models.TextChoices):
     BOOK = "book", "图书"
     JOURNAL_ARTICLE = "journal_article", "期刊论文"
+    JOURNAL_ISSUE = "journal_issue", "整期期刊"
     THESIS = "thesis", "学位论文"
     REPORT = "report", "研究报告"
 
@@ -50,6 +51,14 @@ class ReviewStatus(models.TextChoices):
     NOT_STARTED = "not_started", "尚未复核"
     IN_PROGRESS = "in_progress", "复核中"
     COMPLETED = "completed", "复核完成"
+
+
+class IntelligenceStatus(models.TextChoices):
+    DRAFT = "draft", "草稿"
+    PROCESSING = "processing", "智能内容处理中"
+    ACTIVE = "active", "已进入智能检索"
+    FAILED = "failed", "智能处理异常"
+    WITHDRAWN = "withdrawn", "已退出智能检索"
 
 
 class ReaderRenditionPolicy(models.TextChoices):
@@ -200,6 +209,21 @@ class Edition(UUIDTimeStampedModel):
     first_published_at = models.DateTimeField(null=True, blank=True, db_index=True)
     last_published_at = models.DateTimeField(null=True, blank=True, db_index=True)
     withdrawn_at = models.DateTimeField(null=True, blank=True)
+    metadata_ready_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    fulltext_ready_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    intelligence_status = models.CharField(
+        max_length=24,
+        choices=IntelligenceStatus.choices,
+        default=IntelligenceStatus.DRAFT,
+        db_index=True,
+    )
+    active_catalog_revision = models.ForeignKey(
+        "CatalogPublicationRevision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="active_for_editions",
+    )
     search_indexed_at = models.DateTimeField(null=True, blank=True)
     public_asset_prepared_at = models.DateTimeField(null=True, blank=True)
     ocr_status = models.CharField(
@@ -269,6 +293,21 @@ class Edition(UUIDTimeStampedModel):
     @publication_place_verbatim.setter
     def publication_place_verbatim(self, value):
         self.publication_place = value
+
+
+class JournalIssueArticle(UUIDTimeStampedModel):
+    """Editorial issue contents, optionally linked to an independently catalogued article."""
+
+    issue = models.ForeignKey(Edition, on_delete=models.CASCADE, related_name="journal_articles")
+    article_work = models.ForeignKey(Work, null=True, blank=True, on_delete=models.PROTECT, related_name="journal_issue_entries")
+    title = models.CharField(max_length=600)
+    author_display = models.CharField(max_length=600, blank=True)
+    page_range = models.CharField(max_length=80, blank=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["issue", "article_work"], condition=models.Q(article_work__isnull=False), name="unique_issue_article_work")]
 
 
 class EditionWorkflowDecision(UUIDTimeStampedModel):
@@ -380,6 +419,7 @@ class Asset(UUIDTimeStampedModel):
     extraction_method = models.CharField(max_length=30, blank=True)
     is_current = models.BooleanField(default=True)
     version = models.PositiveIntegerField(default=1)
+    text_revision = models.PositiveIntegerField(default=0, db_index=True)
     source_asset = models.ForeignKey(
         "self",
         null=True,
@@ -399,7 +439,15 @@ class Asset(UUIDTimeStampedModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["sha256", "kind"], name="unique_asset_hash_per_kind"),
+            models.UniqueConstraint(
+                fields=["sha256", "kind"], condition=models.Q(text_revision=0),
+                name="unique_asset_hash_per_kind",
+            ),
+            models.UniqueConstraint(
+                fields=["edition", "kind", "text_revision"],
+                condition=models.Q(text_revision__gt=0),
+                name="unique_asset_text_revision",
+            ),
         ]
         indexes = [models.Index(fields=["edition", "kind", "is_current"])]
 
@@ -1142,6 +1190,11 @@ class PublisherAuthority(UUIDTimeStampedModel):
     valid_from = models.PositiveSmallIntegerField(null=True, blank=True)
     valid_to = models.PositiveSmallIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    editorial_status = models.CharField(
+        max_length=20,
+        default="draft",
+        db_index=True,
+    )
 
     class Meta:
         ordering = ["canonical_name"]
@@ -1718,10 +1771,14 @@ class ScholarProfile(UUIDTimeStampedModel):
 class Contribution(UUIDTimeStampedModel):
     class Role(models.TextChoices):
         AUTHOR = "author", "作者"
+        CHIEF_EDITOR = "chief_editor", "主编"
         EDITOR = "editor", "编者"
         TRANSLATOR = "translator", "译者"
+        ANNOTATOR = "annotator", "校注"
+        PHOTOGRAPHER = "photographer", "摄影"
         ADVISOR = "advisor", "导师"
         SUBJECT = "subject", "研究对象"
+        OTHER = "other", "其他贡献者"
 
     edition = models.ForeignKey(Edition, on_delete=models.CASCADE, related_name="contributions")
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="contributions")
@@ -3364,11 +3421,13 @@ class ClaimEvidence(UUIDTimeStampedModel):
 class EditorialRevision(UUIDTimeStampedModel):
     class TargetType(models.TextChoices):
         WORK = "work", "作品"
+        EDITION = "edition", "版本"
         KNOWLEDGE_NODE = "knowledge_node", "知识节点"
         SCHOLAR_PROFILE = "scholar_profile", "学者"
         DISCIPLINE = "discipline", "学科"
         SUBDISCIPLINE = "subdiscipline", "子学科"
         TOPIC = "topic", "主题"
+        PUBLISHER = "publisher", "出版社"
         READING_PATH = "reading_path", "阅读路径"
 
     class Status(models.TextChoices):
@@ -3413,6 +3472,409 @@ class EditorialRevision(UUIDTimeStampedModel):
         indexes = [
             models.Index(fields=["target_type", "target_id", "status", "-revision"]),
         ]
+
+
+class PublicationBundle(UUIDTimeStampedModel):
+    """One cataloging publication unit, including draft entities created in place."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "草稿"
+        PUBLISHING = "publishing", "发布处理中"
+        PUBLISHED = "published", "已发布"
+        FAILED = "failed", "发布失败"
+        ABANDONED = "abandoned", "已放弃"
+
+    context_type = models.CharField(max_length=48, db_index=True)
+    context_id = models.UUIDField(db_index=True)
+    edition = models.ForeignKey(
+        Edition,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="publication_bundles",
+    )
+    label = models.CharField(max_length=300, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+    minimum_completeness = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_publication_bundles",
+    )
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_publication_bundles",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["context_type", "context_id"],
+                condition=models.Q(status="draft"),
+                name="one_draft_publication_bundle",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["status", "updated_at"]),
+            models.Index(fields=["edition", "status"]),
+        ]
+
+
+class PublicationBundleItem(UUIDTimeStampedModel):
+    class Action(models.TextChoices):
+        CREATE = "create", "新建"
+        UPDATE = "update", "更新"
+        LINK = "link", "关联"
+        MERGE = "merge", "合并"
+        WITHDRAW = "withdraw", "撤回"
+
+    bundle = models.ForeignKey(
+        PublicationBundle,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    object_type = models.CharField(max_length=48, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+    action = models.CharField(max_length=20, choices=Action.choices)
+    label = models.CharField(max_length=300, blank=True)
+    snapshot = models.JSONField(default=dict, blank=True)
+    minimum_complete = models.BooleanField(default=False)
+    blockers = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bundle", "object_type", "object_id"],
+                name="unique_publication_bundle_item",
+            ),
+        ]
+
+
+class CatalogFieldDecision(UUIDTimeStampedModel):
+    """Current editorial state for one field in one cataloging context."""
+
+    class Status(models.TextChoices):
+        EMPTY = "empty", "未填写"
+        SUGGESTED = "suggested", "有建议"
+        NEEDS_REVIEW = "needs_review", "需要确认"
+        CONFIRMED = "confirmed", "已确认"
+        CONFLICT = "conflict", "存在冲突"
+        NOT_APPLICABLE = "not_applicable", "不适用"
+        STALE = "stale", "建议重新检查"
+
+    class ConfirmationMethod(models.TextChoices):
+        MANUAL = "manual", "人工填写"
+        CANDIDATE = "candidate", "采用建议"
+        INLINE_CREATE = "inline_create", "新建并关联"
+        MIGRATED = "migrated", "历史迁移"
+
+    context_type = models.CharField(max_length=48, db_index=True)
+    context_id = models.UUIDField(db_index=True)
+    edition = models.ForeignKey(
+        Edition,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="field_decisions",
+    )
+    target_type = models.CharField(max_length=48, db_index=True)
+    target_id = models.UUIDField(db_index=True)
+    field_name = models.CharField(max_length=120, db_index=True)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.EMPTY,
+        db_index=True,
+    )
+    value = models.JSONField(null=True, blank=True)
+    previous_value = models.JSONField(null=True, blank=True)
+    provenance = models.JSONField(default=dict, blank=True)
+    evidence_summary = models.JSONField(default=list, blank=True)
+    candidate_type = models.CharField(max_length=48, blank=True)
+    candidate_id = models.UUIDField(null=True, blank=True)
+    dependency_fields = models.JSONField(default=list, blank=True)
+    dependency_fingerprint = models.CharField(max_length=64, blank=True)
+    stale_reason = models.CharField(max_length=500, blank=True)
+    confirmation_method = models.CharField(
+        max_length=24,
+        choices=ConfirmationMethod.choices,
+        default=ConfirmationMethod.MANUAL,
+    )
+    bundle = models.ForeignKey(
+        PublicationBundle,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="field_decisions",
+    )
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="catalog_field_decisions",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["context_type", "context_id", "target_type", "field_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "context_type",
+                    "context_id",
+                    "target_type",
+                    "target_id",
+                    "field_name",
+                ],
+                name="unique_catalog_field_decision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["edition", "status"]),
+            models.Index(fields=["target_type", "target_id", "status"]),
+        ]
+
+
+class CatalogFieldDecisionLog(UUIDTimeStampedModel):
+    decision = models.ForeignKey(
+        CatalogFieldDecision,
+        on_delete=models.CASCADE,
+        related_name="audit_log",
+    )
+    action = models.CharField(max_length=40)
+    old_value = models.JSONField(null=True, blank=True)
+    new_value = models.JSONField(null=True, blank=True)
+    candidate_type = models.CharField(max_length=48, blank=True)
+    candidate_id = models.UUIDField(null=True, blank=True)
+    source_summary = models.JSONField(default=list, blank=True)
+    reason = models.CharField(max_length=500, blank=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="catalog_field_decision_logs",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["decision", "created_at"])]
+
+
+class CatalogPublicationRevision(UUIDTimeStampedModel):
+    """Immutable formal snapshot and serving boundary for one Edition."""
+
+    class Status(models.TextChoices):
+        PREPARING = "preparing", "准备中"
+        ACTIVE = "active", "活动"
+        SUPERSEDED = "superseded", "已取代"
+        FAILED = "failed", "处理失败"
+        WITHDRAWN = "withdrawn", "已撤回"
+
+    edition = models.ForeignKey(
+        Edition,
+        on_delete=models.PROTECT,
+        related_name="catalog_revisions",
+    )
+    revision = models.PositiveBigIntegerField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PREPARING,
+        db_index=True,
+    )
+    bundle = models.ForeignKey(
+        PublicationBundle,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="catalog_revisions",
+    )
+    snapshot = models.JSONField(default=dict)
+    changed_fields = models.JSONField(default=list, blank=True)
+    related_entities = models.JSONField(default=list, blank=True)
+    document_revision = models.ForeignKey(
+        DocumentRevision,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="catalog_publication_revisions",
+    )
+    reader_asset = models.ForeignKey(
+        Asset,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="catalog_publication_revisions",
+    )
+    metadata_ready = models.BooleanField(default=False, db_index=True)
+    fulltext_ready = models.BooleanField(default=False, db_index=True)
+    provenance = models.JSONField(default=dict, blank=True)
+    content_fingerprint = models.CharField(max_length=64, db_index=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_catalog_publication_revisions",
+    )
+    activated_at = models.DateTimeField(null=True, blank=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+    failure_code = models.CharField(max_length=120, blank=True)
+    failure_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["edition_id", "-revision"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["edition", "revision"],
+                name="unique_catalog_publication_revision",
+            ),
+            models.UniqueConstraint(
+                fields=["edition"],
+                condition=models.Q(status="active"),
+                name="one_active_catalog_revision",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["edition", "status", "-revision"]),
+            models.Index(fields=["status", "metadata_ready", "fulltext_ready"]),
+        ]
+
+
+class KnowledgePublicationEvent(UUIDTimeStampedModel):
+    class EventType(models.TextChoices):
+        CATALOG_PUBLISHED = "catalog_published", "馆藏发布"
+        CATALOG_UPDATED = "catalog_updated", "馆藏更新"
+        CATALOG_WITHDRAWN = "catalog_withdrawn", "馆藏撤回"
+        ENTITY_PUBLISHED = "entity_published", "实体发布"
+        ENTITY_UPDATED = "entity_updated", "实体更新"
+        ENTITY_MERGED = "entity_merged", "实体合并"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "待处理"
+        PROCESSING = "processing", "处理中"
+        COMPLETED = "completed", "已完成"
+        FAILED = "failed", "处理失败"
+        DEAD_LETTER = "dead_letter", "需要人工处理"
+
+    event_type = models.CharField(max_length=32, choices=EventType.choices, db_index=True)
+    object_type = models.CharField(max_length=48, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+    catalog_revision = models.ForeignKey(
+        CatalogPublicationRevision,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="knowledge_events",
+    )
+    domain_event = models.OneToOneField(
+        "DomainChangeEvent",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="knowledge_publication_event",
+    )
+    changed_fields = models.JSONField(default=list, blank=True)
+    related_entities = models.JSONField(default=list, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    idempotency_key = models.CharField(max_length=200, unique=True)
+    correlation_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="knowledge_publication_events",
+    )
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["status", "next_attempt_at", "created_at"]),
+            models.Index(fields=["object_type", "object_id", "created_at"]),
+        ]
+
+
+class KnowledgeProjectionDelivery(UUIDTimeStampedModel):
+    class Consumer(models.TextChoices):
+        QUERY_LEXICON = "query_lexicon", "规范词典"
+        BIBLIOGRAPHIC_SEARCH = "bibliographic_search", "书目搜索"
+        FULLTEXT = "fulltext", "全文搜索"
+        SEMANTIC = "semantic", "语义检索"
+        RAG = "rag", "馆藏问答材料"
+        VIEWPOINT = "viewpoint", "观点检索"
+        KNOWLEDGE_GRAPH = "knowledge_graph", "知识关系"
+        PERSON_SEARCH = "person_search", "人物搜索"
+        RECOMMENDATION = "recommendation", "推荐"
+        PUBLIC_CACHE = "public_cache", "公开缓存"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "待处理"
+        PROCESSING = "processing", "处理中"
+        COMPLETED = "completed", "已完成"
+        FAILED = "failed", "处理失败"
+        SKIPPED = "skipped", "无需处理"
+
+    event = models.ForeignKey(
+        KnowledgePublicationEvent,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    consumer = models.CharField(max_length=40, choices=Consumer.choices, db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    source_revision = models.PositiveBigIntegerField(default=0)
+    idempotency_key = models.CharField(max_length=220, unique=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    lease_token = models.UUIDField(null=True, blank=True, db_index=True)
+    lease_expires_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=120, blank=True)
+    last_error_message = models.TextField(blank=True)
+    result = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["event_id", "consumer"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "consumer"],
+                name="unique_knowledge_projection_delivery",
+            ),
+        ]
+        indexes = [models.Index(fields=["status", "consumer", "updated_at"])]
 
 
 class TheoryReviewTask(UUIDTimeStampedModel):
@@ -3611,6 +4073,7 @@ class QueryLexiconState(models.Model):
 
 class QueryLexiconEntry(UUIDTimeStampedModel):
     class EntityType(models.TextChoices):
+        WORK = "work", "作品"
         PERSON = "person", "人物"
         KNOWLEDGE_NODE = "knowledge_node", "知识节点"
         DISCIPLINE = "discipline", "学科"
@@ -3629,6 +4092,7 @@ class QueryLexiconEntry(UUIDTimeStampedModel):
         SEARCH_VARIANT = "search_variant", "检索变体"
 
     class SourceKind(models.TextChoices):
+        WORK_FIELD = "work_field", "正式作品字段"
         AUTHORITY_FIELD = "authority_field", "权威字段"
         PERSON_NAME_VARIANT = "person_name_variant", "结构化人物名称"
         KNOWLEDGE_NODE_ALIAS = "knowledge_node_alias", "结构化知识别名"
@@ -4461,6 +4925,13 @@ class DomainChangeEvent(UUIDTimeStampedModel):
     canonical_revision = models.PositiveBigIntegerField()
     change_kind = models.CharField(max_length=20, choices=ChangeKind.choices)
     changed_fields = models.JSONField(default=list, blank=True)
+    catalog_revision = models.ForeignKey(
+        "CatalogPublicationRevision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="domain_change_events",
+    )
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

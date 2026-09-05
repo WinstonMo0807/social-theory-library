@@ -18,11 +18,20 @@ ADMIN_RESOLVABLE = "admin_resolvable"
 RESOLVER_SCOPES = {PUBLIC_ACTIVE, ADMIN_RESOLVABLE}
 
 
-def _match_payload(row, *, scope: str, entity_cache: dict) -> dict | None:
+def _match_payload(
+    row,
+    *,
+    scope: str,
+    entity_cache: dict,
+    source_registry_version: str,
+) -> dict | None:
     key = EntityKey(row.entity_type, row.entity_id)
     cache_key = (row.entity_type, str(row.entity_id))
     if cache_key not in entity_cache:
-        entity_cache[cache_key] = describe_entity(key)
+        entity_cache[cache_key] = describe_entity(
+            key,
+            source_registry_version=source_registry_version,
+        )
     entity = entity_cache[cache_key]
     if entity is None:
         return None
@@ -142,7 +151,12 @@ def resolve_terms(
             truncated = len(term_rows) > limit
             matches = []
             for row in term_rows[:limit]:
-                payload = _match_payload(row, scope=scope, entity_cache=entity_cache)
+                payload = _match_payload(
+                    row,
+                    scope=scope,
+                    entity_cache=entity_cache,
+                    source_registry_version=before.source_registry_version,
+                )
                 if payload is not None:
                     matches.append(payload)
             results[normalized] = {
@@ -250,7 +264,12 @@ def resolve_term(
         matches = []
         entity_cache = {}
         for row in rows:
-            match = _match_payload(row, scope=scope, entity_cache=entity_cache)
+            match = _match_payload(
+                row,
+                scope=scope,
+                entity_cache=entity_cache,
+                source_registry_version=before.source_registry_version,
+            )
             if match is not None:
                 matches.append(match)
         return {

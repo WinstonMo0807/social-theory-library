@@ -6,6 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from catalog.models import Asset, Edition, Page, Passage, PublicationState, Work
 from catalog.services.semantic_chunks import build_semantic_chunks
+from tests.v304_helpers import activate_catalog_revision
 
 
 def _published_asset(*, access_status: str, seed: str):
@@ -51,6 +52,7 @@ def _published_asset(*, access_status: str, seed: str):
         bbox_union=[70, 120, 510, 220],
     )
     chunk = build_semantic_chunks(asset)[0]
+    activate_catalog_revision(edition, reader_asset=asset)
     return asset, passage, chunk, text
 
 

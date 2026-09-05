@@ -23,7 +23,7 @@ import uuid
 import httpx
 
 
-WORKER_VERSION = "3.0.3"
+WORKER_VERSION = "3.0.4"
 SUPPORTED_PROVIDERS = {"ollama", "openai_compatible", "vllm"}
 SUPPORTED_CAPABILITIES = {"llm_small", "llm_large"}
 SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis"}

@@ -39,6 +39,8 @@ def ensure_scholar_public_authority(profile: ScholarProfile, *, actor=None) -> P
     resolution. Publishing a page must never revive one of those states.
     """
 
+    if profile.editorial_status != "published":
+        raise ScholarPublicationError("学者资料尚未正式发布，不能提升人物公开状态。")
     person = Person.objects.select_for_update().get(pk=profile.person_id)
     if person.authority_status not in PUBLICATION_REVIEWABLE_STATUSES:
         raise ScholarPublicationError(
@@ -47,15 +49,15 @@ def ensure_scholar_public_authority(profile: ScholarProfile, *, actor=None) -> P
     if person.authority_status != Person.AuthorityStatus.VERIFIED:
         person.authority_status = Person.AuthorityStatus.VERIFIED
         person.save(update_fields=["authority_status", "updated_at"])
-        from catalog.services.dependency_engine import record_canonical_change
+        from catalog.services.canonical_mutations import record_admin_canonical_change
 
-        record_canonical_change(
+        record_admin_canonical_change(
             object_type="person",
-            object_id=person.pk,
-            change_kind="update",
+            target=person,
+            change_kind="publish",
             changed_fields=["authority_status"],
             actor=actor,
-            idempotency_key=(
+            request_idempotency_key=(
                 f"scholar-public-authority:{person.pk}:{person.updated_at.isoformat()}"
             )[:200],
         )

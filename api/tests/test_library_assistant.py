@@ -17,6 +17,7 @@ from reading.library_assistant import (
 from reading.library_retrieval import LibraryEvidence, LibraryRetrievalResult, LibraryRetrievalService
 from reading.models import LibraryConversation, LibraryMessage, LibraryMessageSource
 from reading.services import decrypt_private_text, encrypt_private_text
+from tests.v304_helpers import activate_catalog_revision
 
 
 def create_source_work(index=1):
@@ -36,6 +37,7 @@ def create_source_work(index=1):
         is_current=True,
         page_count=100,
     )
+    activate_catalog_revision(edition, reader_asset=asset)
     return work, edition, asset
 
 

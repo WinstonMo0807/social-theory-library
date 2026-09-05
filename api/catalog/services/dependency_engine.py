@@ -167,6 +167,184 @@ PROJECTION_DEPENDENCIES: dict[str, tuple[str, ...]] = {
 }
 
 
+# Exact field impacts used by 3.0.4 publication events.  Calls without field
+# information deliberately retain the historical object-level mapping.
+FIELD_PROJECTION_DEPENDENCIES: dict[str, dict[str, tuple[str, ...]]] = {
+    "work": {
+        "cover": (ProjectionType.PUBLIC,),
+        "title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+        "subtitle": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "original_title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "uniform_title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "document_type": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "language": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "abstract": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "contributors": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "classification": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "knowledge": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "curation": (
+            ProjectionType.CLAIM_INDEX,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+    },
+    "edition": {
+        # Catalog publication is coordinated from Edition so one publication
+        # revision cannot enqueue duplicate whole-book jobs for Work and
+        # Edition.  Work-owned fields therefore have explicit Edition aliases.
+        "catalog_publish": ALL_PROJECTIONS,
+        "catalog_withdraw": ALL_PROJECTIONS,
+        "cover": (ProjectionType.PUBLIC,),
+        "title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+        "subtitle": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "original_title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "uniform_title": (
+            ProjectionType.QUERY_LEXICON,
+            ProjectionType.FULLTEXT,
+            ProjectionType.PUBLIC,
+        ),
+        "document_type": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "language": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "abstract": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "authors": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "translators": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.PUBLIC,
+        ),
+        "disciplines": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "subdisciplines": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "topics": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "theories": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.READING_PATH_SUPPORT,
+            ProjectionType.PUBLIC,
+        ),
+        "curation": (
+            ProjectionType.CLAIM_INDEX,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+        "version_label": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "publication_date": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "publication_year": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+        "publisher": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "journal_contents": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "publisher_authority": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "publication_place": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "isbn": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "isbn10": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "isbn13": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "doi": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "contributors": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.KNOWLEDGE_GRAPH,
+            ProjectionType.RECOMMENDATION,
+            ProjectionType.PUBLIC,
+        ),
+        "metadata_ready": (ProjectionType.FULLTEXT, ProjectionType.PUBLIC),
+        "fulltext_ready": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.SEMANTIC,
+            ProjectionType.CLAIM_INDEX,
+            ProjectionType.PUBLIC,
+        ),
+        "asset": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.SEMANTIC,
+            ProjectionType.CLAIM_INDEX,
+            ProjectionType.PUBLIC,
+        ),
+        "document_revision": (
+            ProjectionType.FULLTEXT,
+            ProjectionType.SEMANTIC,
+            ProjectionType.CLAIM_INDEX,
+            ProjectionType.PUBLIC,
+        ),
+    },
+}
+
+
 @dataclass(frozen=True)
 class ProjectionLease:
     state_id: uuid.UUID
@@ -197,10 +375,48 @@ def normalize_object_type(value: str) -> str:
     return normalized
 
 
-def projection_types_for(object_type: str) -> tuple[str, ...]:
+def projection_types_for(
+    object_type: str,
+    changed_fields: Iterable[str] | None = None,
+) -> tuple[str, ...]:
     """Return the bounded projections affected by a canonical object type."""
 
     normalized = normalize_object_type(object_type)
+    normalized_fields = _changed_fields(changed_fields)
+    field_map = FIELD_PROJECTION_DEPENDENCIES.get(normalized, {})
+    if normalized_fields and field_map:
+        selected: set[str] = set()
+        unknown = False
+        for raw_field in normalized_fields:
+            field_name = raw_field.split(".", 1)[0]
+            projections = field_map.get(field_name)
+            if projections is None and normalized == "work":
+                projections = FIELD_PROJECTION_DEPENDENCIES["edition"].get(field_name)
+            if projections is None and normalized in {"edition", "work"} and field_name in {
+                "original_language", "first_publication_date", "translation_of", "series", "extent",
+                "journal_title", "volume", "issue", "page_range", "degree_institution",
+                "degree_type", "report_institution", "recommendation_image",
+            }:
+                projections = (ProjectionType.FULLTEXT, ProjectionType.PUBLIC)
+            if projections is None:
+                unknown = True
+                continue
+            selected.update(projections)
+            if normalized in {"edition", "work"} and field_name in {
+                "title", "subtitle", "original_title", "uniform_title", "document_type", "language",
+                "authors", "translators", "contributors", "publication_year", "topics", "theories",
+                "disciplines", "subdisciplines", "classification", "knowledge",
+            }:
+                # Reuse existing vectors when only the searchable metadata
+                # changes. The semantic consumer chooses metadata_only mode.
+                selected.add(ProjectionType.SEMANTIC)
+                selected.add(ProjectionType.CLAIM_INDEX)
+        if selected and not unknown:
+            return tuple(
+                projection
+                for projection in ALL_PROJECTIONS
+                if projection in selected
+            )
     # Unknown canonical types still receive a public-consistency marker.  A
     # missing registry entry therefore remains visible without scheduling all
     # expensive projections.
@@ -255,7 +471,10 @@ def _resolve_locked(event: DomainChangeEvent) -> list[ProjectionState]:
     now = timezone.now()
     states: list[ProjectionState] = []
     reason = f"{event.change_kind}@{event.canonical_revision}"
-    for projection_type in projection_types_for(event.object_type):
+    for projection_type in projection_types_for(
+        event.object_type,
+        event.changed_fields,
+    ):
         state, _created = ProjectionState.objects.select_for_update().get_or_create(
             object_type=event.object_type,
             object_id=event.object_id,
@@ -311,6 +530,7 @@ def record_canonical_change(
     change_kind: str,
     idempotency_key: str,
     changed_fields: Iterable[str] | None = None,
+    catalog_revision=None,
     actor=None,
     correlation_id=None,
     resolve: bool = True,
@@ -377,6 +597,7 @@ def record_canonical_change(
         canonical_revision=revision.current_revision,
         change_kind=change_kind,
         changed_fields=_changed_fields(changed_fields),
+        catalog_revision=catalog_revision,
         actor=actor,
         correlation_id=_uuid(correlation_id) if correlation_id else uuid.uuid4(),
         idempotency_key=idempotency_key,
@@ -394,7 +615,10 @@ def resolve_domain_change(event_id, *, lease_token=None) -> list[ProjectionState
             ProjectionState.objects.filter(
                 object_type=event.object_type,
                 object_id=event.object_id,
-                projection_type__in=projection_types_for(event.object_type),
+                projection_type__in=projection_types_for(
+                    event.object_type,
+                    event.changed_fields,
+                ),
             ).order_by("projection_type")
         )
     if lease_token is not None and event.lease_token != _uuid(lease_token):

@@ -20,6 +20,7 @@ from reading.library_retrieval import (
     _hydrate_evidence,
     _semantic_call,
 )
+from tests.v304_helpers import activate_catalog_revision
 
 
 def _query(*, max_passages: int = 8) -> LibraryQuery:
@@ -108,6 +109,12 @@ def _claim_source(*, title: str, state: str = PublicationState.PUBLISHED, seed: 
         fingerprint=f"{15000 + seed:064x}",
         shadow=True,
     )
+    if state == PublicationState.PUBLISHED:
+        activate_catalog_revision(
+            edition,
+            reader_asset=asset,
+            document_revision=revision,
+        )
     return work, edition, asset, page, revision, span, claim
 
 

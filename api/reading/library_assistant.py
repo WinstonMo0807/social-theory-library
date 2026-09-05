@@ -12,7 +12,12 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from catalog.models import Asset, Edition, Page, PublicationState, Work
+from catalog.models import Asset, Page, Work
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_q,
+    public_editions,
+)
 from common.ai_runtime import AICapability, runtime_profile
 from common.concurrency import capacity_slot
 from ingestion.services.ai_client import (
@@ -245,12 +250,10 @@ def validated_source_rows(rows: list[dict]) -> list[dict]:
         str(asset.id): asset
         for asset in Asset.objects.select_related("edition__work").filter(
             id__in=asset_ids,
-            edition__state=PublicationState.PUBLISHED,
             edition__is_primary=True,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
-        )
+        ).filter(active_document_q(asset_prefix=""))
     }
     page_ids = {_valid_uuid(row.get("page_id")) for row in rows}
     page_ids.discard("")
@@ -272,13 +275,17 @@ def validated_source_rows(rows: list[dict]) -> list[dict]:
             page = pages.get(page_id)
             if page is None or page.asset_id != asset.id:
                 continue
+        snapshot = active_catalog_snapshot(asset.edition, require_fulltext=True)
         valid.append(
             {
                 **row,
                 "asset_id": str(asset.id),
                 "edition_id": str(asset.edition_id),
                 "work_id": str(asset.edition.work_id),
-                "title": _bounded_text(row.get("title"), 500) or asset.edition.work.title,
+                "title": _bounded_text(
+                    (snapshot.get("work") or {}).get("title") or "未题名",
+                    500,
+                ),
             }
         )
     return valid
@@ -425,18 +432,16 @@ def persist_sources(message: LibraryMessage, rows: list[dict]) -> list[LibraryMe
     works = {str(obj.id): obj for obj in Work.objects.filter(id__in=work_ids)}
     editions = {
         str(obj.id): obj
-        for obj in Edition.objects.filter(id__in=edition_ids, state=PublicationState.PUBLISHED)
+        for obj in public_editions(require_fulltext=True).filter(id__in=edition_ids)
     }
     assets = {
         str(obj.id): obj
         for obj in Asset.objects.filter(
             id__in=asset_ids,
-            edition__state=PublicationState.PUBLISHED,
             edition__is_primary=True,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
-        )
+        ).filter(active_document_q(asset_prefix=""))
     }
     page_ids = {row.get("page_id") for row in rows if row.get("page_id")}
     pages = {str(obj.id): obj for obj in Page.objects.filter(id__in=page_ids)}
@@ -1134,19 +1139,20 @@ def _stream_conversation_answer(
 
 
 def source_is_available(source: LibraryMessageSource) -> bool:
+    snapshot = active_catalog_snapshot(source.edition, require_fulltext=True)
     return bool(
         source.work_id
         and source.asset_id
         and source.edition_id
         and source.edition
-        and source.edition.state == PublicationState.PUBLISHED
+        and snapshot
         and source.edition.is_primary
         and source.edition.work_id == source.work_id
         and source.asset
         and source.asset.edition_id == source.edition_id
+        and source.edition.active_catalog_revision.reader_asset_id == source.asset_id
         and source.asset.kind == Asset.Kind.NORMALIZED
         and source.asset.status == Asset.Status.READY
-        and source.asset.is_current
         and (not source.page_id or source.page.asset_id == source.asset_id)
     )
 

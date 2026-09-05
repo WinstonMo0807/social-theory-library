@@ -363,7 +363,7 @@ def test_rejected_candidate_is_not_reopened_by_identical_rescan(admin_user):
     assert result["added_evidence"] == 0
 
 
-def test_accept_knowledge_candidate_writes_authority_then_outbox_sync(admin_user):
+def test_accept_knowledge_candidate_stays_out_of_formal_lexicon(admin_user):
     node = _node(zh="惯性结构", en="habitus")
     _work, _edition, asset, _page, _chunk = _asset("habitus（惯习）构成实践倾向。")
     scan_asset_for_query_lexicon_candidates(asset, commit=True)
@@ -380,14 +380,14 @@ def test_accept_knowledge_candidate_writes_authority_then_outbox_sync(admin_user
     assert alias.created_by == admin_user
     assert candidate.status == QueryLexiconCandidate.Status.ACCEPTED
     assert candidate.accepted_authority_id == alias.id
-    assert QueryLexiconChangeEvent.objects.filter(processed_at__isnull=True).exists()
+    assert not QueryLexiconChangeEvent.objects.filter(processed_at__isnull=True).exists()
     assert not QueryLexiconEntry.objects.filter(normalized_term="惯习").exists()
 
     process_pending_events()
 
     state = QueryLexiconState.objects.get(key="default")
-    assert state.revision == before + 1
-    assert QueryLexiconEntry.objects.filter(
+    assert state.revision == before
+    assert not QueryLexiconEntry.objects.filter(
         generation=state.active_generation,
         entity_id=node.id,
         normalized_term="惯习",

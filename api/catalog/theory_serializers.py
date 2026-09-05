@@ -94,8 +94,10 @@ def _published_edition(work):
     )
 
 
-def compact_work(work, request=None):
+def compact_work(work, request=None, *, include_unpublished=False):
     edition = _published_edition(work)
+    if edition is None and include_unpublished:
+        edition = work.editions.prefetch_related("contributions__person", "assets").order_by("-is_primary", "-created_at").first()
     if edition is None:
         return None
     authors = [
@@ -131,8 +133,8 @@ def compact_work(work, request=None):
             else ""
         ),
         "asset_id": str(asset.id) if asset else None,
-        "reader_href": f"/reader/{asset.id}" if asset else None,
-        "detail_href": f"/works/{edition.public_slug}" if edition.public_slug else None,
+        "reader_href": f"/reader/{asset.id}" if asset and edition.state == PublicationState.PUBLISHED else None,
+        "detail_href": f"/works/{edition.public_slug}" if edition.state == PublicationState.PUBLISHED and edition.public_slug else None,
     }
 
 
@@ -1035,7 +1037,10 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
         )
 
     def get_work_data(self, obj):
-        return compact_work(obj.work, self.context.get("request")) if obj.work_id else None
+        return compact_work(
+            obj.work, self.context.get("request"),
+            include_unpublished=bool(self.context.get("include_unpublished_items")),
+        ) if obj.work_id else None
 
 
 class ReadingPathSerializer(serializers.ModelSerializer):

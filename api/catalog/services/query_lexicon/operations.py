@@ -21,6 +21,7 @@ from catalog.models import (
     Topic,
 )
 from catalog.services.query_lexicon.sync import dry_run_reconciliation, rebuild_query_lexicon
+from catalog.services.query_lexicon.registry import SOURCE_REGISTRY_VERSION
 from ingestion.models import ProcessingJob
 
 
@@ -167,7 +168,7 @@ def enqueue_query_lexicon_reconciliation(*, actor=None) -> ProcessingJob:
         job_type=ProcessingJob.JobType.QUERY_LEXICON_RECONCILE,
         status=ProcessingJob.Status.PENDING,
         engine="query-lexicon-reconciliation-v1",
-        settings_version="query-lexicon-registry-v1",
+        settings_version=SOURCE_REGISTRY_VERSION,
         task_id=str(uuid.uuid4()),
         correlation_id=str(uuid.uuid4()),
         created_by=actor,

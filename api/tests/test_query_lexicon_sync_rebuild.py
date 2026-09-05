@@ -84,7 +84,7 @@ def test_failed_staging_build_preserves_old_active_generation(monkeypatch):
     sync_service.rebuild_query_lexicon()
     before = _state()
 
-    def fail_collection(_keys):
+    def fail_collection(_keys, **_kwargs):
         raise RuntimeError("forced staging failure")
 
     monkeypatch.setattr(sync_service, "_collect_builds", fail_collection)
@@ -445,7 +445,7 @@ def test_older_full_rebuild_cannot_replace_a_newer_rule_version(monkeypatch):
     old_normalization = state.normalization_version
     old_registry = state.source_registry_version
     new_normalization = "query-lexicon-normalize-test-v2"
-    new_registry = "query-lexicon-registry-test-v2"
+    new_registry = sync_service.SOURCE_REGISTRY_VERSION
     monkeypatch.setattr(
         sync_service,
         "SUPPORTED_NORMALIZATION_VERSIONS",
@@ -454,14 +454,14 @@ def test_older_full_rebuild_cannot_replace_a_newer_rule_version(monkeypatch):
     monkeypatch.setattr(
         sync_service,
         "SUPPORTED_SOURCE_REGISTRY_VERSIONS",
-        {old_registry, new_registry},
+        {old_registry, sync_service.SOURCE_REGISTRY_VERSION, new_registry},
     )
     collect_builds = sync_service._collect_builds
     newer_build_completed = False
 
-    def interleave_newer_version(keys):
+    def interleave_newer_version(keys, **kwargs):
         nonlocal newer_build_completed
-        result = collect_builds(keys)
+        result = collect_builds(keys, **kwargs)
         if not newer_build_completed:
             newer_build_completed = True
             sync_service.rebuild_query_lexicon(

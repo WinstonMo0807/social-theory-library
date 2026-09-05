@@ -124,6 +124,7 @@ def _dependency_rows(obj) -> list[dict]:
 def lifecycle_snapshot(kind: str, obj, config: LifecycleConfig) -> dict:
     status_value = getattr(obj, config.status_field)
     dependencies = _dependency_rows(obj)
+    merged_topic = isinstance(obj, Topic) and bool((obj.curation or {}).get("topic_merge"))
     return {
         "kind": kind,
         "id": str(obj.pk),
@@ -134,8 +135,8 @@ def lifecycle_snapshot(kind: str, obj, config: LifecycleConfig) -> dict:
         "dependency_count": sum(row["count"] for row in dependencies),
         "actions": {
             "archive": status_value != config.archived_value,
-            "restore": status_value == config.archived_value,
-            "delete": status_value != config.published_value,
+            "restore": status_value == config.archived_value and not merged_topic,
+            "delete": status_value != config.published_value and not merged_topic,
         },
         "guidance": (
             "公开内容应先下线。永久删除会同时删除可级联的关系记录，受保护的馆藏关系会阻止删除。"
@@ -198,6 +199,9 @@ class AdminEntityLifecycleView(APIView):
         action = str(request.data.get("action", "")).strip()
         snapshot = lifecycle_snapshot(kind, obj, config)
         before = {"status": snapshot["status"], "name": snapshot["name"]}
+
+        if isinstance(obj, Topic) and (obj.curation or {}).get("topic_merge"):
+            return Response({"detail": "该主题已合并，保留原记录供审计。请编辑合并后的主题。", "code": "merged_topic_read_only", "impact": snapshot}, status=409)
 
         if kind == "theory-school" and action in {"restore", "delete"}:
             return Response(

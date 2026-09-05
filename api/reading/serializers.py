@@ -4,8 +4,12 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from catalog.models import Asset, Page, PublicationState, Topic, Work
+from catalog.models import Asset, Page, Topic, Work
 from catalog.serializers import WorkCardSerializer
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    public_edition_q,
+)
 
 from .models import (
     Annotation,
@@ -24,6 +28,17 @@ from .services import (
     ensure_saved_work_progress,
     readable_progress_for_user,
 )
+
+
+def _reader_asset_available(asset: Asset) -> bool:
+    snapshot = active_catalog_snapshot(asset.edition)
+    return bool(
+        snapshot
+        and asset.edition.active_catalog_revision.reader_asset_id == asset.id
+        and asset.kind == Asset.Kind.NORMALIZED
+        and asset.status == Asset.Status.READY
+        and asset.is_current
+    )
 
 
 class OwnedSerializer(serializers.ModelSerializer):
@@ -55,12 +70,7 @@ class ReadingProgressSerializer(OwnedSerializer):
         ).data
 
     def validate_asset(self, value):
-        if (
-            value.edition.state != PublicationState.PUBLISHED
-            or value.kind != Asset.Kind.NORMALIZED
-            or value.status != Asset.Status.READY
-            or not value.is_current
-        ):
+        if not _reader_asset_available(value):
             raise serializers.ValidationError("该阅读文件不可用。")
         return value
 
@@ -120,12 +130,7 @@ class AnnotationSerializer(OwnedSerializer):
         page = attrs.get("page") or getattr(self.instance, "page", None)
         if asset is None or page is None or page.asset_id != asset.id:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
-        if (
-            asset.edition.state != PublicationState.PUBLISHED
-            or asset.kind != Asset.Kind.NORMALIZED
-            or asset.status != Asset.Status.READY
-            or not asset.is_current
-        ):
+        if not _reader_asset_available(asset):
             raise serializers.ValidationError("该文献当前不可批注。")
         return attrs
 
@@ -159,12 +164,7 @@ class BookmarkSerializer(OwnedSerializer):
     def validate(self, attrs):
         if attrs["page"].asset_id != attrs["asset"].id:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
-        if (
-            attrs["asset"].edition.state != PublicationState.PUBLISHED
-            or attrs["asset"].kind != Asset.Kind.NORMALIZED
-            or attrs["asset"].status != Asset.Status.READY
-            or not attrs["asset"].is_current
-        ):
+        if not _reader_asset_available(attrs["asset"]):
             raise serializers.ValidationError("该阅读文件不可用。")
         return attrs
 
@@ -221,7 +221,7 @@ class SavedItemSerializer(OwnedSerializer):
         list_serializer_class = SavedItemListSerializer
 
     def validate_work(self, value):
-        if not value.editions.filter(state=PublicationState.PUBLISHED).exists():
+        if not value.editions.filter(public_edition_q()).exists():
             raise serializers.ValidationError("该文献当前不可收藏。")
         self._validated_reader_asset = current_reader_asset_for_work(value)
         if self._validated_reader_asset is None:
@@ -317,12 +317,7 @@ class ReadingHistorySerializer(OwnedSerializer):
         ).data
 
     def validate_asset(self, value):
-        if (
-            value.edition.state != PublicationState.PUBLISHED
-            or value.kind != Asset.Kind.NORMALIZED
-            or value.status != Asset.Status.READY
-            or not value.is_current
-        ):
+        if not _reader_asset_available(value):
             raise serializers.ValidationError("该阅读文件不可用。")
         return value
 

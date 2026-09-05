@@ -352,6 +352,7 @@ def queue_projection_refresh(
     actor=None,
     force: bool = False,
     source_event: DomainChangeEvent | None = None,
+    preserve_attempts: bool = False,
 ) -> ProcessingJob:
     target_type = str(target_type or "").strip().casefold()
     target = _target(target_type, target_id)
@@ -387,6 +388,11 @@ def queue_projection_refresh(
                     {
                         "id": str(source_event.id),
                         "canonical_revision": source_event.canonical_revision,
+                        "catalog_revision_id": (
+                            str(source_event.catalog_revision_id)
+                            if source_event.catalog_revision_id
+                            else None
+                        ),
                         "change_kind": source_event.change_kind,
                         "changed_fields": list(source_event.changed_fields or []),
                     }
@@ -414,7 +420,7 @@ def queue_projection_refresh(
 
     if (
         job.status in {ProcessingJob.Status.PENDING, ProcessingJob.Status.RUNNING}
-        and not force
+        and (not force or preserve_attempts)
     ):
         return job
     if job.status == ProcessingJob.Status.SUCCEEDED and not force:
@@ -431,7 +437,7 @@ def queue_projection_refresh(
     }
     job.status = ProcessingJob.Status.PENDING
     job.task_id = ""
-    if force:
+    if force and not preserve_attempts:
         job.attempt = 0
     job.progress = 0
     job.error_code = ""
@@ -782,7 +788,7 @@ def _query_lexicon_projection(target, tracked: dict) -> dict:
     }
 
 
-def _fulltext_projection(assets: list[Asset], tracked: dict) -> dict:
+def _fulltext_projection(assets: list[Asset], tracked: dict, *, catalog_revision=None) -> dict:
     from ingestion.services.indexing import index_asset
 
     results = []
@@ -791,6 +797,7 @@ def _fulltext_projection(assets: list[Asset], tracked: dict) -> dict:
         result = index_asset(
             asset,
             is_public=asset.edition.state == "published",
+            catalog_revision=catalog_revision if catalog_revision and catalog_revision.edition_id == asset.edition_id else None,
         )
         results.append({"asset_id": str(asset.id), **result})
         if result.get("backend") not in VERIFIED_FULLTEXT_BACKENDS:
@@ -817,21 +824,21 @@ def _fulltext_projection(assets: list[Asset], tracked: dict) -> dict:
     return {"status": "current", "assets": results, "empty": not assets}
 
 
-def _claim_projection(assets: list[Asset], tracked: dict) -> dict:
+def _claim_projection(assets: list[Asset], tracked: dict, *, catalog_revision=None) -> dict:
     from catalog.services.claims.indexing import index_document_revision_claims
 
-    revisions = list(
-        DocumentRevision.objects.filter(
+    revisions_query = DocumentRevision.objects.filter(
             asset_id__in=[asset.id for asset in assets],
-            is_active=True,
-        ).order_by("asset_id")
-    )
+        )
+    revisions_query = revisions_query.filter(pk=catalog_revision.document_revision_id) if catalog_revision else revisions_query.filter(is_active=True)
+    revisions = list(revisions_query.order_by("asset_id"))
     results = []
     failures = []
     for revision in revisions:
         result = index_document_revision_claims(
             revision,
             track_projection=False,
+            catalog_revision=catalog_revision,
         )
         results.append({"document_revision_id": str(revision.id), **result})
         if result.get("status") != "completed":
@@ -876,6 +883,8 @@ def _semantic_projection(
     job: ProcessingJob,
     assets: list[Asset],
     tracked: dict,
+    *,
+    catalog_revision=None,
 ) -> dict:
     from catalog.services.semantic_indexing import queue_semantic_job
 
@@ -883,11 +892,19 @@ def _semantic_projection(
     waiting = []
     failed = []
     for asset in assets:
+        previous = asset.edition.active_catalog_revision
+        metadata_only = bool(
+            catalog_revision and previous and previous.reader_asset_id == asset.pk
+            and previous.fulltext_ready and asset.semantic_chunks.exists()
+            and not {"file", "pdf", "ocr", "fulltext", "document_revision", "catalog_publish"}.intersection(catalog_revision.changed_fields or [])
+        )
         semantic = queue_semantic_job(
             asset,
             force=False,
             actor=job.created_by,
             projection_parent_id=job.id,
+            catalog_revision=catalog_revision,
+            metadata_only=metadata_only,
         )
         if semantic is None:
             waiting.append(
@@ -1090,6 +1107,14 @@ def run_projection_refresh_job(
             if isinstance(stats.get("source_event"), dict)
             else None
         )
+        catalog_revision = None
+        if source_event and source_event.get("catalog_revision_id"):
+            from catalog.models import CatalogPublicationRevision
+
+            catalog_revision = CatalogPublicationRevision.objects.select_related("reader_asset__edition__work").get(pk=source_event["catalog_revision_id"])
+            # A publication consumes the captured file, never whichever file
+            # a later upload happened to mark current.
+            assets = [catalog_revision.reader_asset] if catalog_revision.reader_asset_id else []
         for projection_type, state in tracked.items():
             if state.get("status") in {
                 "already_current",
@@ -1098,14 +1123,28 @@ def run_projection_refresh_job(
             }:
                 results[projection_type] = {"status": state["status"]}
                 continue
+            if catalog_revision and projection_type in {
+                ProjectionState.ProjectionType.FULLTEXT, ProjectionState.ProjectionType.SEMANTIC,
+                ProjectionState.ProjectionType.CLAIM_INDEX,
+            }:
+                if catalog_revision.status == "withdrawn":
+                    # Public queries recheck the formal pointer. Retain old
+                    # immutable namespaces for rollback instead of rebuilding.
+                    _complete_tracked(state)
+                    results[projection_type] = {"status": "current", "scope": "withdrawn"}
+                    continue
+                if not (catalog_revision.provenance or {}).get("requested_fulltext_ready"):
+                    _complete_tracked(state)
+                    results[projection_type] = {"status": "current", "scope": "metadata_only"}
+                    continue
             if projection_type == ProjectionState.ProjectionType.QUERY_LEXICON:
                 result = _query_lexicon_projection(target, state)
             elif projection_type == ProjectionState.ProjectionType.FULLTEXT:
-                result = _fulltext_projection(assets, state)
+                result = _fulltext_projection(assets, state, catalog_revision=catalog_revision)
             elif projection_type == ProjectionState.ProjectionType.CLAIM_INDEX:
-                result = _claim_projection(assets, state)
+                result = _claim_projection(assets, state, catalog_revision=catalog_revision)
             elif projection_type == ProjectionState.ProjectionType.SEMANTIC:
-                result = _semantic_projection(job, assets, state)
+                result = _semantic_projection(job, assets, state, catalog_revision=catalog_revision)
             elif (
                 projection_type
                 == ProjectionState.ProjectionType.RECOMMENDATION

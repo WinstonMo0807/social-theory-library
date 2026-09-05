@@ -9,6 +9,7 @@ from ingestion.services.extract import ExtractedBlock, ExtractedPage, persist_pa
 from ingestion.services.files import materialize_field_file
 from ingestion.services.metadata import extract_text_candidates, select_best
 from reading.models import Annotation, Bookmark
+from tests.v304_helpers import activate_catalog_revision
 
 
 def test_ocr_text_can_refine_book_metadata_without_using_filename():
@@ -207,6 +208,7 @@ def test_page_citation_resolves_pdf_page_to_printed_label(api_client):
         printed_label="37",
         text_source=Page.TextSource.EMBEDDED,
     )
+    activate_catalog_revision(edition, reader_asset=asset)
 
     response = api_client.get(
         f"/api/catalog/editions/{edition.id}/citations/",
@@ -247,6 +249,7 @@ def test_hex_encoded_pdf_page_label_is_decoded_everywhere(api_client):
         printed_label="<FEFF00310030>",
         text_source=Page.TextSource.EMBEDDED,
     )
+    activate_catalog_revision(edition, reader_asset=asset)
 
     page_response = api_client.get(f"/api/catalog/assets/{asset.id}/pages/10/")
     citation_response = api_client.get(
@@ -281,6 +284,7 @@ def test_private_annotation_body_is_only_returned_to_owner(api_client, reader_us
         text="test",
         normalized_text="test",
     )
+    activate_catalog_revision(edition, reader_asset=asset)
     api_client.force_authenticate(reader_user)
     create_response = api_client.post(
         "/api/reading/annotations/",

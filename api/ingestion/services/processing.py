@@ -13,6 +13,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 from catalog.models import (
     Asset,
     Edition,
+    KnowledgePublicationEvent,
     OcrStatus,
     Page,
     PageLabelStatus,
@@ -20,8 +21,7 @@ from catalog.models import (
     SemanticIndexStatus,
     SiteSetting,
 )
-from catalog.services.semantic_indexing import queue_semantic_job
-from catalog.services.document_intelligence import best_effort_ocr_completion
+from catalog.services.document_intelligence import best_effort_ocr_completion, stage_document_asset
 from catalog.services.front_matter_intelligence import run_front_matter_intelligence
 from catalog.services.query_lexicon.candidates import (
     EXTRACTION_VERSION as QUERY_LEXICON_CANDIDATE_EXTRACTION_VERSION,
@@ -36,7 +36,6 @@ from ingestion.models import ProcessingJob, UploadItem
 from .candidate_store import persist_metadata_candidates
 from .extract import extract_ocr_page_batch, persist_page_batch
 from .files import materialize_field_file
-from .indexing import index_asset
 from .ocr_pdf import create_searchable_ocr_pdf
 from .ocr_provider import OCR_RUNTIME_KEY, ocr_runtime_config
 from .provider_gateway import refresh_remote_candidates
@@ -356,8 +355,12 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
     return {"candidates": len(jobs), "requeued": requeued, "exhausted": exhausted}
 
 
+@transaction.atomic
 def create_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = False) -> ProcessingJob:
-    pending = asset.processing_jobs.filter(
+    Edition.objects.select_for_update().get(pk=asset.edition_id)
+    pending = ProcessingJob.objects.filter(
+        Q(asset=asset) | Q(stats__text_source_asset_id=str(asset.pk)),
+        edition_id=asset.edition_id,
         job_type=ProcessingJob.JobType.OCR,
         status__in=[
             ProcessingJob.Status.PENDING,
@@ -365,7 +368,7 @@ def create_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = 
             ProcessingJob.Status.PAUSED,
         ],
     ).first()
-    if pending and not force:
+    if pending:
         return pending
     config = ocr_runtime_config()
     paused = processing_workload_paused(ProcessingJob.JobType.OCR)
@@ -379,6 +382,7 @@ def create_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = 
         settings_version=_settings_version(),
         created_by=actor,
         pause_requested_at=timezone.now() if paused else None,
+        stats={"force_reprocess": bool(force)},
     )
 
 
@@ -884,6 +888,25 @@ def _remaining_ocr_page_indexes(asset: Asset) -> tuple[int, int, list[int]]:
     return document_page_count, len(targets), remaining
 
 
+@transaction.atomic
+def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
+    locked = ProcessingJob.objects.select_for_update().select_related("asset__edition").get(pk=job.pk)
+    if locked.asset is None:
+        return locked
+    staged = stage_document_asset(
+        locked.asset, stage_key=f"ocr-job:{locked.pk}",
+        reset_ocr=bool((locked.stats or {}).get("force_reprocess")),
+    )
+    if staged.pk != locked.asset_id:
+        locked.stats = {
+            **dict(locked.stats or {}), "text_source_asset_id": str(locked.asset_id),
+            "staging_asset_id": str(staged.pk),
+        }
+        locked.asset = staged
+        locked.save(update_fields=["asset", "stats", "updated_at"])
+    return locked
+
+
 def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     job = ProcessingJob.objects.select_related("asset__edition").get(pk=job_id)
     if task_id and task_id != job.task_id:
@@ -929,6 +952,10 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     cleanup = None
     next_task_id = ""
     try:
+        job = _stage_ocr_job_asset(job)
+        asset = job.asset
+        edition = asset.edition
+        stats = dict(job.stats or {})
         document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset)
         if document_page_count <= 0:
             raise ValueError("OCR 目标文件没有可处理的页面。")
@@ -1165,13 +1192,24 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             ]
         )
 
-        index_warning = ""
-        try:
-            index_asset(asset, is_public=edition.state == PublicationState.PUBLISHED)
-            edition.search_indexed_at = timezone.now()
-            edition.save(update_fields=["search_indexed_at", "updated_at"])
-        except Exception as exc:
-            index_warning = str(exc)[:2000]
+        # OCR prepares one immutable text interpretation. Only its explicit
+        # publication event may update the reader-facing derived systems.
+        edition.refresh_from_db()
+        if edition.state == PublicationState.PUBLISHED:
+            intelligence = stats.get("document_intelligence") or {}
+            document_revision_id = intelligence.get("revision_id")
+            if intelligence.get("status") != "ready" or not document_revision_id:
+                raise ValueError("正文质量与引用信息未能完成，新正文尚未发布。")
+            from catalog.services.knowledge_publication import create_catalog_publication_event
+
+            event = create_catalog_publication_event(
+                edition, event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+                changed_fields=["ocr", "fulltext"], actor=job.created_by,
+                idempotency_key=f"ocr-doc:{document_revision_id}",
+                content_asset_id=asset.pk,
+                provenance={"source": "ocr_completion", "processing_job_id": str(job.pk)},
+            )
+            stats["knowledge_publication_event_id"] = str(event.pk)
         try:
             stats["theory_suggestions"] = generate_theory_review_tasks(
                 asset,
@@ -1180,7 +1218,6 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             )
         except Exception as exc:
             stats["theory_suggestion_warning"] = str(exc)[:2000]
-        queue_semantic_job(asset, force=True, actor=job.created_by)
         queue_page_label_job(
             asset,
             upload_item=job.upload_item,
@@ -1196,7 +1233,6 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 "pages": document_page_count,
                 "target_pages": target_page_count,
                 "engine": provider,
-                "index_warning": index_warning,
             }
         )
         job.stats = stats

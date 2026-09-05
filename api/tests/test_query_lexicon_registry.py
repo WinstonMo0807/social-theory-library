@@ -5,23 +5,32 @@ from uuid import uuid4
 import pytest
 
 from catalog.models import (
+    CatalogPublicationRevision,
     Concept,
     Discipline,
+    DocumentType,
+    Edition,
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgePublicationStatus,
     LegacyKnowledgeMapping,
     Person,
     PersonNameVariant,
+    PublicationState,
     QueryLexiconEntry,
     Subdiscipline,
     TheorySchool,
+    Work,
 )
 from catalog.services.query_lexicon.normalization import (
     generated_search_variants,
     normalize_term,
 )
-from catalog.services.query_lexicon.registry import EntityKey, build_entity
+from catalog.services.query_lexicon.registry import (
+    SOURCE_REGISTRY_VERSION,
+    EntityKey,
+    build_entity,
+)
 from catalog.services.query_lexicon.resolver import (
     ADMIN_RESOLVABLE,
     PUBLIC_ACTIVE,
@@ -29,6 +38,7 @@ from catalog.services.query_lexicon.resolver import (
 )
 from catalog.services.query_lexicon.sync import (
     ensure_query_lexicon_state,
+    rebuild_query_lexicon,
     sync_entity,
 )
 
@@ -60,7 +70,9 @@ def _entry(build, term: str) -> dict:
 
 
 def _sync(*keys: EntityKey) -> None:
-    ensure_query_lexicon_state()
+    state = ensure_query_lexicon_state()
+    if state.source_registry_version != SOURCE_REGISTRY_VERSION:
+        rebuild_query_lexicon()
     for key in keys:
         sync_entity(key)
 
@@ -72,33 +84,86 @@ def _resolved_ids(result: dict) -> set[tuple[str, str]]:
     }
 
 
+def test_work_terms_come_from_active_published_snapshot_only():
+    work = Work.objects.create(
+        document_type=DocumentType.BOOK,
+        title="尚未激活的新题名",
+        original_title="Unactivated title",
+    )
+    edition = Edition.objects.create(
+        work=work,
+        state=PublicationState.PUBLISHED,
+    )
+    revision = CatalogPublicationRevision.objects.create(
+        edition=edition,
+        revision=1,
+        status=CatalogPublicationRevision.Status.ACTIVE,
+        snapshot={
+            "work": {
+                "id": str(work.pk),
+                "title": "已发布题名",
+                "original_title": "Published title",
+                "uniform_title": "正式规范题名",
+                "language": "zh-Hans",
+                "original_language": "en",
+            }
+        },
+        metadata_ready=True,
+        fulltext_ready=False,
+        content_fingerprint="a" * 64,
+    )
+    edition.active_catalog_revision = revision
+    edition.save(update_fields=["active_catalog_revision", "updated_at"])
+
+    build = _build(QueryLexiconEntry.EntityType.WORK, work)
+    normalized = {row["normalized_term"] for row in build.entries}
+    assert normalize_term("已发布题名") in normalized
+    assert normalize_term("Published title") in normalized
+    assert normalize_term("正式规范题名") in normalized
+    assert normalize_term("尚未激活的新题名") not in normalized
+    assert normalize_term("Unactivated title") not in normalized
+
+    _sync(_key(QueryLexiconEntry.EntityType.WORK, work))
+    assert _resolved_ids(resolve_term("已发布题名", scope=PUBLIC_ACTIVE)) == {
+        (QueryLexiconEntry.EntityType.WORK, str(work.pk))
+    }
+    assert resolve_term("尚未激活的新题名", scope=PUBLIC_ACTIVE)["matches"] == []
+
+
+def test_draft_work_never_enters_registry_v2():
+    work = Work.objects.create(
+        document_type=DocumentType.BOOK,
+        title="草稿作品",
+    )
+    Edition.objects.create(work=work, state=PublicationState.DRAFT)
+
+    assert _build(QueryLexiconEntry.EntityType.WORK, work).entries == []
+
+
 @pytest.mark.parametrize(
-    ("status", "public_active", "admin_resolvable"),
+    "status",
     [
-        (Person.AuthorityStatus.DRAFT, False, True),
-        (Person.AuthorityStatus.NEEDS_REVIEW, False, True),
-        (Person.AuthorityStatus.VERIFIED, True, True),
-        (Person.AuthorityStatus.REJECTED, False, False),
-        (Person.AuthorityStatus.ARCHIVED, False, False),
+        Person.AuthorityStatus.DRAFT,
+        Person.AuthorityStatus.NEEDS_REVIEW,
+        Person.AuthorityStatus.VERIFIED,
+        Person.AuthorityStatus.REJECTED,
+        Person.AuthorityStatus.ARCHIVED,
     ],
 )
-def test_person_status_controls_public_and_admin_visibility(
-    status,
-    public_active,
-    admin_resolvable,
-):
+def test_registry_v2_contains_only_verified_people(status):
     person = Person.objects.create(
         preferred_name=f"人物-{status}",
         authority_status=status,
     )
 
-    entry = _entry(
-        _build(QueryLexiconEntry.EntityType.PERSON, person),
-        person.preferred_name,
-    )
+    build = _build(QueryLexiconEntry.EntityType.PERSON, person)
+    if status != Person.AuthorityStatus.VERIFIED:
+        assert build.entries == []
+        return
+    entry = _entry(build, person.preferred_name)
 
-    assert entry["public_active"] is public_active
-    assert entry["admin_resolvable"] is admin_resolvable
+    assert entry["public_active"] is True
+    assert entry["admin_resolvable"] is True
     assert entry["displayable"] is True
     assert entry["term_type"] == QueryLexiconEntry.TermType.CANONICAL
     assert entry["trust_level"] == QueryLexiconEntry.TrustLevel.AUTHORITATIVE
@@ -177,12 +242,9 @@ def test_person_name_variant_verification_controls_registry_and_resolver_scope()
     assert verified_entry["public_active"] is True
     assert verified_entry["admin_resolvable"] is True
 
-    unverified_entry = _entry(build, unverified.name)
-    assert unverified_entry["term_type"] == QueryLexiconEntry.TermType.ALIAS
-    assert unverified_entry["trust_level"] == QueryLexiconEntry.TrustLevel.UNVERIFIED
-    assert unverified_entry["displayable"] is False
-    assert unverified_entry["public_active"] is False
-    assert unverified_entry["admin_resolvable"] is True
+    assert normalize_term(unverified.name) not in {
+        row["normalized_term"] for row in build.entries
+    }
 
     _sync(_key(QueryLexiconEntry.EntityType.PERSON, person))
     public_result = resolve_term(verified.name, scope=PUBLIC_ACTIVE)
@@ -190,14 +252,10 @@ def test_person_name_variant_verification_controls_registry_and_resolver_scope()
     assert "provenance" not in public_result["matches"][0]
     assert public_result["matches"][0]["source_ref"]
     assert resolve_term(unverified.name, scope=PUBLIC_ACTIVE)["matches"] == []
-    admin_result = resolve_term(unverified.name, scope=ADMIN_RESOLVABLE)
-    assert _resolved_ids(admin_result) == {
-        (QueryLexiconEntry.EntityType.PERSON, str(person.pk))
-    }
-    assert "provenance" in admin_result["matches"][0]
+    assert resolve_term(unverified.name, scope=ADMIN_RESOLVABLE)["matches"] == []
 
 
-def test_person_json_aliases_downgrade_generated_and_residual_values():
+def test_person_json_aliases_are_not_registry_v2_authority_terms():
     person = Person.objects.create(
         preferred_name="韦伯",
         original_name="Max Weber",
@@ -220,14 +278,12 @@ def test_person_json_aliases_downgrade_generated_and_residual_values():
     assert generated["trust_level"] == QueryLexiconEntry.TrustLevel.GENERATED
     assert generated["displayable"] is False
 
-    residual = _entry(build, "社会学家韦伯")
-    assert residual["term_type"] == QueryLexiconEntry.TermType.SEARCH_VARIANT
-    assert residual["source_kind"] == QueryLexiconEntry.SourceKind.LEGACY_MIXED_ALIAS
-    assert residual["trust_level"] == QueryLexiconEntry.TrustLevel.LEGACY
-    assert residual["displayable"] is False
+    assert normalize_term("社会学家韦伯") not in {
+        row["normalized_term"] for row in build.entries
+    }
 
 
-def test_named_object_json_aliases_never_become_curated_translations():
+def test_named_object_json_aliases_are_not_registry_v2_authority_terms():
     theory = TheorySchool.objects.create(
         name="批判理论",
         slug=_slug("critical-theory"),
@@ -251,28 +307,13 @@ def test_named_object_json_aliases_never_become_curated_translations():
     assert generated["term_type"] == QueryLexiconEntry.TermType.SEARCH_VARIANT
     assert generated["displayable"] is False
 
-    residual = _entry(build, "法兰克福学派旧称")
-    assert residual["source_kind"] == QueryLexiconEntry.SourceKind.LEGACY_MIXED_ALIAS
-    assert residual["trust_level"] == QueryLexiconEntry.TrustLevel.LEGACY
-    assert residual["term_type"] == QueryLexiconEntry.TermType.SEARCH_VARIANT
-    assert residual["displayable"] is False
+    assert normalize_term("法兰克福学派旧称") not in {
+        row["normalized_term"] for row in build.entries
+    }
 
 
-@pytest.mark.parametrize(
-    ("status", "public_active", "admin_resolvable"),
-    [
-        (KnowledgePublicationStatus.PUBLISHED, True, True),
-        (KnowledgePublicationStatus.DRAFT, False, True),
-        (KnowledgePublicationStatus.PENDING, False, True),
-        (KnowledgePublicationStatus.REJECTED, False, False),
-        (KnowledgePublicationStatus.ARCHIVED, False, False),
-    ],
-)
-def test_knowledge_node_status_controls_public_and_admin_visibility(
-    status,
-    public_active,
-    admin_resolvable,
-):
+@pytest.mark.parametrize("status", KnowledgePublicationStatus.values)
+def test_registry_v2_contains_only_published_knowledge_nodes(status):
     node = KnowledgeNode.objects.create(
         node_type=KnowledgeNode.NodeType.CONCEPT,
         canonical_name_zh=f"知识节点-{status}",
@@ -280,13 +321,14 @@ def test_knowledge_node_status_controls_public_and_admin_visibility(
         status=status,
     )
 
-    entry = _entry(
-        _build(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, node),
-        node.canonical_name_zh,
-    )
+    build = _build(QueryLexiconEntry.EntityType.KNOWLEDGE_NODE, node)
+    if status != KnowledgePublicationStatus.PUBLISHED:
+        assert build.entries == []
+        return
+    entry = _entry(build, node.canonical_name_zh)
 
-    assert entry["public_active"] is public_active
-    assert entry["admin_resolvable"] is admin_resolvable
+    assert entry["public_active"] is True
+    assert entry["admin_resolvable"] is True
     assert entry["displayable"] is True
     assert entry["term_type"] == QueryLexiconEntry.TermType.CANONICAL
 
@@ -471,6 +513,7 @@ def test_seed_knowledge_alias_is_downgraded_from_declared_translation():
         alias="批判社会理论",
         language="zh-Hans",
         alias_type=KnowledgeNodeAlias.AliasType.TRANSLATION,
+        is_verified=True,
     )
 
     entry = _entry(

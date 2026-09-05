@@ -4020,6 +4020,69 @@
   min-width: 0;
 }
 
+.workflow-field-assistant-row,
+.field-assistant-control > .field-assistant-trigger {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.workflow-field-assistant-row {
+  justify-content: space-between;
+  position: relative;
+}
+
+.field-assistant-control {
+  position: relative;
+}
+
+.field-assistant-trigger {
+  border: 1px solid var(--admin-border, #d8d2c7);
+  border-radius: 999px;
+  background: #fff;
+  padding: .42rem .7rem;
+}
+
+.field-assistant-popover {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  width: min(30rem, calc(100vw - 3rem));
+  padding: .85rem;
+  border: 1px solid var(--admin-border, #d8d2c7);
+  border-radius: .8rem;
+  background: #fff;
+  box-shadow: 0 18px 48px rgb(40 35 29 / 14%);
+}
+
+.field-assistant-popover > header,
+.field-assistant-popover > footer,
+.field-assistant-popover article > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+
+.field-assistant-popover article {
+  padding: .75rem 0;
+  border-top: 1px solid #eee9e0;
+}
+
+.field-assistant-popover p,
+.field-assistant-popover li {
+  font-size: .82rem;
+}
+
+.field-assistant-popover footer input {
+  flex: 1;
+}
+
+.field-assistant-conflict,
+.field-assistant-message {
+  color: #8a3d2d;
+}
+
 .workflow-research-entity-picker > label {
   color: #35342f;
   font-size: 11px;
@@ -4838,10 +4901,31 @@
 }
 
 .workflow-inspector-pdf,
-.workflow-inspector-pdf iframe {
+.workflow-inspector-pdf iframe,
+.workflow-inspector-page-preview iframe {
   width: 100%;
   height: calc(100vh - 110px);
   border: 0;
+}
+
+.workflow-inspector-page-preview {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 0;
+}
+
+.workflow-inspector-page-preview > a {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.35rem;
+  color: #4f4539;
+  font-size: 0.75rem;
+}
+
+.workflow-inspector-page-preview iframe {
+  min-height: calc(100vh - 155px);
+  background: #fff;
 }
 
 .workflow-header-preview {
@@ -4860,7 +4944,7 @@
   align-items: center;
   gap: 0.65rem;
   margin: 0 0 1rem;
-  padding: 0.75rem 0.9rem;
+  padding: 0.42rem 0.7rem;
   border: 1px solid var(--line, #d7d1c7);
   background: #f3efe7;
   color: #26231f;
@@ -4868,6 +4952,16 @@
 
 .admin-page-preview-banner span {
   color: #625d54;
+  font-size: 0.78rem;
+}
+
+.admin-page-preview-banner a {
+  margin-left: auto;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .admin-page-preview-state {

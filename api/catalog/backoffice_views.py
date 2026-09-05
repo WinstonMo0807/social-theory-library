@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from ingestion.models import ProcessingJob, UploadItem
 from catalog.models import HealthIncident, PromptRegistryEntry, ResearchTaskProfile
+from catalog.editorial_read import AdminPrivateResponseMixin
 
 from common.permissions import (
     CanAccessBackOffice,
@@ -89,7 +90,7 @@ class AdminQueryLexiconTermInspectorView(APIView):
         )
 
 
-class AdminKnowledgeWorkspaceView(APIView):
+class AdminKnowledgeWorkspaceView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice, CanViewEvidence]
 
     def get(self, request):
@@ -320,7 +321,7 @@ class AdminFunctionalHealthView(APIView):
         )
 
 
-class AdminIntakeWorkspaceView(APIView):
+class AdminIntakeWorkspaceView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, item_id):
@@ -364,12 +365,13 @@ class AdminIntakeWorkspaceView(APIView):
         )
 
 
-class AdminWorkPagePreviewView(APIView):
+class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanViewEvidence]
 
     def get(self, request, edition_id):
         from catalog.models import Edition, EditorialRevision
         from catalog.services.editorial_revision import serialize_editorial_revision
+        from ingestion.models import UploadItem
 
         edition = get_object_or_404(
             Edition.objects.select_related("work").prefetch_related(
@@ -404,6 +406,16 @@ class AdminWorkPagePreviewView(APIView):
                 ),
             },
         ).data
+        intake_item = (
+            UploadItem.objects.filter(edition=edition)
+            .order_by("-updated_at", "-created_at")
+            .first()
+        )
+        return_url = (
+            f"/admin/intake/{intake_item.id}"
+            if intake_item is not None and edition.state != "published"
+            else f"/admin/library/works/{edition.work_id}?edition={edition.id}"
+        )
         return Response({
             "preview_mode": True,
             "publication_state": edition.state,
@@ -414,6 +426,7 @@ class AdminWorkPagePreviewView(APIView):
             ),
             "public_url": f"/works/{edition.public_slug}" if edition.state == "published" and edition.public_slug else "",
             "pdf_preview_url": f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else "",
+            "return_url": return_url,
             "work": data,
         })
 

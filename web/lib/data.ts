@@ -53,7 +53,7 @@ export type Work = {
   originalTitle?: string;
   author: string;
   year: string;
-  kind: "图书" | "期刊论文" | "学位论文" | "研究报告";
+  kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告";
   school: string;
   summary: string;
   cover: "dark" | "paper" | "cream" | "line";
@@ -84,6 +84,7 @@ export type Work = {
     major_response: CuratedWorkClaim[];
   };
   outline?: { index: number; printed_label: string; chapter_title: string }[];
+  journalContents?: { id?: string | null; title: string; author_display: string; page_range: string; article_href?: string }[];
 };
 
 export type Scholar = {

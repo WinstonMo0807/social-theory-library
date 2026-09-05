@@ -53,8 +53,14 @@ from .services.evidence_envelope import (
     public_curated_claim_groups,
 )
 from .services.semantic_search import viewer_access_statuses
-from .services.scoped_search import public_scholar_queryset
+from .services.scoped_search import public_scholar_queryset, public_work_queryset
 from .services.scholar_publication import scholar_public_eligibility
+from .services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_q,
+    public_editions,
+    public_edition_q,
+)
 from .services.text import clean_page_label, normalize_search_text
 
 
@@ -418,6 +424,7 @@ class CoverCandidateSerializer(serializers.ModelSerializer):
 
 
 class EditionCompactSerializer(serializers.ModelSerializer):
+    journal_contents = serializers.SerializerMethodField()
     contributors = serializers.SerializerMethodField()
     readable_asset = serializers.SerializerMethodField()
     edition_statement = serializers.CharField(source="version_label", read_only=True)
@@ -443,6 +450,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "manufacture_place",
             "manufacturer",
             "journal_title",
+            "journal_contents",
             "volume",
             "issue",
             "page_range",
@@ -457,18 +465,87 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "readable_asset",
         )
 
+    def get_journal_contents(self, obj):
+        from catalog.services.journal_issues import journal_contents_snapshot, public_journal_contents
+
+        if self.context.get("preview_edition") is not None:
+            rows = journal_contents_snapshot(obj)
+        else:
+            snapshot = active_catalog_snapshot(obj)
+            rows = snapshot.get("journal_contents", []) if snapshot else []
+        return public_journal_contents(rows)
+
     def get_contributors(self, obj):
+        snapshot = active_catalog_snapshot(obj)
+        if snapshot:
+            return [
+                {
+                    "role": row.get("role", Contribution.Role.OTHER),
+                    "order": row.get("order", index),
+                    "person": row.get("person")
+                    or {
+                        "id": row.get("person_id"),
+                        "preferred_name": row.get("name", ""),
+                    },
+                }
+                for index, row in enumerate(snapshot.get("contributions", snapshot.get("contributors")) or [])
+                if isinstance(row, dict)
+            ]
         queryset = obj.contributions.filter(approved=True).select_related("person")
         return ContributionSerializer(queryset, many=True).data
 
     def get_readable_asset(self, obj):
-        asset = obj.assets.filter(
+        queryset = obj.assets.filter(
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
             access_status__in=_viewer_asset_statuses(self.context),
-        ).first()
+        )
+        snapshot = active_catalog_snapshot(obj)
+        if snapshot:
+            asset_id = (snapshot.get("document") or {}).get("asset_id")
+            queryset = queryset.filter(pk=asset_id) if asset_id else queryset.none()
+        else:
+            queryset = queryset.filter(is_current=True)
+        asset = queryset.first()
         return AssetCompactSerializer(asset).data if asset else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        snapshot = active_catalog_snapshot(instance)
+        values = snapshot.get("edition") if snapshot else None
+        if not isinstance(values, dict):
+            return data
+        for field_name in (
+            "public_slug",
+            "version_label",
+            "publication_date",
+            "publication_year",
+            "publisher",
+            "publication_place",
+            "distribution_place",
+            "distributor",
+            "manufacture_place",
+            "manufacturer",
+            "journal_title",
+            "volume",
+            "issue",
+            "page_range",
+            "isbn",
+            "isbn10",
+            "isbn13",
+            "doi",
+            "series",
+            "extent",
+            "responsibility_statement",
+        ):
+            if field_name in values:
+                data[field_name] = values[field_name]
+        if "publisher_authority_id" in values:
+            data["publisher_authority"] = values["publisher_authority_id"]
+        data["edition_statement"] = data.get("version_label", "")
+        data["publisher_verbatim"] = data.get("publisher", "")
+        data["publication_place_verbatim"] = data.get("publication_place", "")
+        return data
 
 
 class WorkCardSerializer(serializers.ModelSerializer):
@@ -503,8 +580,26 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "subdisciplines",
         )
 
+    def _public_edition(self, obj):
+        if self.context.get("preview_edition") is not None:
+            return None
+        for edition in obj.editions.all():
+            if edition.is_primary and active_catalog_snapshot(edition):
+                return edition
+        return None
+
+    def _public_snapshot(self, obj):
+        edition = self._public_edition(obj)
+        return active_catalog_snapshot(edition) if edition is not None else {}
+
     def get_cover(self, obj):
-        if not obj.cover:
+        snapshot = self._public_snapshot(obj)
+        cover_name = (
+            (snapshot.get("work") or {}).get("cover")
+            if snapshot
+            else obj.cover.name
+        )
+        if not cover_name:
             return ""
         # Public pages and LAN access both enter through the edge proxy.  Keep
         # browser-facing resources on that same origin instead of leaking the
@@ -513,7 +608,15 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return reverse("public-work-cover", kwargs={"work_id": obj.id})
 
     def get_recommendation_image(self, obj):
-        if not obj.recommendation_image and not obj.cover:
+        snapshot = self._public_snapshot(obj)
+        if snapshot:
+            work_values = snapshot.get("work") or {}
+            available = bool(
+                work_values.get("recommendation_image") or work_values.get("cover")
+            )
+        else:
+            available = bool(obj.recommendation_image or obj.cover)
+        if not available:
             return ""
         return reverse(
             "public-work-recommendation-image",
@@ -521,14 +624,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
         )
 
     def get_edition(self, obj):
-        edition = next(
-            (
-                edition
-                for edition in obj.editions.all()
-                if edition.state == PublicationState.PUBLISHED and edition.is_primary
-            ),
-            None,
-        )
+        edition = self._public_edition(obj)
         return EditionCompactSerializer(edition, context=self.context).data if edition else None
 
     def _relations(self, obj, kind):
@@ -542,6 +638,17 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return values
 
     def get_theories(self, obj):
+        snapshot = self._public_snapshot(obj)
+        if snapshot:
+            return [
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name", ""),
+                    "slug": row.get("slug", ""),
+                }
+                for row in (snapshot.get("knowledge") or {}).get("nodes") or []
+                if isinstance(row, dict) and row.get("type") == "theory_tradition"
+            ]
         # Canonical WorkNodeRelation is the public source for theory identity.
         # Keep the legacy relation as a migration-only fallback so already
         # published 2.x records remain visible until their backfill completes.
@@ -568,6 +675,17 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return values
 
     def get_topics(self, obj):
+        snapshot = self._public_snapshot(obj)
+        if snapshot:
+            return [
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name", ""),
+                    "slug": row.get("slug", ""),
+                }
+                for row in (snapshot.get("knowledge") or {}).get("topics") or []
+                if isinstance(row, dict)
+            ]
         values = []
         seen = set()
         for relation in obj.topic_relations.all():
@@ -588,6 +706,9 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return values
 
     def get_disciplines(self, obj):
+        snapshot = self._public_snapshot(obj)
+        if snapshot:
+            return list((snapshot.get("classification") or {}).get("disciplines") or [])
         return [
             {
                 "id": str(relation.discipline_id),
@@ -601,6 +722,11 @@ class WorkCardSerializer(serializers.ModelSerializer):
         ]
 
     def get_subdisciplines(self, obj):
+        snapshot = self._public_snapshot(obj)
+        if snapshot:
+            return list(
+                (snapshot.get("classification") or {}).get("subdisciplines") or []
+            )
         return [
             {
                 "id": str(relation.subdiscipline_id),
@@ -612,6 +738,30 @@ class WorkCardSerializer(serializers.ModelSerializer):
                 review_status=RelationReviewStatus.APPROVED,
             ).select_related("subdiscipline")
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        snapshot = self._public_snapshot(instance)
+        values = snapshot.get("work") if snapshot else None
+        if not isinstance(values, dict):
+            return data
+        for field_name in (
+            "document_type",
+            "title",
+            "subtitle",
+            "original_title",
+            "uniform_title",
+            "abstract",
+            "language",
+            "original_language",
+            "first_publication_date",
+            "translation_of_id",
+        ):
+            if field_name not in values:
+                continue
+            output_name = "translation_of" if field_name == "translation_of_id" else field_name
+            data[output_name] = values[field_name]
+        return data
 
 
 class WorkDetailSerializer(WorkCardSerializer):
@@ -629,20 +779,21 @@ class WorkDetailSerializer(WorkCardSerializer):
         )
 
     def get_editions(self, obj):
-        editions = obj.editions.filter(state="published").prefetch_related("contributions__person", "assets")
+        editions = public_editions().filter(work=obj).prefetch_related(
+            "contributions__person",
+            "assets",
+        )
         return EditionCompactSerializer(editions, many=True, context=self.context).data
 
     def get_outline(self, obj):
-        edition = obj.editions.filter(
-            state=PublicationState.PUBLISHED,
-            is_primary=True,
-        ).first()
+        edition = public_editions().filter(work=obj, is_primary=True).first()
         if not edition:
             return []
+        document = active_catalog_snapshot(edition).get("document") or {}
         asset = edition.assets.filter(
+            pk=document.get("asset_id"),
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
             access_status__in=_viewer_asset_statuses(self.context),
         ).first()
         if not asset:
@@ -661,14 +812,16 @@ class WorkDetailSerializer(WorkCardSerializer):
             review_status=RelationReviewStatus.APPROVED,
             file__kind=Asset.Kind.NORMALIZED,
             file__status=Asset.Status.READY,
-            file__is_current=True,
             file__access_status__in=_viewer_asset_statuses(self.context),
         ).select_related("file")
         preview_edition = self.context.get("preview_edition")
         public_evidence = (
-            public_evidence.filter(file__edition=preview_edition)
+            public_evidence.filter(
+                file__edition=preview_edition,
+                file__is_current=True,
+            )
             if preview_edition is not None
-            else public_evidence.filter(file__edition__state=PublicationState.PUBLISHED)
+            else public_evidence.filter(active_document_q(asset_prefix="file"))
         )
         relations = (
             obj.node_relations.filter(
@@ -796,8 +949,14 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
         for edition_data in [data.get("edition"), *(data.get("editions") or [])]:
             if not isinstance(edition_data, dict):
                 continue
+            if str(edition_data.get("id") or "") != str(section["edition_id"]):
+                continue
             for field_name, value in values.items():
-                if field_name == "publisher_authority_id":
+                if field_name == "journal_contents":
+                    from catalog.services.journal_issues import public_journal_contents
+
+                    edition_data["journal_contents"] = public_journal_contents(value)
+                elif field_name == "publisher_authority_id":
                     edition_data["publisher_authority"] = value
                 elif field_name in edition_data:
                     edition_data[field_name] = value
@@ -1147,11 +1306,11 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
     def get_curated(self, obj):
         curation = obj.curation if isinstance(obj.curation, dict) else {}
         foundational_works = _ordered_objects(
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+            public_work_queryset(),
             curation.get("foundational_work_ids", []),
         )
         reading_works = _ordered_objects(
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+            public_work_queryset(),
             curation.get("curated_reading_work_ids", []),
         )
         scholars = _ordered_objects(
@@ -1301,11 +1460,11 @@ class TopicSerializer(serializers.ModelSerializer):
     def get_curated(self, obj):
         curation = obj.curation if isinstance(obj.curation, dict) else {}
         foundational = _ordered_objects(
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+            public_work_queryset(),
             curation.get("foundational_work_ids", []),
         )
         recent = _ordered_objects(
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+            public_work_queryset(),
             curation.get("recent_work_ids", []),
         )
         scholars = _ordered_objects(
@@ -1321,7 +1480,7 @@ class TopicSerializer(serializers.ModelSerializer):
             if not isinstance(path, dict):
                 continue
             path_works = _ordered_objects(
-                Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+                public_work_queryset(),
                 path.get("work_ids", []),
             )
             reading_paths.append(
@@ -1382,17 +1541,16 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
         )
 
     def get_works(self, obj):
-        works = Work.objects.filter(
+        works = public_work_queryset().filter(
             editions__contributions__person=obj.person,
             editions__contributions__approved=True,
-            editions__state="published",
         ).distinct()[:24]
         return WorkCardSerializer(works, many=True, context=self.context).data
 
     def get_curated(self, obj):
         curation = obj.curation if isinstance(obj.curation, dict) else {}
         works = _ordered_objects(
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED),
+            public_work_queryset(),
             curation.get("essential_work_ids", []),
         )
         frequent = _ordered_objects(
@@ -1494,10 +1652,10 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
                 work__editions__contributions__person=obj.person,
                 work__editions__contributions__role=Contribution.Role.AUTHOR,
                 work__editions__contributions__approved=True,
-                work__editions__state=PublicationState.PUBLISHED,
                 status=KnowledgePublicationStatus.PUBLISHED,
                 node__status=KnowledgePublicationStatus.PUBLISHED,
             )
+            .filter(public_edition_q(prefix="work__editions"))
             .select_related("node")
             .distinct()
         )
@@ -1566,8 +1724,9 @@ class DisciplineSerializer(serializers.ModelSerializer):
     def get_work_count(self, obj):
         return obj.work_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
-            work__editions__state=PublicationState.PUBLISHED,
-        ).values("work_id").distinct().count()
+        ).filter(public_edition_q(prefix="work__editions")).values(
+            "work_id"
+        ).distinct().count()
 
     def get_scholar_count(self, obj):
         direct = obj.person_relations.filter(
@@ -1643,10 +1802,9 @@ class SubdisciplineSerializer(serializers.ModelSerializer):
         ]
 
     def get_works(self, obj):
-        works = Work.objects.filter(
+        works = public_work_queryset().filter(
             subdiscipline_relations__subdiscipline=obj,
             subdiscipline_relations__review_status=RelationReviewStatus.APPROVED,
-            editions__state=PublicationState.PUBLISHED,
         ).distinct()[:48]
         return WorkCardSerializer(works, many=True, context=self.context).data
 
@@ -1714,7 +1872,15 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
     def get_work(self, obj):
         if obj.work is None:
             return None
-        return {"id": str(obj.work_id), "title": obj.work.title}
+        work = public_work_queryset().filter(pk=obj.work_id).first()
+        if work is None:
+            return None
+        edition = next(iter(work.editions.all()), None)
+        title = str(
+            (active_catalog_snapshot(edition).get("work") or {}).get("title")
+            or "未题名"
+        )
+        return {"id": str(work.id), "title": title}
 
 
 class RecommendationSnapshotSerializer(serializers.ModelSerializer):
@@ -1736,8 +1902,11 @@ class RecommendationSnapshotSerializer(serializers.ModelSerializer):
         rows = []
         for item in obj.items.all().order_by("position"):
             if item.work_id:
+                work = public_work_queryset().filter(pk=item.work_id).first()
+                if work is None:
+                    continue
                 target_type = "work"
-                target = WorkCardSerializer(item.work, context=self.context).data
+                target = WorkCardSerializer(work, context=self.context).data
             elif item.theory_school_id:
                 target_type = "theory_school"
                 target = {

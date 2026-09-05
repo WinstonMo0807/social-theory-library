@@ -137,6 +137,12 @@ def build_semantic_chunks(
 ) -> list[SemanticChunk]:
     work = asset.edition.work
     model_name = _runtime_model_name(runtime_config)
+    from catalog.services.document_intelligence import document_asset_is_published
+
+    if document_asset_is_published(asset) and asset.semantic_chunks.exists():
+        # A model/index refresh may reuse paragraph identities. A changed
+        # interpretation must be built on a new staging Asset instead.
+        return list(asset.semantic_chunks.order_by("order"))
     existing = list(
         asset.semantic_chunks.filter(
             parser_version=PARSER_VERSION,

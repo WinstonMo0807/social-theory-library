@@ -14,6 +14,8 @@ from rest_framework.views import APIView
 from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
 
+from .editorial_read import AdminEditorialDraftReadMixin
+
 from .models import (
     AboutPageBlock,
     Discipline,
@@ -368,10 +370,12 @@ class _CanonicalTaxonomyMutationMixin:
 
 
 class AdminDisciplineListView(
+    AdminEditorialDraftReadMixin,
     _CanonicalTaxonomyMutationMixin,
     generics.ListCreateAPIView,
 ):
     canonical_object_type = "discipline"
+    editorial_target_type = "discipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminDisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -379,10 +383,12 @@ class AdminDisciplineListView(
 
 
 class AdminDisciplineDetailView(
+    AdminEditorialDraftReadMixin,
     _CanonicalTaxonomyMutationMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
     canonical_object_type = "discipline"
+    editorial_target_type = "discipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminDisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -423,7 +429,7 @@ class AdminDisciplineDetailView(
                 patch=dict(serializer.validated_data),
             )
             if not patch:
-                return Response(self.get_serializer(discipline).data)
+                return Response(self._draft_read_rows([discipline])[0])
             current_revision = (
                 CanonicalObjectRevision.objects.filter(
                     object_type=EditorialRevision.TargetType.DISCIPLINE,
@@ -456,17 +462,16 @@ class AdminDisciplineDetailView(
                 {"detail": str(error), "code": "editorial_revision_error"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        payload = dict(self.get_serializer(discipline).data)
-        payload.update(revision.patch)
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+        return Response(self._draft_read_rows([discipline])[0], status=status.HTTP_202_ACCEPTED)
 
 
 class AdminSubdisciplineListView(
+    AdminEditorialDraftReadMixin,
     _CanonicalTaxonomyMutationMixin,
     generics.ListCreateAPIView,
 ):
     canonical_object_type = "subdiscipline"
+    editorial_target_type = "subdiscipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminSubdisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -485,10 +490,12 @@ class AdminSubdisciplineListView(
 
 
 class AdminSubdisciplineDetailView(
+    AdminEditorialDraftReadMixin,
     _CanonicalTaxonomyMutationMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
     canonical_object_type = "subdiscipline"
+    editorial_target_type = "subdiscipline"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminSubdisciplineSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -529,7 +536,7 @@ class AdminSubdisciplineDetailView(
                 patch=dict(serializer.validated_data),
             )
             if not patch:
-                return Response(self.get_serializer(subdiscipline).data)
+                return Response(self._draft_read_rows([subdiscipline])[0])
             current_revision = (
                 CanonicalObjectRevision.objects.filter(
                     object_type=EditorialRevision.TargetType.SUBDISCIPLINE,
@@ -562,10 +569,7 @@ class AdminSubdisciplineDetailView(
                 {"detail": str(error), "code": "editorial_revision_error"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        payload = dict(self.get_serializer(subdiscipline).data)
-        payload.update(revision.patch)
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+        return Response(self._draft_read_rows([subdiscipline])[0], status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         subdiscipline = self.get_object()

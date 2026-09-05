@@ -518,7 +518,7 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
 
 
 def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) -> Asset:
-    existing = edition.assets.filter(kind=kind, sha256=item.sha256).first()
+    existing = edition.assets.filter(kind=kind, sha256=item.sha256, text_revision=0).first()
     if existing:
         return existing
     is_replacement = bool(item.replacement_of_asset_id)
@@ -687,37 +687,28 @@ def _activate_replacement(item: UploadItem, normalized: Asset) -> Asset:
     return old_asset
 
 
+@transaction.atomic
 def _finalize_item_publication(item: UploadItem, normalized: Asset) -> dict:
     if item.replacement_of_asset_id:
         reasons = _replacement_readiness(item, normalized)
         if reasons:
             raise PublicationBlocked(reasons)
-        public_index = index_asset(normalized, is_public=True)
-        old_asset = item.replacement_of_asset
-        try:
-            index_asset(old_asset, is_public=False)
-            old_asset = _activate_replacement(item, normalized)
-        except Exception:
-            index_asset(normalized, is_public=False)
-            index_asset(old_asset, is_public=True)
-            raise
-        try:
-            remove_asset_from_index(old_asset)
-            remove_semantic_asset(str(old_asset.id))
-        except Exception as exc:
-            AuditEvent.objects.create(
-                actor=item.batch.created_by,
-                action="old_search_index_cleanup_failed",
-                object_type="Asset",
-                object_id=str(old_asset.id),
-                after={"error": str(exc)[:1000]},
-            )
+        from catalog.models import KnowledgePublicationEvent
+        from catalog.services.knowledge_publication import create_catalog_publication_event
+
+        event = create_catalog_publication_event(
+            item.edition,
+            event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+            changed_fields=["asset", "document_revision"],
+            content_asset_id=normalized.pk,
+            actor=item.batch.created_by,
+            idempotency_key=f"upload-item:{item.id}:replacement",
+            provenance={"replacement_of_asset_id": str(item.replacement_of_asset_id)},
+        )
         item.status = UploadItem.Status.PUBLISHED
         item.stage_progress = 100
         item.save(update_fields=["status", "stage_progress", "updated_at"])
-        if item.edition.ocr_status in {OcrStatus.NOT_REQUIRED, OcrStatus.SUCCEEDED}:
-            queue_semantic_job(normalized, force=True, actor=item.batch.created_by)
-        return {"public_index": public_index, "replacement": True}
+        return {"knowledge_event_id": str(event.pk), "replacement": True}
 
     was_manually_reviewed = item.edition.field_locks.exists()
     reasons = publication_readiness(
@@ -726,23 +717,16 @@ def _finalize_item_publication(item: UploadItem, normalized: Asset) -> dict:
     )
     if reasons:
         raise PublicationBlocked(reasons)
-    public_index = index_asset(normalized, is_public=True)
-    try:
-        publish_edition(
+    publish_edition(
             item.edition,
             actor=item.batch.created_by,
             idempotency_key=f"upload-item:{item.id}:publish",
             allow_low_confidence=was_manually_reviewed,
-        )
-    except Exception:
-        index_asset(normalized, is_public=False)
-        raise
+    )
     item.status = UploadItem.Status.PUBLISHED
     item.stage_progress = 100
     item.save(update_fields=["status", "stage_progress", "updated_at"])
-    if item.edition.ocr_status in {OcrStatus.NOT_REQUIRED, OcrStatus.SUCCEEDED}:
-        queue_semantic_job(normalized, force=False, actor=item.batch.created_by)
-    return {"public_index": public_index, "replacement": False}
+    return {"publication": "processing", "replacement": False}
 
 
 def resume_reviewed_item_publication(item_id: str) -> UploadItem:
@@ -981,6 +965,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             and edition.assets.filter(
                 kind=Asset.Kind.NORMALIZED,
                 sha256=item.sha256,
+                text_revision=0,
             ).exists()
         )
         with processing_attempt(
@@ -1008,9 +993,15 @@ def run_pipeline(item_id: str) -> UploadItem:
                 normalized = edition.assets.get(
                     kind=Asset.Kind.NORMALIZED,
                     sha256=item.sha256,
+                    text_revision=0,
                 )
 
         with processing_attempt(item, "text_extraction", reuse_completed=False) as attempt:
+            from catalog.services.document_intelligence import stage_document_asset
+
+            normalized = stage_document_asset(
+                normalized, stage_key=f"upload-native:{item.pk}:{attempt.pk}",
+            )
             pages, detected_needs_ocr = extract_native_pages(normalized.file.path)
             detected_page_indexes = ocr_required_page_indexes(pages)
             if item.batch.ocr_strategy == UploadBatch.OcrStrategy.FORCE:
@@ -1056,6 +1047,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             normalized.status = Asset.Status.READY
             normalized.validation_status = Asset.ValidationStatus.VALID
             normalized.validation_details = {
+                **dict(normalized.validation_details or {}),
                 "page_count": len(pages),
                 "sha256": normalized.sha256,
                 "validated_at": timezone.now().isoformat(),
@@ -1268,7 +1260,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             }
             attempt.save(update_fields=["output_summary", "updated_at"])
 
-        if edition.work.document_type == "book":
+        if edition.work.document_type in {"book", "journal_issue"}:
             with processing_attempt(item, "cover_detection", reuse_completed=False) as attempt:
                 candidates = generate_cover_candidates(normalized)
                 attempt.output_summary = {
@@ -1317,8 +1309,9 @@ def run_pipeline(item_id: str) -> UploadItem:
             result = index_asset(normalized, is_public=False)
             attempt.output_summary = result
             attempt.save(update_fields=["output_summary", "updated_at"])
-            edition.search_indexed_at = timezone.now()
-            edition.save(update_fields=["search_indexed_at", "updated_at"])
+            if result.get("status") != "staging_only" and result.get("documents", 0):
+                edition.search_indexed_at = timezone.now()
+                edition.save(update_fields=["search_indexed_at", "updated_at"])
 
         set_stage(item, UploadItem.Status.READY, 88)
         if not _ensure_cloud_copy(item, normalized):

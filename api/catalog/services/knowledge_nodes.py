@@ -8,6 +8,10 @@ from django.utils import timezone
 
 from catalog.models import (
     EvidenceSnippet,
+    CatalogPublicationRevision,
+    Edition,
+    EditorialRevision,
+    KnowledgePublicationEvent,
     KnowledgeNode,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
@@ -206,6 +210,30 @@ def _copy_evidence(evidence, *, node, work_relation=None, knowledge_relation=Non
     return copied, created
 
 
+def _publish_merged_work_metadata(work_ids, *, actor, operation_id):
+    from catalog.services.knowledge_publication import create_catalog_publication_event
+
+    for edition in Edition.objects.select_for_update().filter(work_id__in=work_ids, state="published").order_by("pk"):
+        create_catalog_publication_event(
+            edition, event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+            changed_fields=["theories"], actor=actor,
+            idempotency_key=f"node-merge-metadata:{operation_id}:{edition.pk}",
+            provenance={"source": "node_merge", "merge_operation_id": str(operation_id)},
+        )
+
+
+def _check_merged_relation_decisions(source, target, *, created):
+    if created or getattr(source, "status", "") != "published":
+        return
+    if getattr(target, "status", "") != "published":
+        raise ValueError("合并双方存在已确认与未确认或已拒绝的关系冲突，请先处理关系。")
+    strengths = {"weak": 1, "medium": 2, "strong": 3}
+    if strengths.get(getattr(source, "strength", ""), 0) > strengths.get(getattr(target, "strength", ""), 0):
+        raise ValueError("来源关系具有更高的人工确认强度，请先核对目标关系，避免合并时丢失决定。")
+    if getattr(source, "is_primary", False) and not getattr(target, "is_primary", False):
+        raise ValueError("来源包含主要关系而目标不是主要关系，请先明确保留哪项决定。")
+
+
 @transaction.atomic
 def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNodeMergeRecord:
     if str(source_id) == str(target_id):
@@ -214,14 +242,26 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
     target = KnowledgeNode.objects.select_for_update().get(pk=target_id)
     if source.status == "archived":
         raise ValueError("来源节点已经归档。")
+    if target.status != "published":
+        raise ValueError("请选择已发布的目标理论节点。")
+    work_ids = set(source.work_relations.values_list("work_id", flat=True))
+    if EditorialRevision.objects.filter(target_type="knowledge_node", target_id__in=[source.pk, target.pk], status="draft").exists():
+        raise ValueError("相关理论节点有未发布的编辑草稿，请先完成或放弃草稿。")
+    if EditorialRevision.objects.filter(target_type="work", target_id__in=work_ids, status="draft").exists():
+        raise ValueError("相关作品有未发布的编辑草稿，请先完成或放弃草稿。")
+    if CatalogPublicationRevision.objects.filter(edition__work_id__in=work_ids, status="preparing").exists():
+        raise ValueError("相关作品正在更新智能内容，请处理完成后再合并。")
 
     before_source = node_snapshot(source)
     before_target = node_snapshot(target)
     affected = merge_preview(source)
     created_ids = defaultdict(list)
     moved_ids = defaultdict(list)
+    retired_rows = defaultdict(dict)
 
-    for alias in source.aliases.all():
+    from catalog.services.query_lexicon.registry import FORMAL_KNOWLEDGE_ALIAS_SOURCES
+
+    for alias in source.aliases.filter(is_verified=True, source_kind__in=FORMAL_KNOWLEDGE_ALIAS_SOURCES):
         copied, created = KnowledgeNodeAlias.objects.get_or_create(
             node=target,
             normalized_alias=alias.normalized_alias,
@@ -229,11 +269,23 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "alias": alias.alias,
                 "language": alias.language,
                 "alias_type": alias.alias_type,
+                "source_kind": alias.source_kind,
+                "is_verified": alias.is_verified,
                 "created_by_id": _user_id(actor),
             },
         )
         if created:
             created_ids["KnowledgeNodeAlias"].append(str(copied.id))
+    for name, language in ((source.canonical_name_zh, "zh-CN"), (source.canonical_name_en, "en")):
+        normalized = " ".join(str(name or "").casefold().split())
+        if not normalized or normalized in {" ".join(target.canonical_name_zh.casefold().split()), " ".join(target.canonical_name_en.casefold().split())}:
+            continue
+        alias, created = KnowledgeNodeAlias.objects.get_or_create(
+            node=target, normalized_alias=normalized,
+            defaults={"alias": name, "language": language, "source_kind": KnowledgeNodeAlias.SourceKind.EDITORIAL, "is_verified": True, "created_by_id": _user_id(actor)},
+        )
+        if created:
+            created_ids["KnowledgeNodeAlias"].append(str(alias.pk))
 
     for link in source.discipline_links.all():
         copied, created = KnowledgeNodeDiscipline.objects.get_or_create(
@@ -248,6 +300,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "reviewed_at": link.reviewed_at,
             },
         )
+        _check_merged_relation_decisions(link, copied, created=created)
         if created:
             created_ids["KnowledgeNodeDiscipline"].append(str(copied.id))
 
@@ -266,6 +319,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "reviewed_at": link.reviewed_at,
             },
         )
+        _check_merged_relation_decisions(link, copied, created=created)
         if created:
             created_ids["KnowledgeNodeSubdiscipline"].append(str(copied.id))
 
@@ -283,6 +337,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "reviewed_at": link.reviewed_at,
             },
         )
+        _check_merged_relation_decisions(link, copied, created=created)
         if created:
             created_ids["KnowledgeNodeTopic"].append(str(copied.id))
 
@@ -303,6 +358,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "reviewed_at": relation.reviewed_at,
             },
         )
+        _check_merged_relation_decisions(relation, copied, created=created)
         work_relation_map[relation.id] = copied
         if created:
             created_ids["WorkNodeRelation"].append(str(copied.id))
@@ -330,6 +386,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "reviewed_at": relation.reviewed_at,
             },
         )
+        _check_merged_relation_decisions(relation, copied, created=created)
         if created:
             created_ids["PersonNodeRelation"].append(str(copied.id))
 
@@ -356,6 +413,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "published_at": relation.published_at,
             },
         )
+        _check_merged_relation_decisions(relation, copied, created=created)
         if created:
             created_ids["KnowledgeRelation"].append(str(copied.id))
         for evidence in relation.evidence.all():
@@ -408,6 +466,16 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
     source.status = "archived"
     source.published_at = None
     source.save(update_fields=["status", "published_at", "updated_at"])
+    # Keep the source relation rows for rollback, but never snapshot them as
+    # still-public relations alongside their newly copied survivor relations.
+    for model, query in (
+        (WorkNodeRelation, Q(node=source)),
+        (PersonNodeRelation, Q(node=source)),
+        (KnowledgeRelation, Q(source_node=source) | Q(target_node=source)),
+    ):
+        rows = model.objects.filter(query, status="published")
+        retired_rows[model.__name__] = {str(row.pk): row.status for row in rows}
+        rows.update(status="archived", updated_at=timezone.now())
     record_node_version(target, actor, change_note or f"合并节点 {source.canonical_name_zh}")
     record_node_version(source, actor, f"已合并到 {target.canonical_name_zh}")
 
@@ -420,6 +488,8 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         rollback_payload={
             "created_ids": dict(created_ids),
             "moved_ids": dict(moved_ids),
+            "retired_rows": dict(retired_rows),
+            "affected_work_ids": [str(identifier) for identifier in work_ids],
         },
         merged_by_id=_user_id(actor),
     )
@@ -434,7 +504,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
     record_admin_canonical_change(
         object_type="knowledge_node",
         target=target,
-        change_kind="update",
+        change_kind="merge",
         changed_fields=[
             "aliases",
             "discipline_links",
@@ -451,6 +521,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         actor=actor,
         request_idempotency_key=f"knowledge-node-merge:{record.id}:target",
     )
+    _publish_merged_work_metadata(work_ids, actor=actor, operation_id=record.pk)
     return record
 
 
@@ -474,6 +545,11 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
         "KnowledgeNodeTopic": KnowledgeNodeTopic,
         "KnowledgeNodeAlias": KnowledgeNodeAlias,
     }
+    for model_name, rows in payload.get("retired_rows", {}).items():
+        model = model_map.get(model_name)
+        if model is not None:
+            for identifier, previous_status in rows.items():
+                model.objects.filter(pk=identifier).update(status=previous_status, updated_at=timezone.now())
     for model_name in (
         "EvidenceSnippet",
         "TimelineEventRelation",
@@ -539,4 +615,5 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
         actor=actor,
         request_idempotency_key=f"knowledge-node-merge-rollback:{record.id}:target",
     )
+    _publish_merged_work_metadata(payload.get("affected_work_ids", []), actor=actor, operation_id=f"rollback:{record.pk}")
     return record

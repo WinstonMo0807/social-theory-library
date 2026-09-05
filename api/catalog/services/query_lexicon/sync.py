@@ -185,7 +185,10 @@ def _sync_entity_locked(
     state: QueryLexiconState,
     generation: QueryLexiconGeneration,
 ) -> tuple[bool, int, dict[str, int]]:
-    build = build_entity(key)
+    build = build_entity(
+        key,
+        source_registry_version=generation.source_registry_version,
+    )
     current = list(
         QueryLexiconEntry.objects.filter(
             generation=generation,
@@ -370,7 +373,11 @@ def process_pending_events(*, limit: int | None = None) -> dict[str, int]:
     }
 
 
-def _collect_builds(keys: list[EntityKey]) -> tuple[list[EntityBuild], dict[str, int]]:
+def _collect_builds(
+    keys: list[EntityKey],
+    *,
+    source_registry_version: str = SOURCE_REGISTRY_VERSION,
+) -> tuple[list[EntityBuild], dict[str, int]]:
     builds = []
     audit = defaultdict(int)
     for name in (
@@ -389,7 +396,10 @@ def _collect_builds(keys: list[EntityKey]) -> tuple[list[EntityBuild], dict[str,
     ):
         audit[name] = 0
     for key in keys:
-        build = build_entity(key)
+        build = build_entity(
+            key,
+            source_registry_version=source_registry_version,
+        )
         builds.append(build)
         audit["entities"] += 1
         audit["entries"] += len(build.entries)
@@ -528,15 +538,22 @@ def dry_run_reconciliation(
             "QueryLexiconState 不存在。dry-run 不会自动创建状态，请先应用 migration。"
         )
     _validate_state(state)
-    _validate_rebuild_versions(
+    target_normalization, target_registry = _validate_rebuild_versions(
         state,
         entity_type=entity_type,
         entity_id=entity_id,
         normalization_version=normalization_version,
         source_registry_version=source_registry_version,
     )
-    keys = all_entity_keys(entity_type=entity_type, entity_id=entity_id)
-    builds, audit = _collect_builds(keys)
+    keys = all_entity_keys(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        source_registry_version=target_registry,
+    )
+    builds, audit = _collect_builds(
+        keys,
+        source_registry_version=target_registry,
+    )
     merge_audit = _merge_audit_for_filter(
         entity_type=entity_type,
         entity_id=entity_id,
@@ -555,15 +572,15 @@ def dry_run_reconciliation(
         "dry_run": True,
         "entity_type": entity_type,
         "entity_id": str(entity_id) if entity_id else None,
-        "normalization_version": normalization_version or state.normalization_version,
-        "source_registry_version": source_registry_version or state.source_registry_version,
+        "normalization_version": target_normalization,
+        "source_registry_version": target_registry,
         "current_entries": len(current_rows),
         "expected_entries": len(expected_rows),
         "content_changed": _logical_rows(current_rows) != _logical_rows(expected_rows),
         "expected_content_hash": _logical_hash(
             expected_rows,
-            normalization_version=normalization_version or state.normalization_version,
-            source_registry_version=source_registry_version or state.source_registry_version,
+            normalization_version=target_normalization,
+            source_registry_version=target_registry,
         ),
         "diff": diff,
         "audit": audit,
@@ -583,8 +600,20 @@ def _validate_rebuild_versions(
         raise ValueError("两个版本参数必须同时提供。")
     if (normalization_version or source_registry_version) and (entity_type or entity_id):
         raise ValueError("规则版本参数不能与 entity filter 混用。")
-    target_normalization = normalization_version or state.normalization_version
-    target_registry = source_registry_version or state.source_registry_version
+    if normalization_version or source_registry_version:
+        target_normalization = normalization_version
+        target_registry = source_registry_version
+    elif entity_type or entity_id:
+        # A targeted rebuild cannot change generation rules because it copies
+        # untouched rows from the active generation.
+        target_normalization = state.normalization_version
+        target_registry = state.source_registry_version
+    else:
+        # A full reconciliation is also the safe registry upgrader. It builds
+        # a complete staging generation with current rules before one atomic
+        # pointer switch; the old v1 generation remains active on any failure.
+        target_normalization = NORMALIZATION_VERSION
+        target_registry = SOURCE_REGISTRY_VERSION
     if target_normalization not in SUPPORTED_NORMALIZATION_VERSIONS:
         raise ValueError(f"当前代码不支持 normalization version：{target_normalization}")
     if target_registry not in SUPPORTED_SOURCE_REGISTRY_VERSIONS:
@@ -628,7 +657,11 @@ def rebuild_query_lexicon(
         base_generation_id = base_state.active_generation_id
     # Entity enumeration follows the watermark. Creates or deletes that race
     # with this snapshot therefore have event_seq > start_seq and are replayed.
-    keys = all_entity_keys(entity_type=entity_type, entity_id=entity_id)
+    keys = all_entity_keys(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        source_registry_version=target_registry,
+    )
     generation = QueryLexiconGeneration.objects.create(
         status=QueryLexiconGeneration.Status.STAGING,
         start_event_seq=start_seq,
@@ -645,7 +678,10 @@ def rebuild_query_lexicon(
     try:
         if entity_type or entity_id:
             _copy_active_generation(base_state.active_generation, generation)
-        builds, audit = _collect_builds(keys)
+        builds, audit = _collect_builds(
+            keys,
+            source_registry_version=target_registry,
+        )
         if entity_type and not entity_id:
             QueryLexiconEntry.objects.filter(
                 generation=generation,
@@ -688,7 +724,10 @@ def rebuild_query_lexicon(
                 }
             )
             if replay_keys:
-                replay_builds, replay_audit = _collect_builds(replay_keys)
+                replay_builds, replay_audit = _collect_builds(
+                    replay_keys,
+                    source_registry_version=target_registry,
+                )
                 _replace_generation_builds(generation, replay_builds)
                 for name, count in replay_audit.items():
                     audit[f"replay_{name}"] = count

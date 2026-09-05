@@ -71,10 +71,13 @@ def ensure_passage_index() -> None:
         "theory_slugs",
         "topic_slugs",
         "is_public",
+        "catalog_revision_id",
     ]
     if (
         current.get("searchableAttributes") != desired_searchable
         or current.get("filterableAttributes") != desired_filterable
+        or not {"passage_id", "catalog_revision_id"}.issubset(set(current.get("displayedAttributes") or []))
+        and "*" not in (current.get("displayedAttributes") or [])
     ):
         updated = httpx.patch(
             f"{base_url}/indexes/passages/settings",
@@ -84,6 +87,8 @@ def ensure_passage_index() -> None:
                 "filterableAttributes": desired_filterable,
                 "displayedAttributes": [
                     "id",
+                    "passage_id",
+                    "catalog_revision_id",
                     "asset_id",
                     "edition_id",
                     "edition_slug",
@@ -111,7 +116,7 @@ def ensure_passage_index() -> None:
         _wait_task(updated.json())
 
 
-def _indexed_asset_document_ids(asset_id: str) -> set[str]:
+def _indexed_asset_document_ids(asset_id: str, *, catalog_revision_id: str = "") -> set[str]:
     base_url = settings.MEILISEARCH_URL.rstrip("/")
     document_ids: set[str] = set()
     offset = 0
@@ -121,7 +126,7 @@ def _indexed_asset_document_ids(asset_id: str) -> set[str]:
             f"{base_url}/indexes/passages/documents/fetch",
             headers=_headers(),
             json={
-                "filter": f'asset_id = "{asset_id}"',
+                "filter": f'asset_id = "{asset_id}"' + (f' AND catalog_revision_id = "{catalog_revision_id}"' if catalog_revision_id else ''),
                 "offset": offset,
                 "limit": limit,
                 "fields": ["id"],
@@ -140,8 +145,8 @@ def _indexed_asset_document_ids(asset_id: str) -> set[str]:
         offset += len(results)
 
 
-def _remove_stale_asset_documents(asset_id: str, current_ids: set[str]) -> int:
-    stale_ids = sorted(_indexed_asset_document_ids(asset_id) - current_ids)
+def _remove_stale_asset_documents(asset_id: str, current_ids: set[str], *, catalog_revision_id: str = "") -> int:
+    stale_ids = sorted(_indexed_asset_document_ids(asset_id, catalog_revision_id=catalog_revision_id) - current_ids)
     chunk_size = 1000
     for offset in range(0, len(stale_ids), chunk_size):
         response = httpx.post(
@@ -155,10 +160,25 @@ def _remove_stale_asset_documents(asset_id: str, current_ids: set[str]) -> int:
     return len(stale_ids)
 
 
-def index_asset(asset: Asset, *, is_public: bool | None = None) -> dict:
+def index_asset(asset: Asset, *, is_public: bool | None = None, catalog_revision=None) -> dict:
+    if is_public is False:
+        return {"backend": "staging-only", "documents": 0, "reason": "awaiting_formal_fulltext_publication"}
     work = asset.edition.work
-    if is_public is None:
-        is_public = asset.edition.state == "published"
+    revision = catalog_revision or asset.edition.active_catalog_revision
+    eligible_revision = bool(
+        revision and revision.reader_asset_id == asset.pk
+        and revision.status in {"active", "preparing"}
+        and asset.edition.state == "published"
+        and (revision.fulltext_ready or (revision.provenance or {}).get("requested_fulltext_ready"))
+    )
+    if not eligible_revision:
+        # Do not overwrite an active namespace from an extraction/manual path.
+        return {"backend": "staging-only", "documents": 0, "reason": "awaiting_formal_fulltext_publication"}
+    is_public = eligible_revision and is_public is not False
+    revision_id = str(revision.pk)
+    snapshot = dict(revision.snapshot or {})
+    work_snapshot = snapshot.get("work") or {}
+    edition_snapshot = snapshot.get("edition") or {}
     authors = list(
         asset.edition.contributions.filter(approved=True)
         .order_by("order")
@@ -178,22 +198,28 @@ def index_asset(asset: Asset, *, is_public: bool | None = None) -> dict:
         for relation in approved_relations
         if relation.topic_id
     ]
+    authors = [row.get("name", "") for row in snapshot.get("contributions", [])]
+    knowledge = snapshot.get("knowledge") or {}
+    theory_rows = knowledge.get("nodes") or []
+    topic_rows = knowledge.get("topics") or []
     passages = [
         {
-            "id": str(passage.id),
+            "id": f"{revision_id}_{passage.id}",
+            "passage_id": str(passage.id),
+            "catalog_revision_id": revision_id,
             "asset_id": str(asset.id),
             "edition_id": str(asset.edition_id),
-            "edition_slug": asset.edition.public_slug,
+            "edition_slug": edition_snapshot.get("public_slug", ""),
             "work_id": str(work.id),
-            "title": work.title,
+            "title": work_snapshot.get("title", ""),
             "authors": authors,
-            "document_type": work.document_type,
-            "language": work.language,
-            "publication_year": asset.edition.publication_year,
-            "theory_slugs": [item.slug for item in theories],
-            "theory_names": [item.name for item in theories],
-            "topic_slugs": [item.slug for item in topics],
-            "topic_names": [item.name for item in topics],
+            "document_type": work_snapshot.get("document_type", ""),
+            "language": work_snapshot.get("language", ""),
+            "publication_year": edition_snapshot.get("publication_year"),
+            "theory_slugs": [row.get("slug", "") for row in theory_rows],
+            "theory_names": [row.get("name", "") for row in theory_rows],
+            "topic_slugs": [row.get("slug", "") for row in topic_rows],
+            "topic_names": [row.get("name", "") for row in topic_rows],
             "page_index": passage.page.index,
             "printed_label": passage.page.printed_label,
             "text": passage.text,
@@ -206,7 +232,7 @@ def index_asset(asset: Asset, *, is_public: bool | None = None) -> dict:
     try:
         ensure_passage_index()
         if not passages:
-            removed = _remove_stale_asset_documents(str(asset.id), set())
+            removed = _remove_stale_asset_documents(str(asset.id), set(), catalog_revision_id=revision_id)
             return {
                 "backend": "no-passages",
                 "documents": 0,
@@ -223,6 +249,7 @@ def index_asset(asset: Asset, *, is_public: bool | None = None) -> dict:
         removed = _remove_stale_asset_documents(
             str(asset.id),
             {passage["id"] for passage in passages},
+            catalog_revision_id=revision_id,
         )
         return {
             "backend": "meilisearch",

@@ -21,7 +21,6 @@ from catalog.models import (
     Concept,
     DocumentType,
     Passage,
-    PublicationState,
     SemanticChunk,
     SemanticSearchFeedback,
     SiteSetting,
@@ -29,6 +28,11 @@ from catalog.models import (
     Topic,
 )
 from catalog.services.semantic_indexing import active_semantic_index_uid, ensure_semantic_index
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_q,
+    public_editions,
+)
 from catalog.services.text import clean_page_label, normalize_search_text
 from ingestion.services.indexing import _headers
 
@@ -81,6 +85,86 @@ def _language_filter_values(values) -> list[str]:
                 seen.add(candidate)
                 expanded.append(candidate)
     return expanded
+
+
+def _snapshot_filtered_work_ids(filters: dict) -> set | None:
+    """Resolve public metadata filters against activated catalog snapshots."""
+
+    keys = {
+        "document_types",
+        "languages",
+        "authors",
+        "years",
+        "year_min",
+        "year_max",
+        "theories",
+        "topics",
+        "concepts",
+    }
+    if not any(filters.get(key) not in (None, "", [], (), {}) for key in keys):
+        return None
+    document_types = {
+        "journal_article" if value in {"article", "journal_article"} else value
+        for value in filters.get("document_types") or []
+    }
+    languages = set(_language_filter_values(filters.get("languages") or []))
+    author_ids = {str(value) for value in filters.get("authors") or []}
+    theory_slugs = {str(value) for value in filters.get("theories") or []}
+    topic_slugs = {str(value) for value in filters.get("topics") or []}
+    concept_slugs = {str(value) for value in filters.get("concepts") or []}
+    year_ranges = [YEAR_FILTERS.get(value, (None, None)) for value in filters.get("years") or []]
+    year_min = filters.get("year_min")
+    year_max = filters.get("year_max")
+    output = set()
+    for edition in public_editions(require_fulltext=True).filter(is_primary=True):
+        snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+        work = snapshot.get("work") or {}
+        values = snapshot.get("edition") or {}
+        contributions = snapshot.get("contributions") or []
+        knowledge = snapshot.get("knowledge") or {}
+        year = values.get("publication_year")
+        if document_types and work.get("document_type") not in document_types:
+            continue
+        if languages and work.get("language") not in languages:
+            continue
+        if author_ids and not author_ids.intersection(
+            str(row.get("person_id") or (row.get("person") or {}).get("id") or "")
+            for row in contributions
+            if isinstance(row, dict)
+        ):
+            continue
+        if year_ranges and not any(
+            year is not None
+            and (start is None or year >= start)
+            and (end is None or year <= end)
+            for start, end in year_ranges
+            if start is not None or end is not None
+        ):
+            continue
+        if year_min is not None and (year is None or year < int(year_min)):
+            continue
+        if year_max is not None and (year is None or year > int(year_max)):
+            continue
+        nodes = [row for row in knowledge.get("nodes") or [] if isinstance(row, dict)]
+        topics = [row for row in knowledge.get("topics") or [] if isinstance(row, dict)]
+        if theory_slugs and not theory_slugs.intersection(
+            str(row.get("slug") or "")
+            for row in nodes
+            if row.get("type") == "theory_tradition"
+        ):
+            continue
+        if topic_slugs and not topic_slugs.intersection(
+            str(row.get("slug") or "") for row in topics
+        ):
+            continue
+        if concept_slugs and not concept_slugs.intersection(
+            str(row.get("slug") or "")
+            for row in nodes
+            if row.get("type") == "concept"
+        ):
+            continue
+        output.add(edition.work_id)
+    return output
 
 logger = logging.getLogger(__name__)
 
@@ -448,11 +532,10 @@ def understand_query(query: str) -> dict:
 
 def _base_queryset(filters: dict):
     queryset = SemanticChunk.objects.filter(
-        asset__edition__state=PublicationState.PUBLISHED,
+        active_document_q(asset_prefix="asset"),
         asset__edition__is_primary=True,
         asset__kind="normalized",
         asset__status="ready",
-        asset__is_current=True,
     ).select_related("asset__edition__work")
     queryset = queryset.filter(
         asset__access_status__in=(
@@ -462,53 +545,9 @@ def _base_queryset(filters: dict):
     )
     if filters.get("work_ids"):
         queryset = queryset.filter(work_id__in=filters["work_ids"])
-    if filters.get("document_types"):
-        mapped = ["journal_article" if value in {"article", "journal_article"} else value for value in filters["document_types"]]
-        queryset = queryset.filter(document_type__in=mapped)
-    if filters.get("languages"):
-        queryset = queryset.filter(language__in=_language_filter_values(filters["languages"]))
-    if filters.get("authors"):
-        queryset = queryset.filter(
-            asset__edition__contributions__person_id__in=filters["authors"],
-            asset__edition__contributions__approved=True,
-        )
-    years = filters.get("years") or []
-    if years:
-        condition = Q()
-        for value in years:
-            start, end = YEAR_FILTERS.get(value, (None, None))
-            item = Q()
-            if start is not None:
-                item &= Q(asset__edition__publication_year__gte=start)
-            if end is not None:
-                item &= Q(asset__edition__publication_year__lte=end)
-            if start is not None or end is not None:
-                condition |= item
-        if condition:
-            queryset = queryset.filter(condition)
-    if filters.get("year_min") is not None:
-        queryset = queryset.filter(
-            asset__edition__publication_year__gte=filters["year_min"]
-        )
-    if filters.get("year_max") is not None:
-        queryset = queryset.filter(
-            asset__edition__publication_year__lte=filters["year_max"]
-        )
-    if filters.get("theories"):
-        queryset = queryset.filter(
-            work__knowledge_relations__theory_school__slug__in=filters["theories"],
-            work__knowledge_relations__approved=True,
-        )
-    if filters.get("topics"):
-        queryset = queryset.filter(
-            work__knowledge_relations__topic__slug__in=filters["topics"],
-            work__knowledge_relations__approved=True,
-        )
-    if filters.get("concepts"):
-        queryset = queryset.filter(
-            work__knowledge_relations__concept__slug__in=filters["concepts"],
-            work__knowledge_relations__approved=True,
-        )
+    snapshot_work_ids = _snapshot_filtered_work_ids(filters)
+    if snapshot_work_ids is not None:
+        queryset = queryset.filter(work_id__in=snapshot_work_ids)
     return queryset.distinct()
 
 
@@ -523,13 +562,18 @@ def _keyword_candidates(query: str, terms: list[str], filters: dict, limit: int 
     query_grams = _ngrams(query)
     rows = []
     for chunk in candidates:
+        snapshot = active_catalog_snapshot(
+            chunk.asset.edition,
+            require_fulltext=True,
+        )
+        snapshot_title = str((snapshot.get("work") or {}).get("title") or "未题名")
         coverage = sum(1 for term in terms if term in chunk.normalized_text) / max(1, len(terms))
         cosine = _cosine(query_grams, _ngrams(chunk.normalized_text))
         phrase = SequenceMatcher(None, query[:600], chunk.normalized_text[:1400]).ratio()
         title = SequenceMatcher(
             None,
             query[:300],
-            normalize_search_text(chunk.asset.edition.work.title)[:500],
+            normalize_search_text(snapshot_title)[:500],
         ).ratio()
         penalty = 0.65 if any(flag in chunk.quality_flags for flag in ("references", "table_of_contents")) else 1.0
         score = (coverage * 0.44 + cosine * 0.30 + phrase * 0.18 + title * 0.08) * penalty
@@ -541,11 +585,10 @@ def _keyword_candidates(query: str, terms: list[str], filters: dict, limit: int 
 
 def _passage_base_queryset(filters: dict):
     queryset = Passage.objects.filter(
-        page__asset__edition__state=PublicationState.PUBLISHED,
+        active_document_q(asset_prefix="page__asset"),
         page__asset__edition__is_primary=True,
         page__asset__kind="normalized",
         page__asset__status="ready",
-        page__asset__is_current=True,
     ).select_related("page__asset__edition__work")
     queryset = queryset.filter(
         page__asset__access_status__in=(
@@ -555,60 +598,9 @@ def _passage_base_queryset(filters: dict):
     )
     if filters.get("work_ids"):
         queryset = queryset.filter(page__asset__edition__work_id__in=filters["work_ids"])
-    if filters.get("document_types"):
-        mapped = [
-            "journal_article" if value in {"article", "journal_article"} else value
-            for value in filters["document_types"]
-        ]
-        queryset = queryset.filter(page__asset__edition__work__document_type__in=mapped)
-    if filters.get("languages"):
-        queryset = queryset.filter(
-            page__asset__edition__work__language__in=_language_filter_values(
-                filters["languages"]
-            )
-        )
-    if filters.get("authors"):
-        queryset = queryset.filter(
-            page__asset__edition__contributions__person_id__in=filters["authors"],
-            page__asset__edition__contributions__approved=True,
-        )
-    years = filters.get("years") or []
-    if years:
-        condition = Q()
-        for value in years:
-            start, end = YEAR_FILTERS.get(value, (None, None))
-            item = Q()
-            if start is not None:
-                item &= Q(page__asset__edition__publication_year__gte=start)
-            if end is not None:
-                item &= Q(page__asset__edition__publication_year__lte=end)
-            if start is not None or end is not None:
-                condition |= item
-        if condition:
-            queryset = queryset.filter(condition)
-    if filters.get("year_min") is not None:
-        queryset = queryset.filter(
-            page__asset__edition__publication_year__gte=filters["year_min"]
-        )
-    if filters.get("year_max") is not None:
-        queryset = queryset.filter(
-            page__asset__edition__publication_year__lte=filters["year_max"]
-        )
-    if filters.get("theories"):
-        queryset = queryset.filter(
-            page__asset__edition__work__knowledge_relations__theory_school__slug__in=filters["theories"],
-            page__asset__edition__work__knowledge_relations__approved=True,
-        )
-    if filters.get("topics"):
-        queryset = queryset.filter(
-            page__asset__edition__work__knowledge_relations__topic__slug__in=filters["topics"],
-            page__asset__edition__work__knowledge_relations__approved=True,
-        )
-    if filters.get("concepts"):
-        queryset = queryset.filter(
-            page__asset__edition__work__knowledge_relations__concept__slug__in=filters["concepts"],
-            page__asset__edition__work__knowledge_relations__approved=True,
-        )
+    snapshot_work_ids = _snapshot_filtered_work_ids(filters)
+    if snapshot_work_ids is not None:
+        queryset = queryset.filter(page__asset__edition__work_id__in=snapshot_work_ids)
     return queryset.distinct()
 
 
@@ -624,6 +616,11 @@ def _passage_keyword_candidates(query: str, terms: list[str], filters: dict, lim
     query_grams = _ngrams(query)
     rows = []
     for passage in candidates:
+        snapshot = active_catalog_snapshot(
+            passage.page.asset.edition,
+            require_fulltext=True,
+        )
+        snapshot_title = str((snapshot.get("work") or {}).get("title") or "未题名")
         normalized = passage.normalized_text or normalize_search_text(passage.text)
         coverage = sum(1 for term in terms if term in normalized) / max(1, len(terms))
         cosine = _cosine(query_grams, _ngrams(normalized))
@@ -631,7 +628,7 @@ def _passage_keyword_candidates(query: str, terms: list[str], filters: dict, lim
         title = SequenceMatcher(
             None,
             query[:300],
-            normalize_search_text(passage.page.asset.edition.work.title)[:500],
+            normalize_search_text(snapshot_title)[:500],
         ).ratio()
         score = coverage * 0.44 + cosine * 0.30 + phrase * 0.18 + title * 0.08
         if score <= 0.015:
@@ -670,8 +667,30 @@ def _meili_filters(
     filters: dict,
     *,
     include_access_status: bool = True,
+    include_catalog_revision: bool = True,
 ) -> list[str]:
     output = ["is_public = true"]
+    active_rows = list(public_editions(require_fulltext=True).filter(is_primary=True))
+    asset_ids = [str(row.active_catalog_revision.reader_asset_id) for row in active_rows if row.active_catalog_revision.reader_asset_id]
+    output.append("asset_id IN [" + ", ".join(_json_value(value) for value in asset_ids) + "]" if asset_ids else 'asset_id = "unpublished"')
+    if include_catalog_revision:
+        keys = {
+            str((row.active_catalog_revision.provenance or {}).get("semantic_index_revision_id") or "legacy")
+            for row in active_rows
+        }
+        branches = []
+        if "legacy" in keys:
+            legacy_assets = [
+                str(row.active_catalog_revision.reader_asset_id)
+                for row in active_rows
+                if str((row.active_catalog_revision.provenance or {}).get("semantic_index_revision_id") or "legacy") == "legacy"
+            ]
+            branches.append("(asset_id IN [" + ", ".join(_json_value(value) for value in legacy_assets) + '] AND (catalog_revision_id = "legacy" OR catalog_revision_id NOT EXISTS))')
+        modern = sorted(keys - {"legacy"})
+        if modern:
+            branches.append("catalog_revision_id IN [" + ", ".join(_json_value(value) for value in modern) + "]")
+        if branches:
+            output.append("(" + " OR ".join(branches) + ")")
     if include_access_status:
         allowed_access = (
             filters.get("_allowed_access_statuses")
@@ -751,7 +770,7 @@ def _vector_candidates(
         "q": query,
         "limit": min(200, max(1, limit)),
         "filter": " AND ".join(_meili_filters(filters)),
-        "attributesToRetrieve": ["id"],
+        "attributesToRetrieve": ["id", "chunk_id"],
         "showRankingScore": True,
         "hybrid": {
             # This request is the dense candidate set. Keyword candidates are
@@ -760,33 +779,38 @@ def _vector_candidates(
             "embedder": config["embedder_name"],
         },
     }
-    response = httpx.post(
-        f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/search",
-        headers=_headers(),
-        json=payload,
-        timeout=min(5, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
-    )
-    if _is_legacy_access_filter_error(response):
-        logger.warning(
-            "Semantic index %s predates access_status filtering; "
-            "retrying with the legacy public-only filter.",
-            index_uid,
-        )
-        payload = {
-            **payload,
-            "filter": " AND ".join(
-                _meili_filters(filters, include_access_status=False)
-            ),
-        }
+    response = _post_semantic_search(payload, index_uid=index_uid, filters=filters)
+    hits = response.json().get("hits", [])
+    return [(str(hit.get("chunk_id") or hit["id"]), float(hit.get("_rankingScore") or 0)) for hit in hits if hit.get("id")]
+
+
+def _post_semantic_search(payload: dict, *, index_uid: str, filters: dict):
+    """Preserve old published indexes while introducing revision filtering."""
+    include_access = True
+    include_revision = True
+    for _attempt in range(3):
         response = httpx.post(
             f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/search",
-            headers=_headers(),
-            json=payload,
+            headers=_headers(), json=payload,
             timeout=min(5, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
         )
+        if _is_legacy_access_filter_error(response) and include_access:
+            include_access = False
+        elif response.status_code == 400 and include_revision:
+            details = response.json()
+            legacy_only = not any(
+                str((row.active_catalog_revision.provenance or {}).get("semantic_index_revision_id") or "legacy") != "legacy"
+                for row in public_editions(require_fulltext=True).filter(is_primary=True)
+            )
+            if details.get("code") != "invalid_search_filter" or "catalog_revision_id" not in str(details.get("message", "")) or not legacy_only:
+                response.raise_for_status()
+            include_revision = False
+        else:
+            response.raise_for_status()
+            return response
+        payload = {**payload, "filter": " AND ".join(_meili_filters(filters, include_access_status=include_access, include_catalog_revision=include_revision))}
     response.raise_for_status()
-    hits = response.json().get("hits", [])
-    return [(str(hit["id"]), float(hit.get("_rankingScore") or 0)) for hit in hits if hit.get("id")]
+    return response
 
 
 def _rrf(
@@ -976,11 +1000,15 @@ def _serialize_row(row: dict, rank: int, total: int, terms: list[str], *, debug=
     asset = chunk.asset
     edition = asset.edition
     work = edition.work
-    authors = list(
-        edition.contributions.filter(approved=True)
-        .order_by("order")
-        .values_list("person__preferred_name", flat=True)
-    )
+    snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+    work_values = snapshot.get("work") or {}
+    edition_values = snapshot.get("edition") or {}
+    authors = [
+        str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
+        for row in snapshot.get("contributions") or []
+        if isinstance(row, dict)
+        and ((row.get("person") or {}).get("preferred_name") or row.get("name"))
+    ]
     matched_terms = [term for term in terms if term in chunk.normalized_text][:5]
     reasons = []
     if row.get("vector_rank"):
@@ -1001,14 +1029,18 @@ def _serialize_row(row: dict, rank: int, total: int, terms: list[str], *, debug=
         "id": str(chunk.id),
         "asset_id": str(asset.id),
         "edition_id": str(edition.id),
-        "edition_slug": edition.public_slug,
+        "edition_slug": edition_values.get("public_slug") or edition.public_slug,
         "work_id": str(work.id),
-        "title": work.title,
-        "cover_url": reverse("public-work-cover", kwargs={"work_id": work.id}) if work.cover else "",
+        "title": work_values.get("title") or "未题名",
+        "cover_url": (
+            reverse("public-work-cover", kwargs={"work_id": work.id})
+            if work_values.get("cover")
+            else ""
+        ),
         "authors": authors,
-        "document_type": work.document_type,
-        "language": work.language,
-        "publication_year": edition.publication_year,
+        "document_type": work_values.get("document_type") or "",
+        "language": work_values.get("language") or "",
+        "publication_year": edition_values.get("publication_year"),
         "page_index": chunk.page_start,
         "page_start": chunk.page_start,
         "page_end": chunk.page_end,

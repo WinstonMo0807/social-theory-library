@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_datetime
 
 from catalog.models import (
     Asset,
+    CatalogFieldDecision,
     Contribution,
     Discipline,
     Edition,
@@ -18,6 +19,7 @@ from catalog.models import (
     KnowledgePublicationStatus,
     Person,
     PublisherAuthority,
+    PublicationState,
     RelationReviewStatus,
     ReviewStatus,
     Subdiscipline,
@@ -39,6 +41,14 @@ from .canonical_identity import (
     CanonicalIdentityError,
     canonical_work_node_role,
     mapped_node_for_legacy,
+)
+from .field_decisions import (
+    REQUIRED_FIELDS,
+    SECTION_FIELDS,
+    field_value_present,
+    formal_field_values,
+    invalidate_dependent_fields,
+    record_edition_field_decision,
 )
 
 
@@ -121,6 +131,7 @@ def _refresh_edition_metadata(edition: Edition) -> None:
         "type": {
             "book": "book",
             "journal_article": "article-journal",
+            "journal_issue": "periodical",
             "thesis": "thesis",
             "report": "report",
         }[work.document_type],
@@ -166,7 +177,7 @@ def _refresh_edition_metadata(edition: Edition) -> None:
     )
 
 
-def _save_work(edition: Edition, values: dict[str, Any]) -> None:
+def _save_work(edition: Edition, values: dict[str, Any], *, confirm: bool = True) -> None:
     work = edition.work
     translation_marker = object()
     translation_id = values.get("translation_of", translation_marker)
@@ -184,11 +195,11 @@ def _save_work(edition: Edition, values: dict[str, Any]) -> None:
         else:
             target = Work.objects.select_for_update().filter(pk=translation_id).first()
             if target is None:
-                raise WorkflowEditError("原作 Work 不存在。")
+                raise WorkflowEditError("原作不存在。")
             if target.pk == work.pk:
                 raise WorkflowEditError("作品不能把自身设为原作。")
             work.translation_of = target
-    if not work.title.strip():
+    if confirm and not work.title.strip():
         raise WorkflowEditError("作品题名不能为空。")
     work.clean()
     work.save()
@@ -197,6 +208,13 @@ def _save_work(edition: Edition, values: dict[str, Any]) -> None:
 
 
 def _save_bibliography(edition: Edition, values: dict[str, Any]) -> None:
+    if "journal_contents" in values:
+        from catalog.services.journal_issues import sync_journal_contents
+
+        try:
+            sync_journal_contents(edition, values["journal_contents"])
+        except ValueError as error:
+            raise WorkflowEditError(str(error)) from error
     publisher_authority_marker = object()
     publisher_authority_id = values.get(
         "publisher_authority_id",
@@ -217,7 +235,7 @@ def _save_bibliography(edition: Edition, values: dict[str, Any]) -> None:
                 pk=publisher_authority_id,
             ).first()
             if publisher_authority is None:
-                raise WorkflowEditError("出版社 authority 不存在。")
+                raise WorkflowEditError("出版社不存在。")
             edition.publisher_authority = publisher_authority
             if not str(edition.publisher or "").strip():
                 edition.publisher = publisher_authority.canonical_name
@@ -230,8 +248,10 @@ def _save_contributors(edition: Edition, values: dict[str, Any], actor) -> None:
     # leaving alternative candidates for later review.  The candidates remain
     # proposed and auditable; this save only replaces canonical Contribution
     # rows with the explicit form selection below.
-    rows = values.get("contributors", [])
-    people = _require_all(Person, [row["person_id"] for row in rows], "责任者")
+    if "contributors" not in values:
+        return
+    rows = values["contributors"]
+    people = _require_all(Person, [row["person_id"] for row in rows], "作者或贡献者")
     edition.contributions.select_for_update().all().delete()
     Contribution.objects.bulk_create(
         [
@@ -274,13 +294,13 @@ def apply_work_classification(work: Work, values: dict[str, Any], actor) -> None
     selected_disciplines = {row.pk for row in disciplines.values()}
     selected_subdisciplines = {row.pk for row in subdisciplines.values()}
     _reject_unselected_relations(
-        list(work.discipline_relations.select_for_update()),
+        list(work.discipline_relations.select_for_update()) if "disciplines" in values else [],
         selected_disciplines,
         "discipline_id",
         actor,
     )
     _reject_unselected_relations(
-        list(work.subdiscipline_relations.select_for_update()),
+        list(work.subdiscipline_relations.select_for_update()) if "subdisciplines" in values else [],
         selected_subdisciplines,
         "subdiscipline_id",
         actor,
@@ -353,7 +373,7 @@ def apply_work_knowledge(work: Work, values: dict[str, Any], actor) -> None:
             {**row, "node": node, "canonical_role": canonical_work_node_role(row["role"])}
         )
 
-    existing_topics = list(work.topic_relations.select_for_update())
+    existing_topics = list(work.topic_relations.select_for_update()) if "topics" in values else []
     _reject_unselected_relations(
         existing_topics,
         {row.pk for row in topics.values()},
@@ -387,6 +407,8 @@ def apply_work_knowledge(work: Work, values: dict[str, Any], actor) -> None:
         (row["node"].id, row["canonical_role"]) for row in mapped_theory_rows
     )
     for relation in work.node_relations.select_for_update():
+        if "nodes" not in values and "theories" not in values:
+            continue
         if (relation.node_id, relation.role) in selected_node_keys:
             continue
         if relation.status in {KnowledgePublicationStatus.PENDING, KnowledgePublicationStatus.DRAFT}:
@@ -501,7 +523,7 @@ def _save_reader(edition: Edition, values: dict[str, Any]) -> None:
 def _record_section_locks(edition: Edition, step_key: str, values: dict[str, Any], actor) -> None:
     fields_by_step = {
         "work": {field for field in WORK_FIELDS if not field.endswith("_id")} | {"translation_of"},
-        "bibliography": set(BIBLIOGRAPHY_FIELDS),
+        "bibliography": set(BIBLIOGRAPHY_FIELDS) | {"journal_contents"},
         "contributors": {"contributors"},
         "classification": {"disciplines", "subdisciplines"},
         "knowledge": {"theories", "topics", "nodes"},
@@ -517,7 +539,7 @@ def _record_section_locks(edition: Edition, step_key: str, values: dict[str, Any
             defaults={
                 "locked_by": actor,
                 "locked_value": locked_value,
-                "reason": f"2.8 馆藏工作流确认 {step_key}",
+                "reason": "管理员确认馆藏字段",
             },
         )
 
@@ -570,6 +592,46 @@ def _accept_matching_metadata_candidates(
     )
 
 
+def _register_confirmed_draft_entities(edition, *, actor, reviewed_fields, values, include_editorial_draft=False):
+    """Register only this editor's current confirmed relationship selections."""
+    if not getattr(actor, "pk", None):
+        return
+    from catalog.models import ScholarProfile
+    from catalog.services.field_assistant.service import _bundle_created_entity, _unique_named_slug
+    from catalog.services.field_decisions import ensure_publication_bundle
+    from catalog.services.knowledge_publication import confirmed_bundle_links
+
+    confirmed = set(edition.field_decisions.filter(
+        field_name__in=reviewed_fields, status="confirmed", confirmed_by=actor, confirmed_at__isnull=False,
+    ).values_list("field_name", flat=True))
+    policies = {
+        "person": (Person, {"authors", "translators", "chief_editors", "editors", "annotators", "photographers", "other_contributors"}),
+        "topic": (Topic, {"topics"}), "knowledge_node": (KnowledgeNode, {"theories"}),
+        "theory_school": (TheorySchool, {"theories"}), "publisher": (PublisherAuthority, {"publisher"}),
+    }
+    bundle = None
+    for (kind, identifier) in confirmed_bundle_links(edition, include_editorial_draft=include_editorial_draft):
+        model, fields = policies[kind]
+        fields = fields.intersection(confirmed)
+        if not fields:
+            continue
+        if kind != "publisher" and not any(identifier in {str(value) for value in values.get(field, [])} for field in fields):
+            continue
+        entity = model.objects.select_for_update().filter(pk=identifier).first()
+        if entity is None:
+            raise WorkflowEditError("刚确认的关联对象已经不存在，请刷新后重试。")
+        entity_status = entity.authority_status if isinstance(entity, Person) else getattr(entity, "editorial_status", getattr(entity, "status", "draft"))
+        if entity_status in {"verified", "published"}:
+            continue
+        if entity_status not in {"draft", "needs_review", "pending"}:
+            raise WorkflowEditError("关联对象已经下线或拒绝，不能随本书自动恢复。")
+        if isinstance(entity, Person) and not ScholarProfile.objects.filter(person=entity).exists():
+            ScholarProfile.objects.create(person=entity, slug=_unique_named_slug(ScholarProfile, entity.preferred_name), editorial_status="draft")
+        if bundle is None:
+            bundle = ensure_publication_bundle(edition, actor=actor)
+        _bundle_created_entity(bundle, entity, label=str(entity))
+
+
 @transaction.atomic
 def save_workflow_section(
     edition: Edition,
@@ -578,6 +640,7 @@ def save_workflow_section(
     *,
     actor,
     confirm_section: bool = True,
+    publishing_revision: bool = False,
 ) -> WorkflowSectionResult:
     if step_key not in {
         "work",
@@ -594,15 +657,18 @@ def save_workflow_section(
         .select_related("work")
         .get(pk=edition.pk)
     )
+    if not publishing_revision and edition.work.editions.filter(state=PublicationState.PUBLISHED).exists():
+        raise WorkflowEditError("已发布作品请先保存编辑草稿，再正式发布修改。")
     values = dict(values)
     expected_updated_at = values.pop("expected_updated_at", None)
     expected_work_updated_at = values.pop("expected_work_updated_at", None)
     note = values.pop("note", "")
     _check_expected(edition.updated_at, expected_updated_at, "当前版本")
     _check_expected(edition.work.updated_at, expected_work_updated_at, "当前作品")
+    before, _ = formal_field_values(edition)
 
     if step_key == "work":
-        _save_work(edition, values)
+        _save_work(edition, values, confirm=confirm_section)
     elif step_key == "bibliography":
         _save_bibliography(edition, values)
     elif step_key == "contributors":
@@ -615,10 +681,48 @@ def save_workflow_section(
         _save_reader(edition, values)
 
     edition.save()
+    after, _ = formal_field_values(edition)
+    changed_fields = {name for name in after if _json_safe(before.get(name)) != _json_safe(after[name])}
+    invalidate_dependent_fields(edition, changed_fields, actor=actor)
+    required = set(REQUIRED_FIELDS.get(edition.work.document_type, REQUIRED_FIELDS["book"]))
+    section_fields = set(SECTION_FIELDS.get(step_key, ()))
+    # A partial scalar PATCH confirms only supplied fields. Collection sections
+    # replace the explicit selection, so an empty optional role is a valid N/A.
+    reviewed_fields = section_fields.intersection(values)
+    if step_key == "contributors" and "contributors" in values:
+        reviewed_fields = section_fields
+    if step_key == "knowledge":
+        if "nodes" in values or "theories" in values:
+            reviewed_fields.add("theories")
+    if step_key == "bibliography" and "publisher_authority_id" in values:
+        reviewed_fields.add("publisher")
+    if step_key == "curation" and "skip" in values and confirm_section:
+        reviewed_fields.add("curation")
+    existing_decisions = {row.field_name: row for row in edition.field_decisions.all()}
+    for name in sorted((changed_fields & section_fields) | reviewed_fields):
+        value = _json_safe(after.get(name))
+        current = existing_decisions.get(name)
+        if not confirm_section and current is not None and name not in changed_fields:
+            continue
+        if confirm_section and field_value_present(value):
+            status = CatalogFieldDecision.Status.CONFIRMED
+        elif confirm_section and name not in required:
+            status = CatalogFieldDecision.Status.NOT_APPLICABLE
+        elif field_value_present(value):
+            status = CatalogFieldDecision.Status.NEEDS_REVIEW
+        else:
+            status = CatalogFieldDecision.Status.EMPTY
+        record_edition_field_decision(
+            edition, name, status=status, value=value, actor=actor,
+            provenance={**(dict(current.provenance or {}) if current else {}), "source": "manual_cataloging", "section": step_key},
+            evidence_summary=current.evidence_summary if current else None,
+            reason=note or ("管理员确认字段" if confirm_section else "保存编目草稿"),
+        )
     decision = None
     if confirm_section:
         _record_section_locks(edition, step_key, values, actor)
         _accept_matching_metadata_candidates(edition, step_key, values, actor)
+        _register_confirmed_draft_entities(edition, actor=actor, reviewed_fields=reviewed_fields, values=after)
         decision_value = (
             EditionWorkflowDecision.Decision.SKIPPED
             if step_key == "curation" and values.get("skip")
@@ -632,6 +736,47 @@ def save_workflow_section(
             note=note,
         )
     return WorkflowSectionResult(edition=edition, decision=decision)
+
+
+@transaction.atomic
+def save_editorial_workflow_section(edition, step_key, values, *, actor, confirm_section, **kwargs):
+    """Save one published-work draft and its field decisions atomically."""
+    from catalog.services.editorial_revision import save_workflow_editorial_revision
+
+    edition = Edition.objects.select_for_update().select_related("work").get(pk=edition.pk)
+    before, _ = formal_field_values(edition)
+    revision = save_workflow_editorial_revision(work_id=edition.work_id, actor=actor, **kwargs)
+    after, _ = formal_field_values(edition)
+    changed = {name for name in set(before) | set(after) if _json_safe(before.get(name)) != _json_safe(after.get(name))}
+    invalidate_dependent_fields(edition, changed, actor=actor)
+    reviewed = set(SECTION_FIELDS.get(step_key, ())).intersection(values)
+    if step_key == "contributors" and "contributors" in values:
+        reviewed.update(SECTION_FIELDS["contributors"])
+    if step_key == "knowledge" and ("nodes" in values or "theories" in values):
+        reviewed.add("theories")
+    if step_key == "bibliography" and "publisher_authority_id" in values:
+        reviewed.add("publisher")
+    required = set(REQUIRED_FIELDS.get(after.get("document_type"), REQUIRED_FIELDS["book"]))
+    for name in reviewed | changed:
+        if name not in changed and not confirm_section:
+            continue
+        value = _json_safe(after.get(name))
+        state = (
+            CatalogFieldDecision.Status.CONFIRMED if confirm_section and field_value_present(value)
+            else CatalogFieldDecision.Status.NOT_APPLICABLE if confirm_section and name not in required
+            else CatalogFieldDecision.Status.NEEDS_REVIEW if field_value_present(value)
+            else CatalogFieldDecision.Status.EMPTY
+        )
+        current = edition.field_decisions.filter(field_name=name).first()
+        record_edition_field_decision(
+            edition, name, status=state, value=value, actor=actor,
+            provenance={**(dict(current.provenance or {}) if current else {}), "source": "manual_cataloging", "section": step_key, "editorial_revision_id": str(revision.pk) if revision else None, "canonical_write_deferred": bool(revision)},
+            evidence_summary=current.evidence_summary if current else None,
+            reason="管理员确认字段" if confirm_section else "保存编目草稿",
+        )
+    if confirm_section:
+        _register_confirmed_draft_entities(edition, actor=actor, reviewed_fields=reviewed, values=after, include_editorial_draft=True)
+    return revision
 
 
 def intake_edition(item_id) -> tuple[UploadItem, Edition]:

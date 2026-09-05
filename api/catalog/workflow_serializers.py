@@ -31,7 +31,17 @@ class WorkSectionSerializer(WorkflowSectionSerializer):
     abstract = serializers.CharField(required=False, allow_blank=True)
 
 
+class JournalIssueArticleRowSerializer(serializers.Serializer):
+    id = serializers.UUIDField(required=False, allow_null=True)
+    article_work_id = serializers.UUIDField(required=False, allow_null=True)
+    title = serializers.CharField(max_length=600)
+    author_display = serializers.CharField(max_length=600, required=False, allow_blank=True, default="")
+    page_range = serializers.CharField(max_length=80, required=False, allow_blank=True, default="")
+    position = serializers.IntegerField(min_value=0, required=False)
+
+
 class BibliographySectionSerializer(WorkflowSectionSerializer):
+    journal_contents = JournalIssueArticleRowSerializer(many=True, required=False)
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
     publication_date = serializers.DateField(required=False, allow_null=True)
     publication_year = serializers.IntegerField(min_value=1000, max_value=2100, required=False, allow_null=True)

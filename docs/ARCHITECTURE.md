@@ -1,6 +1,36 @@
 # Social Theory Library 架构
 
-更新日期为 2026-08-28。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
+更新日期为 2026-09-05。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
+
+## 3.0.4 智能编目与知识发布
+
+3.0.4 沿用现有 Django、Next/Vinext、PostgreSQL、Redis、Celery、Meilisearch 和 PaddleOCR。它没有建立第二套书库、候选系统或 RAG。主要变化是明确正式馆藏的发布边界，并让后台围绕字段与馆内对象工作。
+
+Knowledge Studio 的普通入口 `/admin/knowledge` 使用现有字段助手与编辑事务，按对象字段展示建议。只读展示适配将当前草稿中的关联 ID 解析成名称，不改变正式关系。原来源、候选聚合和派生状态操作保留在 `/admin/system-health/knowledge` 诊断入口，沿用同一受保护 API。智能处理状态和重新处理复用发布事件控件，不建立第二套任务服务。
+
+数据职责分为三层。
+
+- 临时证据层保存 OCR 初步结果、联网资料、结构化来源、AI 建议、未采用候选和拒绝反馈。这里的内容只帮助管理员判断。
+- 正式馆藏层保存管理员确认并正式发布的 Work、Edition、Person、Contribution、Topic、KnowledgeNode、学科、版本字段、说明和正文引用。它是全馆唯一事实来源。
+- 派生智能层保存 QueryLexicon、全文文档、Semantic passage、观点材料、Ask/RAG 检索材料、关系读模型、推荐和缓存。这些结果可从正式馆藏重建，也不能反向修改正式事实。
+
+`CatalogFieldDecision` 记录字段的 empty、suggested、needs_review、confirmed、conflict、not_applicable 和 stale 状态。字段依赖服务在上游值变化后失效机器建议。已经人工确认的字段只会标记需要复核，不会被删除或覆盖。章节状态由字段状态聚合，步骤访问记录不再是发布事实。
+
+统一字段助手位于管理员字段与现有馆内搜索、OCR、MetadataCandidate、EntityResolutionCandidate、EnrichmentCandidate 和结构化来源之间。它按字段策略聚合相同实体或值，默认返回三项，不向普通 Admin 输出 confidence、source score 或候选表名。采用动作在同一数据库事务中写入字段或正式草稿关系、字段决定、候选决定、依赖失效和审计。失败时整次采用回滚。
+
+即时创建的 Person、Topic、KnowledgeNode 和 PublisherAuthority 会先搜索馆内重复对象，再创建草稿对象并关联当前 Edition。`PublicationBundle` 保存这些对象与当前编目上下文。新实体在父作品正式发布前不具备公开资格。
+
+每次首次发布、正式更新、撤回或正文版本变化都会创建 `CatalogPublicationRevision`。revision 保存正式快照、相关实体、DocumentRevision、Reader Asset、metadata ready、fulltext ready 和来源信息。`Edition.active_catalog_revision` 是公开服务使用的稳定指针。新 revision 的必要派生处理失败时，旧活动 revision 继续服务。
+
+正式发布事务同时写入 `KnowledgePublicationEvent` 和逐消费者 `KnowledgeProjectionDelivery`。事件携带对象、正式 revision、变化字段、相关实体、正文版本和发布状态。现有 ProjectionState、QueryLexicon generation、全文、Semantic、观点、Ask/RAG 与推荐服务作为幂等消费者继续复用。字段影响映射会跳过无关工作，例如只换封面不会重跑 OCR 或 embedding。
+
+公开作品 serializer、全文入口、Reader、Semantic、观点检索和 Ask 使用统一的活动 revision 资格。书目公开需要 metadata ready；正文智能检索还需要 fulltext ready，并且 Asset 与 DocumentRevision 必须和活动 revision 一致。OCR 可以在作品发布后继续处理，质量不足的文本不会进入公开正文智能能力。
+
+QueryLexicon registry v2 只从正式 Person 姓名和确认别名、已发布 KnowledgeNode、Topic、Discipline、Subdiscipline，以及已有活动馆藏 revision 的作品题名生成。草稿、联网候选、AI 猜测、拒绝记录和 PDF 自动别名不进入正式词典。
+
+Admin Workbench 保留现有视觉语言。字段旁提供智能查找、创建并关联和查看依据。贡献角色使用作者、译者、主编、编者、校注、摄影和其他贡献者。紧凑预览与完整草稿预览继续复用公开 `WorkDetailView`；完整预览隐藏 Admin 侧栏，只保留草稿提示与返回编辑。
+
+catalog 0040 是 additive migration。它建立新表和指针，并为能够证明已发布的历史 Edition 回填初始 revision。它不会自动合并实体、接受候选、修改人工馆藏、执行 OCR 或重建活动索引。详细升级门槛见 [V3.0.4_UPGRADE.md](V3.0.4_UPGRADE.md)，完整审计见 [V3.0.4_ARCHITECTURE.md](V3.0.4_ARCHITECTURE.md)。
 
 当前 3.0.3 分支为 `codex/v3.0.3-public-knowledge-control`。它从已部署 3.0.2 的完整 tracked tree `7ff73f028a1f97d1678faff8008fdc841a8c4447` 开始。源码冻结前，公网仍运行 3.0.2。最终切换结果以 `storage/backups/pre-v303-cutover-20260828-012030/deploy-record` 和公网 readiness 为准。
 

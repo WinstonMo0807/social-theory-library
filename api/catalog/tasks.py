@@ -509,6 +509,24 @@ def recover_projection_queue():
 
 
 @shared_task(ignore_result=True)
+def process_knowledge_publication_event(event_id):
+    from catalog.services.knowledge_publication import process_knowledge_event
+
+    event = process_knowledge_event(str(event_id))
+    return {
+        "event_id": str(event_id),
+        "status": event.status if event is not None else "missing",
+    }
+
+
+@shared_task(ignore_result=True)
+def recover_knowledge_publication_events():
+    from catalog.services.knowledge_publication import recover_knowledge_events
+
+    return recover_knowledge_events(limit=50)
+
+
+@shared_task(ignore_result=True)
 def process_query_lexicon_events():
     return process_pending_events()
 

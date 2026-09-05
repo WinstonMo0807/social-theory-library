@@ -1,4 +1,5 @@
 from hashlib import sha256
+from typing import Any
 
 from django.conf import settings
 from django.db import transaction
@@ -8,17 +9,25 @@ from catalog.models import (
     Asset,
     CuratedClaim,
     Edition,
+    KnowledgeNode,
     OcrStatus,
     PageLabelStatus,
     PublicationEvent,
     PublicationState,
+    PublicationBundle,
+    PublicationBundleItem,
+    Person,
+    PublisherAuthority,
     RecommendationPolicy,
     RecommendationSnapshot,
-    ReviewStatus,
+    ScholarProfile,
     SemanticIndexStatus,
+    TheorySchool,
+    Topic,
 )
 from catalog.services.claims.curation import publish_work_curated_claims
-from catalog.services.dependency_engine import record_canonical_change
+from catalog.services.field_decisions import publication_field_check
+from catalog.services.knowledge_publication import confirmed_bundle_links, create_catalog_publication_event
 from distribution.models import CloudObject
 
 
@@ -43,18 +52,103 @@ def _asset_storage_readable(asset: Asset | None) -> bool:
         return False
 
 
-def publication_preflight(edition: Edition) -> dict[str, list[str]]:
-    """Return technical blockers separately from editorial/process warnings.
+_FIELD_LABELS = {
+    "file": "文件", "title": "作品名称", "document_type": "资源类型",
+    "language": "正文语言", "authors": "作者", "translators": "译者",
+    "publisher": "出版社", "publication_year": "出版年份", "journal_title": "期刊名",
+    "volume": "卷", "issue": "期", "degree_institution": "学位授予单位",
+    "report_institution": "报告机构", "disciplines": "学科", "subdisciplines": "分支学科",
+    "topics": "主题", "theories": "理论传统", "abstract": "简介", "cover": "封面",
+}
 
-    Publication is an administrator decision.  OCR, semantic indexing, page
-    labels and editorial completeness are therefore observable warnings and
-    background work, not aliases for publication state.
+
+def _publication_bundle_check(edition: Edition) -> dict[str, Any]:
+    """Check the actual entities as well as the saved publication checklist."""
+    bundles = edition.publication_bundles.filter(status=PublicationBundle.Status.DRAFT)
+    items = list(PublicationBundleItem.objects.filter(bundle__in=bundles).order_by("created_at"))
+    blockers: list[str] = []
+    summary: list[dict[str, str]] = []
+    confirmed_links = confirmed_bundle_links(edition, include_editorial_draft=True)
+    models = {
+        "person": (Person, "preferred_name", "学者"),
+        "topic": (Topic, "name", "主题"),
+        "knowledge_node": (KnowledgeNode, "canonical_name_zh", "理论节点"),
+        "theory_school": (TheorySchool, "name", "理论传统"),
+        "publisher": (PublisherAuthority, "canonical_name", "出版社"),
+    }
+    for item in items:
+        if item.action == PublicationBundleItem.Action.CREATE and (item.object_type, str(item.object_id)) not in confirmed_links:
+            continue
+        label = item.label or "未命名对象"
+        if item.blockers:
+            blockers.append(f"{label}仍有待处理的发布问题")
+        if item.action != PublicationBundleItem.Action.CREATE:
+            continue
+        target = models.get(str(item.object_type).casefold())
+        if target is None:
+            blockers.append(f"{label}无法随本次馆藏发布，请先完成对象资料")
+            continue
+        model, name_field, kind_label = target
+        entity = model.objects.filter(pk=item.object_id).first()
+        name = str(getattr(entity, name_field, "") or "").strip()
+        if isinstance(entity, KnowledgeNode):
+            name = name or entity.canonical_name_en.strip()
+        if entity is None or not name or not item.minimum_complete:
+            blockers.append(f"新增{kind_label}{label}尚未达到最低完整性要求")
+            continue
+        entity_status = getattr(entity, "editorial_status", getattr(entity, "status", "draft"))
+        if not isinstance(entity, Person) and entity_status not in {"draft", "pending", "published"}:
+            blockers.append(f"新增{kind_label}{name}已下线或拒绝，不能自动恢复")
+        if isinstance(entity, Person):
+            if entity.authority_status in {
+                Person.AuthorityStatus.REJECTED,
+                Person.AuthorityStatus.MERGED,
+                Person.AuthorityStatus.ARCHIVED,
+            }:
+                blockers.append(f"新增学者{name}当前状态不能发布")
+            if not ScholarProfile.objects.filter(person=entity).exists():
+                blockers.append(f"新增学者{name}缺少学者资料")
+            elif ScholarProfile.objects.filter(person=entity).exclude(editorial_status__in=["draft", "pending", "published"]).exists():
+                blockers.append(f"新增学者{name}的资料已下线，不能自动恢复")
+        summary.append({"kind": kind_label, "label": name, "object_id": str(item.object_id)})
+    bundled = {(row.object_type, str(row.object_id)) for row in items if row.action == PublicationBundleItem.Action.CREATE}
+    for object_type, identifier in confirmed_links:
+        if (object_type, identifier) in bundled or object_type not in models:
+            continue
+        model, name_field, kind_label = models[object_type]
+        entity = model.objects.filter(pk=identifier).first()
+        if entity is None:
+            continue
+        state = entity.authority_status if isinstance(entity, Person) else getattr(entity, "editorial_status", getattr(entity, "status", "draft"))
+        if state not in {"verified", "published"}:
+            blockers.append(f"关联的{kind_label}{getattr(entity, name_field, '')}尚未加入本次新增对象，请在对应字段重新确认关联")
+    return {"items": summary, "new_entities_count": len(summary), "blockers": blockers}
+
+
+def publication_preflight(edition: Edition) -> dict[str, Any]:
+    """Derive publication readiness from fields, relations, files and the bundle.
+
+    Optional OCR and intelligence processing can finish after publication.
+    Neither task completion nor visited workflow steps can confirm a field.
     """
 
     blockers: list[str] = []
     warnings: list[str] = []
     background_tasks: list[str] = []
     work = edition.work
+    field_check = publication_field_check(edition)
+    for problem in field_check["blockers"]:
+        label = _FIELD_LABELS.get(problem["field"], "馆藏字段")
+        blockers.append(
+            f"{label}存在冲突，请先处理"
+            if problem["code"] == "field_conflict"
+            else f"{label}尚未填写或确认"
+        )
+    for problem in field_check["warnings"]:
+        label = _FIELD_LABELS.get(problem["field"], "馆藏字段")
+        warnings.append(f"{label}的相关信息已变化，建议重新检查")
+    bundle_check = _publication_bundle_check(edition)
+    blockers.extend(bundle_check["blockers"])
     original = edition.assets.filter(
         kind=Asset.Kind.ORIGINAL,
         status=Asset.Status.READY,
@@ -96,14 +190,10 @@ def publication_preflight(edition: Edition) -> dict[str, list[str]]:
         edition.report_institution.strip() or edition.publisher.strip()
     ):
         warnings.append("研究报告责任机构尚未补全")
-    if edition.metadata_confidence < settings.AUTO_PUBLISH_MIN_CONFIDENCE:
-        warnings.append("元数据置信度低于自动处理阈值")
     if not edition.citation_data:
         warnings.append("引用数据尚未生成")
     if not edition.canonical_filename:
         warnings.append("规范文件名尚未生成")
-    if edition.review_status != ReviewStatus.COMPLETED or edition.review_progress < 100:
-        warnings.append(f"人工复核尚未完成（{edition.review_progress}%）")
     if edition.ocr_status in {OcrStatus.PENDING, OcrStatus.RUNNING}:
         warnings.append("OCR 尚未完成，扫描件暂时不能选择文字")
         background_tasks.append("OCR")
@@ -115,8 +205,8 @@ def publication_preflight(edition: Edition) -> dict[str, list[str]]:
         warnings.append("引用页码尚未完成校对")
         background_tasks.append("页码识别")
     if edition.semantic_index_status != SemanticIndexStatus.READY:
-        warnings.append("语义索引尚未就绪，观点检索将使用关键词降级")
-        background_tasks.append("语义索引")
+        warnings.append("正文智能检索尚未就绪，作品仍可正常阅读")
+        background_tasks.append("正文智能检索")
     if edition.search_indexed_at is None:
         warnings.append("全文索引尚未确认就绪")
         background_tasks.append("全文索引")
@@ -125,6 +215,7 @@ def publication_preflight(edition: Edition) -> dict[str, list[str]]:
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
         "background_tasks": list(dict.fromkeys(background_tasks)),
+        "publication_bundle": bundle_check,
     }
 
 
@@ -169,6 +260,7 @@ def publish_edition(
     allow_low_confidence: bool = False,
     confirm_warnings: bool = False,
     force_update: bool = False,
+    changed_fields: list[str] | tuple[str, ...] | None = None,
 ) -> Edition:
     edition = Edition.objects.select_for_update().select_related("work").get(pk=edition.pk)
     has_curated_drafts = CuratedClaim.objects.filter(
@@ -229,23 +321,33 @@ def publish_edition(
         ]
     )
     published_claims = publish_work_curated_claims(work=edition.work, actor=actor)
-    record_canonical_change(
-        object_type="edition",
-        object_id=edition.id,
-        change_kind=("update" if is_public_update else "publish"),
-        changed_fields=["state", "published_at", "curated_claims"],
-        actor=actor,
-        idempotency_key=f"publication-domain:{event.id}",
-    )
+    publication_fields = list(changed_fields) if changed_fields is not None else ["catalog_publish"]
+    if published_claims:
+        publication_fields = sorted(set(publication_fields) | {"curated_claims"})
+    try:
+        knowledge_event = create_catalog_publication_event(
+            edition,
+            event_type=(
+                "catalog_updated" if is_public_update else "catalog_published"
+            ),
+            changed_fields=publication_fields,
+            actor=actor,
+            idempotency_key=f"catalog-publication:{event.id}",
+        )
+    except ValueError as exc:
+        raise PublicationBlocked([str(exc)]) from exc
     event.completed_at = now
     event.payload = {
         "state": PublicationState.PUBLISHED,
         "preflight": preflight,
         "warnings_confirmed": bool(preflight["warnings"]),
         "curated_claim_ids": [str(claim.id) for claim in published_claims],
+        "knowledge_event_id": str(knowledge_event.id),
+        "catalog_revision_id": str(knowledge_event.catalog_revision_id),
     }
     event.save(update_fields=["completed_at", "payload", "updated_at"])
     transaction.on_commit(invalidate_public_recommendations)
+    edition.refresh_from_db()
     return edition
 
 
@@ -266,13 +368,19 @@ def withdraw_edition(edition: Edition, actor=None, reason: str = "") -> Edition:
     edition.state = PublicationState.WITHDRAWN
     edition.withdrawn_at = now
     edition.save(update_fields=["state", "withdrawn_at", "updated_at"])
-    record_canonical_change(
-        object_type="edition",
-        object_id=edition.id,
-        change_kind="withdraw",
-        changed_fields=["state", "withdrawn_at"],
+    knowledge_event = create_catalog_publication_event(
+        edition,
+        event_type="catalog_withdrawn",
+        changed_fields=["catalog_withdraw"],
         actor=actor,
-        idempotency_key=f"publication-domain:{event.id}",
+        idempotency_key=f"catalog-publication:{event.id}",
     )
+    event.payload = {
+        **dict(event.payload or {}),
+        "knowledge_event_id": str(knowledge_event.id),
+        "catalog_revision_id": str(knowledge_event.catalog_revision_id),
+    }
+    event.save(update_fields=["payload", "updated_at"])
     transaction.on_commit(invalidate_public_recommendations)
+    edition.refresh_from_db()
     return edition

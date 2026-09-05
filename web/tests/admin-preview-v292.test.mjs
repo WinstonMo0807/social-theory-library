@@ -14,7 +14,28 @@ test("public work and authenticated preview reuse one presentational component",
   assert.match(previewRoute, /<AdminWorkPagePreview editionId=\{editionId\} footer=\{<SiteFooter \/>\}/);
   assert.match(previewPage, /<WorkDetailView[\s\S]*preview=\{\{/);
   assert.match(previewPage, /\/catalog\/admin\/page-preview\/editions\/\$\{editionId\}\//);
-  assert.match(view, /管理员页面预览/);
+  assert.match(view, /草稿预览/);
+  assert.match(view, /返回编辑/);
+  assert.match(previewPage, /returnHref: payload\.return_url/);
+});
+
+test("full draft preview removes the normal admin navigation shell", async () => {
+  const shell = await readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8");
+  assert.match(shell, /preview\\\/works\\\/\[\^\/\]\+/);
+  assert.match(shell, /\{!focusMode \? <aside/);
+  assert.match(shell, /\{!focusMode \? <header/);
+});
+
+test("workbench opens a compact preview in the existing inspector", async () => {
+  const [editor, inspector] = await Promise.all([
+    readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin/inspector/workflow-inspector.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(editor, /kind: "page_preview"/);
+  assert.doesNotMatch(editor, /window\.open\(previewUrl/);
+  assert.match(inspector, /打开完整前台预览/);
+  assert.doesNotMatch(inspector, /Math\.round\(candidate\.confidence/);
+  assert.doesNotMatch(inspector, /词典影响/);
 });
 
 test("admin preview keeps async server components outside the client module graph", async () => {

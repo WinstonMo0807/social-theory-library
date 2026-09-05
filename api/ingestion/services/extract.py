@@ -362,6 +362,10 @@ def persist_pages(
     blocks and passages are replaced.
     """
 
+    from catalog.services.document_intelligence import document_asset_is_published
+
+    if document_asset_is_published(asset):
+        raise ValueError("已发布正文不能原位改写，请先创建正文草稿文件。")
     page_indexes = {page.index for page in pages}
     persisted = {}
     for extracted in pages:

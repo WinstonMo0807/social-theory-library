@@ -42,7 +42,6 @@ from catalog.models import (
     ReviewStatus,
     ScholarProfile,
     SemanticIndexJob,
-    SemanticIndexStatus,
     Subdiscipline,
     TheorySchool,
     Topic,
@@ -61,7 +60,6 @@ from catalog.services.knowledge import demote_orphaned_knowledge_objects
 from catalog.services.covers import generate_cover_candidates, generate_recommendation_image
 from catalog.services.semantic_indexing import (
     queue_semantic_job,
-    remove_semantic_asset,
     request_semantic_job_pause,
     resume_semantic_job,
 )
@@ -123,7 +121,6 @@ from .services.metadata import authority_verification_links
 from .services.metadata_import import import_bibliographic_metadata
 from .services.metadata_import_formats import MetadataImportError
 from .services.provider_gateway import refresh_remote_candidates
-from .services.indexing import index_asset, remove_asset_from_index
 from .services.dispatch import schedule_upload_item
 from .services.pipeline import refresh_batch
 from .services.prerequisites import (
@@ -167,7 +164,6 @@ from .services.review_tasks import ReviewTaskActionError, apply_review_task_acti
 from .services.publication import (
     PublicationBlocked,
     PublicationWarningsRequireConfirmation,
-    invalidate_public_recommendations,
     publication_preflight,
     publication_readiness,
     publish_edition,
@@ -395,10 +391,6 @@ def _schedule_publication_background_tasks(item, asset, actor) -> tuple[list[dic
     except Exception as exc:
         warnings.append(f"OCR 任务排队失败：{str(exc)[:500]}")
 
-    text_ready = edition.ocr_status in {
-        OcrStatus.NOT_REQUIRED,
-        OcrStatus.SUCCEEDED,
-    }
     if edition.page_label_status != PageLabelStatus.READY:
         try:
             remember(
@@ -412,15 +404,8 @@ def _schedule_publication_background_tasks(item, asset, actor) -> tuple[list[dic
             )
         except Exception as exc:
             warnings.append(f"页码任务排队失败：{str(exc)[:500]}")
-    if text_ready:
-        if edition.semantic_index_status != SemanticIndexStatus.READY:
-            try:
-                remember(
-                    "semantic_index",
-                    queue_semantic_job(asset, force=False, actor=actor),
-                )
-            except Exception as exc:
-                warnings.append(f"语义索引任务排队失败：{str(exc)[:500]}")
+    # Public intelligence is scheduled by the committed publication event.
+    # OCR and page-label jobs remain independently resumable preparation work.
     return scheduled, warnings
 
 
@@ -1683,16 +1668,17 @@ class MetadataReviewView(APIView):
         data = serializer.validated_data
         work = edition.work
         was_published = edition.state == PublicationState.PUBLISHED
-        if was_published:
+        if was_published or work.editions.filter(state=PublicationState.PUBLISHED).exists():
             return Response(
                 {
                     "detail": (
-                        "已发布文献不能再通过 legacy metadata review 直接修改。"
-                        "请在 Maintenance Workbench 创建 EditorialRevision 并预览发布。"
+                        "该作品已有公开版本，请在馆藏编辑页保存修改草稿，"
+                        "确认后再正式发布。"
                     ),
                     "code": "editorial_revision_required",
                     "work_id": str(work.id),
                     "edition_id": str(edition.id),
+                    "maintenance_url": f"/admin/library/works/{work.id}?edition={edition.id}",
                 },
                 status=status.HTTP_409_CONFLICT,
             )
@@ -2207,24 +2193,7 @@ class MetadataReviewView(APIView):
                     lambda asset=normalized: generate_recommendation_image(asset),
                     robust=True,
                 )
-        if was_published and normalized:
-            transaction.on_commit(
-                invalidate_public_recommendations,
-                robust=True,
-            )
-            transaction.on_commit(
-                lambda asset=normalized: index_asset(asset, is_public=True),
-                robust=True,
-            )
-            transaction.on_commit(
-                lambda asset=normalized: queue_semantic_job(
-                    asset,
-                    force=True,
-                    actor=request.user,
-                ),
-                robust=True,
-            )
-        elif data["retry_publication"]:
+        if data["retry_publication"]:
             transaction.on_commit(
                 lambda: _enqueue_review_processing(str(item.id)),
                 robust=True,
@@ -2273,6 +2242,18 @@ class PublicationPlaceReviewView(APIView):
             results = detect_publication_places(asset, force=True)
             return Response({"results": [serialize_publication_place_evidence(value) for value in results]})
         if action in {"confirm", "correct"}:
+            if item.edition.state == PublicationState.PUBLISHED:
+                return Response(
+                    {
+                        "detail": "请在馆藏编辑页修改出版地，确认修改草稿后再发布。",
+                        "code": "editorial_revision_required",
+                        "maintenance_url": (
+                            f"/admin/library/works/{item.edition.work_id}"
+                            f"?edition={item.edition_id}#bibliography"
+                        ),
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
             evidence = get_object_or_404(
                 PublicationPlaceEvidence,
                 pk=request.data.get("evidence_id"),
@@ -2636,12 +2617,12 @@ class PublishUploadItemView(APIView):
         preflight = publication_preflight(item.edition)
         if preflight["blockers"]:
             return Response(
-                {"detail": "存在阻止发布的技术问题。", **preflight},
+                {"detail": "还有信息需要处理，暂时无法发布。", **preflight},
                 status=409,
             )
         if asset is None:
             return Response(
-                {"detail": "存在阻止发布的技术问题。", "blockers": ["公开阅读锚点文件未就绪"]},
+                {"detail": "阅读文件尚未就绪，暂时无法发布。", "blockers": ["阅读文件未就绪"]},
                 status=409,
             )
         confirmation = request.data.get("confirm_warnings")
@@ -2667,7 +2648,7 @@ class PublishUploadItemView(APIView):
                 item,
                 UploadItem.WorkflowState.INDEXING,
                 actor=request.user,
-                reason="刷新公开索引",
+                reason="准备正式发布",
             )
             published_edition = publish_edition(
                 item.edition,
@@ -2681,10 +2662,10 @@ class PublishUploadItemView(APIView):
                 item,
                 UploadItem.WorkflowState.NEEDS_REVIEW,
                 actor=request.user,
-                reason="发布预检出现技术阻断",
+                reason="发布前检查发现未完成信息",
                 force=True,
             )
-            return Response({"detail": "存在阻止发布的技术问题。", "blockers": exc.reasons}, status=409)
+            return Response({"detail": "还有信息需要处理，暂时无法发布。", "blockers": exc.reasons}, status=409)
         except PublicationWarningsRequireConfirmation as exc:
             transition_upload_item(
                 item,
@@ -2697,21 +2678,7 @@ class PublishUploadItemView(APIView):
                 {"detail": "发布前请确认警告。", "warnings": exc.warnings, "confirmation_required": True},
                 status=409,
             )
-        index_warning = ""
-        try:
-            index_asset(asset, is_public=True)
-            item.edition.search_indexed_at = timezone.now()
-            item.edition.save(update_fields=["search_indexed_at", "updated_at"])
-        except Exception as exc:
-            index_warning = str(exc)[:2000]
-            AuditEvent.objects.create(
-                actor=request.user,
-                action="public_index_refresh_failed",
-                object_type="Edition",
-                object_id=str(item.edition_id),
-                after={"error": index_warning, "publication_preserved": True},
-                request_ip=_request_ip(request),
-            )
+        item.edition = published_edition
         item.status = UploadItem.Status.PUBLISHED
         item.stage_progress = 100
         transition_upload_item(
@@ -2743,7 +2710,7 @@ class PublishUploadItemView(APIView):
             {
                 "detail": "文献已发布。",
                 "preflight": preflight,
-                "index_warning": index_warning,
+                "intelligence_status": published_edition.intelligence_status,
                 "scheduled_tasks": scheduled_tasks,
                 "background_warnings": background_warnings,
             }
@@ -2760,16 +2727,6 @@ class WithdrawUploadItemView(APIView):
         if item.edition is None:
             return Response({"detail": "该上传记录没有可下架的文献。"}, status=409)
         edition = withdraw_edition(item.edition, actor=request.user, reason=serializer.validated_data.get("reason", ""))
-        index_warnings = []
-        for asset in edition.assets.filter(kind=Asset.Kind.NORMALIZED):
-            try:
-                remove_asset_from_index(asset)
-            except Exception as exc:
-                index_warnings.append(f"全文索引移除失败：{str(exc)[:500]}")
-            try:
-                remove_semantic_asset(str(asset.id))
-            except Exception as exc:
-                index_warnings.append(f"语义索引移除失败：{str(exc)[:500]}")
         affected_batches = list(
             UploadBatch.objects.filter(items__edition=edition).distinct()
         )
@@ -2786,22 +2743,10 @@ class WithdrawUploadItemView(APIView):
             related_item.save(update_fields=["status", "updated_at"])
         for batch in affected_batches:
             refresh_batch(batch)
-        if index_warnings:
-            AuditEvent.objects.create(
-                actor=request.user,
-                action="withdraw_index_cleanup_warning",
-                object_type="Edition",
-                object_id=str(edition.id),
-                after={
-                    "warnings": index_warnings,
-                    "withdrawal_preserved": True,
-                },
-                request_ip=_request_ip(request),
-            )
         return Response(
             {
-                "detail": "文献已下架。公开接口会立即按发布状态排除该馆藏，PDF、OCR、索引记录和云端文件均已保留。",
-                "index_warnings": index_warnings,
+                "detail": "文献已下架，已退出公开阅读和检索。原始文件与历史记录仍保留。",
+                "intelligence_status": edition.intelligence_status,
             }
         )
 

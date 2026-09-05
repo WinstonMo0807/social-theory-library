@@ -15,12 +15,17 @@ from django.utils import timezone
 
 from catalog.models import (
     Asset,
+    CatalogPublicationRevision,
     DerivedClaim,
     DocumentRevision,
     ProjectionState,
-    PublicationState,
 )
 from catalog.services.evidence_envelope import evidence_span_envelope
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_revision_q,
+    public_editions,
+)
 from catalog.services.semantic_search import YEAR_FILTERS, viewer_access_statuses
 from ingestion.services.indexing import _headers, _wait_task
 
@@ -40,6 +45,7 @@ SEARCHABLE_ATTRIBUTES = [
 ]
 FILTERABLE_ATTRIBUTES = [
     "claim_id",
+    "catalog_revision_id",
     "document_revision_id",
     "evidence_span_id",
     "asset_id",
@@ -62,6 +68,7 @@ FILTERABLE_ATTRIBUTES = [
 DISPLAYED_ATTRIBUTES = [
     "id",
     "claim_id",
+    "catalog_revision_id",
     "document_revision_id",
     "evidence_span_id",
     "asset_id",
@@ -158,7 +165,21 @@ def ensure_claim_index() -> None:
     _wait_task(updated.json())
 
 
-def _approved_contributors(claim: DerivedClaim) -> tuple[list[str], list[str]]:
+def _approved_contributors(
+    claim: DerivedClaim,
+    snapshot: dict | None = None,
+) -> tuple[list[str], list[str]]:
+    if snapshot:
+        rows = [
+            (
+                str(row.get("person_id") or (row.get("person") or {}).get("id") or ""),
+                str((row.get("person") or {}).get("preferred_name") or row.get("name") or ""),
+            )
+            for row in snapshot.get("contributions") or []
+            if isinstance(row, dict)
+            and (row.get("person_id") or (row.get("person") or {}).get("id"))
+        ]
+        return [row[0] for row in rows], [row[1] for row in rows]
     rows = list(
         claim.edition.contributions.filter(approved=True)
         .order_by("order")
@@ -167,7 +188,7 @@ def _approved_contributors(claim: DerivedClaim) -> tuple[list[str], list[str]]:
     return [str(row[0]) for row in rows], [str(row[1]) for row in rows]
 
 
-def serialize_claim_document(claim: DerivedClaim) -> dict:
+def serialize_claim_document(claim: DerivedClaim, *, catalog_revision=None) -> dict:
     """Serialize a claim only when its PDF locator is still valid."""
 
     revision = claim.document_revision
@@ -177,29 +198,46 @@ def serialize_claim_document(claim: DerivedClaim) -> dict:
         raise ValueError("claim primary evidence belongs to another document revision")
     if evidence.page.asset_id != asset.id:
         raise ValueError("claim evidence page belongs to another asset")
-    author_ids, authors = _approved_contributors(claim)
+    formal_revision = catalog_revision or claim.edition.active_catalog_revision
+    if catalog_revision is None and formal_revision and formal_revision.document_revision_id != revision.pk:
+        formal_revision = None
+    snapshot = formal_revision.snapshot if formal_revision else {}
+    namespace = str((formal_revision.provenance or {}).get("claim_index_revision_id") or "legacy") if formal_revision else "legacy"
+    if catalog_revision and (
+        catalog_revision.edition_id != claim.edition_id
+        or catalog_revision.document_revision_id != revision.pk
+        or catalog_revision.reader_asset_id != asset.pk
+    ):
+        raise ValueError("观点与捕获的馆藏正文修订不一致。")
+    author_ids, authors = _approved_contributors(claim, snapshot)
     envelope = evidence_span_envelope(evidence)
     is_public = (
-        claim.edition.state == PublicationState.PUBLISHED
+        formal_revision is not None
+        and claim.edition.state == "published"
+        and formal_revision.status in {"active", "preparing"}
+        and (formal_revision.fulltext_ready or (formal_revision.provenance or {}).get("requested_fulltext_ready"))
         and claim.edition.is_primary
+        and formal_revision.document_revision_id == revision.id
         and asset.kind == Asset.Kind.NORMALIZED
         and asset.status == Asset.Status.READY
-        and asset.is_current
     )
+    work_values = snapshot.get("work") or {}
+    edition_values = snapshot.get("edition") or {}
     return {
-        "id": str(claim.id),
+        "id": f"{namespace}_{claim.id}" if namespace != "legacy" else str(claim.id),
         "claim_id": str(claim.id),
+        "catalog_revision_id": namespace,
         "document_revision_id": str(revision.id),
         "evidence_span_id": str(evidence.id),
         "asset_id": str(asset.id),
         "edition_id": str(claim.edition_id),
         "work_id": str(claim.work_id),
-        "title": claim.work.title,
+        "title": work_values.get("title") or "未题名",
         "authors": authors,
         "author_ids": author_ids,
-        "document_type": claim.work.document_type,
-        "language": evidence.language or claim.work.language,
-        "publication_year": claim.edition.publication_year,
+        "document_type": work_values.get("document_type") or "",
+        "language": evidence.language or work_values.get("language") or "",
+        "publication_year": edition_values.get("publication_year"),
         "proposition": claim.proposition,
         "subject": claim.subject,
         "predicate": claim.predicate,
@@ -229,7 +267,7 @@ def serialize_claim_document(claim: DerivedClaim) -> dict:
     }
 
 
-def _fetch_revision_document_ids(revision_id: str) -> set[str]:
+def _fetch_revision_document_ids(revision_id: str, *, catalog_namespace: str = "") -> set[str]:
     uid = claim_index_uid()
     offset = 0
     limit = 1000
@@ -239,7 +277,12 @@ def _fetch_revision_document_ids(revision_id: str) -> set[str]:
             f"{_base_url()}/indexes/{uid}/documents/fetch",
             headers=_headers(),
             json={
-                "filter": f'document_revision_id = {json.dumps(str(revision_id))}',
+                "filter": f'document_revision_id = {json.dumps(str(revision_id))}' + (
+                    ' AND (catalog_revision_id = "legacy" OR catalog_revision_id NOT EXISTS)'
+                    if catalog_namespace == "legacy" else
+                    f' AND catalog_revision_id = {json.dumps(catalog_namespace)}'
+                    if catalog_namespace else ""
+                ),
                 "offset": offset,
                 "limit": limit,
                 "fields": ["id"],
@@ -258,7 +301,7 @@ def _fetch_revision_document_ids(revision_id: str) -> set[str]:
         offset += len(rows)
 
 
-def _sync_claim_documents(revision_id: str, documents: list[dict]) -> dict:
+def _sync_claim_documents(revision_id: str, documents: list[dict], *, catalog_namespace: str = "") -> dict:
     ensure_claim_index()
     uid = claim_index_uid()
     task = None
@@ -273,17 +316,18 @@ def _sync_claim_documents(revision_id: str, documents: list[dict]) -> dict:
         task = _wait_task(response.json(), timeout=max(45, _post_timeout()))
     revision = DocumentRevision.objects.only("asset_id", "is_active").get(pk=revision_id)
     cleanup_revision_ids = {str(revision.id)}
-    if revision.is_active:
+    if revision.is_active and not catalog_namespace:
         cleanup_revision_ids.update(
             str(value)
             for value in DocumentRevision.objects.filter(asset_id=revision.asset_id)
             .exclude(pk=revision.pk)
+            .exclude(pk__in=CatalogPublicationRevision.objects.values("document_revision_id"))
             .values_list("pk", flat=True)
         )
     current_ids = {str(document["id"]) for document in documents}
     stale_ids: set[str] = set()
     for cleanup_revision_id in cleanup_revision_ids:
-        indexed = _fetch_revision_document_ids(cleanup_revision_id)
+        indexed = _fetch_revision_document_ids(cleanup_revision_id, catalog_namespace=catalog_namespace)
         stale_ids.update(
             indexed - current_ids
             if cleanup_revision_id == str(revision.id)
@@ -423,6 +467,7 @@ def index_document_revision_claims(
     writer=None,
     required: bool | None = None,
     track_projection: bool = True,
+    catalog_revision=None,
 ) -> dict:
     """Synchronize one revision's active claims and their projection state.
 
@@ -446,11 +491,22 @@ def index_document_revision_claims(
         .prefetch_related("edition__contributions__person")
         .order_by("id")
     )
-    documents = [serialize_claim_document(claim) for claim in claims]
+    if catalog_revision and catalog_revision.document_revision_id != revision.pk:
+        raise ValueError("观点索引只允许处理发布事件捕获的正文修订。")
+    formal_revision = catalog_revision or CatalogPublicationRevision.objects.filter(
+        edition_id=revision.asset.edition_id, document_revision=revision,
+        status__in=[CatalogPublicationRevision.Status.ACTIVE, CatalogPublicationRevision.Status.PREPARING],
+    ).order_by("-revision").first()
+    namespace = str((formal_revision.provenance or {}).get("claim_index_revision_id") or "legacy") if formal_revision else "legacy"
+    # Optional extraction may finish between projection and activation. Bind
+    # those derived claims to the newest formally requested matching document
+    # namespace, so the later pointer switch does not strand them as private.
+    documents = [serialize_claim_document(claim, catalog_revision=formal_revision) for claim in claims]
     captured = _begin_projection(revision, claims) if track_projection else []
-    sync = writer or _sync_claim_documents
     try:
-        result = sync(str(revision.id), documents)
+        result = writer(str(revision.id), documents) if writer else _sync_claim_documents(
+            str(revision.id), documents, catalog_namespace=namespace,
+        )
     except (httpx.HTTPError, RuntimeError, TimeoutError, ValueError) as exc:
         if captured:
             _fail_projection(captured, exc)
@@ -482,7 +538,7 @@ def _json_value(value: object) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
-def _search_filters(filters: dict) -> list[str]:
+def _search_filters(filters: dict, *, include_catalog_revision: bool = True) -> list[str]:
     allowed_access = filters.get("_allowed_access_statuses") or viewer_access_statuses()
     output = [
         'status = "active"',
@@ -491,6 +547,19 @@ def _search_filters(filters: dict) -> list[str]:
         "is_public = true",
         "access_status IN [" + ", ".join(_json_value(row) for row in allowed_access) + "]",
     ]
+    formal = [row.active_catalog_revision for row in public_editions(require_fulltext=True).filter(is_primary=True)]
+    document_ids = [str(row.document_revision_id) for row in formal if row.document_revision_id]
+    output.append("document_revision_id IN " + json.dumps(document_ids) if document_ids else 'document_revision_id = "unpublished"')
+    if include_catalog_revision:
+        modern = sorted({str((row.provenance or {}).get("claim_index_revision_id") or "legacy") for row in formal} - {"legacy"})
+        legacy = [str(row.document_revision_id) for row in formal if not (row.provenance or {}).get("claim_index_revision_id") or (row.provenance or {}).get("claim_index_revision_id") == "legacy"]
+        branches = []
+        if modern:
+            branches.append("catalog_revision_id IN " + json.dumps(modern))
+        if legacy:
+            branches.append('(document_revision_id IN ' + json.dumps(legacy) + ' AND (catalog_revision_id = "legacy" OR catalog_revision_id NOT EXISTS))')
+        if branches:
+            output.append("(" + " OR ".join(branches) + ")")
     mapping = {
         "work_ids": "work_id",
         "document_types": "document_type",
@@ -527,15 +596,12 @@ def visible_claim_queryset(filters: dict | None = None):
     allowed_access = filters.get("_allowed_access_statuses") or viewer_access_statuses()
     rows = DerivedClaim.objects.filter(
         status=DerivedClaim.Status.ACTIVE,
-        document_revision__is_active=True,
         primary_evidence__is_stale=False,
-        edition__state=PublicationState.PUBLISHED,
         edition__is_primary=True,
         document_revision__asset__kind=Asset.Kind.NORMALIZED,
         document_revision__asset__status=Asset.Status.READY,
-        document_revision__asset__is_current=True,
         document_revision__asset__access_status__in=allowed_access,
-    )
+    ).filter(active_document_revision_q(revision_prefix="document_revision"))
     if filters.get("work_ids"):
         rows = rows.filter(work_id__in=filters["work_ids"])
     if filters.get("document_types"):
@@ -543,31 +609,36 @@ def visible_claim_queryset(filters: dict | None = None):
             "journal_article" if value in {"article", "journal_article"} else value
             for value in filters["document_types"]
         ]
-        rows = rows.filter(work__document_type__in=values)
+        rows = rows.filter(edition__active_catalog_revision__snapshot__work__document_type__in=values)
     if filters.get("languages"):
-        rows = rows.filter(Q(primary_evidence__language__in=filters["languages"]) | Q(work__language__in=filters["languages"]))
+        rows = rows.filter(Q(primary_evidence__language__in=filters["languages"]) | Q(edition__active_catalog_revision__snapshot__work__language__in=filters["languages"]))
     if filters.get("authors"):
-        rows = rows.filter(
-            edition__contributions__person_id__in=filters["authors"],
-            edition__contributions__approved=True,
-        )
+        # Matching authors must use the same serving snapshot as the result,
+        # not newer canonical rows whose index publication is still pending.
+        author_ids = {str(value) for value in filters["authors"]}
+        matching_editions = [
+            edition.pk for edition in public_editions(require_fulltext=True).filter(is_primary=True)
+            if any(str(item.get("person_id") or "") in author_ids
+                   for item in (edition.active_catalog_revision.snapshot or {}).get("contributions", []))
+        ]
+        rows = rows.filter(edition_id__in=matching_editions)
     if filters.get("years"):
         condition = Q()
         for value in filters["years"]:
             start, end = YEAR_FILTERS.get(value, (None, None))
             branch = Q()
             if start is not None:
-                branch &= Q(edition__publication_year__gte=start)
+                branch &= Q(edition__active_catalog_revision__snapshot__edition__publication_year__gte=start)
             if end is not None:
-                branch &= Q(edition__publication_year__lte=end)
+                branch &= Q(edition__active_catalog_revision__snapshot__edition__publication_year__lte=end)
             if start is not None or end is not None:
                 condition |= branch
         if condition:
             rows = rows.filter(condition)
     if filters.get("year_min") is not None:
-        rows = rows.filter(edition__publication_year__gte=filters["year_min"])
+        rows = rows.filter(edition__active_catalog_revision__snapshot__edition__publication_year__gte=filters["year_min"])
     if filters.get("year_max") is not None:
-        rows = rows.filter(edition__publication_year__lte=filters["year_max"])
+        rows = rows.filter(edition__active_catalog_revision__snapshot__edition__publication_year__lte=filters["year_max"])
     return rows.distinct()
 
 

@@ -23,6 +23,9 @@ from catalog.models import (
     KnowledgeNodeTopic,
     KnowledgePublicationStatus,
     Person,
+    PersonNameVariant,
+    PublisherAuthority,
+    PublicationState,
     ReadingPath,
     RelationReviewStatus,
     ScholarProfile,
@@ -61,6 +64,7 @@ TARGET_POLICIES = {
                 "original_title",
                 "uniform_title",
                 "abstract",
+                "cover",
                 "language",
                 "original_language",
                 "first_publication_date",
@@ -72,6 +76,40 @@ TARGET_POLICIES = {
                 "bibliography",
                 "contributors",
                 "reader",
+            }
+        ),
+    ),
+    EditorialRevision.TargetType.EDITION: EditorialTargetPolicy(
+        Edition,
+        frozenset(
+            {
+                "version_label",
+                "publication_year",
+                "publication_date",
+                "publisher",
+                "publication_place",
+                "publisher_authority",
+                "distribution_place",
+                "distributor",
+                "manufacture_place",
+                "manufacturer",
+                "journal_title",
+                "volume",
+                "issue",
+                "page_range",
+                "degree_institution",
+                "degree_type",
+                "report_institution",
+                "isbn",
+                "isbn10",
+                "isbn13",
+                "doi",
+                "series",
+                "extent",
+                "responsibility_statement",
+                "citation_data",
+                "reader_rendition_policy",
+                "is_primary",
             }
         ),
     ),
@@ -181,6 +219,20 @@ TARGET_POLICIES = {
             }
         ),
     ),
+    EditorialRevision.TargetType.PUBLISHER: EditorialTargetPolicy(
+        PublisherAuthority,
+        frozenset(
+            {
+                "canonical_name",
+                "aliases",
+                "possible_places",
+                "country",
+                "valid_from",
+                "valid_to",
+                "notes",
+            }
+        ),
+    ),
     EditorialRevision.TargetType.READING_PATH: EditorialTargetPolicy(
         ReadingPath,
         frozenset(
@@ -229,6 +281,8 @@ def _json_value(value):
         return {str(key): _json_value(item) for key, item in value.items()}
     if isinstance(value, (list, tuple, set)):
         return [_json_value(item) for item in value]
+    if hasattr(value, "storage") and hasattr(value, "name"):
+        return str(value.name or "")
     if hasattr(value, "isoformat"):
         return value.isoformat()
     if hasattr(value, "pk"):
@@ -322,6 +376,12 @@ def _scholar_person_snapshot(profile: ScholarProfile) -> dict[str, Any]:
         "birth_year": person.birth_year,
         "death_year": person.death_year,
         "biography": person.biography,
+        "name_variants": [
+            {"name": row.name, "language": row.language, "variant_type": row.variant_type,
+             "source_kind": row.source_kind, "source_note": row.source_note,
+             "displayable": row.displayable, "is_verified": row.is_verified}
+            for row in person.name_variants.order_by("normalized_name", "pk")
+        ],
     }
 
 
@@ -416,6 +476,8 @@ def _special_snapshot(target) -> dict[str, Any]:
         return {"person": _scholar_person_snapshot(target)}
     if isinstance(target, Topic):
         return topic_relation_snapshot(target)
+    if isinstance(target, PublisherAuthority):
+        return {"aliases": list(target.aliases or [])}
     if isinstance(target, ReadingPath):
         from catalog.services.reading_paths import reading_path_stage_groups
 
@@ -526,8 +588,10 @@ def _work_edition_section_snapshot(edition: Edition, field_name: str) -> dict[st
     from catalog.services.admin_workflow import BIBLIOGRAPHY_FIELDS
 
     if field_name == "bibliography":
+        from catalog.services.journal_issues import journal_contents_snapshot
+
         return _json_value(
-            {field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS}
+            {**{field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS}, "journal_contents": journal_contents_snapshot(edition)}
         )
     if field_name == "contributors":
         return {
@@ -549,6 +613,8 @@ def _validated_work_edition_patch(
     target: Work,
     field_name: str,
     value,
+    *,
+    document_type=None,
 ) -> dict[str, Any] | None:
     from catalog.workflow_serializers import (
         BibliographySectionSerializer,
@@ -602,6 +668,13 @@ def _validated_work_edition_patch(
             )
         values["contributors"] = normalized_rows
     values = _json_value(values)
+    if field_name == "bibliography" and "journal_contents" in values:
+        from catalog.services.journal_issues import normalize_journal_contents
+
+        try:
+            values["journal_contents"] = normalize_journal_contents(edition, values["journal_contents"], document_type=document_type)
+        except ValueError as error:
+            raise EditorialRevisionError(str(error)) from error
     current = _work_edition_section_snapshot(edition, field_name)
     if all(current.get(key) == row for key, row in values.items()):
         return None
@@ -618,12 +691,41 @@ def _validated_scholar_person_patch(target: ScholarProfile, value) -> dict[str, 
         "birth_year",
         "death_year",
         "biography",
+        "name_variants",
     }
     unknown = sorted(set(value) - allowed)
     if unknown:
         raise EditorialRevisionError(f"学者草稿包含不可编辑人物字段：{', '.join(unknown)}")
     clean: dict[str, Any] = {}
     for field_name, raw_value in value.items():
+        if field_name == "name_variants":
+            if not isinstance(raw_value, list):
+                raise EditorialRevisionError("人物名称列表格式无效。")
+            from catalog.services.query_lexicon.normalization import normalize_term
+
+            clean_rows = []
+            identifiers = set()
+            allowed_variant_fields = {"name", "language", "variant_type", "source_kind", "source_note", "displayable", "is_verified"}
+            for row in raw_value:
+                if not isinstance(row, dict) or set(row) - allowed_variant_fields:
+                    raise EditorialRevisionError("人物名称包含不可编辑字段。")
+                values = {"language": "und", "variant_type": "alias", "source_kind": "editorial", "source_note": "", "displayable": False, "is_verified": False, **row}
+                name = str(values.get("name") or "").strip()
+                normalized = normalize_term(name)
+                if not normalized or normalized in identifiers:
+                    raise EditorialRevisionError("人物名称不能为空或重复。")
+                identifiers.add(normalized)
+                values["name"] = name
+                instance = PersonNameVariant(person=target.person, **values)
+                try:
+                    cleaned = {key: _json_value(PersonNameVariant._meta.get_field(key).clean(item, instance)) for key, item in values.items()}
+                except ValidationError as exc:
+                    raise EditorialRevisionError("人物名称的语言、类型或来源无效。") from exc
+                if cleaned["displayable"] and not cleaned["is_verified"]:
+                    raise EditorialRevisionError("公开显示的人物名称必须人工确认。")
+                clean_rows.append(cleaned)
+            clean[field_name] = clean_rows
+            continue
         field = Person._meta.get_field(field_name)
         try:
             clean[field_name] = _json_value(field.clean(raw_value, target.person))
@@ -720,6 +822,18 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
     if isinstance(target, Work):
+        if "cover" in patch:
+            cover = str(patch["cover"] or "")
+            current = str(target.cover.name or "")
+            allowed_prefix = f"public/covers/editorial/{target.pk}/"
+            if cover and cover != current and (
+                not cover.startswith(allowed_prefix)
+                or ".." in cover.split("/")
+                or "\\" in cover
+                or not target.cover.storage.exists(cover)
+            ):
+                raise EditorialRevisionError("封面必须来自当前作品已保存的封面建议。")
+            patch["cover"] = cover
         for field_name in ("classification", "knowledge"):
             if field_name in patch:
                 if not isinstance(patch[field_name], dict):
@@ -736,6 +850,7 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                 target,
                 field_name,
                 patch[field_name],
+                document_type=patch.get("document_type", target.document_type),
             )
             if normalized is None:
                 patch.pop(field_name, None)
@@ -1006,17 +1121,26 @@ def _validate_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, A
 def _apply_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, Any], actor) -> None:
     aliases = patch.get("aliases")
     if aliases is not None:
-        target.aliases.all().delete()
+        existing = {row.normalized_alias: row for row in target.aliases.select_for_update()}
+        retained = []
         for row in aliases:
-            KnowledgeNodeAlias.objects.create(
-                node=target,
-                alias=str(row["alias"]).strip(),
-                language=str(row.get("language") or "zh-CN")[:16],
-                alias_type=str(row.get("alias_type") or KnowledgeNodeAlias.AliasType.ALIAS),
-                source_kind=str(row.get("source_kind") or KnowledgeNodeAlias.SourceKind.EDITORIAL),
-                is_verified=bool(row.get("is_verified", True)),
-                created_by=actor,
-            )
+            values = {"alias": str(row["alias"]).strip(), "language": str(row.get("language") or "zh-CN")[:16],
+                      "alias_type": str(row.get("alias_type") or KnowledgeNodeAlias.AliasType.ALIAS),
+                      "source_kind": str(row.get("source_kind") or KnowledgeNodeAlias.SourceKind.OTHER),
+                      "is_verified": bool(row.get("is_verified", True))}
+            normalized = " ".join(values["alias"].casefold().split())
+            previous = existing.get(normalized)
+            changed = previous is None or any(getattr(previous, key) != value for key, value in values.items())
+            if changed:
+                if values["is_verified"]:
+                    values["source_kind"] = KnowledgeNodeAlias.SourceKind.EDITORIAL
+                alias, _created = KnowledgeNodeAlias.objects.update_or_create(
+                    node=target, normalized_alias=normalized, defaults={**values, "created_by": actor},
+                )
+            else:
+                alias = previous
+            retained.append(alias.pk)
+        target.aliases.exclude(pk__in=retained).delete()
     links = patch.get("discipline_links")
     if links is not None:
         target.discipline_links.all().delete()
@@ -1072,10 +1196,12 @@ def _apply_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, Any]
             )
 
 
-def _apply_scholar_person(target: ScholarProfile, values: dict[str, Any]) -> None:
+def _apply_scholar_person(target: ScholarProfile, values: dict[str, Any], actor=None) -> None:
     person = Person.objects.select_for_update().get(pk=target.person_id)
+    previous_aliases = set(person.aliases or [])
     for field_name, value in values.items():
-        setattr(person, field_name, value)
+        if field_name != "name_variants":
+            setattr(person, field_name, value)
     if "preferred_name" in values and not person.sort_name:
         person.sort_name = values["preferred_name"]
     try:
@@ -1091,6 +1217,38 @@ def _apply_scholar_person(target: ScholarProfile, values: dict[str, Any]) -> Non
         )
         raise EditorialRevisionError(f"学者人物草稿不能发布：{message}") from exc
     person.save()
+    if "name_variants" in values:
+        from catalog.services.query_lexicon.normalization import normalize_term
+
+        retained = []
+        existing = {row.normalized_name: row for row in person.name_variants.select_for_update()}
+        for row in values["name_variants"]:
+            defaults = dict(row)
+            normalized = normalize_term(row["name"])
+            previous = existing.get(normalized)
+            changed = previous is None or any(getattr(previous, key) != value for key, value in defaults.items())
+            if changed:
+                if defaults.get("is_verified"):
+                    defaults["source_kind"] = PersonNameVariant.SourceKind.EDITORIAL
+                variant, _created = PersonNameVariant.objects.update_or_create(
+                    person=person, normalized_name=normalized, defaults={**defaults, "created_by": actor},
+                )
+            else:
+                variant = previous
+            retained.append(variant.pk)
+        person.name_variants.exclude(pk__in=retained).delete()
+    if "aliases" in values:
+        from catalog.services.query_lexicon.normalization import normalize_term
+
+        # A full Scholar form can carry legacy search aliases unchanged. Only
+        # newly supplied aliases are an explicit editorial assertion here.
+        for name in set(values["aliases"]) - previous_aliases:
+            PersonNameVariant.objects.update_or_create(
+                person=person, normalized_name=normalize_term(name),
+                defaults={"name": name, "language": "und", "variant_type": PersonNameVariant.VariantType.ALIAS,
+                          "source_kind": PersonNameVariant.SourceKind.EDITORIAL, "is_verified": True,
+                          "displayable": True, "created_by": actor},
+            )
     target.person = person
 
 
@@ -1187,15 +1345,19 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
                     serializer.validated_data,
                     actor=actor,
                     confirm_section=True,
+                    publishing_revision=True,
                 )
         except WorkflowEditError as exc:
             raise EditorialRevisionError(str(exc)) from exc
     if isinstance(target, KnowledgeNode):
         _apply_knowledge_node_relations(target, patch, actor)
     if isinstance(target, ScholarProfile) and "person" in patch:
-        _apply_scholar_person(target, patch["person"])
+        _apply_scholar_person(target, patch["person"], actor)
     if isinstance(target, Topic):
         _apply_topic_relations(target, patch, actor)
+    if isinstance(target, PublisherAuthority) and "aliases" in patch:
+        target.aliases = list(patch["aliases"] or [])
+        target.save(update_fields=["aliases", "updated_at"])
     if isinstance(target, ReadingPath) and "stage_groups" in patch:
         from catalog.services.reading_paths import (
             ReadingPathStructureError,
@@ -1206,6 +1368,38 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
             sync_reading_path_stage_groups(target, patch["stage_groups"])
         except ReadingPathStructureError as exc:
             raise EditorialRevisionError(str(exc)) from exc
+
+
+def _work_catalog_edition(work: Work, patch: dict[str, Any]) -> Edition | None:
+    """Resolve the one Edition snapshot owned by this Work revision.
+
+    Workbench edition sections carry their exact ``edition_id``.  Pure Work
+    changes use the primary published edition, matching the existing public
+    Work route.  Mixed edition section patches are rejected before mutation so
+    one EditorialRevision cannot create an ambiguous catalog snapshot.
+    """
+
+    referenced = {
+        str(section.get("edition_id"))
+        for field_name in ("bibliography", "contributors", "reader")
+        if isinstance((section := patch.get(field_name)), dict)
+        and section.get("edition_id")
+    }
+    if len(referenced) > 1:
+        raise EditorialRevisionError("同一作品草稿不能同时修改多个版本。")
+    published = work.editions.select_for_update().filter(
+        state=PublicationState.PUBLISHED,
+    )
+    if referenced:
+        exact = published.filter(pk=next(iter(referenced))).first()
+        if exact is not None:
+            return exact
+    return published.order_by(
+        "-is_primary",
+        "-last_published_at",
+        "-published_at",
+        "id",
+    ).first()
 
 
 @transaction.atomic
@@ -1356,6 +1550,14 @@ def save_workflow_editorial_revision(
     if latest is not None and latest.pk != revision.pk:
         latest.status = EditorialRevision.Status.SUPERSEDED
         latest.save(update_fields=["status", "updated_at"])
+        from catalog.models import CatalogFieldDecision
+
+        for decision in CatalogFieldDecision.objects.select_for_update().filter(
+            edition__work=work,
+            provenance__editorial_revision_id=str(latest.pk),
+        ):
+            decision.provenance = {**decision.provenance, "editorial_revision_id": str(revision.pk)}
+            decision.save(update_fields=["provenance", "updated_at"])
     return revision
 
 
@@ -1387,6 +1589,13 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         target,
         policy,
         dict(revision.patch or {}),
+    )
+    catalog_edition = (
+        _work_catalog_edition(target, patch)
+        if isinstance(target, Work)
+        else target
+        if isinstance(target, Edition) and target.state == PublicationState.PUBLISHED
+        else None
     )
     relation_fields = SPECIAL_FIELDS
     if isinstance(target, KnowledgeNode):
@@ -1453,21 +1662,135 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         updated_at=timezone.now(),
     )
 
-    from catalog.services.dependency_engine import record_canonical_change
-
     change_kind = (
         "withdraw"
         if previous_status == "published" and next_status in {"archived", "withdrawn"}
         else "publish"
     )
-    event = record_canonical_change(
-        object_type=revision.target_type,
-        object_id=revision.target_id,
-        change_kind=change_kind,
-        changed_fields=revision.changed_fields,
-        actor=actor,
-        idempotency_key=f"editorial-publish:{revision.pk}",
-    )
+    if catalog_edition is not None:
+        from catalog.models import CatalogFieldDecision, KnowledgePublicationEvent
+        from catalog.services.field_decisions import field_value_present, formal_field_values, record_edition_field_decision, SECTION_FIELDS
+        from catalog.services.knowledge_publication import (
+            create_catalog_publication_event,
+        )
+
+        try:
+            # Final publication confirms the reviewed patch, not unrelated
+            # draft fields. Clear staged provenance only for this revision.
+            catalog_edition.refresh_from_db()
+            actual, _ = formal_field_values(catalog_edition, include_editorial_draft=False)
+            confirmed_fields = set(revision.changed_fields).intersection(actual)
+            for section in ("classification", "knowledge"):
+                if section in patch:
+                    confirmed_fields.update(SECTION_FIELDS[section])
+            confirmed_fields.update(CatalogFieldDecision.objects.filter(
+                edition=catalog_edition, provenance__editorial_revision_id=str(revision.pk),
+            ).values_list("field_name", flat=True))
+            for name in confirmed_fields:
+                value = _json_value(actual.get(name))
+                old_decision = catalog_edition.field_decisions.filter(field_name=name).first()
+                record_edition_field_decision(
+                    catalog_edition, name,
+                    status="confirmed" if field_value_present(value) else "not_applicable",
+                    value=value, actor=actor,
+                    provenance={**(old_decision.provenance if old_decision else {}), "editorial_revision_id": str(revision.pk), "canonical_write_deferred": False},
+                    reason="正式发布已确认的编辑修订",
+                )
+            knowledge_event = create_catalog_publication_event(
+                catalog_edition,
+                event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+                changed_fields=revision.changed_fields,
+                actor=actor,
+                idempotency_key=f"editorial-catalog:{revision.pk}",
+                source_object_type=revision.target_type,
+                source_object_id=revision.target_id,
+                source_changed_fields=revision.changed_fields,
+                expected_source_base_revision=revision.base_revision,
+                provenance={
+                    "editorial_revision_id": str(revision.pk),
+                    "editorial_revision_number": revision.revision,
+                },
+            )
+            if isinstance(target, Work):
+                # Work metadata and knowledge relations are shared by every
+                # published Edition. Edition-specific sections remain owned
+                # by the one catalog_edition selected above.
+                shared_fields = sorted(set(patch) - {"bibliography", "contributors", "reader"})
+                if shared_fields:
+                    siblings = target.editions.select_for_update().filter(
+                        state=PublicationState.PUBLISHED,
+                    ).exclude(pk=catalog_edition.pk).order_by("pk")
+                    for sibling in siblings:
+                        sibling_actual, _ = formal_field_values(sibling, include_editorial_draft=False)
+                        sibling_confirmed = set(shared_fields).intersection(sibling_actual)
+                        for section in ("classification", "knowledge"):
+                            if section in shared_fields:
+                                sibling_confirmed.update(SECTION_FIELDS[section])
+                        for name in sibling_confirmed:
+                            value = _json_value(sibling_actual.get(name))
+                            old_decision = sibling.field_decisions.filter(field_name=name).first()
+                            record_edition_field_decision(
+                                sibling, name,
+                                status="confirmed" if field_value_present(value) else "not_applicable",
+                                value=value, actor=actor,
+                                provenance={**(old_decision.provenance if old_decision else {}), "editorial_revision_id": str(revision.pk), "canonical_write_deferred": False},
+                                reason="正式发布作品共享字段",
+                            )
+                        create_catalog_publication_event(
+                            sibling,
+                            event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+                            changed_fields=shared_fields,
+                            actor=actor,
+                            idempotency_key=f"editorial-catalog:{revision.pk}:edition:{sibling.pk}",
+                            # The Work canonical counter was advanced once by
+                            # knowledge_event. Each sibling owns its derived
+                            # Edition publication counter, never a second Work
+                            # mutation for the same editorial action.
+                            source_object_type="edition",
+                            source_object_id=sibling.pk,
+                            source_changed_fields=shared_fields,
+                            provenance={
+                                "source": "shared_work_publication",
+                                "editorial_revision_id": str(revision.pk),
+                                "editorial_revision_number": revision.revision,
+                                "shared_work_publication_event_id": str(knowledge_event.pk),
+                            },
+                        )
+        except ValueError as exc:
+            raise EditorialRevisionConflict(
+                f"正式内容发布事件建立失败：{exc}"
+            ) from exc
+        event = knowledge_event.domain_event
+    else:
+        from catalog.services.dependency_engine import record_canonical_change
+        from catalog.services.canonical_mutations import ENTITY_PUBLICATION_TYPES, _is_published
+
+        if revision.target_type in ENTITY_PUBLICATION_TYPES and (_is_published(target, revision.target_type) or change_kind == "withdraw"):
+            from catalog.models import KnowledgePublicationEvent
+            from catalog.services.knowledge_publication import create_entity_publication_event
+
+            entity_event = create_entity_publication_event(
+                object_type=revision.target_type, object_id=revision.target_id,
+                event_type=KnowledgePublicationEvent.EventType.ENTITY_PUBLISHED if previous_status != "published" and next_status == "published" else KnowledgePublicationEvent.EventType.ENTITY_UPDATED,
+                changed_fields=revision.changed_fields, actor=actor,
+                idempotency_key=f"editorial-publish:{revision.pk}",
+                provenance={"editorial_revision_id": str(revision.pk), "withdrawal": change_kind == "withdraw"},
+            )
+            event = entity_event.domain_event
+        else:
+            # Applying an editorial draft without an explicit public state
+            # only advances concurrency bookkeeping, with no shared consumers.
+            event = record_canonical_change(
+            object_type=revision.target_type,
+            object_id=revision.target_id,
+            change_kind=change_kind,
+            changed_fields=revision.changed_fields,
+            actor=actor,
+            idempotency_key=f"editorial-publish:{revision.pk}",
+            resolve=False,
+            )
+            event.processed_at = timezone.now()
+            event.save(update_fields=["processed_at", "updated_at"])
     if event.canonical_revision != revision.base_revision + 1:
         raise EditorialRevisionConflict("正式内容版本推进异常，事务已回滚。")
     return revision

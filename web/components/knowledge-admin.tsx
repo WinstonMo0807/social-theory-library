@@ -20,8 +20,8 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ResearchEntityPicker } from "@/components/admin/research/research-entity-picker";
 import type { EntityValue } from "@/components/admin/forms/workflow-fields";
-import { AuthoritySuggestions, StringListEditor } from "@/components/structured-editors";
-import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
+import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
+import { StringListEditor } from "@/components/structured-editors";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
@@ -157,13 +157,13 @@ export function DisciplinesAdmin() {
     window.requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: motionAwareScrollBehavior(), block: "start" }));
   }
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent, draftOnly = false) {
+    event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token) return false;
     if (editing?.editorial_status === "published" && image) {
       setMessage("已发布学科的主视觉暂不能放入 JSON 修订。请先保存其他字段，主视觉保持不变。");
-      return;
+      return false;
     }
     try {
       let saved = await apiRequest<DisciplineRow>(
@@ -180,7 +180,7 @@ export function DisciplinesAdmin() {
             introduction: draft.introduction,
             sort_order: draft.sort_order,
             curation_level: draft.curation_level,
-            editorial_status: draft.editorial_status,
+            editorial_status: draftOnly ? (editing?.editorial_status ?? "draft") : draft.editorial_status,
           }),
         },
         token,
@@ -197,9 +197,11 @@ export function DisciplinesAdmin() {
         ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
         : "学科已经保存。理论传统、子学科、主题和统计会按关系自动生成。");
       resource.refresh();
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "保存失败");
     }
+    return false;
   }
 
   return (
@@ -228,15 +230,19 @@ export function DisciplinesAdmin() {
               <label><span>学科代码</span><input value={draft.code} onChange={(event) => setDraft({ ...draft, code: event.target.value })} placeholder="留空自动生成" /></label>
               <label><span>固定链接</span><input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="留空自动生成" /></label>
             </div>
-            <AuthoritySuggestions
-              entityType="discipline"
+            <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+              label="外文名称"
+              authorityType="discipline"
               query={draft.foreign_name.trim() || draft.name}
-            />
-            <FieldEnrichmentControl
               targetType="discipline"
               targetId={editing?.id}
-              title="学科字段核对"
-              fields={[{ name: "foreign_name", label: "外文名称", currentValue: draft.foreign_name }]}
+              fieldName="foreign_name"
+              currentValue={draft.foreign_name}
+              onApply={(value, suggestion) => setDraft((current) => ({
+                ...current,
+                name: suggestion?.label || current.name,
+                foreign_name: suggestion?.originalName || (typeof value === "string" ? value : current.foreign_name),
+              }))}
               onAccepted={resource.refresh}
             />
             <StringListEditor label="检索别名" itemLabel="别名" value={editorLineValues(draft.search_aliases)} onChange={(value) => setDraft({ ...draft, search_aliases: value.join("\n") })} addLabel="添加别名" />
@@ -369,10 +375,10 @@ export function SubdisciplinesAdmin() {
     return () => window.clearTimeout(timer);
   }, [requested.data]);
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent, draftOnly = false) {
+    event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token) return false;
     try {
       let saved = await apiRequest<SubdisciplineRow>(
         `/catalog/admin/subdisciplines/${editing ? `${editing.id}/` : ""}`,
@@ -393,7 +399,7 @@ export function SubdisciplinesAdmin() {
             methods: lineValues(draft.methods),
             representative_issues: lineValues(draft.representative_issues),
             curation_level: draft.curation_level,
-            editorial_status: draft.editorial_status,
+            editorial_status: draftOnly ? (editing?.editorial_status ?? "draft") : draft.editorial_status,
           }),
         },
         token,
@@ -410,7 +416,9 @@ export function SubdisciplinesAdmin() {
         ? `已建立 Revision ${saved.editorial_revision.revision} 草稿。正式页面尚未改变，可在 Knowledge Studio 预览并确认发布。`
         : "子学科已经保存。与理论和主题的关系仍需在关系审核区确认。");
       rows.refresh();
+      return true;
     } catch (reason) { setMessage(reason instanceof Error ? reason.message : "保存失败"); }
+    return false;
   }
 
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || "未归类";
@@ -431,15 +439,19 @@ export function SubdisciplinesAdmin() {
               <ResearchEntityPicker label="上级子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="maintenance_subdisciplines" field="parent" values={onePickerValue(draft.parent, subdisciplineName(draft.parent))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing?.id) return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, parent: selected?.id ?? "" }); }} />
               <label><span>形成时期</span><input value={draft.formation_period} onChange={(event) => setDraft({ ...draft, formation_period: event.target.value })} /></label>
             </div>
-            <AuthoritySuggestions
-              entityType="subdiscipline"
+            <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+              label="外文名称"
+              authorityType="subdiscipline"
               query={draft.foreign_name.trim() || draft.name}
-            />
-            <FieldEnrichmentControl
               targetType="subdiscipline"
               targetId={editing?.id}
-              title="子学科字段核对"
-              fields={[{ name: "foreign_name", label: "外文名称", currentValue: draft.foreign_name }]}
+              fieldName="foreign_name"
+              currentValue={draft.foreign_name}
+              onApply={(value, suggestion) => setDraft((current) => ({
+                ...current,
+                name: suggestion?.label || current.name,
+                foreign_name: suggestion?.originalName || (typeof value === "string" ? value : current.foreign_name),
+              }))}
               onAccepted={() => { rows.refresh(); disciplines.refresh(); }}
             />
             <StringListEditor label="检索别名" itemLabel="别名" value={editorLineValues(draft.search_aliases)} onChange={(value) => setDraft({ ...draft, search_aliases: value.join("\n") })} addLabel="添加别名" />

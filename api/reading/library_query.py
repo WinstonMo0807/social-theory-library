@@ -16,7 +16,6 @@ from catalog.models import (
     KnowledgeNode,
     LegacyKnowledgeMapping,
     Person,
-    PublicationState,
     ReadingPath,
     ScholarProfile,
     Subdiscipline,
@@ -31,6 +30,12 @@ from catalog.services.passage_language import passage_language_details
 from catalog.services.query_lexicon.normalization import normalize_term
 from catalog.services.query_lexicon.resolver import PUBLIC_ACTIVE
 from catalog.services.query_lexicon.search import resolve_search_query
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_q,
+    public_editions,
+    public_edition_q,
+)
 
 from .models import LibraryConversation, LibraryMessage
 from .services import decrypt_private_text
@@ -207,9 +212,10 @@ def _published_work_ids(ids: tuple[str, ...]) -> set[str]:
         str(value)
         for value in Work.objects.filter(
             id__in=ids,
-            editions__state=PublicationState.PUBLISHED,
             editions__is_primary=True,
-        ).values_list("id", flat=True).distinct()
+        ).filter(public_edition_q(prefix="editions")).values_list(
+            "id", flat=True
+        ).distinct()
     }
 
 
@@ -224,16 +230,17 @@ def resolve_library_scope(scope: LibraryScope) -> ResolvedLibraryScope:
     if asset_id:
         asset = Asset.objects.select_related("edition__work").filter(
             pk=asset_id,
-            edition__state=PublicationState.PUBLISHED,
             edition__is_primary=True,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            is_current=True,
-        ).first()
+        ).filter(active_document_q(asset_prefix="")).first()
         if asset is None:
             raise LibraryScopeError("当前 Reader Asset 不可用于馆藏问答。")
         filters["work_ids"] = [str(asset.edition.work_id)]
-        labels.append(asset.edition.work.title)
+        snapshot = active_catalog_snapshot(asset.edition, require_fulltext=True)
+        labels.append(
+            str((snapshot.get("work") or {}).get("title") or "未题名")
+        )
     elif context == LibraryScopeContext.GLOBAL:
         pass
     elif context == LibraryScopeContext.WORKS:
@@ -241,7 +248,14 @@ def resolve_library_scope(scope: LibraryScope) -> ResolvedLibraryScope:
         if len(work_ids) != len(ids):
             raise LibraryScopeError("Scope 包含不可公开读取的 Work。")
         filters["work_ids"] = sorted(work_ids)
-        labels.extend(Work.objects.filter(id__in=work_ids).values_list("title", flat=True))
+        editions = public_editions().filter(
+            is_primary=True,
+            work_id__in=work_ids,
+        )
+        labels.extend(
+            str((active_catalog_snapshot(edition).get("work") or {}).get("title") or "未题名")
+            for edition in editions
+        )
     elif context == LibraryScopeContext.SCHOLARS:
         people = Person.objects.filter(id__in=ids)
         if not admin:
@@ -266,8 +280,9 @@ def resolve_library_scope(scope: LibraryScope) -> ResolvedLibraryScope:
             for value in WorkNodeRelation.objects.filter(
                 node_id__in=node_ids,
                 status="published",
-                work__editions__state=PublicationState.PUBLISHED,
-            ).values_list("work_id", flat=True)
+            ).filter(public_edition_q(prefix="work__editions")).values_list(
+                "work_id", flat=True
+            )
         }
         mapped_legacy = LegacyKnowledgeMapping.objects.filter(
             node_id__in=node_ids,
@@ -279,8 +294,9 @@ def resolve_library_scope(scope: LibraryScope) -> ResolvedLibraryScope:
             for value in WorkKnowledgeRelation.objects.filter(
                 theory_school_id__in=mapped_legacy,
                 approved=True,
-                work__editions__state=PublicationState.PUBLISHED,
-            ).values_list("work_id", flat=True)
+            ).filter(public_edition_q(prefix="work__editions")).values_list(
+                "work_id", flat=True
+            )
         )
         filters["work_ids"] = sorted(work_ids)
         empty = not work_ids

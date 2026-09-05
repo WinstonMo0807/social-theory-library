@@ -27,10 +27,19 @@ from .knowledge_views import (
     TheoryTimelineListView,
 )
 from .lifecycle_views import AdminEntityLifecycleView
+from .topic_merge_views import AdminTopicMergePreviewView, AdminTopicMergeView
+from .knowledge_publication_views import AdminKnowledgePublicationStatusView, AdminKnowledgePublicationRetryView
 from .editorial_revision_views import (
     AdminEditorialRevisionDetailView,
     AdminEditorialRevisionListCreateView,
     AdminEditorialRevisionPublishView,
+)
+from .field_assistant_views import (
+    AdminFieldAssistantAdoptView,
+    AdminFieldAssistantCreateView,
+    AdminFieldAssistantDuplicateView,
+    AdminFieldAssistantLookupView,
+    AdminFieldAssistantRejectView,
 )
 from .enrichment_views import (
     AdminCandidateReviewDecisionView,
@@ -172,6 +181,34 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/editions/<uuid:edition_id>/knowledge-status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-edition-knowledge-status"),
+    path("admin/knowledge-publications/status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-knowledge-publication-status"),
+    path("admin/knowledge-publications/<uuid:event_id>/retry/", AdminKnowledgePublicationRetryView.as_view(), name="admin-knowledge-publication-retry"),
+    path(
+        "admin/field-assistant/lookup/",
+        AdminFieldAssistantLookupView.as_view(),
+        name="admin-field-assistant-lookup",
+    ),
+    path(
+        "admin/field-assistant/adopt/",
+        AdminFieldAssistantAdoptView.as_view(),
+        name="admin-field-assistant-adopt",
+    ),
+    path(
+        "admin/field-assistant/reject/",
+        AdminFieldAssistantRejectView.as_view(),
+        name="admin-field-assistant-reject",
+    ),
+    path(
+        "admin/field-assistant/create/",
+        AdminFieldAssistantCreateView.as_view(),
+        name="admin-field-assistant-create",
+    ),
+    path(
+        "admin/field-assistant/duplicates/",
+        AdminFieldAssistantDuplicateView.as_view(),
+        name="admin-field-assistant-duplicates",
+    ),
     path(
         "admin/editorial-revisions/",
         AdminEditorialRevisionListCreateView.as_view(),
@@ -632,6 +669,8 @@ urlpatterns = [
     path("admin/theory-schools/<uuid:pk>/", AdminTheorySchoolDetailView.as_view(), name="admin-theory-school-detail"),
     path("admin/topics/", AdminTopicListView.as_view(), name="admin-topic-list"),
     path("admin/topics/<uuid:pk>/", AdminTopicDetailView.as_view(), name="admin-topic-detail"),
+    path("admin/topics/<uuid:pk>/merge-preview/", AdminTopicMergePreviewView.as_view(), name="admin-topic-merge-preview"),
+    path("admin/topics/<uuid:pk>/merge/", AdminTopicMergeView.as_view(), name="admin-topic-merge"),
     path("admin/scholars/", AdminScholarListView.as_view(), name="admin-scholar-list"),
     path("admin/scholars/<uuid:pk>/", AdminScholarDetailView.as_view(), name="admin-scholar-detail"),
     path("works/", WorkListView.as_view(), name="work-list"),

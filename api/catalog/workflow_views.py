@@ -8,6 +8,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .editorial_read import AdminPrivateResponseMixin
+
 from common.permissions import (
     CanAccessBackOffice,
     CanEditMetadata,
@@ -15,7 +17,6 @@ from common.permissions import (
     IsKnowledgeEditor,
 )
 from ingestion.models import EntityResolutionCandidate, MetadataCandidate, UploadItem
-from ingestion.services.indexing import index_asset
 from ingestion.services.publication import (
     PublicationBlocked,
     PublicationWarningsRequireConfirmation,
@@ -24,7 +25,6 @@ from ingestion.services.publication import (
 )
 
 from catalog.models import (
-    Asset,
     Edition,
     EditorialRevision,
     EnrichmentCandidate,
@@ -208,7 +208,7 @@ class IntakeWorkflowSectionView(WorkflowSectionPermissionMixin, APIView):
         )
 
 
-class WorkMaintenanceWorkspaceView(APIView):
+class WorkMaintenanceWorkspaceView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, work_id):
@@ -291,8 +291,11 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
                     }
                 }
             try:
-                revision = save_workflow_editorial_revision(
-                    work_id=edition.work_id,
+                from catalog.services.work_editor import save_editorial_workflow_section
+
+                revision = save_editorial_workflow_section(
+                    edition, step_key, raw_values,
+                    confirm_section=confirm_section,
                     section_patch=patch,
                     actor=request.user,
                     idempotency_key=str(
@@ -339,13 +342,16 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
         )
 
 
-class WorkLibraryListView(APIView):
+class WorkLibraryListView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request):
         query = str(request.query_params.get("q") or "").strip()
         view = str(request.query_params.get("view") or "").strip()
         queryset = work_library_queryset(query=query, view=view)
+        document_type = str(request.query_params.get("document_type") or "").strip()
+        if document_type:
+            queryset = queryset.filter(document_type=document_type)
         try:
             page_number = max(1, int(request.query_params.get("page", 1)))
         except (TypeError, ValueError):
@@ -481,10 +487,15 @@ class WorkMaintenancePublicationView(APIView):
                     allow_low_confidence=True,
                     confirm_warnings=confirmed,
                     force_update=published_revision is not None,
+                    changed_fields=(
+                        published_revision.changed_fields
+                        if published_revision is not None
+                        else None
+                    ),
                 )
         except PublicationBlocked as error:
             return Response(
-                {"detail": "存在阻止发布的技术问题。", "blockers": error.reasons},
+                {"detail": "还有信息需要处理，暂时无法发布。", "blockers": error.reasons},
                 status=409,
             )
         except PublicationWarningsRequireConfirmation as error:
@@ -512,17 +523,6 @@ class WorkMaintenancePublicationView(APIView):
                     else status.HTTP_400_BAD_REQUEST
                 ),
             )
-        index_warning = ""
-        normalized = edition.assets.filter(
-            kind=Asset.Kind.NORMALIZED,
-            status=Asset.Status.READY,
-            is_current=True,
-        ).first()
-        if normalized:
-            try:
-                index_asset(normalized, is_public=True)
-            except Exception as error:  # Publication is intentionally preserved.
-                index_warning = str(error)[:2000]
         workspace = build_admin_workspace(
             edition,
             user=request.user,
@@ -532,7 +532,7 @@ class WorkMaintenancePublicationView(APIView):
             {
                 **workspace,
                 "detail": "馆藏版本已发布。",
-                "index_warning": index_warning,
+                "intelligence_status": edition.intelligence_status,
                 "published_editorial_revision": (
                     serialize_editorial_revision(published_revision)
                     if published_revision is not None

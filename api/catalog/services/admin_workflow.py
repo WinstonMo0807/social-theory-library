@@ -9,9 +9,14 @@ from django.utils import timezone
 
 from catalog.models import (
     Asset,
+    CatalogFieldDecision,
+    CatalogPublicationRevision,
+    Contribution,
     Edition,
     EditionWorkflowDecision,
     EnrichmentCandidate,
+    IntelligenceStatus,
+    KnowledgePublicationEvent,
     KnowledgePublicationStatus,
     PublicationState,
     ReadingPathItem,
@@ -20,6 +25,14 @@ from catalog.models import (
     ReviewStatus,
     TheoryReviewTask,
     WorkKnowledgeRelation,
+)
+from catalog.services.field_decisions import (
+    REQUIRED_FIELDS,
+    SECTION_FIELDS,
+    field_readiness,
+    field_value_present,
+    formal_field_values,
+    publication_field_check,
 )
 from ingestion.models import EntityResolutionCandidate, MetadataCandidate, UploadItem
 from ingestion.services.prerequisites import (
@@ -30,16 +43,76 @@ from ingestion.services.prerequisites import (
 
 
 WORKFLOW_STEPS = (
-    ("file", "文件与识别"),
-    ("work", "作品与原作"),
-    ("bibliography", "书目与版本"),
-    ("contributors", "作者与责任者"),
-    ("classification", "学科与子学科"),
-    ("knowledge", "理论、主题与争论"),
-    ("reader", "阅读与定位"),
-    ("curation", "知识策展与前台联动（可选）"),
-    ("publication", "发布与投影"),
+    ("file", "文件"),
+    ("work", "作品"),
+    ("bibliography", "版本"),
+    ("contributors", "作者与贡献者"),
+    ("classification", "学科"),
+    ("knowledge", "理论与主题"),
+    ("reader", "正文与阅读"),
+    ("curation", "策展（可选）"),
+    ("publication", "发布"),
 )
+
+
+ADMIN_QUEUE_STATUS_LABELS = {
+    "needs_review": "待审核",
+    "conflict": "存在冲突",
+    "incomplete": "信息不完整",
+    "ready_to_publish": "可以发布",
+    "publishing": "发布处理中",
+    "post_publish_error": "发布后异常",
+    "published": "已发布",
+}
+
+
+FIELD_LABELS = {
+    "file": "文件",
+    "title": "作品题名",
+    "subtitle": "副题名",
+    "original_title": "原文题名",
+    "uniform_title": "规范题名",
+    "document_type": "资源类型",
+    "language": "正文语言",
+    "original_language": "原文语言",
+    "first_publication_date": "首次出版日期",
+    "translation_of": "原作",
+    "abstract": "简介",
+    "cover": "封面",
+    "version_label": "版本说明",
+    "publication_date": "出版日期",
+    "publication_year": "出版年份",
+    "publisher": "出版社",
+    "publication_place": "出版地",
+    "isbn10": "ISBN-10",
+    "isbn13": "ISBN-13",
+    "series": "丛书",
+    "extent": "页数或篇幅",
+    "journal_title": "期刊",
+    "journal_contents": "本期目录与论文",
+    "volume": "卷",
+    "issue": "期",
+    "page_range": "页码",
+    "doi": "DOI",
+    "degree_institution": "学位授予单位",
+    "degree_type": "学位类型",
+    "report_institution": "发布机构",
+    "authors": "作者",
+    "translators": "译者",
+    "chief_editors": "主编",
+    "editors": "编者",
+    "annotators": "校注",
+    "photographers": "摄影",
+    "other_contributors": "其他贡献者",
+    "disciplines": "学科",
+    "subdisciplines": "子学科",
+    "topics": "主题",
+    "theories": "理论传统",
+    "reader_asset": "阅读文件",
+    "ocr_text": "正文文字",
+    "page_labels": "引用页码",
+    "curation": "策展",
+}
 
 WORK_FIELDS = (
     "document_type",
@@ -322,6 +395,210 @@ def _issue(code: str, message: str, step: str, *, severity: str = "warning", fie
     }
 
 
+def _present(value: Any) -> bool:
+    return field_value_present(value)
+
+
+def _formal_field_values(edition: Edition) -> tuple[dict[str, Any], set[str]]:
+    return formal_field_values(edition)
+
+
+def catalog_field_state(edition: Edition) -> dict[str, Any]:
+    """Resolve field and section readiness from formal draft data.
+
+    CatalogFieldDecision wins whenever it exists. The current Work, Edition,
+    Asset and approved relation rows provide a safe compatibility fallback for
+    historical catalog records. A decision marked confirmed while its formal
+    field is empty becomes a conflict instead of falsely completing a section.
+    """
+
+    readiness = {row.field_name: row for row in field_readiness(edition)}
+    required_fields = set(
+        REQUIRED_FIELDS.get(
+            edition.work.document_type,
+            REQUIRED_FIELDS.get("book", ()),
+        )
+    )
+    field_names = set(readiness) | required_fields
+    for fields in SECTION_FIELDS.values():
+        field_names.update(fields)
+
+    fields: dict[str, dict[str, Any]] = {}
+    for field_name in sorted(field_names):
+        row = readiness.get(field_name)
+        value = row.value if row else None
+        has_value = _present(value)
+        field_status = row.status if row else CatalogFieldDecision.Status.EMPTY
+        fields[field_name] = {
+            "field": field_name,
+            "label": FIELD_LABELS.get(field_name, field_name),
+            "status": field_status,
+            "required": field_name in required_fields,
+            "has_value": has_value,
+            "stale_reason": row.stale_reason if row else "",
+        }
+
+    sections: dict[str, dict[str, Any]] = {}
+    for section, section_fields in SECTION_FIELDS.items():
+        rows = [fields[name] for name in section_fields if name in fields]
+        conflicts = [row["field"] for row in rows if row["status"] == CatalogFieldDecision.Status.CONFLICT]
+        incomplete = [
+            row["field"]
+            for row in rows
+            if row["required"]
+            and row["status"]
+            not in {
+                CatalogFieldDecision.Status.CONFIRMED,
+                CatalogFieldDecision.Status.STALE,
+            }
+            and row["field"] not in conflicts
+        ]
+        review = [
+            row["field"]
+            for row in rows
+            if row["status"]
+            in {
+                CatalogFieldDecision.Status.SUGGESTED,
+                CatalogFieldDecision.Status.NEEDS_REVIEW,
+                CatalogFieldDecision.Status.STALE,
+            }
+            and row["field"] not in incomplete
+        ]
+        if conflicts:
+            status = "conflict"
+        elif incomplete:
+            status = "incomplete"
+        elif review:
+            status = "needs_review"
+        elif any(
+            row["status"]
+            in {
+                CatalogFieldDecision.Status.CONFIRMED,
+                CatalogFieldDecision.Status.NOT_APPLICABLE,
+            }
+            for row in rows
+        ):
+            status = "complete"
+        else:
+            status = "available"
+        sections[section] = {
+            "status": status,
+            "conflicts": conflicts,
+            "incomplete": incomplete,
+            "needs_review": review,
+        }
+
+    # Keep the central publication policy visible here, then reconcile its
+    # decision-only output with formal historical values above.
+    raw_check = publication_field_check(edition)
+    raw_codes = {
+        (str(row.get("field") or ""), str(row.get("code") or ""))
+        for row in raw_check["blockers"]
+    }
+    blockers: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    for field_name, row in fields.items():
+        if row["status"] == CatalogFieldDecision.Status.CONFLICT:
+            blockers.append(
+                {
+                    "field": field_name,
+                    "label": row["label"],
+                    "code": "field_conflict",
+                }
+            )
+        elif row["required"] and row["status"] not in {
+            CatalogFieldDecision.Status.CONFIRMED,
+            CatalogFieldDecision.Status.STALE,
+        }:
+            blockers.append(
+                {
+                    "field": field_name,
+                    "label": row["label"],
+                    "code": (
+                        "required_field_incomplete"
+                        if (field_name, "required_field_incomplete") in raw_codes
+                        else "required_catalog_value_missing"
+                    ),
+                }
+            )
+        elif row["status"] == CatalogFieldDecision.Status.STALE:
+            warnings.append(
+                {
+                    "field": field_name,
+                    "label": row["label"],
+                    "code": "field_stale",
+                }
+            )
+
+    review_fields = sorted(
+        {
+            row["field"]
+            for row in fields.values()
+            if row["status"]
+            in {
+                CatalogFieldDecision.Status.SUGGESTED,
+                CatalogFieldDecision.Status.NEEDS_REVIEW,
+                CatalogFieldDecision.Status.STALE,
+            }
+        }
+    )
+    return {
+        "fields": fields,
+        "sections": sections,
+        "publication_check": {
+            "blockers": blockers,
+            "warnings": warnings,
+            "can_publish": not blockers,
+        },
+        "review_fields": review_fields,
+        "raw_publication_field_check": raw_check,
+    }
+
+
+def _append_catalog_state_issues(
+    issues: list[dict[str, Any]],
+    *,
+    step_key: str,
+    section: dict[str, Any],
+) -> None:
+    existing = {(row.get("code"), row.get("field")) for row in issues}
+    for field_name in section.get("conflicts", []):
+        key = ("field_conflict", field_name)
+        if key not in existing:
+            issues.append(
+                _issue(
+                    "field_conflict",
+                    f"{FIELD_LABELS.get(field_name, field_name)}存在冲突，请确认后再发布。",
+                    step_key,
+                    severity="blocker",
+                    field=field_name,
+                )
+            )
+    for field_name in section.get("incomplete", []):
+        key = ("required_field_incomplete", field_name)
+        if key not in existing:
+            issues.append(
+                _issue(
+                    "required_field_incomplete",
+                    f"{FIELD_LABELS.get(field_name, field_name)}尚未完成。",
+                    step_key,
+                    severity="blocker",
+                    field=field_name,
+                )
+            )
+    for field_name in section.get("needs_review", []):
+        key = ("field_needs_review", field_name)
+        if key not in existing:
+            issues.append(
+                _issue(
+                    "field_needs_review",
+                    f"{FIELD_LABELS.get(field_name, field_name)}需要确认。",
+                    step_key,
+                    field=field_name,
+                )
+            )
+
+
 def _decision_state(edition: Edition, step_key: str) -> tuple[str, EditionWorkflowDecision | None]:
     decision = edition.workflow_decisions.filter(step_key=step_key).first()
     if decision is None:
@@ -412,32 +689,37 @@ def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
 
 
 def _confirmed_step(
-    edition: Edition,
     key: str,
     label: str,
     issues: list[dict[str, Any]],
     summary: str,
     action: str,
+    catalog_state: dict[str, Any],
 ) -> dict[str, Any]:
-    decision_state, _decision = _decision_state(edition, key)
+    section = catalog_state["sections"].get(key, {"status": "available"})
+    _append_catalog_state_issues(issues, step_key=key, section=section)
     blockers = [row for row in issues if row["severity"] == "blocker"]
     if blockers:
         status = "blocked"
-    elif decision_state == EditionWorkflowDecision.Decision.SKIPPED:
-        status = "skipped"
-    elif decision_state == EditionWorkflowDecision.Decision.CONFIRMED:
+    elif section["status"] == "complete":
         status = "complete"
-    elif decision_state == "stale":
-        issues.append(_issue("confirmation_stale", "本节内容已变化，需要重新确认。", key))
-        status = "attention"
-    elif issues:
+    elif section["status"] == "available" and key == "curation":
+        status = "skipped"
+    elif section["status"] in {"needs_review", "conflict", "incomplete"} or issues:
         status = "attention"
     else:
         status = "available"
-    return _step_payload(key, label, status, issues, summary, action)
+    payload = _step_payload(key, label, status, issues, summary, action)
+    payload["field_status"] = section["status"]
+    payload["fields"] = [
+        catalog_state["fields"][field_name]
+        for field_name in SECTION_FIELDS.get(key, ())
+        if field_name in catalog_state["fields"]
+    ]
+    return payload
 
 
-def _work_step(edition: Edition) -> dict[str, Any]:
+def _work_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     issues = []
     if not work.title.strip():
@@ -452,30 +734,17 @@ def _work_step(edition: Edition) -> dict[str, Any]:
                 field="document_type",
             )
         )
-    ambiguous_items = UploadItem.objects.filter(
-        edition=edition,
-        preflight_summary__catalog_reconciliation__requires_review=True,
+    return _confirmed_step(
+        "work",
+        "作品",
+        issues,
+        work.title or "未命名作品",
+        "检查作品字段",
+        catalog_state,
     )
-    ambiguous = any(
-        item.entity_resolution_candidates.filter(
-            target_type="work",
-            status=EntityResolutionCandidate.Status.PROPOSED,
-        ).exists()
-        for item in ambiguous_items
-    )
-    if ambiguous:
-        issues.append(
-            _issue(
-                "work_identity_review_required",
-                "该作品可能对应馆内已有 Work 或新 Edition，请确认身份。",
-                "work",
-                severity="blocker",
-            )
-        )
-    return _confirmed_step(edition, "work", "作品识别", issues, work.title or "未命名作品", "确认作品并继续")
 
 
-def _bibliography_step(edition: Edition) -> dict[str, Any]:
+def _bibliography_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     issues = []
     if edition.publication_year is None:
@@ -492,38 +761,32 @@ def _bibliography_step(edition: Edition) -> dict[str, Any]:
     elif work.document_type == "report" and not (edition.report_institution.strip() or edition.publisher.strip()):
         issues.append(_issue("report_institution_missing", "研究报告责任机构尚未补全。", "bibliography", field="report_institution"))
     summary = f"{edition.publication_year or '未定年'} · {edition.publisher or edition.journal_title or edition.degree_institution or edition.report_institution or '出版信息待补'}"
-    return _confirmed_step(edition, "bibliography", "书目与出版", issues, summary, "确认书目并继续")
-
-
-def _contributors_step(edition: Edition) -> dict[str, Any]:
-    pending = EntityResolutionCandidate.objects.filter(
-        upload_item__edition=edition,
-        target_type="person",
-        status=EntityResolutionCandidate.Status.PROPOSED,
-    ).count()
-    issues = []
-    if pending:
-        issues.append(
-            _issue(
-                "contributors_unresolved",
-                f"仍有 {pending} 组责任者候选可继续处理；已确认责任者不受影响。",
-                "contributors",
-            )
-        )
-    approved = edition.contributions.filter(approved=True).count()
-    if not approved:
-        issues.append(_issue("contributors_empty", "尚未确认正式责任者。", "contributors"))
     return _confirmed_step(
-        edition,
-        "contributors",
-        "作者与责任者",
+        "bibliography",
+        "版本",
         issues,
-        f"已确认 {approved} 位责任者",
-        "确认责任者并继续",
+        summary,
+        "检查版本字段",
+        catalog_state,
     )
 
 
-def _classification_step(edition: Edition) -> dict[str, Any]:
+def _contributors_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
+    issues = []
+    approved = edition.contributions.filter(approved=True).count()
+    if not approved:
+        issues.append(_issue("contributors_empty", "尚未确认作者。", "contributors"))
+    return _confirmed_step(
+        "contributors",
+        "作者与贡献者",
+        issues,
+        f"已关联 {approved} 位作者或贡献者",
+        "检查作者与贡献者",
+        catalog_state,
+    )
+
+
+def _classification_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     suggested = work.discipline_relations.filter(review_status=RelationReviewStatus.SUGGESTED).count()
     suggested += work.subdiscipline_relations.filter(review_status=RelationReviewStatus.SUGGESTED).count()
@@ -546,16 +809,16 @@ def _classification_step(edition: Edition) -> dict[str, Any]:
             )
         )
     return _confirmed_step(
-        edition,
         "classification",
-        "社科分类",
+        "学科",
         issues,
         f"{approved.count()} 个已确认学科",
-        "确认分类并继续",
+        "检查学科分类",
+        catalog_state,
     )
 
 
-def _knowledge_step(edition: Edition) -> dict[str, Any]:
+def _knowledge_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     legacy_pending = work.knowledge_relations.filter(
         Q(approved=False) | Q(review_status=RelationReviewStatus.SUGGESTED)
@@ -563,14 +826,7 @@ def _knowledge_step(edition: Edition) -> dict[str, Any]:
     node_pending = work.node_relations.filter(
         status__in=[KnowledgePublicationStatus.PENDING, KnowledgePublicationStatus.DRAFT]
     ).count()
-    task_pending = TheoryReviewTask.objects.filter(
-        work=work,
-        status__in=[
-            TheoryReviewTask.TaskStatus.PENDING,
-            TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
-        ],
-    ).count()
-    pending = legacy_pending + node_pending + task_pending
+    pending = legacy_pending + node_pending
     issues = []
     if pending:
         issues.append(
@@ -583,16 +839,16 @@ def _knowledge_step(edition: Edition) -> dict[str, Any]:
     confirmed = work.knowledge_relations.filter(approved=True).count()
     confirmed += work.node_relations.filter(status=KnowledgePublicationStatus.PUBLISHED).count()
     return _confirmed_step(
-        edition,
         "knowledge",
-        "理论、主题与知识关系",
+        "理论与主题",
         issues,
-        f"{confirmed} 条正式知识关系",
-        "确认知识关系并继续",
+        f"{confirmed} 条已确认关系",
+        "检查理论与主题",
+        catalog_state,
     )
 
 
-def _reader_step(edition: Edition) -> dict[str, Any]:
+def _reader_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     issues = []
     normalized = edition.assets.filter(
         kind=Asset.Kind.NORMALIZED,
@@ -610,10 +866,17 @@ def _reader_step(edition: Edition) -> dict[str, Any]:
     if edition.semantic_index_status != "ready":
         issues.append(_issue("semantic_index_pending", "观点检索尚未就绪，将使用关键词降级。", "reader"))
     summary = f"阅读文件 {'已就绪' if normalized else '待处理'} · {edition.get_reader_rendition_policy_display()}"
-    return _confirmed_step(edition, "reader", "文本与阅读文件", issues, summary, "确认阅读文件并继续")
+    return _confirmed_step(
+        "reader",
+        "正文与阅读",
+        issues,
+        summary,
+        "检查阅读文件",
+        catalog_state,
+    )
 
 
-def _curation_step(edition: Edition) -> dict[str, Any]:
+def _curation_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
     work = edition.work
     paths = ReadingPathItem.objects.filter(work=work).values("reading_path_id").distinct().count()
     overrides = RecommendationOverride.objects.filter(work=work, active=True).count()
@@ -621,12 +884,12 @@ def _curation_step(edition: Edition) -> dict[str, Any]:
     if not paths:
         issues.append(_issue("reading_path_missing", "尚未加入阅读路径，可选择暂不策展。", "curation"))
     return _confirmed_step(
-        edition,
         "curation",
-        "知识策展与前台联动",
+        "策展（可选）",
         issues,
         f"阅读路径 {paths} 条 · 推荐规则 {overrides} 条",
-        "确认策展或暂不策展",
+        "检查策展内容",
+        catalog_state,
     )
 
 
@@ -827,9 +1090,12 @@ def _serialize_work(edition: Edition) -> dict[str, Any]:
 
 
 def _serialize_bibliography(edition: Edition) -> dict[str, Any]:
+    from catalog.services.journal_issues import journal_contents_snapshot
+
     return {
         "id": str(edition.id),
         **{field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS},
+        "journal_contents": journal_contents_snapshot(edition),
         "state": edition.state,
         "public_slug": edition.public_slug,
         "is_primary": edition.is_primary,
@@ -1120,6 +1386,14 @@ def _workspace_data(edition: Edition, item: UploadItem | None, workflow: dict[st
         "knowledge": {
             "relations": legacy_relations,
             "node_relations": node_relations,
+            "topics": [
+                {"id": str(row.topic_id), "name": row.topic.name, "is_primary": row.is_primary}
+                for row in work.topic_relations.exclude(review_status=RelationReviewStatus.REJECTED).select_related("topic")
+            ],
+            "nodes": [
+                {"id": str(row["node_id"]), "name": row["node__canonical_name_zh"], "role": row["role"], "strength": row["strength"], "is_primary": row["is_primary"]}
+                for row in node_relations if row["status"] not in {"rejected", "archived"}
+            ],
         },
         "reader": {
             "reader_rendition_policy": edition.reader_rendition_policy,

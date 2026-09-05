@@ -15276,7 +15276,6 @@ a[data-route-pending="true"] {
 .explore-landing-page {
   padding: 0 10px 28px;
   overflow-x: clip;
-  background: #f7f4ee;
 }
 
 .explore-landing-hero {
@@ -15503,12 +15502,6 @@ a[data-route-pending="true"] {
 
 .explore-page {
   padding: 20px clamp(20px, 3vw, 52px) 48px;
-  background: linear-gradient(180deg, #f8f5ef, #f4f0e8);
-}
-
-#main-content:has(.explore-landing-page),
-#main-content:has(.explore-page) {
-  background: #f7f4ee;
 }
 
 .explore-workbench-head {

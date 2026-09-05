@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 import re
 import tempfile
+from uuid import uuid4
 
 import fitz
 from PIL import Image, ImageStat
@@ -12,7 +13,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils.text import slugify
 
-from catalog.models import Asset, CoverCandidate, DocumentType, Work
+from catalog.models import Asset, CatalogFieldDecision, CoverCandidate, DocumentType, Edition, PublicationState, Work
 
 
 class CoverCandidateUnavailable(RuntimeError):
@@ -153,12 +154,29 @@ def _page_metrics(page, page_index: int, work: Work, author_names: list[str], ma
 
 
 @transaction.atomic
-def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False):
+def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False, actor=None, edition_id=None):
     candidate = (
         CoverCandidate.objects.select_for_update()
         .select_related("work", "asset")
         .get(pk=candidate.pk)
     )
+    edition = Edition.objects.select_for_update().get(pk=candidate.asset.edition_id)
+    if edition_id and str(edition.pk) != str(edition_id):
+        raise CoverCandidateUnavailable("该封面不属于当前版本，请查找本版本封面。")
+    work = Work.objects.select_for_update().get(pk=candidate.work_id)
+    edition.work = work
+    if edition.work_id != candidate.work_id:
+        raise CoverCandidateUnavailable("该封面对应的作品已变化，请重新查找。")
+    requires_revision = work.editions.filter(state=PublicationState.PUBLISHED).exists()
+    if automatic and CatalogFieldDecision.objects.filter(
+        edition=edition, field_name="cover",
+        status__in={CatalogFieldDecision.Status.CONFIRMED, CatalogFieldDecision.Status.NOT_APPLICABLE},
+    ).exists():
+        return {"candidate": candidate, "automatic": True, "saved": False}
+    if requires_revision and (automatic or actor is None):
+        # Background discovery may prepare alternatives, never change an
+        # already published holding or create a human-confirmed revision.
+        return {"candidate": candidate, "automatic": automatic, "saved": False}
     thumbnail_name = candidate.thumbnail.name
     if (
         not thumbnail_name
@@ -177,24 +195,52 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
         raise CoverCandidateUnavailable(
             "封面候选文件暂时不可用，请点击“重新分析”后再选择。"
         ) from exc
-    CoverCandidate.objects.filter(work=candidate.work).exclude(pk=candidate.pk).update(
+    CoverCandidate.objects.filter(asset__edition=edition).exclude(pk=candidate.pk).update(
         selected=False
     )
     candidate.selected = True
     candidate.save(update_fields=["selected", "updated_at"])
-    filename = f"{slugify(candidate.work.title)[:100] or candidate.work_id}-cover.jpg"
-    candidate.work.cover.save(filename, ContentFile(content), save=False)
-    candidate.work.save(update_fields=["cover", "updated_at"])
+    revision = None
+    if requires_revision:
+        from catalog.services.editorial_revision import save_workflow_editorial_revision
+
+        name = f"public/covers/editorial/{work.pk}/{uuid4().hex}.jpg"
+        stored_name = work.cover.storage.save(name, ContentFile(content))
+        revision = save_workflow_editorial_revision(
+            work_id=work.pk, section_patch={"cover": stored_name}, actor=actor,
+            change_note="确认本版本封面，等待发布编辑草稿",
+        )
+        value = stored_name
+    else:
+        filename = f"{slugify(work.title)[:100] or work.pk}-{uuid4().hex}-cover.jpg"
+        work.cover.save(filename, ContentFile(content), save=False)
+        work.save(update_fields=["cover", "updated_at"])
+        value = work.cover.name
+    from catalog.services.field_decisions import record_edition_field_decision
+
+    provenance = {"source": "pdf_cover", "page": candidate.page_index, "asset_id": str(candidate.asset_id)}
+    if revision:
+        provenance.update(editorial_revision_id=str(revision.pk), canonical_write_deferred=True)
+    record_edition_field_decision(
+        edition, "cover", status=CatalogFieldDecision.Status.SUGGESTED if automatic else CatalogFieldDecision.Status.CONFIRMED,
+        value=value, actor=actor,
+        confirmation_method=CatalogFieldDecision.ConfirmationMethod.CANDIDATE,
+        provenance=provenance, candidate_type="cover", candidate_id=candidate.pk,
+        reason="从当前版本PDF选取封面",
+    )
     return {
         "candidate": candidate,
         "automatic": automatic,
+        "saved": True,
+        "canonical_write_deferred": revision is not None,
+        "editorial_revision_id": str(revision.pk) if revision else None,
     }
 
 
 def generate_cover_candidates(asset: Asset, *, force: bool = False):
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
-    if work.document_type != DocumentType.BOOK:
+    if work.document_type not in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
         return []
     existing = list(asset.cover_candidates.order_by("-score", "page_index"))
     if existing and not force:
@@ -266,8 +312,8 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False):
         ),
         None,
     )
-    if preferred is not None:
-        select_cover_candidate(preferred)
+    if preferred is not None and not work.cover:
+        select_cover_candidate(preferred, automatic=True)
     elif not work.cover and candidates and candidates[0].score >= settings.COVER_AUTO_SELECT_THRESHOLD:
         select_cover_candidate(candidates[0], automatic=True)
     return list(asset.cover_candidates.order_by("-score", "page_index"))
@@ -282,8 +328,11 @@ def generate_recommendation_image(asset: Asset, *, force: bool = False):
     """
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
-    if work.document_type == DocumentType.BOOK:
+    if work.document_type in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
         return work.cover
+    if work.editions.filter(state=PublicationState.PUBLISHED).exists():
+        # Background file processing cannot replace a published editorial image.
+        return work.recommendation_image
     image_name = work.recommendation_image.name
     if (
         image_name

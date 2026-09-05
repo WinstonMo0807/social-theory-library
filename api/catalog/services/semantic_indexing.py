@@ -14,6 +14,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 
 from catalog.models import (
     Asset,
+    CatalogPublicationRevision,
     Edition,
     OcrStatus,
     PublicationState,
@@ -420,13 +421,17 @@ def resume_semantic_job(job: SemanticIndexJob, *, actor=None) -> SemanticIndexJo
     return job
 
 
-def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None = None) -> None:
+def ensure_semantic_index(
+    config: dict | None = None, *, index_uid: str | None = None,
+    metadata_only: bool = False,
+) -> None:
     from catalog.services.semantic_search import current_semantic_runtime, semantic_model_health
 
     config = config or current_semantic_runtime()
     index_uid = index_uid or active_semantic_index_version().uid
     if (
-        config.get("engine") == "meilisearch_hybrid"
+        not metadata_only
+        and config.get("engine") == "meilisearch_hybrid"
         and config.get("provider") == "huggingFace"
         and config.get("offline_mode")
     ):
@@ -438,6 +443,8 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
     base_url = settings.MEILISEARCH_URL.rstrip("/")
     response = httpx.get(f"{base_url}/indexes/{index_uid}", headers=_headers(), timeout=5)
     if response.status_code == 404:
+        if metadata_only:
+            raise ValueError("原有正文索引不可用，元数据更新不能重新建立全文向量。")
         created = httpx.post(
             f"{base_url}/indexes",
             headers=_headers(),
@@ -463,6 +470,8 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
             "edition_id",
             "work_id",
             "document_id",
+            "catalog_revision_id",
+            "chunk_id",
             "document_type",
             "language",
             "access_status",
@@ -476,6 +485,8 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
         "displayedAttributes": [
             "id",
             "document_id",
+            "catalog_revision_id",
+            "chunk_id",
             "asset_id",
             "edition_id",
             "edition_slug",
@@ -502,16 +513,32 @@ def ensure_semantic_index(config: dict | None = None, *, index_uid: str | None =
         ],
         "searchCutoffMs": 1600,
     }
-    updated = httpx.patch(
-        f"{base_url}/indexes/{index_uid}/settings",
-        headers=_headers(),
-        json=desired,
-        timeout=10,
-    )
-    updated.raise_for_status()
-    _wait_task(updated.json())
+    if metadata_only:
+        current_response = httpx.get(
+            f"{base_url}/indexes/{index_uid}/settings", headers=_headers(), timeout=5,
+        )
+        current_response.raise_for_status()
+        current = current_response.json()
+        if config.get("embedder_name") not in (current.get("embedders") or {}):
+            raise ValueError("原有正文向量配置不可用，继续保留上一正式检索版本。")
+        additions = {}
+        for name in ("filterableAttributes", "displayedAttributes"):
+            existing = list(current.get(name) or [])
+            if "*" in existing:
+                continue
+            missing = [field for field in desired[name] if field not in existing]
+            if missing:
+                additions[name] = [*existing, *missing]
+        desired = additions
+    if desired:
+        updated = httpx.patch(
+            f"{base_url}/indexes/{index_uid}/settings",
+            headers=_headers(), json=desired, timeout=10,
+        )
+        updated.raise_for_status()
+        _wait_task(updated.json())
 
-    if config.get("engine") == "meilisearch_hybrid":
+    if not metadata_only and config.get("engine") == "meilisearch_hybrid":
         embedder = {
             "source": config["provider"],
             "model": config.get("model_repo_id") or config["model"],
@@ -556,6 +583,8 @@ def semantic_documents(
     asset: Asset,
     *,
     runtime_config: dict | None = None,
+    catalog_revision: CatalogPublicationRevision | None = None,
+    staging_only: bool = False,
 ) -> list[dict]:
     from catalog.services.semantic_search import current_semantic_runtime
 
@@ -572,26 +601,40 @@ def semantic_documents(
         edition.contributions.filter(approved=True).values_list("person_id", flat=True)
     )
     relations = _relations(work)
-    is_public = (
-        edition.state == PublicationState.PUBLISHED
-        and asset.is_current
+    catalog_revision = None if staging_only else catalog_revision or edition.active_catalog_revision
+    snapshot = catalog_revision.snapshot if catalog_revision else {}
+    work_values = snapshot.get("work") or {}
+    edition_values = snapshot.get("edition") or {}
+    knowledge = snapshot.get("knowledge") or {}
+    revision_key = str((catalog_revision.provenance or {}).get("semantic_index_revision_id") or "legacy") if catalog_revision else ""
+    if catalog_revision:
+        if catalog_revision.reader_asset_id != asset.pk:
+            raise ValueError("语义索引文件与馆藏修订不一致。")
+        authors = [str(row.get("name") or "") for row in snapshot.get("contributions", [])]
+        author_ids = [str(row.get("person_id")) for row in snapshot.get("contributions", [])]
+    is_public = bool(
+        catalog_revision and edition.state == PublicationState.PUBLISHED
+        and catalog_revision.status != CatalogPublicationRevision.Status.WITHDRAWN
+        and (catalog_revision.fulltext_ready or (catalog_revision.provenance or {}).get("requested_fulltext_ready"))
         and asset.status == Asset.Status.READY
     )
     return [
         {
-            "id": str(chunk.id),
+            "id": f"{revision_key}_{chunk.id}" if revision_key and revision_key != "legacy" else str(chunk.id),
+            "chunk_id": str(chunk.id),
+            "catalog_revision_id": revision_key,
             "document_id": chunk.document_id,
             "asset_id": str(asset.id),
             "edition_id": str(edition.id),
             "edition_slug": edition.public_slug,
             "work_id": str(work.id),
-            "title": work.title,
+            "title": work_values.get("title", work.title),
             "authors": authors,
             "author_ids": [str(value) for value in author_ids],
-            "document_type": work.document_type,
+            "document_type": work_values.get("document_type", work.document_type),
             "language": chunk.language or "unknown",
             "access_status": asset.access_status,
-            "publication_year": edition.publication_year,
+            "publication_year": edition_values.get("publication_year", edition.publication_year),
             "page_start": chunk.page_start,
             "page_end": chunk.page_end,
             "chapter_title": chunk.chapter_title,
@@ -602,16 +645,12 @@ def semantic_documents(
             "context_after": chunk.context_after,
             "locators": chunk.locators,
             "quality_flags": chunk.quality_flags,
-            "theory_slugs": [item.slug for item in relations["theories"]],
-            "topic_slugs": [item.slug for item in relations["topics"]],
-            "concept_slugs": [item.slug for item in relations["concepts"]],
+            "theory_slugs": [row["slug"] for row in knowledge.get("nodes", []) if row.get("type") == "theory_tradition"] if catalog_revision else [item.slug for item in relations["theories"]],
+            "topic_slugs": [row["slug"] for row in knowledge.get("topics", [])] if catalog_revision else [item.slug for item in relations["topics"]],
+            "concept_slugs": [row["slug"] for row in knowledge.get("nodes", []) if row.get("type") == "concept"] if catalog_revision else [item.slug for item in relations["concepts"]],
             "is_public": is_public,
         }
-        for chunk in asset.semantic_chunks.filter(
-            parser_version=PARSER_VERSION,
-            chunk_version=CHUNK_VERSION,
-            embedding_model=model_name,
-        ).order_by("order")
+        for chunk in asset.semantic_chunks.order_by("order")
     ]
 
 
@@ -699,11 +738,56 @@ def _bind_legacy_job_version(job: SemanticIndexJob) -> bool:
     return bool(job.index_version_id)
 
 
+def _reuse_catalog_vectors(asset, documents, *, index_uid: str, runtime: dict):
+    """Copy stored vectors using Meilisearch's retrieveVectors contract.
+
+    No request is made to an embedding provider for a metadata-only revision.
+    https://www.meilisearch.com/docs/reference/api/documents/list-documents-with-get
+    """
+    if runtime.get("engine") != "meilisearch_hybrid":
+        return
+    active = asset.edition.active_catalog_revision
+    if active is None or active.reader_asset_id != asset.pk:
+        raise ValueError("没有可复用的已发布正文向量。")
+    source_key = str((active.provenance or {}).get("semantic_index_revision_id") or "legacy")
+    condition = f'asset_id = "{asset.pk}" AND '
+    condition += '(catalog_revision_id = "legacy" OR catalog_revision_id NOT EXISTS)' if source_key == "legacy" else f'catalog_revision_id = "{source_key}"'
+    vectors = {}
+    offset = 0
+    while True:
+        response = httpx.get(
+            f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/documents",
+            headers=_headers(),
+            params={"filter": condition, "offset": offset, "limit": 500, "retrieveVectors": "true", "fields": "id,chunk_id,_vectors"},
+            timeout=settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        page = response.json()
+        rows = page.get("results", [])
+        for row in rows:
+            identifier = str(row.get("chunk_id") or row.get("id") or "")
+            entries = row.get("_vectors") or {}
+            entry = entries.get(runtime["embedder_name"])
+            embeddings = entry.get("embeddings") if isinstance(entry, dict) else entry
+            if embeddings:
+                vectors[identifier] = {runtime["embedder_name"]: {"embeddings": embeddings, "regenerate": False}}
+        offset += len(rows)
+        if not rows or offset >= int(page.get("total", offset)):
+            break
+    if any(document["chunk_id"] not in vectors for document in documents):
+        raise ValueError("已有正文向量不完整，元数据更新保留上一稳定版本，请修复索引后重试。")
+    for document in documents:
+        document["_vectors"] = vectors[document["chunk_id"]]
+
+
 def index_semantic_asset(
     asset: Asset,
     *,
     index_version: SemanticIndexVersion | None = None,
     runtime_config: dict | None = None,
+    catalog_revision: CatalogPublicationRevision | None = None,
+    metadata_only: bool = False,
+    staging_only: bool = False,
 ) -> dict:
     index_version = _write_index_version(index_version)
     runtime = (
@@ -711,12 +795,17 @@ def index_semantic_asset(
         if runtime_config is not None
         else semantic_index_version_runtime(index_version)
     )
-    documents = semantic_documents(asset, runtime_config=runtime)
+    documents = semantic_documents(asset, runtime_config=runtime, catalog_revision=catalog_revision, staging_only=staging_only)
+    from catalog.services.document_intelligence import document_asset_is_published
+
+    preserve_generations = bool(catalog_revision or document_asset_is_published(asset))
     try:
         index_uid = index_version.uid
-        ensure_semantic_index(runtime, index_uid=index_uid)
+        ensure_semantic_index(runtime, index_uid=index_uid, metadata_only=metadata_only)
+        if metadata_only:
+            _reuse_catalog_vectors(asset, documents, index_uid=index_uid, runtime=runtime)
         if not documents:
-            removed = _remove_stale_semantic_asset_documents(
+            removed = 0 if preserve_generations else _remove_stale_semantic_asset_documents(
                 index_uid,
                 str(asset.id),
                 set(),
@@ -738,7 +827,7 @@ def index_semantic_asset(
             indexed_at=timezone.now(),
             updated_at=timezone.now(),
         )
-        removed = _remove_stale_semantic_asset_documents(
+        removed = 0 if preserve_generations else _remove_stale_semantic_asset_documents(
             index_uid,
             str(asset.id),
             {document["id"] for document in documents},
@@ -752,6 +841,8 @@ def index_semantic_asset(
             "document_batch_size": write_result["document_batch_size"],
             "removed_stale_documents": removed,
             "task": write_result["task"],
+            "metadata_only": metadata_only,
+            "catalog_revision_id": str(catalog_revision.pk) if catalog_revision else None,
         }
     except SemanticModelUnavailable:
         asset.semantic_chunks.filter(
@@ -763,6 +854,8 @@ def index_semantic_asset(
         )
         raise
     except (httpx.HTTPError, RuntimeError, TimeoutError, ValueError) as exc:
+        if catalog_revision:
+            raise
         asset.semantic_chunks.update(
             index_status=SemanticChunk.IndexStatus.FAILED,
             index_error=str(exc)[:2000],
@@ -773,13 +866,15 @@ def index_semantic_asset(
         return {"backend": "database-fallback", "documents": len(documents), "warning": str(exc)}
 
 
-def remove_semantic_asset(asset_id: str) -> None:
+def remove_semantic_asset(asset_id: str, *, strict: bool = False) -> None:
     try:
         index_uid = active_semantic_index_version().uid
     except SemanticIndexVersionRequired:
         # A missing or ambiguous active version must never turn into a write
         # against the historical fallback UID. Callers can record the warning
         # and continue their source-of-truth operation independently.
+        if strict:
+            raise
         return
     try:
         response = httpx.post(
@@ -794,7 +889,7 @@ def remove_semantic_asset(asset_id: str) -> None:
         _wait_task(response.json(), timeout=30)
         synchronize_active_semantic_index_document_count(index_uid)
     except (httpx.HTTPError, RuntimeError, TimeoutError):
-        if settings.SEMANTIC_SEARCH_REQUIRED:
+        if strict or settings.SEMANTIC_SEARCH_REQUIRED:
             raise
 
 
@@ -820,6 +915,32 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
 
     started = time.monotonic()
     runtime_config = semantic_index_version_runtime(job.index_version)
+    catalog_revision_id = (job.stats or {}).get("catalog_revision_id")
+    catalog_revision = CatalogPublicationRevision.objects.get(pk=catalog_revision_id) if catalog_revision_id else None
+    staging_only = bool((job.stats or {}).get("staging_only"))
+    published_asset = CatalogPublicationRevision.objects.filter(
+        Q(reader_asset_id=job.asset_id) | Q(document_revision__asset_id=job.asset_id)
+    ).exists()
+    if published_asset and (
+        staging_only or (catalog_revision is None and job.index_version.status == SemanticIndexVersion.Status.ACTIVE)
+    ):
+        job.status = SemanticIndexJob.Status.CANCELED
+        job.error_message = "该文件已进入正式发布，请通过馆藏智能内容更新重新处理。"
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+        _finalize_projection_bindings(job)
+        return job
+    if catalog_revision and catalog_revision.status in {
+        CatalogPublicationRevision.Status.SUPERSEDED,
+        CatalogPublicationRevision.Status.WITHDRAWN,
+    }:
+        job.status = SemanticIndexJob.Status.CANCELED
+        job.error_message = "馆藏修订已被替代或撤回。"
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+        _finalize_projection_bindings(job)
+        return job
+    metadata_only = bool((job.stats or {}).get("metadata_only"))
     job.status = SemanticIndexJob.Status.RUNNING
     job.started_at = timezone.now()
     job.attempts += 1
@@ -829,8 +950,9 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
     job.asset.edition.save(update_fields=["semantic_index_status", "updated_at"])
     candidate_extraction_stats = {}
     try:
-        job.asset.semantic_chunks.update(index_status=SemanticChunk.IndexStatus.INDEXING)
-        chunks = build_semantic_chunks(
+        if not metadata_only:
+            job.asset.semantic_chunks.update(index_status=SemanticChunk.IndexStatus.INDEXING)
+        chunks = list(job.asset.semantic_chunks.order_by("order")) if metadata_only else build_semantic_chunks(
             job.asset,
             force=job.operation == SemanticIndexJob.Operation.REBUILD,
             runtime_config=runtime_config,
@@ -842,14 +964,14 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                 queue_query_lexicon_candidate_job,
             )
 
-            candidate_job = queue_query_lexicon_candidate_job(
+            candidate_job = None if metadata_only else queue_query_lexicon_candidate_job(
                 job.asset,
                 actor=job.requested_by,
             )
             candidate_extraction_stats = {
                 "query_lexicon_candidate_job_id": str(candidate_job.id),
                 "query_lexicon_candidate_job_status": candidate_job.status,
-            }
+            } if candidate_job else {"candidate_extraction": "unchanged_fulltext"}
         except Exception as exc:
             # Candidate discovery is enrichment. Its durable job can be
             # repaired independently and must never fail semantic indexing.
@@ -880,6 +1002,9 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
             job.asset,
             index_version=job.index_version,
             runtime_config=runtime_config,
+            catalog_revision=catalog_revision,
+            metadata_only=metadata_only,
+            staging_only=staging_only,
         ) if settings.SEMANTIC_SEARCH_ENABLED else {
             "backend": "disabled",
             "documents": len(chunks),
@@ -943,7 +1068,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
                         batch_size=settings.SEMANTIC_INDEX_STAGE_BATCH_SIZE,
                     )
             else:
-                SemanticIndexVersion.objects.filter(pk=job.index_version_id).update(
+                SemanticIndexVersion.objects.filter(pk=job.index_version_id).exclude(status=SemanticIndexVersion.Status.ACTIVE).update(
                     status=SemanticIndexVersion.Status.FAILED,
                     error_message="候选索引任务降级为数据库检索，生产索引未切换。",
                     updated_at=timezone.now(),
@@ -966,7 +1091,7 @@ def run_semantic_index_job(job_id: str, *, task_id: str = "") -> SemanticIndexJo
         job.asset.edition.semantic_index_status = SemanticIndexStatus.FAILED
         job.asset.edition.save(update_fields=["semantic_index_status", "updated_at"])
         if job.index_version_id:
-            SemanticIndexVersion.objects.filter(pk=job.index_version_id).update(
+            SemanticIndexVersion.objects.filter(pk=job.index_version_id).exclude(status=SemanticIndexVersion.Status.ACTIVE).update(
                 status=SemanticIndexVersion.Status.FAILED,
                 error_message=str(exc)[:4000],
                 updated_at=timezone.now(),
@@ -983,18 +1108,26 @@ def create_semantic_job(
     actor=None,
     index_version: SemanticIndexVersion | None = None,
     deferred: bool = False,
+    catalog_revision: CatalogPublicationRevision | None = None,
+    metadata_only: bool = False,
 ) -> SemanticIndexJob | None:
     # Reuse an already queued/running job before resolving the active version.
     # A temporary version-management outage must not turn an idempotent enqueue
     # into a second failure when the existing job already has its own target.
     if not force:
-        pending = asset.semantic_index_jobs.filter(
+        pending_jobs = asset.semantic_index_jobs.filter(
             status__in=[SemanticIndexJob.Status.QUEUED, SemanticIndexJob.Status.RUNNING],
-        ).first()
+        )
+        if catalog_revision:
+            pending_jobs = pending_jobs.filter(stats__catalog_revision_id=str(catalog_revision.pk))
+        else:
+            pending_jobs = pending_jobs.filter(stats__catalog_revision_id__isnull=True)
+        pending = pending_jobs.first()
         if pending:
             return pending
 
     index_version = _write_index_version(index_version)
+    stats = {"catalog_revision_id": str(catalog_revision.pk), "metadata_only": metadata_only} if catalog_revision else {}
     if deferred:
         return SemanticIndexJob.objects.create(
             operation=SemanticIndexJob.Operation.REBUILD if force else SemanticIndexJob.Operation.BUILD,
@@ -1003,6 +1136,7 @@ def create_semantic_job(
             requested_by=actor,
             chunk_version=CHUNK_VERSION,
             index_version=index_version,
+            stats=stats,
         )
     if semantic_index_paused():
         return SemanticIndexJob.objects.create(
@@ -1012,6 +1146,7 @@ def create_semantic_job(
             requested_by=actor,
             chunk_version=CHUNK_VERSION,
             index_version=index_version,
+            stats=stats,
             pause_requested_at=timezone.now(),
         )
     return SemanticIndexJob.objects.create(
@@ -1020,6 +1155,7 @@ def create_semantic_job(
         requested_by=actor,
         chunk_version=CHUNK_VERSION,
         index_version=index_version,
+        stats=stats,
     )
 
 
@@ -1030,6 +1166,8 @@ def queue_semantic_job(
     actor=None,
     index_version: SemanticIndexVersion | None = None,
     projection_parent_id=None,
+    catalog_revision: CatalogPublicationRevision | None = None,
+    metadata_only: bool = False,
 ) -> SemanticIndexJob | None:
     try:
         job = create_semantic_job(
@@ -1037,6 +1175,8 @@ def queue_semantic_job(
             force=force,
             actor=actor,
             index_version=index_version,
+            catalog_revision=catalog_revision,
+            metadata_only=metadata_only,
         )
     except SemanticIndexVersionRequired as exc:
         # Semantic indexing is derived enrichment. Record a durable, explicit
@@ -1044,10 +1184,15 @@ def queue_semantic_job(
         # complete. A later retry with one active version can create a fresh
         # queued job; repeated failed enqueues remain idempotent for this asset.
         if not force:
-            existing_failure = asset.semantic_index_jobs.filter(
+            failures = asset.semantic_index_jobs.filter(
                 status=SemanticIndexJob.Status.FAILED,
                 error_code=exc.error_code,
-            ).order_by("-created_at").first()
+            )
+            if catalog_revision:
+                failures = failures.filter(stats__catalog_revision_id=str(catalog_revision.pk))
+            else:
+                failures = failures.filter(stats__catalog_revision_id__isnull=True)
+            existing_failure = failures.order_by("-created_at").first()
             if existing_failure:
                 return existing_failure
         job = SemanticIndexJob.objects.create(
@@ -1063,6 +1208,7 @@ def queue_semantic_job(
             error_code=exc.error_code,
             error_message=str(exc)[:4000],
             finished_at=timezone.now(),
+            stats={"catalog_revision_id": str(catalog_revision.pk), "metadata_only": metadata_only} if catalog_revision else {},
         )
         Edition.objects.filter(pk=asset.edition_id).update(
             semantic_index_status=SemanticIndexStatus.FAILED,
@@ -1110,6 +1256,57 @@ def queue_semantic_job(
     job.task_id = task_id
     transaction.on_commit(lambda: dispatch_semantic_job(str(job.id), task_id))
     return job
+
+
+@transaction.atomic
+def queue_semantic_maintenance(asset: Asset, *, action: str, actor=None) -> dict:
+    """Rebuild published projections through a new immutable catalog revision.
+
+    Draft work is explicitly staging-only, even if publication happens before
+    the worker starts. Published paragraph identities are retained; this entry
+    point does not replace PDF bytes or run OCR.
+    """
+    from catalog.models import KnowledgePublicationEvent
+    from catalog.services.knowledge_publication import create_catalog_publication_event, retry_knowledge_publication
+
+    edition = Edition.objects.select_for_update(of=("self",)).select_related("active_catalog_revision").get(pk=asset.edition_id)
+    asset = Asset.objects.select_for_update().select_related("edition__work").get(pk=asset.pk)
+    if asset.kind != Asset.Kind.NORMALIZED or asset.status != Asset.Status.READY:
+        raise ValueError("阅读文件尚未就绪，不能重建正文索引。")
+    referenced = CatalogPublicationRevision.objects.filter(
+        Q(reader_asset_id=asset.pk) | Q(document_revision__asset_id=asset.pk)
+    ).exists()
+    active = edition.active_catalog_revision
+    if edition.state == PublicationState.PUBLISHED and active is None:
+        raise ValueError("这本馆藏缺少正式发布快照，请先核对发布记录。")
+    if referenced:
+        if edition.state != PublicationState.PUBLISHED or active is None or active.reader_asset_id != asset.pk:
+            raise ValueError("历史正文继续保留；请对当前已发布版本重新处理。")
+        newer_document = edition.catalog_revisions.filter(
+            revision__gt=active.revision, status__in=["preparing", "failed"],
+        ).exclude(reader_asset_id=asset.pk).exists()
+        if newer_document:
+            raise ValueError("新正文正在准备，请在该发布记录中重新处理，不能用旧正文覆盖。")
+        key = f"semantic-maintenance:{edition.pk}:{active.pk}:{action}"
+        event = create_catalog_publication_event(
+            edition, event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+            changed_fields=["document_revision", "fulltext_ready"], actor=actor,
+            idempotency_key=key, content_asset_id=asset.pk,
+            provenance={"source": "semantic_maintenance", "operation": action, "source_asset_id": str(asset.pk)},
+        )
+        if event.status in {"failed", "dead_letter"}:
+            event = retry_knowledge_publication(event.pk, actor=actor)
+        return {"queued": True, "publication_event_id": str(event.pk), "catalog_revision_id": str(event.catalog_revision_id), "scope": "published_revision"}
+    # Never let an administrative draft task acquire publication authority by
+    # implicitly falling back to the Edition's later active revision.
+    job = asset.semantic_index_jobs.filter(status__in=["queued", "running", "paused"], stats__staging_only=True).first()
+    if job is None:
+        job = queue_semantic_job(asset, force=True, actor=actor)
+        if job is None:
+            raise ValueError("正文索引任务暂时不能创建，请在诊断中查看处理状态。")
+        job.stats = {**(job.stats or {}), "staging_only": True, "maintenance_action": action}
+        job.save(update_fields=["stats", "updated_at"])
+    return {"queued": True, "job_id": str(job.pk), "scope": "draft_staging"}
 
 
 @transaction.atomic

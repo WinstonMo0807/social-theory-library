@@ -14,6 +14,11 @@ from catalog.models import DerivedClaim, EvidenceSpan, Page, SemanticChunk
 from catalog.services.claims.indexing import search_claim_index, visible_claim_queryset
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.passage_language import detect_passage_language
+from catalog.services.publication_eligibility import (
+    active_catalog_snapshot,
+    active_document_q,
+    active_document_revision_q,
+)
 from catalog.services.query_lexicon.normalization import normalize_term
 from catalog.services.retrieval import unified_retrieve
 from catalog.services.semantic_indexing import active_semantic_index_uid
@@ -369,10 +374,10 @@ def _evidence_spans_by_page(rows: list[dict]) -> dict[tuple[str, int], list[Evid
     spans = (
         EvidenceSpan.objects.filter(
             document_revision__asset_id__in=asset_ids,
-            document_revision__is_active=True,
             page_number__in=page_numbers,
             is_stale=False,
         )
+        .filter(active_document_revision_q(revision_prefix="document_revision"))
         .select_related(
             "document_revision__asset__edition__work",
             "page",
@@ -396,7 +401,9 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             chunk_ids.append(value)
     chunks = {
         str(chunk.id): chunk
-        for chunk in SemanticChunk.objects.filter(id__in=chunk_ids).select_related("asset")
+        for chunk in SemanticChunk.objects.filter(id__in=chunk_ids)
+        .filter(active_document_q(asset_prefix="asset"))
+        .select_related("asset")
     }
     page_lookups = {
         (str(row.get("asset_id") or ""), _row_page_number(row))
@@ -410,7 +417,9 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
     if page_query:
         pages = {
             (str(page.asset_id), page.index): page
-            for page in Page.objects.filter(page_query)
+            for page in Page.objects.filter(page_query).filter(
+                active_document_q(asset_prefix="asset")
+            )
         }
     spans_by_page = _evidence_spans_by_page(rows)
     output = []
@@ -436,8 +445,22 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             row_authors = envelope.source.get("authors") or row.get("authors") or []
         else:
             envelope = None
-            work = edition = None
-            row_authors = row.get("authors") or []
+            asset = chunk.asset if chunk is not None else getattr(page, "asset", None)
+            edition = asset.edition if asset is not None else None
+            work = edition.work if edition is not None else None
+            snapshot = (
+                active_catalog_snapshot(edition, require_fulltext=True)
+                if edition is not None
+                else {}
+            )
+            row_authors = [
+                str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
+                for item in snapshot.get("contributions") or []
+                if isinstance(item, dict)
+                and ((item.get("person") or {}).get("preferred_name") or item.get("name"))
+            ]
+            if not row_authors:
+                row_authors = row.get("authors") or []
         language = (
             str(span.language if span else "").strip()
             or
@@ -476,7 +499,11 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             LibraryEvidence(
                 evidence_id=str(span.id) if span else evidence_id,
                 work_id=str(work.id) if work else str(row.get("work_id") or ""),
-                work_title=(work.title if work else str(row.get("title") or "未题名"))[:500],
+                work_title=(
+                    str(envelope.source.get("work_title") or "未题名")
+                    if envelope is not None
+                    else str((snapshot.get("work") or {}).get("title") or "未题名")
+                )[:500],
                 edition_id=str(edition.id) if edition else str(row.get("edition_id") or ""),
                 asset_id=asset_id,
                 page_id=str(page.id) if page else "",
@@ -550,15 +577,11 @@ def _claim_evidence_from_hit(
     ):
         return None
     envelope = evidence_span_envelope(span)
-    authors = [
-        contribution.person.preferred_name
-        for contribution in claim.edition.contributions.all()
-        if contribution.approved and contribution.person_id
-    ]
+    authors = envelope.source.get("authors") or []
     return LibraryEvidence(
         evidence_id=str(span.id),
         work_id=str(claim.work_id),
-        work_title=claim.work.title[:500],
+        work_title=str(envelope.source.get("work_title") or "未题名")[:500],
         edition_id=str(claim.edition_id),
         asset_id=str(asset.id),
         page_id=str(span.page_id),
@@ -567,7 +590,11 @@ def _claim_evidence_from_hit(
         semantic_chunk_id="",
         document_id=f"evidence:{span.id}",
         original_passage=span.original_text,
-        language=span.language or claim.work.language or detect_passage_language(span.original_text),
+        language=(
+            span.language
+            or (active_catalog_snapshot(claim.edition, require_fulltext=True).get("work") or {}).get("language")
+            or detect_passage_language(span.original_text)
+        ),
         authors=tuple(str(value)[:240] for value in authors[:20] if value),
         section_title=span.section[:500],
         reader_url=envelope.reader_url[:1000],

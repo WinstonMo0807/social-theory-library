@@ -15,7 +15,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from catalog.models import Asset, OcrStatus, PublicationState, ReaderRenditionPolicy
+from catalog.models import Asset, OcrStatus, ReaderRenditionPolicy
+from catalog.services.publication_eligibility import active_asset_q
 from accounts.ownership import is_library_owner
 from common.permissions import (
     CanConfigureProviders,
@@ -37,12 +38,10 @@ def _public_asset(asset_id, request=None):
     visual layer is resolved separately and can safely fall back.
     """
     asset = get_object_or_404(
-        Asset,
+        Asset.objects.filter(active_asset_q(asset_prefix="")),
         pk=asset_id,
         kind=Asset.Kind.NORMALIZED,
         status=Asset.Status.READY,
-        edition__state=PublicationState.PUBLISHED,
-        is_current=True,
     )
     access_status = asset.access_status
     if access_status == Asset.AccessStatus.REGISTERED and not (

@@ -28,6 +28,7 @@ from catalog.services.semantic_search import (
     _base_queryset,
     _keyword_candidates,
     _meili_filters,
+    _post_semantic_search,
     _passage_keyword_candidates,
     _query_terms,
     _rrf,
@@ -332,19 +333,13 @@ def _meili_sparse_candidates(query: str, filters: dict, *, limit: int, index_uid
         "q": query,
         "limit": min(200, max(1, int(limit))),
         "filter": " AND ".join(_meili_filters(filters)),
-        "attributesToRetrieve": ["id"],
+        "attributesToRetrieve": ["id", "chunk_id"],
         "showRankingScore": True,
     }
-    response = httpx.post(
-        f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/search",
-        headers=_headers(),
-        json=payload,
-        timeout=min(5, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
-    )
-    response.raise_for_status()
+    response = _post_semantic_search(payload, index_uid=index_uid, filters=filters)
     hits = response.json().get("hits", [])
     return [
-        (str(hit["id"]), float(hit.get("_rankingScore") or 0))
+        (str(hit.get("chunk_id") or hit["id"]), float(hit.get("_rankingScore") or 0))
         for hit in hits
         if hit.get("id")
     ]
@@ -355,23 +350,17 @@ def _meili_dense_candidates(query: str, config: dict, filters: dict, *, limit: i
         "q": query,
         "limit": min(200, max(1, int(limit))),
         "filter": " AND ".join(_meili_filters(filters)),
-        "attributesToRetrieve": ["id"],
+        "attributesToRetrieve": ["id", "chunk_id"],
         "showRankingScore": True,
         "hybrid": {
             "semanticRatio": 1.0,
             "embedder": config["embedder_name"],
         },
     }
-    response = httpx.post(
-        f"{settings.MEILISEARCH_URL.rstrip('/')}/indexes/{index_uid}/search",
-        headers=_headers(),
-        json=payload,
-        timeout=min(5, settings.SEMANTIC_SEARCH_TIMEOUT_SECONDS),
-    )
-    response.raise_for_status()
+    response = _post_semantic_search(payload, index_uid=index_uid, filters=filters)
     hits = response.json().get("hits", [])
     return [
-        (str(hit["id"]), float(hit.get("_rankingScore") or 0))
+        (str(hit.get("chunk_id") or hit["id"]), float(hit.get("_rankingScore") or 0))
         for hit in hits
         if hit.get("id")
     ]

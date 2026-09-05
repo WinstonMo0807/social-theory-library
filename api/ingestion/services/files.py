@@ -135,6 +135,11 @@ def canonical_pdf_filename(title: str, authors: list[str], year: int | None) -> 
 
 def rename_normalized_asset(asset, filename: str) -> str:
     """Rename the public NAS copy without changing the immutable original."""
+    from catalog.models import Asset
+    from catalog.services.document_intelligence import document_asset_is_published
+
+    if document_asset_is_published(asset):
+        return asset.file.name
     current = PurePosixPath(asset.file.name)
     filename = safe_component(Path(filename).stem) + ".pdf"
     desired = str(current.with_name(filename))
@@ -145,7 +150,10 @@ def rename_normalized_asset(asset, filename: str) -> str:
     with asset.file.open("rb") as source:
         saved_name = storage.save(available, source)
     try:
-        storage.delete(asset.file.name)
+        # Staged text interpretations can share the same immutable PDF path.
+        # Moving one interpretation must never remove another one's bytes.
+        if not Asset.objects.filter(file=asset.file.name).exclude(pk=asset.pk).exists():
+            storage.delete(asset.file.name)
     except PermissionError:
         # Windows does not allow deleting a PDF while an active preview response
         # still holds the old file. The database can safely move to the new

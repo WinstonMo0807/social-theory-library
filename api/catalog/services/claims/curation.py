@@ -87,11 +87,24 @@ def high_value_claim_candidates(
     *,
     reviewer=None,
     limit: int = MAX_ACTIVE_DECISIONS,
+    kind: str = "",
+    edition_id=None,
 ) -> list[dict[str, Any]]:
     """Reduce hundreds of machine claims to a few evidence-backed decisions."""
 
     bounded_limit = max(1, min(int(limit), MAX_ACTIVE_DECISIONS))
-    claims = list(_claim_queryset(work)[:500])
+    queryset = _claim_queryset(work)
+    if edition_id:
+        queryset = queryset.filter(edition_id=edition_id)
+    if kind == CuratedClaim.Kind.MAJOR_CRITICISM:
+        queryset = queryset.filter(claim_type=DerivedClaim.ClaimType.CRITICISM)
+    elif kind == CuratedClaim.Kind.MAJOR_RESPONSE:
+        queryset = queryset.filter(claim_type=DerivedClaim.ClaimType.RESPONSE)
+    elif kind == CuratedClaim.Kind.CORE_VIEWPOINT:
+        queryset = queryset.exclude(claim_type__in=[DerivedClaim.ClaimType.CRITICISM, DerivedClaim.ClaimType.RESPONSE])
+    claims = list(queryset[:500])
+    if kind:
+        claims = [claim for claim in claims if _candidate_kind(claim) == kind]
     if not claims:
         return []
     adopted = set(
@@ -244,20 +257,21 @@ def decide_claim_curation_candidate(
     kind: str = "",
 ) -> CuratedClaim | None:
     if not actor or not getattr(actor, "is_authenticated", False):
-        raise PermissionError("Claim 策展决定必须记录真实 Editor。")
+        raise PermissionError("观点审核必须记录当前管理员，请先登录。")
     if decision not in IntelligenceFeedback.Decision.values:
-        raise ValueError("未知 Claim 策展决定。")
+        raise ValueError("无法识别本次观点审核操作。")
+    work = Work.objects.select_for_update().get(pk=work.pk)
     claim = DerivedClaim.objects.select_for_update().select_related(
         "document_revision", "primary_evidence"
     ).get(pk=claim.pk)
     if claim.work_id != work.id:
-        raise ValueError("DerivedClaim 不属于当前 Work。")
+        raise ValueError("该观点建议不属于当前作品。")
     if (
         claim.status != DerivedClaim.Status.ACTIVE
         or not claim.document_revision.is_active
         or claim.primary_evidence.is_stale
     ):
-        raise ValueError("该 Claim 的原文依据已经失效，请等待增量重算。")
+        raise ValueError("该观点的原文依据已变化，请重新查找建议。")
     curated = None
     edited_proposition = str(proposition or claim.proposition).strip()
     curated_kind = str(kind or _candidate_kind(claim)).strip()
@@ -267,13 +281,18 @@ def decide_claim_curation_candidate(
         CuratedClaim.Kind.MAJOR_RESPONSE,
     }
     if curated_kind not in allowed_kinds:
-        raise ValueError("当前 Work 策展只支持核心观点、主要批评和主要回应。")
+        raise ValueError("当前作品支持核心观点、主要批评和主要回应。")
     if decision in {IntelligenceFeedback.Decision.ACCEPT, IntelligenceFeedback.Decision.ACCEPT_WITH_EDIT}:
         if not edited_proposition:
-            raise ValueError("采用 Claim 前必须确认命题文本。")
+            raise ValueError("采用前请确认观点内容。")
+        if CuratedClaim.objects.filter(
+            work=work, adopted_from=claim, status=CuratedClaim.Status.PUBLISHED,
+        ).exists():
+            raise ValueError("该观点已经正式发布，不能通过重复采用覆盖。请在正式策展编辑中建立修改草稿。")
         curated, _ = CuratedClaim.objects.update_or_create(
             work=work,
             adopted_from=claim,
+            status=CuratedClaim.Status.DRAFT,
             defaults={
                 "kind": curated_kind,
                 "proposition": edited_proposition,
@@ -296,14 +315,8 @@ def decide_claim_curation_candidate(
                 },
             },
         )
-        record_canonical_change(
-            object_type="curated_claim",
-            object_id=curated.id,
-            change_kind="create",
-            changed_fields=["kind", "proposition", "evidence"],
-            actor=actor,
-            idempotency_key=f"curated-claim-adopt:{claim.id}:{curated.updated_at.isoformat()}",
-        )
+        # The existing CuratedClaim draft is the editorial storage. Adoption
+        # records feedback below but cannot start shared knowledge projections.
     record_intelligence_feedback(
         reviewer=actor,
         task_profile_key={

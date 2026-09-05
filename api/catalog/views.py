@@ -19,6 +19,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from urllib.parse import urlparse
 
+from .editorial_read import AdminEditorialDraftReadMixin
+
 from .models import (
     Asset,
     AnonymousUsageEvent,
@@ -88,7 +90,7 @@ from .services.semantic_search import (
 from .services.semantic_indexing import (
     activate_semantic_index_version,
     dispatch_semantic_version_batch,
-    queue_semantic_job,
+    queue_semantic_maintenance,
     remove_semantic_asset,
     resume_semantic_job,
     semantic_index_paused,
@@ -103,6 +105,13 @@ from .services.scoped_search import (
     SearchVisibility,
     public_scholar_queryset,
     public_work_queryset,
+)
+from .services.publication_eligibility import (
+    active_asset_q,
+    active_catalog_snapshot,
+    active_document_q,
+    active_document_revision_q,
+    public_edition_q,
 )
 from .services.text import clean_page_label, clipboard_payload, normalize_search_text, passage_snippet
 from .site_config import DEFAULT_SITE_CONFIG
@@ -122,6 +131,23 @@ logger = logging.getLogger(__name__)
 
 def public_works():
     return public_work_queryset()
+
+
+def _active_work_snapshot(work):
+    for edition in work.editions.all():
+        if edition.is_primary:
+            snapshot = active_catalog_snapshot(edition)
+            if snapshot:
+                return snapshot
+    return {}
+
+
+def _active_edition_work_title(edition, *, require_fulltext=False):
+    snapshot = active_catalog_snapshot(
+        edition,
+        require_fulltext=require_fulltext,
+    )
+    return str((snapshot.get("work") or {}).get("title") or "未题名")
 
 
 class AdminAuthoritySuggestionView(APIView):
@@ -152,22 +178,23 @@ class PublicWorkCoverView(APIView):
 
     def get(self, request, work_id):
         work = get_object_or_404(public_works(), pk=work_id)
-        cover_name = work.cover.name
-        if not cover_name or not work.cover.storage.exists(cover_name):
+        cover_name = (_active_work_snapshot(work).get("work") or {}).get("cover", "")
+        storage = Work._meta.get_field("cover").storage
+        if not cover_name or not storage.exists(cover_name):
             return Response(
                 {"detail": "该文献尚无公开封面。"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         try:
-            work.cover.open("rb")
+            image = storage.open(cover_name, "rb")
         except (FileNotFoundError, OSError, ValueError):
             return Response(
                 {"detail": "该文献封面暂时不可用。"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         response = FileResponse(
-            work.cover,
-            content_type="image/jpeg",
+            image,
+            content_type=mimetypes.guess_type(cover_name)[0] or "image/jpeg",
             filename=f"{work.id}-cover.jpg",
         )
         response["Cache-Control"] = "public, max-age=86400"
@@ -179,15 +206,19 @@ class PublicWorkRecommendationImageView(APIView):
 
     def get(self, request, work_id):
         work = get_object_or_404(public_works(), pk=work_id)
-        image = work.recommendation_image or work.cover
-        image_name = image.name if image else ""
-        if not image_name or not image.storage.exists(image_name):
+        work_snapshot = _active_work_snapshot(work).get("work") or {}
+        recommendation_name = work_snapshot.get("recommendation_image", "")
+        cover_name = work_snapshot.get("cover", "")
+        image_name = recommendation_name or cover_name
+        field_name = "recommendation_image" if recommendation_name else "cover"
+        storage = Work._meta.get_field(field_name).storage
+        if not image_name or not storage.exists(image_name):
             return Response(
                 {"detail": "该文献尚无公开推荐图例。"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         try:
-            image.open("rb")
+            image = storage.open(image_name, "rb")
         except (FileNotFoundError, OSError, ValueError):
             return Response(
                 {"detail": "该文献推荐图例暂时不可用。"},
@@ -195,7 +226,7 @@ class PublicWorkRecommendationImageView(APIView):
             )
         response = FileResponse(
             image,
-            content_type="image/jpeg",
+            content_type=mimetypes.guess_type(image_name)[0] or "image/jpeg",
             filename=f"{work.id}-recommendation.jpg",
         )
         response["Cache-Control"] = "public, max-age=86400"
@@ -339,10 +370,14 @@ class AdminCoverCandidateListView(APIView):
             "-score",
             "page_index",
         )
+        edition_id = request.query_params.get("edition_id")
+        if edition_id:
+            edition = get_object_or_404(Edition, pk=edition_id, work=work)
+            candidates = candidates.filter(asset__edition=edition)
         return Response(
             {
                 "document_type": work.document_type,
-                "eligible": work.document_type == DocumentType.BOOK,
+                "eligible": work.document_type in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE},
                 "results": CoverCandidateSerializer(
                     candidates,
                     many=True,
@@ -353,22 +388,24 @@ class AdminCoverCandidateListView(APIView):
 
     def post(self, request, work_id):
         work = get_object_or_404(Work, pk=work_id)
-        if work.document_type != DocumentType.BOOK:
+        if work.document_type not in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
             return Response(
-                {"detail": "封面候选只对图书启用。"},
+                {"detail": "封面查找适用于图书和整期期刊。"},
                 status=409,
             )
-        asset = (
-            Asset.objects.filter(
-                edition__work=work,
-                edition__is_primary=True,
-                kind=Asset.Kind.NORMALIZED,
-                status=Asset.Status.READY,
-                is_current=True,
-            )
-            .select_related("edition__work")
-            .first()
+        assets = Asset.objects.filter(
+            edition__work=work,
+            kind=Asset.Kind.NORMALIZED,
+            status=Asset.Status.READY,
+            is_current=True,
         )
+        edition_id = request.data.get("edition_id")
+        if edition_id:
+            edition = get_object_or_404(Edition, pk=edition_id, work=work)
+            assets = assets.filter(edition=edition)
+        else:
+            assets = assets.filter(edition__is_primary=True)
+        asset = assets.select_related("edition__work").first()
         if asset is None:
             return Response({"detail": "规范阅读 PDF 尚未就绪。"}, status=409)
         candidates = generate_cover_candidates(asset, force=True)
@@ -395,14 +432,19 @@ class AdminCoverCandidateSelectView(APIView):
             work_id=work_id,
         )
         try:
-            result = select_cover_candidate(candidate)
-        except CoverCandidateUnavailable as exc:
+            result = select_cover_candidate(candidate, actor=request.user, edition_id=request.data.get("edition_id"))
+        except (CoverCandidateUnavailable, ValueError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(
-            CoverCandidateSerializer(
-                result["candidate"],
-                context={"request": request},
-            ).data
+            {
+                **CoverCandidateSerializer(
+                    result["candidate"],
+                    context={"request": request},
+                ).data,
+                "saved": result.get("saved", True),
+                "canonical_write_deferred": result.get("canonical_write_deferred", False),
+                "editorial_revision_id": result.get("editorial_revision_id"),
+            }
         )
 
 
@@ -768,7 +810,7 @@ class SiteStatsView(APIView):
 
     def get(self, request):
         published = Edition.objects.filter(
-            state=PublicationState.PUBLISHED,
+            public_edition_q(),
             is_primary=True,
         )
         last_updated = published.aggregate(value=Max("updated_at"))["value"]
@@ -1211,7 +1253,8 @@ def _draft_published_editorial_change(
     )
 
 
-class AdminTopicListView(generics.ListCreateAPIView):
+class AdminTopicListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
+    editorial_target_type = "topic"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTopicSerializer
     search_fields = ("name", "description", "search_aliases")
@@ -1238,7 +1281,8 @@ class AdminTopicListView(generics.ListCreateAPIView):
             )
 
 
-class AdminTopicDetailView(generics.RetrieveUpdateDestroyAPIView):
+class AdminTopicDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
+    editorial_target_type = "topic"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTopicSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -1268,6 +1312,8 @@ class AdminTopicDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         topic = self.get_object()
+        if (topic.curation or {}).get("topic_merge"):
+            return Response({"detail": "该主题已合并，请编辑合并后的主题。", "code": "merged_topic_read_only"}, status=409)
         if topic.editorial_status != "published":
             return super().update(request, *args, **kwargs)
         if "hero_image" in request.data:
@@ -1303,14 +1349,13 @@ class AdminTopicDetailView(generics.RetrieveUpdateDestroyAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if revision is None:
-            return Response(self.get_serializer(topic).data)
-        payload = dict(self.get_serializer(topic).data)
-        payload.update(revision.patch)
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+            return Response(self._draft_read_rows([topic])[0])
+        return Response(self._draft_read_rows([topic])[0], status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         topic = self.get_object()
+        if (topic.curation or {}).get("topic_merge"):
+            return Response({"detail": "该主题已合并，原记录需要保留供审计。", "code": "merged_topic_read_only"}, status=409)
         if topic.editorial_status != "published":
             return super().destroy(request, *args, **kwargs)
         from catalog.models import EditorialRevision
@@ -1340,7 +1385,8 @@ class AdminTopicDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-class AdminScholarListView(generics.ListCreateAPIView):
+class AdminScholarListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
+    editorial_target_type = "scholar_profile"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminScholarSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -1385,7 +1431,8 @@ class AdminScholarListView(generics.ListCreateAPIView):
             )
 
 
-class AdminScholarDetailView(generics.RetrieveUpdateDestroyAPIView):
+class AdminScholarDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
+    editorial_target_type = "scholar_profile"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminScholarSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -1454,15 +1501,8 @@ class AdminScholarDetailView(generics.RetrieveUpdateDestroyAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if revision is None:
-            return Response(self.get_serializer(scholar).data)
-        payload = dict(self.get_serializer(scholar).data)
-        for field_name, value in revision.patch.items():
-            if field_name == "person":
-                payload.update(value)
-            else:
-                payload[field_name] = value
-        payload["editorial_revision"] = serialize_editorial_revision(revision)
-        return Response(payload, status=status.HTTP_202_ACCEPTED)
+            return Response(self._draft_read_rows([scholar])[0])
+        return Response(self._draft_read_rows([scholar])[0], status=status.HTTP_202_ACCEPTED)
 
     def destroy(self, request, *args, **kwargs):
         scholar = self.get_object()
@@ -1906,15 +1946,14 @@ class TopicDetailView(generics.RetrieveAPIView):
         )
         passage_queryset = (
             Passage.objects.filter(
-                page__asset__edition__state=PublicationState.PUBLISHED,
                 page__asset__kind=Asset.Kind.NORMALIZED,
                 page__asset__status=Asset.Status.READY,
-                page__asset__is_current=True,
                 page__asset__access_status__in=viewer_access_statuses(
                     authenticated=authenticated,
                     staff=staff,
                 ),
             )
+            .filter(active_document_q(asset_prefix="page__asset"))
             .filter(
                 Q(
                     page__asset__edition__work__topic_relations__topic=instance,
@@ -1943,7 +1982,10 @@ class TopicDetailView(generics.RetrieveAPIView):
             {
                 "id": str(passage.id),
                 "asset_id": str(passage.page.asset_id),
-                "title": passage.page.asset.edition.work.title,
+                "title": _active_edition_work_title(
+                    passage.page.asset.edition,
+                    require_fulltext=True,
+                ),
                 "page_index": passage.page.index,
                 "printed_label": clean_page_label(passage.page.printed_label),
                 "snippet": passage_snippet(passage.text, ""),
@@ -2021,11 +2063,11 @@ class GlobalSearchView(APIView):
                 return Response(SearchService(request=request).search(search_request))
         service = SearchService(request=request)
         passage_base = Passage.objects.filter(
-            page__asset__edition__state=PublicationState.PUBLISHED,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
-            page__asset__is_current=True,
             page__asset__access_status__in=_viewer_asset_access_statuses(request),
+        ).filter(
+            active_document_q(asset_prefix="page__asset")
         ).select_related("page__asset__edition__work")
 
         if query:
@@ -2152,7 +2194,10 @@ class GlobalSearchView(APIView):
                 "work_id": str(passage.page.asset.edition.work_id),
                 "edition_slug": passage.page.asset.edition.public_slug,
                 "asset_id": str(passage.page.asset_id),
-                "title": passage.page.asset.edition.work.title,
+                "title": _active_edition_work_title(
+                    passage.page.asset.edition,
+                    require_fulltext=True,
+                ),
                 "page_index": passage.page.index,
                 "printed_label": clean_page_label(passage.page.printed_label),
                 "snippet": passage_snippet(passage.text, query),
@@ -2384,11 +2429,11 @@ class SemanticSearchFeedbackView(APIView):
                 passage_id = raw_chunk_id.removeprefix("passage:")
                 passage = Passage.objects.filter(
                     pk=passage_id,
-                    page__asset__edition__state=PublicationState.PUBLISHED,
                     page__asset__kind=Asset.Kind.NORMALIZED,
                     page__asset__status=Asset.Status.READY,
-                    page__asset__is_current=True,
                     page__asset__access_status__in=allowed_access_statuses,
+                ).filter(
+                    active_document_q(asset_prefix="page__asset")
                 ).first()
                 if passage is None:
                     return Response({"chunk_id": ["该观点段落已不存在。"]}, status=404)
@@ -2396,13 +2441,11 @@ class SemanticSearchFeedbackView(APIView):
                 passage_id = ""
                 chunk = SemanticChunk.objects.filter(
                     pk=raw_chunk_id,
-                    asset__edition__state=PublicationState.PUBLISHED,
                     asset__edition__is_primary=True,
                     asset__kind=Asset.Kind.NORMALIZED,
                     asset__status=Asset.Status.READY,
-                    asset__is_current=True,
                     asset__access_status__in=allowed_access_statuses,
-                ).first()
+                ).filter(active_document_q(asset_prefix="asset")).first()
                 if chunk is None:
                     return Response({"chunk_id": ["该观点段落已不存在。"]}, status=404)
         else:
@@ -2626,10 +2669,14 @@ class SemanticIndexAdminView(APIView):
                 Asset.objects.select_related("edition__work"),
                 pk=request.data.get("asset_id"),
                 kind=Asset.Kind.NORMALIZED,
-                is_current=True,
             )
-            job = queue_semantic_job(asset, force=True, actor=request.user)
-            return Response({"queued": True, "job_id": str(job.id)}, status=202)
+            try:
+                result = queue_semantic_maintenance(asset, action=action, actor=request.user)
+            except PermissionError as exc:
+                return Response({"detail": str(exc)}, status=403)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response(result, status=202)
         if action in {"rebuild_all", "retry_failed"}:
             assets = Asset.objects.filter(
                 kind=Asset.Kind.NORMALIZED,
@@ -2637,27 +2684,53 @@ class SemanticIndexAdminView(APIView):
                 is_current=True,
             ).select_related("edition__work")
             if action == "retry_failed":
-                failed_ids = SemanticChunk.objects.filter(
-                    index_status=SemanticChunk.IndexStatus.FAILED,
-                ).values_list("asset_id", flat=True)
-                assets = assets.filter(pk__in=failed_ids)
+                assets = assets.filter(
+                    Q(semantic_chunks__index_status=SemanticChunk.IndexStatus.FAILED)
+                    | Q(semantic_index_jobs__status__in=["failed", "partial"])
+                    | Q(edition__catalog_revisions__status="failed")
+                ).distinct()
             queued = 0
+            blocked = []
             for asset in assets[:10000]:
-                queue_semantic_job(asset, force=True, actor=request.user)
-                queued += 1
-            return Response({"queued": queued}, status=202)
+                try:
+                    queue_semantic_maintenance(asset, action=action, actor=request.user)
+                    queued += 1
+                except (ValueError, PermissionError) as exc:
+                    blocked.append({"asset_id": str(asset.pk), "reason": str(exc)})
+            return Response({"queued": queued, "blocked": blocked}, status=202)
         if action == "clean_orphans":
+            from .models import CatalogPublicationRevision
+            from ingestion.models import AuditEvent
+
             stale = Asset.objects.exclude(
                 kind=Asset.Kind.NORMALIZED,
                 status=Asset.Status.READY,
                 is_current=True,
-                edition__state=PublicationState.PUBLISHED,
-            ).filter(semantic_chunks__isnull=False).distinct()
+            ).filter(semantic_chunks__isnull=False).exclude(
+                pk__in=CatalogPublicationRevision.objects.exclude(reader_asset_id=None).values("reader_asset_id"),
+            ).exclude(
+                pk__in=CatalogPublicationRevision.objects.exclude(document_revision_id=None).values("document_revision__asset_id"),
+            ).exclude(
+                semantic_index_jobs__status__in=["queued", "running", "paused"],
+            ).distinct()
             cleaned = 0
-            for asset in stale[:10000]:
-                remove_semantic_asset(str(asset.id))
-                asset.semantic_chunks.all().delete()
-                cleaned += 1
+            for candidate in stale.values("id", "edition_id")[:10000]:
+                with transaction.atomic():
+                    # Publication and task creation lock the Edition first.
+                    # Recheck inside that lock, not only in the initial list.
+                    Edition.objects.select_for_update().get(pk=candidate["edition_id"])
+                    asset = Asset.objects.select_for_update().filter(pk=candidate["id"]).first()
+                    if asset is None or CatalogPublicationRevision.objects.filter(
+                        Q(reader_asset_id=asset.pk) | Q(document_revision__asset_id=asset.pk)
+                    ).exists() or asset.semantic_index_jobs.filter(status__in=["queued", "running", "paused"]).exists():
+                        continue
+                    if asset.is_current and asset.kind == Asset.Kind.NORMALIZED and asset.status == Asset.Status.READY:
+                        continue
+                    before = {"semantic_chunks": asset.semantic_chunks.count()}
+                    remove_semantic_asset(str(asset.id), strict=True)
+                    asset.semantic_chunks.all().delete()
+                    AuditEvent.objects.create(actor=request.user, action="semantic_orphans_cleaned", object_type="catalog.Asset", object_id=str(asset.pk), before=before, after={"semantic_chunks": 0, "source_file_retained": True, "published_revisions_retained": True})
+                    cleaned += 1
             return Response({"cleaned": cleaned})
         return Response({"action": ["请选择有效的语义索引操作。"]}, status=400)
 
@@ -2929,9 +3002,9 @@ class PublicUsageEventView(APIView):
                 pk=asset_id,
                 kind=Asset.Kind.NORMALIZED,
                 status=Asset.Status.READY,
-                is_current=True,
-                edition__state=PublicationState.PUBLISHED,
-            ).select_related("edition__work").first()
+            ).filter(active_asset_q(asset_prefix="")).select_related(
+                "edition__work"
+            ).first()
             if asset and work is None:
                 work = asset.edition.work
         result_count_raw = request.data.get("result_count")
@@ -3098,19 +3171,20 @@ class PassageFocusView(APIView):
         allowed_access_statuses = _viewer_asset_access_statuses(request)
         passage = Passage.objects.select_related("page__asset__edition__work").filter(
             pk=pk,
-            page__asset__edition__state=PublicationState.PUBLISHED,
             page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
-            page__asset__is_current=True,
             page__asset__access_status__in=allowed_access_statuses,
-        ).first()
+        ).filter(active_document_q(asset_prefix="page__asset")).first()
         if passage is not None:
             return Response(
                 {
                     "id": str(passage.id),
                     "asset_id": str(passage.page.asset_id),
-                    "title": passage.page.asset.edition.work.title,
+                    "title": _active_edition_work_title(
+                        passage.page.asset.edition,
+                        require_fulltext=True,
+                    ),
                     "page_index": passage.page.index,
                     "printed_label": clean_page_label(passage.page.printed_label),
                     "width": passage.page.width,
@@ -3125,13 +3199,12 @@ class PassageFocusView(APIView):
         ).filter(
             pk=pk,
             is_stale=False,
-            document_revision__is_active=True,
-            page__asset__edition__state=PublicationState.PUBLISHED,
             page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
-            page__asset__is_current=True,
             page__asset__access_status__in=allowed_access_statuses,
+        ).filter(
+            active_document_revision_q(revision_prefix="document_revision")
         ).first()
         if span is not None:
             raw_bbox = span.bbox or []
@@ -3147,7 +3220,10 @@ class PassageFocusView(APIView):
                 {
                     "id": str(span.id),
                     "asset_id": str(span.page.asset_id),
-                    "title": span.page.asset.edition.work.title,
+                    "title": _active_edition_work_title(
+                        span.page.asset.edition,
+                        require_fulltext=True,
+                    ),
                     "page_index": span.page.index,
                     "printed_label": span.printed_page_label
                     or clean_page_label(span.page.printed_label),
@@ -3159,13 +3235,13 @@ class PassageFocusView(APIView):
                 }
             )
         chunk = get_object_or_404(
-            SemanticChunk.objects.select_related("asset__edition__work"),
+            SemanticChunk.objects.select_related("asset__edition__work").filter(
+                active_document_q(asset_prefix="asset")
+            ),
             pk=pk,
-            asset__edition__state=PublicationState.PUBLISHED,
             asset__edition__is_primary=True,
             asset__kind=Asset.Kind.NORMALIZED,
             asset__status=Asset.Status.READY,
-            asset__is_current=True,
             asset__access_status__in=allowed_access_statuses,
         )
         locator = chunk.locators[0] if chunk.locators else {}
@@ -3174,7 +3250,10 @@ class PassageFocusView(APIView):
             {
                 "id": str(chunk.id),
                 "asset_id": str(chunk.asset_id),
-                "title": chunk.asset.edition.work.title,
+                "title": _active_edition_work_title(
+                    chunk.asset.edition,
+                    require_fulltext=True,
+                ),
                 "page_index": chunk.page_start,
                 "printed_label": clean_page_label(locator.get("printed_label", "")),
                 "width": page.width if page else 0,
@@ -3191,44 +3270,18 @@ class PublicAssetManifestView(APIView):
 
     def get(self, request, asset_id):
         asset = get_object_or_404(
-            Asset.objects.select_related("edition__work"),
+            Asset.objects.select_related("edition__work").filter(
+                active_asset_q(asset_prefix="")
+            ),
             pk=asset_id,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            edition__state=PublicationState.PUBLISHED,
-            is_current=True,
             access_status__in=_viewer_asset_access_statuses(request),
         )
         chapter_pages = asset.pages.exclude(chapter_title="").order_by("index")
-        author_profiles = public_scholar_queryset().filter(
-            person__contributions__edition=asset.edition,
-            person__contributions__role=Contribution.Role.AUTHOR,
-            person__contributions__approved=True,
-        ).select_related("person").distinct()
-        theories = list(
-            asset.edition.work.node_relations.filter(
-                node__node_type="theory_tradition",
-                status=KnowledgePublicationStatus.PUBLISHED,
-            ).select_related("node")
-        )
-        legacy_theories = {
-            row.node_id: row
-            for row in LegacyKnowledgeMapping.objects.filter(
-                legacy_model="TheorySchool",
-                migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
-                node_id__in=[relation.node_id for relation in theories],
-                node__node_type="theory_tradition",
-            )
-        }
-        legacy_theory_rows = {
-            str(row.id): row
-            for row in TheorySchool.objects.filter(
-                pk__in=[mapping.legacy_id for mapping in legacy_theories.values()]
-            )
-        }
-        topics = asset.edition.work.topic_relations.filter(
-            review_status=RelationReviewStatus.APPROVED,
-        ).select_related("topic")
+        snapshot = active_catalog_snapshot(asset.edition)
+        contributors = snapshot.get("contributions") or []
+        knowledge = snapshot.get("knowledge") or {}
         return Response(
             {
                 "asset_id": str(asset.id),
@@ -3254,41 +3307,36 @@ class PublicAssetManifestView(APIView):
                 ],
                 "related_scholars": [
                     {
-                        "name": profile.person.preferred_name,
-                        "slug": profile.slug,
+                        "name": (row.get("person") or {}).get("preferred_name")
+                        or row.get("name", ""),
+                        "slug": (row.get("person") or {}).get("scholar_slug"),
                         "years": (
-                            f"{profile.person.birth_year or ''}—{profile.person.death_year or ''}"
-                            if profile.person.birth_year or profile.person.death_year
+                            f"{(row.get('person') or {}).get('birth_year') or ''}—"
+                            f"{(row.get('person') or {}).get('death_year') or ''}"
+                            if (row.get("person") or {}).get("birth_year")
+                            or (row.get("person") or {}).get("death_year")
                             else ""
                         ),
                     }
-                    for profile in author_profiles
+                    for row in contributors
+                    if isinstance(row, dict)
+                    and row.get("role") == Contribution.Role.AUTHOR
                 ],
                 "related_theories": [
                     {
-                        "name": (
-                            legacy_theory_rows[str(legacy_theories[relation.node_id].legacy_id)].name
-                            if relation.node_id in legacy_theories
-                            and str(legacy_theories[relation.node_id].legacy_id) in legacy_theory_rows
-                            else relation.node.canonical_name_zh
-                            or relation.node.canonical_name_en
-                        ),
-                        "slug": (
-                            legacy_theory_rows[str(legacy_theories[relation.node_id].legacy_id)].slug
-                            if relation.node_id in legacy_theories
-                            and str(legacy_theories[relation.node_id].legacy_id) in legacy_theory_rows
-                            else relation.node.slug
-                        ),
+                        "name": row.get("name", ""),
+                        "slug": row.get("slug", ""),
                     }
-                    for relation in theories
+                    for row in knowledge.get("nodes") or []
+                    if isinstance(row, dict) and row.get("type") == "theory_tradition"
                 ],
                 "related_topics": [
                     {
-                        "name": relation.topic.name,
-                        "slug": relation.topic.slug,
+                        "name": row.get("name", ""),
+                        "slug": row.get("slug", ""),
                     }
-                    for relation in topics
-                    if relation.topic_id
+                    for row in knowledge.get("topics") or []
+                    if isinstance(row, dict)
                 ],
             }
         )
@@ -3299,12 +3347,10 @@ class PublicPageContentView(APIView):
 
     def get(self, request, asset_id, page_index):
         asset = get_object_or_404(
-            Asset,
+            Asset.objects.filter(active_document_q(asset_prefix="")),
             pk=asset_id,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            edition__state=PublicationState.PUBLISHED,
-            is_current=True,
             access_status__in=_viewer_asset_access_statuses(request),
         )
         page = get_object_or_404(asset.pages, index=page_index)
@@ -3347,12 +3393,10 @@ class DocumentSearchView(APIView):
     def get(self, request, asset_id):
         query = request.query_params.get("q", "").strip()[:500]
         asset = get_object_or_404(
-            Asset,
+            Asset.objects.filter(active_document_q(asset_prefix="")),
             pk=asset_id,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
-            edition__state=PublicationState.PUBLISHED,
-            is_current=True,
             access_status__in=_viewer_asset_access_statuses(request),
         )
         if not query:
@@ -3435,9 +3479,10 @@ class CitationView(APIView):
 
     def get(self, request, edition_id):
         edition = get_object_or_404(
-            Edition.objects.select_related("work").prefetch_related("contributions__person"),
+            Edition.objects.select_related("work").prefetch_related(
+                "contributions__person"
+            ).filter(public_edition_q()),
             pk=edition_id,
-            state=PublicationState.PUBLISHED,
         )
         pdf_page_raw = request.query_params.get("pdf_page", "").strip()
         legacy_page = clean_page_label(
@@ -3464,9 +3509,9 @@ class CitationView(APIView):
                     status=400,
                 )
             asset = edition.assets.filter(
+                pk=edition.active_catalog_revision.reader_asset_id,
                 kind=Asset.Kind.NORMALIZED,
                 status=Asset.Status.READY,
-                is_current=True,
             ).first()
             if asset is None:
                 return Response(
@@ -3482,7 +3527,11 @@ class CitationView(APIView):
                 "citation_label": page_label,
                 "source": "pdf-label" if printed_label else "pdf-index",
             }
-        bundle = citation_bundle(edition, page_label)
+        bundle = citation_bundle(
+            edition,
+            page_label,
+            snapshot=active_catalog_snapshot(edition),
+        )
         bundle["page"] = page_meta
         return Response(bundle)
 

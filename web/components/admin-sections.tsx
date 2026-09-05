@@ -30,11 +30,12 @@ import { ActionButton, AsyncStatus, type ActionState } from "@/components/action
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { FieldEnrichmentControl } from "@/components/field-enrichment-control";
+import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
+import { TopicMergePanel } from "@/components/admin/curation/topic-merge-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import {
-  AuthoritySuggestions,
+  mergeUniqueStrings,
   StringListEditor,
   StructuredRowsEditor,
   type StructuredRow,
@@ -548,10 +549,10 @@ export function TaxonomyAdmin({
     };
   }, [detail.data, editorOnly, entityId, mode]);
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent, draftOnly = false) {
+    event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token) return false;
     const base = draft.kind === "theory" ? "/catalog/admin/theory-schools" : "/catalog/admin/topics";
     const terms = splitValues(draft.terms);
     const curation = draft.kind === "theory"
@@ -613,7 +614,7 @@ export function TaxonomyAdmin({
           core_questions: splitLines(draft.coreQuestions),
           key_themes: terms,
           curation,
-          editorial_status: draft.status,
+          editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
         }
       : {
           name: draft.name,
@@ -627,7 +628,7 @@ export function TaxonomyAdmin({
           key_concepts: terms,
           timeline: parseStructuredLines(draft.timeline, ["0", "1", "2"]).map((row) => [row["0"], row["1"], row["2"]]),
           curation,
-          editorial_status: draft.status,
+          editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
         };
     try {
       const saved = await apiRequest<AdminTheory | AdminTopic>(
@@ -662,9 +663,11 @@ export function TaxonomyAdmin({
             : `/admin/topics/${saved.id}`,
         );
       }
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "保存失败。");
     }
+    return false;
   }
 
   return (
@@ -729,15 +732,22 @@ export function TaxonomyAdmin({
           </header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           <label><span>名称</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
-          <AuthoritySuggestions
-            entityType={draft.kind === "theory" ? "theory_tradition" : "topic"}
+          <CurationFieldAssistant
+            label="名称"
+            authorityType={draft.kind === "theory" ? "theory_tradition" : "topic"}
             query={draft.foreignName.trim() || draft.name}
+            onApply={(_value, suggestion) => suggestion && setDraft((current) => ({
+              ...current,
+              name: suggestion.label || current.name,
+              foreignName: suggestion.originalName || current.foreignName,
+            }))}
           />
-          {draft.kind === "topic" ? <FieldEnrichmentControl
+          {draft.kind === "topic" ? <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+            label="学科分类"
             targetType="topic"
             targetId={draft.id}
-            title="主题字段核对"
-            fields={[{ name: "discipline", label: "学科分类" }]}
+            fieldName="discipline"
+            lookupLabel="获取分类建议"
             onAccepted={detail.refresh}
           /> : null}
           <label><span>固定链接</span><input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="留空自动生成" /></label>
@@ -981,7 +991,7 @@ export function TaxonomyAdmin({
           objectId={draft.id}
           refreshKey={message}
           onChanged={detail.refresh}
-        /> : null}</div></div> : null}
+        /> : null}{draft.kind === "topic" && draft.id ? <TopicMergePanel topicId={draft.id} name={draft.name} status={draft.status} /> : null}</div></div> : null}
       </div>
     </AdminPageFrame>
   );
@@ -1166,10 +1176,10 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
     };
   }, [detail.data, editorOnly, scholarId]);
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent, draftOnly = false) {
+    event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token) return false;
     const curation = {
       ...draft.baseCuration,
       essential_work_ids: draft.essentialWorkIds,
@@ -1214,7 +1224,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             curation,
             featured_quote: draft.quote,
             quote_source: draft.quoteSource,
-            editorial_status: draft.status,
+            editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
           }),
         },
         token,
@@ -1242,9 +1252,11 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       if (editorOnly && scholarId === "new") {
         router.replace(`/admin/scholars/${saved.id}`);
       }
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "保存失败。");
     }
+    return false;
   }
 
   return (
@@ -1268,11 +1280,21 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
           <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div></header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
-          {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message={`学者档案已标记发布，但人物权威状态为 ${detail.data.authority_status}。发布资格收敛后才会出现在公开站点。`} /> : null}
+          {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
-          <AuthoritySuggestions
-            entityType="person"
+          <CurationFieldAssistant
+            label="学者姓名"
+            authorityType="person"
             query={draft.originalName.trim() || draft.name}
+            onApply={(_value, suggestion) => suggestion && setDraft((current) => ({
+              ...current,
+              name: suggestion.label || current.name,
+              originalName: suggestion.originalName || current.originalName,
+              aliases: mergeUniqueStrings(editorLines(current.aliases), suggestion.aliases).join("\n"),
+              birthYear: suggestion.birthYear === null ? current.birthYear : String(suggestion.birthYear),
+              deathYear: suggestion.deathYear === null ? current.deathYear : String(suggestion.deathYear),
+              description: current.description || suggestion.description,
+            }))}
           />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
@@ -1280,22 +1302,39 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
           <label><span>页面简介</span><textarea rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small>用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
           <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
-          <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
-          <FieldEnrichmentControl
+          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+            label="译名或别名"
             targetType="person"
             targetId={draft.personId}
-            title="学者字段核对"
-            fields={[
-              { name: "external_identifier", label: "权威标识符" },
-              { name: "affiliation", label: "机构", currentValue: editorLines(draft.affiliations) },
-              { name: "name_variant", label: "译名或别名", currentValue: editorLines(draft.aliases) },
-            ]}
+            fieldName="name_variant"
+            currentValue={editorLines(draft.aliases)}
+            query={draft.originalName.trim() || draft.name}
+            formContext={{ language: "zh" }}
+            onApply={(value) => {
+              const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
+              const name = String(row.name || row.alias || "").trim();
+              if (name) setDraft((current) => ({ ...current, aliases: mergeUniqueStrings(editorLines(current.aliases), [name]).join("\n") }));
+            }}
+            onAccepted={resource.refresh}
+          />
+          <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
+          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+            label="机构"
+            targetType="person"
+            targetId={draft.personId}
+            fieldName="affiliation"
+            currentValue={editorLines(draft.affiliations)}
             formContext={{
               language: "zh",
               known_birth_year: Number(draft.birthYear) || null,
               known_death_year: Number(draft.deathYear) || null,
             }}
-            onAccepted={detail.refresh}
+            onApply={(value) => {
+              const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
+              const name = String(row.name || "").trim();
+              if (name) setDraft((current) => ({ ...current, affiliations: mergeUniqueStrings(editorLines(current.affiliations), [name]).join("\n") }));
+            }}
+            onAccepted={resource.refresh}
           />
           <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
           <StructuredRowsEditor
