@@ -724,7 +724,7 @@ def _work_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any
     issues = []
     if not work.title.strip():
         issues.append(_issue("title_required", "请填写作品题名。", "work", severity="blocker", field="title"))
-    if work.document_type not in {"book", "journal_article", "thesis", "report"}:
+    if work.document_type not in {"book", "journal_article", "journal_issue", "thesis", "report"}:
         issues.append(
             _issue(
                 "document_type_required",
@@ -967,15 +967,16 @@ def build_edition_workflow(edition: Edition, *, upload_item: UploadItem | None =
         .prefetch_related("workflow_decisions")
         .get(pk=edition.pk)
     )
+    catalog_state = catalog_field_state(edition)
     steps = [
         _file_step(upload_item, edition),
-        _work_step(edition),
-        _bibliography_step(edition),
-        _contributors_step(edition),
-        _classification_step(edition),
-        _knowledge_step(edition),
-        _reader_step(edition),
-        _curation_step(edition),
+        _work_step(edition, catalog_state),
+        _bibliography_step(edition, catalog_state),
+        _contributors_step(edition, catalog_state),
+        _classification_step(edition, catalog_state),
+        _knowledge_step(edition, catalog_state),
+        _reader_step(edition, catalog_state),
+        _curation_step(edition, catalog_state),
     ]
     publication, preflight = _publication_step(edition)
     steps.append(publication)
