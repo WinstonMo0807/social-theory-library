@@ -20,7 +20,27 @@
 
 ### 3.0.4 最终生产记录
 
-本节预留给实际 deploy-record、BackupJob、校验值、镜像、migration、回退标签、公网检查和观察结果。只有对应操作真实完成后才能填写。
+2026-09-05，最终代码提交为 `18f4106`，源树为 `d38f23ba0b8b77a3df376b08d68abaaa85da7670`。源包包含 855 个文件，SHA-256 为 `6860dbfe2d0c105dc9382b0958b56f94a6db831e5d6ff1590b8a87a66c37080c`。API/Web 镜像均已构建，依赖锁未改变。初次 npm 下载超时后复用经精确锁文件比对的既有依赖构建层，未更换依赖版本。
+
+Fresh BackupJob 为 `6d17bfc8-7a58-4dc0-a7eb-b6231806dcff`，备份 SHA-256 为 `443c774374f4b496b2c4b32352ac10f8beeb854c426b975bdd57a2006d445066`。隔离 PostgreSQL 16 恢复和基础迁移演练已完成，最终小补丁未重跑测试。回退记录为 `storage/backups/pre-v304-cutover-20260905-134000/deploy-record`，镜像回退标签为 `pre-v304-20260905-134000`。
+
+第一次切换在 14:48 已成功应用生产 0040–0042，之后因词典版本参数不完整而停止。退出码为 1，旧 3.0.3 应用已恢复，新增 schema 保留，数据库未恢复。初次记录保存到 `deploy-record/attempt-1`。
+
+第二次切换在 2026-09-05 14:59:18 完成，退出码 0。公网 `/api/ready/` 返回 3.0.4、database=true、pending_migrations=0。API image 为 `sha256:dbd0db1d1599531aa83199e4834ab2c8b5c348c05a8fd4df845dae3b1c8c259e`，Web 为 `sha256:1e1433ca18a26ae8f1c32b0f9e04382587edda5f0be1202a083c9b65694eb127`。API、两个 Worker 和 Beat 使用同一 API image；Web/Edge 已更新。Cloudflare 1033 由隧道连接中断引起，重启原有 cloudflared 后四条连接重新注册并恢复公网，没有修改凭据或域名权限。
+
+正式词典为 registry v2，generation `e1ffe3fc-da50-46cb-a648-bc6b973b6cb0`，revision 13。部署审计中 47 条旧词典来源问题归零，仍有 5 条历史候选差异和 5 条关系警告须人工审核。13 类核心对象身份摘要、9 个原始 PDF 记录摘要及数量保持不变。6 个暂停 OCR 任务保持不变，未重跑全文 embedding。隔离恢复数据库及其独立网络已清理，生产备份和回退入口保留。
+
+最终补丁未运行功能、集成、E2E 或浏览器测试。已执行的是部署构建、备份迁移、只读数据核对及运行健康门槛，不能把它们写成 A–J 验收通过。
+
+QueryLexicon 版本升级必须同时提供两个参数。正确命令为 `python manage.py rebuild_query_lexicon --normalization-version query-lexicon-normalize-v1 --source-registry-version query-lexicon-registry-v2`。应用回退时同样同时指定 normalization v1 和 registry v1，不执行 schema down migration。
+
+### 3.0.4 工作台参数热修
+
+15:03 用户访问产生错误 d277ae6118dc。共同根因为 build_edition_workflow 对 7 个步骤未传 catalog_state。所有已建 Edition 的上架、已发布维护、工作队列与字段研究均可能触发，不是单本 PDF 或数据库损坏。
+
+修复提交 `ee8958880b79e35ac792843ae9c6c1428ad2dec4` 已推送，于 2026-09-05 15:14:25 完成 API 热修，退出码 0。API/两个 Worker/Beat 使用 `social-theory-library-api:3.0.4-workbench-ee89588`，image ID 为 `sha256:859330ad798a4a2edac1d25d5bacb9f9658b32d71eac0875cd7780ceca1062a4`。Web 保留主发布版本，Edge 已刷新。
+
+记录在 `storage/backups/pre-v304-workbench-hotfix-ee89588/deploy-record`。热修没有数据库 migration、馆藏修改、OCR 或索引重建，没有运行功能测试。公网/容器就绪仅作为启动门槛，不表示逐本工作台已验收。再次发生的 Cloudflare 1033 在重连后恢复，网络持续稳定性仍需另行处理。
 
 ## Version 3.0.3 production cutover
 

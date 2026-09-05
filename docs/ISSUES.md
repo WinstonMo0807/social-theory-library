@@ -4,11 +4,15 @@
 
 ## 3.0.4 当前真实限制
 
-- 2026-09-05 恢复核对确认的实现缺口见 [CURRENT_PROGRESS.md](../CURRENT_PROGRESS.md)。它们包括非线性保存、统一字段决定、已发布候选编辑修订、字段及发布包前置检查、旧直接索引入口、策展后端统一及 Topic 合并，不应仅列为环境验证问题。
-- catalog 0040、正式 revision、知识发布事件、字段助手和公开资格过滤已经进入源码，但生产 migration 与公网切换在本文更新时尚未完成。必须先取得 fresh BackupJob、PostgreSQL 16 恢复演练、migration plan、旧镜像标签、任务空闲窗口和活动索引回退记录。
+- 15:03 工作台出现共用参数遗漏错误。build_edition_workflow 对 7 个步骤未传 catalog_state，导致已建 Edition 的上架、已发布维护和队列均可 500。ee89588 最小修复已于 15:14:25 上线，未改数据或运行测试。不能将 readiness 成功写成工作台已经逐本验收。
+- Cloudflare 隧道在主发布和热修期间均出现 1033 与连接超时，重启原连接后恢复。当前公网就绪，但长期稳定性未核实；后续复现需处理外网连通性，不能通过反复回退业务代码掩盖此问题。
+- 非线性保存、统一字段决定、候选编辑修订、发布包、正文保护、统一策展和 Topic 合并已实现并随 3.0.4 上线。当前状态见 [CURRENT_PROGRESS.md](../CURRENT_PROGRESS.md)，不能再把上午恢复时的缺口当作当前全部未完成。
+- 2026-09-05 14:59:18 已完成公网切换，生产 catalog 0040–0042 已应用，readiness 为 3.0.4、pending_migrations=0。备份、隔离恢复记录、旧镜像、首次失败与恢复记录保留。
+- 最终生产一致性报告仍为 clean=false。5 项历史候选与字段/关系差异，以及 5 项已确认关系指向未发布或归档分类的警告需要管理员判断。公开读取已排除非正式端点，原关系未删，不能把警告归零作为自动发布或合并依据。
+- 完全没有 UploadItem 的手工创建作品，外部人物查找结果仍受原候选持久化服务限制。馆内查找、手工填写、新建并关联可以使用；后续应补正式候选契约，不伪造上传项。
 - 用户要求本轮最终收口不追加测试运行。较早阶段的定向回归只能证明当时的源码。最终工作树、catalog 0040 的生产 PostgreSQL 行为、真实 Celery 事件重试、管理员浏览器写入和公网边界仍需通过部署检查确认。
 - 一致性审计命令是只读工具。它会报告 accepted 候选未写字段、重复实体、发布 revision、搜索、QueryLexicon 和 Semantic 资格问题，但不会自动合并 Person、Topic、KnowledgeNode 或修改历史人工馆藏。任何修复都需要备份和明确规则。
-- 正式 QueryLexicon 已按 registry v2 排除草稿和未经确认来源。升级后仍需保存切换前 generation，运行正式馆藏审计并核对新 generation。不得用直接删除活动词典或自动升级候选别名的方式消除报告。
+- 正式 QueryLexicon 已重建到 registry v2，47 条旧来源问题已消除。新 generation 为 e1ffe3fc-da50-46cb-a648-bc6b973b6cb0，revision 13；旧 generation 保留。没有直接删除活动词典或自动升级候选别名。
 - metadata ready 与 fulltext ready 已分开。没有合格 DocumentRevision 或质量记录的已发布作品只能提供书目与获准阅读的 PDF。真实 PaddleOCR、远程 embedding、Meilisearch 内容和 Reader locator 需要逐项生产核对。
 - 知识发布投递依赖现有 ProjectionState 和幂等任务。外部服务故障应显示为智能内容处理异常，并继续服务上一稳定 revision。长期重试、dead-letter 处置和人工重新处理仍需要生产观察，不能用清空失败记录处理。
 - 旧 TheorySchool、Concept、WorkKnowledgeRelation、章节决定和多类 Candidate 表仍保留兼容或诊断用途。3.0.4 停止把它们当作普通 Admin 的主要操作语言，但物理删除要等映射一致、旧读取为零和观察期完成。
@@ -16,7 +20,9 @@
 - 外部书目、VIAF、联网检索、AI 简介和候选封面的实际可用性会随环境与授权变化。它们失败时不得阻断手工编目，也不得降低证据、身份或正式发布门槛。
 - 生产上的普通非 superuser 管理员完整上架、即时新建实体、bundle 发布、修改已发布作者、仅换封面、主题合并和整书撤回场景尚无本轮持久写入证据。部署验收应优先使用可回滚事务或专用测试记录，不修改真实馆藏来制造通过。
 
-## 3.0.3 当前真实限制
+## 3.0.3 阶段限制记录
+
+本节是旧版本阶段记录。当前部署与数据状态以上方 3.0.4 和数据库审计报告为准。
 
 - 公开 Scholar 缺失的根因已确认。生产有 4 个 published ScholarProfile，但对应 Person 均为 draft。源码修复和有界收敛命令已完成。正式 apply 只能在 fresh backup、dry-run 数量匹配和新镜像就绪后执行。
 - PublicPageContract 当前覆盖 Scholar 9 页、Theory 7 页、Topic 8 页，路由与管理字段审计均为 100%。旧 `/theory-schools` 路由、Topic 的旧 Theory 补充和 Scholar curation 中的旧 Theory ID 仍是明确兼容层。退役需要 normalized mapping 完整并连续观察没有旧读取需求。
