@@ -15,9 +15,15 @@ services:
       LAN_PROXY_TOKEN: ${LAN_PROXY_TOKEN:?请设置至少 32 位的 LAN_PROXY_TOKEN}
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared@sha256:e39ee8da81ad5e05d77f38d2f51c60ca51bf2a8450ac3abab50c17fdb91d91bf}
     restart: unless-stopped
     init: true
+    # Only this container's network namespace is changed. The kernel default
+    # keeps unacknowledged HTTP/2 connections alive for about 15 minutes,
+    # while cloudflared can still count those sockets as ready. Eight retries
+    # retains the RFC-recommended >=100s budget and permits timely reconnect.
+    sysctls:
+      net.ipv4.tcp_retries2: "8"
     command:
       - tunnel
       - --no-autoupdate

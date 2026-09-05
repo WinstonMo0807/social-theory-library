@@ -2,6 +2,8 @@
 
 更新日期为 2026-09-05。本文件记录源码中的部署入口、安全要求和正式生产切换快照。任何后续部署仍需重新检查实时状态。
 
+15:52 最新状态：公网 Cloudflare 1033 尚未恢复，书库内网正常。cloudflared 已固定当前镜像并持久化独立 netns 的 tcp_retries2=8，宿主与其他服务未改。出站 7844 连通性仍需进一步处理，详见 [隧道恢复记录](CLOUDFLARE_TUNNEL_RECOVERY.md)。下方成功切换记录不能代表当前公网可用。
+
 ## Version 3.0.4 production cutover
 
 3.0.4 继续使用现有 `social-science-library` Compose project、`compose.public.yaml` 和 `compose.cloudflare.yaml`。目标 migration 为 catalog 0040、0041、0042，分别建立编目发布结构、独立正文解释版本和期刊目录关系。0040 包含历史已发布 Edition 的初始馆藏 revision 及人工确认草稿发布包回填，因此必须先用 fresh BackupJob 在隔离 PostgreSQL 16 中完成恢复和迁移演练。
