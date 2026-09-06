@@ -1,5 +1,11 @@
 # 开发进度
 
+## 2026-09-06 3.0.5 开发中
+
+从 3.0.4 的 `340b94f` 建立 `codex/v3.0.5-architecture-convergence`，尚未上线。完整基线为后端 888 通过/90 失败/32 跳过、前端 161 通过/17 失败，TypeScript 和 build 通过，lint 8 errors。最新状态以根目录 CURRENT_PROGRESS 为准。
+
+已修复活动馆藏修订归属遗漏。公开 Q selector、内存快照与正式发布事件入口都检查 revision.edition，阻止错误指针暴露另一版本内容。专项先红后绿，与原发布和一致性测试合计 22 通过。无 migration、无生产数据变更。完整升级仍在实施。
+
 2026-09-05 15:52 更新：公网隧道当前仍为 1033，内网 3.0.4 正常。只在 cloudflared 独立网络命名空间缩短失联 TCP 等待并持久化，没有动应用或数据。外部新连接仍超时，需要继续检查路由器或上游出站路径。此状态覆盖下方主发布时的公网成功快照，详见 CURRENT_PROGRESS.md 与 CLOUDFLARE_TUNNEL_RECOVERY.md。
 
 当前续接入口为 [CURRENT_PROGRESS.md](../CURRENT_PROGRESS.md)。3.0.4 已于 2026-09-05 14:59:18 完成公网部署，上线代码提交为 `18f4106`。公开 readiness 返回 3.0.4，数据库迁移待执行数为 0。全部用户要求回溯见 [要求回溯](V3.0.4_USER_REQUESTS.md)。

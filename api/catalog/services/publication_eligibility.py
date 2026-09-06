@@ -28,6 +28,7 @@ def public_edition_q(*, prefix: str = "", require_fulltext: bool = False) -> Q:
 
     conditions = {
         _path(prefix, "state"): PublicationState.PUBLISHED,
+        _path(prefix, "active_catalog_revision__edition_id"): F(_path(prefix, "id")),
         _path(prefix, "active_catalog_revision__status"): (
             CatalogPublicationRevision.Status.ACTIVE
         ),
@@ -106,6 +107,7 @@ def active_catalog_snapshot(
     revision = getattr(edition, "active_catalog_revision", None)
     if (
         revision is None
+        or revision.edition_id != edition.pk
         or revision.status != CatalogPublicationRevision.Status.ACTIVE
         or not revision.metadata_ready
         or (require_fulltext and not revision.fulltext_ready)

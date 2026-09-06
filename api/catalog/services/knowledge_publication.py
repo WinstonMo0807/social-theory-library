@@ -819,6 +819,8 @@ def create_catalog_publication_event(
         old_active = CatalogPublicationRevision.objects.select_for_update().get(
             pk=old_active.pk
         )
+        if old_active.edition_id != edition.pk:
+            raise ValueError("当前公开修订不属于此版本，请先核查发布指针。")
     fields = normalize_changed_fields(changed_fields, event_type=event_type)
     if content_asset_id:
         fields = sorted(set(fields) | {"document_revision", "fulltext_ready"})
