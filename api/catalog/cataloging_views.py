@@ -71,6 +71,15 @@ class CatalogingSessionDetailView(AdminPrivateResponseMixin, APIView):
         return Response({"session": session_payload(session), "workspace": workspace})
 
 
+class CatalogFieldContractView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    def get(self, request):
+        from catalog.contracts.fields import FIELDS
+
+        return Response({"version": "catalog-field-contract-v305", "fields": [field.payload() for field in FIELDS]})
+
+
 class CatalogingSessionAbandonView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanEditMetadata]
 

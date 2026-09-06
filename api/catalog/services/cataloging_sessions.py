@@ -54,7 +54,13 @@ def open_cataloging_session(*, actor, edition_id=None, upload_item_id=None,
         edition = Edition.objects.select_for_update(of=("self",)).get(pk=edition_id)
     elif source_type in {CatalogingSession.SourceType.MANUAL, CatalogingSession.SourceType.IMPORT}:
         work = Work.objects.create(title=title.strip(), document_type=document_type, language=language)
-        edition = Edition.objects.create(work=work)
+        edition = Edition.objects.create(work=work, publication_mode=Edition.PublicationMode.BIBLIOGRAPHIC)
+        if source_type == CatalogingSession.SourceType.MANUAL:
+            from catalog.services.field_decisions import record_edition_field_decision
+            for name, value in {"title": title.strip(), "document_type": document_type, "language": language}.items():
+                if value:
+                    record_edition_field_decision(edition, name, value=value, status="confirmed", actor=actor,
+                                                 provenance={"source": "manual_catalog_creation"})
     elif item is None:
         raise ValueError("编辑已有馆藏需要指定版本。")
 

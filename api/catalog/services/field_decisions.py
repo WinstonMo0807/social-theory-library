@@ -26,110 +26,7 @@ from catalog.models import (
 )
 
 
-SECTION_FIELDS: dict[str, tuple[str, ...]] = {
-    "file": ("file",),
-    "work": (
-        "title",
-        "subtitle",
-        "original_title",
-        "uniform_title",
-        "document_type",
-        "language",
-        "original_language",
-        "first_publication_date",
-        "translation_of",
-        "abstract",
-        "cover",
-    ),
-    "bibliography": (
-        "journal_contents",
-        "version_label",
-        "publication_date",
-        "publication_year",
-        "publisher",
-        "publication_place",
-        "isbn10",
-        "isbn13",
-        "series",
-        "extent",
-        "journal_title",
-        "volume",
-        "issue",
-        "page_range",
-        "doi",
-        "degree_institution",
-        "degree_type",
-        "report_institution",
-    ),
-    "contributors": (
-        "authors",
-        "translators",
-        "chief_editors",
-        "editors",
-        "annotators",
-        "photographers",
-        "other_contributors",
-    ),
-    "classification": ("disciplines", "subdisciplines"),
-    "knowledge": ("topics", "theories"),
-    "reader": ("reader_asset", "ocr_text", "page_labels"),
-    "curation": ("curation",),
-}
-
-
-# Downstream fields are invalidated when any listed upstream field changes.
-FIELD_DEPENDENCIES: dict[str, tuple[str, ...]] = {
-    "edition_match": ("title", "authors", "isbn10", "isbn13", "publisher", "publication_year"),
-    "translators": ("title", "authors", "isbn10", "isbn13", "publisher", "publication_year"),
-    "publisher": ("title", "isbn10", "isbn13", "publication_year"),
-    "publication_year": ("title", "isbn10", "isbn13", "publisher"),
-    "cover": ("title", "authors", "isbn10", "isbn13", "publisher", "publication_year"),
-    "abstract": ("title", "authors", "isbn10", "isbn13", "publisher", "publication_year"),
-    "disciplines": ("title", "authors", "abstract"),
-    "subdisciplines": ("title", "authors", "abstract", "disciplines"),
-    "topics": ("title", "authors", "abstract", "disciplines"),
-    "theories": ("title", "authors", "abstract", "disciplines", "topics"),
-}
-
-
-REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
-    DocumentType.BOOK: ("file", "title", "document_type", "language", "authors"),
-    DocumentType.JOURNAL_ARTICLE: (
-        "file",
-        "title",
-        "document_type",
-        "language",
-        "authors",
-        "journal_title",
-        "publication_year",
-    ),
-    DocumentType.JOURNAL_ISSUE: (
-        "file",
-        "title",
-        "document_type",
-        "language",
-        "journal_title",
-        "publication_year",
-        "volume",
-        "issue",
-    ),
-    DocumentType.THESIS: (
-        "file",
-        "title",
-        "document_type",
-        "language",
-        "authors",
-        "degree_institution",
-    ),
-    DocumentType.REPORT: (
-        "file",
-        "title",
-        "document_type",
-        "language",
-        "authors",
-        "report_institution",
-    ),
-}
+from catalog.contracts.fields import FIELD_DEPENDENCIES, REQUIRED_FIELDS, SECTION_FIELDS, required_fields
 
 
 REVIEWABLE_OPTIONAL_FIELDS = (
@@ -502,7 +399,7 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
         "abstract": work.abstract,
         "cover": work.cover.name if work.cover else "",
         **{
-            field_name: getattr(edition, field_name)
+            field_name: str(getattr(edition, field_name)) if field_name.endswith("_id") and getattr(edition, field_name) else getattr(edition, field_name)
             for field_name in SECTION_FIELDS["bibliography"] if field_name != "journal_contents"
         },
         **role_values,
@@ -603,7 +500,7 @@ def _decision_map(edition: Edition) -> dict[str, CatalogFieldDecision]:
 def field_readiness(edition: Edition) -> list[FieldReadiness]:
     decisions = _decision_map(edition)
     values, formally_confirmed = formal_field_values(edition)
-    required = set(REQUIRED_FIELDS.get(values.get("document_type"), REQUIRED_FIELDS[DocumentType.BOOK]))
+    required = set(required_fields(values.get("document_type"), has_document=document_required(edition)))
     field_names = sorted(required | set(REVIEWABLE_OPTIONAL_FIELDS) | set(decisions) | set(values))
     result = []
     for field_name in field_names:
@@ -682,11 +579,22 @@ def section_statuses(edition: Edition) -> dict[str, dict[str, Any]]:
     return output
 
 
+def document_required(edition: Edition) -> bool:
+    # A malformed or missing file must not be hidden by selecting metadata-only.
+    return edition.publication_mode != Edition.PublicationMode.BIBLIOGRAPHIC or edition.assets.exists()
+
+
 def publication_field_check(edition: Edition) -> dict[str, Any]:
+    from catalog.contracts.validation import field_error
+
     rows = field_readiness(edition)
     blockers = []
     warnings = []
     for row in rows:
+        error = field_error(row.field_name, row.value)
+        if error:
+            blockers.append(error)
+            continue
         if row.status == CatalogFieldDecision.Status.CONFLICT:
             blockers.append({"field": row.field_name, "code": "field_conflict"})
         elif row.required and (not field_value_present(row.value) or row.status not in {

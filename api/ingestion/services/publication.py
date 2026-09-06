@@ -26,7 +26,7 @@ from catalog.models import (
     Topic,
 )
 from catalog.services.claims.curation import publish_work_curated_claims
-from catalog.services.field_decisions import publication_field_check
+from catalog.services.field_decisions import document_required, publication_field_check
 from catalog.services.knowledge_publication import confirmed_bundle_links, create_catalog_publication_event
 from distribution.models import CloudObject
 
@@ -52,14 +52,7 @@ def _asset_storage_readable(asset: Asset | None) -> bool:
         return False
 
 
-_FIELD_LABELS = {
-    "file": "文件", "title": "作品名称", "document_type": "资源类型",
-    "language": "正文语言", "authors": "作者", "translators": "译者",
-    "publisher": "出版社", "publication_year": "出版年份", "journal_title": "期刊名",
-    "volume": "卷", "issue": "期", "degree_institution": "学位授予单位",
-    "report_institution": "报告机构", "disciplines": "学科", "subdisciplines": "分支学科",
-    "topics": "主题", "theories": "理论传统", "abstract": "简介", "cover": "封面",
-}
+from catalog.contracts.fields import FIELD_LABELS as _FIELD_LABELS
 
 
 def _publication_bundle_check(edition: Edition) -> dict[str, Any]:
@@ -138,6 +131,9 @@ def publication_preflight(edition: Edition) -> dict[str, Any]:
     work = edition.work
     field_check = publication_field_check(edition)
     for problem in field_check["blockers"]:
+        if problem.get("message"):
+            blockers.append(problem["message"])
+            continue
         label = _FIELD_LABELS.get(problem["field"], "馆藏字段")
         blockers.append(
             f"{label}存在冲突，请先处理"
@@ -160,13 +156,14 @@ def publication_preflight(edition: Edition) -> dict[str, Any]:
         is_current=True,
     ).order_by("-version", "-created_at").first()
 
-    if not _asset_storage_readable(original):
+    requires_document = document_required(edition)
+    if requires_document and not _asset_storage_readable(original):
         blockers.append("原始 PDF 不存在或当前无法读取")
-    if not _asset_storage_readable(normalized):
+    if requires_document and not _asset_storage_readable(normalized):
         blockers.append("公开阅读锚点文件不存在或当前无法读取")
-    elif normalized.validation_status == Asset.ValidationStatus.INVALID:
+    elif normalized is not None and normalized.validation_status == Asset.ValidationStatus.INVALID:
         blockers.append("公开阅读锚点文件验证失败")
-    elif settings.REQUIRE_CLOUD_FOR_PUBLICATION and not normalized.cloud_objects.filter(
+    elif requires_document and settings.REQUIRE_CLOUD_FOR_PUBLICATION and not normalized.cloud_objects.filter(
         status=CloudObject.Status.READY,
     ).exists():
         blockers.append("当前部署要求云端阅读副本，但副本尚未就绪")
@@ -192,8 +189,15 @@ def publication_preflight(edition: Edition) -> dict[str, Any]:
         warnings.append("研究报告责任机构尚未补全")
     if not edition.citation_data:
         warnings.append("引用数据尚未生成")
-    if not edition.canonical_filename:
+    if requires_document and not edition.canonical_filename:
         warnings.append("规范文件名尚未生成")
+    if not requires_document:
+        return {
+            "blockers": list(dict.fromkeys(blockers)),
+            "warnings": list(dict.fromkeys([*warnings, "本记录仅公开书目，没有可阅读或下载的文献"])),
+            "background_tasks": ["书目检索"],
+            "publication_bundle": bundle_check,
+        }
     if edition.ocr_status in {OcrStatus.PENDING, OcrStatus.RUNNING}:
         warnings.append("OCR 尚未完成，扫描件暂时不能选择文字")
         background_tasks.append("OCR")
@@ -304,6 +308,9 @@ def publish_edition(
         },
     )
     now = timezone.now()
+    if not edition.public_slug:
+        # Stable identity-based URL also works for a bibliography without PDF.
+        edition.public_slug = f"work-{edition.pk}"
     edition.state = PublicationState.PUBLISHED
     edition.published_at = now
     if edition.first_published_at is None:
@@ -313,6 +320,7 @@ def publish_edition(
     edition.save(
         update_fields=[
             "state",
+            "public_slug",
             "published_at",
             "first_published_at",
             "last_published_at",

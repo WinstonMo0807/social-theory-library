@@ -13,6 +13,10 @@
 
 ## 仍待完成
 
+## catalog 0044
+
+Edition 新增 publication_mode，默认 document 保留旧馆藏文件门槛。手工会话创建新 Edition 时显式选择 bibliographic，旧行不批量改为纯书目。纯书目只有在没有任何 Asset 时允许无文档发布；已有异常或不可读文件仍阻断。恢复旧应用时保留字段，不 down migrate。SQLite 纯书目公开、损坏文件、旧模式、字段与会话专项通过，PostgreSQL 演练待核实。
+
 ## ingestion 0015
 
 EntityResolutionCandidate 新增可空 cataloging_session FK，旧 upload_item 改为可空但保留，数据库要求至少一个真实上下文。增加 session/type/status 索引。没有删除、自动接受或批量改写旧候选。新研究写入 session，旧上传候选在确认来源一致的持久化操作中关联会话；保持 ID、旧状态、证据和审计。

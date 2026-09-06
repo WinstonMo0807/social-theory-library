@@ -949,7 +949,15 @@ def _local_entity(source_type: str, source_id):
 
 
 def _apply_scalar(edition, policy: AssistantFieldPolicy, value: Any, *, actor) -> None:
+    from catalog.contracts.fields import FIELD_CONTRACTS
+    from catalog.contracts.validation import field_error, normalize_field
+
     field_name = _canonical_field(policy)
+    if field_name in FIELD_CONTRACTS:
+        error = field_error(field_name, value)
+        if error:
+            raise FieldAssistantError(error["message"])
+        value = normalize_field(field_name, value)
     target = edition if hasattr(edition, field_name) else edition.work
     if not hasattr(target, field_name):
         raise FieldAssistantError("该字段不能直接采用值候选。")
@@ -962,8 +970,6 @@ def _apply_scalar(edition, policy: AssistantFieldPolicy, value: Any, *, actor) -
     try:
         converted = model_field.to_python(value)
         model_field.run_validators(converted)
-        if field_name == "publication_year" and not 1000 <= converted <= 2100:
-            raise ValueError("year out of range")
     except Exception as exc:
         raise FieldAssistantError("建议值的格式不适用于当前字段。") from exc
     if _requires_editorial_revision(edition):

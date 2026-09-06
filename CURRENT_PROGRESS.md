@@ -12,7 +12,13 @@
 
 验证已完成 12 项会话基础、24 项候选首组。扩大集成 110 passed/1 failed，唯一旧公开预览 fixture 补显式活动快照后其参数组 3 passed。TypeScript、新文件 lint、Django check、migration drift、build 均退出 0。两项真实本地 Playwright 已分别通过，覆盖非 superuser Editor 创建/保存/重开与 Reader 拒绝。首次命令路径和标题选择器失败均保留记录，业务 API 没有 mock。
 
-当前进入字段契约收敛和纯书目发布。`catalog/contracts/fields.py` 声明已开始，尚未接入运行服务。MetadataCandidate 的 session 迁移、发布状态关联、完整 Workbench、OpenAPI、媒体、legacy 与最终全回归仍未完成。两项局部成功不代表完整版本验收。本机 E2E 临时 SQLite 只含测试账号与记录，不是生产或恢复副本。
+会话与候选已保存为第二个本地提交 `c7b2cb6`。当前字段契约已接入 SECTION_FIELDS、REQUIRED_FIELDS、FIELD_DEPENDENCIES、字段标签、可写字段、工作流序列化验证和发布检查。ISBN/DOI 的格式校验不代表外部标识符存在性。catalog 0044 新增 publication_mode，旧数据保持 document，手工新建使用 bibliographic。
+
+纯书目沿用原 CatalogPublicationRevision/outbox，成功后返回公开详情且 reader_asset=null。有任何附带 Asset 时仍检查真实文档，不用纯书目模式掩盖坏文件。50 项首轮契约/会话/发布测试通过，增加会话 publishing/published 关联后 44 项通过。TypeScript 和当前新文件 lint 通过。该切片仍未提交、未生产部署，正进行剩余联动与构建。
+
+19:28 完成当前构建与两项真实 Playwright，均退出 0，新增覆盖无上传新建作者并关联。字段助手标量采用也已使用契约校验，相关 20 项通过。基线 8 个 lint 错误已修复，全仓 lint 和 TypeScript 均退出 0。按上下文隔离的临时状态拒绝旧异步结果，Knowledge Studio 复用可取消的 API hook，3 个状态隔离单元测试通过。完整 Node 基线的旧断言和后端失败仍未全部处理。
+
+MetadataCandidate 的 session 迁移、完整 Workbench、OpenAPI、媒体、legacy 与最终全回归仍未完成。两项局部成功不代表完整版本验收。本机 E2E 临时 SQLite 只含测试账号与记录，不是生产或恢复副本。
 
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 

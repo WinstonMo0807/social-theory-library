@@ -164,7 +164,12 @@ class Work(UUIDTimeStampedModel):
 
 
 class Edition(UUIDTimeStampedModel):
+    class PublicationMode(models.TextChoices):
+        DOCUMENT = "document", "书目与文献"
+        BIBLIOGRAPHIC = "bibliographic", "纯书目"
+
     work = models.ForeignKey(Work, on_delete=models.PROTECT, related_name="editions")
+    publication_mode = models.CharField(max_length=16, choices=PublicationMode.choices, default=PublicationMode.DOCUMENT)
     version_label = models.CharField(max_length=120, blank=True)
     publication_year = models.PositiveSmallIntegerField(null=True, blank=True, db_index=True)
     publication_date = models.DateField(null=True, blank=True, db_index=True)
@@ -260,6 +265,10 @@ class Edition(UUIDTimeStampedModel):
 
     class Meta:
         ordering = ["-publication_year", "work__title"]
+        constraints = [models.CheckConstraint(
+            condition=models.Q(publication_mode__in=["document", "bibliographic"]),
+            name="edition_publication_mode_valid",
+        )]
 
     def __str__(self):
         return f"{self.work.title} ({self.publication_year or '未定年'})"

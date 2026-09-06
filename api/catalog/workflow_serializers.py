@@ -17,6 +17,24 @@ class WorkflowSectionSerializer(serializers.Serializer):
     expected_work_updated_at = serializers.DateTimeField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")
 
+    def validate(self, attrs):
+        from catalog.contracts.fields import FIELD_CONTRACTS
+        from catalog.contracts.validation import field_error, normalize_field
+
+        attrs = super().validate(attrs)
+        errors = {}
+        for name, value in attrs.items():
+            if name not in FIELD_CONTRACTS:
+                continue
+            error = field_error(name, value)
+            if error:
+                errors[name] = error["message"]
+            else:
+                attrs[name] = normalize_field(name, value)
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
 
 class WorkSectionSerializer(WorkflowSectionSerializer):
     document_type = serializers.ChoiceField(choices=DocumentType.choices, required=False)

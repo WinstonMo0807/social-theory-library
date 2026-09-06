@@ -27,9 +27,9 @@ from catalog.models import (
     WorkKnowledgeRelation,
 )
 from catalog.services.field_decisions import (
-    REQUIRED_FIELDS,
     SECTION_FIELDS,
     field_readiness,
+    document_required,
     field_value_present,
     formal_field_values,
     publication_field_check,
@@ -66,89 +66,9 @@ ADMIN_QUEUE_STATUS_LABELS = {
 }
 
 
-FIELD_LABELS = {
-    "file": "文件",
-    "title": "作品题名",
-    "subtitle": "副题名",
-    "original_title": "原文题名",
-    "uniform_title": "规范题名",
-    "document_type": "资源类型",
-    "language": "正文语言",
-    "original_language": "原文语言",
-    "first_publication_date": "首次出版日期",
-    "translation_of": "原作",
-    "abstract": "简介",
-    "cover": "封面",
-    "version_label": "版本说明",
-    "publication_date": "出版日期",
-    "publication_year": "出版年份",
-    "publisher": "出版社",
-    "publication_place": "出版地",
-    "isbn10": "ISBN-10",
-    "isbn13": "ISBN-13",
-    "series": "丛书",
-    "extent": "页数或篇幅",
-    "journal_title": "期刊",
-    "journal_contents": "本期目录与论文",
-    "volume": "卷",
-    "issue": "期",
-    "page_range": "页码",
-    "doi": "DOI",
-    "degree_institution": "学位授予单位",
-    "degree_type": "学位类型",
-    "report_institution": "发布机构",
-    "authors": "作者",
-    "translators": "译者",
-    "chief_editors": "主编",
-    "editors": "编者",
-    "annotators": "校注",
-    "photographers": "摄影",
-    "other_contributors": "其他贡献者",
-    "disciplines": "学科",
-    "subdisciplines": "子学科",
-    "topics": "主题",
-    "theories": "理论传统",
-    "reader_asset": "阅读文件",
-    "ocr_text": "正文文字",
-    "page_labels": "引用页码",
-    "curation": "策展",
-}
+from catalog.contracts.fields import FIELD_LABELS
 
-WORK_FIELDS = (
-    "document_type",
-    "title",
-    "subtitle",
-    "original_title",
-    "uniform_title",
-    "language",
-    "original_language",
-    "first_publication_date",
-    "translation_of_id",
-    "abstract",
-)
-
-BIBLIOGRAPHY_FIELDS = (
-    "version_label",
-    "publication_date",
-    "publication_year",
-    "publisher",
-    "publisher_authority_id",
-    "publication_place",
-    "journal_title",
-    "volume",
-    "issue",
-    "page_range",
-    "degree_institution",
-    "degree_type",
-    "report_institution",
-    "isbn",
-    "isbn10",
-    "isbn13",
-    "doi",
-    "series",
-    "extent",
-    "responsibility_statement",
-)
+from catalog.contracts.fields import BIBLIOGRAPHY_FIELDS, WORK_FIELDS
 
 METADATA_FIELDS_BY_STEP = {
     "work": {
@@ -414,10 +334,7 @@ def catalog_field_state(edition: Edition) -> dict[str, Any]:
 
     readiness = {row.field_name: row for row in field_readiness(edition)}
     required_fields = set(
-        REQUIRED_FIELDS.get(
-            edition.work.document_type,
-            REQUIRED_FIELDS.get("book", ()),
-        )
+        row.field_name for row in readiness.values() if row.required
     )
     field_names = set(readiness) | required_fields
     for fields in SECTION_FIELDS.values():
@@ -497,6 +414,7 @@ def catalog_field_state(edition: Edition) -> dict[str, Any]:
     }
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
+    blockers.extend(row for row in raw_check["blockers"] if str(row["code"]).startswith("catalog.invalid_"))
     for field_name, row in fields.items():
         if row["status"] == CatalogFieldDecision.Status.CONFLICT:
             blockers.append(
@@ -631,6 +549,8 @@ def _step_payload(
 
 
 def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
+    if not document_required(edition):
+        return _step_payload("file", "文件与识别", "skipped", [], "纯书目记录，尚未附带文献。", "")
     if item is None:
         return _step_payload(
             "file",
@@ -849,6 +769,8 @@ def _knowledge_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str
 
 
 def _reader_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any]:
+    if not document_required(edition):
+        return _step_payload("reader", "正文与阅读", "skipped", [], "纯书目不提供正文阅读。", "")
     issues = []
     normalized = edition.assets.filter(
         kind=Asset.Kind.NORMALIZED,

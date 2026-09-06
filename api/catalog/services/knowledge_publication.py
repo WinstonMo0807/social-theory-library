@@ -302,6 +302,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
         },
         "edition": {
             "id": str(edition.id),
+            "publication_mode": edition.publication_mode,
             "version_label": edition.version_label,
             "publication_date": _json(edition.publication_date),
             "publication_year": edition.publication_year,
@@ -1123,6 +1124,17 @@ def create_catalog_publication_event(
             for consumer, details in sorted(plan.items())
         ]
     )
+    if actor and not withdrawal and not system_content_update and not shared_work_update:
+        from catalog.models import CatalogingSession
+
+        session = CatalogingSession.objects.select_for_update().filter(
+            edition=edition, status__in=["drafting", "reviewing", "ready", "publishing"],
+        ).first()
+        if session is not None:
+            session.status = CatalogingSession.Status.PUBLISHING
+            session.save(update_fields=["status", "updated_at"])
+            event.payload = {**event.payload, "cataloging_session_id": str(session.pk)}
+            event.save(update_fields=["payload", "updated_at"])
     transaction.on_commit(lambda event_id=event.id: dispatch_knowledge_event(event_id))
     return event
 
@@ -1242,6 +1254,12 @@ def _activate_completed_revision(event: KnowledgePublicationEvent) -> None:
     # database transaction, after moving the pointer, so readers never get a
     # new title from the lexicon with the old public catalog revision.
     _sync_published_work_terms(edition)
+    if event.payload.get("cataloging_session_id"):
+        from catalog.models import CatalogingSession
+
+        CatalogingSession.objects.filter(
+            pk=event.payload["cataloging_session_id"], edition=edition, status="publishing",
+        ).update(status=CatalogingSession.Status.PUBLISHED, updated_at=now)
     if revision.bundle_id:
         PublicationBundle.objects.filter(pk=revision.bundle_id).update(
             status=PublicationBundle.Status.PUBLISHED,

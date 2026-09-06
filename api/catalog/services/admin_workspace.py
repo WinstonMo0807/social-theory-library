@@ -962,6 +962,7 @@ def build_admin_workspace(
             "filename": item.source_filename if item else (normalized.original_filename if normalized else ""),
             "document_type": data["work"].get("document_type") or work.document_type,
             "publication_state": edition.state,
+            "publication_mode": edition.publication_mode,
             "pdf_preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
                 f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
             ),
