@@ -130,7 +130,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
 
   return (
     <div className="admin-page work-library-page">
-      <PageHeader eyebrow="馆藏" title="作品与版本" description="以 Work 为正式馆藏身份。版本、文件和上传历史从作品详情继续查看。" actions={<Link className="button" href="/admin/uploads">上传与批次</Link>} />
+      <PageHeader eyebrow="馆藏" title="作品与版本" description="管理作品、出版版本和数字文件。" actions={<><Link className="button secondary" href="/admin/cataloging/new">新建书目</Link><Link className="button" href="/admin/uploads">上传与批次</Link></>} />
       <form className="admin-list-toolbar" onSubmit={submit}>
         <label><Search size={15} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索题名、责任者、ISBN 或 DOI" /></label>
         <label><span className="sr-only">馆藏视图</span><select value={view} onChange={(event) => { setView(event.target.value); setSubmittedQuery(query.trim()); }}><option value="all">全部作品</option><option value="editions">版本与文件</option><option value="quality">馆藏质量</option><option value="attention">需要处理</option><option value="published">已发布</option><option value="draft">草稿</option><option value="withdrawn">已下架</option></select></label>
@@ -138,7 +138,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
       </form>
       {error ? <p className="admin-list-state review-error" role="alert">{error}</p> : null}
       {loading ? <p className="admin-list-state">正在读取作品馆藏……</p> : null}
-      {!loading && !error && !page?.results.length ? <EmptyState title="没有匹配的作品" description="上传形成 Work 后会显示在这里。" icon={<BookOpen size={21} />} /> : null}
+      {!loading && !error && !page?.results.length ? <EmptyState title="没有匹配的作品" description="可以上传文献，也可以先建立无文件书目。" icon={<BookOpen size={21} />} /> : null}
       {page?.results.length ? <section className="work-library-table admin-panel"><header><span>作品</span><span>版本</span><span>发布</span><span>文件</span><span>知识</span><span>策展</span><span>更新时间</span><span>操作</span></header>{page.results.map((work) => <article key={work.id}><div><strong>{work.title}</strong><small>{documentLabels[work.document_type] ?? work.document_type} · {work.language} · {work.contributors.join("、") || "责任者待确认"}</small></div><span><strong>{work.edition_count}</strong><small>{work.primary_edition}</small></span><StatusBadge label={statusLabels[work.publication_state] ?? work.publication_state} tone={toneByStatus[work.publication_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.asset_state] ?? work.asset_state} tone={toneByStatus[work.asset_state] ?? "neutral"} /><StatusBadge label={statusLabels[work.knowledge_status] ?? work.knowledge_status} tone={toneByStatus[work.knowledge_status] ?? "neutral"} /><StatusBadge label={statusLabels[work.curation_status] ?? work.curation_status} tone={toneByStatus[work.curation_status] ?? "neutral"} /><time>{work.updated_at ? new Date(work.updated_at).toLocaleString("zh-CN") : "—"}</time><Link href={`/admin/library/works/${work.id}${work.primary_edition_id ? `?edition=${encodeURIComponent(work.primary_edition_id)}` : ""}#work`}>打开作品 <ArrowRight size={13} /></Link></article>)}<footer>共 {page.count} 项作品。上传历史不会取代 Work 身份。</footer></section> : null}
     </div>
   );

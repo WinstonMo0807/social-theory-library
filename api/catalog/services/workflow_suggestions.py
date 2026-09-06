@@ -341,10 +341,10 @@ class WorkflowSuggestionAggregator:
         return rows
 
     def _entity_rows(self, step: str | None, field: str | None) -> list[dict]:
-        if self.item is None:
-            return []
+        from ingestion.services.candidate_context import candidate_decision_url, edition_candidate_scope
+
         rows = []
-        for candidate in EntityResolutionCandidate.objects.filter(upload_item=self.item).order_by("target_type", "source_name", "-match_score", "created_at")[:300]:
+        for candidate in EntityResolutionCandidate.objects.filter(edition_candidate_scope(self.edition, self.item)).order_by("target_type", "source_name", "-match_score", "created_at")[:300]:
             location = _entity_candidate_location(candidate)
             if location is None:
                 continue
@@ -393,7 +393,7 @@ class WorkflowSuggestionAggregator:
                 entity_type=candidate.candidate_entity_type,
                 entity_id=candidate.candidate_entity_id,
                 status=status,
-                decision_url=f"/ingestion/items/{self.item.id}/entity-resolution-candidates/{candidate.id}/decision/",
+                decision_url=candidate_decision_url(candidate),
                 available_actions=available_actions,
                 evidence_status=evidence_status,
             )

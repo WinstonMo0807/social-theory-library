@@ -124,16 +124,15 @@ def _candidate_state(edition: Edition, item: UploadItem | None) -> tuple[list[di
             accepted_states={MetadataCandidate.Lifecycle.ACCEPTED},
             rejected_states={MetadataCandidate.Lifecycle.REJECTED},
         )
-        remember(
-            "entity",
-            EntityResolutionCandidate.objects.filter(upload_item=item),
-            accepted_states={
-                EntityResolutionCandidate.Status.LINKED,
-                EntityResolutionCandidate.Status.CREATE_DRAFT,
-                EntityResolutionCandidate.Status.UNRESOLVED,
-            },
-            rejected_states={EntityResolutionCandidate.Status.REJECTED, EntityResolutionCandidate.Status.IGNORED},
-        )
+    from ingestion.services.candidate_context import edition_candidate_scope
+
+    remember(
+        "entity",
+        EntityResolutionCandidate.objects.filter(edition_candidate_scope(edition, item)),
+        accepted_states={EntityResolutionCandidate.Status.LINKED, EntityResolutionCandidate.Status.CREATE_DRAFT,
+                         EntityResolutionCandidate.Status.UNRESOLVED},
+        rejected_states={EntityResolutionCandidate.Status.REJECTED, EntityResolutionCandidate.Status.IGNORED},
+    )
     enrichment = EnrichmentCandidate.objects.filter(
         Q(target_type=EnrichmentCandidate.TargetType.WORK, target_id=edition.work_id)
         | Q(target_type=EnrichmentCandidate.TargetType.EDITION, target_id=edition.id)
@@ -275,9 +274,11 @@ def _confirmed_entities(edition: Edition) -> list[dict[str, Any]]:
     return rows[:300]
 
 
-def _unresolved_entities(item: UploadItem | None, draft: dict[str, Any]) -> list[dict[str, Any]]:
+def _unresolved_entities(item: UploadItem | None, draft: dict[str, Any], edition=None) -> list[dict[str, Any]]:
+    from ingestion.services.candidate_context import edition_candidate_scope
+
     rows = []
-    if item is not None:
+    if edition is not None:
         rows.extend(
             {
                 "entity_type": candidate.target_type,
@@ -285,7 +286,7 @@ def _unresolved_entities(item: UploadItem | None, draft: dict[str, Any]) -> list
                 "candidate_id": str(candidate.id),
             }
             for candidate in EntityResolutionCandidate.objects.filter(
-                upload_item=item,
+                edition_candidate_scope(edition, item),
                 status=EntityResolutionCandidate.Status.PROPOSED,
             )[:200]
         )
@@ -414,7 +415,7 @@ def build_research_context(
         "persisted_data": _json_value(persisted),
         "draft_data": draft,
         "confirmed_entities": _confirmed_entities(edition),
-        "unresolved_entities": _unresolved_entities(item, draft),
+        "unresolved_entities": _unresolved_entities(item, draft, edition),
         "accepted_candidates": accepted,
         "rejected_candidates": rejected,
         "field_locks": _json_value(locks),

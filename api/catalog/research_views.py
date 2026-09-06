@@ -441,7 +441,7 @@ class ResearchEntityDiscoveryView(APIView):
                 payload,
                 contract=contract,
                 entity_type=entity_type,
-                allow_decisions=bool(item is not None and item.edition_id),
+                allow_decisions=edition is not None,
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -455,12 +455,7 @@ class ResearchEntityDecisionView(APIView):
 
     def post(self, request):
         edition, item = _resolve_direct_entity_context(request)
-        if item is None:
-            return Response(
-                {"detail": "实体决定需要有效 UploadItem 上下文。"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if item.edition_id is None:
+        if edition is None:
             return Response(
                 {"detail": "当前上架项目尚未建立 Edition，不能执行实体决定。"},
                 status=status.HTTP_409_CONFLICT,
@@ -535,6 +530,7 @@ class ResearchEntityDecisionView(APIView):
             context=context,
             item=item,
             groups=[group],
+            actor=request.user,
         )
         review_candidate_id = row.get("review_candidate_id")
         if not review_candidate_id:
@@ -545,7 +541,7 @@ class ResearchEntityDecisionView(APIView):
         candidate = get_object_or_404(
             EntityResolutionCandidate.objects.select_related("upload_item__edition"),
             pk=review_candidate_id,
-            upload_item=item,
+            cataloging_session__edition=edition,
         )
         if action == "verify":
             try:

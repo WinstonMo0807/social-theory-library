@@ -120,10 +120,13 @@ def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
     return output
 
 
-def _entity_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
-    if item is None:
+def _entity_candidates(item: UploadItem | None, edition=None) -> list[dict[str, Any]]:
+    from ingestion.services.candidate_context import candidate_decision_url, edition_candidate_scope
+
+    edition = edition or (item.edition if item else None)
+    if edition is None:
         return []
-    rows = item.entity_resolution_candidates.order_by(
+    rows = EntityResolutionCandidate.objects.filter(edition_candidate_scope(edition, item)).order_by(
         "target_type", "source_name", "-match_score", "created_at"
     )
     output: list[dict[str, Any]] = []
@@ -172,7 +175,7 @@ def _entity_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
                 "preview": row.preview_data,
                 "supporting_properties": row.supporting_properties,
             },
-            "decision_url": f"/ingestion/items/{item.id}/entity-resolution-candidates/{row.id}/decision/",
+            "decision_url": candidate_decision_url(row),
             "verify_url": verify_url or None,
             "available_actions": actions,
             "role": (
@@ -862,7 +865,7 @@ def build_admin_workspace(
     ).order_by("-version").first()
     candidates = {
         "metadata": _metadata_candidates(item),
-        "entities": _entity_candidates(item),
+        "entities": _entity_candidates(item, edition),
         "enrichment": _enrichment_candidates(work, edition),
         "theory": _theory_candidates(work),
         # Machine claim volume is deliberately compressed to no more than five

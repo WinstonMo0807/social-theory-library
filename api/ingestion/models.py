@@ -521,8 +521,14 @@ class EntityResolutionCandidate(UUIDTimeStampedModel):
 
     upload_item = models.ForeignKey(
         UploadItem,
+        null=True,
+        blank=True,
         on_delete=models.CASCADE,
         related_name="entity_resolution_candidates",
+    )
+    cataloging_session = models.ForeignKey(
+        "catalog.CatalogingSession", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="entity_candidates",
     )
     source_record = models.ForeignKey(
         SourceRecord,
@@ -560,9 +566,35 @@ class EntityResolutionCandidate(UUIDTimeStampedModel):
 
     class Meta:
         ordering = ["-match_score", "created_at"]
+        constraints = [models.CheckConstraint(
+            condition=models.Q(upload_item__isnull=False) | models.Q(cataloging_session__isnull=False),
+            name="entity_candidate_has_context",
+        )]
         indexes = [
             models.Index(fields=["upload_item", "target_type", "status"]),
+            models.Index(fields=["cataloging_session", "target_type", "status"], name="entity_candidate_session_state"),
         ]
+
+    @property
+    def catalog_context(self):
+        """A real session or the legacy real upload, never a fabricated row."""
+        return self.cataloging_session if self.cataloging_session_id else self.upload_item
+
+    @property
+    def catalog_edition(self):
+        return self.catalog_context.edition
+
+    @property
+    def catalog_edition_id(self):
+        return self.catalog_context.edition_id
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        if self.cataloging_session_id and self.upload_item_id:
+            if self.cataloging_session.edition_id != self.upload_item.edition_id:
+                raise ValidationError({"cataloging_session": "候选会话与原始上传的版本不一致。"})
 
 
 class ReviewTask(UUIDTimeStampedModel):

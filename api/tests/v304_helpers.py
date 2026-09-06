@@ -44,7 +44,7 @@ def activate_catalog_revision(
         .order_by("-version", "-created_at")
         .first()
     )
-    if reader_asset is None:
+    if reader_asset is None and fulltext_ready:
         raise ValueError("an activated test edition requires a ready normalized asset")
 
     if fulltext_ready and document_revision is None:

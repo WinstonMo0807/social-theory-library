@@ -2096,6 +2096,10 @@ def test_preview_urls_and_public_visibility_follow_publication_state(
         state=state,
         slug=slug,
     )
+    if state == PublicationState.PUBLISHED:
+        from .v304_helpers import activate_catalog_revision
+
+        activate_catalog_revision(edition, fulltext_ready=False)
 
     workspace = build_admin_workspace(
         edition,

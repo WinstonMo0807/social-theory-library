@@ -6,6 +6,8 @@
 
 已修复活动馆藏修订归属遗漏。公开 Q selector、内存快照与正式发布事件入口都检查 revision.edition，阻止错误指针暴露另一版本内容。专项先红后绿，与原发布和一致性测试合计 22 通过。无 migration、无生产数据变更。完整升级仍在实施。
 
+CatalogingSession 和可空上传的 EntityResolutionCandidate 已实现，含 additive 0043/0015、独立编目 API、Web 手工新建与会话入口。研究结果在无上传时可持久化，采用/拒绝/撤销继续复用原服务，按会话与角色隔离。12 项会话、24 项候选首组通过，扩大组 110 通过/1 个旧 fixture 失败修正后定向 3 通过。两项本地真实 API Playwright 分别通过，非 superuser Editor 可保存并重开。纯书目发布、MetadataCandidate 会话迁移及完整最终门槛仍在实施。
+
 2026-09-05 15:52 更新：公网隧道当前仍为 1033，内网 3.0.4 正常。只在 cloudflared 独立网络命名空间缩短失联 TCP 等待并持久化，没有动应用或数据。外部新连接仍超时，需要继续检查路由器或上游出站路径。此状态覆盖下方主发布时的公网成功快照，详见 CURRENT_PROGRESS.md 与 CLOUDFLARE_TUNNEL_RECOVERY.md。
 
 当前续接入口为 [CURRENT_PROGRESS.md](../CURRENT_PROGRESS.md)。3.0.4 已于 2026-09-05 14:59:18 完成公网部署，上线代码提交为 `18f4106`。公开 readiness 返回 3.0.4，数据库迁移待执行数为 0。全部用户要求回溯见 [要求回溯](V3.0.4_USER_REQUESTS.md)。

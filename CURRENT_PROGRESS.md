@@ -8,7 +8,13 @@
 
 已完成主要依赖审计与完整本地基线，记录在 `docs/V3.0.5_ARCHITECTURE_AUDIT.md` 和 `docs/V3.0.5_VERIFICATION.md`。已实现第一个发布安全修复，公开 selector 和新发布入口拒绝指向其他 Edition 的 revision。9 个新不变量用例先出现 3 个预期失败，修复后与原发布/一致性检查合计 22 项通过。没有修改历史数据或 schema，尚未上线。
 
-当前继续 CatalogingSession 的最小独立实现，随后迁移候选和研究上下文。无上传手工编目仍未完成。其余基线失败继续保留，不能把这 22 项写成全部回归通过。上一测试进程句柄中断后不可用，已仅重跑最后一组，并将 XML 写到本机临时目录以便续接核对。
+发布归属修复已本地提交 `1ba12c9`。CatalogingSession、catalog 0043、ingestion 0015、无上传实体候选服务/API、Web 新建与会话入口已实现。会话从 Edition 推导 Work；候选采用/拒绝/撤销复用原服务，按会话与贡献角色隔离。旧候选和真实上传记录保留，无 fake UploadItem。
+
+验证已完成 12 项会话基础、24 项候选首组。扩大集成 110 passed/1 failed，唯一旧公开预览 fixture 补显式活动快照后其参数组 3 passed。TypeScript、新文件 lint、Django check、migration drift、build 均退出 0。两项真实本地 Playwright 已分别通过，覆盖非 superuser Editor 创建/保存/重开与 Reader 拒绝。首次命令路径和标题选择器失败均保留记录，业务 API 没有 mock。
+
+当前进入字段契约收敛和纯书目发布。`catalog/contracts/fields.py` 声明已开始，尚未接入运行服务。MetadataCandidate 的 session 迁移、发布状态关联、完整 Workbench、OpenAPI、媒体、legacy 与最终全回归仍未完成。两项局部成功不代表完整版本验收。本机 E2E 临时 SQLite 只含测试账号与记录，不是生产或恢复副本。
+
+19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 
 完整基线随后完成。后端 888 通过、90 失败、32 跳过；前端 161 通过、17 失败。TypeScript 与 build 通过，lint 8 个错误、3 个警告。生产发布明确阻断。失败按旧公开快照夹具、字段确认规则、异步 outbox 接口与真实回归分类，不放宽公开权限或把机器确认视为人工决定。
 

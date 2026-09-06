@@ -825,9 +825,13 @@ class ResearchOrchestrator:
         context: ResearchContext | None = None,
         item: UploadItem | None,
         groups: list[dict[str, Any]],
+        actor=None,
     ) -> None:
-        if item is None:
-            return
+        from catalog.services.cataloging_sessions import open_cataloging_session
+        from ingestion.services.candidate_context import candidate_decision_url, edition_candidate_scope
+
+        if item is None and context is None:
+            raise ValueError("候选持久化需要真实编目上下文。")
         if run is not None and context is None:
             raise ValueError("ResearchRun candidate persistence requires its exact ResearchContext.")
         with transaction.atomic():
@@ -842,10 +846,17 @@ class ResearchOrchestrator:
                 ).first()
                 if locked_run is None:
                     return
-            locked_item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk)
+            actor = actor or (run.requested_by if run else None) or (item.batch.created_by if item else None)
+            session, _created = open_cataloging_session(
+                actor=actor, edition_id=context.edition_id if context else item.edition_id,
+                upload_item_id=item.pk if item else None,
+                source_type="upload" if item else "existing",
+            )
+            locked_item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk) if item else None
+            scope = edition_candidate_scope(session.edition, locked_item) if session.edition_id else Q(upload_item=locked_item)
             existing_rows = list(
                 EntityResolutionCandidate.objects.select_for_update(of=("self",))
-                .filter(upload_item=locked_item)
+                .filter(scope)
                 .order_by("created_at")
             )
             by_research_key: dict[str, EntityResolutionCandidate] = {}
@@ -936,6 +947,7 @@ class ResearchOrchestrator:
                     if candidate is None:
                         candidate = EntityResolutionCandidate.objects.create(
                             upload_item=locked_item,
+                            cataloging_session=session,
                             source_record=source_record,
                             target_type=target_type,
                             source_name=label,
@@ -1014,8 +1026,11 @@ class ResearchOrchestrator:
                             "updated_at",
                         ])
                     by_research_key[research_key] = candidate
+                    if candidate.cataloging_session_id is None:
+                        candidate.cataloging_session = session
+                        candidate.save(update_fields=["cataloging_session", "updated_at"])
                     row["review_candidate_id"] = str(candidate.id)
-                    row["decision_url"] = f"/ingestion/items/{locked_item.id}/entity-resolution-candidates/{candidate.id}/decision/"
+                    row["decision_url"] = candidate_decision_url(candidate)
                     row["available_actions"] = ["inspect", *available_resolution_actions(candidate)]
                     row["review_status"] = candidate.status
 

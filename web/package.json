@@ -16,6 +16,8 @@
     "test:e2e:public": "playwright test --config=playwright.public.config.ts",
     "test:e2e:auth": "playwright test --config=playwright.auth.config.ts",
     "test:e2e:workflow": "playwright test --config=playwright.workflow.config.ts",
+    "test:e2e:cataloging": "playwright test --config=playwright.cataloging.config.ts",
+    "pretest:e2e:cataloging": "npm run build",
     "test:auth": "node --import tsx --test --test-force-exit tests/auth-session.test.mjs tests/scoped-search.test.mjs",
     "test:runtime-api": "node --experimental-strip-types --test --test-force-exit tests/runtime-api.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern public/pdfjs",

@@ -3474,6 +3474,84 @@ class EditorialRevision(UUIDTimeStampedModel):
         ]
 
 
+class CatalogingSession(UUIDTimeStampedModel):
+    """An editorial process, independent of file intake or public snapshots.
+
+    Work identity is derived from edition.work rather than duplicated here.
+    An upload may have no edition until the ingestion pipeline creates it.
+    """
+
+    class SourceType(models.TextChoices):
+        UPLOAD = "upload", "上传文献"
+        MANUAL = "manual", "手工编目"
+        IMPORT = "import", "导入书目"
+        EXISTING = "existing", "编辑馆藏"
+
+    class Status(models.TextChoices):
+        DRAFTING = "drafting", "编目中"
+        REVIEWING = "reviewing", "核对中"
+        READY = "ready", "准备发布"
+        PUBLISHING = "publishing", "发布中"
+        PUBLISHED = "published", "已发布"
+        ABANDONED = "abandoned", "已结束编辑"
+
+    source_type = models.CharField(max_length=16, choices=SourceType.choices)
+    upload_item = models.ForeignKey(
+        "ingestion.UploadItem", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="cataloging_sessions",
+    )
+    edition = models.ForeignKey(
+        Edition, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="cataloging_sessions",
+    )
+    base_public_revision = models.ForeignKey(
+        "CatalogPublicationRevision", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="based_cataloging_sessions",
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFTING)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="cataloging_sessions",
+    )
+    request_key = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["edition"], condition=models.Q(status__in=["drafting", "reviewing", "ready", "publishing"]),
+                name="one_open_catalog_session_edition",
+            ),
+            models.UniqueConstraint(
+                fields=["upload_item"], condition=models.Q(status__in=["drafting", "reviewing", "ready", "publishing"]),
+                name="one_open_catalog_session_upload",
+            ),
+            models.UniqueConstraint(fields=["created_by", "request_key"], name="catalog_session_request_key"),
+            models.CheckConstraint(
+                condition=~models.Q(source_type="upload") | models.Q(upload_item__isnull=False),
+                name="upload_catalog_session_has_item",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(upload_item__isnull=False) | models.Q(edition__isnull=False),
+                name="catalog_session_has_context",
+            ),
+        ]
+        indexes = [models.Index(fields=["status", "updated_at"], name="catalog_session_status_updated")]
+
+    @property
+    def work_id(self):
+        return self.edition.work_id if self.edition_id else None
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        if self.upload_item_id and self.upload_item.edition_id != self.edition_id:
+            raise ValidationError({"edition": "编目会话与上传记录的版本不一致。"})
+        if self.base_public_revision_id and self.base_public_revision.edition_id != self.edition_id:
+            raise ValidationError({"base_public_revision": "公开基线不属于当前版本。"})
+
+
 class PublicationBundle(UUIDTimeStampedModel):
     """One cataloging publication unit, including draft entities created in place."""
 

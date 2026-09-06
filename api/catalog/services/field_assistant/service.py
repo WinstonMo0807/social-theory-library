@@ -329,43 +329,34 @@ def _prepared_candidates(
                     )
                 )
 
-        entity_rows = item.entity_resolution_candidates.filter(
-            target_type__in=policy.entity_target_types,
-            status=EntityResolutionCandidate.Status.PROPOSED,
-        )
-        for candidate in entity_rows:
-            if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, checked_runs):
-                continue
-            if not {"link_existing", "create_draft"}.intersection(available_resolution_actions(candidate)):
-                continue
-            if policy.contribution_role:
-                role = str(
-                    (candidate.supporting_properties or {}).get("contribution_role")
-                    or Contribution.Role.AUTHOR
-                )
-                if role != policy.contribution_role:
-                    continue
-            entity_type = str(candidate.candidate_entity_type or candidate.target_type)
-            formal = bool(
-                candidate.candidate_entity_id
-                and not entity_type.endswith("_draft")
+    from ingestion.services.candidate_context import edition_candidate_scope
+
+    entity_rows = EntityResolutionCandidate.objects.filter(
+        edition_candidate_scope(edition, item),
+        target_type__in=policy.entity_target_types,
+        status=EntityResolutionCandidate.Status.PROPOSED,
+    )
+    for candidate in entity_rows:
+        if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, checked_runs):
+            continue
+        if not {"link_existing", "create_draft"}.intersection(available_resolution_actions(candidate)):
+            continue
+        if policy.contribution_role:
+            role = str(
+                (candidate.supporting_properties or {}).get("contribution_role")
+                or Contribution.Role.AUTHOR
             )
-            output.append(
-                _raw_candidate(
-                    label=candidate.label or candidate.source_name,
-                    value={
-                        "label": candidate.label or candidate.source_name,
-                        "entity_id": candidate.candidate_entity_id,
-                    },
-                    source_type="entity_resolution",
-                    source_id=candidate.pk,
-                    evidence=_entity_evidence(candidate),
-                    entity_type=entity_type.removesuffix("_draft"),
-                    entity_id=candidate.candidate_entity_id or None,
-                    formal=formal,
-                    conflicts=candidate.conflicts or (),
-                )
-            )
+            if role != policy.contribution_role:
+                continue
+        entity_type = str(candidate.candidate_entity_type or candidate.target_type)
+        formal = bool(candidate.candidate_entity_id and not entity_type.endswith("_draft"))
+        output.append(_raw_candidate(
+            label=candidate.label or candidate.source_name,
+            value={"label": candidate.label or candidate.source_name, "entity_id": candidate.candidate_entity_id},
+            source_type="entity_resolution", source_id=candidate.pk, evidence=_entity_evidence(candidate),
+            entity_type=entity_type.removesuffix("_draft"), entity_id=candidate.candidate_entity_id or None,
+            formal=formal, conflicts=candidate.conflicts or (),
+        ))
 
     enrichment = EnrichmentCandidate.objects.filter(
         Q(target_type=EnrichmentCandidate.TargetType.WORK, target_id=edition.work_id)
@@ -601,6 +592,12 @@ def _aggregate_candidates(rows: list[dict], *, default_limit: int) -> tuple[tupl
     for key, members in grouped.items():
         members.sort(key=lambda row: preference.get(row["ref"]["source_type"], 9))
         primary = members[0]
+        # Keep the formal library label, but record the exact persisted
+        # candidate the administrator is adopting. Do not silently leave it
+        # proposed when its accepted authority has an identical local match.
+        action_source = next((row for row in members
+                              if row["ref"]["source_type"] == "entity_resolution"
+                              and row["entity_id"] and row["entity_id"] == primary["entity_id"]), primary)
         conflicts = [item for row in members for item in row["conflicts"]]
         if _normalized(primary["label"]) in ambiguous_labels:
             conflicts.append("馆内存在同名对象，请确认具体身份。")
@@ -646,7 +643,7 @@ def _aggregate_candidates(rows: list[dict], *, default_limit: int) -> tuple[tupl
                 "conflicts": sorted(set(conflicts)),
                 "source_count": len(members),
                 "action": {
-                    **primary["ref"],
+                    **action_source["ref"],
                     "selected_value": primary["label"],
                 },
             }
@@ -1058,7 +1055,9 @@ def _resolution_entity(candidate: EntityResolutionCandidate):
 def _adopt_resolution_in_revision(service, candidate, *, edition, policy, actor, action, reason):
     """Confirm identity without invoking legacy canonical relation writes."""
     from ingestion.services.entity_resolution_decisions import _review_task_for
+    from ingestion.services.candidate_context import candidate_group_scope, lock_candidate_context
 
+    lock_candidate_context(candidate)
     candidate = EntityResolutionCandidate.objects.select_for_update().get(pk=candidate.pk)
     if candidate.status in {EntityResolutionCandidate.Status.LINKED, EntityResolutionCandidate.Status.CREATE_DRAFT}:
         entity = _resolution_entity(candidate)
@@ -1096,7 +1095,7 @@ def _adopt_resolution_in_revision(service, candidate, *, edition, policy, actor,
         "supporting_properties", "reviewed_by", "reviewed_at", "updated_at",
     ])
     EntityResolutionCandidate.objects.select_for_update().filter(
-        upload_item=candidate.upload_item, target_type=candidate.target_type,
+        candidate_group_scope(candidate), target_type=candidate.target_type,
         source_name=candidate.source_name, status=EntityResolutionCandidate.Status.PROPOSED,
     ).exclude(pk=candidate.pk).update(
         status=EntityResolutionCandidate.Status.REJECTED, reviewed_by=actor,
@@ -1499,7 +1498,7 @@ class FieldAssistantService:
                 .prefetch_related()
                 .get(pk=source_id)
             )
-            if candidate.upload_item.edition_id != edition.pk:
+            if candidate.catalog_edition_id != edition.pk:
                 raise FieldAssistantError("实体建议不属于当前版本。")
             if not _research_candidate_is_current(candidate.supporting_properties, edition, policy):
                 raise FieldAssistantError("当前编目信息已变化，请重新查找后再采用。")
@@ -1515,7 +1514,7 @@ class FieldAssistantService:
             evidence = _entity_evidence(candidate)
             action = (
                 "create_draft"
-                if candidate.candidate_entity_type.endswith("_draft")
+                if candidate.candidate_entity_type.endswith("_draft") or candidate.status == EntityResolutionCandidate.Status.CREATE_DRAFT
                 else "link_existing"
             )
             if _requires_editorial_revision(edition):
@@ -1695,7 +1694,7 @@ class FieldAssistantService:
             status = candidate.status
         elif source_type == "entity_resolution":
             candidate = EntityResolutionCandidate.objects.select_related("upload_item").get(pk=source_id)
-            if candidate.upload_item.edition_id != edition_id or candidate.target_type not in policy.entity_target_types:
+            if candidate.catalog_edition_id != edition_id or candidate.target_type not in policy.entity_target_types:
                 raise FieldAssistantError("实体建议不属于当前字段或版本。")
             try:
                 result = decide_entity_resolution(

@@ -23,6 +23,7 @@ from catalog.models import (
 from ingestion.models import DecisionLog, EntityResolutionCandidate, ReviewTask, UploadItem
 
 from .reconciliation import normalized_label
+from .candidate_context import candidate_group_scope, lock_candidate_context
 
 
 class ResolutionDecisionError(ValueError):
@@ -121,6 +122,8 @@ def available_resolution_actions(candidate: EntityResolutionCandidate) -> list[s
 
 
 def _review_task_for(candidate: EntityResolutionCandidate, *, lock: bool) -> ReviewTask | None:
+    if candidate.upload_item_id is None:
+        return None
     queryset = ReviewTask.objects
     if lock:
         queryset = queryset.select_for_update()
@@ -244,7 +247,7 @@ def _link_existing(
     if candidate.target_type == "person" and not confirm_identity:
         raise ResolutionDecisionError("人物同名不能自动合并，请明确确认这是同一人物。")
 
-    item = candidate.upload_item
+    item = candidate.catalog_context
     if candidate.target_type == "person" and item.edition_id:
         role = _contribution_role(candidate)
         contribution, created = Contribution.objects.get_or_create(
@@ -304,7 +307,7 @@ def _create_draft(candidate: EntityResolutionCandidate, *, actor):
     if not name:
         raise ResolutionDecisionError("候选名称为空，不能创建草稿。")
 
-    item = candidate.upload_item
+    item = candidate.catalog_context
     if candidate.target_type == "person":
         role = _contribution_role(candidate)
         entity = Person.objects.create(
@@ -396,9 +399,9 @@ def _keep_unresolved_contributor(candidate: EntityResolutionCandidate):
         sort_name=name,
         authority_status=Person.AuthorityStatus.DRAFT,
     )
-    if candidate.upload_item.edition_id:
+    if candidate.catalog_edition_id:
         Contribution.objects.create(
-            edition_id=candidate.upload_item.edition_id,
+            edition_id=candidate.catalog_edition_id,
             person=person,
             role=role,
             source="entity_resolution_unresolved",
@@ -427,10 +430,10 @@ def _serialize_datetime(value):
 
 
 def _contribution_snapshot(candidate: EntityResolutionCandidate, target_id: str) -> dict | None:
-    if candidate.target_type != "person" or not candidate.upload_item.edition_id or not target_id:
+    if candidate.target_type != "person" or not candidate.catalog_edition_id or not target_id:
         return None
     contribution = Contribution.objects.filter(
-        edition_id=candidate.upload_item.edition_id,
+        edition_id=candidate.catalog_edition_id,
         person_id=target_id,
         role=_contribution_role(candidate),
     ).first()
@@ -448,11 +451,11 @@ def _contribution_snapshot(candidate: EntityResolutionCandidate, target_id: str)
 
 
 def _organization_contribution_snapshot(candidate: EntityResolutionCandidate, target_id: str) -> dict | None:
-    if candidate.target_type != "organization" or not candidate.upload_item.edition_id or not target_id:
+    if candidate.target_type != "organization" or not candidate.catalog_edition_id or not target_id:
         return None
     role = str(candidate.supporting_properties.get("organization_role") or "").strip()
     contribution = OrganizationContribution.objects.filter(
-        edition_id=candidate.upload_item.edition_id,
+        edition_id=candidate.catalog_edition_id,
         organization_id=target_id,
         role=role,
     ).first()
@@ -477,7 +480,7 @@ def _decision_snapshot(
     action: str,
     target_id: str,
 ) -> dict:
-    edition = candidate.upload_item.edition if candidate.upload_item.edition_id else None
+    edition = candidate.catalog_edition
     return {
         "candidate": {
             "status": candidate.status,
@@ -522,7 +525,7 @@ def _decision_snapshot(
 
 
 def _current_mutation_snapshot(candidate: EntityResolutionCandidate) -> dict:
-    edition = candidate.upload_item.edition if candidate.upload_item.edition_id else None
+    edition = candidate.catalog_edition
     target_id = str(candidate.candidate_entity_id or "")
     return {
         "edition_id": str(edition.id) if edition else "",
@@ -549,19 +552,25 @@ def decide_entity_resolution(
     if action not in ACTION_STATUS:
         raise ResolutionDecisionError("不支持的实体消歧决定。")
 
-    item = _lock_upload_context(candidate.upload_item_id)
+    try:
+        item = lock_candidate_context(candidate)
+    except ValueError as error:
+        raise ResolutionDecisionError(str(error)) from error
     candidate = EntityResolutionCandidate.objects.select_for_update(of=("self",)).get(
         pk=candidate.pk
     )
-    if candidate.upload_item_id != item.id:
-        raise ResolutionDecisionError("候选所属上传记录已变化，请刷新后重试。")
-    candidate.upload_item = item
+    if candidate.catalog_context.pk != item.pk:
+        raise ResolutionDecisionError("候选所属编目上下文已变化，请刷新后重试。")
+    if candidate.cataloging_session_id:
+        candidate.cataloging_session = item
+    else:
+        candidate.upload_item = item
     if target_type != candidate.target_type:
         raise ResolutionDecisionError("目标类型与当前候选不一致。")
 
     group = list(
         EntityResolutionCandidate.objects.select_for_update().filter(
-            upload_item=candidate.upload_item,
+            candidate_group_scope(candidate),
             target_type=candidate.target_type,
             source_name=candidate.source_name,
         ).order_by("-match_score", "created_at")
@@ -664,7 +673,7 @@ def decide_entity_resolution(
 
     refreshed_group = tuple(
         EntityResolutionCandidate.objects.filter(
-            upload_item=candidate.upload_item,
+            candidate_group_scope(candidate),
             target_type=candidate.target_type,
             source_name=candidate.source_name,
         ).order_by("-match_score", "created_at")
@@ -784,10 +793,13 @@ def revert_entity_resolution_decision(
 ) -> ResolutionRevertResult:
     if decision.resolution_candidate_id is None:
         raise ResolutionDecisionError("该决定不属于实体消歧，不能在此撤销。")
-    candidate_hint = EntityResolutionCandidate.objects.only("upload_item_id").get(
+    candidate_hint = EntityResolutionCandidate.objects.only("upload_item_id", "cataloging_session_id").get(
         pk=decision.resolution_candidate_id
     )
-    item = _lock_upload_context(candidate_hint.upload_item_id)
+    try:
+        item = lock_candidate_context(candidate_hint)
+    except ValueError as error:
+        raise ResolutionDecisionError(str(error)) from error
     decision = (
         DecisionLog.objects.select_for_update(of=("self",))
         .select_related("resolution_candidate__upload_item__edition", "review_task")
@@ -797,15 +809,14 @@ def revert_entity_resolution_decision(
         raise ResolutionDecisionError("撤销记录本身不能再次撤销。")
     if decision.resolution_candidate_id is None:
         raise ResolutionDecisionError("该决定不属于实体消歧，不能在此撤销。")
-    if decision.resolution_candidate.upload_item_id != item.id:
-        raise ResolutionDecisionError("决定所属上传记录已变化，请刷新后重试。")
-    decision.resolution_candidate.upload_item = item
+    if decision.resolution_candidate.catalog_context.pk != item.pk:
+        raise ResolutionDecisionError("决定所属编目上下文已变化，请刷新后重试。")
     if decision.reverted_at:
         reversal = DecisionLog.objects.get(reverts_decision=decision)
         candidate = decision.resolution_candidate
         group = tuple(
             EntityResolutionCandidate.objects.filter(
-                upload_item=candidate.upload_item,
+                candidate_group_scope(candidate),
                 target_type=candidate.target_type,
                 source_name=candidate.source_name,
             ).order_by("-match_score", "created_at")
@@ -822,12 +833,15 @@ def revert_entity_resolution_decision(
     candidate = EntityResolutionCandidate.objects.select_for_update().get(
         pk=decision.resolution_candidate_id
     )
-    candidate.upload_item = item
+    if candidate.cataloging_session_id:
+        candidate.cataloging_session = item
+    else:
+        candidate.upload_item = item
     if item.edition_id and item.edition.state == PublicationState.PUBLISHED:
         raise ResolutionDecisionError("已发布版本的实体决定不能直接撤销，请先创建修订或下架。")
     group = list(
         EntityResolutionCandidate.objects.select_for_update().filter(
-            upload_item=item,
+            candidate_group_scope(candidate),
             target_type=candidate.target_type,
             source_name=candidate.source_name,
         ).order_by("-match_score", "created_at")
@@ -920,7 +934,7 @@ def revert_entity_resolution_decision(
         update_fields=["reverted_at", "reverted_by", "reversal_reason", "updated_at"]
     )
     reversal = DecisionLog.objects.create(
-        upload_item=item,
+        upload_item=candidate.upload_item,
         review_task=review_task,
         resolution_candidate=candidate,
         actor=actor,
@@ -935,7 +949,7 @@ def revert_entity_resolution_decision(
     )
     refreshed_group = tuple(
         EntityResolutionCandidate.objects.filter(
-            upload_item=item,
+            candidate_group_scope(candidate),
             target_type=candidate.target_type,
             source_name=candidate.source_name,
         ).order_by("-match_score", "created_at")

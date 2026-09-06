@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 3.0.5 升级分支增量（尚未部署）
+
+CatalogingSession 记录上传、手工、导入和已有版本的编目过程，Work 身份由 Edition 推导。EntityResolutionCandidate 新增真实 session FK，旧 upload FK 保留兼容且可空，至少一个上下文由数据库约束保证。决定、撤销、证据和正式关联仍复用原服务。新 API 和 Web 会话入口不建立第二套书库。详细审计和未完成项见 `V3.0.5_ARCHITECTURE_AUDIT.md` 与根目录 CURRENT_PROGRESS。本节是当前开发源码，下面生产段落仍是历史版本记录。
+
 更新日期为 2026-09-05。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
 
 ## 3.0.4 智能编目与知识发布

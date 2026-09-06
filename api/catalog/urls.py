@@ -1,5 +1,7 @@
 from django.urls import path
 
+from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView
+
 from .knowledge_views import (
     AboutPageBlockListView,
     AdminAboutPageBlockDetailView,
@@ -181,6 +183,10 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/cataloging-sessions/", CatalogingSessionListView.as_view(), name="cataloging-session-list"),
+    path("admin/cataloging-sessions/<uuid:session_id>/", CatalogingSessionDetailView.as_view(), name="cataloging-session-detail"),
+    path("admin/cataloging-sessions/<uuid:session_id>/abandon/", CatalogingSessionAbandonView.as_view(), name="cataloging-session-abandon"),
+    path("admin/cataloging-sessions/<uuid:session_id>/candidates/<uuid:candidate_id>/decision/", CatalogingCandidateDecisionView.as_view(), name="cataloging-candidate-decision"),
     path("admin/editions/<uuid:edition_id>/knowledge-status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-edition-knowledge-status"),
     path("admin/knowledge-publications/status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-knowledge-publication-status"),
     path("admin/knowledge-publications/<uuid:event_id>/retry/", AdminKnowledgePublicationRetryView.as_view(), name="admin-knowledge-publication-retry"),
