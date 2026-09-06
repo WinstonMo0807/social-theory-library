@@ -19,6 +19,10 @@ Edition 新增 publication_mode，默认 document 保留旧馆藏文件门槛。
 
 ## ingestion 0015
 
+## ingestion 0016
+
+MetadataCandidate 增加可空 cataloging_session FK、会话字段状态索引与至少一个上下文约束，旧 upload FK 保留。手工来源导入只建立 PROPOSED 候选和 Evidence，正式字段由显式人工采用写入。旧候选决定、身份和来源保持不变。兼容读取、拒绝幂等、隔离不同会话、审计和旧 backfill 已回归。应用回退仍保留新增字段/表，新会话-only 候选不交给旧应用写入。
+
 EntityResolutionCandidate 新增可空 cataloging_session FK，旧 upload_item 改为可空但保留，数据库要求至少一个真实上下文。增加 session/type/status 索引。没有删除、自动接受或批量改写旧候选。新研究写入 session，旧上传候选在确认来源一致的持久化操作中关联会话；保持 ID、旧状态、证据和审计。
 
 首次服务回归 24 passed，包含无上传采用/撤销与跨会话隔离。PostgreSQL 锁与生产回填仍待演练。回退旧应用时保留新增 schema，旧应用不支持新 session-only 候选，必须停止相关写入并使用新版只读诊断，不能删除这些候选来回退。

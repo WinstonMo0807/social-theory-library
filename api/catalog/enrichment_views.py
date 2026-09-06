@@ -310,12 +310,12 @@ class AdminCandidateReviewView(APIView):
                 _with_review_status(payload)
                 rows.append(payload)
         if kind in {"all", "metadata"}:
-            queryset = MetadataCandidate.objects.select_related("upload_item__edition__work").prefetch_related("evidence_records")
+            queryset = MetadataCandidate.objects.select_related("upload_item__edition__work", "cataloging_session__edition__work").prefetch_related("evidence_records")
             values = _status_filter_values("metadata", status_filter)
             if values is not None:
                 queryset = queryset.filter(lifecycle__in=values)
             if work_filter:
-                queryset = queryset.filter(upload_item__edition__work_id=work_filter)
+                queryset = queryset.filter(Q(upload_item__edition__work_id=work_filter) | Q(cataloging_session__edition__work_id=work_filter))
             if source_filter:
                 queryset = queryset.filter(source=source_filter)
             kind_counts["metadata"] = queryset.count()
@@ -326,8 +326,8 @@ class AdminCandidateReviewView(APIView):
                         "review_kind": "metadata",
                         "candidate_kind": "metadata",
                         "target_label": row.field_name,
-                        "target_entity_type": "work" if row.upload_item.edition_id else "upload_item",
-                        "target_entity_id": str(row.upload_item.edition.work_id) if row.upload_item.edition_id else str(row.upload_item_id),
+                        "target_entity_type": "work" if row.catalog_edition_id else "upload_item",
+                        "target_entity_id": str(row.catalog_edition.work_id) if row.catalog_edition_id else str(row.upload_item_id),
                         "proposed_value": row.value,
                         "current_value": None,
                         "source_class": row.source,
@@ -335,9 +335,11 @@ class AdminCandidateReviewView(APIView):
                         "status": row.lifecycle,
                         "evidence_count": row.evidence_records.count(),
                         "independent_source_count": row.evidence_records.values("source_record_id").distinct().count(),
-                        "review_action": "open_intake_workspace",
-                        "upload_item_id": str(row.upload_item_id),
-                        "work_id": str(row.upload_item.edition.work_id) if row.upload_item.edition_id else None,
+                        "review_action": "open_cataloging_session" if row.cataloging_session_id else "open_intake_workspace",
+                        "upload_item_id": str(row.upload_item_id) if row.upload_item_id else None,
+                        "workbench_url": f"/admin/cataloging/{row.cataloging_session_id}" if row.cataloging_session_id else f"/admin/intake/{row.upload_item_id}",
+                        "work_id": str(row.catalog_edition.work_id) if row.catalog_edition_id else None,
+                        "cataloging_session_id": str(row.cataloging_session_id) if row.cataloging_session_id else None,
                         "created_at": row.created_at,
                     })
                 )

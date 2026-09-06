@@ -424,7 +424,11 @@ class MetadataCandidate(UUIDTimeStampedModel):
         REJECTED = "rejected", "已拒绝"
         SUPERSEDED = "superseded", "已被替代"
 
-    upload_item = models.ForeignKey(UploadItem, on_delete=models.CASCADE, related_name="metadata_candidates")
+    upload_item = models.ForeignKey(UploadItem, null=True, blank=True, on_delete=models.CASCADE, related_name="metadata_candidates")
+    cataloging_session = models.ForeignKey(
+        "catalog.CatalogingSession", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="metadata_candidates",
+    )
     field_name = models.CharField(max_length=80)
     value = models.JSONField()
     source = models.CharField(max_length=120)
@@ -466,10 +470,34 @@ class MetadataCandidate(UUIDTimeStampedModel):
     rejected_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        constraints = [models.CheckConstraint(
+            condition=models.Q(upload_item__isnull=False) | models.Q(cataloging_session__isnull=False),
+            name="metadata_candidate_has_context",
+        )]
         indexes = [
             models.Index(fields=["upload_item", "field_name", "-confidence"]),
             models.Index(fields=["upload_item", "lifecycle", "field_name"]),
+            models.Index(fields=["cataloging_session", "field_name", "lifecycle"], name="metadata_candidate_session"),
         ]
+
+    @property
+    def catalog_context(self):
+        return self.cataloging_session if self.cataloging_session_id else self.upload_item
+
+    @property
+    def catalog_edition(self):
+        return self.catalog_context.edition
+
+    @property
+    def catalog_edition_id(self):
+        return self.catalog_context.edition_id
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        if self.cataloging_session_id and self.upload_item_id and self.cataloging_session.edition_id != self.upload_item.edition_id:
+            raise ValidationError({"cataloging_session": "候选会话与原始上传的版本不一致。"})
 
 
 class CandidateEvidence(UUIDTimeStampedModel):

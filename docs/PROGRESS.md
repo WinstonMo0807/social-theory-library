@@ -2,6 +2,8 @@
 
 ## 2026-09-06 3.0.5 开发中
 
+普通 MetadataCandidate 已支持真实 CatalogingSession。来源导入不直接改变正式字段，采用/拒绝和审计支持无上传上下文。相关元数据与旧 backfill 26 项通过。API 错误保留旧字段并统一顶层契约，verified 编目范围已有 DRF/OpenAPI 生成 TS 与漂移门槛，契约专项 6 项、真实编目 E2E 2 项、TypeScript 和生成检查通过。全量 schema 仍有明确旧接口缺口，不计 P0-5 全部完成。
+
 从 3.0.4 的 `340b94f` 建立 `codex/v3.0.5-architecture-convergence`，尚未上线。完整基线为后端 888 通过/90 失败/32 跳过、前端 161 通过/17 失败，TypeScript 和 build 通过，lint 8 errors。最新状态以根目录 CURRENT_PROGRESS 为准。
 
 已修复活动馆藏修订归属遗漏。公开 Q selector、内存快照与正式发布事件入口都检查 revision.edition，阻止错误指针暴露另一版本内容。专项先红后绿，与原发布和一致性测试合计 22 通过。无 migration、无生产数据变更。完整升级仍在实施。

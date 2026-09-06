@@ -15,6 +15,10 @@ def candidate_scope(candidate):
 
 
 def candidate_decision_url(candidate):
+    if candidate._meta.model_name == "metadatacandidate":
+        if candidate.cataloging_session_id:
+            return f"/catalog/admin/cataloging-sessions/{candidate.cataloging_session_id}/metadata/{candidate.pk}/decision/"
+        return f"/ingestion/items/{candidate.upload_item_id}/metadata-candidates/{candidate.pk}/decision/"
     if candidate.cataloging_session_id:
         return f"/catalog/admin/cataloging-sessions/{candidate.cataloging_session_id}/candidates/{candidate.pk}/decision/"
     return f"/ingestion/items/{candidate.upload_item_id}/entity-resolution-candidates/{candidate.pk}/decision/"

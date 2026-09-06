@@ -67,7 +67,7 @@ FIELDS = (
     _edition("version_label", "版本说明"),
     _edition("publication_date", "出版日期", data_type="date", nullable=True),
     _edition("publication_year", "出版年份", data_type="integer", nullable=True,
-             required_for=("journal_article", "journal_issue"), validator="publication_year",
+             required_for=("journal_article", "journal_issue"), normalizer="integer", validator="publication_year",
              dependencies=("title", "isbn10", "isbn13", "publisher")),
     _edition("publisher", "出版社", authority_resolver="publisher",
              dependencies=("title", "isbn10", "isbn13", "publication_year")),

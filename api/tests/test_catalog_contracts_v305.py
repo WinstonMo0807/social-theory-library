@@ -50,6 +50,9 @@ def test_workflow_serializer_and_publication_use_identical_identifier_rules():
     bad = BibliographySectionSerializer(data={"isbn13": "9780306406158"})
     assert not bad.is_valid()
     assert field_error("isbn13", "9780306406158")["severity"] == "blocking"
+    assert field_error("publication_year", "2020") is None
+    assert field_error("publication_year", "2020.5") is not None
+    assert field_error("publication_year", True) is not None
 
 
 def _manual_ready(admin_user):

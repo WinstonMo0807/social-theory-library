@@ -184,10 +184,14 @@ def _evidence(category: str, summary: str, *, locator: dict | None = None) -> di
 
 def _metadata_evidence(candidate: MetadataCandidate) -> list[dict]:
     output: list[dict] = []
+    source = str(candidate.source or "").casefold()
+    imported = source.startswith("manual_import:")
     for row in candidate.evidence_records.all()[:20]:
         locator = {"page": row.page_number} if row.page_number else None
-        summary = row.text_quote.strip() or "当前文件中的书目信息"
-        output.append(_evidence("来自本书", summary[:280], locator=locator))
+        summary = row.text_quote.strip() or ((candidate.evidence or {}).get("source_label") if imported else "当前文件中的书目信息")
+        if imported and row.external_identifier:
+            locator = {"url": row.external_identifier}
+        output.append(_evidence("人工导入" if imported else "来自本书", str(summary or "书目建议")[:280], locator=locator))
     if not output:
         source = str(candidate.source or "").casefold()
         category = "来自本书" if any(key in source for key in ("pdf", "ocr", "native")) else "其他资料"
@@ -312,24 +316,16 @@ def _prepared_candidates(
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     checked_runs = {}
-    if item is not None:
-        metadata = item.metadata_candidates.filter(
-            field_name__in=policy.metadata_fields,
-            lifecycle=MetadataCandidate.Lifecycle.PROPOSED,
-        ).prefetch_related("evidence_records")
-        for candidate in metadata:
-            for label, value in _metadata_value_rows(candidate, policy):
-                output.append(
-                    _raw_candidate(
-                        label=label,
-                        value=value,
-                        source_type="metadata",
-                        source_id=candidate.pk,
-                        evidence=_metadata_evidence(candidate),
-                    )
-                )
-
     from ingestion.services.candidate_context import edition_candidate_scope
+
+    metadata = MetadataCandidate.objects.filter(
+        edition_candidate_scope(edition, item), field_name__in=policy.metadata_fields,
+        lifecycle=MetadataCandidate.Lifecycle.PROPOSED,
+    ).prefetch_related("evidence_records")
+    for candidate in metadata:
+        for label, value in _metadata_value_rows(candidate, policy):
+            output.append(_raw_candidate(label=label, value=value, source_type="metadata",
+                                         source_id=candidate.pk, evidence=_metadata_evidence(candidate)))
 
     entity_rows = EntityResolutionCandidate.objects.filter(
         edition_candidate_scope(edition, item),
@@ -993,13 +989,16 @@ def _apply_scalar(edition, policy: AssistantFieldPolicy, value: Any, *, actor) -
 
 
 def _accept_metadata_candidate(candidate: MetadataCandidate, *, actor) -> None:
+    from ingestion.services.candidate_context import candidate_scope, lock_candidate_context
+
+    lock_candidate_context(candidate)
     if candidate.lifecycle == MetadataCandidate.Lifecycle.ACCEPTED:
         return
     if candidate.lifecycle != MetadataCandidate.Lifecycle.PROPOSED:
         raise FieldAssistantError("该字段建议已经失效，请重新查找。")
     now = timezone.now()
     siblings = MetadataCandidate.objects.select_for_update().filter(
-        upload_item=candidate.upload_item,
+        candidate_scope(candidate),
         field_name=candidate.field_name,
         lifecycle=MetadataCandidate.Lifecycle.ACCEPTED,
     ).exclude(pk=candidate.pk)
@@ -1561,7 +1560,7 @@ class FieldAssistantService:
             candidate = MetadataCandidate.objects.select_for_update().select_related(
                 "upload_item"
             ).prefetch_related("evidence_records").get(pk=source_id)
-            if candidate.upload_item.edition_id != edition.pk:
+            if candidate.catalog_edition_id != edition.pk:
                 raise FieldAssistantError("字段建议不属于当前版本。")
             if candidate.field_name not in policy.metadata_fields:
                 raise FieldAssistantError("字段建议不适用于当前字段。")
@@ -1672,7 +1671,7 @@ class FieldAssistantService:
             status = "rejected"
         elif source_type == "metadata":
             candidate = MetadataCandidate.objects.select_related("upload_item").get(pk=source_id)
-            if candidate.upload_item.edition_id != edition_id or candidate.field_name not in policy.metadata_fields:
+            if candidate.catalog_edition_id != edition_id or candidate.field_name not in policy.metadata_fields:
                 raise FieldAssistantError("字段建议不属于当前版本。")
             candidate = set_candidate_decision(candidate, action="reject", actor=actor)
             status = candidate.lifecycle

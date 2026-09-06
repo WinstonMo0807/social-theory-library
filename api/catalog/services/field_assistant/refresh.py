@@ -24,6 +24,16 @@ FIELD_RESEARCH = {
     "theory": ("knowledge", "theories"),
 }
 
+from catalog.contracts.fields import FIELDS
+
+for _field in FIELDS:
+    try:
+        RESEARCH_CONTRACTS.get(_field.section, _field.name)
+    except ValueError:
+        continue
+    else:
+        FIELD_RESEARCH.setdefault(_field.name, (_field.section, _field.name))
+
 
 def field_research_context(edition, policy, query=""):
     from .service import _edition_section_values
@@ -113,6 +123,8 @@ def request_field_refresh(request, *, actor):
     policy = get_field_policy(request.field_name)
     if not request.allow_external or not (policy.allow_authority or policy.allow_web):
         return {"state": "local", "message": "当前字段只使用馆内记录和已有依据。"}
+    if policy.key not in FIELD_RESEARCH:
+        return {"state": "local", "message": "此字段暂只支持人工填写与已有依据，外部研究尚未接通。"}
     edition = _edition_for_request(request)
     edition = Edition.objects.select_related("work").get(pk=edition.pk)
     item = _upload_item(edition, request.upload_item_id)

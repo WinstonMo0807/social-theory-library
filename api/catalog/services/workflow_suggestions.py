@@ -303,9 +303,9 @@ class WorkflowSuggestionAggregator:
         self.item = item
 
     def _metadata_rows(self, step: str | None, field: str | None) -> list[dict]:
-        if self.item is None:
-            return []
-        queryset = MetadataCandidate.objects.filter(upload_item=self.item).prefetch_related("evidence_records")
+        from ingestion.services.candidate_context import candidate_decision_url, edition_candidate_scope
+
+        queryset = MetadataCandidate.objects.filter(edition_candidate_scope(self.edition, self.item)).prefetch_related("evidence_records")
         rows = []
         for candidate in queryset.order_by("field_name", "-confidence", "created_at")[:300]:
             candidate_step = _step_for_metadata(candidate.field_name)
@@ -330,7 +330,7 @@ class WorkflowSuggestionAggregator:
                     evidence=evidence,
                     status="pending" if candidate.lifecycle == MetadataCandidate.Lifecycle.PROPOSED else candidate.lifecycle,
                     decision_url=(
-                        f"/ingestion/items/{self.item.id}/metadata-candidates/{candidate.id}/decision/"
+                        candidate_decision_url(candidate)
                         if candidate.lifecycle == MetadataCandidate.Lifecycle.PROPOSED
                         else ""
                     ),

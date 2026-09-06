@@ -147,7 +147,12 @@ def accept_candidates_from_review(
 
 @transaction.atomic
 def set_candidate_decision(candidate: MetadataCandidate, *, action: str, actor) -> MetadataCandidate:
+    from .candidate_context import lock_candidate_context
+
+    lock_candidate_context(candidate)
     candidate = MetadataCandidate.objects.select_for_update().get(pk=candidate.pk)
+    if action == "reject" and candidate.lifecycle == MetadataCandidate.Lifecycle.REJECTED:
+        return candidate
     before = {
         "lifecycle": candidate.lifecycle,
         "selected": candidate.selected,

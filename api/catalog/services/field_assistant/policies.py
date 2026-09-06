@@ -202,6 +202,20 @@ _register(
 )
 
 
+from catalog.contracts.fields import FIELDS
+
+for _field in FIELDS:
+    if _field.name in FIELD_POLICIES or _field.data_type not in {"string", "text", "integer", "date", "identifier"}:
+        continue
+    _register(AssistantFieldPolicy(
+        key=_field.name, label=_field.label, action_label=f"采用{_field.label}", lookup_label="查找建议",
+        create_label="", value_kind="value", entity_type="", metadata_fields=(_field.name,),
+        enrichment_fields=(_field.name,), entity_target_types=(), allow_authority=False,
+        query_context_fields=_field.dependencies or ("title", "authors"),
+        strategy_labels=("原文与人工导入的书目信息", "可核对的外部来源"),
+    ))
+
+
 def get_field_policy(field_name: str) -> AssistantFieldPolicy:
     normalized = str(field_name or "").strip().casefold()
     try:

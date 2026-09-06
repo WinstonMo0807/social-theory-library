@@ -322,14 +322,14 @@ def _accepted_metadata_without_value() -> Iterable[dict[str, Any]]:
     }
     rows = (
         MetadataCandidate.objects.filter(
+            Q(upload_item__edition__isnull=False) | Q(cataloging_session__edition__isnull=False),
             lifecycle=MetadataCandidate.Lifecycle.ACCEPTED,
-            upload_item__edition__isnull=False,
         )
         .select_related("upload_item__edition__work")
         .order_by("created_at", "pk")
     )
     for candidate in rows.iterator(chunk_size=250):
-        edition = candidate.upload_item.edition
+        edition = candidate.catalog_edition
         field_name = candidate.field_name
         missing = False
         actual: Any = None
@@ -368,14 +368,14 @@ def _accepted_resolution_without_relation() -> Iterable[dict[str, Any]]:
     }
     rows = (
         EntityResolutionCandidate.objects.filter(
+            Q(upload_item__edition__isnull=False) | Q(cataloging_session__edition__isnull=False),
             status__in=resolved,
-            upload_item__edition__isnull=False,
         )
         .select_related("upload_item__edition")
         .order_by("created_at", "pk")
     )
     for candidate in rows.iterator(chunk_size=250):
-        edition = candidate.upload_item.edition
+        edition = candidate.catalog_edition
         if candidate.target_type == "person":
             role = str(
                 (candidate.supporting_properties or {}).get("contribution_role")

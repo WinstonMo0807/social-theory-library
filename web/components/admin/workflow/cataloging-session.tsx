@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/admin-ui";
 import { getServerSessionCredential } from "@/lib/api";
-import { createManualCatalog, type CatalogingSession } from "@/lib/api/cataloging";
+import { createManualCatalog, type CatalogingSession, type ManualCatalogInput } from "@/lib/api/cataloging";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { WorkflowEditor } from "./workflow-editor";
 
@@ -26,7 +26,7 @@ export function ManualCatalogForm() {
     try {
       const session = await createManualCatalog({
         title: String(form.get("title") ?? ""),
-        document_type: String(form.get("document_type") ?? "book"),
+        document_type: String(form.get("document_type") ?? "book") as ManualCatalogInput["document_type"],
         language: String(form.get("language") ?? "zh-CN"), request_key: requestKey.current,
       });
       router.push(`/admin/cataloging/${encodeURIComponent(session.id)}#work`);

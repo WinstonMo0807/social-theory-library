@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "drf_spectacular",
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "accounts",
@@ -164,7 +165,17 @@ for origin in LAN_HTTP_TRUSTED_ORIGINS:
     if origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(origin)
 
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Social Theory Library API",
+    "DESCRIPTION": "Canonical catalog, editorial processes and permission-scoped reading APIs.",
+    "VERSION": "3.0.5",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+}
+
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_RENDERER_CLASSES": ("config.renderers.ContractJSONRenderer", "rest_framework.renderers.BrowsableAPIRenderer"),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.VersionedJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",

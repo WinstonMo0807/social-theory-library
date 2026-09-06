@@ -18,7 +18,17 @@
 
 19:28 完成当前构建与两项真实 Playwright，均退出 0，新增覆盖无上传新建作者并关联。字段助手标量采用也已使用契约校验，相关 20 项通过。基线 8 个 lint 错误已修复，全仓 lint 和 TypeScript 均退出 0。按上下文隔离的临时状态拒绝旧异步结果，Knowledge Studio 复用可取消的 API hook，3 个状态隔离单元测试通过。完整 Node 基线的旧断言和后端失败仍未全部处理。
 
-MetadataCandidate 的 session 迁移、完整 Workbench、OpenAPI、媒体、legacy 与最终全回归仍未完成。两项局部成功不代表完整版本验收。本机 E2E 临时 SQLite 只含测试账号与记录，不是生产或恢复副本。
+字段契约/纯书目提交为 `11e9f6f`，前端状态修复提交为 `36db404`。当前 MetadataCandidate 的 session FK、ingestion 0016、来源导入/API、字段助手采用拒绝、工作台读取和一致性审计已接入，正在跑相关测试，尚不计完成。完整 Workbench、OpenAPI、媒体、legacy 与最终全回归仍未完成。本机 E2E 临时 SQLite 只含测试账号与记录，不是生产或恢复副本。
+
+元数据首组 39 passed/2 failed，定位为统一年份校验未先转换候选字符串；已补 integer normalizer，保持 1000–2100 范围并拒绝布尔/小数，正在重跑元数据与旧 backfill 集成。人工导入的来源标签和 URL 保留为导入证据，不再误标成书内 PDF 证据。没有自动改正式题名或采用导入值。
+
+元数据/字段/旧 backfill 集成随后 26 passed，退出 0，43.01 秒。仍无生产数据操作。接下来配置 OpenAPI 生成工具，并逐领域替换手写 TS；不能只生成 schema 文件就宣称所有端点已覆盖。
+
+已固定新增 drf-spectacular 0.30.0 与 openapi-typescript 7.13.0。JSON 错误统一包装保留旧 error/detail 字段，新 schema 入口受原后台权限保护，正在首次生成和回归。npm audit 当前 14 项（6 high/8 moderate），主要涉及现有 Vinext/构建工具及传递依赖，未执行 audit fix 或强制升级。须在安全阶段逐项确定实际影响，不能忽略。
+
+OpenAPI 全量探测报告 170 类端点无法推导及 162 类警告，退出 0 不能证明通过。已建立明确的 verified 编目契约范围，不发布工具猜测的旧类型。该范围 `--validate --fail-on-warn` 退出 0，TypeScript 已自动生成，编目客户端改用生成类型，`npm run api:check` 检测 serializer/schema/TS 漂移。全量 API 覆盖仍未完成。
+
+23:57 收口结果为 API 契约专项 6 passed、生成漂移检查与 TypeScript 退出 0、当前构建与真实编目 E2E 2 passed。此前 30 pass/1 fail 是查询计数测试缺少 django_db 标记，已修复后仅重跑该文件。metadata/candidate 相关 31 项也已通过。下一项为统一发布命令、预发布字段 diff、合法回滚与过期消费者防护。
 
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 

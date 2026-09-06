@@ -117,14 +117,12 @@ def _candidate_state(edition: Edition, item: UploadItem | None) -> tuple[list[di
             elif payload["status"] in rejected_states:
                 rejected.append(payload)
 
-    if item is not None:
-        remember(
-            "metadata",
-            MetadataCandidate.objects.filter(upload_item=item),
-            accepted_states={MetadataCandidate.Lifecycle.ACCEPTED},
-            rejected_states={MetadataCandidate.Lifecycle.REJECTED},
-        )
     from ingestion.services.candidate_context import edition_candidate_scope
+
+    remember(
+        "metadata", MetadataCandidate.objects.filter(edition_candidate_scope(edition, item)),
+        accepted_states={MetadataCandidate.Lifecycle.ACCEPTED}, rejected_states={MetadataCandidate.Lifecycle.REJECTED},
+    )
 
     remember(
         "entity",

@@ -6,6 +6,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "api:generate": "node scripts/generate-api-contracts.mjs",
+    "api:check": "node scripts/generate-api-contracts.mjs --check",
     "postinstall": "node scripts/patch-vinext-static-paths.mjs && node scripts/prepare-pdfjs-assets.mjs",
     "prebuild": "node scripts/patch-vinext-static-paths.mjs && node scripts/prepare-pdfjs-assets.mjs",
     "prestart": "node scripts/patch-vinext-static-paths.mjs && node scripts/prepare-pdfjs-assets.mjs",
@@ -47,6 +49,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.12",
+    "openapi-typescript": "7.13.0",
     "tailwindcss": "4.2.1",
     "tsx": "^4.22.1",
     "typescript": "5.9.3",

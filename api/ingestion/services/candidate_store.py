@@ -7,7 +7,7 @@ import uuid
 
 from django.db import transaction
 
-from catalog.models import Asset
+from catalog.models import Asset, CatalogingSession, Edition
 from ingestion.models import CandidateEvidence, MetadataCandidate, SourceRecord, UploadItem
 
 from .metadata import Candidate
@@ -68,12 +68,12 @@ def _persist_evidence(
     evidence = dict(candidate.evidence or {})
     evidence_asset = None
     evidence_asset_id = str(evidence.get("asset_id") or "").strip()
-    if evidence_asset_id and stored.upload_item.edition_id:
+    if evidence_asset_id and stored.catalog_edition_id:
         evidence_asset = Asset.objects.filter(
             pk=evidence_asset_id,
-            edition_id=stored.upload_item.edition_id,
+            edition_id=stored.catalog_edition_id,
         ).first()
-    if evidence_asset is None:
+    if evidence_asset is None and stored.upload_item_id:
         evidence_asset = stored.upload_item.asset
     page_number = evidence.get("page")
     if page_number is None and isinstance(evidence.get("page_range"), list) and evidence["page_range"]:
@@ -137,21 +137,36 @@ def _persist_evidence(
 
 @transaction.atomic
 def persist_metadata_candidates(
-    item: UploadItem,
+    item: UploadItem | None,
     candidates: list[Candidate],
     selected: dict | None = None,
     *,
     supersede_sources: set[str] | None = None,
+    cataloging_session: CatalogingSession | None = None,
 ) -> dict[str, int]:
     """Upsert candidates while preserving every human decision and field lock."""
 
     # The parent row is the serialization point even when this item has no
     # candidates yet. Row-locking only the current candidate queryset would
     # not protect the empty-set case from concurrent duplicate inserts.
-    item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk)
+    if cataloging_session is not None:
+        from .candidate_context import edition_candidate_scope
+
+        Edition.objects.select_for_update(of=("self",)).get(pk=cataloging_session.edition_id)
+        cataloging_session = CatalogingSession.objects.select_for_update().get(pk=cataloging_session.pk)
+        if cataloging_session.status not in {"drafting", "reviewing", "ready"}:
+            raise ValueError("该编目会话当前不能接收新建议。")
+        if item and item.edition_id != cataloging_session.edition_id:
+            raise ValueError("候选来源与编目会话不一致。")
+        queryset = MetadataCandidate.objects.filter(edition_candidate_scope(cataloging_session.edition, item))
+    elif item is not None:
+        item = UploadItem.objects.select_for_update(of=("self",)).get(pk=item.pk)
+        queryset = item.metadata_candidates
+    else:
+        raise ValueError("元数据候选必须有真实上传或编目会话。")
     selected = selected or {}
     existing = list(
-        item.metadata_candidates.select_for_update(of=("self",))
+        queryset.select_for_update(of=("self",))
         .select_related("source_record")
         .prefetch_related("evidence_records")
     )
@@ -180,6 +195,7 @@ def persist_metadata_candidates(
         if row is None:
             row = MetadataCandidate.objects.create(
                 upload_item=item,
+                cataloging_session=cataloging_session,
                 field_name=candidate.field_name,
                 value=candidate.value,
                 normalized_value=normalized_value(candidate.value),
@@ -189,7 +205,7 @@ def persist_metadata_candidates(
                 selected=selected_value,
                 lifecycle=MetadataCandidate.Lifecycle.PROPOSED,
                 source_record=source_record,
-                conflict_group=_conflict_group(item, candidate.field_name),
+                conflict_group=_conflict_group(cataloging_session or item, candidate.field_name),
                 score_factors=score.factors,
                 is_locked=False,
             )
@@ -208,7 +224,7 @@ def persist_metadata_candidates(
             row.selected = selected_value
             row.lifecycle = MetadataCandidate.Lifecycle.PROPOSED
             row.source_record = source_record
-            row.conflict_group = _conflict_group(item, candidate.field_name)
+            row.conflict_group = _conflict_group(cataloging_session or item, candidate.field_name)
             row.score_factors = score.factors
             row.save(
                 update_fields=[

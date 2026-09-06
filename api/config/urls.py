@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from django.urls import include, path
 
 from .version import APP_VERSION
+from .schema import AdminSchemaView
+from common.permissions import CanAccessBackOffice
 
 
 def health(request):
@@ -54,6 +56,7 @@ def ready(request):
 
 
 urlpatterns = [
+    path("api/admin/schema/", AdminSchemaView.as_view(urlconf="config.schema_urls", permission_classes=[CanAccessBackOffice]), name="api-schema"),
     path("admin/", admin.site.urls),
     path("api/health/", health),
     path("api/ready/", ready),

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
+from .cataloging_views import CatalogingMetadataDecisionView, CatalogingMetadataImportView
 
 from .knowledge_views import (
     AboutPageBlockListView,
@@ -184,6 +185,8 @@ from .theory_system_views import (
 
 urlpatterns = [
     path("admin/catalog-field-contracts/", CatalogFieldContractView.as_view(), name="catalog-field-contracts"),
+    path("admin/cataloging-sessions/<uuid:session_id>/metadata/import/", CatalogingMetadataImportView.as_view(), name="cataloging-metadata-import"),
+    path("admin/cataloging-sessions/<uuid:session_id>/metadata/<uuid:candidate_id>/decision/", CatalogingMetadataDecisionView.as_view(), name="cataloging-metadata-decision"),
     path("admin/cataloging-sessions/", CatalogingSessionListView.as_view(), name="cataloging-session-list"),
     path("admin/cataloging-sessions/<uuid:session_id>/", CatalogingSessionDetailView.as_view(), name="cataloging-session-detail"),
     path("admin/cataloging-sessions/<uuid:session_id>/abandon/", CatalogingSessionAbandonView.as_view(), name="cataloging-session-abandon"),

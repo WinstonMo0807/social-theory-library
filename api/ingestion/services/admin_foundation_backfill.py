@@ -21,6 +21,7 @@ from ingestion.models import (
 )
 
 from .candidate_store import normalized_value
+from .candidate_context import candidate_scope
 from .metadata import Candidate
 from .metadata_scoring import calibrate_candidate, normalized_candidate_value
 from .reconciliation import normalized_label, persist_resolution_candidates
@@ -510,7 +511,7 @@ def _create_candidate_evidence(candidate: MetadataCandidate) -> bool:
     bbox = evidence.get("bbox") if isinstance(evidence.get("bbox"), list) else []
     CandidateEvidence.objects.create(
         metadata_candidate=candidate,
-        asset=candidate.upload_item.asset,
+        asset=candidate.upload_item.asset if candidate.upload_item_id else None,
         source_record=candidate.source_record,
         page_number=page_number,
         bbox=bbox,
@@ -548,7 +549,7 @@ def _enrich_candidate(action: BackfillAction) -> bool:
     if "score_factors" in fields and not candidate.score_factors:
         siblings = [
             _candidate_object(row)
-            for row in candidate.upload_item.metadata_candidates.filter(field_name=candidate.field_name)
+            for row in MetadataCandidate.objects.filter(candidate_scope(candidate), field_name=candidate.field_name)
         ]
         candidate.score_factors = calibrate_candidate(_candidate_object(candidate), siblings).factors
         updates.append("score_factors")
@@ -567,7 +568,7 @@ def _enrich_candidate(action: BackfillAction) -> bool:
             updates.append("source_record")
     if {"accepted_from_field_lock", "accepted_provenance_from_field_lock"} & fields:
         lock_id = action.details.get("field_lock_id")
-        lock = FieldLock.objects.filter(pk=lock_id, edition=candidate.upload_item.edition).first()
+        lock = FieldLock.objects.filter(pk=lock_id, edition=candidate.catalog_edition).first()
         if lock and _matching_values(candidate.value, lock.locked_value):
             candidate.lifecycle = MetadataCandidate.Lifecycle.ACCEPTED
             candidate.selected = True

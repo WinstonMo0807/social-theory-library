@@ -78,10 +78,13 @@ def _candidate_evidence(candidate: MetadataCandidate) -> list[dict[str, Any]]:
     ]
 
 
-def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
-    if item is None:
+def _metadata_candidates(item: UploadItem | None, edition=None) -> list[dict[str, Any]]:
+    from ingestion.services.candidate_context import candidate_decision_url, edition_candidate_scope
+
+    edition = edition or (item.edition if item else None)
+    if edition is None:
         return []
-    rows = item.metadata_candidates.prefetch_related("evidence_records").order_by(
+    rows = MetadataCandidate.objects.filter(edition_candidate_scope(edition, item)).prefetch_related("evidence_records").order_by(
         "field_name", "-confidence", "created_at"
     )
     output: list[dict[str, Any]] = []
@@ -101,7 +104,7 @@ def _metadata_candidates(item: UploadItem | None) -> list[dict[str, Any]]:
             "evidence_count": len(evidence_records),
             "evidence_status": "evidence" if evidence_records else "none",
             "is_locked": row.is_locked,
-            "decision_url": f"/ingestion/items/{item.id}/metadata-candidates/{row.id}/decision/",
+            "decision_url": candidate_decision_url(row),
             "available_actions": (
                 ["inspect", "reject"]
                 if row.field_name in {"authors", "translators"}
@@ -864,7 +867,7 @@ def build_admin_workspace(
         status=Asset.Status.READY,
     ).order_by("-version").first()
     candidates = {
-        "metadata": _metadata_candidates(item),
+        "metadata": _metadata_candidates(item, edition),
         "entities": _entity_candidates(item, edition),
         "enrichment": _enrichment_candidates(work, edition),
         "theory": _theory_candidates(work),

@@ -1,0 +1,754 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Social Theory Library API",
+        "version": "3.0.5",
+        "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
+    },
+    "paths": {
+        "/api/catalog/admin/catalog-field-contracts/": {
+            "get": {
+                "operationId": "catalog_field_contracts_retrieve",
+                "tags": [
+                    "catalog-field-contracts"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/": {
+            "get": {
+                "operationId": "cataloging_sessions_list",
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CatalogingSessionList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "cataloging_sessions_create",
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingSessionCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingSessionCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingSessionCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CatalogingSession"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CatalogingSession"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/{session_id}/": {
+            "get": {
+                "operationId": "cataloging_sessions_detail",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CatalogingSessionDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/{session_id}/abandon/": {
+            "post": {
+                "operationId": "cataloging_sessions_abandon_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CatalogingSession"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/{session_id}/candidates/{candidate_id}/decision/": {
+            "post": {
+                "operationId": "cataloging_sessions_candidates_decision_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "candidate_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingCandidateDecisionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingCandidateDecisionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingCandidateDecisionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/{session_id}/metadata/{candidate_id}/decision/": {
+            "post": {
+                "operationId": "cataloging_sessions_metadata_decision_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "candidate_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MetadataDecisionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MetadataDecisionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MetadataDecisionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/cataloging-sessions/{session_id}/metadata/import/": {
+            "post": {
+                "operationId": "cataloging_sessions_metadata_import_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "cataloging-sessions"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingMetadataImportRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingMetadataImportRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CatalogingMetadataImportRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ApiError": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "field": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "severity": {
+                        "$ref": "#/components/schemas/SeverityEnum"
+                    },
+                    "details": {}
+                },
+                "required": [
+                    "code",
+                    "details",
+                    "field",
+                    "message",
+                    "severity"
+                ]
+            },
+            "CatalogingCandidateDecisionActionEnum": {
+                "enum": [
+                    "link_existing",
+                    "create_draft",
+                    "keep_unresolved",
+                    "reject"
+                ],
+                "type": "string",
+                "description": "* `link_existing` - link_existing\n* `create_draft` - create_draft\n* `keep_unresolved` - keep_unresolved\n* `reject` - reject"
+            },
+            "CatalogingCandidateDecisionRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/CatalogingCandidateDecisionActionEnum"
+                    },
+                    "target_type": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "confirm_identity": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "action",
+                    "target_type"
+                ]
+            },
+            "CatalogingMetadataImportRequest": {
+                "type": "object",
+                "properties": {
+                    "source_label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "source_url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "fields": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "fields",
+                    "source_label"
+                ]
+            },
+            "CatalogingSession": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SourceTypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StatusEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "upload_item_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "base_public_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "workbench_url": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "base_public_revision_id",
+                    "created_at",
+                    "edition_id",
+                    "id",
+                    "source_type",
+                    "status",
+                    "updated_at",
+                    "upload_item_id",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
+            "CatalogingSessionCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "source_type": {
+                        "$ref": "#/components/schemas/SourceTypeEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "upload_item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "language": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "source_type"
+                ]
+            },
+            "CatalogingSessionDetail": {
+                "type": "object",
+                "properties": {
+                    "session": {
+                        "$ref": "#/components/schemas/CatalogingSession"
+                    },
+                    "workspace": {
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "session",
+                    "workspace"
+                ]
+            },
+            "CatalogingSessionList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CatalogingSession"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "DocumentTypeEnum": {
+                "enum": [
+                    "book",
+                    "journal_article",
+                    "journal_issue",
+                    "thesis",
+                    "report"
+                ],
+                "type": "string",
+                "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+            },
+            "MetadataDecisionActionEnum": {
+                "enum": [
+                    "reject",
+                    "reopen"
+                ],
+                "type": "string",
+                "description": "* `reject` - reject\n* `reopen` - reopen"
+            },
+            "MetadataDecisionRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/MetadataDecisionActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "SeverityEnum": {
+                "enum": [
+                    "blocking",
+                    "warning",
+                    "info"
+                ],
+                "type": "string",
+                "description": "* `blocking` - blocking\n* `warning` - warning\n* `info` - info"
+            },
+            "SourceTypeEnum": {
+                "enum": [
+                    "upload",
+                    "manual",
+                    "import",
+                    "existing"
+                ],
+                "type": "string",
+                "description": "* `upload` - 上传文献\n* `manual` - 手工编目\n* `import` - 导入书目\n* `existing` - 编辑馆藏"
+            },
+            "StatusEnum": {
+                "enum": [
+                    "drafting",
+                    "reviewing",
+                    "ready",
+                    "publishing",
+                    "published",
+                    "abandoned"
+                ],
+                "type": "string",
+                "description": "* `drafting` - 编目中\n* `reviewing` - 核对中\n* `ready` - 准备发布\n* `publishing` - 发布中\n* `published` - 已发布\n* `abandoned` - 已结束编辑"
+            }
+        },
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid"
+            },
+            "libraryCookie": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "stl_access"
+            }
+        }
+    }
+}
