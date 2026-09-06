@@ -2,6 +2,8 @@
 
 ## 2026-09-06 3.0.5 开发中
 
+2026-09-07 增加统一发布命令、只读字段 diff、重新核对指纹、正式快照不可变保护、合法公开恢复及迟到事件防护。后台按书目编辑、后台处理和公开内容分别显示健康状态。相关发布/旧修订/Reader 夹具 38 项通过，具体限制见 V3.0.5_PUBLICATION。未部署、未执行真实数据库回滚。
+
 普通 MetadataCandidate 已支持真实 CatalogingSession。来源导入不直接改变正式字段，采用/拒绝和审计支持无上传上下文。相关元数据与旧 backfill 26 项通过。API 错误保留旧字段并统一顶层契约，verified 编目范围已有 DRF/OpenAPI 生成 TS 与漂移门槛，契约专项 6 项、真实编目 E2E 2 项、TypeScript 和生成检查通过。全量 schema 仍有明确旧接口缺口，不计 P0-5 全部完成。
 
 从 3.0.4 的 `340b94f` 建立 `codex/v3.0.5-architecture-convergence`，尚未上线。完整基线为后端 888 通过/90 失败/32 跳过、前端 161 通过/17 失败，TypeScript 和 build 通过，lint 8 errors。最新状态以根目录 CURRENT_PROGRESS 为准。

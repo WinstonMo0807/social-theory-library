@@ -11,5 +11,7 @@ VERIFIED_NAMES = {
     "cataloging-session-list", "cataloging-session-detail", "cataloging-session-abandon",
     "cataloging-candidate-decision", "cataloging-metadata-import", "cataloging-metadata-decision",
     "catalog-field-contracts",
+    "publication-prepare", "publication-rollback",
+    "publication-history",
 }
 urlpatterns = [path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES]))]

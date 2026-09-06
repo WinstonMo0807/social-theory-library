@@ -47,6 +47,12 @@ test("non-superuser creates a real manual session, saves and reopens it", async 
   expect(authored.session.upload_item_id).toBeNull();
   expect(authored.workspace.data.contributors.items).toHaveLength(1);
   expect(authored.workspace.data.contributors.items[0].display_name).toBe("E2E 人工新建作者");
+  await page.goto(`${url.split("#")[0]}#publication`);
+  await page.getByRole("button", { name: "发布前检查", exact: true }).click();
+  const diff = page.getByRole("region", { name: "发布内容差异" });
+  await expect(diff).toBeVisible();
+  await expect(diff.getByText("E2E 人工新建作者", { exact: true })).toBeVisible();
+  await expect(diff.getByText("准备发布", { exact: true })).toBeVisible();
 });
 
 test("a reader cannot open cataloging or submit a manual catalog", async ({ page }) => {

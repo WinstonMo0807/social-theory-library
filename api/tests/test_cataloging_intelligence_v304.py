@@ -51,7 +51,7 @@ def _edition(*, title: str = "3.0.4 发布边界") -> Edition:
     )
 
 
-def _active_revision(edition: Edition, *, revision: int = 1):
+def _active_revision(edition: Edition, *, revision: int = 1, **content):
     row = CatalogPublicationRevision.objects.create(
         edition=edition,
         revision=revision,
@@ -63,6 +63,7 @@ def _active_revision(edition: Edition, *, revision: int = 1):
         ).hexdigest(),
         metadata_ready=True,
         activated_at=timezone.now(),
+        **content,
     )
     edition.active_catalog_revision = row
     edition.metadata_ready_at = timezone.now()
@@ -376,18 +377,7 @@ def test_reader_and_fulltext_predicates_use_active_revision_assets():
         text_checksum=sha256(b"active text").hexdigest(),
         is_active=True,
     )
-    revision = _active_revision(edition)
-    revision.reader_asset = active_asset
-    revision.document_revision = document_revision
-    revision.fulltext_ready = True
-    revision.save(
-        update_fields=[
-            "reader_asset",
-            "document_revision",
-            "fulltext_ready",
-            "updated_at",
-        ]
-    )
+    _active_revision(edition, reader_asset=active_asset, document_revision=document_revision, fulltext_ready=True)
 
     assert set(
         Asset.objects.filter(active_asset_q(asset_prefix="")).values_list(

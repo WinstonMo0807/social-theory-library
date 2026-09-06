@@ -434,6 +434,156 @@
                     }
                 }
             }
+        },
+        "/api/catalog/admin/editions/{edition_id}/publication/history/": {
+            "get": {
+                "operationId": "editions_publication_history_list",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "editions"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PublicationHistoryItem"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/publication/prepare/": {
+            "get": {
+                "operationId": "editions_publication_prepare_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "editions"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicationPreparation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/publication/rollback/": {
+            "post": {
+                "operationId": "editions_publication_rollback_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "editions"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicationRollbackRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicationRollbackRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicationRollbackRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicationRollbackResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -676,6 +826,16 @@
                     "results"
                 ]
             },
+            "ChangeEnum": {
+                "enum": [
+                    "unchanged",
+                    "added",
+                    "removed",
+                    "changed"
+                ],
+                "type": "string",
+                "description": "* `unchanged` - unchanged\n* `added` - added\n* `removed` - removed\n* `changed` - changed"
+            },
             "DocumentTypeEnum": {
                 "enum": [
                     "book",
@@ -704,6 +864,177 @@
                 },
                 "required": [
                     "action"
+                ]
+            },
+            "PublicationFieldDiff": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "change": {
+                        "$ref": "#/components/schemas/ChangeEnum"
+                    },
+                    "before": {
+                        "nullable": true
+                    },
+                    "after": {
+                        "nullable": true
+                    },
+                    "before_display": {
+                        "type": "string"
+                    },
+                    "after_display": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "after",
+                    "after_display",
+                    "before",
+                    "before_display",
+                    "change",
+                    "field",
+                    "label"
+                ]
+            },
+            "PublicationHistoryItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "can_rollback": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "activated_at",
+                    "can_rollback",
+                    "id",
+                    "is_current",
+                    "revision",
+                    "status",
+                    "title"
+                ]
+            },
+            "PublicationPreparation": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "active_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationFieldDiff"
+                        }
+                    },
+                    "blocking": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "background_processing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "can_publish": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "active_revision_id",
+                    "background_processing",
+                    "blocking",
+                    "can_publish",
+                    "changes",
+                    "edition_id",
+                    "fingerprint",
+                    "warnings"
+                ]
+            },
+            "PublicationRollbackRequest": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "reason",
+                    "request_key",
+                    "revision_id"
+                ]
+            },
+            "PublicationRollbackResult": {
+                "type": "object",
+                "properties": {
+                    "event_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "event_id",
+                    "source_revision_id",
+                    "status"
                 ]
             },
             "SeverityEnum": {

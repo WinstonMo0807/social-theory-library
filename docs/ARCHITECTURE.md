@@ -8,6 +8,8 @@ CatalogingSession 记录上传、手工、导入和已有版本的编目过程�
 
 MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建议及来源。verified 编目 API 从实际 DRF serializer 生成 OpenAPI 和 TS，旧未声明响应的 API 仍在覆盖清单中，不能用猜测类型代替真实契约。生成与校验命令见 `V3.0.5_API_CONTRACT.md`。
 
+发布命令收敛与公开恢复见 `V3.0.5_PUBLICATION.md`。工作台读取、差异和公开历史使用同一 revision 事实，恢复发布保持递增序号并引用曾合法激活的原快照。书目编辑、后台处理和公开状态分别呈现。此机制尚未完成生产 PostgreSQL/索引/文档恢复验收。
+
 更新日期为 2026-09-05。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
 
 ## 3.0.4 智能编目与知识发布

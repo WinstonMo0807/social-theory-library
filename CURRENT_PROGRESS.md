@@ -1,6 +1,6 @@
 # Social Theory Library 3.0.5 当前进度
 
-最近核对时间为 2026-09-06，香港时间。
+最近核对时间为 2026-09-07，香港时间。
 
 ## 3.0.5 当前动作
 
@@ -29,6 +29,14 @@
 OpenAPI 全量探测报告 170 类端点无法推导及 162 类警告，退出 0 不能证明通过。已建立明确的 verified 编目契约范围，不发布工具猜测的旧类型。该范围 `--validate --fail-on-warn` 退出 0，TypeScript 已自动生成，编目客户端改用生成类型，`npm run api:check` 检测 serializer/schema/TS 漂移。全量 API 覆盖仍未完成。
 
 23:57 收口结果为 API 契约专项 6 passed、生成漂移检查与 TypeScript 退出 0、当前构建与真实编目 E2E 2 passed。此前 30 pass/1 fail 是查询计数测试缺少 django_db 标记，已修复后仅重跑该文件。metadata/candidate 相关 31 项也已通过。下一项为统一发布命令、预发布字段 diff、合法回滚与过期消费者防护。
+
+元数据/契约基础已本地提交 `d8fde9a`。当前 publication_commands 已开始接管旧 publish/withdraw 入口，包含只读准备差异、校验指纹、revision 归属与文档一致性检查。回滚只接受已合法激活过的修订，以原不可变快照创建单调递增的恢复发布，不改写旧快照；旧活动内容继续服务到恢复处理完成。正在跑专项，API/UI 尚未接完，不计交付完成。
+
+发布命令首组 37 passed。API、生成类型和前端字段 diff 已接入，旧直接“确认发布更新”按钮现先进入差异核对；上传/维护的实际发布均带 prepared_fingerprint。扩大旧修订集成 26 passed/2 failed，正在将旧任意幂等键的合并测试改为真实维护发布 HTTP 行为，并对齐已有扁平 changed_fields 契约，不放宽业务检查。最近 Playwright 的 .last-run.json 保存 passed；原进程句柄在用户续接后失效，不假设进程退出码。
+
+旧修订两项已定向通过。新增正式快照 Model/QuerySet 不可变保护后，原 Reader 夹具因为在创建后改写 reader_asset 被拒绝，已改为创建时设置正式内容。发布差异/历史/回滚和三类健康状态均已接前端，当前重新运行发布与真实编目 E2E。回滚只恢复公开内容，不覆盖后来人工编辑字段，保留的不同草稿显示为待发布修改。
+
+00:55 最后结果为发布/不变量/旧编目/编辑修订 38 passed，三类健康独立性新增用例 1 passed。TypeScript、lint、生成漂移、migration drift、构建均退出 0。真实编目 Playwright 2 passed，51.8 秒，包含新建、保存、重开、人工作者、发布前 diff 和读者拒绝。当前准备保存该逻辑提交，再做新的全回归盘点。全部生产门槛仍未达到，不能部署。
 
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 

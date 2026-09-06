@@ -3762,8 +3762,35 @@ class CatalogFieldDecisionLog(UUIDTimeStampedModel):
         indexes = [models.Index(fields=["decision", "created_at"])]
 
 
+CATALOG_REVISION_CONTENT_FIELDS = frozenset({
+    "edition", "edition_id", "revision", "snapshot", "changed_fields", "related_entities",
+    "document_revision", "document_revision_id", "reader_asset", "reader_asset_id", "content_fingerprint",
+})
+
+
+class CatalogPublicationRevisionQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        if CATALOG_REVISION_CONTENT_FIELDS.intersection(kwargs):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("正式修订内容不可改写，请创建新修订。")
+        return super().update(**kwargs)
+
+
 class CatalogPublicationRevision(UUIDTimeStampedModel):
     """Immutable formal snapshot and serving boundary for one Edition."""
+
+    objects = CatalogPublicationRevisionQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if not self._state.adding and (update_fields is None or CATALOG_REVISION_CONTENT_FIELDS.intersection(update_fields)):
+            from django.core.exceptions import ValidationError
+
+            fields = ("edition_id", "revision", "snapshot", "changed_fields", "related_entities", "document_revision_id", "reader_asset_id", "content_fingerprint")
+            existing = type(self).objects.filter(pk=self.pk).values(*fields).first()
+            if existing is not None and any(existing[name] != getattr(self, name) for name in fields):
+                raise ValidationError("正式修订内容不可改写，请创建新修订。")
+        return super().save(*args, **kwargs)
 
     class Status(models.TextChoices):
         PREPARING = "preparing", "准备中"

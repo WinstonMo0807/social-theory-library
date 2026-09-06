@@ -460,6 +460,13 @@ class WorkMaintenancePublicationView(APIView):
             # rolls back a pending Work EditorialRevision and its projection
             # events instead of leaving a half-published canonical object.
             with transaction.atomic():
+                if request.data.get("prepared_fingerprint"):
+                    from catalog.services.publication_commands import prepare_revision
+
+                    edition = Edition.objects.select_for_update().get(pk=edition.pk)
+                    Work.objects.select_for_update().get(pk=edition.work_id)
+                    if prepare_revision(edition)["fingerprint"] != request.data["prepared_fingerprint"]:
+                        raise PublicationBlocked(["内容已在准备发布后变化，请重新检查差异。"])
                 pending_revision = (
                     EditorialRevision.objects.select_for_update()
                     .filter(

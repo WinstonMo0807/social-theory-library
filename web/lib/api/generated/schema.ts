@@ -112,6 +112,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/publication/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["editions_publication_history_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/publication/prepare/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["editions_publication_prepare_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/publication/rollback/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["editions_publication_rollback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -187,6 +235,14 @@ export interface components {
             results: components["schemas"]["CatalogingSession"][];
         };
         /**
+         * @description * `unchanged` - unchanged
+         *     * `added` - added
+         *     * `removed` - removed
+         *     * `changed` - changed
+         * @enum {string}
+         */
+        ChangeEnum: "unchanged" | "added" | "removed" | "changed";
+        /**
          * @description * `book` - 图书
          *     * `journal_article` - 期刊论文
          *     * `journal_issue` - 整期期刊
@@ -203,6 +259,52 @@ export interface components {
         MetadataDecisionActionEnum: "reject" | "reopen";
         MetadataDecisionRequest: {
             action: components["schemas"]["MetadataDecisionActionEnum"];
+        };
+        PublicationFieldDiff: {
+            field: string;
+            label: string;
+            change: components["schemas"]["ChangeEnum"];
+            before: unknown;
+            after: unknown;
+            before_display: string;
+            after_display: string;
+        };
+        PublicationHistoryItem: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            title: string;
+            status: string;
+            /** Format: date-time */
+            activated_at: string | null;
+            is_current: boolean;
+            can_rollback: boolean;
+        };
+        PublicationPreparation: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            active_revision_id: string | null;
+            fingerprint: string;
+            changes: components["schemas"]["PublicationFieldDiff"][];
+            blocking: string[];
+            warnings: string[];
+            background_processing: string[];
+            can_publish: boolean;
+        };
+        PublicationRollbackRequest: {
+            /** Format: uuid */
+            revision_id: string;
+            /** Format: uuid */
+            request_key: string;
+            reason: string;
+        };
+        PublicationRollbackResult: {
+            /** Format: uuid */
+            event_id: string;
+            /** Format: uuid */
+            source_revision_id: string;
+            status: string;
         };
         /**
          * @description * `blocking` - blocking
@@ -462,6 +564,83 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    editions_publication_history_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationHistoryItem"][];
+                };
+            };
+        };
+    };
+    editions_publication_prepare_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationPreparation"];
+                };
+            };
+        };
+    };
+    editions_publication_rollback_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicationRollbackRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicationRollbackRequest"];
+                "multipart/form-data": components["schemas"]["PublicationRollbackRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationRollbackResult"];
                 };
             };
             409: {

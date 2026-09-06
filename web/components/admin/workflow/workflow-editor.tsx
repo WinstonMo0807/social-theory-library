@@ -59,6 +59,9 @@ import {
 import { WorkflowStepRail } from "./workflow-step-rail";
 import { FieldAssistantControl, type AssistantFieldName } from "./field-assistant-control";
 import { PublicationRetryControl } from "./publication-retry-control";
+import { PublicationDiff, type PublicationPreparation } from "./publication-diff";
+import { PublicationHistory } from "./publication-history";
+import { CatalogHealth } from "./catalog-health";
 import { assistantCacheKey, cachedAssistantRequest, invalidateAssistantCache, lookupFieldSuggestions } from "./field-assistant-cache";
 
 type EditorMode = "intake" | "maintenance";
@@ -198,6 +201,7 @@ function normalizePayload(value: unknown, mode: EditorMode, itemId?: string, wor
   }
   return {
     mode: root.mode === "maintenance" ? "maintenance" : mode,
+    health: asRecord(root.health) as Record<string, string>,
     context,
     workflow: normalizeWorkflow(root.workflow),
     data,
@@ -551,6 +555,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const [inspector, setInspector] = useState<InspectorSelection | null>(null);
   const [researchSuggestions, setResearchSuggestions] = useState<Partial<Record<WorkflowStepKey, WorkflowCandidate[]>>>({});
   const [publishConfirmation, setPublishConfirmation] = useState<"next" | "stay" | null>(null);
+  const [publicationPreview, setPublicationPreview] = useState<PublicationPreparation | null>(null);
   const [pendingExitHref, setPendingExitHref] = useState("");
   const draftsRef = useRef<WorkflowDrafts | null>(null);
   const dirtyRef = useRef<DirtyFields>({});
@@ -635,6 +640,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   }, []);
 
   const applyRemote = useCallback((raw: unknown, preserveDirty: boolean) => {
+    setPublicationPreview(null);
     const nextPayload = normalizePayload(raw, mode, itemId, workId);
     const remoteDrafts = draftsFromPayload(nextPayload);
     invalidateAssistantCache(asString(nextPayload.context.edition_id));
@@ -889,7 +895,13 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     try {
       const result = await apiRequest(scopedEndpoint, {}, token);
       const nextPayload = normalizePayload(result, mode, itemId, workId);
+      if (dirtyFieldCount(dirtyRef.current)) {
+        setMessage("检查期间又有未保存修改，请先保存草稿。");
+        return;
+      }
       applyRemote(result, false);
+      const prepared = await apiRequest<PublicationPreparation>(`/catalog/admin/editions/${asString(nextPayload.context.edition_id)}/publication/prepare/`, {}, token);
+      setPublicationPreview(prepared);
       const publication = asRecord(nextPayload.data.publication);
       const preflight = asRecord(publication.preflight ?? publication);
       const blockerCount = asArray(preflight.blockers).length;
@@ -910,19 +922,9 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       setMessage("正式内容已经变化，请刷新后重新建立编辑草稿。");
       return;
     }
-    if (!window.confirm("确认把当前编辑草稿原子发布到正式页面吗？")) return;
-    const operationKey = "publish-editorial-revision";
-    if (!beginOperation(operationKey)) return;
-    try {
-      await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, token);
-      setMessage("编辑草稿已发布，智能内容正在更新。");
-      await refresh(true);
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "编辑草稿发布失败。");
-    } finally {
-      finishOperation(operationKey);
-    }
-  }, [beginOperation, finishOperation, payload?.editorial_revision, refresh, token]);
+    await runPublicationPreflight();
+    setMessage("已准备本次更新，请在发布区域核对差异并确认。");
+  }, [payload?.editorial_revision, runPublicationPreflight, token]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -999,6 +1001,11 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       goToStep("publication");
       return;
     }
+    if (!publicationPreview) {
+      await runPublicationPreflight();
+      setMessage("请核对本次发布差异，再确认发布。");
+      return;
+    }
     const publication = draftsRef.current?.publication ?? {};
     const preflight = asRecord(publication.preflight ?? publication);
     if (asArray(preflight.blockers).length) {
@@ -1016,7 +1023,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       const publishEndpoint = mode === "intake"
         ? `/ingestion/items/${encodeURIComponent(asString(payload.context.item_id ?? itemId))}/publish/`
         : `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/${maintenanceQuery}`;
-      const result = asRecord(await apiRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, after_publish: intent, ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) }, token));
+      const result = asRecord(await apiRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, prepared_fingerprint: publicationPreview.fingerprint, after_publish: intent, ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) }, token));
       setPublishConfirmation(null);
       const nextTarget = asRecord(result.next_target);
       if (intent === "next") {
@@ -1039,7 +1046,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "发布失败。");
     } finally { finishOperation(operationKey); }
-  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, publicationPreview, runPublicationPreflight, token, workId]);
 
   const performWithdraw = useCallback(async () => {
     if (!payload || !token || !window.confirm("确认下架当前版本吗？文件、审核记录和历史版本会继续保留。")) return;
@@ -1208,7 +1215,10 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       <main className="workflow-editor-main">
         <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>{asString(payload.context.title, "未命名馆藏")}</h1><span>{payload.workflow.blockers_count ? `还需确认 ${payload.workflow.blockers_count} 项` : "没有阻断性问题"} · {currentDirtyCount ? `${currentDirtyCount} 项未保存` : "草稿已保存"}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveStep(active, false)} disabled={Boolean(busy) || !canEdit}><Save size={14} />保存草稿</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{payload.context.page_preview_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.page_preview_url)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
         {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
+        <CatalogHealth value={payload.health} />
         {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
+        {active === "publication" && publicationPreview ? <PublicationDiff value={publicationPreview} /> : null}
+        {active === "publication" && editionId ? <PublicationHistory editionId={editionId} token={token} canPublish={Boolean(payload.permissions.can_publish)} onChanged={async () => { await refresh(true); }} /> : null}
         {payload.editorial_revision?.status === "draft" ? <section className="workflow-editorial-revision"><div><strong>已发布作品的编辑草稿</strong><p>当前有 {payload.editorial_revision.changed_fields.length} 项已保存修改。表单和预览显示草稿，读者仍使用已发布版本。</p></div><ActionButton className="button" state={busy === "publish-editorial-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(busy) || payload.editorial_revision.has_conflict} onClick={() => void publishEditorialRevision()}><Check size={14} />确认发布更新</ActionButton></section> : null}
         {editionId ? <PublicationRetryControl key={editionId} editionId={editionId} token={token} disabled={Boolean(busy)} refreshKey={JSON.stringify(payload.context)} onCompleted={async () => { await refresh(true); }} /> : null}
         <div className="workflow-sections">{payload.workflow.steps.map((step) => {

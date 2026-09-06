@@ -779,6 +779,7 @@ def create_catalog_publication_event(
     expected_source_base_revision: int | None = None,
     provenance: dict | None = None,
     content_asset_id=None,
+    restore_from_revision=None,
 ) -> KnowledgePublicationEvent:
     if event_type not in {
         KnowledgePublicationEvent.EventType.CATALOG_PUBLISHED,
@@ -811,6 +812,7 @@ def create_catalog_publication_event(
             or existing.object_type != source_object_type
             or str(existing.object_id) != str(source_object_id)
             or existing.event_type != event_type
+            or (restore_from_revision is not None and str((existing.catalog_revision.provenance or {}).get("rollback_source_revision_id")) != str(restore_from_revision.pk))
         ):
             raise ValueError("幂等键已用于另一项知识发布。")
         return existing
@@ -822,12 +824,20 @@ def create_catalog_publication_event(
         )
         if old_active.edition_id != edition.pk:
             raise ValueError("当前公开修订不属于此版本，请先核查发布指针。")
+    restored = None
+    if restore_from_revision is not None:
+        from catalog.services.publication_commands import validate_revision
+
+        restored = CatalogPublicationRevision.objects.select_related("reader_asset", "document_revision").get(pk=restore_from_revision.pk)
+        errors = validate_revision(restored, edition=edition, for_rollback=True)
+        if errors:
+            raise ValueError(" ".join(errors))
     fields = normalize_changed_fields(changed_fields, event_type=event_type)
     if content_asset_id:
         fields = sorted(set(fields) | {"document_revision", "fulltext_ready"})
     requested_content_change = bool(content_asset_id or CONTENT_FIELDS.intersection(fields))
     withdrawal = event_type == KnowledgePublicationEvent.EventType.CATALOG_WITHDRAWN
-    pending_revisions = [] if withdrawal else list(
+    pending_revisions = [] if withdrawal or restored is not None else list(
         CatalogPublicationRevision.objects.select_for_update(of=("self",)).select_related(
             "reader_asset", "document_revision", "bundle",
         ).filter(
@@ -850,7 +860,7 @@ def create_catalog_publication_event(
         )))
     system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance"}
     shared_work_update = (provenance or {}).get("source") == "shared_work_publication"
-    bundle = (
+    bundle = None if restored is not None else (
         pending_base.bundle if shared_work_update and pending_base is not None
         else None if system_content_update or shared_work_update
         else bundle or ensure_publication_bundle(edition, actor=actor)
@@ -860,8 +870,12 @@ def create_catalog_publication_event(
     promoted_entities = (
         [] if withdrawal or bundle is None or shared_work_update else _publish_bundle_entities(bundle, actor=actor)
     )
-    snapshot, related = catalog_snapshot(edition, content_asset_id=content_asset_id)
-    document_base = None if requested_content_change or withdrawal else (pending_base or old_active)
+    if restored is not None:
+        from copy import deepcopy
+        snapshot, related = deepcopy(restored.snapshot), deepcopy(restored.related_entities)
+    else:
+        snapshot, related = catalog_snapshot(edition, content_asset_id=content_asset_id)
+    document_base = restored or (None if requested_content_change or withdrawal else (pending_base or old_active))
     if document_base is not None:
         # Metadata-only publication cannot fall back from a pending OCR/PDF
         # rendition to the older is_current Asset. Keep the captured pointers
@@ -913,6 +927,11 @@ def create_catalog_publication_event(
                 for row in related
             }.values()
         )
+    if restored is not None:
+        # Recovery republishes the original payload byte-for-structure. Do
+        # not insert modern optional keys into historical immutable content.
+        from copy import deepcopy
+        snapshot = deepcopy(restored.snapshot)
     fingerprint = _fingerprint(snapshot)
     # Workbench publication first commits its Work EditorialRevision and then
     # invokes the existing Edition publication adapter in the same outer
@@ -1179,6 +1198,13 @@ def _activate_completed_revision(event: KnowledgePublicationEvent) -> None:
         return
     edition = Edition.objects.select_for_update().get(pk=revision.edition_id)
     revision = CatalogPublicationRevision.objects.select_for_update().get(pk=revision.pk)
+    if revision.status not in {CatalogPublicationRevision.Status.PREPARING, CatalogPublicationRevision.Status.ACTIVE, CatalogPublicationRevision.Status.WITHDRAWN}:
+        return
+    if revision.status != CatalogPublicationRevision.Status.WITHDRAWN:
+        from catalog.services.publication_commands import validate_revision
+        errors = validate_revision(revision, edition=edition)
+        if errors:
+            raise ValueError(" ".join(errors))
     # A slow older delivery must never resurrect withdrawn material or replace
     # a newer catalog revision that has already been requested.
     newer_exists = CatalogPublicationRevision.objects.filter(

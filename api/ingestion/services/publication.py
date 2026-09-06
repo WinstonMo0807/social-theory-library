@@ -43,6 +43,19 @@ class PublicationWarningsRequireConfirmation(RuntimeError):
         super().__init__("；".join(warnings))
 
 
+def publish_edition(edition, actor=None, idempotency_key=None, **options):
+    """Compatibility entry; all activation requests use the command layer."""
+    from catalog.services.publication_commands import activate_revision
+
+    return activate_revision(edition, actor=actor, idempotency_key=idempotency_key, **options)
+
+
+def withdraw_edition(edition, actor=None, reason=""):
+    from catalog.services.publication_commands import withdraw_revision
+
+    return withdraw_revision(edition, actor=actor, reason=reason)
+
+
 def _asset_storage_readable(asset: Asset | None) -> bool:
     if asset is None or not asset.file.name or asset.status != Asset.Status.READY:
         return False
@@ -256,7 +269,7 @@ def _publication_event_key(value: str) -> str:
 
 
 @transaction.atomic
-def publish_edition(
+def _publish_edition(
     edition: Edition,
     actor=None,
     idempotency_key: str | None = None,
@@ -360,7 +373,7 @@ def publish_edition(
 
 
 @transaction.atomic
-def withdraw_edition(edition: Edition, actor=None, reason: str = "") -> Edition:
+def _withdraw_edition(edition: Edition, actor=None, reason: str = "") -> Edition:
     edition = Edition.objects.select_for_update().get(pk=edition.pk)
     if edition.state == PublicationState.WITHDRAWN:
         return edition

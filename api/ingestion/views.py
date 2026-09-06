@@ -2654,6 +2654,7 @@ class PublishUploadItemView(APIView):
                 item.edition,
                 actor=request.user,
                 idempotency_key=f"manual:{item.id}:publish:{item.edition.updated_at.isoformat()}",
+                prepared_fingerprint=str(request.data.get("prepared_fingerprint") or ""),
                 allow_low_confidence=True,
                 confirm_warnings=confirmed,
             )

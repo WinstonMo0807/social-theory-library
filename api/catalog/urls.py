@@ -1,4 +1,5 @@
 from django.urls import path
+from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
 from .cataloging_views import CatalogingMetadataDecisionView, CatalogingMetadataImportView
@@ -184,6 +185,9 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/editions/<uuid:edition_id>/publication/history/", PublicationHistoryView.as_view(), name="publication-history"),
+    path("admin/editions/<uuid:edition_id>/publication/prepare/", PublicationPrepareView.as_view(), name="publication-prepare"),
+    path("admin/editions/<uuid:edition_id>/publication/rollback/", PublicationRollbackView.as_view(), name="publication-rollback"),
     path("admin/catalog-field-contracts/", CatalogFieldContractView.as_view(), name="catalog-field-contracts"),
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/import/", CatalogingMetadataImportView.as_view(), name="cataloging-metadata-import"),
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/<uuid:candidate_id>/decision/", CatalogingMetadataDecisionView.as_view(), name="cataloging-metadata-decision"),

@@ -96,6 +96,7 @@ export type WorkflowCandidate = {
 };
 
 export type WorkflowPayload = {
+  health?: Record<string, string>;
   mode: "intake" | "maintenance";
   context: WorkflowContext;
   workflow: WorkflowEvaluation;

@@ -955,8 +955,10 @@ def build_admin_workspace(
 
         if pending_revision is not None:
             serialized_revision = serialize_editorial_revision(pending_revision)
+    from catalog.services.publication_commands import catalog_health
     return {
         "mode": mode,
+        "health": catalog_health(edition),
         "context": {
             "item_id": str(item.id) if item else None,
             "work_id": str(work.id),
