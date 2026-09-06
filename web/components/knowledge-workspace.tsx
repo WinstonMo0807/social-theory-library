@@ -4,6 +4,7 @@ import { ArrowRight, ExternalLink, FileClock, LoaderCircle, RefreshCw, Search } 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { useApiResource } from "@/lib/api/use-api-resource";
 import { ActionButton, type ActionState } from "./action-feedback";
 import { CurationFieldAssistant } from "./admin/curation/curation-field-assistant";
 import { PublicationRetryControl } from "./admin/workflow/publication-retry-control";
@@ -191,24 +192,25 @@ function ObjectFields({ selection, onRefresh, publishing, publishState, onPublis
 }
 
 export function KnowledgeWorkspace() {
-  const [payload, setPayload] = useState<KnowledgePayload | null>(null);
   const [objectType, setObjectType] = useState("all");
   const [selected, setSelected] = useState<{ type: string; id: string } | null>(null);
   const [queryDraft, setQueryDraft] = useState("");
   const [query, setQuery] = useState("");
   const [initialized, setInitialized] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [publishing, setPublishing] = useState("");
   const [publishState, setPublishState] = useState<ActionState>("idle");
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const requestRef = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const selectedType = selected?.type || "";
   const selectedId = selected?.id || "";
   const contextKey = JSON.stringify([objectType, query, selectedType, selectedId, refreshVersion]);
-  const contextRef = useRef(contextKey);
-  contextRef.current = contextKey;
+  const params = new URLSearchParams({ status: "pending", object_type: objectType, q: query, limit: "40" });
+  if (selectedId) { params.set("selected_type", selectedType); params.set("selected_id", selectedId); }
+  const { data: payload, loading, error: loadError, retry } = useApiResource<KnowledgePayload>(
+    initialized ? `/catalog/admin/knowledge-workspace/?${params}` : "", getServerSessionCredential(), contextKey,
+  );
+  const load = useCallback(async () => { retry(); }, [retry]);
 
   useEffect(() => {
     mounted.current = true;
@@ -219,45 +221,18 @@ export function KnowledgeWorkspace() {
       const validKind = Object.hasOwn(objectLabels, kind) ? kind : "all";
       setObjectType(validKind);
       setSelected(validKind !== "all" && id ? { type: validKind, id } : null);
-      setPayload(null);
-      setLoading(true);
       setRefreshVersion((value) => value + 1);
       setInitialized(true);
     };
     readLocation();
     window.addEventListener("popstate", readLocation);
-    return () => { mounted.current = false; requestRef.current?.abort(); window.removeEventListener("popstate", readLocation); };
+    return () => { mounted.current = false; window.removeEventListener("popstate", readLocation); };
   }, []);
 
-  const load = useCallback(async () => {
-    if (!initialized || !mounted.current || contextRef.current !== contextKey) return;
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ status: "pending", object_type: objectType, q: query, limit: "40" });
-      if (selectedId) { params.set("selected_type", selectedType); params.set("selected_id", selectedId); }
-      const next = await apiRequest<KnowledgePayload>(`/catalog/admin/knowledge-workspace/?${params}`, { signal: controller.signal }, getServerSessionCredential());
-      if (!controller.signal.aborted) { setPayload(next); setMessage(""); }
-    } catch (reason) {
-      if (!controller.signal.aborted) setMessage(reason instanceof Error ? reason.message : "暂时无法读取知识对象，请重试。");
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-    }
-  }, [initialized, objectType, query, selectedId, selectedType, contextKey]);
-
-  useEffect(() => {
-    void load();
-    return () => requestRef.current?.abort();
-  }, [load]);
-
   function choose(kind: string, id = "") {
-    requestRef.current?.abort();
     setObjectType(kind);
     setSelected(id ? { type: kind, id } : null);
-    setPayload(null);
-    setLoading(true);
+    setMessage("");
     setRefreshVersion((value) => value + 1);
     const url = new URL(window.location.href);
     url.searchParams.set("object_type", kind);
@@ -298,7 +273,7 @@ export function KnowledgeWorkspace() {
       <label><span>对象类型</span><select value={objectType} onChange={(event) => choose(event.target.value)}>{Object.entries(objectLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       <label className="knowledge-studio-search"><span>名称</span><div><Search size={15} /><input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="搜索馆内对象" /></div></label><button className="button" type="submit">搜索</button>
     </form>
-    {message ? <p className="form-message" role="status">{message}</p> : null}
+    {loadError ? <p className="form-message" role="alert">{loadError}</p> : message ? <p className="form-message" role="status">{message}</p> : null}
     {loading && !payload ? <p className="admin-list-state"><LoaderCircle size={17} className="spin" />正在读取馆内资料</p> : null}
     {studio ? <div className="knowledge-studio-layout">
       <aside className="admin-panel knowledge-studio-directory"><header><h2>馆内对象</h2><span>最多显示 {studio.filters.limit} 项</span></header><div>{studio.objects.map((row) => <button key={`${row.object_type}:${row.id}`} className={current?.id === row.id && current.object_type === row.object_type ? "active" : ""} type="button" onClick={() => choose(row.object_type, row.id)}><span>{objectLabels[row.object_type] || "知识对象"}</span><strong>{row.label}</strong><small>{row.secondary_label || statusLabels[row.status] || "需要核对"}</small><ArrowRight size={14} /></button>)}{!studio.objects.length ? <p className="admin-list-state">当前筛选下没有对象。可到上方对应策展页面新建。</p> : null}</div></aside>

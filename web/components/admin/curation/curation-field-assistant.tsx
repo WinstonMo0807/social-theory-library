@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { useContextState } from "@/lib/use-context-state";
 
 type AuthorityEntityType =
   | "person"
@@ -94,21 +95,16 @@ export function CurationFieldAssistant({
 }: Props) {
   const popoverId = useId();
   const normalizedQuery = useMemo(() => query.normalize("NFKC").trim(), [query]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const contextKey = JSON.stringify([targetType, targetId, fieldName, normalizedQuery, currentValue, formContext]);
+  const [open, setOpen] = useContextState(contextKey, false);
+  const [loading, setLoading] = useContextState(contextKey, false);
   const [busy, setBusy] = useState("");
-  const [results, setResults] = useState<AssistantCandidate[]>([]);
+  const [results, setResults] = useContextState<AssistantCandidate[]>(contextKey, []);
   const [showMore, setShowMore] = useState(false);
   const [message, setMessage] = useState("");
-  const [editingClaim, setEditingClaim] = useState<{ key: string; proposition: string } | null>(null);
+  const [editingClaim, setEditingClaim] = useContextState<{ key: string; proposition: string } | null>(contextKey, null);
   const requestRef = useRef<AbortController | null>(null);
-  const contextKey = JSON.stringify([targetType, targetId, fieldName, normalizedQuery, currentValue, formContext]);
   useEffect(() => {
-    requestRef.current?.abort();
-    setResults([]);
-    setEditingClaim(null);
-    setOpen(false);
-    setLoading(false);
     return () => requestRef.current?.abort();
   }, [contextKey]);
 
@@ -200,7 +196,7 @@ export function CurationFieldAssistant({
       setResults((current) => current.filter((row) => row.key !== candidate.key));
       setMessage("已记录不采用。该结果不会进入正式馆藏知识。");
     } catch (reason) {
-      setMessage("未能记录本次决定，请稍后重试。");
+      setMessage(reason instanceof Error ? reason.message : "未能记录本次决定，请稍后重试。");
     } finally {
       setBusy("");
     }

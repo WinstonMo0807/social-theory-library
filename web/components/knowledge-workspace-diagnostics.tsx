@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -444,34 +445,30 @@ function ObjectDetail({
 }
 
 export function KnowledgeWorkspaceDiagnostics() {
+  const searchParams = useSearchParams();
+  const kind = searchParams.get("object_type") || "all";
+  const id = searchParams.get("object_id") || "";
+  const type = Object.hasOwn(objectLabels, kind) ? kind : "all";
+  return <KnowledgeWorkspaceDiagnosticsContent key={`${type}:${id}`} initialType={type} initialId={id} />;
+}
+
+function KnowledgeWorkspaceDiagnosticsContent({ initialType, initialId }: { initialType: string; initialId: string }) {
   const [payload, setPayload] = useState<KnowledgePayload | null>(null);
   const [candidateStatus, setCandidateStatus] = useState("pending");
-  const [objectType, setObjectType] = useState("all");
+  const [objectType, setObjectType] = useState(initialType);
   const [queryDraft, setQueryDraft] = useState("");
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<{ type: string; id: string } | null>(null);
+  const [selected, setSelected] = useState<{ type: string; id: string } | null>(initialId && initialType !== "all" ? { type: initialType, id: initialId } : null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [publishingRevision, setPublishingRevision] = useState("");
   const [publishState, setPublishState] = useState<ActionState>("idle");
   const [busyCandidate, setBusyCandidate] = useState("");
-  const [initialized, setInitialized] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const kind = params.get("object_type") || "";
-    const id = params.get("object_id") || "";
-    if (Object.hasOwn(objectLabels, kind)) {
-      setObjectType(kind);
-      if (id) setSelected({ type: kind, id });
-    }
-    setInitialized(true);
-    return () => requestRef.current?.abort();
-  }, []);
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   const load = useCallback(async () => {
-    if (!initialized) return;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -491,7 +488,7 @@ export function KnowledgeWorkspaceDiagnostics() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [candidateStatus, initialized, objectType, query, selected]);
+  }, [candidateStatus, objectType, query, selected]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);

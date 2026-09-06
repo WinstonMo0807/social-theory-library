@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton, ActionLink, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { apiBlob, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { r2StagingStatusLabel } from "@/lib/ingestion-staging-status";
+import { useContextState } from "@/lib/use-context-state";
+import Image from "next/image";
 import {
   CanonicalField,
   ConditionalFieldGroup,
@@ -359,17 +361,17 @@ function CoverThumbnail({ option, token }: { option: CoverOption; token: string 
     }).catch(() => { if (alive) setError(true); });
     return () => { alive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [option.thumbnail_url, token]);
-  return image ? <img src={image} alt={`第 ${option.page_index} 页封面`} style={{ width: "100%", maxHeight: 180, objectFit: "contain" }} /> : <p>{error ? "封面暂时无法显示" : "正在读取封面"}</p>;
+  return image ? <Image src={image} unoptimized width={180} height={240} alt={`第 ${option.page_index} 页封面`} style={{ width: "100%", maxHeight: 180, objectFit: "contain" }} /> : <p>{error ? "封面暂时无法显示" : "正在读取封面"}</p>;
 }
 
 function CoverField(props: BodyProps) {
   const { context, documentType, canEdit, research, beforeFieldAction, message, assistantContextKey } = props;
-  const [options, setOptions] = useState<CoverOption[] | null>(null);
+  const scope = JSON.stringify([context.edition_id, assistantContextKey]);
+  const [options, setOptions] = useContextState<CoverOption[] | null>(scope, null);
   const [busy, setBusy] = useState("");
-  const [more, setMore] = useState(false);
+  const [more, setMore] = useContextState(scope, false);
   const workId = asString(context.work_id);
   const editionId = asString(context.edition_id);
-  useEffect(() => { setOptions(null); setMore(false); }, [assistantContextKey, editionId]);
   if (!["book", "journal_issue"].includes(documentType)) return null;
   const load = async (regenerate = false) => {
     if (!await beforeFieldAction()) return;
@@ -409,7 +411,7 @@ function KnowledgeFields(props: BodyProps) {
 }
 
 function WorkBody(props: BodyProps) {
-  const { draft, candidates, canEdit, errors, update, inspectField, research, documentType } = props;
+  const { draft, candidates, canEdit, errors, update, inspectField, documentType } = props;
   const value = (field: string, next: string) => update("work", field, next);
   const identityCandidates = candidateCount(candidates, "work");
   const translationId = fieldValue(draft, "translation_of");

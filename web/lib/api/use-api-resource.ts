@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "../api";
 
 /** Request-local state. Old results are never rendered under a new URL/key. */
-export function useApiResource<T>(url: string, credential: string | null) {
+export function useApiResource<T>(url: string, credential: string | null, contextKey = "") {
   const [attempt, setAttempt] = useState(0);
-  const key = JSON.stringify([url, credential, attempt]);
+  const key = JSON.stringify([url, credential, attempt, contextKey]);
   const [result, setResult] = useState<{ key: string; data: T | null; error: string } | null>(null);
   useEffect(() => {
     if (!url || !credential) return;

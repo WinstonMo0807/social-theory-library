@@ -1,8 +1,9 @@
 "use client";
 
 import { Check, ChevronDown, ChevronUp, LoaderCircle, Plus, Search, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { useContextState } from "@/lib/use-context-state";
 import { assistantCacheKey, invalidateAssistantCache, lookupFieldSuggestions } from "./field-assistant-cache";
 
 type Evidence = { category?: string; summary?: string };
@@ -58,32 +59,26 @@ export function FieldAssistantControl({
   contextKey?: string;
 }) {
   const popoverId = useId();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const lookupKey = assistantCacheKey(editionId, fieldName, query, contextKey);
+  const [open, setOpen] = useContextState(lookupKey, false);
+  const [loading, setLoading] = useContextState(lookupKey, false);
   const [busy, setBusy] = useState("");
-  const [data, setData] = useState<LookupResult | null>(null);
-  const [message, setMessage] = useState("");
+  const [data, setData] = useContextState<LookupResult | null>(lookupKey, null);
+  const [message, setMessage] = useContextState(lookupKey, "");
   const [newLabel, setNewLabel] = useState("");
   const [showMore, setShowMore] = useState(false);
-  const [duplicates, setDuplicates] = useState<Duplicate[] | null>(null);
+  const [duplicates, setDuplicates] = useContextState<Duplicate[] | null>(lookupKey, null);
   const [duplicateName, setDuplicateName] = useState("");
   const requestRef = useRef<AbortController | null>(null);
   const preparingRef = useRef(false);
   const copy = FIELD_COPY[fieldName];
-  const lookupKey = assistantCacheKey(editionId, fieldName, query, contextKey);
   const lookupKeyRef = useRef(lookupKey);
-  lookupKeyRef.current = lookupKey;
-  const lookupContextRef = useRef({ editionId, fieldName, query, contextKey });
-  lookupContextRef.current = { editionId, fieldName, query, contextKey };
-
-  useEffect(() => {
-    setData(null);
-    if (preparingRef.current) return;
-    requestRef.current?.abort();
-    setLoading(false);
-    setOpen(false);
-    setDuplicates(null);
-  }, [lookupKey]);
+  const lookupContextRef = useRef({ editionId, fieldName, query, contextKey, setData, setOpen, setLoading, setMessage });
+  useLayoutEffect(() => {
+    lookupKeyRef.current = lookupKey;
+    lookupContextRef.current = { editionId, fieldName, query, contextKey, setData, setOpen, setLoading, setMessage };
+    if (!preparingRef.current) requestRef.current?.abort();
+  }, [editionId, fieldName, query, contextKey, lookupKey, setData, setOpen, setLoading, setMessage]);
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -101,20 +96,23 @@ export function FieldAssistantControl({
     try {
       preparingRef.current = true;
       try { await prepare(); } finally { preparingRef.current = false; }
-      setOpen(true);
+      const current = lookupContextRef.current;
+      if (current.editionId !== editionId || current.fieldName !== fieldName) return;
+      current.setOpen(true);
+      current.setLoading(true);
       request = new AbortController();
       requestRef.current = request;
       const requestKey = lookupKeyRef.current;
       const result = await lookupFieldSuggestions<LookupResult>({ ...lookupContextRef.current, token, signal: request.signal, refresh: true });
       if (request.signal.aborted || requestKey !== lookupKeyRef.current) return;
-      setData(result);
-      if (result.refresh?.message) setMessage(result.refresh.message);
+      current.setData(result);
+      if (result.refresh?.message) current.setMessage(result.refresh.message);
     } catch (reason) {
       if (request?.signal.aborted) return;
       setOpen(true);
       setMessage(reason instanceof Error ? reason.message : "暂时无法查找建议，可以继续手工填写。");
     } finally {
-      if (!request || requestRef.current === request) setLoading(false);
+      if (!request || requestRef.current === request) lookupContextRef.current.setLoading(false);
     }
   };
 

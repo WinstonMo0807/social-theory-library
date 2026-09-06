@@ -36,6 +36,17 @@ test("non-superuser creates a real manual session, saves and reopens it", async 
   const payload = await response.json();
   expect(payload.session.upload_item_id).toBeNull();
   expect(payload.workspace.context.publication_state).toBe("draft");
+
+  await page.goto(`${url.split("#")[0]}#contributors`);
+  await page.getByRole("button", { name: "智能查找", exact: true }).first().click();
+  await page.getByLabel("新学者名称", { exact: true }).fill("E2E 人工新建作者");
+  await page.getByRole("button", { name: "创建学者并关联", exact: true }).click();
+  await expect(page.getByText("已新建馆内草稿对象并关联当前作品。", { exact: true })).toBeVisible();
+  const withAuthor = await page.request.get(`http://127.0.0.1:8105/api/catalog/admin/cataloging-sessions/${sessionId}/`);
+  const authored = await withAuthor.json();
+  expect(authored.session.upload_item_id).toBeNull();
+  expect(authored.workspace.data.contributors.items).toHaveLength(1);
+  expect(authored.workspace.data.contributors.items[0].display_name).toBe("E2E 人工新建作者");
 });
 
 test("a reader cannot open cataloging or submit a manual catalog", async ({ page }) => {
