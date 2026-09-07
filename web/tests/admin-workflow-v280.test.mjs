@@ -132,7 +132,7 @@ test("section validation blocks continuation before backend save", () => {
   );
   assert.deepEqual(
     validateWorkflowSection("contributors", { items: [{ display_name: "候选作者", role: "author", person_id: null }] }),
-    [{ field: "items.0.person_id", message: "请为第 1 位责任者关联馆内人物、创建新学者主页，或选择仅添加为责任者。" }],
+    [{ field: "items.0.person_id", message: "请为第 1 位贡献者关联馆内学者，或直接新建并关联。" }],
   );
 });
 
@@ -144,7 +144,9 @@ test("contributor editor keeps unresolved candidates outside canonical rows", as
   assert.match(editor, /label="作者" values=\{authorItems\} emptyValue=\{blank\("author"\)\}/);
   assert.match(editor, /label="译者" values=\{translatorItems\} create=\{\(\) => blank\("translator"\)\}/);
   assert.doesNotMatch(editor, /translatorItems\.length \? translatorItems : \[blank\("translator"\)\]/);
-  assert.match(editor, /请在责任者候选中逐项核对并只采用需要的人物/);
+  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="author"/);
+  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="translator"/);
+  assert.match(editor, /person_id: person\?\.id \?\? null/);
   assert.match(fields, /showsEmptyValue/);
 });
 
@@ -170,11 +172,11 @@ test("focus mode, contextual curation and publication choices use canonical rout
   assert.match(editor, /保存草稿/);
   assert.match(editor, /发布前检查/);
   assert.match(editor, /发布作品/);
-  assert.match(curation, /知识策展与前台联动/);
-  assert.match(curation, /理论与概念/);
+  assert.match(curation, /更多策展内容/);
+  assert.match(editor, /理论传统与理论节点/);
   assert.match(curation, /学者与知识关系/);
-  assert.match(curation, /Debate \/ 争论/);
-  assert.match(curation, /采用后影响/);
+  assert.match(curation, /相关争论在知识对象中继续策展/);
+  assert.match(curation, /正式发布前只在当前草稿中使用/);
   assert.match(curation, /reading-path-placements\/\$\{placement\.id\}/);
   assert.match(curation, /reading_path_id: selectedPath/);
   assert.match(curation, /stage_id: selectedStage/);

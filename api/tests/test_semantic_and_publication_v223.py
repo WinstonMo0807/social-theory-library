@@ -33,6 +33,7 @@ from catalog.services.semantic_indexing import create_semantic_job, run_semantic
 from catalog.services.semantic_search import semantic_search
 from catalog.services.search_backend import ExternalPassageSearch
 from ingestion.models import MetadataCandidate, UploadBatch, UploadItem
+from .v304_helpers import activate_catalog_revision
 
 
 def active_semantic_version(marker: str) -> SemanticIndexVersion:
@@ -91,6 +92,7 @@ def create_asset(
             bbox_union=[60, 100, 530, 180],
         )
         pages.append(page)
+    activate_catalog_revision(edition, reader_asset=asset)
     return work, edition, asset, pages
 
 
@@ -279,7 +281,7 @@ def test_semantic_index_job_is_partial_when_vector_backend_fails(settings):
     )
     settings.SEMANTIC_SEARCH_ENABLED = True
     active_semantic_version("partial")
-    job = create_semantic_job(asset)
+    job = create_semantic_job(asset, catalog_revision=_edition.active_catalog_revision)
     with patch(
         "catalog.services.semantic_indexing.index_semantic_asset",
         return_value={"backend": "database-fallback", "documents": 1, "warning": "vector offline"},
@@ -478,19 +480,20 @@ def test_withdrawal_requests_semantic_index_cleanup(api_client, admin_user):
         status=UploadItem.Status.PUBLISHED,
     )
     api_client.force_authenticate(admin_user)
-    with (
-        patch("ingestion.views.remove_asset_from_index"),
-        patch("ingestion.views.remove_semantic_asset") as remove_semantic,
-    ):
-        response = api_client.post(
-            f"/api/ingestion/items/{item.id}/withdraw/",
-            {"reason": "test"},
-            format="json",
-        )
+    response = api_client.post(
+        f"/api/ingestion/items/{item.id}/withdraw/",
+        {"reason": "test"},
+        format="json",
+    )
     assert response.status_code == 200
-    remove_semantic.assert_called_once_with(str(asset.id))
+    from catalog.models import KnowledgePublicationEvent
+    from catalog.services.publication_eligibility import active_catalog_snapshot
+    event = KnowledgePublicationEvent.objects.get(event_type="catalog_withdrawn", catalog_revision__edition=edition)
+    assert event.deliveries.filter(consumer="semantic", status="pending").exists()
     edition.refresh_from_db()
     assert edition.state == PublicationState.WITHDRAWN
+    assert active_catalog_snapshot(edition) == {}
+    assert Asset.objects.filter(pk=asset.pk).exists()
 
 
 @pytest.mark.django_db

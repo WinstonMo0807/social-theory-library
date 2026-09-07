@@ -31,11 +31,11 @@ test("existing scholar and theory editors use the shared field control", async (
   ]);
 
   assert.match(scholars, /targetType="person"/);
-  assert.match(scholars, /name: "external_identifier"/);
-  assert.match(scholars, /name: "affiliation"/);
-  assert.match(scholars, /name: "name_variant"/);
+  assert.match(scholars, /fieldName="external_identifier"/);
+  assert.match(scholars, /fieldName="affiliation"/);
+  assert.match(scholars, /fieldName="name_variant"/);
   assert.match(theories, /targetType="knowledge_node"/);
-  assert.match(theories, /name: "alias"/);
-  assert.match(theories, /name: "discipline"/);
-  assert.match(theories, /name: "subdiscipline"/);
+  assert.match(theories, /fieldName="alias"/);
+  assert.match(theories, /fieldName="discipline"/);
+  assert.match(theories, /fieldName="subdiscipline"/);
 });

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const studioUrl = new URL("../components/knowledge-workspace.tsx", import.meta.url);
+const studioUrl = new URL("../components/knowledge-workspace-diagnostics.tsx", import.meta.url);
+const editorialStudioUrl = new URL("../components/knowledge-workspace.tsx", import.meta.url);
 const shellUrl = new URL("../components/admin-shell.tsx", import.meta.url);
 const nodeEditorUrl = new URL("../components/theory-system-admin.tsx", import.meta.url);
 const taxonomyEditorUrl = new URL("../components/knowledge-admin.tsx", import.meta.url);
@@ -24,7 +25,7 @@ const stylesUrl = new URL("../app/editorial-workspaces.css", import.meta.url);
 
 test("Knowledge Studio is the primary knowledge entry and reuses specialist editors", async () => {
   const [studio, shell, nodeEditor, taxonomyEditor, readingPathEditor] = await Promise.all([
-    readFile(studioUrl, "utf8"),
+    readFile(editorialStudioUrl, "utf8"),
     readFile(shellUrl, "utf8"),
     readFile(nodeEditorUrl, "utf8"),
     readFile(taxonomyEditorUrl, "utf8"),
@@ -35,13 +36,14 @@ test("Knowledge Studio is the primary knowledge entry and reuses specialist edit
   assert.match(studio, /href="\/admin\/theories"/);
   assert.match(studio, /href="\/admin\/scholars"/);
   assert.match(studio, /href="\/admin\/topics"/);
-  assert.match(studio, /进入专门编辑器/);
+  assert.match(studio, /完整编辑/);
+  assert.match(studio, /\/admin\/system-health\/knowledge/);
   assert.match(nodeEditor, /search\.get\("node"\)/);
   assert.match(nodeEditor, /已从 Knowledge Studio 打开这个规范节点/);
   assert.match(taxonomyEditor, /searchParams\.get\("subdiscipline"\)/);
   assert.match(taxonomyEditor, /已从 Knowledge Studio 打开这个子学科/);
   assert.match(readingPathEditor, /searchParams\.get\("path"\)/);
-  assert.match(readingPathEditor, /已从 Knowledge Studio 打开这条阅读路径/);
+  assert.match(readingPathEditor, /encodeURIComponent\(requestedPath\)/);
 });
 
 test("Knowledge Studio presents every required evidence-led object section", async () => {
@@ -83,7 +85,7 @@ test("Scholar Discipline Theory and Topic share the bounded object Inspector", a
     assert.match(adminSections + disciplineEditor, new RegExp(`objectType="${objectType}"`));
   }
   assert.match(nodeEditor, /knowledgeStudioNodeType/);
-  for (const feature of ["前台内容完整度", "Knowledge Growth", "Evidence", "Claims", "Revision 与 Preview", "前台影响与投影"]) {
+  for (const feature of ["前台内容完整度", "knowledgeUpdates", "EvidenceEnvelopeCard", "curatedClaims", "revisions", "projectionStates"]) {
     assert.match(panel, new RegExp(feature));
   }
   assert.match(panel, /CandidateDecisionBar/);
@@ -161,9 +163,9 @@ test("Reading Path keeps explicit learning goals and prerequisites inside revisi
   assert.match(readingPathEditor, /学习目标/);
   assert.match(readingPathEditor, /前置要求/);
   assert.match(readingPathEditor, /saved\.editorial_revision/);
-  assert.match(readingPathEditor, /正式页面尚未改变/);
+  assert.match(readingPathEditor, /确认发布后更新公开页面/);
   assert.match(readingPathEditor, /draft_stage_groups/);
-  assert.match(readingPathEditor, /下线草稿/);
+  assert.match(readingPathEditor, /撤回草稿/);
 });
 
 test("protected knowledge preview renders the same six public detail components", async () => {

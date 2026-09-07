@@ -38,6 +38,14 @@ OpenAPI 全量探测报告 170 类端点无法推导及 162 类警告，退出 0
 
 00:55 最后结果为发布/不变量/旧编目/编辑修订 38 passed，三类健康独立性新增用例 1 passed。TypeScript、lint、生成漂移、migration drift、构建均退出 0。真实编目 Playwright 2 passed，51.8 秒，包含新建、保存、重开、人工作者、发布前 diff 和读者拒绝。当前准备保存该逻辑提交，再做新的全回归盘点。全部生产门槛仍未达到，不能部署。
 
+发布切片已提交 `a15b0f4`。00:59 全量后端 XML 记录 1074 tests、86 failures、32 skipped，即 956 passed；耗时 371.484 秒。前端全量 XML 为 181 tests、17 failures，即 164 passed。原进程句柄已失效，以报告记录结果，不重跑获取退出码。正在按真实公开 revision 修正旧 Reader/Scoped Search 的 published 夹具，后续逐域处理，绝不恢复仅 state=published 即公开的旧捷径。
+
+Reader/收藏进度/Scoped Search/公开 Range 夹具更新后 27 passed，退出 0。前端旧位置、文案和控件断言已对齐当前字段助手与系统诊断分工，完整 181 tests/0 failures，退出 0。还补回了被旧界面重构遗漏的学者 external_identifier 字段助手，仍由人工采用。TypeScript 与 lint 退出 0。npm test 已改为自动发现所有 .test.mjs，当前继续语义检索相关夹具和剩余后端失败。
+
+当前 `npm test` 已实际完成重新构建和自动发现的 181 项，全通过，退出 0。Semantic/Opinion 组在显式活动修订 fixture 下 28 passed/1 failed；最后一项只因旧断言要求移除所有过滤，而当前 fallback 正确保留 active Asset 空范围约束，已对齐断言并定向复核。未放宽任何 Meilisearch 访问过滤。
+
+最后 fallback 用例定向 1 passed，退出 0。语义与 Reader 回归切片已收口，剩余后端 failure 不估算为已通过。下一项优先补 L1/L2/L3 功能健康，把 workbench 实际构造、活动 revision 与公开目录检查接到既有探针，避免 /ready 绿色掩盖工作台故障。Person 合并已实读 9 类 Person 引用和 5 类 ScholarProfile 引用，事务实现仍待完成。
+
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 
 完整基线随后完成。后端 888 通过、90 失败、32 跳过；前端 161 通过、17 失败。TypeScript 与 build 通过，lint 8 个错误、3 个警告。生产发布明确阻断。失败按旧公开快照夹具、字段确认规则、异步 outbox 接口与真实回归分类，不放宽公开权限或把机器确认视为人工决定。

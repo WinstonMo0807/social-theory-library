@@ -42,36 +42,34 @@ test("research leads cannot be selected or treated as evidence", () => {
   assert.equal(canDirectlySelectResearchSuggestion({ id: "pdf", entity_id: "entity", source_tier: "pdf_evidence" }), false);
 });
 
-test("classification and converged curation use research-backed object pickers", async () => {
+test("classification uses canonical pickers and curation keeps explicit evidence suggestions", async () => {
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
   const curation = await readFile(new URL("../components/admin/curation/work-curation-editor.tsx", import.meta.url), "utf8");
-  assert.match(editor, /ResearchSuggestionPanel[\s\S]*step="classification"/);
-  assert.match(editor, /ResearchEntityPicker[\s\S]*?label="主要学科"/);
+  assert.match(editor, /EntityPicker[\s\S]*?label="主要学科"/);
   assert.doesNotMatch(editor, /label="正式对象 ID"/);
-  assert.match(editor, /step="curation"/);
-  assert.match(editor, /step="bibliography"/);
+  assert.match(editor, /WorkflowFieldAssistant/);
   assert.match(editor, /<WorkCurationEditor/);
-  assert.match(curation, /知识策展与前台联动/);
-  assert.match(curation, /CandidateDecisionBar/);
-  assert.match(curation, /ResearchEntityPicker[\s\S]*搜索现有阅读路径/);
+  assert.match(curation, /更多策展内容/);
+  assert.match(curation, /CurationFieldAssistant/);
+  assert.match(curation, /EntityPicker[\s\S]*搜索馆内阅读路径/);
 });
 
 test("front matter authors and translators stay role-aware and require an individual decision", async () => {
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
   assert.match(editor, /\["authors", "translators"\]\.includes\(field\)/);
   assert.match(editor, /field === "authors" \? "author" : "translator"/);
-  assert.match(editor, /请在责任者候选中逐项核对并只采用需要的人物/);
-  assert.match(editor, /创建新学者主页或仅添加为责任者/);
+  assert.match(editor, /fieldName="author"/);
+  assert.match(editor, /fieldName="translator"/);
+  assert.match(editor, /beforeAction=\{beforeFieldAction\}/);
 });
 
-test("candidate inspector separates evidence, match basis and lexicon impact", async () => {
+test("candidate inspector separates evidence and match basis from system diagnostics", async () => {
   const inspector = await readFile(new URL("../components/admin/inspector/workflow-inspector.tsx", import.meta.url), "utf8");
   const actions = await readFile(new URL("../components/admin/research/candidate-action-contract.ts", import.meta.url), "utf8");
   assert.match(inspector, /匹配依据/);
-  assert.match(inspector, /词典影响/);
-  assert.match(inspector, /搜索摘要不是 Evidence/);
-  assert.match(inspector, /QueryLexicon sync/);
-  assert.match(inspector, /decision_descriptor/);
+  assert.match(inspector, /取得可靠正文依据前不能采用/);
+  assert.match(inspector, /CandidateDecisionBar/);
+  assert.match(actions, /action_descriptors/);
   assert.match(inspector, /EvidenceEnvelopeCard/);
   assert.match(actions, /candidate\.decision_url/);
 });

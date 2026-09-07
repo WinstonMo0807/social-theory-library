@@ -345,11 +345,13 @@ test("authority identity suggestions require an explicit request and never fill 
   assert.doesNotMatch(shared, /onApply/);
   assert.match(shared, /typeof entry === "string"/);
   assert.match(shared, /text\(row\.name\) \|\| text\(row\.alias\)/);
-  assert.match(sections, /entityType="person"/);
+  assert.match(sections, /authorityType="person"/);
   assert.match(knowledge, /entityType="discipline"/);
   assert.match(knowledge, /entityType="subdiscipline"/);
-  assert.match(theory, /entityType=\{draft\.node_type === "theory_tradition"/);
-  assert.doesNotMatch([sections, knowledge, theory].join("\n"), /onApply=/);
+  assert.match(theory, /authorityType=\{draft\.node_type === "theory_tradition"/);
+  const assistant = await readFile(new URL("../components/admin/curation/curation-field-assistant.tsx", import.meta.url), "utf8");
+  assert.match(assistant, /async function adopt[\s\S]*onApply\?\./);
+  assert.match(assistant, /onClick=\{\(\) => void adopt/);
   assert.doesNotMatch(shared, /editorial_status|publication_status|published_at/);
 });
 

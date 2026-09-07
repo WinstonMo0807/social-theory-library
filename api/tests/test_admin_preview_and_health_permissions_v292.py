@@ -115,6 +115,8 @@ def test_published_public_pdf_range_behavior_is_unchanged(
     settings.PUBLIC_DEPLOYMENT_MODE = False
     settings.X_ACCEL_REDIRECT_ENABLED = False
     _edition, asset, payload = _edition_with_pdf(state=PublicationState.PUBLISHED)
+    from .v304_helpers import activate_catalog_revision
+    activate_catalog_revision(_edition, reader_asset=asset, fulltext_ready=False)
 
     response = api_client.get(
         f"/api/distribution/assets/{asset.id}/file/",

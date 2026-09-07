@@ -25,6 +25,7 @@ from catalog.services.semantic_search import (
     viewer_access_statuses,
 )
 from catalog.services.semantic_search_v2 import analyze_query
+from .v304_helpers import activate_catalog_revision
 
 
 def _chunk(
@@ -55,7 +56,7 @@ def _chunk(
         is_current=True,
         access_status=access_status,
     )
-    return SemanticChunk.objects.create(
+    chunk = SemanticChunk.objects.create(
         asset=asset,
         work=work,
         order=0,
@@ -77,6 +78,8 @@ def _chunk(
         quality_flags=[],
         index_status=SemanticChunk.IndexStatus.READY,
     )
+    activate_catalog_revision(edition, reader_asset=asset)
+    return chunk
 
 
 @pytest.mark.django_db
@@ -181,10 +184,9 @@ def test_v2_fuses_candidates_and_returns_non_probability_labels(settings):
     assert result["stage_timings_ms"]["rrf_ms"] >= 0
     assert result["candidate_counts"]["fusion_candidate_count"] == 2
     assert result["results"][0]["printed_label"] in {"1", "2"}
-    assert all(
-        item["cover_url"] == f"/api/catalog/works/{item['work_id']}/cover/"
-        for item in result["results"]
-    )
+    # Changing a canonical draft cover after activation cannot change the
+    # reader-facing search snapshot until an explicit new publication.
+    assert all(item["cover_url"] == "" for item in result["results"])
 
 
 @pytest.mark.django_db
@@ -217,6 +219,7 @@ def test_v2_never_serializes_registered_text_for_anonymous_reader(settings):
     assert [item["id"] for item in result["results"]] == [str(public.id)]
 
 
+@pytest.mark.django_db
 def test_meilisearch_filter_applies_reader_access_before_top_k():
     anonymous = " AND ".join(
         _meili_filters({"_allowed_access_statuses": viewer_access_statuses()})
@@ -236,6 +239,7 @@ def test_meilisearch_filter_applies_reader_access_before_top_k():
     assert '"registered"' in reader
 
 
+@pytest.mark.django_db
 def test_v1_retries_public_only_filter_for_legacy_active_index(settings):
     settings.MEILISEARCH_URL = "http://meilisearch:7700"
     request = httpx.Request(
@@ -272,9 +276,10 @@ def test_v1_retries_public_only_filter_for_legacy_active_index(settings):
     first_filter = called.call_args_list[0].kwargs["json"]["filter"]
     retry_filter = called.call_args_list[1].kwargs["json"]["filter"]
     assert "access_status" in first_filter
-    assert retry_filter == "is_public = true"
+    assert retry_filter == 'is_public = true AND asset_id = "unpublished"'
 
 
+@pytest.mark.django_db
 def test_v1_does_not_hide_unrelated_meilisearch_filter_errors(settings):
     settings.MEILISEARCH_URL = "http://meilisearch:7700"
     request = httpx.Request(

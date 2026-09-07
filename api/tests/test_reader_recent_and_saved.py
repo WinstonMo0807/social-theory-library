@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from catalog.models import Asset, Edition, PublicationState, Work
 from reading.models import ReadingProgress, SavedItem
+from .v304_helpers import activate_catalog_revision
 
 
 def create_readable_work(index):
@@ -24,6 +25,7 @@ def create_readable_work(index):
         page_count=20,
         is_current=True,
     )
+    activate_catalog_revision(edition, reader_asset=asset, fulltext_ready=False)
     return work, asset
 
 
@@ -79,6 +81,7 @@ def test_continue_reading_uses_only_the_latest_asset_for_each_work(
         page_count=20,
         is_current=True,
     )
+    activate_catalog_revision(second_edition, reader_asset=second_asset, fulltext_ready=False)
     ReadingProgress.objects.create(
         user=reader_user,
         asset=first_asset,

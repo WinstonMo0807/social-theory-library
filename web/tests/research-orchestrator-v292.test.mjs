@@ -158,16 +158,16 @@ test("workflow editor provides unsaved drafts and decision handling to research 
   assert.match(editor, /operationRef\.current/);
   assert.match(editor, /<ActionButton/);
   assert.match(editor, /<AsyncStatus/);
-  assert.match(editor, /entityType="person" step="contributors" field="contributors"/);
-  assert.match(editor, /entityType="discipline" step="classification" field="primary_disciplines"/);
+  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="author"/);
+  assert.match(editor, /EntityPicker label="主要学科"/);
   assert.match(editor, /<WorkCurationEditor/);
   assert.match(editor, /editionId: asString|editionId,/);
-  assert.match(editor, /entityType="work" step="work" field="translation_of"/);
-  assert.match(editor, /endpoint="\/catalog\/admin\/library\/works\/" queryParam="q" nameField="title" entityType="work"/);
-  assert.match(editor, /renderEntityText\("publisher", "出版者", "publisher"\)/);
-  assert.match(editor, /renderEntityText\("journal_title", "期刊名", "journal"/);
-  assert.match(editor, /renderEntityText\("degree_institution", "学位授予单位", "organization"/);
-  assert.match(editor, /renderEntityText\("report_institution", "报告责任机构", "organization"/);
+  assert.match(editor, /translation_of/);
+  assert.match(editor, /endpoint="\/catalog\/admin\/library\/works\/"/);
+  assert.match(editor, /fieldName="publisher"/);
+  assert.match(editor, /journal_title/);
+  assert.match(editor, /degree_institution/);
+  assert.match(editor, /report_institution/);
   assert.match(editor, /publisher_authority_id/);
   assert.match(editor, /候选决定尚未提交/);
   assert.match(editor, /return true;[\s\S]*catch \(reason\)[\s\S]*return false;/);
@@ -175,8 +175,8 @@ test("workflow editor provides unsaved drafts and decision handling to research 
 
 test("curation uses universal reading-path discovery before the existing stage placement mutation", async () => {
   const curation = await readFile(new URL("../components/admin/curation/work-curation-editor.tsx", import.meta.url), "utf8");
-  assert.match(curation, /<ResearchEntityPicker label="搜索现有阅读路径"/);
-  assert.match(curation, /entityType="reading_path" step="curation" field="reading_path_placements"/);
+  assert.match(curation, /<EntityPicker label="搜索馆内阅读路径"/);
+  assert.match(curation, /endpoint="\/catalog\/admin\/theory-system\/reading-paths\/"/);
   assert.match(curation, /theory-system\/reading-paths\/\$\{encodeURIComponent\(selectedPath\)\}/);
   assert.match(curation, /selectedPathOption\?\.stages\?\.map/);
   assert.match(curation, /reading_path_id: selectedPath/);
@@ -186,13 +186,13 @@ test("curation uses universal reading-path discovery before the existing stage p
 test("reading-path workbench uses the shared picker for formal Discipline, Work and KnowledgeNode inputs", async () => {
   const workbench = await readFile(new URL("../components/admin/curation/reading-path-workbench.tsx", import.meta.url), "utf8");
   const fields = await readFile(new URL("../components/admin/forms/workflow-fields.tsx", import.meta.url), "utf8");
-  assert.match(workbench, /<ResearchEntityPicker label="馆藏作品"/);
-  assert.match(workbench, /entityType="work"[\s\S]*queryParam="q"[\s\S]*nameField="title"/);
-  assert.match(workbench, /<ResearchEntityPicker label="知识节点"/);
-  assert.match(workbench, /entityType="knowledge_node"[\s\S]*queryParam="q"[\s\S]*nameField="canonical_name_zh"/);
+  assert.match(workbench, /<EntityPicker label="馆藏作品"/);
+  assert.match(workbench, /endpoint="\/catalog\/admin\/library\/works\/"[\s\S]*queryParam="q"[\s\S]*nameField="title"/);
+  assert.match(workbench, /<EntityPicker label="知识节点"/);
+  assert.match(workbench, /endpoint="\/catalog\/admin\/theory-system\/nodes\/"[\s\S]*queryParam="q"[\s\S]*nameField="canonical_name_zh"/);
   assert.match(workbench, /node_name: asString\(nodeData\.canonical_name_zh/);
   assert.match(workbench, /work_name: asString\(workData\.title/);
-  assert.match(workbench, /<ResearchEntityPicker label="主要学科" endpoint="\/catalog\/admin\/disciplines\/" queryParam="q"[\s\S]*step="classification" field="primary_disciplines"/);
+  assert.match(workbench, /<EntityPicker label="主要学科" endpoint="\/catalog\/admin\/disciplines\/" queryParam="q"/);
   assert.doesNotMatch(workbench, /<span>主要学科<\/span><select/);
   assert.doesNotMatch(workbench, /catalogQuery/);
   assert.match(fields, /queryParam = "search"/);

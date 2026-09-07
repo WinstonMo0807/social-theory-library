@@ -1319,6 +1319,15 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           />
           <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
           <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+            label="外部标识"
+            targetType="person"
+            targetId={draft.personId}
+            fieldName="external_identifier"
+            query={draft.originalName.trim() || draft.name}
+            formContext={{ language: "zh" }}
+            onAccepted={resource.refresh}
+          />
+          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
             label="机构"
             targetType="person"
             targetId={draft.personId}

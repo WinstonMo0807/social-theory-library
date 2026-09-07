@@ -18,6 +18,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.query_lexicon.normalization import normalize_term
+from .v304_helpers import activate_catalog_revision
 
 
 pytestmark = pytest.mark.django_db
@@ -25,12 +26,13 @@ pytestmark = pytest.mark.django_db
 
 def create_public_work(title="共同研究"):
     work = Work.objects.create(title=title, document_type="book", language="zh-CN")
-    Edition.objects.create(
+    edition = Edition.objects.create(
         work=work,
         state="published",
         is_primary=True,
         public_slug=f"work-{work.id}",
     )
+    activate_catalog_revision(edition, fulltext_ready=False)
     return work
 
 
