@@ -96,6 +96,7 @@ type HealthRecovery = {
 };
 
 type FunctionalHealthPayload = {
+  layers?: { key: string; label: string; status: HealthStatus; checks: { key: string; label: string; status: HealthStatus; summary: string; critical: boolean }[] }[];
   version: string;
   generated_at: string;
   overall_status: HealthStatus;
@@ -453,6 +454,10 @@ export function FunctionalHealthPanel({
 
   return (
     <section className="functional-health-panel admin-panel" aria-labelledby="functional-health-title" aria-busy={loading || Boolean(pendingAction)}>
+      {payload?.layers ? <section className="workflow-publication-summary" aria-label="分层健康检查">{payload.layers.map((layer) => <details key={layer.key}>
+        <summary>{layer.label} · {statusLabel(layer.status)}</summary>
+        {layer.checks.map((check) => <p key={check.key}><strong>{check.label}</strong> {statusLabel(check.status)}<br />{check.summary}</p>)}
+      </details>)}</section> : null}
       <header>
         <div>
           <p className="functional-health-kicker">功能健康</p>

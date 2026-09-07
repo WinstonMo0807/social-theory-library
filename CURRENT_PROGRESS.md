@@ -46,6 +46,12 @@ Reader/收藏进度/Scoped Search/公开 Range 夹具更新后 27 passed，退�
 
 最后 fallback 用例定向 1 passed，退出 0。语义与 Reader 回归切片已收口，剩余后端 failure 不估算为已通过。下一项优先补 L1/L2/L3 功能健康，把 workbench 实际构造、活动 revision 与公开目录检查接到既有探针，避免 /ready 绿色掩盖工作台故障。Person 合并已实读 9 类 Person 引用和 5 类 ScholarProfile 引用，事务实现仍待完成。
 
+回归切片已提交 `6206b16`。分层健康已接入原 HealthCheckRegistry 和 Processing Center，包括 migration、真实 workbench 只读构造、活动 revision/公开 serializer，以及独立公网探测。/ready 明确只证明 database/schema，L2/L3 未执行；历史陈旧健康结果在层摘要标为 unknown。新增只读 check_functional_readiness 命令，缺真实样本不能通过门槛；正在跑相关回归和构建。
+
+分层健康/原调度/权限组 34 passed，空样本门槛 1 passed。TypeScript、lint、构建及完整 npm test 181 项通过。公网 API 验证已要求有效 readiness JSON，不能用 WAF/HTML 200 冒充成功；最后探针专项正在收口。没有实际请求生产或自动执行恢复。
+
+最后分层健康专项 8 passed、migration drift 退出 0。该项可本地交接，生产检查尚未执行。下一步继续剩余回归、MediaAsset/Rendition 与人物合并，不把当前部分实现冒充 v3.0.5 全部完成。
+
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 
 完整基线随后完成。后端 888 通过、90 失败、32 跳过；前端 161 通过、17 失败。TypeScript 与 build 通过，lint 8 个错误、3 个警告。生产发布明确阻断。失败按旧公开快照夹具、字段确认规则、异步 outbox 接口与真实回归分类，不放宽公开权限或把机器确认视为人工决定。

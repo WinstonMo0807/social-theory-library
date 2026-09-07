@@ -52,6 +52,7 @@ def readiness_state():
 
 def ready(request):
     state = readiness_state()
+    state.update({"scope": "infrastructure_database_and_schema", "application_functional": "not_evaluated", "external_access": "not_evaluated"})
     return JsonResponse(state, status=200 if state["status"] == "ready" else 503)
 
 

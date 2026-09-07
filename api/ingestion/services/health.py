@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import json
 import re
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -180,7 +181,7 @@ def worker_runtime_status(
     }
 
 
-def http_service_health(url: str, path: str = "", *, timeout: int = 4) -> dict:
+def http_service_health(url: str, path: str = "", *, timeout: int = 4, expected_json: dict | None = None) -> dict:
     if not url:
         return {"configured": False, "reachable": True, "detail": "未配置"}
     target = f"{url.rstrip('/')}{path}"
@@ -188,7 +189,14 @@ def http_service_health(url: str, path: str = "", *, timeout: int = 4) -> dict:
         request = Request(target, method="GET")
         with urlopen(request, timeout=timeout) as response:
             reachable = 200 <= int(response.status) < 500
-        return {"configured": True, "reachable": reachable, "detail": "可连接"}
+            functional = None
+            if expected_json is not None:
+                payload = json.loads(response.read(65536))
+                functional = isinstance(payload, dict) and all(payload.get(key) == value for key, value in expected_json.items())
+        result = {"configured": True, "reachable": reachable, "detail": "可连接"}
+        if expected_json is not None:
+            result["functional"] = functional
+        return result
     except (OSError, URLError, ValueError) as exc:
         return {
             "configured": True,

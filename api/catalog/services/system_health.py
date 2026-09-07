@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -79,6 +79,7 @@ class HealthProbe:
     probable_causes: tuple[str, ...] = ()
     safe_recovery_actions: tuple[str, ...] = ("rerun_probe",)
     critical: bool = False
+    layer: str = "application"
 
 
 class HealthCheckRegistry:
@@ -155,10 +156,11 @@ def _worker_probe() -> ProbeResult:
 
 
 def _storage_reader_probe() -> ProbeResult:
+    from catalog.services.publication_eligibility import active_asset_q
     asset = (
         Asset.objects.filter(
-            edition__state=PublicationState.PUBLISHED,
-            kind__in=[Asset.Kind.ORIGINAL, Asset.Kind.NORMALIZED],
+            active_asset_q(asset_prefix=""),
+            kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             is_current=True,
         )
@@ -299,6 +301,64 @@ def _public_catalog_probe() -> ProbeResult:
         {"published_editions": published, "missing_public_slug": missing_slug, "search_index_missing": stale_index},
         error_code="public_catalog_inconsistent" if not functional else "public_catalog_not_fresh" if not productive else "",
     )
+
+
+def _migration_probe() -> ProbeResult:
+    from django.db.migrations.executor import MigrationExecutor
+
+    executor = MigrationExecutor(connection)
+    pending = len(executor.migration_plan(executor.loader.graph.leaf_nodes()))
+    return ProbeResult(True, True, pending == 0, pending == 0, "迁移已一致。" if not pending else "存在未应用的迁移。",
+                       {"pending_migrations": pending}, "pending_migrations" if pending else "")
+
+
+def _workbench_probe() -> ProbeResult:
+    from catalog.services.admin_workflow import build_edition_workflow
+
+    editions = list(Edition.objects.select_related("work").order_by("-updated_at")[:2])
+    if not editions:
+        return ProbeResult(True, True, None, None, "没有可构造工作台的书目。", error_code="workbench_fixture_missing")
+    for edition in editions:
+        workflow = build_edition_workflow(edition)
+        if not workflow.get("steps") or not isinstance(workflow.get("publication_preflight"), dict):
+            return ProbeResult(True, True, False, False, "工作台返回了不完整结构。", error_code="workbench_contract_invalid")
+    return ProbeResult(True, True, True, True, "工作台只读构造正常。", {"editions_checked": len(editions)})
+
+
+def _active_revision_probe() -> ProbeResult:
+    from catalog.models import CatalogPublicationRevision
+    from catalog.services.publication_eligibility import public_editions
+    from catalog.serializers import WorkCardSerializer
+
+    pointed = Edition.objects.filter(state=PublicationState.PUBLISHED, active_catalog_revision__isnull=False)
+    invalid = pointed.exclude(active_catalog_revision__edition_id=F("pk"), active_catalog_revision__status="active", active_catalog_revision__metadata_ready=True).count()
+    missing = Edition.objects.filter(state=PublicationState.PUBLISHED, active_catalog_revision__isnull=True).exclude(
+        catalog_revisions__status=CatalogPublicationRevision.Status.PREPARING,
+    ).count()
+    if invalid or missing:
+        return ProbeResult(True, True, False, False, "公开馆藏存在无效修订指针。", {"invalid_pointers": invalid, "missing_pointers": missing}, "invalid_publication_pointer")
+    example = public_editions().first()
+    if example is None:
+        return ProbeResult(True, True, True, None, "修订指针一致，尚无公开样本。", error_code="public_fixture_missing")
+    payload = WorkCardSerializer(example.work).data
+    valid = bool(payload.get("edition") and payload.get("title"))
+    return ProbeResult(True, True, valid, valid, "公开目录与活动修订读取正常。" if valid else "公开目录序列化失败。",
+                       {"invalid_pointers": 0, "missing_pointers": 0, "work_id": str(example.work_id)}, "" if valid else "public_serializer_invalid")
+
+
+def _external_public_probe() -> ProbeResult:
+    if not settings.PUBLIC_DEPLOYMENT_MODE:
+        return ProbeResult(False, None, None, None, "本地环境不探测公网入口。", error_code="external_probe_disabled")
+    base = str(settings.PUBLIC_WEB_URL).rstrip("/")
+    if not base.startswith("https://"):
+        return ProbeResult(False, False, False, False, "公网 HTTPS 入口未配置。", error_code="public_origin_invalid")
+    result = http_service_health(f"{base}/api/ready/", expected_json={"status": "ready", "database": True, "pending_migrations": 0})
+    reachable = bool(result.get("reachable"))
+    functional = result.get("functional") if reachable else False
+    return ProbeResult(True, reachable, functional, functional,
+                       "公网 API 就绪响应已核对，完整外部页面验收仍需独立执行。" if functional else "公网 API 未通过检查，需与应用内部故障分开诊断。",
+                       {"scope": "external_api_only", "application_rollback_allowed": False},
+                       "" if reachable else "external_edge_unavailable")
 
 
 def _research_contract_probe() -> ProbeResult:
@@ -512,12 +572,16 @@ def _research_productive_probe() -> ProbeResult:
 
 def _register_probes() -> None:
     values = [
-        HealthProbe("database", "catalog_core", "数据库", 60, _database_probe, ("公开目录", "后台编辑", "研究候选"), ("PostgreSQL 不可达", "连接池耗尽"), critical=True),
-        HealthProbe("cache", "catalog_core", "Redis / Cache", 60, _cache_probe, ("会话", "缓存", "任务协调"), ("Redis 不可达",), critical=True),
-        HealthProbe("worker", "background_processing", "Broker / Worker / Beat", 60, _worker_probe, ("入库", "OCR", "Research", "索引"), ("Broker 不可达", "Worker 未消费", "Beat 未调度"), ("rerun_probe", "recover_ingestion_queue"), True),
-        HealthProbe("storage_reader", "public_reading", "PDF 存储与 Reader", 300, _storage_reader_probe, ("在线阅读", "下载", "复制"), ("NAS 挂载不可用", "PDF 缺失或损坏"), critical=True),
+        HealthProbe("database", "catalog_core", "数据库", 60, _database_probe, ("公开目录", "后台编辑", "研究候选"), ("PostgreSQL 不可达", "连接池耗尽"), critical=True, layer="infrastructure"),
+        HealthProbe("cache", "catalog_core", "Redis / Cache", 60, _cache_probe, ("会话", "缓存", "任务协调"), ("Redis 不可达",), critical=True, layer="infrastructure"),
+        HealthProbe("migrations", "catalog_core", "数据库迁移", 300, _migration_probe, critical=True, layer="infrastructure"),
+        HealthProbe("catalog_workbench", "catalog_editing", "编目工作台", 300, _workbench_probe, ("编目", "上架", "馆藏维护"), critical=True),
+        HealthProbe("active_publication", "public_catalog", "公开修订与目录", 300, _active_revision_probe, ("公开作品", "Reader"), critical=True),
+        HealthProbe("external_public", "public_internet", "公网入口", 300, _external_public_probe, ("公网访问",), ("Cloudflare 或上游出站故障",), layer="external"),
+        HealthProbe("worker", "background_processing", "Broker / Worker / Beat", 60, _worker_probe, ("入库", "OCR", "Research", "索引"), ("Broker 不可达", "Worker 未消费", "Beat 未调度"), ("rerun_probe", "recover_ingestion_queue"), True, layer="infrastructure"),
+        HealthProbe("storage_reader", "public_reading", "PDF 存储与 Reader", 300, _storage_reader_probe, ("在线阅读", "下载", "复制"), ("NAS 挂载不可用", "PDF 缺失或损坏"), critical=True, layer="infrastructure"),
         HealthProbe("ocr", "ingestion", "PaddleOCR", 300, _ocr_probe, ("OCR", "全文复制", "入库"), ("OCR 容器不可达", "模型未加载"), ("rerun_probe", "recover_ingestion_queue")),
-        HealthProbe("semantic", "search", "Meilisearch 与语义索引", 300, _semantic_probe, ("站内检索", "语义检索"), ("Meilisearch 不可达", "活动索引缺失"), ("rerun_probe", "recover_semantic_queue"), True),
+        HealthProbe("semantic", "search", "Meilisearch 与语义索引", 300, _semantic_probe, ("站内检索", "语义检索"), ("Meilisearch 不可达", "活动索引缺失"), ("rerun_probe", "recover_semantic_queue"), False),
         HealthProbe("query_lexicon", "search", "QueryLexicon", 300, _query_lexicon_probe, ("双语检索", "实体匹配"), ("投影未初始化", "重建任务失败"), ("rerun_probe", "recover_query_lexicon")),
         HealthProbe("processing", "background_processing", "处理任务", 60, _processing_probe, ("入库", "OCR", "索引", "研究"), ("任务 ownership 失效", "Worker 中断"), ("rerun_probe", "recover_ingestion_queue")),
         HealthProbe("public_catalog", "public_catalog", "公开目录新鲜度", 300, _public_catalog_probe, ("首页", "检索", "作品页"), ("发布投影未刷新", "搜索索引时间缺失"), critical=True),
@@ -732,6 +796,8 @@ STATUS_RANK = {
 
 
 CAPABILITY_LABELS = {
+    "catalog_editing": "编目功能",
+    "public_internet": "公网入口",
     "catalog_core": "书库核心服务",
     "public_reading": "公开阅读",
     "public_catalog": "公开目录",
@@ -747,6 +813,23 @@ def functional_health_snapshot() -> dict[str, Any]:
     from catalog.services.processing_center_diagnostics import processing_center_diagnostics
 
     latest = _latest_runs()
+    layers = []
+    now = timezone.now()
+    for layer, label in (("infrastructure", "基础设施"), ("application", "应用功能"), ("external", "公网入口")):
+        rows = []
+        for probe in HEALTH_CHECKS.all():
+            if probe.layer != layer:
+                continue
+            run = latest.get(probe.key)
+            fresh = run is not None and (now - run.started_at).total_seconds() <= 2 * probe.interval_seconds
+            rows.append({"key": probe.key, "label": probe.label,
+                         "status": run.status if fresh else HealthCheckRun.Status.UNKNOWN,
+                         "summary": run.summary if fresh else "尚无新鲜探测结果。", "critical": probe.critical})
+        required = [row["status"] for row in rows if row["critical"]]
+        status = max(required or [row["status"] for row in rows], key=lambda value: STATUS_RANK.get(value, 0), default=HealthCheckRun.Status.UNKNOWN)
+        if status == HealthCheckRun.Status.HEALTHY and any(row["status"] in {HealthCheckRun.Status.FAILED, HealthCheckRun.Status.DEGRADED} for row in rows):
+            status = HealthCheckRun.Status.DEGRADED
+        layers.append({"key": layer, "label": label, "status": status, "checks": rows})
     open_incidents = list(HealthIncident.objects.filter(status__in=[HealthIncident.Status.OPEN, HealthIncident.Status.RECOVERING]).order_by("-severity", "-last_seen_at")[:100])
     incidents_by_capability: dict[str, list[HealthIncident]] = defaultdict(list)
     for row in open_incidents:
@@ -791,6 +874,7 @@ def functional_health_snapshot() -> dict[str, Any]:
     recoveries = RecoveryAction.objects.select_related("incident").order_by("-created_at")[:50]
     return {
         "version": HEALTH_REGISTRY_VERSION,
+        "layers": layers,
         "generated_at": timezone.now(),
         "overall_status": max((row["status"] for row in capabilities), key=lambda value: STATUS_RANK.get(value, 0), default=HealthCheckRun.Status.UNKNOWN),
         "capabilities": capabilities,
