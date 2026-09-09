@@ -37,6 +37,7 @@ const navigation = [
   ]],
   ["馆藏", [
     ["/admin/library", BookOpen, "作品"],
+    ["/admin/media", BookOpen, "媒体"],
     ["/admin/library?view=editions", Boxes, "版本与文件"],
     ["/admin/library?view=quality", Activity, "馆藏质量"],
   ]],

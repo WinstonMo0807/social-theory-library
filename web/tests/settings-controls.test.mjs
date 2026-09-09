@@ -123,7 +123,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
 
   const expectedGroups = [
     ["工作", ["/admin", "/admin/uploads", "/admin/review", "/admin/publication"]],
-    ["馆藏", ["/admin/library", "/admin/library?view=editions", "/admin/library?view=quality"]],
+    ["馆藏", ["/admin/library", "/admin/media", "/admin/library?view=editions", "/admin/library?view=quality"]],
     ["知识", [
       "/admin/knowledge",
       "/admin/scholars",

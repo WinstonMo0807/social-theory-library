@@ -32,6 +32,8 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     summary: value.abstract || "馆藏简介待补充。",
     cover: coverStyles[index % coverStyles.length],
     coverImage: value.cover || value.recommendation_image || undefined,
+    coverSources: value.cover_media?.renditions,
+    coverAlt: value.cover_media?.alt_text || undefined,
     pages: value.edition?.readable_asset?.page_count ?? 0,
     language: value.language,
     authors: authorContributions.map((row) => ({

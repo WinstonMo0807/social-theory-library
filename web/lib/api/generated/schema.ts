@@ -7,7 +7,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["catalog_field_contracts_retrieve"];
+        get: operations["admin_catalog_field_contracts_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -25,7 +25,7 @@ export interface paths {
         };
         get: operations["cataloging_sessions_list"];
         put?: never;
-        post: operations["cataloging_sessions_create"];
+        post: operations["admin_cataloging_sessions_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -57,7 +57,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cataloging_sessions_abandon_create"];
+        post: operations["admin_cataloging_sessions_abandon_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -73,7 +73,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cataloging_sessions_candidates_decision_create"];
+        post: operations["admin_cataloging_sessions_candidates_decision_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -89,7 +89,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cataloging_sessions_metadata_decision_create"];
+        post: operations["admin_cataloging_sessions_metadata_decision_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -105,7 +105,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cataloging_sessions_metadata_import_create"];
+        post: operations["admin_cataloging_sessions_metadata_import_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/media/cover/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_editions_media_cover_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -119,7 +135,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["editions_publication_history_list"];
+        get: operations["admin_editions_publication_history_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -135,7 +151,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["editions_publication_prepare_retrieve"];
+        get: operations["admin_editions_publication_prepare_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -153,7 +169,71 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["editions_publication_rollback_create"];
+        post: operations["admin_editions_publication_rollback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/media/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_media_list"];
+        put?: never;
+        post: operations["admin_media_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/media/{media_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_media_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["admin_media_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/media/{media_id}/renditions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_media_renditions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/works/{work_id}/cover-metadata/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["works_cover_metadata_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -199,7 +279,7 @@ export interface components {
         CatalogingSession: {
             /** Format: uuid */
             readonly id: string;
-            readonly source_type: components["schemas"]["SourceTypeEnum"];
+            readonly source_type: components["schemas"]["CatalogingSourceTypeEnum"];
             readonly status: components["schemas"]["StatusEnum"];
             /** Format: uuid */
             readonly edition_id: string | null;
@@ -216,7 +296,7 @@ export interface components {
             readonly workbench_url: string;
         };
         CatalogingSessionCreateRequest: {
-            source_type: components["schemas"]["SourceTypeEnum"];
+            source_type: components["schemas"]["CatalogingSourceTypeEnum"];
             /** Format: uuid */
             edition_id?: string;
             /** Format: uuid */
@@ -235,6 +315,14 @@ export interface components {
             results: components["schemas"]["CatalogingSession"][];
         };
         /**
+         * @description * `upload` - 上传文献
+         *     * `manual` - 手工编目
+         *     * `import` - 导入书目
+         *     * `existing` - 编辑馆藏
+         * @enum {string}
+         */
+        CatalogingSourceTypeEnum: "upload" | "manual" | "import" | "existing";
+        /**
          * @description * `unchanged` - unchanged
          *     * `added` - added
          *     * `removed` - removed
@@ -242,6 +330,20 @@ export interface components {
          * @enum {string}
          */
         ChangeEnum: "unchanged" | "added" | "removed" | "changed";
+        CoverMediaSelectionRequest: {
+            /** Format: uuid */
+            media_id: string;
+        };
+        CoverMediaSelectionResult: {
+            saved: boolean;
+            /** Format: uuid */
+            media_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            editorial_revision_id: string | null;
+            workbench_url: string;
+        };
         /**
          * @description * `book` - 图书
          *     * `journal_article` - 期刊论文
@@ -252,6 +354,89 @@ export interface components {
          */
         DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
         /**
+         * @description * `cover` - cover
+         *     * `portrait` - portrait
+         *     * `hero` - hero
+         *     * `card` - card
+         *     * `thumbnail` - thumbnail
+         * @enum {string}
+         */
+        KindEnum: "cover" | "portrait" | "hero" | "card" | "thumbnail";
+        MediaAsset: {
+            /** Format: uuid */
+            readonly id: string;
+            media_type: string;
+            source_type?: components["schemas"]["MediaSourceTypeEnum"];
+            source_url?: string;
+            source_label?: string;
+            rights?: string;
+            license?: string;
+            credit?: string;
+            alt_text?: string;
+            /** Format: int64 */
+            width: number;
+            /** Format: int64 */
+            height: number;
+            checksum: string;
+            /** Format: int64 */
+            byte_size: number;
+            /** Format: double */
+            focal_x?: number;
+            /** Format: double */
+            focal_y?: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly renditions: components["schemas"]["MediaRendition"][];
+        };
+        MediaRendition: {
+            /** Format: uuid */
+            readonly id: string;
+            kind: string;
+            /** Format: int64 */
+            requested_width: number;
+            /** Format: int64 */
+            width: number;
+            /** Format: int64 */
+            height: number;
+            checksum: string;
+            /** Format: int64 */
+            byte_size: number;
+            readonly url: string;
+        };
+        MediaRenditionRequestRequest: {
+            /** @default 640 */
+            width: components["schemas"]["WidthEnum"];
+            /** @default cover */
+            kind: components["schemas"]["KindEnum"];
+        };
+        /**
+         * @description * `upload` - 人工上传
+         *     * `pdf` - 文献页面
+         *     * `external` - 外部资料
+         *     * `generated` - 生成图片
+         * @enum {string}
+         */
+        MediaSourceTypeEnum: "upload" | "pdf" | "external" | "generated";
+        MediaUploadRequest: {
+            /** Format: date-time */
+            expected_updated_at?: string;
+            source_type?: components["schemas"]["MediaSourceTypeEnum"];
+            source_url?: string;
+            source_label?: string;
+            rights?: string;
+            license?: string;
+            credit?: string;
+            alt_text?: string;
+            /** Format: double */
+            focal_x?: number;
+            /** Format: double */
+            focal_y?: number;
+            /** Format: binary */
+            image: string;
+        };
+        /**
          * @description * `reject` - reject
          *     * `reopen` - reopen
          * @enum {string}
@@ -259,6 +444,41 @@ export interface components {
         MetadataDecisionActionEnum: "reject" | "reopen";
         MetadataDecisionRequest: {
             action: components["schemas"]["MetadataDecisionActionEnum"];
+        };
+        PatchedMediaMetadataRequest: {
+            /** Format: date-time */
+            expected_updated_at?: string;
+            source_type?: components["schemas"]["MediaSourceTypeEnum"];
+            source_url?: string;
+            source_label?: string;
+            rights?: string;
+            license?: string;
+            credit?: string;
+            alt_text?: string;
+            /** Format: double */
+            focal_x?: number;
+            /** Format: double */
+            focal_y?: number;
+        };
+        PublicCoverMedia: {
+            /** Format: uuid */
+            media_id: string;
+            /** Format: uuid */
+            primary_rendition_id: string;
+            alt_text: string;
+            source_label: string;
+            source_url: string;
+            rights: string;
+            license: string;
+            credit: string;
+            renditions: components["schemas"]["PublicMediaRendition"][];
+        };
+        PublicMediaRendition: {
+            /** Format: uuid */
+            id: string;
+            width: number;
+            height: number;
+            url: string;
         };
         PublicationFieldDiff: {
             field: string;
@@ -314,14 +534,6 @@ export interface components {
          */
         SeverityEnum: "blocking" | "warning" | "info";
         /**
-         * @description * `upload` - 上传文献
-         *     * `manual` - 手工编目
-         *     * `import` - 导入书目
-         *     * `existing` - 编辑馆藏
-         * @enum {string}
-         */
-        SourceTypeEnum: "upload" | "manual" | "import" | "existing";
-        /**
          * @description * `drafting` - 编目中
          *     * `reviewing` - 核对中
          *     * `ready` - 准备发布
@@ -331,6 +543,13 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "drafting" | "reviewing" | "ready" | "publishing" | "published" | "abandoned";
+        /**
+         * @description * `320` - 320
+         *     * `640` - 640
+         *     * `1280` - 1280
+         * @enum {integer}
+         */
+        WidthEnum: 320 | 640 | 1280;
     };
     responses: never;
     parameters: never;
@@ -340,7 +559,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    catalog_field_contracts_retrieve: {
+    admin_catalog_field_contracts_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -380,7 +599,7 @@ export interface operations {
             };
         };
     };
-    cataloging_sessions_create: {
+    admin_cataloging_sessions_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -450,7 +669,7 @@ export interface operations {
             };
         };
     };
-    cataloging_sessions_abandon_create: {
+    admin_cataloging_sessions_abandon_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -479,7 +698,7 @@ export interface operations {
             };
         };
     };
-    cataloging_sessions_candidates_decision_create: {
+    admin_cataloging_sessions_candidates_decision_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -509,7 +728,7 @@ export interface operations {
             };
         };
     };
-    cataloging_sessions_metadata_decision_create: {
+    admin_cataloging_sessions_metadata_decision_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -539,7 +758,7 @@ export interface operations {
             };
         };
     };
-    cataloging_sessions_metadata_import_create: {
+    admin_cataloging_sessions_metadata_import_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -576,7 +795,34 @@ export interface operations {
             };
         };
     };
-    editions_publication_history_list: {
+    admin_editions_media_cover_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverMediaSelectionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CoverMediaSelectionRequest"];
+                "multipart/form-data": components["schemas"]["CoverMediaSelectionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverMediaSelectionResult"];
+                };
+            };
+        };
+    };
+    admin_editions_publication_history_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -597,7 +843,7 @@ export interface operations {
             };
         };
     };
-    editions_publication_prepare_retrieve: {
+    admin_editions_publication_prepare_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -618,7 +864,7 @@ export interface operations {
             };
         };
     };
-    editions_publication_rollback_create: {
+    admin_editions_publication_rollback_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -649,6 +895,153 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    admin_media_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"][];
+                };
+            };
+        };
+    };
+    admin_media_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["MediaUploadRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MediaUploadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+        };
+    };
+    admin_media_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+        };
+    };
+    admin_media_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMediaMetadataRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMediaMetadataRequest"];
+                "multipart/form-data": components["schemas"]["PatchedMediaMetadataRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+        };
+    };
+    admin_media_renditions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MediaRenditionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MediaRenditionRequestRequest"];
+                "multipart/form-data": components["schemas"]["MediaRenditionRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRendition"];
+                };
+            };
+        };
+    };
+    works_cover_metadata_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCoverMedia"];
                 };
             };
         };

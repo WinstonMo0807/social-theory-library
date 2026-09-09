@@ -13,5 +13,8 @@ VERIFIED_NAMES = {
     "catalog-field-contracts",
     "publication-prepare", "publication-rollback",
     "publication-history",
+    "media-list", "media-detail", "media-rendition",
+    "work-cover-media-selection",
+    "public-cover-metadata",
 }
 urlpatterns = [path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES]))]

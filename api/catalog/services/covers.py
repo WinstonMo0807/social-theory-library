@@ -214,7 +214,8 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
     else:
         filename = f"{slugify(work.title)[:100] or work.pk}-{uuid4().hex}-cover.jpg"
         work.cover.save(filename, ContentFile(content), save=False)
-        work.save(update_fields=["cover", "updated_at"])
+        work.cover_rendition = None
+        work.save(update_fields=["cover_rendition", "cover", "updated_at"])
         value = work.cover.name
     from catalog.services.field_decisions import record_edition_field_decision
 

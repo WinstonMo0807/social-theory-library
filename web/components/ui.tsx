@@ -39,7 +39,12 @@ export function SectionHeading({
 export function BookCover({ work, size = "normal" }: { work: Work; size?: "small" | "normal" | "large" }) {
   return (
     <div className={`book-cover ${work.cover} ${size}${work.coverImage ? " has-image" : ""}`} aria-label={`${work.title}封面`}>
-      {work.coverImage ? (
+      {work.coverSources?.length ? (
+        <picture>
+          <source type="image/webp" srcSet={work.coverSources.map((row) => `${row.url} ${row.width}w`).join(", ")} sizes={size === "large" ? "(max-width: 760px) 50vw, 320px" : "(max-width: 760px) 40vw, 200px"} />
+          <img className="book-cover-image" src={work.coverImage} width={work.coverSources[0].width} height={work.coverSources[0].height} alt={work.coverAlt || `${work.title}封面`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        </picture>
+      ) : work.coverImage ? (
         <span
           className="book-cover-image"
           style={{ backgroundImage: `url("${work.coverImage}")` }}

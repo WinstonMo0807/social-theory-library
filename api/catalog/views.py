@@ -178,7 +178,26 @@ class PublicWorkCoverView(APIView):
 
     def get(self, request, work_id):
         work = get_object_or_404(public_works(), pk=work_id)
-        cover_name = (_active_work_snapshot(work).get("work") or {}).get("cover", "")
+        work_snapshot = _active_work_snapshot(work).get("work") or {}
+        media_snapshot = work_snapshot.get("cover_media")
+        if media_snapshot:
+            from catalog.models import MediaRendition
+
+            rendition_id = str(request.query_params.get("rendition") or media_snapshot.get("primary_rendition_id") or "")
+            allowed = {str(row["id"]) for row in media_snapshot.get("renditions", [])}
+            if rendition_id not in allowed:
+                return Response({"detail": "该图片不属于当前公开版本。"}, status=404)
+            rendition = get_object_or_404(MediaRendition, pk=rendition_id, media_id=media_snapshot["media_id"])
+            try:
+                image = rendition.file.open("rb")
+            except OSError:
+                return Response({"detail": "公开封面暂时无法读取。"}, status=503)
+            response = FileResponse(image, content_type="image/webp")
+            response["Cache-Control"] = "public, max-age=300"
+            response["ETag"] = f'"{rendition.checksum}"'
+            response["X-Content-Type-Options"] = "nosniff"
+            return response
+        cover_name = work_snapshot.get("cover", "")
         storage = Work._meta.get_field("cover").storage
         if not cover_name or not storage.exists(cover_name):
             return Response(

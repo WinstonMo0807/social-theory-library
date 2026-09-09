@@ -118,6 +118,7 @@ class Work(UUIDTimeStampedModel):
         related_name="translations",
     )
     cover = models.ImageField(upload_to="public/covers/%Y/%m/", blank=True)
+    cover_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="cover_works")
     recommendation_image = models.ImageField(
         upload_to="public/recommendations/%Y/%m/",
         blank=True,
@@ -3481,6 +3482,100 @@ class EditorialRevision(UUIDTimeStampedModel):
         indexes = [
             models.Index(fields=["target_type", "target_id", "status", "-revision"]),
         ]
+
+
+class ImmutableMediaQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        if self.model.immutable_file_fields.intersection(kwargs):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("媒体文件内容不可覆盖，请创建新的媒体版本。")
+        return super().update(**kwargs)
+
+
+def _validate_media_file_identity(instance):
+    if instance._state.adding:
+        return
+    fields = {instance._meta.get_field(name).attname for name in instance.immutable_file_fields}
+    before = type(instance).objects.filter(pk=instance.pk).values(*fields).first()
+    if before and any(
+        before[name] != (instance.file.name if name == "file" else getattr(instance, name))
+        for name in before
+    ):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("媒体文件内容不可覆盖，请创建新的媒体版本。")
+
+
+class MediaAsset(UUIDTimeStampedModel):
+    """An immutable image file with explicit attribution and editorial metadata."""
+
+    objects = ImmutableMediaQuerySet.as_manager()
+    immutable_file_fields = frozenset({"file", "media_type", "checksum", "width", "height", "byte_size"})
+
+    class SourceType(models.TextChoices):
+        UPLOAD = "upload", "人工上传"
+        PDF = "pdf", "文献页面"
+        EXTERNAL = "external", "外部资料"
+        GENERATED = "generated", "生成图片"
+
+    file = models.FileField(upload_to="private/media/originals/%Y/%m/")
+    media_type = models.CharField(max_length=40)
+    source_type = models.CharField(max_length=32, choices=SourceType.choices, default=SourceType.UPLOAD)
+    source_url = models.URLField(max_length=1000, blank=True)
+    source_label = models.CharField(max_length=300, blank=True)
+    rights = models.TextField(blank=True)
+    license = models.CharField(max_length=200, blank=True)
+    credit = models.CharField(max_length=500, blank=True)
+    alt_text = models.CharField(max_length=1000, blank=True)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    checksum = models.CharField(max_length=64, unique=True)
+    byte_size = models.PositiveBigIntegerField()
+    focal_x = models.FloatField(default=0.5)
+    focal_y = models.FloatField(default=0.5)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(focal_x__gte=0, focal_x__lte=1, focal_y__gte=0, focal_y__lte=1), name="media_focal_in_bounds"),
+            models.CheckConstraint(condition=models.Q(width__gt=0, height__gt=0), name="media_dimensions_positive"),
+        ]
+
+    def save(self, *args, **kwargs):
+        _validate_media_file_identity(self)
+        return super().save(*args, **kwargs)
+
+
+class MediaRendition(UUIDTimeStampedModel):
+    objects = ImmutableMediaQuerySet.as_manager()
+    immutable_file_fields = frozenset({"media", "media_id", "variant_key", "kind", "requested_width", "file", "width", "height", "checksum", "byte_size", "metadata_snapshot"})
+
+    media = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, related_name="renditions")
+    variant_key = models.CharField(max_length=64)
+    group_key = models.CharField(max_length=64, blank=True, db_index=True)
+    metadata_snapshot = models.JSONField(default=dict, blank=True)
+    kind = models.CharField(max_length=20)
+    requested_width = models.PositiveIntegerField()
+    file = models.FileField(upload_to="private/media/renditions/%Y/%m/")
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    checksum = models.CharField(max_length=64)
+    byte_size = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["media", "variant_key"], name="unique_media_rendition")]
+
+    def save(self, *args, **kwargs):
+        _validate_media_file_identity(self)
+        return super().save(*args, **kwargs)
+
+
+class CatalogPublicationMedia(UUIDTimeStampedModel):
+    catalog_revision = models.ForeignKey("CatalogPublicationRevision", on_delete=models.PROTECT, related_name="media_references")
+    rendition = models.ForeignKey(MediaRendition, on_delete=models.PROTECT, related_name="publication_references")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["catalog_revision", "rendition"], name="unique_catalog_publication_media")]
 
 
 class CatalogingSession(UUIDTimeStampedModel):

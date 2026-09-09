@@ -59,6 +59,7 @@ export type PublicKnowledgeNodeLink = {
 };
 
 export type ApiWork = {
+  cover_media?: import("./api/generated/schema").components["schemas"]["PublicCoverMedia"] | null;
   id: string;
   document_type: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
   title: string;

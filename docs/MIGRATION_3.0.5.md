@@ -1,5 +1,7 @@
 # 3.0.5 迁移记录（开发中）
 
+媒体增量 0045–0049 的职责和验证见 `V3.0.5_MEDIA.md`。当前 migration 尚未应用生产，不执行 down migration 或覆盖旧文件。
+
 未在生产执行。所有 schema 必须先经过隔离 PostgreSQL 恢复演练，不能用 SQLite 成绩代替。
 
 ## catalog 0043

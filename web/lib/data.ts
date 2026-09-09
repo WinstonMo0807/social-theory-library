@@ -58,6 +58,8 @@ export type Work = {
   summary: string;
   cover: "dark" | "paper" | "cream" | "line";
   coverImage?: string;
+  coverSources?: { url: string; width: number; height: number }[];
+  coverAlt?: string;
   pages: number;
   language?: string;
   authors?: { name: string; slug?: string | null }[];

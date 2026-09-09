@@ -1,0 +1,14 @@
+.layout { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.3fr); gap: 24px; align-items: start; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; }
+.gallery button { text-align: left; padding: 12px; border: 1px solid var(--line); background: var(--surface); }
+.gallery button[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.thumbnail { width: 100%; height: 150px; object-fit: contain; }
+.form { display: grid; gap: 14px; min-width: 0; }
+.layout > section { padding: 20px; }
+.layout h2 { margin: 0 0 16px; }
+.form label { display: grid; gap: 6px; }
+.form input, .form textarea, .form select { max-width: 100%; width: 100%; min-width: 0; }
+.preview { max-width: 100%; max-height: 440px; height: auto; width: auto; object-fit: contain; margin: 16px auto; }
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.message { overflow-wrap: anywhere; }
+@media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }

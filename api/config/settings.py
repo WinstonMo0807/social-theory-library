@@ -171,6 +171,10 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "3.0.5",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "CatalogingSourceTypeEnum": "catalog.services.cataloging_sessions.CATALOGING_SOURCE_TYPES",
+        "MediaSourceTypeEnum": "catalog.services.media.MEDIA_SOURCE_TYPES",
+    },
 }
 
 REST_FRAMEWORK = {

@@ -1,8 +1,20 @@
 # Social Theory Library 3.0.5 当前进度
 
-最近核对时间为 2026-09-07，香港时间。
+最近核对时间为 2026-09-09，香港时间。
 
 ## 3.0.5 当前动作
+
+当前分支为 `codex/v3.0.5-architecture-convergence`，最后本地提交 `cd7eaba`。媒体切片尚未提交，未推送、未连接或部署生产。
+
+已修复媒体导航断言和草稿封面预览。预览从待发布 EditorialRevision 读取选图，使用受保护的私有 URL，不写 canonical Work。新增 Model/QuerySet 媒体内容保护。该组后端 33 项、导航 23 项通过，TypeScript、lint 和 API 漂移检查退出 0。
+
+随后补齐只改 alt/许可时的发布边界。MediaRendition 的 0049 保存不可变资料快照，资料改变会生成新的选择版本；发布前 diff 显示来源、许可和说明，另一个管理员后来修改媒体源资料不会改变已核对的版本。扩大回归 47 passed/1 failed，最后失败为测试给 Edition 而非实际 Work 发布事件设置投影状态，已按事件对象修正。最终 48 passed，退出 0，48.91 秒。当前 `npm test` 重新构建并完成 181 项，退出 0；最新 3 项真实 E2E 通过，退出 0，56.7 秒。当前准备保存媒体本地提交，再处理普通 Editor 首页统计 403 的消费者权限问题。
+
+后续仍有其他实体媒体、人物查重合并、完整工作台/Reader/API/CSS 收敛、legacy 写入冻结、剩余全量后端失败和生产恢复演练。v3.0.5 全部完成与上线门槛均未达到。
+
+### 此前开发记录
+
+下列按发生顺序保留。某一记录中的“当前”只代表当时，最新状态以上方摘要为准。
 
 用户要求的全栈系统升级已开始。完整任务位于本机附件 `bc6af443-82db-4f9a-8e88-e03744b12693/pasted-text.txt`，共 119 节。已核对干净基线 `codex/v3.0.4-cataloging-intelligence`、提交 `340b94f`，并建立 `codex/v3.0.5-architecture-convergence`。原分支未修改。
 
@@ -51,6 +63,16 @@ Reader/收藏进度/Scoped Search/公开 Range 夹具更新后 27 passed，退�
 分层健康/原调度/权限组 34 passed，空样本门槛 1 passed。TypeScript、lint、构建及完整 npm test 181 项通过。公网 API 验证已要求有效 readiness JSON，不能用 WAF/HTML 200 冒充成功；最后探针专项正在收口。没有实际请求生产或自动执行恢复。
 
 最后分层健康专项 8 passed、migration drift 退出 0。该项可本地交接，生产检查尚未执行。下一步继续剩余回归、MediaAsset/Rendition 与人物合并，不把当前部分实现冒充 v3.0.5 全部完成。
+
+分层健康已提交 `cd7eaba`。MediaAsset/Rendition、0045/0046、受保护上传/元数据/预览接口与媒体管理页已实现，首组 8 项通过。曾因主任务在测试运行中改源码导致旧模块常量导入失败，已在稳定源码重跑，不把中间失败当通过。媒体保存增加并发校验，正在运行 9 项媒体专项与包括真实图片上传的新 E2E。公开 Work/Portrait 尚未接入媒体字段，上传不会自行公开。
+
+媒体后端最终 9 passed，退出 0。浏览器前两项仍通过，新媒体用例发现 select 标签定位与 Vinext Image 拒绝 localhost API 图片，真实网络 trace 证明原图/缩略图已保存。已改角色定位和原生 picture/img，保留私网 SSRF 防护，重新构建与 E2E 正在运行。公开封面接入仍待后续完成。
+
+媒体 E2E 又定位到保存后刷新列表会暂时清空 data 并卸载编辑器，导致成功提示和新预览丢失。已保留当前选择对象，刷新不卸载表单；编辑版本号只在本人成功保存后推进，避免隐藏其他管理员的并发修改。正定向重跑媒体浏览器旅程，不用延长等待时间掩盖该问题。
+
+最新媒体定向 E2E 的 .last-run.json 已保存 passed，原句柄续接后失效。当前 Work.cover_rendition 和 rendition group_key 的 0047 已生成。媒体封面可先进入现有 Work EditorialRevision，公开 serializer/图片端点只读取活动快照的精确衍生图；新增响应式 srcset 与媒体库选封面入口，正验证发布隔离。尚未接入 Person/Knowledge/ReadingPath 媒体，不计完整媒体系统完成。
+
+16:53 当前构建和 3 项真实 E2E 通过，包含媒体上传、署名许可、焦点、横幅预览及封面关联。作品媒体发布/契约/编辑修订 35 项通过；0048 新增 CatalogPublicationMedia 真实 FK，保护每个公开衍生图不被删除。正在复核引用保护和小图 srcset 去重；公开图仅允许活动快照中的 ID，不公开媒体原件。
 
 19:00 的 E2E 观察到 Vinext 导航取消时 ERR_STREAM_UNABLE_TO_PIPE、Editor 首页统计请求 403，列为待排查问题。没有覆盖正文/外部 Provider/PostgreSQL/生产 Cloudflare。未推送、未连接生产。
 

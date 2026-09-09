@@ -62,3 +62,47 @@ test("a reader cannot open cataloging or submit a manual catalog", async ({ page
   const response = await page.request.get("http://127.0.0.1:8105/api/catalog/admin/cataloging-sessions/");
   expect(response.status()).toBe(403);
 });
+
+test("media upload keeps a private original and creates a responsive preview", async ({ page }) => {
+  await login(page, "curator");
+  await page.goto("/admin/media");
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 1200;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#334455";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByLabel("图片文件", { exact: true }).setInputFiles({ name: "e2e-media.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
+  await page.getByLabel("图片说明", { exact: true }).fill("E2E 媒体原图");
+  await page.getByRole("button", { name: "上传图片", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "媒体资料与预览", exact: true })).toBeVisible();
+  await page.getByLabel("许可", { exact: true }).fill("仅用于本地测试");
+  await page.getByLabel("水平焦点", { exact: true }).press("Home");
+  await page.getByLabel("水平焦点", { exact: true }).press("ArrowRight");
+  await page.getByRole("combobox", { name: "预览用途", exact: true }).selectOption("hero");
+  await page.getByRole("button", { name: "保存资料并生成预览", exact: true }).click();
+  await expect(page.getByText("媒体资料已保存。此操作不会直接更改公开书目。", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "E2E 媒体原图", exact: true }).last()).toHaveJSProperty("naturalWidth", 640);
+  const result = await page.request.get("http://127.0.0.1:8105/api/catalog/admin/media/");
+  const rows = await result.json();
+  expect(rows[0].width).toBe(800);
+  expect(rows[0].height).toBe(1200);
+  expect(rows[0].license).toBe("仅用于本地测试");
+  expect(rows[0].renditions.length).toBeGreaterThanOrEqual(2);
+  expect(rows[0].file).toBeUndefined();
+  await page.goto("/admin/cataloging/new");
+  await page.getByLabel("作品题名", { exact: true }).fill("E2E 媒体关联书目");
+  await page.getByRole("button", { name: "创建草稿并开始编目" }).click();
+  await expect(page).toHaveURL(/\/admin\/cataloging\/[a-f0-9-]+#work/);
+  const sessionId = new URL(page.url()).pathname.split("/").at(-1);
+  const sessionResponse = await page.request.get(`http://127.0.0.1:8105/api/catalog/admin/cataloging-sessions/${sessionId}/?workspace=0`);
+  const { session } = await sessionResponse.json();
+  await page.goto(`/admin/media?edition=${session.edition_id}`);
+  await page.getByRole("button", { name: /E2E 媒体原图/ }).click();
+  await page.getByRole("button", { name: "用作当前作品封面", exact: true }).click();
+  await expect(page.getByText("封面已保存到书目草稿。请返回工作台核对后发布。", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "返回编目工作台", exact: true })).toBeVisible();
+});

@@ -549,6 +549,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
 
 
 class WorkCardSerializer(serializers.ModelSerializer):
+    cover_media = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
     recommendation_image = serializers.SerializerMethodField()
     edition = serializers.SerializerMethodField()
@@ -572,6 +573,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "first_publication_date",
             "translation_of",
             "cover",
+            "cover_media",
             "recommendation_image",
             "edition",
             "theories",
@@ -607,6 +609,9 @@ class WorkCardSerializer(serializers.ModelSerializer):
 
     def get_cover(self, obj):
         snapshot = self._public_snapshot(obj)
+        media = (snapshot.get("work") or {}).get("cover_media") if snapshot else None
+        if media:
+            return reverse("public-work-cover", kwargs={"work_id": obj.id}) + f"?rendition={media['primary_rendition_id']}"
         cover_name = (
             (snapshot.get("work") or {}).get("cover")
             if snapshot
@@ -619,6 +624,9 @@ class WorkCardSerializer(serializers.ModelSerializer):
         # API container hostname or a development default such as
         # ``http://localhost:8000`` into server-rendered HTML.
         return reverse("public-work-cover", kwargs={"work_id": obj.id})
+
+    def get_cover_media(self, obj):
+        return (self._public_snapshot(obj).get("work") or {}).get("cover_media")
 
     def get_recommendation_image(self, obj):
         snapshot = self._public_snapshot(obj)
@@ -933,9 +941,31 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
         ]
 
     def get_cover(self, obj):
+        media = self.get_cover_media(obj)
+        if media:
+            return reverse("media-rendition-file", kwargs={"rendition_id": media["primary_rendition_id"]})
         if not obj.recommendation_image and not obj.cover:
             return ""
         return reverse("admin-work-recommendation-image", kwargs={"work_id": obj.id})
+
+    def get_cover_media(self, obj):
+        from catalog.models import MediaRendition
+        from catalog.services.media import cover_media_snapshot
+
+        if not hasattr(self, "_preview_media_cache"):
+            self._preview_media_cache = {}
+        if obj.pk not in self._preview_media_cache:
+            rendition_id = self._editorial_preview().get("cover_rendition", obj.cover_rendition_id)
+            primary = (
+                MediaRendition.objects.select_related("media").filter(pk=rendition_id, kind="cover").first()
+                if rendition_id else None
+            )
+            media = cover_media_snapshot(obj, primary=primary) if primary else None
+            if media:
+                for row in media["renditions"]:
+                    row["url"] = reverse("media-rendition-file", kwargs={"rendition_id": row["id"]})
+            self._preview_media_cache[obj.pk] = media
+        return self._preview_media_cache[obj.pk]
 
     def get_recommendation_image(self, obj):
         return self.get_cover(obj)

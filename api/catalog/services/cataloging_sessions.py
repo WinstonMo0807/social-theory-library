@@ -11,6 +11,7 @@ OPEN_STATUSES = (
     CatalogingSession.Status.DRAFTING, CatalogingSession.Status.REVIEWING,
     CatalogingSession.Status.READY, CatalogingSession.Status.PUBLISHING,
 )
+CATALOGING_SOURCE_TYPES = CatalogingSession.SourceType.choices
 
 
 class CatalogingSessionConflict(ValueError):

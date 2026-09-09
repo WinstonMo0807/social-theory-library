@@ -1,4 +1,6 @@
 from django.urls import path
+from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
+from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
@@ -185,6 +187,12 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("works/<uuid:work_id>/cover-metadata/", PublicCoverMetadataView.as_view(), name="public-cover-metadata"),
+    path("admin/editions/<uuid:edition_id>/media/cover/", WorkCoverMediaSelectionView.as_view(), name="work-cover-media-selection"),
+    path("admin/media/", MediaListView.as_view(), name="media-list"),
+    path("admin/media/<uuid:media_id>/", MediaDetailView.as_view(), name="media-detail"),
+    path("admin/media/<uuid:media_id>/renditions/", MediaRenditionView.as_view(), name="media-rendition"),
+    path("admin/media/renditions/<uuid:rendition_id>/file/", MediaRenditionFileView.as_view(), name="media-rendition-file"),
     path("admin/editions/<uuid:edition_id>/publication/history/", PublicationHistoryView.as_view(), name="publication-history"),
     path("admin/editions/<uuid:edition_id>/publication/prepare/", PublicationPrepareView.as_view(), name="publication-prepare"),
     path("admin/editions/<uuid:edition_id>/publication/rollback/", PublicationRollbackView.as_view(), name="publication-rollback"),
