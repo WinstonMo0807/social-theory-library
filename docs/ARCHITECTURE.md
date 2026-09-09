@@ -12,6 +12,8 @@ MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建
 
 媒体原件、衍生图和公开引用由 MediaAsset、MediaRendition、CatalogPublicationMedia 负责。Work 的媒体选择通过原编辑修订发布；精确尺寸和说明固定在活动公开快照中，后台改图不会就地改变读者内容。当前先接入 Work 封面，其他实体仍沿用旧图像字段，详见 V3.0.5_MEDIA。
 
+字段助手的旧 TheorySchool 输入继续可读，但新关联只经既有、经确认且身份安全的 LegacyKnowledgeMapping 写到 KnowledgeNode/WorkNodeRelation。发布过的 Work 仍先建立 EditorialRevision。采用时锁住映射与目标，拒绝缺映射、类型错误、非正式目标或名称不匹配。历史 WorkKnowledgeRelation 和证据原样保留，不把静态扫描归零当作完整旧版退役或运行时零调用证明。
+
 更新日期为 2026-09-05。本文件描述当前源码结构。生产状态来自 NAS 与公网验收，仍属于有时间边界的运行快照。
 
 ## 3.0.4 智能编目与知识发布

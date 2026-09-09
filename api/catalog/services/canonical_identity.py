@@ -78,14 +78,18 @@ def legacy_mapping_safety(mapping: LegacyKnowledgeMapping) -> tuple[bool, str]:
     return True, "ready"
 
 
-def mapped_node_for_legacy(legacy_model: str, legacy_id) -> KnowledgeNode:
+def mapped_node_for_legacy(legacy_model: str, legacy_id, *, for_update: bool = False) -> KnowledgeNode:
     """Resolve an explicitly reviewed legacy mapping without guessing identity."""
 
     if legacy_model not in LEGACY_NODE_MODELS:
         raise CanonicalIdentityError(f"{legacy_model} 不是 3.0 兼容映射对象。")
+    mappings = LegacyKnowledgeMapping.objects.select_related("node")
+    if for_update:
+        # Callers must already own a transaction. Keep the reviewed mapping
+        # and its target stable until the canonical relation is saved.
+        mappings = mappings.select_for_update(of=("self", "node"))
     mapping = (
-        LegacyKnowledgeMapping.objects.select_related("node")
-        .filter(
+        mappings.filter(
             legacy_model=legacy_model,
             legacy_id=legacy_id,
             migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,

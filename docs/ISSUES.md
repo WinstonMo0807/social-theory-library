@@ -8,6 +8,7 @@
 - 升级分支的无上传 EntityResolutionCandidate、人工采用/拒绝/撤销和 Web 新建/保存/重开已验证；MetadataCandidate、完整发布与生产行为仍待完成。不能沿用下面旧版限制描述否认这部分本地实现，也不能据此称升级全部完成。
 - Editor 首页的无权限统计请求已于 2026-09-09 在源码修复。页面复用外层验证后的会话及能力，不再无条件调用管理员统计 API，后端鉴权未改。真实浏览器已核对 Editor 无请求、管理员正常读取、队列断网显错与真实 API 重试。导航取消仍会记录 ERR_STREAM_UNABLE_TO_PIPE，未宣称消除。
 - 2026-09-09 完整后端报告为 1095 项，1002 passed、61 failed、32 skipped，396.086 秒。进程句柄在续接后失效，报告仍完整。失败仍包含旧公开 fixture、旧同步索引 mock、字段人工确认、事件契约以及实际遗留写入。最终发布门槛未通过。
+- 全量报告中的 `test_inventory_detects_real_legacy_writer_sites` 定位到字段助手的 WorkKnowledgeRelation.update_or_create，已改用安全映射后的规范关联，首组 37 项通过。旧静态写入点归零仅覆盖 inventory 当前识别的 ORM/API 形式，运行时读统计和完整 legacy 退役门槛仍待完成。
 - 前端一次完整运行出现集中 SSR render digest 3227098399，未取得足够信息确定原因。同一首页定向、未改源码的完整 184 项复核及最新重新构建后 184 项均已通过。保留此次异常记录，不能据后续通过宣称间歇问题已根治。
 - 基线 8 个前端 lint 错误已修复。2026-09-06 19:28 全仓 lint、TypeScript、构建、状态隔离 3 项及真实编目 Playwright 2 项通过。旧 Node 文案/组件位置断言与完整后端失败仍需治理，不能把 lint 通过当成全功能通过。
 

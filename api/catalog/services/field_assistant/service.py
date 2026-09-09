@@ -46,6 +46,7 @@ from catalog.services.editorial_revision import (
     serialize_editorial_revision,
 )
 from catalog.services.field_enrichment.mutations import reject_enrichment_candidate
+from catalog.services.canonical_identity import CanonicalIdentityError, mapped_node_for_legacy
 from catalog.services.query_lexicon.normalization import normalize_term
 from ingestion.models import (
     AuditEvent,
@@ -701,14 +702,21 @@ def _current_value(edition, policy: AssistantFieldPolicy) -> Any:
                 }
             ).select_related("node")
         ]
-        legacy = [
-            {"id": str(row.theory_school_id), "name": row.theory_school.name}
-            for row in edition.work.knowledge_relations.filter(
-                kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-                approved=True,
-            ).select_related("theory_school")
-            if row.theory_school_id
-        ]
+        legacy = []
+        current_ids = {row["id"] for row in nodes}
+        for row in edition.work.knowledge_relations.filter(
+            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
+            approved=True,
+        ).select_related("theory_school"):
+            if not row.theory_school_id:
+                continue
+            try:
+                mapped = mapped_node_for_legacy("TheorySchool", row.theory_school_id)
+            except CanonicalIdentityError:
+                mapped = None
+            if mapped is not None and str(mapped.pk) in current_ids:
+                continue
+            legacy.append({"id": str(row.theory_school_id), "name": row.theory_school.name})
         return [*nodes, *legacy]
     if hasattr(edition, field):
         return getattr(edition, field)
@@ -801,9 +809,9 @@ def _stage_entity(edition, policy, entity, *, actor):
         values = _edition_section_values(edition, "bibliography")
         values.update(publisher=entity.canonical_name, publisher_authority_id=str(entity.pk))
         patch = {"bibliography": {"edition_id": str(edition.pk), "values": values}}
-    elif policy.key == "topic" and isinstance(entity, Topic) or policy.key == "theory" and isinstance(entity, (KnowledgeNode, TheorySchool)):
+    elif policy.key == "topic" and isinstance(entity, Topic) or policy.key == "theory" and isinstance(entity, KnowledgeNode):
         values = _knowledge_values(edition)
-        field = "topics" if isinstance(entity, Topic) else "nodes" if isinstance(entity, KnowledgeNode) else "theories"
+        field = "topics" if isinstance(entity, Topic) else "nodes"
         rows = values.setdefault(field, [])
         if not any(str(row["id"]) == str(entity.pk) for row in rows):
             row = {"id": str(entity.pk), "is_primary": False}
@@ -835,6 +843,14 @@ def _revision_response(edition) -> dict:
 
 
 def _link_entity(edition, policy: AssistantFieldPolicy, entity, *, actor, source: str) -> None:
+    if policy.key == "theory" and isinstance(entity, TheorySchool):
+        # A legacy selector is an input adapter, never permission to create a
+        # parallel legacy relation. Only an explicitly reviewed mapping may
+        # resolve the identity, for both new catalogues and published drafts.
+        try:
+            entity = mapped_node_for_legacy("TheorySchool", entity.pk, for_update=True)
+        except CanonicalIdentityError as error:
+            raise FieldAssistantError(str(error)) from error
     if isinstance(entity, Person):
         if entity.authority_status in {Person.AuthorityStatus.ARCHIVED, Person.AuthorityStatus.MERGED, Person.AuthorityStatus.REJECTED}:
             raise FieldAssistantError("该学者已撤回或合并，请选择当前馆内对象。")
@@ -904,21 +920,6 @@ def _link_entity(edition, policy: AssistantFieldPolicy, entity, *, actor, source
                     if entity.status == KnowledgePublicationStatus.PUBLISHED
                     else KnowledgePublicationStatus.PENDING
                 ),
-                "reviewed_by": actor,
-                "reviewed_at": now,
-            },
-        )
-        return
-    if policy.key == "theory" and isinstance(entity, TheorySchool):
-        WorkKnowledgeRelation.objects.update_or_create(
-            work=edition.work,
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-            theory_school=entity,
-            defaults={
-                "source": source,
-                "confidence": 1,
-                "approved": True,
-                "review_status": RelationReviewStatus.APPROVED,
                 "reviewed_by": actor,
                 "reviewed_at": now,
             },
