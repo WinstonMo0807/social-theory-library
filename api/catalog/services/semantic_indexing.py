@@ -1835,34 +1835,44 @@ def dispatch_semantic_job(job_id: str, task_id: str) -> bool:
             ignore_result=True,
         )
     except (KombuOperationalError, OSError, ConnectionError, TimeoutError) as exc:
-        SemanticIndexJob.objects.filter(
-            pk=job_id,
-            status=SemanticIndexJob.Status.QUEUED,
-            task_id=task_id,
-        ).update(
-            status=SemanticIndexJob.Status.FAILED,
-            error_code="queue_unavailable",
-            error_message=f"语义索引任务未进入队列：{exc}"[:4000],
-            finished_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-        edition_id = Asset.objects.filter(
-            semantic_index_jobs__pk=job_id,
-        ).values_list("edition_id", flat=True).first()
-        if edition_id:
-            Edition.objects.filter(pk=edition_id).update(
-                semantic_index_status=SemanticIndexStatus.FAILED,
+        with transaction.atomic():
+            failed = SemanticIndexJob.objects.filter(
+                pk=job_id,
+                status=SemanticIndexJob.Status.QUEUED,
+                task_id=task_id,
+            ).update(
+                status=SemanticIndexJob.Status.FAILED,
+                error_code="queue_unavailable",
+                error_message=f"语义索引任务未进入队列：{exc}"[:4000],
+                finished_at=timezone.now(),
                 updated_at=timezone.now(),
             )
-        version_id = SemanticIndexJob.objects.filter(pk=job_id).values_list(
-            "index_version_id", flat=True
-        ).first()
-        if version_id:
-            SemanticIndexVersion.objects.filter(pk=version_id).update(
-                status=SemanticIndexVersion.Status.FAILED,
-                error_message=f"候选索引任务未进入队列：{exc}"[:4000],
-                updated_at=timezone.now(),
-            )
+            if not failed:
+                # A worker may have received the message before its broker
+                # acknowledgement was lost, or recovery may own a new task ID.
+                return False
+            edition_id = Asset.objects.filter(
+                semantic_index_jobs__pk=job_id,
+            ).values_list("edition_id", flat=True).first()
+            if edition_id:
+                Edition.objects.filter(pk=edition_id).update(
+                    semantic_index_status=SemanticIndexStatus.FAILED,
+                    updated_at=timezone.now(),
+                )
+            version_id = SemanticIndexJob.objects.filter(pk=job_id).values_list(
+                "index_version_id", flat=True
+            ).first()
+            if version_id:
+                # A failed delivery invalidates an unfinished candidate, not
+                # a serving index or a retained rollback target.
+                SemanticIndexVersion.objects.filter(
+                    pk=version_id,
+                    status__in=[SemanticIndexVersion.Status.BUILDING, SemanticIndexVersion.Status.READY],
+                ).update(
+                    status=SemanticIndexVersion.Status.FAILED,
+                    error_message=f"候选索引任务未进入队列：{exc}"[:4000],
+                    updated_at=timezone.now(),
+                )
         return False
     return True
 
