@@ -42,7 +42,7 @@ from ingestion.models import (
 
 from .ai_metadata import metadata_candidates_from_ai
 from .candidate_store import persist_metadata_candidates
-from .catalog_reconciliation import find_catalog_match, normalize_doi, normalize_isbn
+from .catalog_reconciliation import effective_catalog_reconciliation, find_catalog_match, normalize_doi, normalize_isbn
 from .extract import extract_native_pages, ocr_required_page_indexes, persist_pages
 from .files import (
     canonical_pdf_filename,
@@ -309,6 +309,8 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
     if item.edition_id:
         edition = Edition.objects.select_for_update().select_related("work").get(pk=item.edition_id)
         work = edition.work
+        reconciliation = effective_catalog_reconciliation(item, edition=edition)
+        reconciliation_mode = str(reconciliation.get("mode") or "")
         if (
             item.replacement_of_asset_id
             or reconciliation_mode == "existing_edition"

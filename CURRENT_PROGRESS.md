@@ -12,7 +12,13 @@
 
 Reader 替换集成发现语义任务投递失败会把活动 SemanticIndexVersion 标为 failed。8405d9f 已修复，仅让未完成候选受失败影响，active/retired 完整保留，旧 task_id 的迟到错误不能覆盖已执行或重新派发的任务。任务失败与重试记录保留，没有重建或重置活动索引。该专项先红后绿，最终 12 passed，退出 0，87.57 秒。
 
-当前 Django check、migration drift、API 契约漂移和 diff 检查均退出 0，无 schema 或前端代码变更。元数据复核切片实现和验证完成，正在保存本地提交；不将这些结果推算为新的全量后端成绩。
+当前 Django check、migration drift、API 契约漂移和 diff 检查均退出 0，无 schema 或前端代码变更。元数据复核切片已本地提交 92c16f8；不将这些结果推算为新的全量后端成绩。
+
+工作台旧回归首组 29 passed/1 failed，50.42 秒。整步历史确认不能替代实际字段确认；未采用机器候选继续可查，不阻止已确认字段；策展 N/A 按字段状态显示完成；关联同名 Work 后仍需确认字段。
+
+同名 Work 关联后重跑可被 OCR 覆盖的风险已先红复现并修复。新增只读 effective_catalog_reconciliation 从当前已审核、目标与 Edition.work 一致的候选推导有效状态。流水线与后台复用此读取，保留原始 preflight_summary，撤销后自然恢复待判断状态。原本已复用整个 Edition 的更强保护不能被降级。首组 39 项通过；最后加入智能编目和发布命令组，59 passed，退出 0，94.71 秒。Django check、migration drift、API 契约与 diff 检查退出 0。没有新增 schema 或改写历史报告。本切片实现和验证已完成，按独立本地提交保存，未推送或部署。
+
+续接从剩余全量回归和未完功能继续。最近一次完整后端仍是 wave2 的 1002 passed/61 failed/32 skipped，之后这些专项不当作新的全量结果。下一批优先处理 Reader/公开修订旧夹具、投影事件契约与 OCR 测试旧入口，再完成 Person 合并、剩余媒体/API/界面和生产验收。
 
 中间失败与修正原因已记录在 docs/V3.0.5_VERIFICATION.md。未放宽数据库保护约束或公开访问过滤。
 

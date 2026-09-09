@@ -49,6 +49,7 @@ from catalog.services.candidate_decision_protocol import (
 from ingestion.services.entity_resolution_decisions import (
     available_resolution_actions,
 )
+from ingestion.services.catalog_reconciliation import effective_catalog_reconciliation
 
 
 QUEUE_STATUSES = (
@@ -295,6 +296,7 @@ def _file_data(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
     normalized = edition.assets.filter(kind=Asset.Kind.NORMALIZED, is_current=True).order_by("-version").first()
     anchor = normalized or original
     summary = item.preflight_summary if item else {}
+    reconciliation = effective_catalog_reconciliation(item, edition=edition) if item else {}
     return {
         "filename": item.source_filename if item else (anchor.original_filename if anchor else ""),
         "status": item.status if item else (anchor.status if anchor else "pending"),
@@ -307,7 +309,7 @@ def _file_data(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
         "text_profile": (summary or {}).get("text_profile", ""),
         "ocr_strategy": item.batch.ocr_strategy if item else "maintenance",
         "exact_duplicate": bool((summary or {}).get("exact_duplicate")),
-        "duplicate_status": (summary or {}).get("catalog_reconciliation", {}).get("mode", ""),
+        "duplicate_status": reconciliation.get("mode", ""),
         "error_code": item.error_code if item else "",
         "error_message": item.error_message if item else "",
         "can_retry": bool(item and item.status == UploadItem.Status.FAILED),

@@ -8,6 +8,8 @@ CatalogingSession 记录上传、手工、导入和已有版本的编目过程�
 
 旧 MetadataReview PUT 通过 CatalogContractValidationMixin 复用字段校验，并将明确提交的字段同步到 CatalogFieldDecision。遗漏语言保留既有值，不能靠序列化默认值取得人工确认。新关联对象仍只进入发布包，最终发布前不公开；旧接口不支持修改已经发布的 Work。受控索引测试完成状态与真实 Worker/Provider 验收分开记录。
 
+原始 preflight_summary 保留机器识别时的证据。人工关联已有 Work 后，effective_catalog_reconciliation 从当前已审核、目标与 Edition.work 一致的 EntityResolutionCandidate 推导有效复用状态，后台与流水线共用这一读模型。撤销不需要覆写旧报告。更强的 existing_edition 保护保持不变，不能被 Work 层选择降级。
+
 MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建议及来源。verified 编目 API 从实际 DRF serializer 生成 OpenAPI 和 TS，旧未声明响应的 API 仍在覆盖清单中，不能用猜测类型代替真实契约。生成与校验命令见 `V3.0.5_API_CONTRACT.md`。
 
 发布命令收敛与公开恢复见 `V3.0.5_PUBLICATION.md`。工作台读取、差异和公开历史使用同一 revision 事实，恢复发布保持递增序号并引用曾合法激活的原快照。书目编辑、后台处理和公开状态分别呈现。此机制尚未完成生产 PostgreSQL/索引/文档恢复验收。

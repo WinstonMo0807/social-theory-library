@@ -14,6 +14,8 @@ from catalog.models import (
     TheoryReviewTask,
 )
 from catalog.services.admin_workflow import WORKFLOW_STEPS, build_edition_workflow
+from catalog.services.admin_workspace import build_admin_workspace
+from catalog.services.work_editor import save_workflow_section
 from ingestion.models import (
     EntityResolutionCandidate,
     FieldLock,
@@ -25,6 +27,20 @@ from ingestion.services.entity_resolution_decisions import decide_entity_resolut
 from ingestion.services.reconciliation import persist_resolution_candidates
 
 from .test_resilient_publication_v260 import create_item_with_files
+from .publication_fixtures import acknowledge_catalog_projections
+
+
+def confirm_required_catalog_fields(edition, actor):
+    from catalog.models import Person
+
+    save_workflow_section(edition, "work", {
+        "title": edition.work.title, "document_type": edition.work.document_type, "language": edition.work.language,
+    }, actor=actor)
+    person = Person.objects.create(preferred_name="已确认作者", sort_name="已确认作者", authority_status="verified")
+    save_workflow_section(edition, "contributors", {
+        "contributors": [{"person_id": person.pk, "role": "author", "order": 0}],
+    }, actor=actor)
+    edition.refresh_from_db()
 
 
 def make_item(admin_user, edition, *, status=UploadItem.Status.NEEDS_REVIEW):
@@ -92,7 +108,8 @@ def test_workflow_order_section_confirmation_and_curation_skip(
     curation = next(
         row for row in skipped.data["workflow"]["steps"] if row["key"] == "curation"
     )
-    assert curation["status"] == "skipped"
+    assert curation["status"] == "complete"
+    assert next(row for row in curation["fields"] if row["field"] == "curation")["status"] == "not_applicable"
     decision = EditionWorkflowDecision.objects.get(
         edition=edition,
         step_key=EditionWorkflowDecision.Step.CURATION,
@@ -330,10 +347,11 @@ def test_pending_contributor_and_optional_classification_are_advisory(
         row for row in response.data["workflow"]["steps"] if row["key"] == "contributors"
     )
     assert contributor_step["status"] == "complete"
-    unresolved = next(
-        row for row in contributor_step["issues"] if row["code"] == "contributors_unresolved"
-    )
-    assert unresolved["severity"] == "warning"
+    # Unchosen discovery candidates remain visible beside the field, but do
+    # not create a review requirement for the already confirmed selection.
+    assert not any(row["code"] == "contributors_unresolved" for row in contributor_step["issues"])
+    assert next(row for row in contributor_step["fields"] if row["field"] == "authors")["status"] == "confirmed"
+    assert len([row for row in response.data["candidates"]["entities"] if row["target_type"] == "person"]) == 10
     classification_step = next(
         row for row in response.data["workflow"]["steps"] if row["key"] == "classification"
     )
@@ -447,14 +465,20 @@ def test_workflow_stale_confirmation_and_publication_blocker(settings, tmp_path,
 
     record_step_decision(edition, "work", actor=admin_user)
     first = build_edition_workflow(edition)
-    assert next(row for row in first["steps"] if row["key"] == "work")["status"] == "complete"
+    assert next(row for row in first["steps"] if row["key"] == "work")["status"] == "blocked"
+    save_workflow_section(edition, "work", {
+        "title": work.title, "document_type": work.document_type, "language": work.language,
+    }, actor=admin_user)
+    edition.refresh_from_db()
+    confirmed = build_edition_workflow(edition)
+    assert next(row for row in confirmed["steps"] if row["key"] == "work")["status"] == "complete"
 
-    work.subtitle = "内容已经变化"
-    work.save(update_fields=["subtitle", "updated_at"])
+    save_workflow_section(edition, "work", {"subtitle": "内容已经变化"}, actor=admin_user, confirm_section=False)
+    edition.refresh_from_db()
     stale = build_edition_workflow(edition)
     work_step = next(row for row in stale["steps"] if row["key"] == "work")
     assert work_step["status"] == "attention"
-    assert any(row["code"] == "confirmation_stale" for row in work_step["issues"])
+    assert any(row["code"] == "field_needs_review" and row["field"] == "subtitle" for row in work_step["issues"])
 
     normalized.validation_status = Asset.ValidationStatus.INVALID
     normalized.save(update_fields=["validation_status", "updated_at"])
@@ -465,13 +489,13 @@ def test_workflow_stale_confirmation_and_publication_blocker(settings, tmp_path,
 
 
 @pytest.mark.django_db
-def test_pending_knowledge_research_is_visible_but_non_blocking(settings, tmp_path):
+def test_pending_knowledge_research_is_visible_but_non_blocking(settings, tmp_path, admin_user):
     work, edition, _original, _normalized = create_item_with_files(
         settings,
         tmp_path,
         title="可选知识策展",
     )
-    TheoryReviewTask.objects.create(
+    candidate = TheoryReviewTask.objects.create(
         task_type=TheoryReviewTask.TaskType.NEW_NODE,
         work=work,
         suggested_node_name="待判断理论",
@@ -480,12 +504,13 @@ def test_pending_knowledge_research_is_visible_but_non_blocking(settings, tmp_pa
 
     workflow = build_edition_workflow(edition)
     knowledge = next(row for row in workflow["steps"] if row["key"] == "knowledge")
-    pending_issue = next(
-        row for row in knowledge["issues"] if row["code"] == "knowledge_review_pending"
-    )
-
-    assert knowledge["status"] == "attention"
-    assert pending_issue["severity"] == "warning"
+    assert knowledge["status"] != "blocked"
+    assert not any(row["code"] == "knowledge_review_pending" for row in knowledge["issues"])
+    workspace = build_admin_workspace(edition, user=admin_user, mode="maintenance")
+    suggestion = next(row for row in workspace["candidates"]["theory"] if row["id"] == str(candidate.pk))
+    assert suggestion["status"] == "pending"
+    assert suggestion["evidence"]["text"] == "机器候选仍需人工判断。"
+    assert not work.node_relations.exists()
 
 
 @pytest.mark.django_db
@@ -494,7 +519,6 @@ def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     admin_user,
     settings,
     tmp_path,
-    monkeypatch,
 ):
     work, edition, _original, _normalized = create_item_with_files(
         settings,
@@ -509,11 +533,11 @@ def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     assert any(row["item_id"] == str(item.id) for row in queue.data["recent_items"])
     assert "candidate_review_count" in queue.data
 
+    confirm_required_catalog_fields(edition, admin_user)
     before = build_edition_workflow(edition)
     assert before["publication_preflight"]["blockers"] == []
     assert before["publication_preflight"]["warnings"]
 
-    monkeypatch.setattr("catalog.workflow_views.index_asset", lambda *args, **kwargs: None)
     needs_confirmation = api_client.post(
         f"/api/catalog/admin/library/works/{work.id}/publication/",
         {"confirm_warnings": False},
@@ -534,6 +558,7 @@ def test_workflow_queue_and_maintenance_publication_reuse_existing_rules(
     )
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
+    acknowledge_catalog_projections(edition)
 
     draft = api_client.patch(
         f"/api/catalog/admin/library/works/{work.id}/sections/work/?edition={edition.id}",
@@ -681,6 +706,28 @@ def test_ambiguous_work_can_be_explicitly_linked_without_leaving_workflow_blocke
     edition.refresh_from_db()
     assert edition.work_id == existing_work.id
 
+    from ingestion.services.pipeline import _create_or_update_catalog
+
+    item.refresh_from_db()
+    _create_or_update_catalog(item, {
+        "title": "后续 OCR 不得覆盖人工关联的作品", "document_type": "book", "language": "en",
+    }, [], "")
+    existing_work.refresh_from_db()
+    assert existing_work.title == "同题名作品识别"
+    assert existing_work.language == "zh-CN"
+
     after = api_client.get(f"/api/catalog/admin/intake/{item.id}/")
+    assert after.data["data"]["file"]["duplicate_status"] == "existing_work"
     work_step = next(row for row in after.data["workflow"]["steps"] if row["key"] == "work")
+    # Resolving identity does not implicitly confirm the linked Work's fields.
+    assert work_step["status"] == "blocked"
+    item.refresh_from_db()
+    assert item.preflight_summary["catalog_reconciliation"]["requires_review"] is True
+    confirmed = api_client.patch(
+        f"/api/catalog/admin/intake/{item.id}/sections/work/",
+        {"data": {"title": existing_work.title, "document_type": existing_work.document_type, "language": existing_work.language}},
+        format="json",
+    )
+    assert confirmed.status_code == 200
+    work_step = next(row for row in confirmed.data["workflow"]["steps"] if row["key"] == "work")
     assert work_step["status"] != "blocked"

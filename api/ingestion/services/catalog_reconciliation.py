@@ -46,6 +46,33 @@ class CatalogMatch:
         return self.mode in {"existing_edition", "existing_work"}
 
 
+def effective_catalog_reconciliation(item, *, edition=None) -> dict:
+    """Read current human identity decisions without rewriting intake evidence."""
+    from ingestion.models import EntityResolutionCandidate
+
+    report = dict((item.preflight_summary or {}).get("catalog_reconciliation") or {})
+    # Reusing the full Edition is a stronger preservation boundary. A Work
+    # identity decision must not downgrade it and reopen bibliographic writes.
+    if not item.edition_id or report.get("mode") == "existing_edition":
+        return report
+    edition = edition if edition is not None else item.edition
+    choice = EntityResolutionCandidate.objects.filter(
+        Q(upload_item_id=item.pk) | Q(cataloging_session__edition_id=edition.pk),
+        target_type="work", candidate_entity_type="work", candidate_entity_id=str(edition.work_id),
+        status=EntityResolutionCandidate.Status.LINKED, reviewed_by__isnull=False, reviewed_at__isnull=False,
+    ).order_by("-reviewed_at", "-created_at").first()
+    if choice is None:
+        return report
+    return {
+        **report,
+        "mode": "existing_work",
+        "work_id": str(edition.work_id),
+        "requires_review": False,
+        "decision_source": "manual_entity_resolution",
+        "resolution_candidate_id": str(choice.pk),
+    }
+
+
 def _identifier_editions(selected: dict) -> list[Edition]:
     isbn_raw = normalize_identifier(selected.get("isbn"))
     isbn = normalize_isbn(isbn_raw)
