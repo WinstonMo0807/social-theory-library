@@ -32,6 +32,7 @@ from catalog.models import (
 from ingestion.models import UploadBatch, UploadItem
 from ingestion.services.pipeline import resume_reviewed_item_publication, run_pipeline
 from reading.models import Annotation
+from .publication_fixtures import acknowledge_catalog_projections
 
 
 @pytest.fixture(autouse=True)
@@ -269,6 +270,7 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     settings.REQUIRE_CLOUD_FOR_PUBLICATION = False
     settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS = True
     settings.REQUIRE_EXTERNAL_SEARCH = False
+    settings.CELERY_TASK_ALWAYS_EAGER = False
     source = tmp_path / "test.pdf"
     payload = build_test_pdf(source)
 
@@ -336,6 +338,7 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
             "title": "测试社会学著作",
             "subtitle": "",
             "document_type": "book",
+            "language": "zh-CN",
             "publication_year": 2026,
             "publisher": "测试出版社",
             "publication_place": "北京",
@@ -440,6 +443,9 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     assert edition.state == PublicationState.PUBLISHED
     assert edition.work.title == "测试社会学著作"
     assert "测试学者_2026_测试社会学著作.pdf" == edition.canonical_filename
+
+    assert edition.active_catalog_revision_id is None
+    acknowledge_catalog_projections(edition)
 
     title_search = api_client.get("/api/catalog/search/", {"q": "测试社会学著作"})
     assert title_search.status_code == 200
@@ -680,22 +686,18 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     replacement_item = UploadItem.objects.get(pk=replace_response.data["id"])
     assert replacement_item.batch.source == "replacement"
 
-    # The first eager semantic attempt may mark its version failed when the
-    # offline model fixture is unavailable. A replacement still needs exactly
-    # one explicit active target, so create one only if the previous target was
-    # actually failed.
-    if not SemanticIndexVersion.objects.filter(
+    # Embeddings are not executed in this catalog/Reader integration fixture.
+    # The initially configured target must remain intact through replacement.
+    assert SemanticIndexVersion.objects.filter(
         status=SemanticIndexVersion.Status.ACTIVE,
-    ).exists():
-        SemanticIndexVersion.objects.create(
-            uid=f"ingestion-replacement-{uuid4()}",
-            provider="huggingFace",
-            model_repo_id="test-model",
-            status=SemanticIndexVersion.Status.ACTIVE,
-        )
+    ).exists()
+    previous_publication_id = edition.active_catalog_revision_id
     replacement_item = run_pipeline(str(replacement_item.id))
     replacement_item.refresh_from_db()
     edition.refresh_from_db()
+    assert edition.active_catalog_revision_id == previous_publication_id
+    assert api_client.get(f"/api/distribution/assets/{old_asset.id}/access/").status_code == 200
+    acknowledge_catalog_projections(edition)
     old_asset.refresh_from_db()
     old_original.refresh_from_db()
     annotation.refresh_from_db()
@@ -717,7 +719,12 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     assert new_original.version == 2
     assert old_normalized_path.exists()
     assert old_original_path.exists()
-    assert annotation.orphaned is True
+    # The original file and exact page still exist. Replacement must not move
+    # or invalidate the reader's old annotation just to update the public PDF.
+    assert annotation.orphaned is False
+    assert annotation.asset_id == old_asset.pk
+    assert annotation.page.asset_id == old_asset.pk
+    assert annotation.quote == "Power"
     assert edition.assets.filter(kind=Asset.Kind.NORMALIZED).count() == 2
     assert edition.assets.filter(kind=Asset.Kind.ORIGINAL).count() == 2
 
@@ -763,6 +770,8 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     item.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
     assert item.status == UploadItem.Status.PUBLISHED
+    assert api_client.get("/api/catalog/search/", {"q": "测试社会学著作"}).data["counts"]["works"] == 0
+    acknowledge_catalog_projections(edition)
     assert api_client.get("/api/catalog/search/", {"q": "测试社会学著作"}).data["counts"]["works"] == 1
     assert api_client.get(f"/api/distribution/assets/{new_asset.id}/access/").status_code == 200
     assert PublicationEvent.objects.filter(

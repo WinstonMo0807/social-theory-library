@@ -12,6 +12,7 @@ from catalog.models import Asset, OcrStatus, PublicationState, SemanticIndexStat
 from ingestion.models import MetadataCandidate, UploadItem
 from ingestion.services.metadata import Candidate
 from ingestion.services.pipeline import run_pipeline
+from .publication_fixtures import acknowledge_catalog_projections
 
 
 def _build_text_pdf(path: Path) -> bytes:
@@ -268,12 +269,8 @@ def test_complete_chinese_pdf_http_ingestion_review_publish_and_withdraw(
     assert confirmation_response.data["confirmation_required"] is True
 
     with (
-        patch(
-            "ingestion.views.index_asset",
-            return_value={"indexed": True, "test_adapter": True},
-        ),
         patch("ingestion.views.queue_page_label_job", side_effect=lambda *_a, **_k: _pending_job()),
-        patch("ingestion.views.queue_semantic_job", side_effect=lambda *_a, **_k: _pending_job()),
+        patch("ingestion.views.queue_semantic_job") as semantic_queue,
     ):
         publish_response = api_client.post(
             f"/api/ingestion/items/{item.id}/publish/",
@@ -281,10 +278,8 @@ def test_complete_chinese_pdf_http_ingestion_review_publish_and_withdraw(
             format="json",
         )
     assert publish_response.status_code == 200
-    assert {row["type"] for row in publish_response.data["scheduled_tasks"]} == {
-        "page_labels",
-        "semantic_index",
-    }
+    assert {row["type"] for row in publish_response.data["scheduled_tasks"]} == {"page_labels"}
+    semantic_queue.assert_not_called()  # Intelligence belongs to the publication event.
 
     processed.refresh_from_db()
     processed.edition.refresh_from_db()
@@ -294,16 +289,18 @@ def test_complete_chinese_pdf_http_ingestion_review_publish_and_withdraw(
     assert processed.edition.work.title == "乡土中国"
     assert processed.edition.first_published_at is not None
 
+    before_activation = api_client.get("/api/catalog/works/")
+    assert all(row["title"] != "乡土中国" for row in before_activation.data["results"])
+    event = acknowledge_catalog_projections(processed.edition)
+    assert event.catalog_revision.reader_asset_id == normalized.pk
+
     public_list = api_client.get("/api/catalog/works/")
     assert public_list.status_code == 200
     assert any(row["title"] == "乡土中国" for row in public_list.data["results"])
     access_response = api_client.get(f"/api/distribution/assets/{normalized.id}/access/")
     assert access_response.status_code == 200
 
-    with (
-        patch("ingestion.views.remove_asset_from_index"),
-        patch("ingestion.views.remove_semantic_asset"),
-    ):
+    with patch("catalog.services.knowledge_publication.dispatch_knowledge_event", return_value=False):
         withdraw_response = api_client.post(
             f"/api/ingestion/items/{item.id}/withdraw/",
             {"reason": "完整流程回归下架"},
@@ -314,6 +311,7 @@ def test_complete_chinese_pdf_http_ingestion_review_publish_and_withdraw(
     processed.edition.refresh_from_db()
     assert processed.status == UploadItem.Status.WITHDRAWN
     assert processed.edition.state == PublicationState.WITHDRAWN
+    assert processed.edition.active_catalog_revision.status == "withdrawn"
     assert Path(original.file.path).is_file()
     assert Path(normalized.file.path).is_file()
     public_after_withdraw = api_client.get("/api/catalog/works/")
@@ -489,12 +487,8 @@ def test_complete_chinese_journal_upload_remote_candidates_review_and_publish(
     assert preflight.status_code == 200
     assert preflight.data["blockers"] == []
     with (
-        patch(
-            "ingestion.views.index_asset",
-            return_value={"indexed": True, "test_adapter": True},
-        ),
         patch("ingestion.views.queue_page_label_job", side_effect=lambda *_a, **_k: _pending_job()),
-        patch("ingestion.views.queue_semantic_job", side_effect=lambda *_a, **_k: _pending_job()),
+        patch("ingestion.views.queue_semantic_job") as semantic_queue,
     ):
         publish_response = api_client.post(
             f"/api/ingestion/items/{item.id}/publish/",
@@ -502,6 +496,7 @@ def test_complete_chinese_journal_upload_remote_candidates_review_and_publish(
             format="json",
         )
     assert publish_response.status_code == 200
+    semantic_queue.assert_not_called()
     processed.refresh_from_db()
     processed.edition.refresh_from_db()
     assert processed.status == UploadItem.Status.PUBLISHED
@@ -509,6 +504,10 @@ def test_complete_chinese_journal_upload_remote_candidates_review_and_publish(
     assert processed.edition.work.document_type == "journal_article"
     assert processed.edition.journal_title == "社会学研究"
     assert processed.edition.doi == "10.1234/chinese-journal.2026.01"
+
+    before_activation = api_client.get("/api/catalog/works/")
+    assert all(row["title"] != "社会理论的中国经验" for row in before_activation.data["results"])
+    acknowledge_catalog_projections(processed.edition)
 
     public_list = api_client.get("/api/catalog/works/")
     assert public_list.status_code == 200

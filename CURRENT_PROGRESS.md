@@ -4,7 +4,17 @@
 
 ## 3.0.5 当前动作
 
-当前分支为 `codex/v3.0.5-architecture-convergence`，媒体切片已本地提交 `b39ddce`，首页权限切片为 `fe89007`。未推送、未连接或部署生产。
+当前分支为 `codex/v3.0.5-architecture-convergence`，媒体切片已本地提交 `b39ddce`，首页权限切片为 `fe89007`，规范关系修复为 `44e79df`，语义投递保护为 `8405d9f`。未推送、未连接或部署生产。
+
+旧 MetadataReviewView 未同步统一字段确认的遗漏已修复。显式语言、书目字段和关联选择通过原 CatalogFieldDecision、人工锁与发布包记录；未传语言保留现值、不确认默认值。复用同一 DRF 字段契约，校验 ISBN/DOI/年份/出版日期一致性；已声明的 publication_date 现在实际保存。已归档作者拒绝并原子回滚，不自动恢复。
+
+最终复核/旧 backfill/全部完整入库集成 34 passed，退出 0，180.31 秒。覆盖中文图书/期刊文章、搜索过滤、引用、PDF Range、受信代理、文件替换、原 Annotation 的 asset/page/quote 保留、撤回和重新上架。处理完成前的新书/重新上架不可见，替换处理中旧公开版本保持可读。发布消费者采用明确的 test-only 确认，未证明实际模型、Worker 或索引可用。
+
+Reader 替换集成发现语义任务投递失败会把活动 SemanticIndexVersion 标为 failed。8405d9f 已修复，仅让未完成候选受失败影响，active/retired 完整保留，旧 task_id 的迟到错误不能覆盖已执行或重新派发的任务。任务失败与重试记录保留，没有重建或重置活动索引。该专项先红后绿，最终 12 passed，退出 0，87.57 秒。
+
+当前 Django check、migration drift、API 契约漂移和 diff 检查均退出 0，无 schema 或前端代码变更。元数据复核切片实现和验证完成，正在保存本地提交；不将这些结果推算为新的全量后端成绩。
+
+中间失败与修正原因已记录在 docs/V3.0.5_VERIFICATION.md。未放宽数据库保护约束或公开访问过滤。
 
 已修复媒体导航断言和草稿封面预览。预览从待发布 EditorialRevision 读取选图，使用受保护的私有 URL，不写 canonical Work。新增 Model/QuerySet 媒体内容保护。该组后端 33 项、导航 23 项通过，TypeScript、lint 和 API 漂移检查退出 0。
 

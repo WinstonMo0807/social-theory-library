@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rest_framework import serializers
+from catalog.contracts.serializers import CatalogContractValidationMixin
 
 from catalog.models import (
     Contribution,
@@ -12,28 +13,10 @@ from catalog.models import (
 )
 
 
-class WorkflowSectionSerializer(serializers.Serializer):
+class WorkflowSectionSerializer(CatalogContractValidationMixin, serializers.Serializer):
     expected_updated_at = serializers.DateTimeField(required=False)
     expected_work_updated_at = serializers.DateTimeField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")
-
-    def validate(self, attrs):
-        from catalog.contracts.fields import FIELD_CONTRACTS
-        from catalog.contracts.validation import field_error, normalize_field
-
-        attrs = super().validate(attrs)
-        errors = {}
-        for name, value in attrs.items():
-            if name not in FIELD_CONTRACTS:
-                continue
-            error = field_error(name, value)
-            if error:
-                errors[name] = error["message"]
-            else:
-                attrs[name] = normalize_field(name, value)
-        if errors:
-            raise serializers.ValidationError(errors)
-        return attrs
 
 
 class WorkSectionSerializer(WorkflowSectionSerializer):
@@ -81,16 +64,6 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     series = serializers.CharField(max_length=300, required=False, allow_blank=True)
     extent = serializers.CharField(max_length=160, required=False, allow_blank=True)
     responsibility_statement = serializers.CharField(required=False, allow_blank=True)
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        publication_date = attrs.get("publication_date")
-        publication_year = attrs.get("publication_year")
-        if publication_date and publication_year and publication_date.year != publication_year:
-            raise serializers.ValidationError(
-                {"publication_date": "本版本出版日期与兼容出版年份不一致。"}
-            )
-        return attrs
 
 
 class ContributorRowSerializer(serializers.Serializer):

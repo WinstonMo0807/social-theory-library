@@ -3,6 +3,7 @@ from django.db.models import prefetch_related_objects
 from django.utils import timezone
 from rest_framework import serializers
 
+from catalog.contracts.serializers import CatalogContractValidationMixin
 from catalog.services.text import clean_page_label
 from catalog.serializers import CoverCandidateSerializer
 from catalog.services.publication_places import serialize_publication_place_evidence
@@ -825,14 +826,14 @@ class TopicAssignmentSerializer(serializers.Serializer):
     evidence_text = serializers.CharField(required=False, allow_blank=True)
 
 
-class MetadataReviewSerializer(serializers.Serializer):
+class MetadataReviewSerializer(CatalogContractValidationMixin, serializers.Serializer):
     title = serializers.CharField(max_length=600)
     subtitle = serializers.CharField(max_length=600, required=False, allow_blank=True)
     document_type = serializers.ChoiceField(choices=("book", "journal_article", "thesis", "report"))
-    language = serializers.ChoiceField(choices=("zh-CN", "zh-TW", "en"), default="zh-CN")
+    language = serializers.ChoiceField(choices=("zh-CN", "zh-TW", "en"), required=False)
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
     publication_date = serializers.DateField(required=False, allow_null=True)
-    publication_year = serializers.IntegerField(min_value=1400, max_value=2100, required=False, allow_null=True)
+    publication_year = serializers.IntegerField(min_value=1000, max_value=2100, required=False, allow_null=True)
     publisher = serializers.CharField(max_length=300, required=False, allow_blank=True)
     publication_place = serializers.CharField(max_length=200, required=False, allow_blank=True)
     journal_title = serializers.CharField(max_length=300, required=False, allow_blank=True)

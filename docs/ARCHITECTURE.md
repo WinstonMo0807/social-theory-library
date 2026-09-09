@@ -6,6 +6,8 @@ CatalogingSession 记录上传、手工、导入和已有版本的编目过程�
 
 `catalog/contracts/fields.py` 统一当前工作台字段的分组、必填、标签、依赖、可写字段与验证描述。DRF 工作流保存、Field Assistant 标量采用和发布检查共用校验实现。Edition.publication_mode 默认 document，新的手工书目明确为 bibliographic；有任何 Asset 的版本仍执行文件门槛。纯书目公开仍使用原 CatalogPublicationRevision，没有虚构文档、页或 Reader 锚点。
 
+旧 MetadataReview PUT 通过 CatalogContractValidationMixin 复用字段校验，并将明确提交的字段同步到 CatalogFieldDecision。遗漏语言保留既有值，不能靠序列化默认值取得人工确认。新关联对象仍只进入发布包，最终发布前不公开；旧接口不支持修改已经发布的 Work。受控索引测试完成状态与真实 Worker/Provider 验收分开记录。
+
 MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建议及来源。verified 编目 API 从实际 DRF serializer 生成 OpenAPI 和 TS，旧未声明响应的 API 仍在覆盖清单中，不能用猜测类型代替真实契约。生成与校验命令见 `V3.0.5_API_CONTRACT.md`。
 
 发布命令收敛与公开恢复见 `V3.0.5_PUBLICATION.md`。工作台读取、差异和公开历史使用同一 revision 事实，恢复发布保持递增序号并引用曾合法激活的原快照。书目编辑、后台处理和公开状态分别呈现。此机制尚未完成生产 PostgreSQL/索引/文档恢复验收。

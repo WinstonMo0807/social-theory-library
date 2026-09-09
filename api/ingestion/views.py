@@ -1646,6 +1646,13 @@ class MetadataReviewView(APIView):
 
     @transaction.atomic
     def put(self, request, item_id):
+        from catalog.contracts.fields import FIELD_CONTRACTS, required_fields
+        from catalog.services.field_decisions import (
+            document_required, field_value_present, formal_field_values,
+            invalidate_dependent_fields, record_edition_field_decision,
+        )
+        from catalog.services.work_editor import WorkflowEditError, _json_safe, _register_confirmed_draft_entities
+
         item = get_object_or_404(
             _locked_upload_items(
                 "batch",
@@ -1683,6 +1690,7 @@ class MetadataReviewView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
         previous_title = work.title
+        before_values, _ = formal_field_values(edition, include_editorial_draft=False)
         before = {
             "title": work.title,
             "document_type": work.document_type,
@@ -1693,7 +1701,8 @@ class MetadataReviewView(APIView):
         work.normalized_title = work.title.casefold()
         work.subtitle = data.get("subtitle", "")
         work.document_type = data["document_type"]
-        work.language = data["language"]
+        if "language" in data:
+            work.language = data["language"]
         work.abstract = data.get("abstract", "")
         work.save()
         if (
@@ -1708,6 +1717,7 @@ class MetadataReviewView(APIView):
             )
         edition_fields = (
             "version_label",
+            "publication_date",
             "publication_year",
             "publisher",
             "publication_place",
@@ -2092,7 +2102,20 @@ class MetadataReviewView(APIView):
             actor=request.user,
         )
 
-        for field_name in set(data.get("lock_fields", [])) | {
+        # Only validated, explicitly submitted fields (or an explicit lock)
+        # constitute a human decision; serializer defaults are not evidence.
+        submitted = set(request.data)
+        reviewed_fields = (submitted.intersection(data) | set(data.get("lock_fields", []))).intersection(FIELD_CONTRACTS)
+        for field, input_names in {
+            "authors": {"authors", "author_ids", "author_person_ids"},
+            "theories": {"theory_schools", "theory_school_ids", "theory_assignments", "knowledge_node_ids", "knowledge_node_assignments"},
+            "topics": {"topics", "topic_ids", "topic_assignments"},
+            "disciplines": {"discipline_ids", "discipline_assignments"},
+            "subdisciplines": {"subdiscipline_ids", "subdiscipline_assignments"},
+        }.items():
+            if submitted.intersection(input_names):
+                reviewed_fields.add(field)
+        review_lock_fields = reviewed_fields | set(data.get("lock_fields", [])) | {
             "title",
             "document_type",
             "authors",
@@ -2101,13 +2124,14 @@ class MetadataReviewView(APIView):
             "topics",
             "disciplines",
             "subdisciplines",
-        }:
+        }
+        for field_name in review_lock_fields:
             FieldLock.objects.update_or_create(
                 edition=edition,
                 field_name=field_name,
                 defaults={
                     "locked_by": request.user,
-                    "locked_value": data.get(field_name, True),
+                    "locked_value": _json_safe(data.get(field_name, True)),
                     "reason": "人工元数据复核",
                 },
             )
@@ -2115,17 +2139,31 @@ class MetadataReviewView(APIView):
             item,
             data,
             actor=request.user,
-            locked_fields=set(data.get("lock_fields", [])) | {
-                "title",
-                "document_type",
-                "authors",
-                "theory_schools",
-                "knowledge_nodes",
-                "topics",
-                "disciplines",
-                "subdisciplines",
-            },
+            locked_fields=review_lock_fields,
         )
+
+        # Keep compatibility review and Workbench decisions on the same facts.
+        actual, _ = formal_field_values(edition, include_editorial_draft=False)
+        changed = {name for name in actual if actual[name] != before_values.get(name)}
+        invalidate_dependent_fields(edition, changed, actor=request.user)
+        required = set(required_fields(work.document_type, has_document=document_required(edition)))
+        existing = {row.field_name: row for row in edition.field_decisions.all()}
+        for name in sorted(reviewed_fields):
+            value = _json_safe(actual.get(name))
+            previous = existing.get(name)
+            record_edition_field_decision(
+                edition, name, value=value, actor=request.user,
+                status="confirmed" if field_value_present(value) else "empty" if name in required else "not_applicable",
+                provenance={**(previous.provenance if previous else {}), "source": "manual_metadata_review", "upload_item_id": str(item.pk)},
+                evidence_summary=previous.evidence_summary if previous else None,
+                reason="管理员保存元数据复核",
+            )
+        try:
+            _register_confirmed_draft_entities(
+                edition, actor=request.user, reviewed_fields=reviewed_fields, values=actual,
+            )
+        except WorkflowEditError as error:
+            raise DRFValidationError({"relations": [str(error)]}) from error
 
         item.status = (
             UploadItem.Status.PUBLISHED
