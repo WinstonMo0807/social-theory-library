@@ -26,6 +26,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ADMIN_VERSION_LABEL } from "@/lib/version";
+import { AdminSessionContext } from "@/lib/admin-session";
 import { Wordmark } from "./site-header";
 
 const navigation = [
@@ -186,6 +187,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <AdminSessionContext.Provider value={user}>
     <div className={`admin-shell ${focusMode ? "focus-mode" : ""}`}>
       {!focusMode ? <aside
         id="admin-navigation"
@@ -242,5 +244,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <div className="admin-content">{children}</div>
       </div>
     </div>
+    </AdminSessionContext.Provider>
   );
 }

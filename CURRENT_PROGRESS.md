@@ -4,13 +4,17 @@
 
 ## 3.0.5 当前动作
 
-当前分支为 `codex/v3.0.5-architecture-convergence`，最后本地提交 `cd7eaba`。媒体切片尚未提交，未推送、未连接或部署生产。
+当前分支为 `codex/v3.0.5-architecture-convergence`，媒体切片已本地提交 `b39ddce`。未推送、未连接或部署生产。
 
 已修复媒体导航断言和草稿封面预览。预览从待发布 EditorialRevision 读取选图，使用受保护的私有 URL，不写 canonical Work。新增 Model/QuerySet 媒体内容保护。该组后端 33 项、导航 23 项通过，TypeScript、lint 和 API 漂移检查退出 0。
 
 随后补齐只改 alt/许可时的发布边界。MediaRendition 的 0049 保存不可变资料快照，资料改变会生成新的选择版本；发布前 diff 显示来源、许可和说明，另一个管理员后来修改媒体源资料不会改变已核对的版本。扩大回归 47 passed/1 failed，最后失败为测试给 Edition 而非实际 Work 发布事件设置投影状态，已按事件对象修正。最终 48 passed，退出 0，48.91 秒。当前 `npm test` 重新构建并完成 181 项，退出 0；最新 3 项真实 E2E 通过，退出 0，56.7 秒。当前准备保存媒体本地提交，再处理普通 Editor 首页统计 403 的消费者权限问题。
 
 后续仍有其他实体媒体、人物查重合并、完整工作台/Reader/API/CSS 收敛、legacy 写入冻结、剩余全量后端失败和生产恢复演练。v3.0.5 全部完成与上线门槛均未达到。
+
+Editor 首页 403 已修复。原因为前端无条件请求管理员统计并忽略失败。AdminShell 现在向子页面提供已验证会话；首页与统计页按当前能力读取，复用可取消、按账号隔离的资源 hook，失败显示重试且不假装队列为空。后端权限未改。TypeScript、lint、首组 26 项和最新完整构建/184 项通过。最新真实 Playwright 6 项通过，退出 0，1.1 分钟，包含 Editor 无统计请求、管理员真实统计、队列断网与重试、手工编目、Reader 拒绝及媒体操作。日志中的统计 403 来自明确的越权 API 拒绝测试。
+
+前端一次全量运行曾集中 SSR 失败，原因待核实；同一首页、无改动完整重跑及最后重新构建后均通过，未删除失败记录。后端 wave2 报告已完成，1095 项中 1002 passed、61 failed、32 skipped，396.086 秒，进程句柄失效，退出码未知。当前准备保存首页权限提交，再修字段助手仍创建 WorkKnowledgeRelation 的真实旧写入，继续复用已审查的 LegacyKnowledgeMapping 和 WorkNodeRelation。
 
 ### 此前开发记录
 

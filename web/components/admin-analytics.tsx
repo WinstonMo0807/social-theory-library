@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { BarChart3, BookOpen, Download, Search } from "lucide-react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { getServerSessionCredential } from "@/lib/api";
+import { useApiResource } from "@/lib/api/use-api-resource";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 
 type Analytics = {
   period_days: number;
@@ -15,15 +16,10 @@ type Analytics = {
 };
 
 export function AdminAnalytics() {
-  const [data, setData] = useState<Analytics | null>(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    void apiRequest<Analytics>("/catalog/admin/usage-analytics/?days=30", {}, token)
-      .then(setData)
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "统计读取失败。"));
-  }, []);
+  const user = useAdminSession();
+  const allowed = hasAdminCapability(user, "can_view_audit_log");
+  const { data, error, retry } = useApiResource<Analytics>(allowed ? "/catalog/admin/usage-analytics/?days=30" : "", user ? getServerSessionCredential() : null, String(user?.id ?? ""));
+  if (!allowed) return <div className="admin-page"><h1>当前账户没有统计查看权限</h1><p>请返回今日工作继续编目。</p></div>;
   const cards = [
     ["匿名阅读会话", data?.anonymous_sessions ?? "—", BarChart3],
     ["图书打开", data?.events.reader_open ?? "—", BookOpen],
@@ -33,7 +29,7 @@ export function AdminAnalytics() {
   return (
     <div className="admin-page analytics-page">
       <header className="admin-page-title"><div><p>数据分析</p><h1>阅读与搜索统计</h1><span>只使用第一方匿名会话做聚合，不以 IP 标识读者，也不与注册账号永久关联。</span></div></header>
-      {error ? <p className="review-error">{error}</p> : null}
+      {error ? <p className="review-error" role="alert">{error}<button type="button" onClick={retry}>重试统计</button></p> : null}
       <section className="metric-grid">{cards.map(([label, value, Icon]) => <article key={label}><header><span>{label}</span><Icon size={15} /></header><div><strong>{value}</strong></div><p>最近 30 天</p></article>)}</section>
       <div className="admin-grid top">
         <section className="admin-panel"><h2>热门馆藏</h2>{(data?.top_works ?? []).map((item) => <p className="status-count-row" key={item.work_id}><span>{item.work__title}</span><strong>{item.opens} 次 · {item.unique_sessions} 会话</strong></p>)}{data && !data.top_works.length ? <p className="empty-state">尚无匿名阅读事件。</p> : null}</section>

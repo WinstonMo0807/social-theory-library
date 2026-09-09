@@ -32,7 +32,7 @@ def main():
     from django.core.management import call_command
     from accounts.models import User
     call_command("migrate", interactive=False, verbosity=0)
-    for email, role in (("curator-v305@example.test", "editor"), ("reader-v305@example.test", "reader")):
+    for email, role in (("curator-v305@example.test", "editor"), ("reader-v305@example.test", "reader"), ("administrator-v305@example.test", "admin")):
         User.objects.create_user(
             username=email, email=email, display_name="Local E2E",
             role=role, password="E2E-Local-Only-305-passphrase",

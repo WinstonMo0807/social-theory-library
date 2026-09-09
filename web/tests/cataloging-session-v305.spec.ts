@@ -8,13 +8,55 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-async function login(page: Page, role: "curator" | "reader") {
+async function login(page: Page, role: "curator" | "reader" | "administrator") {
   await page.goto("/login");
   await page.getByLabel("邮箱").fill(`${role}-v305@example.test`);
   await page.locator('input[name="password"]').fill("E2E-Local-Only-305-passphrase");
   await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(page).toHaveURL(role === "curator" ? /\/admin$/ : /\/account$/);
+  await expect(page).toHaveURL(role === "reader" ? /\/account$/ : /\/admin$/);
 }
+
+test("editor dashboard never requests admin-only statistics", async ({ page }) => {
+  const statisticsRequests: string[] = [];
+  page.on("request", (request) => { if (request.url().includes("/usage-analytics/")) statisticsRequests.push(request.url()); });
+  const queueLoaded = page.waitForResponse((response) => response.url().includes("/admin/workflows/queue/") && response.ok());
+  await login(page, "curator");
+  await queueLoaded;
+  await expect(page.getByRole("heading", { name: "今日工作", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "继续处理", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "匿名使用统计", exact: true })).toHaveCount(0);
+  await expect(page.locator('a[href="/admin/analytics"]')).toHaveCount(0);
+  await page.goto("/admin/analytics");
+  await expect(page.getByRole("heading", { name: "当前账户没有统计查看权限", exact: true })).toBeVisible();
+  expect(statisticsRequests).toEqual([]);
+  const direct = await page.request.get("http://127.0.0.1:8105/api/catalog/admin/usage-analytics/?days=30");
+  expect(direct.status()).toBe(403);
+});
+
+test("ordinary administrator dashboard reads real usage statistics", async ({ page }) => {
+  const statisticsLoaded = page.waitForResponse((response) => response.url().includes("/usage-analytics/") && response.ok());
+  await login(page, "administrator");
+  const response = await statisticsLoaded;
+  expect((await response.json()).anonymous_sessions).toBe(0);
+  const panel = page.locator("section").filter({ has: page.getByRole("heading", { name: "匿名使用统计", exact: true }) });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("0", { exact: true })).toHaveCount(2);
+});
+
+test("queue transport failure is visible and retries the real API", async ({ page }) => {
+  // Explicit failure injection, never a fabricated successful business payload.
+  const queueUrl = "**/api/catalog/admin/workflows/queue/";
+  await page.route(queueUrl, (route) => route.abort("failed"));
+  await login(page, "curator");
+  await expect(page.getByRole("alert").filter({ hasText: "工作队列读取失败" })).toBeVisible();
+  await expect(page.getByText("当前没有中断的馆藏工作。", { exact: true })).toHaveCount(0);
+  await page.unroute(queueUrl);
+  const queueLoaded = page.waitForResponse((response) => response.url().includes("/admin/workflows/queue/") && response.ok());
+  await page.getByRole("button", { name: "重试工作队列", exact: true }).click();
+  await queueLoaded;
+  await expect(page.getByRole("heading", { name: "继续处理", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "重试工作队列", exact: true })).toHaveCount(0);
+});
 
 test("non-superuser creates a real manual session, saves and reopens it", async ({ page }) => {
   await login(page, "curator");

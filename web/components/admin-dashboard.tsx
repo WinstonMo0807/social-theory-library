@@ -6,8 +6,10 @@ import {
   FileText,
   Plus,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { useMemo } from "react";
+import { getServerSessionCredential } from "@/lib/api";
+import { useApiResource } from "@/lib/api/use-api-resource";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { EmptyState, PageHeader, StatusBadge, type StatusTone } from "./admin-ui";
 
 type MetadataCandidate = {
@@ -117,24 +119,20 @@ const statusTones: Record<string, StatusTone> = {
 };
 
 export function AdminDashboard() {
-  const [live, setLive] = useState<DashboardData | null>(null);
-  const [error, setError] = useState("");
-  const [usage, setUsage] = useState<UsageSummary | null>(null);
-  const [hotSearches, setHotSearches] = useState<HotSearchPayload["results"]>([]);
-  const [workflowQueue, setWorkflowQueue] = useState<WorkflowQueuePayload | null>(null);
-
-  useEffect(() => {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    apiRequest<DashboardData>("/ingestion/dashboard/", {}, token)
-      .then(setLive)
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "仪表盘读取失败。"));
-    apiRequest<WorkflowQueuePayload>("/catalog/admin/workflows/queue/", {}, token)
-      .then(setWorkflowQueue)
-      .catch(() => undefined);
-    apiRequest<UsageSummary>("/catalog/admin/usage-analytics/?days=30", {}, token).then(setUsage).catch(() => undefined);
-    apiRequest<HotSearchPayload>("/catalog/hot-searches/?days=30&limit=8", {}, token).then((payload) => setHotSearches(payload.results)).catch(() => undefined);
-  }, []);
+  const user = useAdminSession();
+  const credential = user ? getServerSessionCredential() : null;
+  const contextKey = String(user?.id ?? "");
+  const canViewAnalytics = hasAdminCapability(user, "can_view_audit_log");
+  const canViewSystemStatus = hasAdminCapability(user, "can_view_system_status");
+  const dashboard = useApiResource<DashboardData>("/ingestion/dashboard/", credential, contextKey);
+  const queue = useApiResource<WorkflowQueuePayload>("/catalog/admin/workflows/queue/", credential, contextKey);
+  const analytics = useApiResource<UsageSummary>(canViewAnalytics ? "/catalog/admin/usage-analytics/?days=30" : "", credential, contextKey);
+  const hot = useApiResource<HotSearchPayload>("/catalog/hot-searches/?days=30&limit=8", credential, contextKey);
+  const live = dashboard.data;
+  const error = dashboard.error;
+  const workflowQueue = queue.data;
+  const usage = analytics.data;
+  const hotSearches = hot.data?.results ?? [];
 
   const totalItems = useMemo(
     () => Object.values(live?.status_counts ?? {}).reduce((sum, value) => sum + value, 0),
@@ -162,14 +160,8 @@ export function AdminDashboard() {
         ["账户", String(live.users), "不作为读者数量"],
         ["待复核", String(live.needs_review), `${live.processing} 处理中`],
       ]
-    : [
-        ["馆藏总量", "—", "正在读取"],
-        ["PDF 文档", "—", "正在读取"],
-        ["理论流派", "—", "正在读取"],
-        ["学者", "—", "正在读取"],
-        ["账户", "—", "正在读取"],
-        ["待复核", "—", "正在读取"],
-      ];
+    : ["馆藏总量", "PDF 文档", "理论流派", "学者", "账户", "待复核"]
+        .map((label) => [label, "—", error ? "读取失败" : "正在读取"]);
 
   return (
     <div className="admin-dashboard">
@@ -184,17 +176,19 @@ export function AdminDashboard() {
           </Link>
         )}
       />
-      {error ? <p className="admin-error" role="alert">{error}</p> : null}
+      {error ? <p className="admin-error" role="alert">{error}<button type="button" onClick={dashboard.retry}>重新读取概况</button></p> : null}
       <section className="admin-work-entry-grid" aria-label="今日工作入口">
+        {queue.error ? <p className="admin-error" role="alert">工作队列读取失败。{queue.error}<button type="button" onClick={queue.retry}>重试工作队列</button></p> : queue.loading ? <p role="status">正在读取工作队列…</p> : <>
         <WorkflowQueuePanel title="继续处理" items={workflowQueue?.continue_items ?? []} empty="当前没有中断的馆藏工作。" />
         <WorkflowQueuePanel title="待人工确认" items={workflowQueue?.attention_items ?? []} empty="当前没有待确认项目。" />
         <WorkflowQueuePanel title="异常" items={workflowQueue?.exception_items ?? workflowQueue?.exceptions ?? []} empty="当前没有处理异常。" tone="danger" />
         <WorkflowQueuePanel title="待发布" items={workflowQueue?.publication_ready ?? []} empty="当前没有完成发布准备的项目。" step="publication" />
+        <WorkflowQueuePanel title="最近处理" items={workflowQueue?.recent_items ?? []} empty="尚无最近处理记录。" />
+        </>}
         <section className="admin-panel admin-work-queue-panel">
           <header><h2>知识策展</h2><Link href="/admin/knowledge">打开字段工作台 <ArrowRight size={13} /></Link></header>
           <p>选择作品、学者、主题或理论，在需要补充的字段中查看依据并确认修改。</p>
         </section>
-        <WorkflowQueuePanel title="最近处理" items={workflowQueue?.recent_items ?? []} empty="尚无最近处理记录。" />
       </section>
 
       <header className="admin-dashboard-section-heading"><p>概况</p><h2>馆藏与运行摘要</h2></header>
@@ -297,22 +291,24 @@ export function AdminDashboard() {
           ))}
         </AdminPanel>
 
-        <AdminPanel title="匿名使用统计" href="/admin/analytics" className="user-chart-panel">
+        {canViewAnalytics ? <AdminPanel title="匿名使用统计" href="/admin/analytics" className="user-chart-panel">
+          {analytics.error ? <p role="alert">统计读取失败。{analytics.error}<button type="button" onClick={analytics.retry}>重试统计</button></p> : analytics.loading ? <p role="status">正在读取统计…</p> : null}
           <div className="chart-stats">
             <p><strong>{usage?.anonymous_sessions ?? "—"}</strong><span>最近 30 天匿名会话</span></p>
             <p><strong>{usage?.events.reader_open ?? "—"}</strong><span>图书打开次数</span></p>
           </div>
           <p className="empty-state">不保存 IP 身份，也不把匿名会话永久绑定到注册账号。</p>
-        </AdminPanel>
+        </AdminPanel> : null}
 
-        <AdminPanel title="热门搜索" href="/admin/analytics">
+        <AdminPanel title="热门搜索" href={canViewAnalytics ? "/admin/analytics" : undefined}>
+          {hot.error ? <p role="alert">热门搜索读取失败。{hot.error}<button type="button" onClick={hot.retry}>重试热门搜索</button></p> : hot.loading ? <p role="status">正在读取热门搜索…</p> : null}
           {hotSearches.map((item) => <p className="status-count-row" key={item.query}><span>{item.query}</span><strong>{item.search_count}</strong></p>)}
-          {!hotSearches.length ? <p className="empty-state">尚无达到匿名阈值的热门搜索。低频与敏感查询不会公开聚合。</p> : null}
+          {hot.data && !hotSearches.length ? <p className="empty-state">尚无达到匿名阈值的热门搜索。低频与敏感查询不会公开聚合。</p> : null}
         </AdminPanel>
       </div>
 
       <div className="admin-grid bottom">
-        <AdminPanel title="系统健康" href="/admin/system-health">
+        <AdminPanel title="系统健康" href={canViewSystemStatus ? "/admin/system-health" : undefined}>
           {[["Web 应用", "已连接"], ["数据库", live ? "可查询" : "等待"], ["搜索索引", "需独立探测"]].map(([service, state]) => (
             <p className="health-row" key={service}><i /><strong>{service}</strong><span>{state}</span></p>
           ))}
