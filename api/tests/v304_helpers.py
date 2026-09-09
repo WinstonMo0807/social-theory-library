@@ -73,7 +73,9 @@ def activate_catalog_revision(
                 is_active=True,
             )
 
-    snapshot, related_entities = catalog_snapshot(edition)
+    snapshot, related_entities = catalog_snapshot(
+        edition, content_asset_id=reader_asset.pk if reader_asset is not None else None,
+    )
     revision_number = (
         edition.catalog_revisions.aggregate(value=Max("revision"))["value"] or 0
     ) + 1

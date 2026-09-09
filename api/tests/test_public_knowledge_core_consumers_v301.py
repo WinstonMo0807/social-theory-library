@@ -25,8 +25,9 @@ from catalog.models import (
 )
 
 
-pytestmark = pytest.mark.django_db
+from .v304_helpers import activate_catalog_revision
 
+pytestmark = pytest.mark.django_db
 
 def _published_node(*, name: str, slug: str, node_type: str):
     return KnowledgeNode.objects.create(
@@ -175,6 +176,7 @@ def test_public_work_theory_tags_are_normalized_first_with_legacy_optional(api_c
         approved=True,
     )
 
+    activate_catalog_revision(edition, fulltext_ready=False)
     response = api_client.get("/api/catalog/works/")
 
     assert response.status_code == 200
@@ -280,6 +282,8 @@ def test_public_knowledge_evidence_never_serializes_restricted_asset_text(api_cl
         seed="b",
     )
 
+    active = activate_catalog_revision(edition, reader_asset=public_asset)
+    assert active.snapshot["document"]["asset_id"] == str(public_asset.pk)
     work_response = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
     assert work_response.status_code == 200
     assert work_response.data["edition"]["readable_asset"]["id"] == str(public_asset.id)

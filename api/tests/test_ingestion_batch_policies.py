@@ -229,6 +229,8 @@ def test_registered_asset_requires_login_but_remains_available_to_reader(
     tmp_path,
     settings,
 ):
+    from .v304_helpers import activate_catalog_revision
+
     settings.MEDIA_ROOT = tmp_path / "media"
     settings.NAS_PUBLIC_ROOT = settings.MEDIA_ROOT / "public"
     settings.REQUIRE_CLOUD_FOR_PUBLICATION = False
@@ -250,6 +252,7 @@ def test_registered_asset_requires_login_but_remains_available_to_reader(
         validation_status=Asset.ValidationStatus.VALID,
         access_status=Asset.AccessStatus.REGISTERED,
     )
+    activate_catalog_revision(edition, reader_asset=asset, fulltext_ready=False)
 
     anonymous = api_client.get(f"/api/distribution/assets/{asset.id}/access/")
     assert anonymous.status_code == 401
@@ -262,6 +265,7 @@ def test_registered_asset_requires_login_but_remains_available_to_reader(
     assert protected_file.status_code == 200
     assert protected_file["Cache-Control"] == "private, no-store, no-transform"
     assert "Cookie" in protected_file["Vary"]
+    protected_file.close()
 
 
 @pytest.mark.django_db

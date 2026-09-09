@@ -20,6 +20,7 @@ from catalog.models import (
     Topic,
     Work,
 )
+from .v304_helpers import activate_catalog_revision
 
 
 def make_public_source(title="策展观点公开测试"):
@@ -154,6 +155,7 @@ def test_work_detail_exposes_only_published_evidence_backed_curated_claims(api_c
         shadow=True,
     )
 
+    activate_catalog_revision(edition, reader_asset=asset, document_revision=revision)
     response = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
 
     assert response.status_code == 200
@@ -233,6 +235,7 @@ def test_work_detail_hides_curated_claim_without_public_reader_source(api_client
     )
     ClaimEvidence.objects.create(curated_claim=claim, evidence_span=private_evidence)
 
+    activate_catalog_revision(edition, reader_asset=_asset, document_revision=_revision)
     response = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
 
     assert response.status_code == 200
@@ -271,6 +274,7 @@ def test_anonymous_curated_claim_never_leaks_non_public_asset_text(
         role=ClaimEvidence.Role.PRIMARY,
     )
 
+    activate_catalog_revision(edition, reader_asset=asset, document_revision=_revision)
     response = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
 
     assert response.status_code == 200
@@ -305,6 +309,7 @@ def test_debate_node_exposes_human_positions_with_current_pdf_evidence(api_clien
         confidence=0.92,
     )
 
+    activate_catalog_revision(_edition, reader_asset=asset, document_revision=_revision)
     response = api_client.get(
         f"/api/catalog/theory-system/nodes/{debate.slug}/"
     )
@@ -358,6 +363,7 @@ def test_topic_and_scholar_share_the_same_evidence_backed_curated_core(api_clien
             role=ClaimEvidence.Role.PRIMARY,
         )
 
+    activate_catalog_revision(edition, reader_asset=_asset, document_revision=_revision)
     topic_response = api_client.get(f"/api/catalog/topics/{topic.slug}/")
     scholar_response = api_client.get(f"/api/catalog/scholars/{scholar.slug}/")
 

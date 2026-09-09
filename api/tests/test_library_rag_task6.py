@@ -31,7 +31,9 @@ from reading.library_retrieval import (
 from reading.models import LibraryConversation
 
 
-def create_reader_asset(index: int = 1):
+def create_reader_asset(index: int = 1, *, fulltext_ready: bool = True):
+    from .v304_helpers import activate_catalog_revision
+
     work = Work.objects.create(document_type="book", title=f"Task 6 馆藏 {index}")
     edition = Edition.objects.create(
         work=work,
@@ -48,6 +50,7 @@ def create_reader_asset(index: int = 1):
         is_current=True,
         page_count=12,
     )
+    activate_catalog_revision(edition, reader_asset=asset, fulltext_ready=fulltext_ready)
     return work, edition, asset
 
 
@@ -151,6 +154,14 @@ def test_scope_normalization_is_strict_and_reader_asset_constrains_work():
         normalize_library_scope({"context": "theory", "ids": []})
     with pytest.raises(LibraryScopeError):
         normalize_library_scope({"context": "not-a-real-scope"})
+
+
+@pytest.mark.django_db
+def test_reader_asset_without_published_fulltext_cannot_be_used_as_rag_source():
+    _work, _edition, asset = create_reader_asset(3, fulltext_ready=False)
+    scope = normalize_library_scope({"context": "work", "asset_id": str(asset.pk)})
+    with pytest.raises(LibraryScopeError, match="不可用于馆藏问答"):
+        resolve_library_scope(scope)
 
 
 @pytest.mark.django_db

@@ -1,8 +1,16 @@
 # Social Theory Library 3.0.5 当前进度
 
-最近核对时间为 2026-09-09，香港时间。
+最近核对时间为 2026-09-10，香港时间。
 
 ## 3.0.5 当前动作
+
+当前 Reader/公开证据回归切片已完成。旧夹具补明确活动 Catalog/Document 快照，生产 selector 和证据过滤未放宽。原始分支接续于 cc1335f，尚未连接生产。
+
+公开证据首组 23 passed/2 failed，90.81 秒。测试 helper 未将指定 reader_asset 传给 catalog_snapshot，混用了同一 Edition 的较新受限文件；另一个 RAG fixture 只有 metadata_ready 却期待可查询正文。已修正测试并新增无正式全文不能作 RAG 来源的断言。审计还发现 PDF 封面归属检查在比较前覆写 edition.work，可能让旧 Work 候选通过。新增复现正在执行，尚未计修复完成。
+
+封面归属风险已复现为 1 failed，其余公开 Reader/证据 26 passed，66.49 秒。已将真实 Edition.work_id 比较移到赋值前，再锁定确认归属的 Work；无 schema 或数据清理操作。新增合法封面仍可保存的用例后，扩大 Reader/媒体/范围检索组 62 passed，退出 0，70.69 秒。明确覆盖多文件快照、草稿/失效/受限证据、无正式全文 RAG 拒绝、阅读历史与登录文件。
+
+新核对的发布门槛：AdminWorkRecommendationImageView 旧图例接口直接改 Work.recommendation_image，替换/删除时物理删除旧文件；尚未统一进入 EditorialRevision 和媒体引用保护。该问题为源码确认，未检查生产是否存在受影响历史图例。接下来处理此入口与剩余投影/OCR回归，不把媒体系统判为完成。
 
 当前分支为 `codex/v3.0.5-architecture-convergence`，媒体切片已本地提交 `b39ddce`，首页权限切片为 `fe89007`，规范关系修复为 `44e79df`，语义投递保护为 `8405d9f`。未推送、未连接或部署生产。
 

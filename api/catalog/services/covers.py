@@ -163,10 +163,10 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
     edition = Edition.objects.select_for_update().get(pk=candidate.asset.edition_id)
     if edition_id and str(edition.pk) != str(edition_id):
         raise CoverCandidateUnavailable("该封面不属于当前版本，请查找本版本封面。")
-    work = Work.objects.select_for_update().get(pk=candidate.work_id)
-    edition.work = work
     if edition.work_id != candidate.work_id:
         raise CoverCandidateUnavailable("该封面对应的作品已变化，请重新查找。")
+    work = Work.objects.select_for_update().get(pk=edition.work_id)
+    edition.work = work
     requires_revision = work.editions.filter(state=PublicationState.PUBLISHED).exists()
     if automatic and CatalogFieldDecision.objects.filter(
         edition=edition, field_name="cover",

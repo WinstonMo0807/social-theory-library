@@ -798,6 +798,8 @@ def test_only_configured_owner_can_promote_or_demote_administrators(
 
 @pytest.mark.django_db
 def test_reading_history_coalesces_recent_page_updates(api_client, reader_user):
+    from .v304_helpers import activate_catalog_revision
+
     work = Work.objects.create(document_type="book", title="阅读历史测试")
     edition = Edition.objects.create(
         work=work,
@@ -812,6 +814,7 @@ def test_reading_history_coalesces_recent_page_updates(api_client, reader_user):
         status=Asset.Status.READY,
         page_count=10,
     )
+    activate_catalog_revision(edition, reader_asset=asset, fulltext_ready=False)
     api_client.force_authenticate(reader_user)
     first = api_client.post(
         "/api/reading/history/",
