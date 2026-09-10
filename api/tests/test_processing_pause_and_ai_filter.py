@@ -4,6 +4,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 from catalog.models import (
+    DocumentRevision,
+    KnowledgePublicationEvent,
     OcrStatus,
     Page,
     SemanticIndexJob,
@@ -176,13 +178,11 @@ def test_ocr_pauses_after_persisted_batch_and_resumes_same_job_from_remaining_pa
             return_value=("reader.pdf", lambda: None),
         ),
         patch("ingestion.services.processing.extract_ocr_page_batch", side_effect=fake_extract),
-        patch("ingestion.services.processing.index_asset"),
-        patch("ingestion.services.processing.queue_semantic_job"),
         patch("ingestion.services.processing.queue_page_label_job"),
         patch("ingestion.services.processing.detect_publication_places", return_value=[]),
         patch("ingestion.services.processing.generate_theory_review_tasks", return_value=0),
     )
-    with common_patches[0], common_patches[1], common_patches[2], common_patches[3], common_patches[4], common_patches[5], common_patches[6], patch(
+    with common_patches[0], common_patches[1], common_patches[2], common_patches[3], common_patches[4], patch(
         "ingestion.services.processing.dispatch_ocr_job",
         return_value=True,
     ) as dispatch:
@@ -212,6 +212,12 @@ def test_ocr_pauses_after_persisted_batch_and_resumes_same_job_from_remaining_pa
     assert job.stats["processed_pages"] == 3
     assert normalized.pages.filter(text_source=Page.TextSource.OCR).count() == 3
     assert edition.ocr_status == OcrStatus.SUCCEEDED
+    assert job.stats["document_intelligence"]["status"] == "ready"
+    assert DocumentRevision.objects.filter(
+        pk=job.stats["document_intelligence"]["revision_id"], asset=normalized,
+    ).exists()
+    assert edition.active_catalog_revision_id is None
+    assert not KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).exists()
 
 
 @pytest.mark.django_db

@@ -27,6 +27,7 @@ from catalog.services.document_intelligence import (
     synchronize_native_extraction,
     synchronize_ocr_completion,
 )
+from .v304_helpers import activate_catalog_revision
 
 
 pytestmark = pytest.mark.django_db
@@ -232,8 +233,13 @@ def test_selective_ocr_preserves_page_identity_and_only_stales_affected_evidence
 
     edition.state = "published"
     edition.save(update_fields=["state", "updated_at"])
+    assert not visible_claim_queryset({"work_ids": [str(work.id)]}).filter(pk=carried.pk).exists()
+    activate_catalog_revision(edition, reader_asset=asset, document_revision=ocr_revision)
     assert visible_claim_queryset({"work_ids": [str(work.id)]}).filter(
         pk=carried.pk
+    ).exists()
+    assert not visible_claim_queryset({"work_ids": [str(work.id)]}).filter(
+        pk__in=[changed_claim.pk, unchanged_claim.pk],
     ).exists()
 
     scheduled = schedule_document_claim_extraction(

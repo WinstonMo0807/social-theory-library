@@ -6,6 +6,8 @@ import pytest
 from django.core.management import call_command
 
 from catalog.models import (
+    DocumentRevision,
+    KnowledgePublicationEvent,
     OcrStatus,
     Page,
     SemanticChunk,
@@ -535,10 +537,6 @@ def test_ocr_job_persists_and_dispatches_resumable_page_batches(
         "ingestion.services.processing.dispatch_ocr_job",
         side_effect=fake_dispatch,
     ), patch(
-        "ingestion.services.processing.index_asset"
-    ) as indexed, patch(
-        "ingestion.services.processing.queue_semantic_job"
-    ) as semantic, patch(
         "ingestion.services.processing.queue_page_label_job"
     ) as page_labels, patch(
         "ingestion.services.processing.detect_publication_places",
@@ -579,8 +577,13 @@ def test_ocr_job_persists_and_dispatches_resumable_page_batches(
     assert first_page.is_label_anchor is True
     assert normalized.extraction_method == "paddleocr_nas"
     assert edition.ocr_status == OcrStatus.SUCCEEDED
-    indexed.assert_called_once()
-    semantic.assert_called_once()
+    assert job.stats["document_intelligence"]["status"] == "ready"
+    assert DocumentRevision.objects.filter(
+        pk=job.stats["document_intelligence"]["revision_id"], asset=normalized,
+    ).exists()
+    assert edition.active_catalog_revision_id is None
+    assert not KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).exists()
+    assert "knowledge_publication_event_id" not in job.stats
     page_labels.assert_called_once()
     publication_places.assert_called_once_with(
         normalized,

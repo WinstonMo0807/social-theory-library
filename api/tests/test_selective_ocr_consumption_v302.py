@@ -16,6 +16,7 @@ from catalog.models import (
     DocumentRevision,
     Edition,
     EvidenceSpan,
+    KnowledgePublicationEvent,
     Page,
     Work,
 )
@@ -168,9 +169,7 @@ def test_selective_ocr_flows_to_revision_evidence_and_bibliographic_candidate(
             "ingestion.services.extract.parse_pdf_pages_with_ocr",
             side_effect=_ocr_payload,
         ) as provider,
-        patch("ingestion.services.processing.index_asset"),
         patch("ingestion.services.processing.generate_theory_review_tasks", return_value=0),
-        patch("ingestion.services.processing.queue_semantic_job"),
         patch("ingestion.services.processing.queue_page_label_job"),
         patch("ingestion.services.processing.detect_publication_places", return_value=[]),
         patch("ingestion.services.processing.controlled_vocabulary_candidates_for_asset", return_value=[]),
@@ -207,6 +206,10 @@ def test_selective_ocr_flows_to_revision_evidence_and_bibliographic_candidate(
     assert active_revision.ocr_provider == "paddleocr_nas"
     assert active_revision.source_checksum == digest
     assert native_revision.is_active is False
+    edition.refresh_from_db()
+    assert edition.active_catalog_revision_id is None
+    assert not KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).exists()
+    assert "knowledge_publication_event_id" not in completed.stats
     evidence = EvidenceSpan.objects.get(
         document_revision=active_revision,
         page_id=stable_page_id,
