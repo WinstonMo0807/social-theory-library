@@ -14,7 +14,7 @@ MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建
 
 发布命令收敛与公开恢复见 `V3.0.5_PUBLICATION.md`。工作台读取、差异和公开历史使用同一 revision 事实，恢复发布保持递增序号并引用曾合法激活的原快照。书目编辑、后台处理和公开状态分别呈现。此机制尚未完成生产 PostgreSQL/索引/文档恢复验收。
 
-媒体原件、衍生图和公开引用由 MediaAsset、MediaRendition、CatalogPublicationMedia 负责。Work 的媒体选择通过原编辑修订发布；精确尺寸和说明固定在活动公开快照中，后台改图不会就地改变读者内容。当前先接入 Work 封面，其他实体仍沿用旧图像字段，详见 V3.0.5_MEDIA。
+媒体原件、衍生图和公开引用由 MediaAsset、MediaRendition、CatalogPublicationMedia 负责。Work 封面和推荐图例分别使用真实 rendition FK，选择通过原编辑修订发布；精确尺寸和说明固定在活动公开快照中，后台改图不会就地改变读者内容。旧图例 HTTP 入口复用同一媒体服务，不再删除历史文件。元数据接口、写入与 PDF 图例生成保留所选 Edition 上下文，其他实体仍沿用旧图像字段，详见 V3.0.5_MEDIA。
 
 字段助手的旧 TheorySchool 输入继续可读，但新关联只经既有、经确认且身份安全的 LegacyKnowledgeMapping 写到 KnowledgeNode/WorkNodeRelation。发布过的 Work 仍先建立 EditorialRevision。采用时锁住映射与目标，拒绝缺映射、类型错误、非正式目标或名称不匹配。历史 WorkKnowledgeRelation 和证据原样保留，不把静态扫描归零当作完整旧版退役或运行时零调用证明。
 

@@ -62,6 +62,8 @@ FIELDS = (
     _work("abstract", "简介", data_type="text", dependencies=_IDENTITY, display="textarea"),
     _work("cover", "封面", data_type="image", dependencies=_IDENTITY, warning_rules=("missing", "stale"),
           projection_impact=("public", "recommendation"), display="media"),
+    _work("recommendation_image", "推荐图例", data_type="image", dependencies=_IDENTITY,
+          projection_impact=("public", "recommendation"), display="media"),
     _edition("journal_contents", "本期目录与论文", data_type="relation_list", display="journal_contents"),
     _edition("publication_mode", "公开内容", data_type="enum", validator="publication_mode", candidate_sources=("manual",)),
     _edition("version_label", "版本说明"),

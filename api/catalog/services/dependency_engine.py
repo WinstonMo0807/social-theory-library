@@ -172,6 +172,9 @@ PROJECTION_DEPENDENCIES: dict[str, tuple[str, ...]] = {
 FIELD_PROJECTION_DEPENDENCIES: dict[str, dict[str, tuple[str, ...]]] = {
     "work": {
         "cover": (ProjectionType.PUBLIC,),
+        "cover_rendition": (ProjectionType.PUBLIC,),
+        "recommendation_image": (ProjectionType.PUBLIC,),
+        "recommendation_rendition": (ProjectionType.PUBLIC,),
         "title": (
             ProjectionType.QUERY_LEXICON,
             ProjectionType.FULLTEXT,
@@ -231,6 +234,9 @@ FIELD_PROJECTION_DEPENDENCIES: dict[str, dict[str, tuple[str, ...]]] = {
         "catalog_publish": ALL_PROJECTIONS,
         "catalog_withdraw": ALL_PROJECTIONS,
         "cover": (ProjectionType.PUBLIC,),
+        "cover_rendition": (ProjectionType.PUBLIC,),
+        "recommendation_image": (ProjectionType.PUBLIC,),
+        "recommendation_rendition": (ProjectionType.PUBLIC,),
         "title": (
             ProjectionType.QUERY_LEXICON,
             ProjectionType.FULLTEXT,

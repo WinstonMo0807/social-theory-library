@@ -1,8 +1,10 @@
 # 3.0.5 迁移记录（开发中）
 
-媒体增量 0045–0049 的职责和验证见 `V3.0.5_MEDIA.md`。当前 migration 尚未应用生产，不执行 down migration 或覆盖旧文件。
+媒体增量 0045–0050 的职责和验证见 `V3.0.5_MEDIA.md`。当前 migration 尚未应用生产，不执行 down migration 或覆盖旧文件。
 
 未在生产执行。所有 schema 必须先经过隔离 PostgreSQL 恢复演练，不能用 SQLite 成绩代替。
+
+0050 为 Work 增加可空的 recommendation_rendition PROTECT FK。新选图使用 MediaAsset/Rendition 与现有 CatalogPublicationMedia；旧图例路径保持原样，无批量确认、图片重建或删除。回退旧应用需保留 schema 并禁用旧推荐图写入口，或保留本修复，避免旧代码物理删除托管衍生图；只读兼容不受影响。
 
 ## catalog 0043
 

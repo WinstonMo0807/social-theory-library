@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from urllib.parse import urlparse
 
-from .editorial_read import AdminEditorialDraftReadMixin
+from .editorial_read import AdminEditorialDraftReadMixin, AdminPrivateResponseMixin
 
 from .models import (
     Asset,
@@ -173,6 +173,25 @@ class AdminAuthoritySuggestionView(APIView):
         return Response(result)
 
 
+def _public_media_response(request, media_snapshot):
+    from catalog.models import MediaRendition
+
+    identifier = str(request.query_params.get("rendition") or media_snapshot.get("primary_rendition_id") or "")
+    allowed = {str(row["id"]) for row in media_snapshot.get("renditions", [])}
+    if identifier not in allowed:
+        return Response({"detail": "该图片不属于当前公开版本。"}, status=404)
+    rendition = get_object_or_404(MediaRendition, pk=identifier, media_id=media_snapshot["media_id"])
+    try:
+        image = rendition.file.open("rb")
+    except OSError:
+        return Response({"detail": "公开图片暂时无法读取。"}, status=503)
+    response = FileResponse(image, content_type="image/webp")
+    response["Cache-Control"] = "public, max-age=300"
+    response["ETag"] = f'"{rendition.checksum}"'
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 class PublicWorkCoverView(APIView):
     permission_classes = [AllowAny]
 
@@ -181,22 +200,7 @@ class PublicWorkCoverView(APIView):
         work_snapshot = _active_work_snapshot(work).get("work") or {}
         media_snapshot = work_snapshot.get("cover_media")
         if media_snapshot:
-            from catalog.models import MediaRendition
-
-            rendition_id = str(request.query_params.get("rendition") or media_snapshot.get("primary_rendition_id") or "")
-            allowed = {str(row["id"]) for row in media_snapshot.get("renditions", [])}
-            if rendition_id not in allowed:
-                return Response({"detail": "该图片不属于当前公开版本。"}, status=404)
-            rendition = get_object_or_404(MediaRendition, pk=rendition_id, media_id=media_snapshot["media_id"])
-            try:
-                image = rendition.file.open("rb")
-            except OSError:
-                return Response({"detail": "公开封面暂时无法读取。"}, status=503)
-            response = FileResponse(image, content_type="image/webp")
-            response["Cache-Control"] = "public, max-age=300"
-            response["ETag"] = f'"{rendition.checksum}"'
-            response["X-Content-Type-Options"] = "nosniff"
-            return response
+            return _public_media_response(request, media_snapshot)
         cover_name = work_snapshot.get("cover", "")
         storage = Work._meta.get_field("cover").storage
         if not cover_name or not storage.exists(cover_name):
@@ -227,6 +231,9 @@ class PublicWorkRecommendationImageView(APIView):
         work = get_object_or_404(public_works(), pk=work_id)
         work_snapshot = _active_work_snapshot(work).get("work") or {}
         recommendation_name = work_snapshot.get("recommendation_image", "")
+        media_snapshot = work_snapshot.get("recommendation_media") if recommendation_name else work_snapshot.get("cover_media")
+        if media_snapshot:
+            return _public_media_response(request, media_snapshot)
         cover_name = work_snapshot.get("cover", "")
         image_name = recommendation_name or cover_name
         field_name = "recommendation_image" if recommendation_name else "cover"
@@ -252,36 +259,55 @@ class PublicWorkRecommendationImageView(APIView):
         return response
 
 
-class AdminWorkRecommendationImageView(APIView):
-    """Preview, replace or regenerate the visual used by recommendation cards.
-
-    A manually uploaded image is stored on ``Work.recommendation_image`` and
-    therefore remains authoritative during later ingestion runs.  Removing the
-    override restores the selected book cover, or allows a non-book visual to
-    be generated again from its normalized PDF.
-    """
+class AdminWorkRecommendationImageView(AdminPrivateResponseMixin, APIView):
+    """Compatibility image API backed by the shared media/editorial services."""
 
     permission_classes = [IsLibraryStaff]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     max_upload_size = 12 * 1024 * 1024
 
-    def _image(self, work):
-        if work.recommendation_image:
-            return work.recommendation_image, "manual_or_generated"
-        if work.cover:
-            return work.cover, "book_cover"
+    def _draft(self, work):
+        from catalog.models import EditorialRevision
+
+        return EditorialRevision.objects.filter(target_type="work", target_id=work.pk, status="draft").order_by("-revision").first()
+
+    def _edition(self, request, work):
+        identifier = request.query_params.get("edition_id") or request.data.get("edition_id")
+        if identifier:
+            identifier = serializers.UUIDField().run_validation(identifier)
+            return get_object_or_404(Edition, pk=identifier, work=work)
+        return work.editions.order_by("-is_primary", "created_at").first()
+
+    def _image(self, work, *, preview=None, slot="recommendation"):
+        if preview is None:
+            draft = self._draft(work)
+            preview = draft.materialized_preview if draft else {}
+        fields = [("recommendation_image", "manual_or_generated"), ("cover", "book_cover")] if slot == "recommendation" else [("cover", "book_cover")]
+        for field_name, source in fields:
+            name = preview.get(field_name, getattr(work, field_name).name)
+            if name:
+                field = Work._meta.get_field(field_name)
+                return field.attr_class(work, field, name), source
         return None, "missing"
 
     def _payload(self, request, work):
-        image, source = self._image(work)
+        draft = self._draft(work)
+        preview = draft.materialized_preview if draft else {}
+        image, source = self._image(work, preview=preview)
         image_name = image.name if image else ""
         available = bool(
             image_name
             and image.storage.exists(image_name)
         )
+        edition = self._edition(request, work)
+        image_fields = {"recommendation_image", "recommendation_rendition"}
+        if source == "book_cover":
+            image_fields.update({"cover", "cover_rendition"})
+        staged = bool(draft and image_fields.intersection(draft.patch))
+        public = _active_work_snapshot(work).get("work") or {}
         return {
             "work_id": str(work.id),
-            "document_type": work.document_type,
+            "document_type": preview.get("document_type", work.document_type),
             "available": available,
             "source": source if available else "missing",
             "preview_url": request.build_absolute_uri(
@@ -290,15 +316,20 @@ class AdminWorkRecommendationImageView(APIView):
             "public_url": (
                 f"{settings.PUBLIC_API_URL.rstrip('/')}"
                 f"{reverse('public-work-recommendation-image', kwargs={'work_id': work.id})}"
-            ) if available else "",
-            "updated_at": work.updated_at,
+            ) if public.get("recommendation_image") or public.get("cover") else "",
+            "updated_at": draft.updated_at if staged else work.updated_at,
+            "canonical_write_deferred": staged,
+            "editorial_revision_id": str(draft.pk) if staged else None,
+            "workbench_url": f"/admin/library/works/{work.pk}?edition={edition.pk}#work" if edition else "",
+            "media_library_url": f"/admin/media?edition={edition.pk}&slot=recommendation" if edition else "",
+            "detail": "推荐图例已保存到草稿，请回到编目工作台核对后发布。原文件仍保留。" if staged else "图例选择已保存，原文件仍保留。",
         }
 
     def get(self, request, work_id):
         work = get_object_or_404(Work, pk=work_id)
         if request.query_params.get("metadata") == "1":
             return Response(self._payload(request, work))
-        image, _source = self._image(work)
+        image, _source = self._image(work, slot="cover" if request.query_params.get("slot") == "cover" else "recommendation")
         image_name = image.name if image else ""
         if not image_name or not image.storage.exists(image_name):
             return Response({"detail": "该馆藏尚无可预览的推荐图例。"}, status=404)
@@ -312,71 +343,54 @@ class AdminWorkRecommendationImageView(APIView):
         return response
 
     def post(self, request, work_id):
+        from django.core.exceptions import ValidationError
+        from catalog.services.media import ingest_image, select_work_image
+
         work = get_object_or_404(Work, pk=work_id)
+        edition = self._edition(request, work)
+        if edition is None:
+            return Response({"detail": "请先在编目工作台为作品建立版本。"}, status=409)
         uploaded = request.FILES.get("image")
         action = str(request.data.get("action", "")).strip()
-        previous_name = work.recommendation_image.name
-        previous_storage = work.recommendation_image.storage
-
-        if uploaded is not None:
-            if uploaded.size > self.max_upload_size:
-                return Response({"image": ["图片不能超过 12 MB。"]}, status=400)
-            try:
-                uploaded = serializers.ImageField().run_validation(uploaded)
-            except serializers.ValidationError as exc:
-                return Response({"image": exc.detail}, status=400)
-            work.recommendation_image.save(uploaded.name, uploaded, save=False)
-            work.save(update_fields=["recommendation_image", "updated_at"])
-        elif action == "regenerate":
-            if work.document_type == DocumentType.BOOK:
-                if not work.cover:
-                    return Response({"detail": "请先选择或上传图书封面。"}, status=409)
-                work.recommendation_image = ""
-                work.save(update_fields=["recommendation_image", "updated_at"])
+        try:
+            if uploaded is not None:
+                if uploaded.size > self.max_upload_size:
+                    return Response({"image": ["图片不能超过 12 MB。"]}, status=400)
+                media, _ = ingest_image(uploaded, actor=request.user, metadata={"alt_text": f"{work.title}推荐图例"})
+                select_work_image(edition.pk, media.pk, slot="recommendation", actor=request.user, expected_work_id=work.pk)
+            elif action == "regenerate":
+                draft = self._draft(work)
+                document_type = (draft.materialized_preview if draft else {}).get("document_type", work.document_type)
+                if document_type in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
+                    image, _ = self._image(work, slot="cover")
+                    if not image:
+                        return Response({"detail": "请先选择或上传图书封面。"}, status=409)
+                    select_work_image(edition.pk, None, slot="recommendation", actor=request.user, expected_work_id=work.pk)
+                else:
+                    asset = edition.assets.filter(kind=Asset.Kind.NORMALIZED, status=Asset.Status.READY, is_current=True).first()
+                    if asset is None:
+                        return Response({"detail": "规范阅读 PDF 尚未就绪。"}, status=409)
+                    generate_recommendation_image(asset, force=True, actor=request.user, automatic=False, expected_work_id=work.pk)
             else:
-                asset = (
-                    Asset.objects.filter(
-                        edition__work=work,
-                        edition__is_primary=True,
-                        kind=Asset.Kind.NORMALIZED,
-                        status=Asset.Status.READY,
-                        is_current=True,
-                    )
-                    .select_related("edition__work")
-                    .first()
-                )
-                if asset is None:
-                    return Response({"detail": "规范阅读 PDF 尚未就绪。"}, status=409)
-                try:
-                    generate_recommendation_image(asset, force=True)
-                except CoverCandidateUnavailable as exc:
-                    return Response({"detail": str(exc)}, status=409)
-                work.refresh_from_db()
-        else:
-            return Response({"detail": "请上传图片，或指定 regenerate 操作。"}, status=400)
-
-        current_name = work.recommendation_image.name
-        if previous_name and previous_name != current_name:
-            try:
-                previous_storage.delete(previous_name)
-            except OSError:
-                # Windows may keep a preview stream open briefly.  The database
-                # must still switch to the new image; the orphan can be removed
-                # by normal media maintenance after the handle is released.
-                pass
+                return Response({"detail": "请上传图片，或指定 regenerate 操作。"}, status=400)
+        except (ValueError, ValidationError, CoverCandidateUnavailable) as error:
+            return Response({"code": "media.selection_failed", "detail": str(error)}, status=409)
+        work.refresh_from_db()
         return Response(self._payload(request, work))
 
     def delete(self, request, work_id):
+        from django.core.exceptions import ValidationError
+        from catalog.services.media import select_work_image
+
         work = get_object_or_404(Work, pk=work_id)
-        previous_name = work.recommendation_image.name
-        previous_storage = work.recommendation_image.storage
-        work.recommendation_image = ""
-        work.save(update_fields=["recommendation_image", "updated_at"])
-        if previous_name:
-            try:
-                previous_storage.delete(previous_name)
-            except OSError:
-                pass
+        edition = self._edition(request, work)
+        if edition is None:
+            return Response({"detail": "请先在编目工作台为作品建立版本。"}, status=409)
+        try:
+            select_work_image(edition.pk, None, slot="recommendation", actor=request.user, expected_work_id=work.pk)
+        except (ValueError, ValidationError) as error:
+            return Response({"code": "media.selection_failed", "detail": str(error)}, status=409)
+        work.refresh_from_db()
         return Response(self._payload(request, work))
 
 

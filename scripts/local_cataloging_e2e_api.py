@@ -28,6 +28,15 @@ def main():
     })
     sys.path.insert(0, str(repository / "api"))
     import django
+    from django.conf import settings
+
+    # This disposable SQLite server has concurrent browser requests. Acquire
+    # write intent up front instead of racing a deferred read-to-write upgrade.
+    # Production PostgreSQL settings and transaction/row locks are unchanged.
+    database = settings.DATABASES["default"]
+    if database["ENGINE"] != "django.db.backends.sqlite3" or Path(database["NAME"]).resolve() != fixture_directory / "local_fixture.sqlite3":
+        raise RuntimeError("E2E database is not the newly created isolated SQLite file")
+    database.setdefault("OPTIONS", {}).update(timeout=20, transaction_mode="IMMEDIATE")
     django.setup()
     from django.core.management import call_command
     from accounts.models import User

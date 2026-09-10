@@ -101,16 +101,16 @@ def prepare_revision(edition):
     values["file"] = values.get("reader_asset")
     public_snapshot = active_catalog_snapshot(edition)
     public = _public_values(public_snapshot)
-    from catalog.models import MediaRendition
-    from catalog.services.media import cover_media_snapshot
+    from catalog.services.media import WORK_IMAGE_SLOTS, preview_work_media
 
     draft = EditorialRevision.objects.filter(target_type="work", target_id=edition.work_id, status="draft").order_by("-revision").first()
-    selected_id = (draft.materialized_preview if draft else {}).get("cover_rendition", edition.work.cover_rendition_id)
-    primary = MediaRendition.objects.select_related("media").filter(pk=selected_id).first() if selected_id else None
-    cover_media = cover_media_snapshot(edition.work, primary=primary) if primary else None
+    media_values = {
+        config["snapshot"]: preview_work_media(edition.work, slot=slot, preview=draft.materialized_preview if draft else None)
+        for slot, config in WORK_IMAGE_SLOTS.items()
+    }
     fingerprint = sha256(json.dumps({
         "values": values, "public_revision_id": str(edition.active_catalog_revision_id),
-        "confirmed_fields": sorted(confirmed), "cover_media": cover_media,
+        "confirmed_fields": sorted(confirmed), **media_values,
     }, sort_keys=True, default=str, ensure_ascii=False).encode()).hexdigest()
     names = {}
     old_names = {str(row["person_id"]): row.get("name", "") for row in public_snapshot.get("contributions", [])}
@@ -134,9 +134,9 @@ def prepare_revision(edition):
 
     def display(value, name, *, previous=False):
         labels = old_names if previous else names
-        if name == "cover" and isinstance(value, dict):
+        if name in {"cover", "recommendation_image"} and isinstance(value, dict):
             media = value.get("media") or {}
-            return "\n".join(["已选封面", *[
+            return "\n".join([f"已选{FIELD_CONTRACTS[name].label}", *[
                 f"{label}：{media[key]}" for key, label in (
                     ("alt_text", "图片说明"), ("source_label", "来源"), ("source_url", "来源网址"),
                     ("rights", "使用权说明"), ("license", "许可"), ("credit", "署名"),
@@ -153,11 +153,13 @@ def prepare_revision(edition):
         if name in {"ocr_text", "page_labels", "curation"}:
             continue
         before, after = public.get(name), values.get(name)
-        if name == "cover":
-            if public.get("cover_media"):
-                before = {"file": before, "media": public["cover_media"]}
-            if cover_media:
-                after = {"file": after, "media": cover_media}
+        image_config = next((config for config in WORK_IMAGE_SLOTS.values() if config["field"] == name), None)
+        if image_config is not None:
+            key = image_config["snapshot"]
+            if public.get(key):
+                before = {"file": before, "media": public[key]}
+            if media_values[key]:
+                after = {"file": after, "media": media_values[key]}
         empty = (None, "", [])
         state = "unchanged" if before == after or (before in empty and after in empty) else "added" if before in empty else "removed" if after in empty else "changed"
         changes.append({"field": name, "label": field.label, "change": state,

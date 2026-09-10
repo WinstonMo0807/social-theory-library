@@ -59,6 +59,8 @@ test("queue transport failure is visible and retries the real API", async ({ pag
 });
 
 test("non-superuser creates a real manual session, saves and reopens it", async ({ page }) => {
+  const serverErrors: string[] = [];
+  page.on("response", (response) => { if (response.status() >= 500) serverErrors.push(`${response.status()} ${response.url()}`); });
   await login(page, "curator");
   await page.goto("/admin/cataloging/new");
   await page.getByLabel("作品题名", { exact: true }).fill("E2E 无文件编目");
@@ -95,6 +97,7 @@ test("non-superuser creates a real manual session, saves and reopens it", async 
   await expect(diff).toBeVisible();
   await expect(diff.getByText("E2E 人工新建作者", { exact: true })).toBeVisible();
   await expect(diff.getByText("准备发布", { exact: true })).toBeVisible();
+  expect(serverErrors).toEqual([]);
 });
 
 test("a reader cannot open cataloging or submit a manual catalog", async ({ page }) => {
@@ -147,4 +150,21 @@ test("media upload keeps a private original and creates a responsive preview", a
   await page.getByRole("button", { name: "用作当前作品封面", exact: true }).click();
   await expect(page.getByText("封面已保存到书目草稿。请返回工作台核对后发布。", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "返回编目工作台", exact: true })).toBeVisible();
+  await page.goto(`/admin/media?edition=${session.edition_id}&slot=recommendation`);
+  await page.getByRole("button", { name: /E2E 媒体原图/ }).click();
+  await page.getByRole("button", { name: "用作当前作品推荐图例", exact: true }).click();
+  await expect(page.getByText("推荐图例已保存到书目草稿。请返回工作台核对后发布。", { exact: true })).toBeVisible();
+  const imagePreview = await page.request.get(`http://127.0.0.1:8105/api/catalog/admin/page-preview/editions/${session.edition_id}/`);
+  const imageWork = (await imagePreview.json()).work;
+  expect(imageWork.recommendation_media.primary_rendition_id).not.toBe(imageWork.cover_media.primary_rendition_id);
+  await page.getByRole("link", { name: "返回编目工作台", exact: true }).click();
+  const imageEditor = page.getByRole("region", { name: "推荐图例编辑", exact: true });
+  await expect(imageEditor).toBeVisible();
+  await expect(imageEditor.getByRole("img", { name: "当前草稿推荐图例", exact: true })).toHaveJSProperty("naturalWidth", 640);
+  await imageEditor.getByRole("button", { name: "移除图例选择", exact: true }).click();
+  await expect(page.getByText("图例选择已保存，原文件仍保留。", { exact: true })).toBeVisible();
+  const afterClear = await page.request.get(`http://127.0.0.1:8105/api/catalog/admin/page-preview/editions/${session.edition_id}/`);
+  const clearedWork = (await afterClear.json()).work;
+  expect(clearedWork.cover_media.primary_rendition_id).toBe(imageWork.cover_media.primary_rendition_id);
+  expect(clearedWork.recommendation_media.primary_rendition_id).toBe(clearedWork.cover_media.primary_rendition_id);
 });

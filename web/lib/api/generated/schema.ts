@@ -128,6 +128,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/media/recommendation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_editions_media_recommendation_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/publication/history/": {
         parameters: {
             query?: never;
@@ -224,6 +240,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_works_recommendation_image_metadata_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/works/{work_id}/cover-metadata/": {
         parameters: {
             query?: never;
@@ -232,6 +264,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["works_cover_metadata_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/works/{work_id}/recommendation-image-metadata/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["works_recommendation_image_metadata_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -337,12 +385,13 @@ export interface components {
         CoverMediaSelectionResult: {
             saved: boolean;
             /** Format: uuid */
-            media_id: string;
+            media_id: string | null;
             /** Format: uuid */
             edition_id: string;
             /** Format: uuid */
             editorial_revision_id: string | null;
             workbench_url: string;
+            canonical_write_deferred: boolean;
         };
         /**
          * @description * `book` - 图书
@@ -525,6 +574,23 @@ export interface components {
             /** Format: uuid */
             source_revision_id: string;
             status: string;
+        };
+        RecommendationImagePreview: {
+            /** Format: uuid */
+            work_id: string;
+            document_type: string;
+            available: boolean;
+            source: string;
+            preview_url: string;
+            public_url: string;
+            /** Format: date-time */
+            updated_at: string;
+            canonical_write_deferred: boolean;
+            /** Format: uuid */
+            editorial_revision_id: string | null;
+            workbench_url: string;
+            media_library_url: string;
+            detail: string;
         };
         /**
          * @description * `blocking` - blocking
@@ -822,6 +888,33 @@ export interface operations {
             };
         };
     };
+    admin_editions_media_recommendation_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverMediaSelectionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CoverMediaSelectionRequest"];
+                "multipart/form-data": components["schemas"]["CoverMediaSelectionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverMediaSelectionResult"];
+                };
+            };
+        };
+    };
     admin_editions_publication_history_list: {
         parameters: {
             query?: never;
@@ -1025,7 +1118,51 @@ export interface operations {
             };
         };
     };
+    admin_works_recommendation_image_metadata_retrieve: {
+        parameters: {
+            query?: {
+                edition_id?: string;
+            };
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationImagePreview"];
+                };
+            };
+        };
+    };
     works_cover_metadata_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCoverMedia"];
+                };
+            };
+        };
+    };
+    works_recommendation_image_metadata_retrieve: {
         parameters: {
             query?: never;
             header?: never;

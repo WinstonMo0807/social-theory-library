@@ -11,7 +11,7 @@ import {
 import { defaultSiteConfig, type SiteConfig } from "./site-config";
 import type { SearchContext } from "./search-context";
 import { WEB_APP_VERSION } from "./version";
-import { adaptApiScholar, adaptApiScholarDetail, adaptApiTopic, adaptApiWork } from "./public-data-adapters";
+import { adaptApiScholar, adaptApiScholarDetail, adaptApiTopic, adaptApiWork, adaptRecommendationWork } from "./public-data-adapters";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -60,6 +60,7 @@ export type PublicKnowledgeNodeLink = {
 
 export type ApiWork = {
   cover_media?: import("./api/generated/schema").components["schemas"]["PublicCoverMedia"] | null;
+  recommendation_media?: import("./api/generated/schema").components["schemas"]["PublicCoverMedia"] | null;
   id: string;
   document_type: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
   title: string;
@@ -1360,7 +1361,7 @@ export async function loadAboutBlocks(): Promise<{ configured: boolean; blocks: 
 export function recommendationWorks(bundle: RecommendationBundle, placement: string): Work[] {
   return (bundle.placements[placement]?.current?.items ?? [])
     .filter((item) => item.target_type === "work")
-    .map((item, index) => adaptWork(item.target as ApiWork, index));
+    .map((item, index) => adaptRecommendationWork(item.target as ApiWork, index));
 }
 
 export function recommendationSlugs(

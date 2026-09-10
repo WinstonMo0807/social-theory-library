@@ -144,6 +144,8 @@ def normalize_changed_fields(
         root = value.split(".", 1)[0]
         if root == "cover_rendition":
             root = "cover"
+        elif root == "recommendation_rendition":
+            root = "recommendation_image"
         fields.update(COMPOSITE_FIELDS.get(root, (root,)))
     if event_type == KnowledgePublicationEvent.EventType.CATALOG_PUBLISHED:
         fields.add("catalog_publish")
@@ -185,7 +187,7 @@ def _current_document(edition: Edition, *, content_asset_id=None) -> tuple[Asset
 
 def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, list[dict]]:
     from catalog.services.journal_issues import journal_contents_snapshot
-    from catalog.services.media import cover_media_snapshot
+    from catalog.services.media import cover_media_snapshot, work_media_snapshot
 
     work = edition.work
     contributions = [
@@ -303,6 +305,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "cover": str(work.cover.name or ""),
             "cover_media": cover_media_snapshot(work),
             "recommendation_image": str(work.recommendation_image.name or ""),
+            "recommendation_media": work_media_snapshot(work, slot="recommendation"),
         },
         "edition": {
             "id": str(edition.id),
@@ -1021,16 +1024,21 @@ def create_catalog_publication_event(
         created_by=actor,
         activated_at=None,
     )
-    media_snapshot = (snapshot.get("work") or {}).get("cover_media") or {}
-    if media_snapshot:
+    media_references = {}
+    for media_key in ("cover_media", "recommendation_media"):
+        media_snapshot = (snapshot.get("work") or {}).get(media_key) or {}
+        if not media_snapshot:
+            continue
         from catalog.models import CatalogPublicationMedia, MediaRendition
 
         ids = {row["id"] for row in media_snapshot.get("renditions", [])}
         renditions = list(MediaRendition.objects.filter(pk__in=ids, media_id=media_snapshot["media_id"]))
         if len(renditions) != len(ids):
-            raise ValueError("发布封面引用了不存在或不匹配的媒体版本。")
+            raise ValueError("发布图片引用了不存在或不匹配的媒体版本。")
+        media_references.update({row.pk: row for row in renditions})
+    if media_references:
         CatalogPublicationMedia.objects.bulk_create([
-            CatalogPublicationMedia(catalog_revision=revision, rendition=row) for row in renditions
+            CatalogPublicationMedia(catalog_revision=revision, rendition=row) for row in media_references.values()
         ])
 
     if revision_status == CatalogPublicationRevision.Status.WITHDRAWN:

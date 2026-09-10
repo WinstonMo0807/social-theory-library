@@ -494,6 +494,65 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/media/recommendation/": {
+            "post": {
+                "operationId": "admin_editions_media_recommendation_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CoverMediaSelectionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CoverMediaSelectionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CoverMediaSelectionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CoverMediaSelectionResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/editions/{edition_id}/publication/history/": {
             "get": {
                 "operationId": "admin_editions_publication_history_list",
@@ -879,9 +938,96 @@
                 }
             }
         },
+        "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
+            "get": {
+                "operationId": "admin_works_recommendation_image_metadata_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationImagePreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/works/{work_id}/cover-metadata/": {
             "get": {
                 "operationId": "works_cover_metadata_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "works"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicCoverMedia"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/works/{work_id}/recommendation-image-metadata/": {
+            "get": {
+                "operationId": "works_recommendation_image_metadata_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1200,7 +1346,8 @@
                     },
                     "media_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "edition_id": {
                         "type": "string",
@@ -1213,9 +1360,13 @@
                     },
                     "workbench_url": {
                         "type": "string"
+                    },
+                    "canonical_write_deferred": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
+                    "canonical_write_deferred",
                     "edition_id",
                     "editorial_revision_id",
                     "media_id",
@@ -1820,6 +1971,65 @@
                     "event_id",
                     "source_revision_id",
                     "status"
+                ]
+            },
+            "RecommendationImagePreview": {
+                "type": "object",
+                "properties": {
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "canonical_write_deferred": {
+                        "type": "boolean"
+                    },
+                    "editorial_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    },
+                    "media_library_url": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "available",
+                    "canonical_write_deferred",
+                    "detail",
+                    "document_type",
+                    "editorial_revision_id",
+                    "media_library_url",
+                    "preview_url",
+                    "public_url",
+                    "source",
+                    "updated_at",
+                    "work_id",
+                    "workbench_url"
                 ]
             },
             "SeverityEnum": {

@@ -41,6 +41,8 @@ function adaptPreviewWork(value: ApiWork): Work {
     summary: value.abstract || "简介待编辑。",
     cover: coverStyles[0],
     coverImage: normalizePublicResourceUrl(value.cover || value.recommendation_image || "") || undefined,
+    coverSources: (value.cover ? value.cover_media : value.recommendation_media)?.renditions.map((row) => ({ ...row, url: normalizePublicResourceUrl(row.url) })),
+    coverAlt: (value.cover ? value.cover_media : value.recommendation_media)?.alt_text || undefined,
     pages: value.edition?.readable_asset?.page_count ?? 0,
     language: value.language,
     authors: authors.map((row) => ({ name: row.person.preferred_name, slug: row.person.scholar_slug })),

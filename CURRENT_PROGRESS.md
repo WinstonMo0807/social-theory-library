@@ -4,6 +4,16 @@
 
 ## 3.0.5 当前动作
 
+本轮接续于 86fde7c，工作区起始干净。推荐图例已接入既有 MediaAsset/Rendition、Work 编辑修订和发布引用保护。旧接口保留，保存草稿后返回真实预览，移除图例只清除选择而不物理删除历史文件。公开页只读活动快照，书封与推荐图例独立。0050 为新增可空 FK，没有生产迁移或外部写入。
+
+推荐图例的旧接口删除历史文件已以 2 failed 复现。0050 增加 Work.recommendation_rendition，推荐图例与书封复用媒体选择、资料快照、验证和 CatalogPublicationMedia；移除只清选择，发布及回滚保持精确文件引用。第一组 36 passed，退出 0，70.48 秒。第一次运行未保存完成报告，未计通过。当前已接共享图例编辑器、媒体库推荐用途、生成类型与公开推荐适配器，正在跑扩大后端与前端全量。未提交、未部署。
+
+扩大后端 53 passed/1 failed，定位为推荐图仍触发正文索引，已在原依赖注册表补图片字段及 FK 的 Public-only 规则，随后 56 passed，退出 0，110.37 秒。TypeScript、lint、API 漂移检查通过。前端构建/原 184 项通过，新增推荐/书封适配 4 项通过。6 项真实浏览器流程通过且包含推荐图选择/预览/清除，但后台 FieldAssistant 一次 SQLite 锁冲突仍需处理。隔离 fixture 已验证本机 Django 支持并配置 IMMEDIATE 写事务及超时，并给编目 E2E 增加 500 响应断言，正在复核。生产 PostgreSQL 设置未变。
+
+本地 fixture 修正后 6 项真实 E2E 通过，退出 0，2.0 分钟，新增的 500 响应断言通过，输出未再出现 database is locked。仍不证明 PostgreSQL 并发。兼容图例旧回归已更新为实际发布修订与旧文件保留；首轮 56 passed/1 failed，失败是报告 fixture 缺少必填发布机构，已补测试数据后最后重跑中。没有放宽必填规则。
+
+兼容图例补齐测试数据后 57 passed。新增精确 edition_id 路由、请求越界拒绝和待发布文献类型的 PDF 图例生成后，最后后端 59 passed，退出 0，98.98 秒。最新 Web 重新构建和完整 188 项通过，退出 0。最后 10:35 的 E2E .last-run.json 为 passed，续接后句柄失效，最终退出码未知。最新 lint 与 API 漂移复核退出 0，Django check 与 migration drift 退出 0。工作台、旧复核页和媒体库均已接共享图例编辑，API 写入和预览保持当前版本上下文。该切片可本地交接，正在保存提交；全后端 checkpoint3 已启动，报告将写 stl-v305-regression-checkpoint3.xml，不提前宣布通过。未推送或部署。
+
 当前 Reader/公开证据回归切片已完成。旧夹具补明确活动 Catalog/Document 快照，生产 selector 和证据过滤未放宽。原始分支接续于 cc1335f，尚未连接生产。
 
 公开证据首组 23 passed/2 failed，90.81 秒。测试 helper 未将指定 reader_asset 传给 catalog_snapshot，混用了同一 Edition 的较新受限文件；另一个 RAG fixture 只有 metadata_ready 却期待可查询正文。已修正测试并新增无正式全文不能作 RAG 来源的断言。审计还发现 PDF 封面归属检查在比较前覆写 edition.work，可能让旧 Work 候选通过。新增复现正在执行，尚未计修复完成。

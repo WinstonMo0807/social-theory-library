@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import Edition, MediaAsset, MediaRendition
-from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_cover, update_media_metadata
+from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_image, update_media_metadata
 from common.permissions import CanAccessBackOffice, CanEditMetadata
 
 
@@ -136,14 +136,16 @@ class CoverMediaSelectionSerializer(serializers.Serializer):
 
 class CoverMediaSelectionResultSerializer(serializers.Serializer):
     saved = serializers.BooleanField()
-    media_id = serializers.UUIDField()
+    media_id = serializers.UUIDField(allow_null=True)
     edition_id = serializers.UUIDField()
     editorial_revision_id = serializers.UUIDField(allow_null=True)
     workbench_url = serializers.CharField()
+    canonical_write_deferred = serializers.BooleanField()
 
 
 class WorkCoverMediaSelectionView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanEditMetadata]
+    image_slot = "cover"
 
     @extend_schema(request=CoverMediaSelectionSerializer, responses=CoverMediaSelectionResultSerializer)
     def post(self, request, edition_id):
@@ -152,10 +154,14 @@ class WorkCoverMediaSelectionView(AdminPrivateResponseMixin, APIView):
         serializer.is_valid(raise_exception=True)
         media = get_object_or_404(MediaAsset, pk=serializer.validated_data["media_id"])
         try:
-            result = select_work_cover(edition_id, media.pk, actor=request.user)
+            result = select_work_image(edition_id, media.pk, slot=self.image_slot, actor=request.user)
         except (ValueError, ValidationError) as error:
             return Response({"code": "media.selection_failed", "detail": str(error)}, status=409)
         return Response(result)
+
+
+class WorkRecommendationMediaSelectionView(WorkCoverMediaSelectionView):
+    image_slot = "recommendation"
 
 
 class PublicMediaRenditionSerializer(serializers.Serializer):
@@ -179,13 +185,48 @@ class PublicCoverMediaSerializer(serializers.Serializer):
 
 class PublicCoverMetadataView(APIView):
     permission_classes = [AllowAny]
+    image_slot = "cover"
 
     @extend_schema(responses=PublicCoverMediaSerializer)
     def get(self, request, work_id):
         from catalog.views import _active_work_snapshot, public_works
 
         work = get_object_or_404(public_works(), pk=work_id)
-        media = (_active_work_snapshot(work).get("work") or {}).get("cover_media")
+        values = _active_work_snapshot(work).get("work") or {}
+        media = values.get("cover_media")
+        if self.image_slot == "recommendation" and values.get("recommendation_image"):
+            media = values.get("recommendation_media")
         if media is None:
-            return Response({"detail": "该公开版本没有媒体封面。"}, status=404)
+            return Response({"detail": "该公开版本没有可用的媒体图片。"}, status=404)
         return Response(media)
+
+
+class PublicRecommendationMetadataView(PublicCoverMetadataView):
+    image_slot = "recommendation"
+
+
+class RecommendationImagePreviewSerializer(serializers.Serializer):
+    work_id = serializers.UUIDField()
+    document_type = serializers.CharField()
+    available = serializers.BooleanField()
+    source = serializers.CharField()
+    preview_url = serializers.CharField(allow_blank=True)
+    public_url = serializers.CharField(allow_blank=True)
+    updated_at = serializers.DateTimeField()
+    canonical_write_deferred = serializers.BooleanField()
+    editorial_revision_id = serializers.UUIDField(allow_null=True)
+    workbench_url = serializers.CharField(allow_blank=True)
+    media_library_url = serializers.CharField(allow_blank=True)
+    detail = serializers.CharField()
+
+
+class RecommendationImageMetadataView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=RecommendationImagePreviewSerializer, parameters=[OpenApiParameter("edition_id", OpenApiTypes.UUID)])
+    def get(self, request, work_id):
+        from catalog.models import Work
+        from catalog.views import AdminWorkRecommendationImageView
+
+        work = get_object_or_404(Work, pk=work_id)
+        return Response(AdminWorkRecommendationImageView()._payload(request, work))

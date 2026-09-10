@@ -66,6 +66,8 @@ TARGET_POLICIES = {
                 "abstract",
                 "cover",
                 "cover_rendition",
+                "recommendation_image",
+                "recommendation_rendition",
                 "language",
                 "original_language",
                 "first_publication_date",
@@ -823,29 +825,12 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
     if isinstance(target, Work):
-        media_cover = None
-        if patch.get("cover_rendition"):
-            from catalog.models import MediaRendition
-            media_cover = MediaRendition.objects.filter(pk=patch["cover_rendition"], kind="cover").first()
-            if media_cover is None or not media_cover.file.storage.exists(media_cover.file.name):
-                raise EditorialRevisionError("所选媒体封面不存在或不能读取。")
-            patch.setdefault("cover", media_cover.file.name)
-        if "cover" in patch:
-            cover = str(patch["cover"] or "")
-            current = str(target.cover.name or "")
-            allowed_prefix = f"public/covers/editorial/{target.pk}/"
-            if media_cover is not None and cover != media_cover.file.name:
-                raise EditorialRevisionError("封面文件与所选媒体版本不一致。")
-            if media_cover is None and cover and cover != current and (
-                not cover.startswith(allowed_prefix)
-                or ".." in cover.split("/")
-                or "\\" in cover
-                or not target.cover.storage.exists(cover)
-            ):
-                raise EditorialRevisionError("封面必须来自当前作品已保存的封面建议。")
-            patch["cover"] = cover
-            if media_cover is None and cover != current:
-                patch["cover_rendition"] = None
+        from catalog.services.media import MediaValidationError, validate_work_image_patch
+
+        try:
+            validate_work_image_patch(target, patch)
+        except MediaValidationError as error:
+            raise EditorialRevisionError(str(error)) from error
         for field_name in ("classification", "knowledge"):
             if field_name in patch:
                 if not isinstance(patch[field_name], dict):

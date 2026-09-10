@@ -1,5 +1,7 @@
 "use client";
 
+import { RecommendationImageEditor } from "@/components/admin/media/recommendation-image-editor";
+
 import Link from "next/link";
 import {
   AlertCircle,
@@ -1572,6 +1574,7 @@ export function MetadataReview({ itemId }: { itemId: string }) {
             ) : null}
             <RecommendationImageEditor
               workId={item.review_data.work_id}
+              editionId={item.review_data.edition_id}
               documentType={form.documentType}
               onMessage={setMessage}
             />
@@ -1942,131 +1945,6 @@ function CoverCandidatePreview({ candidate }: { candidate: CoverCandidate }) {
         <span>{failed ? "预览不可用，请重新分析" : "正在读取候选页……"}</span>
       ) : null}
     </div>
-  );
-}
-
-function RecommendationImageEditor({
-  workId,
-  documentType,
-  onMessage,
-}: {
-  workId: string;
-  documentType: FormState["documentType"];
-  onMessage: (message: string) => void;
-}) {
-  const [preview, setPreview] = useState("");
-  const [missing, setMissing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [revision, setRevision] = useState(0);
-  const [image, setImage] = useState<File | null>(null);
-
-  useEffect(() => {
-    const token = getServerSessionCredential();
-    if (!token || !workId) return;
-    let active = true;
-    let objectUrl = "";
-    void apiRequest<{ available: boolean }>(
-      `/catalog/admin/works/${workId}/recommendation-image/?metadata=1&v=${revision}`,
-      {},
-      token,
-    )
-      .then((metadata) => {
-        if (!metadata.available) {
-          if (active) {
-            setPreview("");
-            setMissing(true);
-          }
-          return null;
-        }
-        return apiBlob(`/catalog/admin/works/${workId}/recommendation-image/?v=${revision}`, token);
-      })
-      .then((blob) => {
-        if (!blob) return;
-        objectUrl = URL.createObjectURL(blob);
-        if (active) {
-          setPreview(objectUrl);
-          setMissing(false);
-        } else {
-          URL.revokeObjectURL(objectUrl);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setPreview("");
-          setMissing(true);
-        }
-      });
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [revision, workId]);
-
-  async function submitImage() {
-    const token = getServerSessionCredential();
-    if (!token || !image) return;
-    const body = new FormData();
-    body.append("image", image);
-    setBusy(true);
-    try {
-      await apiRequest(`/catalog/admin/works/${workId}/recommendation-image/`, { method: "POST", body }, token);
-      setImage(null);
-      setRevision((value) => value + 1);
-      onMessage("推荐图例已经由管理员替换。后续自动识别不会覆盖这张图片。");
-    } catch (reason) {
-      onMessage(reason instanceof Error ? reason.message : "推荐图例上传失败。");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function change(action: "regenerate" | "clear") {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    setBusy(true);
-    try {
-      await apiRequest(
-        `/catalog/admin/works/${workId}/recommendation-image/`,
-        action === "clear"
-          ? { method: "DELETE" }
-          : { method: "POST", body: JSON.stringify({ action: "regenerate" }) },
-        token,
-      );
-      setRevision((value) => value + 1);
-      onMessage(action === "clear" ? "人工图例已经移除，系统将使用可用的自动图例。" : "推荐图例已经重新生成。");
-    } catch (reason) {
-      onMessage(reason instanceof Error ? reason.message : "推荐图例处理失败。");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <section className="recommendation-image-review">
-      <header>
-        <div>
-          <h3>推荐卡片图例</h3>
-          <p>{documentType === "book" ? "默认使用已确认的图书封面。" : "默认使用 PDF 前部第一张有效页面。"} 管理员上传图片后，以人工图片为准。</p>
-        </div>
-        <div>
-          <button type="button" disabled={busy} onClick={() => void change("regenerate")}><RefreshCw size={14} />恢复自动图例</button>
-          <button type="button" disabled={busy} onClick={() => void change("clear")}>移除人工图例</button>
-        </div>
-      </header>
-      <div className="recommendation-image-body">
-        <div className={`recommendation-image-preview${missing ? " missing" : ""}`} style={preview ? { backgroundImage: `url("${preview}")` } : undefined}>
-          {!preview ? <span>{missing ? "尚无图例" : "正在读取图例……"}</span> : null}
-        </div>
-        <div>
-          <label className="knowledge-image-upload">
-            <span>{image?.name || "选择替换图片"}</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
-          </label>
-          <button className="button secondary" type="button" disabled={!image || busy} onClick={() => void submitImage()}>{busy ? <LoaderCircle className="spin" size={15} /> : null}上传并采用</button>
-          <small>支持 JPEG、PNG 与 WebP，文件不超过 12 MB。公开推荐、首页精选和相关馆藏使用同一张图例。</small>
-        </div>
-      </div>
-    </section>
   );
 }
 

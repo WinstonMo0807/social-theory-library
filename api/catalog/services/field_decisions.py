@@ -398,6 +398,7 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
         "translation_of": str(work.translation_of_id) if work.translation_of_id else None,
         "abstract": work.abstract,
         "cover": work.cover.name if work.cover else "",
+        "recommendation_image": work.recommendation_image.name if work.recommendation_image else "",
         **{
             field_name: str(getattr(edition, field_name)) if field_name.endswith("_id") and getattr(edition, field_name) else getattr(edition, field_name)
             for field_name in SECTION_FIELDS["bibliography"] if field_name != "journal_contents"

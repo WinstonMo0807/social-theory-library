@@ -1,6 +1,6 @@
 from django.urls import path
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
-from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView
+from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
@@ -189,6 +189,9 @@ from .theory_system_views import (
 urlpatterns = [
     path("works/<uuid:work_id>/cover-metadata/", PublicCoverMetadataView.as_view(), name="public-cover-metadata"),
     path("admin/editions/<uuid:edition_id>/media/cover/", WorkCoverMediaSelectionView.as_view(), name="work-cover-media-selection"),
+    path("admin/editions/<uuid:edition_id>/media/recommendation/", WorkRecommendationMediaSelectionView.as_view(), name="work-recommendation-media-selection"),
+    path("works/<uuid:work_id>/recommendation-image-metadata/", PublicRecommendationMetadataView.as_view(), name="public-recommendation-metadata"),
+    path("admin/works/<uuid:work_id>/recommendation-image/metadata/", RecommendationImageMetadataView.as_view(), name="recommendation-image-metadata"),
     path("admin/media/", MediaListView.as_view(), name="media-list"),
     path("admin/media/<uuid:media_id>/", MediaDetailView.as_view(), name="media-detail"),
     path("admin/media/<uuid:media_id>/renditions/", MediaRenditionView.as_view(), name="media-rendition"),

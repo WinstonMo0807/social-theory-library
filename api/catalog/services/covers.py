@@ -320,7 +320,7 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False):
     return list(asset.cover_candidates.order_by("-score", "page_index"))
 
 
-def generate_recommendation_image(asset: Asset, *, force: bool = False):
+def generate_recommendation_image(asset: Asset, *, force: bool = False, actor=None, automatic: bool = True, expected_work_id=None):
     """Create a stable visual card for non-book documents.
 
     Books keep using the selected cover. Articles, theses and reports use the
@@ -329,9 +329,11 @@ def generate_recommendation_image(asset: Asset, *, force: bool = False):
     """
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
-    if work.document_type in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
+    if expected_work_id is not None and str(work.pk) != str(expected_work_id):
+        raise CoverCandidateUnavailable("版本对应的作品已变化，请重新进入编目工作台。")
+    if automatic and work.document_type in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
         return work.cover
-    if work.editions.filter(state=PublicationState.PUBLISHED).exists():
+    if automatic and work.editions.filter(state=PublicationState.PUBLISHED).exists():
         # Background file processing cannot replace a published editorial image.
         return work.recommendation_image
     image_name = work.recommendation_image.name
@@ -354,13 +356,22 @@ def generate_recommendation_image(asset: Asset, *, force: bool = False):
                 if len(text) >= 30 or page.get_images(full=True):
                     selected_page = page
                     break
+            selected_page_number = selected_page.number + 1
             pixmap = selected_page.get_pixmap(matrix=fitz.Matrix(0.55, 0.55), alpha=False)
             image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
             output = BytesIO()
             image.save(output, format="JPEG", quality=86, optimize=True)
         finally:
             document.close()
-    filename = f"{slugify(work.title)[:100] or work.id}-document.jpg"
-    work.recommendation_image.save(filename, ContentFile(output.getvalue()), save=False)
-    work.save(update_fields=["recommendation_image", "updated_at"])
+    from django.core.files.uploadedfile import InMemoryUploadedFile
+    from catalog.services.media import ingest_image, select_work_image
+
+    content = output.getvalue()
+    uploaded = InMemoryUploadedFile(BytesIO(content), "image", f"pdf-{asset.pk}.jpg", "image/jpeg", len(content), None)
+    media, _ = ingest_image(uploaded, actor=actor, metadata={
+        "source_type": "pdf", "source_label": f"PDF 第 {selected_page_number} 页",
+        "alt_text": f"{work.title}推荐图例",
+    })
+    select_work_image(asset.edition_id, media.pk, slot="recommendation", actor=actor, automatic=automatic, expected_work_id=expected_work_id or work.pk)
+    work.refresh_from_db()
     return work.recommendation_image

@@ -32,8 +32,8 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     summary: value.abstract || "馆藏简介待补充。",
     cover: coverStyles[index % coverStyles.length],
     coverImage: value.cover || value.recommendation_image || undefined,
-    coverSources: value.cover_media?.renditions,
-    coverAlt: value.cover_media?.alt_text || undefined,
+    coverSources: (value.cover ? value.cover_media : value.recommendation_media)?.renditions,
+    coverAlt: (value.cover ? value.cover_media : value.recommendation_media)?.alt_text || undefined,
     pages: value.edition?.readable_asset?.page_count ?? 0,
     language: value.language,
     authors: authorContributions.map((row) => ({
@@ -47,6 +47,12 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     outline: value.outline ?? [],
     journalContents: value.edition?.journal_contents ?? [],
   };
+}
+
+export function adaptRecommendationWork(value: ApiWork, index = 0): Work {
+  return adaptApiWork(value.recommendation_image ? {
+    ...value, cover: value.recommendation_image, cover_media: value.recommendation_media,
+  } : value, index);
 }
 
 export function adaptApiScholar(value: ApiScholar): Scholar {

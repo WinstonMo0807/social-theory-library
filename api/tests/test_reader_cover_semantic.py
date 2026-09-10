@@ -97,13 +97,22 @@ def test_admin_recommendation_image_override_is_public_and_removable(
     tmp_path,
     settings,
 ):
+    from catalog.models import EditorialRevision
+    from .publication_fixtures import acknowledge_catalog_projections
+    from .v304_helpers import activate_catalog_revision
+
     settings.MEDIA_ROOT = tmp_path / "media"
     settings.PUBLIC_API_URL = "http://testserver"
-    work, _edition, _asset, _page, _passage = create_public_asset(
+    work, edition, asset, _page, _passage = create_public_asset(
         "人工推荐图例测试",
         "a" * 64,
         document_type=DocumentType.REPORT,
     )
+    author = Person.objects.create(preferred_name="图例测试作者", authority_status="verified")
+    Contribution.objects.create(edition=edition, person=author, role="author", approved=True)
+    edition.report_institution = "图例测试机构"
+    edition.save(update_fields=["report_institution", "updated_at"])
+    activate_catalog_revision(edition, reader_asset=asset)
     output = BytesIO()
     Image.new("RGB", (320, 180), color=(35, 35, 35)).save(output, format="PNG")
     upload = SimpleUploadedFile(
@@ -128,17 +137,25 @@ def test_admin_recommendation_image_override_is_public_and_removable(
     assert response.data["available"] is True
     assert response.data["source"] == "manual_or_generated"
     work.refresh_from_db()
-    assert work.recommendation_image.name.startswith("public/recommendations/")
-    stored_name = work.recommendation_image.name
+    assert not work.recommendation_image
+    assert response.data["canonical_write_deferred"] is True
+    draft = EditorialRevision.objects.get(pk=response.data["editorial_revision_id"])
+    stored_name = draft.patch["recommendation_image"]
+    assert stored_name.startswith("private/media/renditions/")
     assert work.recommendation_image.storage.exists(stored_name)
 
+    publish_url = f"/api/catalog/admin/library/works/{work.pk}/publication/?edition={edition.pk}"
+    published = api_client.post(publish_url, {"confirm_warnings": True}, format="json")
+    assert published.status_code == 200, published.data
+    acknowledge_catalog_projections(edition)
+    work.refresh_from_db()
     api_client.force_authenticate(None)
     works_response = api_client.get("/api/catalog/works/")
     serialized_work = next(
         item for item in works_response.data["results"] if item["id"] == str(work.id)
     )
     assert serialized_work["recommendation_image"] == (
-        f"/api/catalog/works/{work.id}/recommendation-image/"
+        f"/api/catalog/works/{work.id}/recommendation-image/?rendition={work.recommendation_rendition_id}"
     )
 
     api_client.force_authenticate(admin_user)
@@ -160,7 +177,12 @@ def test_admin_recommendation_image_override_is_public_and_removable(
     )
     assert removed.status_code == 200
     assert removed.data["available"] is False
-    assert not work.recommendation_image.storage.exists(stored_name)
+    assert work.recommendation_image.storage.exists(stored_name)
+    assert api_client.post(publish_url, {"confirm_warnings": True}, format="json").status_code == 200
+    acknowledge_catalog_projections(edition)
+    api_client.force_authenticate(None)
+    assert api_client.get(f"/api/catalog/works/{work.id}/recommendation-image/").status_code == 404
+    assert work.recommendation_image.storage.exists(stored_name)
 
 
 @pytest.mark.django_db

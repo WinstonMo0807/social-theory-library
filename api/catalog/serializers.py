@@ -550,6 +550,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
 
 class WorkCardSerializer(serializers.ModelSerializer):
     cover_media = serializers.SerializerMethodField()
+    recommendation_media = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
     recommendation_image = serializers.SerializerMethodField()
     edition = serializers.SerializerMethodField()
@@ -575,6 +576,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "cover",
             "cover_media",
             "recommendation_image",
+            "recommendation_media",
             "edition",
             "theories",
             "topics",
@@ -629,6 +631,9 @@ class WorkCardSerializer(serializers.ModelSerializer):
         return (self._public_snapshot(obj).get("work") or {}).get("cover_media")
 
     def get_recommendation_image(self, obj):
+        media = self.get_recommendation_media(obj)
+        if media:
+            return reverse("public-work-recommendation-image", kwargs={"work_id": obj.pk}) + f"?rendition={media['primary_rendition_id']}"
         snapshot = self._public_snapshot(obj)
         if snapshot:
             work_values = snapshot.get("work") or {}
@@ -643,6 +648,10 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "public-work-recommendation-image",
             kwargs={"work_id": obj.id},
         )
+
+    def get_recommendation_media(self, obj):
+        values = self._public_snapshot(obj).get("work") or {}
+        return values.get("recommendation_media") if values.get("recommendation_image") else values.get("cover_media")
 
     def get_edition(self, obj):
         edition = self._public_edition(obj)
@@ -944,31 +953,40 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
         media = self.get_cover_media(obj)
         if media:
             return reverse("media-rendition-file", kwargs={"rendition_id": media["primary_rendition_id"]})
-        if not obj.recommendation_image and not obj.cover:
+        if not self._editorial_preview().get("cover", obj.cover.name):
             return ""
-        return reverse("admin-work-recommendation-image", kwargs={"work_id": obj.id})
+        return reverse("admin-work-recommendation-image", kwargs={"work_id": obj.id}) + "?slot=cover"
 
     def get_cover_media(self, obj):
-        from catalog.models import MediaRendition
-        from catalog.services.media import cover_media_snapshot
+        return self._private_image_media(obj, "cover")
+
+    def _private_image_media(self, obj, slot):
+        from catalog.services.media import preview_work_media
 
         if not hasattr(self, "_preview_media_cache"):
             self._preview_media_cache = {}
-        if obj.pk not in self._preview_media_cache:
-            rendition_id = self._editorial_preview().get("cover_rendition", obj.cover_rendition_id)
-            primary = (
-                MediaRendition.objects.select_related("media").filter(pk=rendition_id, kind="cover").first()
-                if rendition_id else None
-            )
-            media = cover_media_snapshot(obj, primary=primary) if primary else None
+        key = (obj.pk, slot)
+        if key not in self._preview_media_cache:
+            media = preview_work_media(obj, slot=slot, preview=self._editorial_preview())
             if media:
                 for row in media["renditions"]:
                     row["url"] = reverse("media-rendition-file", kwargs={"rendition_id": row["id"]})
-            self._preview_media_cache[obj.pk] = media
-        return self._preview_media_cache[obj.pk]
+            self._preview_media_cache[key] = media
+        return self._preview_media_cache[key]
 
     def get_recommendation_image(self, obj):
-        return self.get_cover(obj)
+        preview = self._editorial_preview()
+        if not (preview.get("recommendation_image", obj.recommendation_image.name) or preview.get("cover", obj.cover.name)):
+            return ""
+        media = self.get_recommendation_media(obj)
+        if media:
+            return reverse("media-rendition-file", kwargs={"rendition_id": media["primary_rendition_id"]})
+        return reverse("admin-work-recommendation-image", kwargs={"work_id": obj.pk})
+
+    def get_recommendation_media(self, obj):
+        if self._editorial_preview().get("recommendation_image", obj.recommendation_image.name):
+            return self._private_image_media(obj, "recommendation")
+        return self.get_cover_media(obj)
 
     def get_curated_claims(self, obj):
         return admin_preview_curated_claim_groups(

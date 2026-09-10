@@ -12,8 +12,8 @@ import styles from "./media-library.module.css";
 type Media = components["schemas"]["MediaAsset"];
 type Rendition = components["schemas"]["MediaRendition"];
 
-function MediaEditor({ media, onSaved }: { media: Media; onSaved: () => void }) {
-  const editionId = useSearchParams().get("edition");
+function MediaEditor({ media, onSaved, editionId, slot }: { media: Media; onSaved: () => void; editionId: string | null; slot: "cover" | "recommendation" }) {
+  const label = slot === "cover" ? "封面" : "推荐图例";
   const [workbenchUrl, setWorkbenchUrl] = useState("");
   const [focalX, setFocalX] = useState(media.focal_x ?? 0.5);
   const [focalY, setFocalY] = useState(media.focal_y ?? 0.5);
@@ -21,16 +21,16 @@ function MediaEditor({ media, onSaved }: { media: Media; onSaved: () => void }) 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [editVersion, setEditVersion] = useState(media.updated_at);
-  async function chooseCover() {
+  async function chooseImage() {
     if (!editionId || busy) return;
     setBusy(true);
     try {
-      const result = await apiRequest<{ workbench_url: string }>(`/catalog/admin/editions/${encodeURIComponent(editionId)}/media/cover/`, {
+      const result = await apiRequest<components["schemas"]["CoverMediaSelectionResult"]>(`/catalog/admin/editions/${encodeURIComponent(editionId)}/media/${slot}/`, {
         method: "POST", body: JSON.stringify({ media_id: media.id }),
       }, getServerSessionCredential());
       setWorkbenchUrl(result.workbench_url);
-      setMessage("封面已保存到书目草稿。请返回工作台核对后发布。");
-    } catch (reason) { setMessage(reason instanceof Error ? reason.message : "封面关联失败。"); }
+      setMessage(`${label}已保存到书目草稿。请返回工作台核对后发布。`);
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : "图片关联失败。"); }
     finally { setBusy(false); }
   }
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -69,13 +69,18 @@ function MediaEditor({ media, onSaved }: { media: Media; onSaved: () => void }) 
       <button className="button" type="submit" disabled={busy}>{busy ? "正在保存…" : "保存资料并生成预览"}</button>
     </form>
     {message ? <p className={styles.message} role="status">{message}</p> : null}
-    {editionId ? <button className="button" type="button" disabled={busy} onClick={() => void chooseCover()}>用作当前作品封面</button> : null}
+    {editionId ? <button className="button" type="button" disabled={busy} onClick={() => void chooseImage()}>用作当前作品{label}</button> : null}
     {workbenchUrl ? <Link className="button secondary" href={workbenchUrl}>返回编目工作台</Link> : null}
     {preview ? <picture><source type="image/webp" srcSet={normalizePublicResourceUrl(preview.url)} /><img className={styles.preview} src={normalizePublicResourceUrl(preview.url)} alt={media.alt_text || "媒体预览"} width={preview.width} height={preview.height} /></picture> : <p>暂无衍生图。</p>}
   </section>;
 }
 
 export function MediaLibrary() {
+  const params = useSearchParams();
+  const editionId = params.get("edition");
+  const requestedSlot = params.get("slot") ?? "cover";
+  const slot = requestedSlot === "recommendation" ? "recommendation" : "cover";
+  const validSlot = requestedSlot === "cover" || requestedSlot === "recommendation";
   const { data, loading, error, retry } = useApiResource<Media[]>("/catalog/admin/media/", getServerSessionCredential());
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +113,6 @@ export function MediaLibrary() {
         {row.renditions?.[0] ? <picture><source type="image/webp" srcSet={normalizePublicResourceUrl(row.renditions[0].url)} /><img className={styles.thumbnail} src={normalizePublicResourceUrl(row.renditions[0].url)} alt={row.alt_text || "图片"} width={row.renditions[0].width} height={row.renditions[0].height} loading="lazy" /></picture> : null}
         <span>{row.alt_text || row.source_label || "未填写说明"}</span><small>{row.width} × {row.height}</small>
       </button>)}</div>
-    </section>{selected ? <MediaEditor key={selected.id} media={selected} onSaved={retry} /> : <section className="admin-panel"><h2>选择媒体</h2><p>可在此查看来源、使用说明和裁切预览。未关联并发布的图片不会出现在公开书目中。</p></section>}</div>
+    </section>{!validSlot ? <p role="alert">不支持这种图片用途，请返回编目工作台重新选择。</p> : selected ? <MediaEditor key={`${selected.id}:${editionId}:${slot}`} media={selected} onSaved={retry} editionId={editionId} slot={slot} /> : <section className="admin-panel"><h2>选择媒体</h2><p>可在此查看来源、使用说明和裁切预览。未关联并发布的图片不会出现在公开书目中。</p></section>}</div>
   </div>;
 }

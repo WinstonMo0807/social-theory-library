@@ -123,6 +123,7 @@ class Work(UUIDTimeStampedModel):
         upload_to="public/recommendations/%Y/%m/",
         blank=True,
     )
+    recommendation_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="recommendation_works")
     is_featured = models.BooleanField(default=False)
 
     class Meta:

@@ -16,5 +16,7 @@ VERIFIED_NAMES = {
     "media-list", "media-detail", "media-rendition",
     "work-cover-media-selection",
     "public-cover-metadata",
+    "work-recommendation-media-selection", "public-recommendation-metadata",
+    "recommendation-image-metadata",
 }
 urlpatterns = [path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES]))]

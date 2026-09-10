@@ -22,6 +22,10 @@ MEDIA_SOURCE_TYPES = MediaAsset.SourceType.choices
 RENDITION_KINDS = ("cover", "portrait", "hero", "card", "thumbnail")
 METADATA_FIELDS = ("source_type", "source_url", "source_label", "rights", "license", "credit", "alt_text", "focal_x", "focal_y")
 PUBLIC_METADATA_FIELDS = ("alt_text", "source_label", "source_url", "rights", "license", "credit")
+WORK_IMAGE_SLOTS = {
+    "cover": {"field": "cover", "relation": "cover_rendition", "kind": "cover", "snapshot": "cover_media", "route": "cover"},
+    "recommendation": {"field": "recommendation_image", "relation": "recommendation_rendition", "kind": "hero", "snapshot": "recommendation_media", "route": "recommendation-image"},
+}
 
 
 class MediaValidationError(ValueError):
@@ -142,11 +146,12 @@ def build_rendition(media_id, *, width=640, kind="cover"):
     return rendition
 
 
-def cover_media_snapshot(work, *, primary=None):
+def work_media_snapshot(work, *, slot="cover", primary=None):
     """A publication captures exact rendition IDs; later crop edits are drafts."""
-    if primary is None and not work.cover_rendition_id:
+    config = WORK_IMAGE_SLOTS[slot]
+    if primary is None and not getattr(work, f"{config['relation']}_id"):
         return None
-    primary = primary if primary is not None else work.cover_rendition
+    primary = primary if primary is not None else getattr(work, config["relation"])
     media = primary.media
     variants = media.renditions.filter(group_key=primary.group_key).order_by("requested_width") if primary.group_key else [primary]
     by_width = {row.width: row for row in variants}
@@ -157,32 +162,99 @@ def cover_media_snapshot(work, *, primary=None):
         # explicitly reselected; do not invent historical attribution.
         **{name: primary.metadata_snapshot.get(name, "") for name in PUBLIC_METADATA_FIELDS},
         "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height,
-                         "url": f"/api/catalog/works/{work.pk}/cover/?rendition={row.pk}"} for row in sorted(by_width.values(), key=lambda row: row.width)],
+                         "url": f"/api/catalog/works/{work.pk}/{config['route']}/?rendition={row.pk}"} for row in sorted(by_width.values(), key=lambda row: row.width)],
     }
 
 
+def cover_media_snapshot(work, *, primary=None):
+    return work_media_snapshot(work, slot="cover", primary=primary)
+
+
+def preview_work_media(work, *, slot, preview=None):
+    config = WORK_IMAGE_SLOTS[slot]
+    identifier = (preview or {}).get(config["relation"], getattr(work, f"{config['relation']}_id"))
+    primary = MediaRendition.objects.select_related("media").filter(pk=identifier, kind=config["kind"]).first() if identifier else None
+    return work_media_snapshot(work, slot=slot, primary=primary) if primary else None
+
+
+def validate_work_image_patch(work, patch):
+    """Keep file-path compatibility paired with an exact, valid rendition."""
+    from catalog.contracts.fields import FIELD_LABELS
+
+    for config in WORK_IMAGE_SLOTS.values():
+        field, relation = config["field"], config["relation"]
+        selected = None
+        if patch.get(relation):
+            selected = MediaRendition.objects.filter(pk=patch[relation], kind=config["kind"]).first()
+            if selected is None or not selected.file.storage.exists(selected.file.name):
+                raise MediaValidationError(f"所选{FIELD_LABELS[field]}不存在或不能读取。")
+            patch.setdefault(field, selected.file.name)
+        elif relation in patch:
+            patch.setdefault(field, "")
+        if field not in patch:
+            continue
+        name = str(patch[field] or "")
+        current = getattr(work, field)
+        legacy_prefix = f"public/{'covers' if field == 'cover' else 'recommendations'}/editorial/{work.pk}/"
+        if selected is not None and name != selected.file.name:
+            raise MediaValidationError(f"{FIELD_LABELS[field]}文件与所选媒体版本不一致。")
+        if selected is None and name and name != current.name and (
+            not name.startswith(legacy_prefix) or ".." in name.split("/") or "\\" in name or not current.storage.exists(name)
+        ):
+            raise MediaValidationError(f"{FIELD_LABELS[field]}必须来自当前作品已保存的图片选择。")
+        patch[field] = name
+        if selected is None and name != current.name:
+            patch[relation] = None
+
+
+def select_work_image(edition_id, media_id, *, slot, actor, automatic=False, expected_work_id=None):
+    config = WORK_IMAGE_SLOTS[slot]
+    # Prepared media persists independently from a failed catalog decision.
+    # One transaction keeps every size on the same immutable metadata version.
+    with transaction.atomic():
+        variants = {width: build_rendition(media_id, width=width, kind=config["kind"]) for width in RENDITION_WIDTHS} if media_id else {}
+    return _select_prepared_work_image(edition_id, variants.get(640), slot=slot, actor=actor, automatic=automatic, expected_work_id=expected_work_id)
+
+
 @transaction.atomic
-def select_work_cover(edition_id, media_id, *, actor):
-    from catalog.models import Edition, Work
+def _select_prepared_work_image(edition_id, primary, *, slot, actor, automatic, expected_work_id):
+    from catalog.contracts.fields import FIELD_LABELS
+    from catalog.models import CatalogFieldDecision, Edition, Work
     from catalog.services.editorial_revision import save_workflow_editorial_revision
     from catalog.services.field_decisions import record_edition_field_decision
 
     edition = Edition.objects.select_for_update().get(pk=edition_id)
+    if expected_work_id is not None and str(edition.work_id) != str(expected_work_id):
+        raise MediaValidationError("版本对应的作品已变化，请重新进入编目工作台。")
     work = Work.objects.select_for_update().get(pk=edition.work_id)
-    variants = {width: build_rendition(media_id, width=width, kind="cover") for width in RENDITION_WIDTHS}
-    primary = variants[640]
+    config = WORK_IMAGE_SLOTS[slot]
+    field, relation = config["field"], config["relation"]
+    published = work.editions.filter(state="published").exists()
+    if automatic and (published or CatalogFieldDecision.objects.filter(
+        edition=edition, field_name=field, status__in=["confirmed", "not_applicable"],
+    ).exists()):
+        return {"saved": False, "edition_id": str(edition.pk)}
+    media_id = primary.media_id if primary else None
+    name = primary.file.name if primary else ""
     revision = None
-    if work.editions.filter(state="published").exists():
+    if published:
         revision = save_workflow_editorial_revision(
-            work_id=work.pk, section_patch={"cover_rendition": str(primary.pk), "cover": primary.file.name}, actor=actor,
-            change_note="从媒体库选择封面，等待正式发布",
+            work_id=work.pk, section_patch={relation: str(primary.pk) if primary else None, field: name}, actor=actor,
+            change_note=f"更新{FIELD_LABELS[field]}选择，等待正式发布",
         )
     else:
-        work.cover_rendition = primary
-        work.cover = primary.file.name
-        work.save(update_fields=["cover_rendition", "cover", "updated_at"])
-    record_edition_field_decision(edition, "cover", value=primary.file.name, status="confirmed", actor=actor,
-                                  provenance={"source": "media_library", "media_id": str(media_id), "canonical_write_deferred": revision is not None})
-    return {"saved": True, "edition_id": str(edition.pk), "media_id": str(media_id),
+        setattr(work, relation, primary)
+        setattr(work, field, name)
+        work.save(update_fields=[relation, field, "updated_at"])
+    record_edition_field_decision(edition, field, value=name, status="suggested" if automatic else "confirmed" if primary else "not_applicable", actor=actor,
+                                  provenance={"source": "media_library", "media_id": str(media_id) if media_id else None,
+                                              "canonical_write_deferred": revision is not None,
+                                              "editorial_revision_id": str(revision.pk) if revision else None})
+    return {"saved": True, "edition_id": str(edition.pk), "media_id": str(media_id) if media_id else None,
             "editorial_revision_id": str(revision.pk) if revision else None,
+            "canonical_write_deferred": revision is not None,
             "workbench_url": f"/admin/library/works/{work.pk}?edition={edition.pk}#work"}
+
+
+def select_work_cover(edition_id, media_id, *, actor):
+    return select_work_image(edition_id, media_id, slot="cover", actor=actor)
