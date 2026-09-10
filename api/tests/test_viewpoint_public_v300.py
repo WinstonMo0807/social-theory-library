@@ -334,6 +334,7 @@ def test_viewpoint_facets_use_canonical_ids_slugs_labels_and_result_counts():
     assert facets["publication_year"] == {"min": 2022, "max": 2022}
 
 
+@pytest.mark.django_db
 def test_viewpoint_year_range_reaches_semantic_and_claim_projection_filters():
     filters = {
         "year_min": 1980,

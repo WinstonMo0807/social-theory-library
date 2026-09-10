@@ -321,7 +321,8 @@ def test_fulltext_fallback_stays_failed_then_bounded_retry_can_finish(
     )
     job = queue_projection_refresh(target_type="work", target_id=str(work.id))
 
-    def semantic_current(_job, _assets, tracked):
+    def semantic_current(_job, _assets, tracked, *, catalog_revision=None):
+        assert catalog_revision is None  # This test models a generic canonical event.
         _complete_tracked(tracked)
         return {"status": "current", "jobs": []}
 
@@ -396,14 +397,15 @@ def test_document_revision_claim_index_reuses_coordinator_lease(
         target_id=str(revision.id),
     )
 
-    def semantic_current(_job, _assets, tracked):
+    def semantic_current(_job, _assets, tracked, *, catalog_revision=None):
+        assert catalog_revision is None
         _complete_tracked(tracked)
         return {"status": "current", "jobs": []}
 
     claim_calls = []
 
-    def claim_index(document_revision, *, track_projection=True):
-        claim_calls.append((document_revision.id, track_projection))
+    def claim_index(document_revision, *, track_projection=True, catalog_revision=None):
+        claim_calls.append((document_revision.id, track_projection, catalog_revision))
         return {"status": "completed", "backend": "meilisearch"}
 
     monkeypatch.setattr(
@@ -425,7 +427,7 @@ def test_document_revision_claim_index_reuses_coordinator_lease(
         object_id=revision.id,
     )
     assert completed.status == ProcessingJob.Status.SUCCEEDED
-    assert claim_calls == [(revision.id, False)]
+    assert claim_calls == [(revision.id, False, None)]
     assert states.count() == 4
     assert set(states.values_list("status", flat=True)) == {
         ProjectionState.Status.CURRENT

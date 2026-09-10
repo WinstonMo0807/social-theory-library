@@ -63,8 +63,16 @@ def test_canonical_change_is_idempotent_and_marks_bounded_projections_stale():
         object_type="work", object_id=work_id
     ).current_revision == 1
     states = ProjectionState.objects.filter(object_type="work", object_id=work_id)
-    assert states.count() == len(ALL_PROJECTIONS)
-    assert set(states.values_list("projection_type", flat=True)) == set(ALL_PROJECTIONS)
+    expected = {
+        ProjectionState.ProjectionType.QUERY_LEXICON,
+        ProjectionState.ProjectionType.FULLTEXT,
+        ProjectionState.ProjectionType.SEMANTIC,
+        ProjectionState.ProjectionType.CLAIM_INDEX,
+        ProjectionState.ProjectionType.RECOMMENDATION,
+        ProjectionState.ProjectionType.PUBLIC,
+    }
+    assert states.count() == len(expected)
+    assert set(states.values_list("projection_type", flat=True)) == expected
     assert set(states.values_list("status", flat=True)) == {ProjectionState.Status.STALE}
 
 

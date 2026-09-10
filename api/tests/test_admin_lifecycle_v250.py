@@ -4,6 +4,7 @@ from django.test import RequestFactory, override_settings
 from catalog.models import (
     Discipline,
     DomainChangeEvent,
+    KnowledgePublicationEvent,
     Edition,
     EditorialRevision,
     KnowledgeNode,
@@ -177,11 +178,15 @@ def test_public_knowledge_lifecycle_uses_revision_for_every_supported_target(
         assert published.status_code == 200
         target.refresh_from_db()
         assert getattr(target, status_field) == "archived"
-        event = DomainChangeEvent.objects.get(
+        publication = KnowledgePublicationEvent.objects.select_related("domain_event").get(
             object_type=target_type,
             object_id=target.id,
             idempotency_key=f"editorial-publish:{revision.id}",
         )
+        event = publication.domain_event
+        assert event.object_type == target_type and event.object_id == target.id
+        assert publication.payload["provenance"]["editorial_revision_id"] == str(revision.pk)
+        assert event.canonical_revision == revision.base_revision + 1
         assert event.change_kind == DomainChangeEvent.ChangeKind.WITHDRAW
 
 

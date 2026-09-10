@@ -128,7 +128,7 @@ def test_knowledge_node_parent_cycle_is_rejected_and_public_parent_is_controlled
     )
 
     public_data = KnowledgeNodeListSerializer(child).data
-    assert public_data["parent"] == root.id
+    assert public_data["parent"] == str(root.id)
 
     serializer = AdminKnowledgeNodeSerializer(
         root,

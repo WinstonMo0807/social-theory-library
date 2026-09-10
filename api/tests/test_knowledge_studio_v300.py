@@ -10,7 +10,7 @@ from catalog.models import (
     DerivedClaim,
     Discipline,
     DocumentRevision,
-    DomainChangeEvent,
+    KnowledgePublicationEvent,
     EditorialRevision,
     Edition,
     EnrichmentCandidate,
@@ -490,11 +490,13 @@ def test_published_reading_path_explicit_semantics_publish_through_revision(
     assert reading_path.learning_goal == "比较组织制度理论的不同解释。"
     assert item.prerequisite == "先读组织社会学导论。"
     assert item.editorial_note == "仅后台可见的编辑说明。"
-    assert DomainChangeEvent.objects.filter(
+    publication = KnowledgePublicationEvent.objects.select_related("domain_event").get(
         object_type="reading_path",
         object_id=reading_path.id,
         idempotency_key=f"editorial-publish:{revision_id}",
-    ).exists()
+    )
+    assert publication.domain_event.object_id == reading_path.pk
+    assert publication.payload["provenance"]["editorial_revision_id"] == str(revision_id)
 
 
 def test_published_subdiscipline_edit_and_lifecycle_archive_use_editorial_revision(
@@ -553,11 +555,15 @@ def test_published_subdiscipline_edit_and_lifecycle_archive_use_editorial_revisi
     assert published.status_code == 200
     subdiscipline.refresh_from_db()
     assert subdiscipline.description == "新的前台说明"
-    event = DomainChangeEvent.objects.get(
+    publication = KnowledgePublicationEvent.objects.select_related("domain_event").get(
         object_type="subdiscipline",
         object_id=subdiscipline.id,
         idempotency_key=f"editorial-publish:{revision.id}",
     )
+    event = publication.domain_event
+    assert event.object_id == subdiscipline.pk
+    assert publication.payload["provenance"]["editorial_revision_id"] == str(revision.pk)
+    assert event.canonical_revision == revision.base_revision + 1
     assert ProjectionState.objects.filter(
         object_type="subdiscipline",
         object_id=subdiscipline.id,

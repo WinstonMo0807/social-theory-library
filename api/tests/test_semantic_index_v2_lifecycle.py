@@ -183,8 +183,8 @@ def test_candidate_index_uses_its_saved_runtime_snapshot(settings, tmp_path):
         result = index_semantic_asset(normalized, index_version=version)
 
     assert result["index_uid"] == version.uid
-    document_builder.assert_called_once_with(normalized, runtime_config=snapshot)
-    ensure.assert_called_once_with(snapshot, index_uid=version.uid)
+    document_builder.assert_called_once_with(normalized, runtime_config=snapshot, catalog_revision=None, staging_only=False)
+    ensure.assert_called_once_with(snapshot, index_uid=version.uid, metadata_only=False)
 
 
 @pytest.mark.django_db
