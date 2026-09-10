@@ -5,11 +5,13 @@ from uuid import uuid4
 import pytest
 
 from catalog.models import (
+    Asset,
     Contribution,
     Edition,
     KnowledgeNode,
     KnowledgePublicationStatus,
     Person,
+    Page,
     PublicationState,
     RelationReviewStatus,
     ScholarProfile,
@@ -21,6 +23,18 @@ from catalog.models import (
 from catalog.services.viewpoint_search import _viewpoint_facets
 from catalog.services.claims.indexing import _search_filters as claim_index_filters
 from catalog.services.semantic_search import _meili_filters as semantic_index_filters
+from .v304_helpers import activate_catalog_revision
+
+
+def _activate_search_edition(edition):
+    asset = Asset.objects.create(
+        edition=edition, kind="normalized", status="ready", validation_status="valid",
+        sha256=edition.pk.hex * 2, page_count=1,
+    )
+    Page.objects.create(
+        asset=asset, index=1, text="筛选项测试的正式原文", normalized_text="筛选项测试的正式原文", text_source="embedded",
+    )
+    activate_catalog_revision(edition, reader_asset=asset)
 
 
 def _search_payload():
@@ -215,6 +229,8 @@ def test_public_viewpoint_filters_resolve_canonical_ids_and_real_ranges(api_clie
         topic=topic,
         review_status=RelationReviewStatus.APPROVED,
     )
+    edition = Edition.objects.create(work=work, state="published", public_slug="formal-filter-work")
+    _activate_search_edition(edition)
     scholar_id = str(uuid4())
     payload = _search_payload()
 
@@ -298,16 +314,19 @@ def test_viewpoint_facets_use_canonical_ids_slugs_labels_and_result_counts():
         topic=topic,
         review_status=RelationReviewStatus.APPROVED,
     )
+    _activate_search_edition(edition)
     rows = [
         {
-            "work": {"id": str(work.id)},
+            "work": {"id": str(work.id), "title": work.title, "slug": edition.public_slug},
+            "evidence": {"source": {"edition_id": str(edition.pk)}},
             "stance": "support",
             "source_type": "journal",
             "language": "zh-CN",
             "publication_year": 2022,
         },
         {
-            "work": {"id": str(work.id)},
+            "work": {"id": str(work.id), "title": work.title, "slug": edition.public_slug},
+            "evidence": {"source": {"edition_id": str(edition.pk)}},
             "stance": "qualify",
             "source_type": "journal",
             "language": "zh-CN",

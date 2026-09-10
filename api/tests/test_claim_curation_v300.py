@@ -26,6 +26,7 @@ from catalog.services.claims.curation import (
     publish_work_curated_claims,
 )
 from ingestion.services.publication import publish_edition
+from .publication_fixtures import confirm_book_identity
 
 
 def _source():
@@ -167,6 +168,8 @@ def test_claim_volume_is_compressed_to_five_decisions_then_human_adoption_publis
     assert chosen.status == DerivedClaim.Status.ACTIVE
     assert IntelligenceFeedback.objects.get(candidate_id=str(chosen.id)).decision == "accept_with_edit"
 
+    assert not ProjectionState.objects.filter(object_type="curated_claim", object_id=curated.pk).exists()
+    confirm_book_identity(edition, editor)
     publish_edition(edition, actor=editor, confirm_warnings=True)
     curated.refresh_from_db()
     assert curated.status == CuratedClaim.Status.PUBLISHED
@@ -176,7 +179,7 @@ def test_claim_volume_is_compressed_to_five_decisions_then_human_adoption_publis
         object_id=curated.id,
         projection_type=ProjectionState.ProjectionType.PUBLIC,
     )
-    assert projection.source_revision >= 2
+    assert projection.source_revision == 1  # Adoption is a draft, publication is the first formal change.
     assert projection.projected_revision < projection.source_revision
 
 

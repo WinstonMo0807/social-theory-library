@@ -49,6 +49,7 @@ from common.task_runtime import (
     queue_or_wait,
     register_executor_heartbeat,
 )
+from .v304_helpers import activate_catalog_revision
 
 
 pytestmark = pytest.mark.django_db
@@ -173,6 +174,7 @@ def test_viewpoint_evidence_matching_rejects_unrelated_same_page_text():
         title="观点定位词面校验",
         pages=1,
     )
+    activate_catalog_revision(_edition, reader_asset=asset, document_revision=_revision)
     unrelated = _matching_evidence_span({
         "asset_id": str(asset.id),
         "page_start": 1,
@@ -369,11 +371,15 @@ def test_active_claim_index_sync_tombstones_superseded_revision_documents():
         requests.append((url, kwargs.get("json")))
         return Response()
 
+    def fetch_ids(revision_id, *, catalog_namespace=""):
+        assert catalog_namespace == ""
+        return indexed[str(revision_id)]
+
     with (
         patch("catalog.services.claims.indexing.ensure_claim_index"),
         patch(
             "catalog.services.claims.indexing._fetch_revision_document_ids",
-            side_effect=lambda revision_id: indexed[str(revision_id)],
+            side_effect=fetch_ids,
         ),
         patch("catalog.services.claims.indexing.httpx.post", side_effect=post),
         patch("catalog.services.claims.indexing._wait_task", return_value={"status": "succeeded"}),
@@ -541,6 +547,7 @@ def test_query_claim_preserves_causal_negation():
 @override_settings(VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED=False)
 def test_viewpoint_search_keeps_baseline_default_and_groups_validated_claim_shadow():
     work, _edition, asset, revision, spans = _source(title="观点检索 Shadow")
+    activate_catalog_revision(_edition, reader_asset=asset, document_revision=revision)
     positive = _claim(
         revision,
         spans[0],
@@ -639,6 +646,7 @@ def test_viewpoint_search_keeps_baseline_default_and_groups_validated_claim_shad
 @override_settings(VIEWPOINT_CLAIM_BENCHMARK_GATE_PASSED=True)
 def test_viewpoint_claim_default_requires_explicit_benchmark_gate(settings):
     work, _edition, _asset, revision, spans = _source(title="观点检索 Gate", pages=1)
+    activate_catalog_revision(_edition, reader_asset=_asset, document_revision=revision)
     claim = _claim(
         revision,
         spans[0],

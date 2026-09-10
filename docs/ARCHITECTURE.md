@@ -16,6 +16,8 @@ MetadataCandidate 也已扩展真实 session FK，人工来源导入只保存建
 
 Reader 页内容 API 将页码元数据与正式正文分开。页码、尺寸和私人阅读锚点要求获准访问的活动 Reader Asset；文字、文本块和章节仍要求同一活动全文修订。没有正式全文时返回 `text_available=false`、空正文和空文本块，不改写数据库中的 OCR 内容。访问接口的 `ocr_text_available` 也检查正式全文资格，`ocr_status` 继续报告实际处理状态。文内搜索与 PDF 文件选择规则保持原有边界。
 
+观点检索将索引返回值视为候选位置，不直接作为公开依据。基线重新检查活动 Catalog/Document 修订、Reader Asset 和当前会话的文件权限，使用获准 EvidenceSpan 的原文。结果题名、作者、年份和筛选项成员来自同一正式快照，分类实体的当前公开资格仍保留。新正文正在准备时不要求旧正式 DocumentRevision.is_active，保持上一正式正文可查。作品、作者、年份与规范分类筛选也不能仅依赖外部索引执行，使用既有正式快照筛选服务复核。
+
 媒体原件、衍生图和公开引用由 MediaAsset、MediaRendition、CatalogPublicationMedia 负责。Work 封面和推荐图例分别使用真实 rendition FK，选择通过原编辑修订发布；精确尺寸和说明固定在活动公开快照中，后台改图不会就地改变读者内容。旧图例 HTTP 入口复用同一媒体服务，不再删除历史文件。元数据接口、写入与 PDF 图例生成保留所选 Edition 上下文，其他实体仍沿用旧图像字段，详见 V3.0.5_MEDIA。
 
 字段助手的旧 TheorySchool 输入继续可读，但新关联只经既有、经确认且身份安全的 LegacyKnowledgeMapping 写到 KnowledgeNode/WorkNodeRelation。发布过的 Work 仍先建立 EditorialRevision。采用时锁住映射与目标，拒绝缺映射、类型错误、非正式目标或名称不匹配。历史 WorkKnowledgeRelation 和证据原样保留，不把静态扫描归零当作完整旧版退役或运行时零调用证明。

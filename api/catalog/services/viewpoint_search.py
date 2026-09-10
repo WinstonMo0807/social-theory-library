@@ -4,24 +4,27 @@ from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 import re
 from typing import Any
+from uuid import UUID
+
+from django.db.models import F, Q
 
 from catalog.models import (
+    Asset,
     Contribution,
     DerivedClaim,
-    Edition,
     EvidenceSpan,
     KnowledgeNode,
-    KnowledgePublicationStatus,
-    RelationReviewStatus,
-    WorkNodeRelation,
-    WorkTopicRelation,
 )
 from catalog.services.claim_benchmark import claim_viewpoint_activation_state
 from catalog.services.claims.indexing import search_claim_index, visible_claim_queryset
 from catalog.services.claims.stance import ClaimStatement, ClaimStance, classify_stance
 from catalog.services.evidence_envelope import evidence_span_envelope
+from catalog.services.publication_eligibility import (
+    active_asset_q, active_catalog_snapshot, active_document_revision_q, public_editions,
+)
 from catalog.services.retrieval import unified_retrieve
 from catalog.services.scoped_search import public_scholar_queryset
+from catalog.services.semantic_search import _snapshot_filtered_work_ids, viewer_access_statuses
 
 
 STANCE_ORDER = (
@@ -168,22 +171,50 @@ def _source_type(document_type: object) -> str:
     return "other"
 
 
-def _matching_evidence_span(row: dict) -> EvidenceSpan | None:
-    asset_id = str(row.get("asset_id") or "").strip()
+def _uuid_identifier(value: object) -> str | None:
+    try:
+        return str(UUID(str(value or "").strip()))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _matching_evidence_span(
+    row: dict, *, filters: dict | None = None, eligible_work_ids: set | None = None,
+) -> EvidenceSpan | None:
+    asset_id = _uuid_identifier(row.get("asset_id"))
     try:
         page_number = int(row.get("page_start") or row.get("page_index") or 0)
     except (TypeError, ValueError):
         page_number = 0
     if not asset_id or page_number <= 0:
         return None
+    allowed_access = (filters or {}).get("_allowed_access_statuses") or viewer_access_statuses()
+    work_scope = Q()
+    if (filters or {}).get("work_ids"):
+        work_scope &= Q(document_revision__asset__edition__work_id__in=filters["work_ids"])
+    if eligible_work_ids is not None:
+        work_scope &= Q(document_revision__asset__edition__work_id__in=eligible_work_ids)
     spans = list(
         EvidenceSpan.objects.filter(
             document_revision__asset_id=asset_id,
-            document_revision__is_active=True,
+            document_revision__asset__kind=Asset.Kind.NORMALIZED,
+            document_revision__asset__status=Asset.Status.READY,
+            document_revision__asset__access_status__in=allowed_access,
+            document_revision__asset__edition__is_primary=True,
+            page__asset_id=F("document_revision__asset_id"),
             page_number=page_number,
             is_stale=False,
         )
-        .select_related("document_revision__asset__edition__work", "page")
+        .filter(
+            active_document_revision_q(revision_prefix="document_revision"),
+            active_asset_q(asset_prefix="document_revision__asset"),
+            work_scope,
+        )
+        .select_related(
+            "document_revision__asset__edition__work",
+            "document_revision__asset__edition__active_catalog_revision",
+            "page",
+        )
         .order_by("start_offset")[:40]
     )
     if not spans:
@@ -220,17 +251,38 @@ def _matching_evidence_span(row: dict) -> EvidenceSpan | None:
     )
 
 
+def _public_result_metadata(span: EvidenceSpan, envelope: dict) -> dict:
+    snapshot = active_catalog_snapshot(span.document_revision.asset.edition, require_fulltext=True)
+    work = snapshot.get("work") or {}
+    edition = snapshot.get("edition") or {}
+    return {
+        "authors": list(envelope["source"]["authors"]),
+        "work": {
+            "id": str(work.get("id") or ""),
+            "title": str(work.get("title") or "未题名"),
+            "slug": str(edition.get("public_slug") or ""),
+        },
+        "source_type": _source_type(work.get("document_type")),
+        "language": span.language or work.get("language") or "unknown",
+        "publication_year": edition.get("publication_year"),
+    }
+
+
 def _semantic_result(
     row: dict,
     *,
     query_statement: ClaimStatement,
     rank: int,
     total: int,
+    filters: dict | None = None,
+    eligible_work_ids: set | None = None,
 ) -> dict | None:
-    span = _matching_evidence_span(row)
+    span = _matching_evidence_span(row, filters=filters, eligible_work_ids=eligible_work_ids)
     if span is None:
         return None
-    statement = _semantic_statement(row)
+    # Index text is only a locator hint. Quote the authorized source itself,
+    # not extra text that a stale or inconsistent index hit may contain.
+    statement = _semantic_statement({**row, "snippet": span.original_text})
     if not statement.proposition:
         return None
     stance = classify_stance(query_statement, statement)
@@ -248,15 +300,7 @@ def _semantic_result(
         "stance_confidence": stance.confidence,
         "stance_reasons": list(stance.reasons),
         "score": round(base_score, 6),
-        "authors": list(row.get("authors") or []),
-        "work": {
-            "id": str(row.get("work_id") or ""),
-            "title": str(row.get("title") or ""),
-            "slug": str(row.get("edition_slug") or ""),
-        },
-        "source_type": _source_type(row.get("document_type")),
-        "language": str(row.get("language") or "unknown"),
-        "publication_year": row.get("publication_year"),
+        **_public_result_metadata(span, envelope),
         "page": envelope["locator"].get("page"),
         "printed_page_label": envelope["locator"].get("printed_page_label"),
         "evidence": envelope,
@@ -285,14 +329,6 @@ def _claim_result(
         index_score = float(index_hit.get("_rankingScore") or 0)
     except (TypeError, ValueError):
         index_score = max(0.0, 1.0 - ((rank - 1) / max(1, total)))
-    authors = list(
-        claim.edition.contributions.filter(
-            approved=True,
-            role=Contribution.Role.AUTHOR,
-        )
-        .order_by("order")
-        .values_list("person__preferred_name", flat=True)
-    )
     score = (
         min(max(index_score, 0), 1) * 0.25
         + claim.quality_score * 0.25
@@ -309,15 +345,7 @@ def _claim_result(
         "stance_confidence": stance.confidence,
         "stance_reasons": list(stance.reasons),
         "score": round(score, 6),
-        "authors": authors,
-        "work": {
-            "id": str(claim.work_id),
-            "title": claim.work.title,
-            "slug": claim.edition.public_slug or "",
-        },
-        "source_type": _source_type(claim.work.document_type),
-        "language": claim.primary_evidence.language or claim.work.language,
-        "publication_year": claim.edition.publication_year,
+        **_public_result_metadata(claim.primary_evidence, envelope),
         "page": envelope["locator"].get("page"),
         "printed_page_label": envelope["locator"].get("printed_page_label"),
         "evidence": envelope,
@@ -340,23 +368,27 @@ def _validated_claim_results(
     *,
     filters: dict,
     query_statement: ClaimStatement,
+    eligible_work_ids: set | None = None,
 ) -> tuple[list[dict], int]:
-    hit_ids = [str(hit.get("claim_id") or hit.get("id") or "") for hit in hits]
+    hit_ids = [_uuid_identifier(hit.get("claim_id") or hit.get("id")) for hit in hits]
+    work_scope = Q(work_id__in=eligible_work_ids) if eligible_work_ids is not None else Q()
     rows = (
         visible_claim_queryset(filters)
-        .filter(pk__in=[value for value in hit_ids if value])
+        .filter(work_scope, pk__in=[value for value in hit_ids if value])
         .select_related(
             "work",
             "edition",
             "document_revision__asset__edition__work",
             "primary_evidence__page__asset",
+            "primary_evidence__document_revision__asset__edition__work",
+            "primary_evidence__document_revision__asset__edition__active_catalog_revision",
         )
     )
     claim_map = {str(claim.id): claim for claim in rows}
     output = []
     rejected = 0
     for rank, hit in enumerate(hits, start=1):
-        claim_id = str(hit.get("claim_id") or hit.get("id") or "")
+        claim_id = _uuid_identifier(hit.get("claim_id") or hit.get("id"))
         claim = claim_map.get(claim_id)
         if (
             claim is None
@@ -485,68 +517,74 @@ def _entity_facet_options(
 def _viewpoint_facets(rows: list[dict]) -> dict[str, Any]:
     work_counts = Counter(str(row.get("work", {}).get("id") or "") for row in rows)
     work_counts.pop("", None)
-    work_ids = list(work_counts)
     work_options = []
     seen_works: set[str] = set()
-    if work_ids:
-        editions = Edition.objects.filter(
-            work_id__in=work_ids,
-            state="published",
-            is_primary=True,
-        ).select_related("work").order_by("work__title", "-publication_year")
-        for edition in editions:
-            work_id = str(edition.work_id)
-            if work_id in seen_works:
-                continue
-            seen_works.add(work_id)
-            work_options.append(
-                {
-                    "id": work_id,
-                    "slug": edition.public_slug or "",
-                    "label": edition.work.title,
-                    "count": int(work_counts[work_id]),
-                }
-            )
+    for row in rows:
+        work = row.get("work") or {}
+        work_id = str(work.get("id") or "")
+        if not work_id or work_id in seen_works:
+            continue
+        seen_works.add(work_id)
+        work_options.append({
+            "id": work_id, "slug": work.get("slug") or "", "label": work.get("title") or "",
+            "count": int(work_counts[work_id]),
+        })
+    work_options.sort(key=lambda row: (row["label"], row["id"]))
 
     scholar_rows = []
     theory_rows = []
     topic_rows = []
-    if work_ids:
-        scholar_rows = list(
-            public_scholar_queryset().filter(
-                person__contributions__edition__work_id__in=work_ids,
-                person__contributions__edition__state="published",
-                person__contributions__edition__is_primary=True,
-                person__contributions__approved=True,
-                person__contributions__role=Contribution.Role.AUTHOR,
-            )
-            .values(
-                "person_id",
-                "slug",
-                "person__preferred_name",
-                "person__contributions__edition__work_id",
-            )
-            .distinct()
-        )
-        theory_rows = list(
-            WorkNodeRelation.objects.filter(
-                work_id__in=work_ids,
-                node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
-                node__status=KnowledgePublicationStatus.PUBLISHED,
-                status=KnowledgePublicationStatus.PUBLISHED,
-            )
-            .values("node_id", "node__slug", "node__canonical_name_zh", "work_id")
-            .distinct()
-        )
-        topic_rows = list(
-            WorkTopicRelation.objects.filter(
-                work_id__in=work_ids,
-                topic__editorial_status="published",
-                review_status=RelationReviewStatus.APPROVED,
-            )
-            .values("topic_id", "topic__slug", "topic__name", "work_id")
-            .distinct()
-        )
+    # Facet membership must follow the same serving editions as the results.
+    # Current entity publication status still applies through the existing
+    # snapshot taxonomy mask and public scholar selector.
+    edition_ids = {
+        row.get("evidence", {}).get("source", {}).get("edition_id") for row in rows
+    } - {None, ""}
+    snapshots = []
+    seen_snapshot_works = set()
+    if edition_ids:
+        for edition in public_editions(require_fulltext=True).filter(pk__in=edition_ids, is_primary=True):
+            snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+            work_id = str((snapshot.get("work") or {}).get("id") or "")
+            if work_id in work_counts and work_id not in seen_snapshot_works:
+                snapshots.append((work_id, snapshot))
+                seen_snapshot_works.add(work_id)
+    author_rows = [
+        (work_id, row) for work_id, snapshot in snapshots
+        for row in snapshot.get("contributions") or []
+        if isinstance(row, dict) and row.get("role") == Contribution.Role.AUTHOR
+    ]
+    author_ids = {
+        str(row.get("person_id") or (row.get("person") or {}).get("id") or "")
+        for _work_id, row in author_rows
+    } - {""}
+    scholar_slugs = {
+        str(row["person_id"]): row["slug"] for row in
+        public_scholar_queryset().filter(person_id__in=author_ids).values("person_id", "slug")
+    } if author_ids else {}
+    for work_id, row in author_rows:
+        person = row.get("person") or {}
+        person_id = str(row.get("person_id") or person.get("id") or "")
+        if person_id in scholar_slugs:
+            scholar_rows.append({
+                "person_id": person_id, "slug": scholar_slugs[person_id],
+                "person__preferred_name": person.get("preferred_name") or row.get("name") or "",
+                "person__contributions__edition__work_id": work_id,
+            })
+    for work_id, snapshot in snapshots:
+        knowledge = snapshot.get("knowledge") or {}
+        for node in knowledge.get("nodes") or []:
+            if isinstance(node, dict) and node.get("type") == KnowledgeNode.NodeType.THEORY_TRADITION:
+                theory_rows.append({
+                    "node_id": node["id"], "node__slug": node.get("slug") or "",
+                    "node__canonical_name_zh": node.get("name") or "", "work_id": work_id,
+                })
+        for topic in knowledge.get("topics") or []:
+            if isinstance(topic, dict):
+                topic_rows.append({
+                    "topic_id": topic["id"], "topic__slug": topic.get("slug") or "",
+                    "topic__name": topic.get("name") or "", "work_id": work_id,
+                })
 
     years = [
         int(row["publication_year"])
@@ -617,6 +655,7 @@ def viewpoint_search(
 
     statement = query_claim(query)
     normalized_filters = dict(filters or {})
+    eligible_work_ids = _snapshot_filtered_work_ids(normalized_filters)
     bounded_limit = max(1, min(int(limit), 100))
     bounded_per_work = max(0, min(int(max_per_work), 20))
     semantic_error = ""
@@ -643,6 +682,8 @@ def viewpoint_search(
             query_statement=statement,
             rank=rank,
             total=len(raw_baseline or []),
+            filters=normalized_filters,
+            eligible_work_ids=eligible_work_ids,
         )
         if result is None:
             unvalidated_baseline += 1
@@ -659,6 +700,7 @@ def viewpoint_search(
         list(claim_response.get("hits") or []),
         filters=normalized_filters,
         query_statement=statement,
+        eligible_work_ids=eligible_work_ids,
     )
     shadow_rows = _diversified(
         _deduplicate([*claim_rows, *baseline_rows]),

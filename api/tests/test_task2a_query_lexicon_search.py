@@ -15,9 +15,11 @@ from catalog.models import (
     DocumentType,
     Edition,
     KnowledgeNode,
+    Page,
     Person,
     PersonNameVariant,
     PublicationState,
+    QueryLexiconState,
     SearchEvaluationJudgment,
     SearchEvaluationQuery,
     SearchEvaluationSet,
@@ -30,6 +32,8 @@ from catalog.services.passage_language import (
     passage_language_details,
 )
 from catalog.services.query_lexicon.search import resolve_search_query
+from catalog.services.query_lexicon.normalization import NORMALIZATION_VERSION
+from catalog.services.query_lexicon.registry import LEGACY_SOURCE_REGISTRY_VERSION, SOURCE_REGISTRY_VERSION
 from catalog.services.query_lexicon.sync import rebuild_query_lexicon
 from catalog.services.semantic_search import semantic_search
 from catalog.services.semantic_search import _language_filter_values, _meili_filters
@@ -38,6 +42,7 @@ from catalog.services.semantic_search_v2 import (
     _rule_rerank_v2,
 )
 from catalog.services.semantic_search_v2_config import branch_weight
+from .v304_helpers import activate_catalog_revision
 
 
 pytestmark = pytest.mark.django_db
@@ -175,13 +180,16 @@ def test_search_resolver_preserves_ambiguity_and_suppresses_standalone_field_exp
     }
 
 
-def test_legacy_alias_is_retained_as_low_trust_source_and_never_verified_translation():
+def test_compatibility_registry_keeps_legacy_alias_low_trust_and_never_verified_translation():
     person = _verified_person("Canonical Legacy Test")
     person.aliases = ["old mixed alias"]
     person.save()
     cache.clear()
 
-    rebuild_query_lexicon()
+    rebuild_query_lexicon(
+        normalization_version=NORMALIZATION_VERSION,
+        source_registry_version=LEGACY_SOURCE_REGISTRY_VERSION,
+    )
     result = resolve_search_query("old mixed alias")
     matched = result["matched_entities"][0]
 
@@ -195,6 +203,25 @@ def test_legacy_alias_is_retained_as_low_trust_source_and_never_verified_transla
     assert branches
     assert all(branch["effective_trust_level"] == "legacy" for branch in branches)
     assert all(branch_weight(branch) < 0.2 for branch in branches)
+
+
+def test_current_registry_preserves_raw_legacy_alias_without_public_expansion():
+    person = _verified_person("Canonical Legacy Suppression")
+    person.aliases = ["unconfirmed mixed alias"]
+    person.save()
+    person.refresh_from_db()
+    stored_aliases = list(person.aliases)
+    cache.clear()
+    rebuild_query_lexicon()
+    result = resolve_search_query("unconfirmed mixed alias")
+    assert result["matched_entities"] == []
+    assert result["expansion_branches"][1:] == []
+    person.refresh_from_db()
+    assert person.aliases == stored_aliases
+    assert "unconfirmed mixed alias" in person.aliases
+    state = QueryLexiconState.objects.select_related("active_generation").get(key="default")
+    assert state.source_registry_version == SOURCE_REGISTRY_VERSION
+    assert state.active_generation.source_registry_version == SOURCE_REGISTRY_VERSION
 
 
 def test_search_resolver_cache_key_contains_revision_and_scope():
@@ -331,6 +358,7 @@ def test_v2_retrieval_calls_bounded_verified_translation_branch_for_english_quer
         status=Asset.Status.READY,
         is_current=True,
         access_status=Asset.AccessStatus.PUBLIC,
+        page_count=1,
     )
     chunk = SemanticChunk.objects.create(
         asset=asset,
@@ -349,6 +377,11 @@ def test_v2_retrieval_calls_bounded_verified_translation_branch_for_english_quer
         locators=[{"page": 1, "printed_label": "1", "bbox": []}],
         index_status=SemanticChunk.IndexStatus.READY,
     )
+    Page.objects.create(
+        asset=asset, index=1, text=chunk.original_text,
+        normalized_text=chunk.normalized_text, text_source="embedded",
+    )
+    activate_catalog_revision(edition, reader_asset=asset)
     cache.clear()
     rebuild_query_lexicon()
     calls: list[str] = []

@@ -18,6 +18,7 @@ from catalog.models import (
     EnrichmentSourceClass,
     KnowledgeNode,
     KnowledgeNodeAlias,
+    KnowledgePublicationEvent,
     KnowledgeRelation,
     Person,
     PersonNameVariant,
@@ -29,6 +30,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.field_enrichment.extraction import extract_web_observations
+from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision
 from catalog.services.field_enrichment.mutations import (
     accept_enrichment_candidate,
     reject_enrichment_candidate,
@@ -534,7 +536,7 @@ def test_accept_rejects_context_hash_mismatch_even_when_run_flag_is_current(admi
     assert edition.work.title == "数据库旧题名"
 
 
-def test_accept_person_name_variant_writes_authority_then_outbox(admin_user):
+def test_accept_person_name_variant_stays_draft_until_explicit_parent_publication(admin_user):
     person = _person()
     adapter = FakeStructuredAdapter(
         [
@@ -557,7 +559,26 @@ def test_accept_person_name_variant_writes_authority_then_outbox(admin_user):
     assert result.authority_model == "catalog.PersonNameVariant"
     assert variant.is_verified is True and variant.displayable is False
     assert candidate.status == EnrichmentCandidate.Status.ACCEPTED
-    assert QueryLexiconChangeEvent.objects.filter(source_object_id=variant.id).exists()
+    assert not QueryLexiconChangeEvent.objects.filter(source_object_id=variant.id).exists()
+    assert QueryLexiconEntry.objects.count() == before_entries
+    person.refresh_from_db()
+    assert person.authority_status == "draft"
+    assert not KnowledgePublicationEvent.objects.filter(
+        object_id__in=[person.pk, person.scholar_profile.pk],
+    ).exists()
+    revision = create_editorial_revision(
+        target_type=EditorialRevision.TargetType.SCHOLAR_PROFILE,
+        target_id=person.scholar_profile.pk, patch={"editorial_status": "published"},
+        actor=admin_user, idempotency_key=f"publish-alias-parent:{person.pk}",
+    )
+    publish_editorial_revision(revision.pk, actor=admin_user)
+    publication = KnowledgePublicationEvent.objects.select_related("domain_event").get(
+        idempotency_key=f"editorial-publish:{revision.pk}",
+    )
+    assert publication.object_type == "scholar_profile"
+    assert publication.object_id == person.scholar_profile.pk
+    assert publication.domain_event.object_id == person.scholar_profile.pk
+    assert publication.actor_id == admin_user.pk
     assert QueryLexiconEntry.objects.count() == before_entries
 
 
@@ -652,7 +673,7 @@ def test_accept_published_work_candidate_creates_revision_without_public_mutatio
     assert candidate.status == EnrichmentCandidate.Status.ACCEPTED
 
 
-def test_accept_knowledge_alias_writes_alias_and_query_lexicon_event(admin_user):
+def test_accept_knowledge_alias_stays_draft_until_explicit_parent_publication(admin_user):
     node = KnowledgeNode.objects.create(
         node_type=KnowledgeNode.NodeType.CONCEPT,
         canonical_name_zh="Habitus",
@@ -677,7 +698,25 @@ def test_accept_knowledge_alias_writes_alias_and_query_lexicon_event(admin_user)
     accept_enrichment_candidate(candidate, actor=admin_user, reason="术语来源已人工核对")
 
     alias = KnowledgeNodeAlias.objects.get(node=node, alias="惯习")
-    assert QueryLexiconChangeEvent.objects.filter(source_object_id=alias.id).exists()
+    assert not QueryLexiconChangeEvent.objects.filter(source_object_id=alias.id).exists()
+    assert alias.is_verified is True
+    node.refresh_from_db()
+    assert node.status == "draft"
+    assert not KnowledgePublicationEvent.objects.filter(object_id=node.pk).exists()
+    assert QueryLexiconEntry.objects.count() == before_entries
+    revision = create_editorial_revision(
+        target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
+        target_id=node.pk, patch={"status": "published"},
+        actor=admin_user, idempotency_key=f"publish-alias-parent:{node.pk}",
+    )
+    publish_editorial_revision(revision.pk, actor=admin_user)
+    publication = KnowledgePublicationEvent.objects.select_related("domain_event").get(
+        idempotency_key=f"editorial-publish:{revision.pk}",
+    )
+    assert publication.object_type == "knowledge_node"
+    assert publication.object_id == node.pk
+    assert publication.domain_event.object_id == node.pk
+    assert publication.actor_id == admin_user.pk
     assert QueryLexiconEntry.objects.count() == before_entries
 
 

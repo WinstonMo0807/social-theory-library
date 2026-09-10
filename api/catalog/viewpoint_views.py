@@ -11,11 +11,8 @@ from common.concurrency import capacity_slot
 
 from .models import (
     KnowledgeNode,
-    KnowledgePublicationStatus,
-    RelationReviewStatus,
-    WorkNodeRelation,
-    WorkTopicRelation,
 )
+from .services.publication_eligibility import active_catalog_snapshot, public_editions
 from .services.semantic_search import viewer_access_statuses
 from .services.viewpoint_search import (
     STANCE_ORDER,
@@ -73,30 +70,27 @@ def _canonical_work_ids(
     theory_ids: list[str],
     topic_ids: list[str],
 ) -> set[str] | None:
-    """Resolve normalized identities to Work IDs without requiring index changes."""
-
-    work_ids: set[str] | None = None
-    if theory_ids:
-        theory_work_ids = {
-            str(value)
-            for value in WorkNodeRelation.objects.filter(
-                node_id__in=theory_ids,
-                node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
-                node__status=KnowledgePublicationStatus.PUBLISHED,
-                status=KnowledgePublicationStatus.PUBLISHED,
-            ).values_list("work_id", flat=True)
+    """Resolve selected identities against formally published relationships."""
+    if not theory_ids and not topic_ids:
+        return None
+    wanted_theories = set(theory_ids)
+    wanted_topics = set(topic_ids)
+    work_ids: set[str] = set()
+    for edition in public_editions(require_fulltext=True).filter(is_primary=True):
+        snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+        knowledge = snapshot.get("knowledge") or {}
+        theories = {
+            str(row.get("id")) for row in knowledge.get("nodes") or []
+            if isinstance(row, dict) and row.get("type") == KnowledgeNode.NodeType.THEORY_TRADITION
         }
-        work_ids = _intersect_work_ids(work_ids, theory_work_ids)
-    if topic_ids:
-        topic_work_ids = {
-            str(value)
-            for value in WorkTopicRelation.objects.filter(
-                topic_id__in=topic_ids,
-                topic__editorial_status="published",
-                review_status=RelationReviewStatus.APPROVED,
-            ).values_list("work_id", flat=True)
+        topics = {
+            str(row.get("id")) for row in knowledge.get("topics") or [] if isinstance(row, dict)
         }
-        work_ids = _intersect_work_ids(work_ids, topic_work_ids)
+        if wanted_theories and not wanted_theories.intersection(theories):
+            continue
+        if wanted_topics and not wanted_topics.intersection(topics):
+            continue
+        work_ids.add(str(edition.work_id))
     return work_ids
 
 
