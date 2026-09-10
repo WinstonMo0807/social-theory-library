@@ -3380,13 +3380,18 @@ class PublicPageContentView(APIView):
 
     def get(self, request, asset_id, page_index):
         asset = get_object_or_404(
-            Asset.objects.filter(active_document_q(asset_prefix="")),
+            Asset.objects.filter(active_asset_q(asset_prefix="")),
             pk=asset_id,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             access_status__in=_viewer_asset_access_statuses(request),
         )
         page = get_object_or_404(asset.pages, index=page_index)
+        # Page anchors and dimensions remain usable for an approved PDF before
+        # full-text publication. Unactivated OCR text must not leave this API.
+        text_available = Asset.objects.filter(
+            active_document_q(asset_prefix=""), pk=asset.pk,
+        ).exists()
         return Response(
             {
                 "page_id": str(page.id),
@@ -3396,11 +3401,12 @@ class PublicPageContentView(APIView):
                 "citation_page_label": clean_page_label(page.printed_label) or str(page.index),
                 "label_source": page.label_source,
                 "label_confidence": page.label_confidence,
-                "chapter_title": page.chapter_title,
-                "text_source": page.text_source,
+                "chapter_title": page.chapter_title if text_available else "",
+                "text_available": text_available,
+                "text_source": page.text_source if text_available else Page.TextSource.NONE,
                 "width": page.width,
                 "height": page.height,
-                "text": page.text,
+                "text": page.text if text_available else "",
                 "blocks": [
                     {
                         "id": str(block.id),
@@ -3411,7 +3417,7 @@ class PublicPageContentView(APIView):
                         "confidence": block.confidence,
                     }
                     for block in page.blocks.exclude(block_type__in=["header", "footer"])
-                ],
+                ] if text_available else [],
             }
         )
 

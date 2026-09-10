@@ -8,6 +8,29 @@ from catalog.models import KnowledgePublicationEvent, ProjectionState
 from catalog.services.knowledge_publication import process_knowledge_event
 
 
+def confirm_book_identity(edition, actor):
+    """Explicit test input, not inferred confirmation from an OCR score."""
+    from catalog.models import Contribution, Person
+    from catalog.services.field_decisions import record_edition_field_decision
+
+    assert edition.work.document_type == "book"
+    if not edition.contributions.filter(role="author", approved=True).exists():
+        person = Person.objects.create(
+            preferred_name="人工确认测试作者", sort_name="人工确认测试作者", authority_status="verified",
+        )
+        Contribution.objects.create(
+            edition=edition, person=person, role="author", approved=True, source="manual_test_input",
+        )
+    for name in ("title", "document_type", "language"):
+        record_edition_field_decision(
+            edition, name, value=getattr(edition.work, name), status="confirmed", actor=actor,
+        )
+    authors = edition.contributions.filter(role="author", approved=True).values_list("person_id", flat=True)
+    record_edition_field_decision(
+        edition, "authors", value=[str(pk) for pk in authors], status="confirmed", actor=actor,
+    )
+
+
 def acknowledge_catalog_projections(edition):
     event = KnowledgePublicationEvent.objects.filter(
         catalog_revision__edition=edition,

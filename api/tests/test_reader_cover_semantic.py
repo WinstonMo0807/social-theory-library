@@ -33,6 +33,8 @@ from ingestion.models import AuditEvent, UploadBatch, UploadItem
 from ingestion.services.ocr_provider import parse_pdf_with_ocr
 from ingestion.services.publication import publication_preflight, publication_readiness, publish_edition
 from ingestion.views import _locked_upload_items
+from .v304_helpers import activate_catalog_revision
+from .publication_fixtures import confirm_book_identity
 
 
 def create_public_asset(title, sha256, *, document_type=DocumentType.BOOK):
@@ -199,6 +201,8 @@ def test_reader_note_groups_are_owned_grouped_and_limited_to_three(
         "第二本笔记书",
         "2" * 64,
     )
+    activate_catalog_revision(_edition_a, reader_asset=asset_a)
+    activate_catalog_revision(_edition_b, reader_asset=asset_b)
     api_client.force_authenticate(reader_user)
     created_ids = []
     for index in range(4):
@@ -271,6 +275,7 @@ def test_semantic_search_returns_public_passage_and_exact_focus(api_client):
         "3" * 64,
     )
     chunk = build_semantic_chunks(asset)[0]
+    activate_catalog_revision(edition, reader_asset=asset)
     response = api_client.get(
         "/api/catalog/semantic-search/",
         {"q": "leisure class consumption and status"},
@@ -433,7 +438,10 @@ def test_cover_candidates_only_run_for_books_and_allow_manual_selection(
     api_client,
     tmp_path,
     settings,
+    admin_user,
 ):
+    from .publication_fixtures import acknowledge_catalog_projections
+
     settings.MEDIA_ROOT = tmp_path / "media"
     settings.COVER_AUTO_SELECT_THRESHOLD = 1.1
     work = Work.objects.create(
@@ -446,12 +454,18 @@ def test_cover_candidates_only_run_for_books_and_allow_manual_selection(
         state=PublicationState.PUBLISHED,
         public_slug="social-test-cover",
     )
-    person = Person.objects.create(preferred_name="Test Scholar")
+    person = Person.objects.create(preferred_name="Test Scholar", authority_status="verified")
     Contribution.objects.create(
         edition=edition,
         person=person,
         role=Contribution.Role.AUTHOR,
         approved=True,
+    )
+    original = Asset.objects.create(
+        edition=edition, kind=Asset.Kind.ORIGINAL,
+        file=SimpleUploadedFile("source.pdf", build_cover_pdf(), content_type="application/pdf"),
+        sha256="4" * 64, status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID, page_count=3,
     )
     asset = Asset.objects.create(
         edition=edition,
@@ -463,18 +477,38 @@ def test_cover_candidates_only_run_for_books_and_allow_manual_selection(
         ),
         sha256="4" * 64,
         status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID,
+        source_asset=original,
         page_count=3,
     )
+    confirm_book_identity(edition, admin_user)
+    activate_catalog_revision(edition, reader_asset=asset, fulltext_ready=False)
     candidates = generate_cover_candidates(asset)
     assert len(candidates) == 3
     assert candidates[0].page_index == 2
     assert candidates[0].metrics["title_similarity"] >= 0.7
     assert candidates[0].thumbnail.name.startswith("incoming/cover-candidates/")
-    selected = select_cover_candidate(candidates[0])["candidate"]
+    assert select_cover_candidate(candidates[0])["saved"] is False
+    selection = select_cover_candidate(candidates[0], actor=admin_user)
+    selected = selection["candidate"]
     work.refresh_from_db()
     assert selected.selected is True
-    assert work.cover.name.startswith("public/covers/")
-    assert work.cover.name.endswith("-cover.jpg")
+    assert selection["canonical_write_deferred"] is True
+    assert selection["editorial_revision_id"]
+    assert not work.cover
+    assert api_client.get(f"/api/catalog/works/{work.id}/cover/").status_code == 404
+    api_client.force_authenticate(admin_user)
+    published = api_client.post(
+        f"/api/catalog/admin/library/works/{work.pk}/publication/?edition={edition.pk}",
+        {"confirm_warnings": True}, format="json",
+    )
+    assert published.status_code == 200, published.data
+    api_client.force_authenticate(None)
+    assert api_client.get(f"/api/catalog/works/{work.id}/cover/").status_code == 404
+    acknowledge_catalog_projections(edition)
+    work.refresh_from_db()
+    assert work.cover.name.startswith("public/covers/editorial/")
+    assert work.cover.name.endswith(".jpg")
     works_response = api_client.get("/api/catalog/works/")
     assert works_response.status_code == 200
     serialized_work = next(
@@ -591,7 +625,7 @@ def test_upload_item_row_lock_targets_only_the_primary_table():
 
 
 @pytest.mark.django_db
-def test_publication_allows_empty_authors_theory_schools_and_topics(settings):
+def test_publication_requires_confirmed_authors_but_allows_empty_theories_and_topics(settings, admin_user):
     settings.REQUIRE_CLOUD_FOR_PUBLICATION = False
     work, edition, _asset, _page, _passage = create_public_asset(
         "A Work Without Assigned School",
@@ -613,15 +647,17 @@ def test_publication_allows_empty_authors_theory_schools_and_topics(settings):
 
     assert not edition.contributions.exists()
     assert not work.knowledge_relations.exists()
+    assert "作者尚未填写或确认" in publication_readiness(edition)
+    confirm_book_identity(edition, admin_user)
     assert publication_readiness(edition) == []
 
-    publish_edition(edition, confirm_warnings=True)
+    publish_edition(edition, actor=admin_user, confirm_warnings=True)
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
 
 
 @pytest.mark.django_db
-def test_manual_publication_can_accept_low_metadata_confidence(settings):
+def test_manual_publication_can_accept_low_metadata_confidence(settings, admin_user):
     settings.REQUIRE_CLOUD_FOR_PUBLICATION = False
     settings.AUTO_PUBLISH_MIN_CONFIDENCE = 0.85
     work, edition, _asset, _page, _passage = create_public_asset(
@@ -641,10 +677,14 @@ def test_manual_publication_can_accept_low_metadata_confidence(settings):
     edition.search_indexed_at = timezone.now()
     edition.save()
 
+    confirm_book_identity(edition, admin_user)
     assert publication_readiness(edition) == []
-    assert "元数据置信度低于自动处理阈值" in publication_preflight(edition)["warnings"]
+    low_confidence_checks = publication_preflight(edition)
+    edition.metadata_confidence = 1
+    edition.save(update_fields=["metadata_confidence", "updated_at"])
+    assert publication_preflight(edition) == low_confidence_checks
 
-    publish_edition(edition, allow_low_confidence=True, confirm_warnings=True)
+    publish_edition(edition, actor=admin_user, allow_low_confidence=True, confirm_warnings=True)
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
 
@@ -673,7 +713,7 @@ def test_published_metadata_edit_requires_revision_and_preserves_canonical(
         asset=asset,
     )
     api_client.force_authenticate(admin_user)
-    with patch("ingestion.views.index_asset") as reindex, patch(
+    with patch("catalog.services.knowledge_publication.create_catalog_publication_event") as reindex, patch(
         "ingestion.views.generate_cover_candidates",
     ):
         response = api_client.put(

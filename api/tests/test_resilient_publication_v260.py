@@ -10,11 +10,15 @@ from rest_framework.test import APIClient
 from catalog.models import (
     AnonymousUsageEvent,
     Asset,
+    CatalogPublicationRevision,
     DocumentType,
     Edition,
+    KnowledgePublicationEvent,
+    KnowledgeProjectionDelivery,
     OcrStatus,
     Page,
     PageLabelStatus,
+    ProjectionState,
     PublicationState,
     ReaderRenditionPolicy,
     SearchQueryAggregate,
@@ -22,6 +26,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.analytics import aggregate_search_queries
+from catalog.services.knowledge_publication import process_knowledge_event
 from catalog.services.page_labels import infer_page_labels
 from catalog.services.semantic_search import semantic_model_health
 from ingestion.models import FieldLock, UploadBatch, UploadItem
@@ -34,6 +39,8 @@ from ingestion.services.publication import (
 )
 from ingestion.services.ocr_pdf import create_searchable_ocr_pdf
 from ingestion.views import _schedule_publication_background_tasks
+from .v304_helpers import activate_catalog_revision
+from .publication_fixtures import acknowledge_catalog_projections, confirm_book_identity
 
 
 def create_item_with_files(settings, tmp_path, *, title="状态分离测试"):
@@ -88,36 +95,39 @@ def create_item_with_files(settings, tmp_path, *, title="状态分离测试"):
 def test_publication_state_is_independent_from_ocr_review_and_semantic_work(
     settings,
     tmp_path,
+    admin_user,
 ):
     _work, edition, original, normalized = create_item_with_files(settings, tmp_path)
+    confirm_book_identity(edition, admin_user)
 
     preflight = publication_preflight(edition)
     assert preflight["blockers"] == []
-    assert "人工复核尚未完成（60%）" in preflight["warnings"]
+    assert edition.review_progress == 60  # Aggregate progress cannot negate confirmed fields.
     assert "OCR 尚未完成，扫描件暂时不能选择文字" in preflight["warnings"]
-    assert set(preflight["background_tasks"]) >= {"OCR", "页码识别", "语义索引"}
+    assert set(preflight["background_tasks"]) >= {"OCR", "页码识别", "正文智能检索"}
 
     with pytest.raises(PublicationWarningsRequireConfirmation):
-        publish_edition(edition)
+        publish_edition(edition, actor=admin_user)
 
-    publish_edition(edition, confirm_warnings=True)
+    publish_edition(edition, actor=admin_user, confirm_warnings=True)
     edition.refresh_from_db()
     first_published_at = edition.first_published_at
     stable_slug = edition.public_slug
     assert edition.state == PublicationState.PUBLISHED
     assert first_published_at is not None
+    acknowledge_catalog_projections(edition)
 
     edition.ocr_status = OcrStatus.FAILED
     edition.save(update_fields=["ocr_status", "updated_at"])
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
 
-    withdraw_edition(edition, reason="测试下架但保留资料")
+    withdraw_edition(edition, actor=admin_user, reason="测试下架但保留资料")
     edition.refresh_from_db()
     assert edition.state == PublicationState.WITHDRAWN
     assert Asset.objects.filter(pk__in=[original.pk, normalized.pk]).count() == 2
 
-    publish_edition(edition, confirm_warnings=True)
+    publish_edition(edition, actor=admin_user, confirm_warnings=True)
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
     assert edition.public_slug == stable_slug
@@ -178,7 +188,7 @@ def test_ocr_disabled_publication_keeps_page_labels_but_skips_empty_semantic_wor
 
 
 @pytest.mark.django_db
-def test_admin_publish_survives_search_index_failure_and_withdraw_preserves_files(
+def test_admin_publish_records_projection_failure_and_withdraw_preserves_files(
     settings,
     tmp_path,
     api_client,
@@ -188,8 +198,9 @@ def test_admin_publish_survives_search_index_failure_and_withdraw_preserves_file
     _work, edition, original, normalized = create_item_with_files(
         settings,
         tmp_path,
-        title="索引故障仍可发布",
+        title="索引故障保留发布事件",
     )
+    confirm_book_identity(edition, admin_user)
     batch = UploadBatch.objects.create(created_by=admin_user, expected_count=1)
     item = UploadItem.objects.create(
         batch=batch,
@@ -207,9 +218,7 @@ def test_admin_publish_survives_search_index_failure_and_withdraw_preserves_file
     ).status_code == 403
 
     api_client.force_authenticate(admin_user)
-    with patch("ingestion.views.index_asset", side_effect=RuntimeError("search offline")), patch(
-        "ingestion.views.queue_semantic_job",
-    ) as semantic_queue, patch(
+    with patch("ingestion.views.queue_semantic_job") as semantic_queue, patch(
         "ingestion.views.queue_ocr_job",
     ) as ocr_queue:
         ocr_queue.return_value.id = "ocr-job"
@@ -222,7 +231,7 @@ def test_admin_publish_survives_search_index_failure_and_withdraw_preserves_file
             format="json",
         )
     assert response.status_code == 200
-    assert "search offline" in response.data["index_warning"]
+    assert response.data["intelligence_status"] == "processing"
     semantic_queue.assert_not_called()
     ocr_queue.assert_called_once_with(
         normalized,
@@ -233,18 +242,39 @@ def test_admin_publish_survives_search_index_failure_and_withdraw_preserves_file
     assert response.data["scheduled_tasks"][0]["type"] == "ocr"
     edition.refresh_from_db()
     assert edition.state == PublicationState.PUBLISHED
+    assert edition.active_catalog_revision_id is None
+    event = KnowledgePublicationEvent.objects.get(catalog_revision__edition=edition)
+    assert event.event_type == KnowledgePublicationEvent.EventType.CATALOG_PUBLISHED
+    assert event.catalog_revision.status == CatalogPublicationRevision.Status.PREPARING
+    assert event.deliveries.get(consumer="bibliographic_search").status == "pending"
+    # Model an external consumer failure at its durable status boundary. This
+    # does not execute or prove availability of the actual search service.
+    failed_states = ProjectionState.objects.filter(
+        object_type=event.object_type, object_id=event.object_id, projection_type="public",
+    )
+    assert failed_states.update(status=ProjectionState.Status.FAILED) == 1
+    processed = process_knowledge_event(event.pk)
+    assert processed.status == KnowledgePublicationEvent.Status.FAILED
+    assert processed.last_error_code == "projection_delivery_failed"
+    assert processed.next_attempt_at is not None
+    assert event.deliveries.get(consumer="bibliographic_search").status == "failed"
+    edition.refresh_from_db()
+    assert edition.active_catalog_revision_id is None
+    assert APIClient().get(f"/api/catalog/works/{edition.public_slug}/").status_code == 404
 
-    with patch("ingestion.views.remove_asset_from_index"), patch(
-        "ingestion.views.remove_semantic_asset",
-    ):
-        response = api_client.post(
-            f"/api/ingestion/items/{item.id}/withdraw/",
-            {"reason": "管理测试"},
-            format="json",
-        )
+    response = api_client.post(
+        f"/api/ingestion/items/{item.id}/withdraw/",
+        {"reason": "管理测试"},
+        format="json",
+    )
     assert response.status_code == 200
     edition.refresh_from_db()
     assert edition.state == PublicationState.WITHDRAWN
+    event.refresh_from_db()
+    assert event.status == KnowledgePublicationEvent.Status.FAILED
+    assert KnowledgePublicationEvent.objects.filter(
+        catalog_revision__edition=edition, event_type="catalog_withdrawn",
+    ).exists()
     assert Asset.objects.filter(pk__in=[original.pk, normalized.pk]).count() == 2
     assert original.file.storage.exists(original.file.name)
     assert normalized.file.storage.exists(normalized.file.name)
@@ -257,13 +287,15 @@ def test_withdrawal_stays_effective_when_search_cleanup_is_unavailable(
     api_client,
     admin_user,
 ):
-    _work, edition, _original, normalized = create_item_with_files(
+    _work, edition, original, normalized = create_item_with_files(
         settings,
         tmp_path,
         title="下架优先测试",
     )
     edition.state = PublicationState.PUBLISHED
     edition.save(update_fields=["state", "updated_at"])
+    active = activate_catalog_revision(edition, reader_asset=normalized, fulltext_ready=False)
+    assert APIClient().get(f"/api/catalog/works/{edition.public_slug}/").status_code == 200
     batch = UploadBatch.objects.create(created_by=admin_user, expected_count=1)
     item = UploadItem.objects.create(
         batch=batch,
@@ -274,25 +306,42 @@ def test_withdrawal_stays_effective_when_search_cleanup_is_unavailable(
     )
     api_client.force_authenticate(admin_user)
 
-    with patch(
-        "ingestion.views.remove_asset_from_index",
-        side_effect=ConnectionError("keyword search offline"),
-    ), patch(
-        "ingestion.views.remove_semantic_asset",
-        side_effect=ConnectionError("semantic search offline"),
-    ):
-        response = api_client.post(
-            f"/api/ingestion/items/{item.id}/withdraw/",
-            {"reason": "管理员决定"},
-            format="json",
-        )
+    response = api_client.post(
+        f"/api/ingestion/items/{item.id}/withdraw/",
+        {"reason": "管理员决定"},
+        format="json",
+    )
 
     assert response.status_code == 200
-    assert len(response.data["index_warnings"]) == 2
+    event = KnowledgePublicationEvent.objects.get(
+        catalog_revision__edition=edition, event_type="catalog_withdrawn",
+    )
+    assert event.catalog_revision.status == CatalogPublicationRevision.Status.WITHDRAWN
+    # Withdrawal takes effect before external index cleanup is acknowledged.
+    assert APIClient().get(f"/api/catalog/works/{edition.public_slug}/").status_code == 404
+    for projection in ("fulltext", "semantic"):
+        assert event.deliveries.get(consumer=projection).status == "pending"
+        states = ProjectionState.objects.filter(
+            object_type=event.object_type, object_id=event.object_id, projection_type=projection,
+        )
+        assert states.update(status=ProjectionState.Status.FAILED) == 1
+    processed = process_knowledge_event(event.pk)
+    assert processed.status == KnowledgePublicationEvent.Status.FAILED
+    assert processed.next_attempt_at is not None
+    for consumer in ("fulltext", "semantic"):
+        delivery = event.deliveries.get(consumer=consumer)
+        assert delivery.status == KnowledgeProjectionDelivery.Status.FAILED
+        assert delivery.last_error_code == "projection_failed"
     edition.refresh_from_db()
     item.refresh_from_db()
+    active.refresh_from_db()
+    assert active.status == CatalogPublicationRevision.Status.SUPERSEDED
+    assert edition.active_catalog_revision_id == event.catalog_revision_id
     assert edition.state == PublicationState.WITHDRAWN
     assert item.status == UploadItem.Status.WITHDRAWN
+    assert APIClient().get(f"/api/catalog/works/{edition.public_slug}/").status_code == 404
+    assert original.file.storage.exists(original.file.name)
+    assert normalized.file.storage.exists(normalized.file.name)
 
 
 @pytest.mark.django_db
@@ -383,6 +432,7 @@ def test_reader_and_download_use_only_validated_ocr_pdf_with_original_fallback(
         validation_status=Asset.ValidationStatus.INVALID,
         source_asset=original,
     )
+    activate_catalog_revision(edition, reader_asset=normalized, fulltext_ready=False)
 
     access_url = f"/api/distribution/assets/{normalized.id}/access/"
     response = api_client.get(access_url)
@@ -561,6 +611,7 @@ def test_page_segment_maps_pdf_page_73_to_printed_page_50(
     edition.refresh_from_db()
     assert edition.page_label_status == PageLabelStatus.READY
 
+    activate_catalog_revision(edition, reader_asset=normalized, fulltext_ready=False)
     api_client.force_authenticate(user=None)
     page = api_client.get(f"/api/catalog/assets/{normalized.id}/pages/73/")
     assert page.status_code == 200

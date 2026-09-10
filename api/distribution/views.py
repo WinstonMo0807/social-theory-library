@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Asset, OcrStatus, ReaderRenditionPolicy
-from catalog.services.publication_eligibility import active_asset_q
+from catalog.services.publication_eligibility import active_asset_q, active_document_q
 from accounts.ownership import is_library_owner
 from common.permissions import (
     CanConfigureProviders,
@@ -112,7 +112,10 @@ def _access_metadata(anchor: Asset, served: Asset, fallback_reason: str) -> dict
         "sha256": served.sha256,
         "page_count": served.page_count or anchor.page_count,
         "ocr_status": edition.ocr_status,
-        "ocr_text_available": edition.ocr_status == OcrStatus.SUCCEEDED,
+        "ocr_text_available": (
+            edition.ocr_status == OcrStatus.SUCCEEDED
+            and Asset.objects.filter(active_document_q(asset_prefix=""), pk=anchor.pk).exists()
+        ),
         "page_label_status": edition.page_label_status,
         "semantic_index_status": edition.semantic_index_status,
     }
