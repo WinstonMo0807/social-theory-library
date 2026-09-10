@@ -168,6 +168,8 @@ def index_asset(asset: Asset, *, is_public: bool | None = None, catalog_revision
     revision = catalog_revision or asset.edition.active_catalog_revision
     eligible_revision = bool(
         revision and revision.reader_asset_id == asset.pk
+        and revision.edition_id == asset.edition_id
+        and revision.metadata_ready
         and revision.status in {"active", "preparing"}
         and asset.edition.state == "published"
         and (revision.fulltext_ready or (revision.provenance or {}).get("requested_fulltext_ready"))

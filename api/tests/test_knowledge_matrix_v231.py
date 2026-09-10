@@ -28,6 +28,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.recommendations import current_snapshot, generate_snapshot
+from .v304_helpers import activate_catalog_revision
 
 
 def create_published_work(title: str, document_type: str, year: int):
@@ -36,13 +37,15 @@ def create_published_work(title: str, document_type: str, year: int):
         title=title,
         language="zh-CN",
     )
-    Edition.objects.create(
+    edition = Edition.objects.create(
         work=work,
         state=PublicationState.PUBLISHED,
         is_primary=True,
         publication_year=year,
+        publication_mode="bibliographic",
         public_slug=f"work-{year}-{document_type}",
     )
+    activate_catalog_revision(edition, fulltext_ready=False)
     return work
 
 

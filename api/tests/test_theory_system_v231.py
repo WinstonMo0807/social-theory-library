@@ -15,6 +15,7 @@ from catalog.models import (
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
     KnowledgeNodeMergeRecord,
+    KnowledgePublicationEvent,
     KnowledgeRelation,
     Page,
     Passage,
@@ -32,6 +33,7 @@ from catalog.models import (
 from catalog.serializers import AdminTopicSerializer
 from catalog.services.knowledge_nodes import merge_nodes, rollback_merge
 from catalog.services.theory_suggestions import generate_theory_review_tasks
+from .v304_helpers import activate_catalog_revision
 
 
 def make_work(title="理论测试馆藏"):
@@ -279,7 +281,11 @@ def test_node_merge_preserves_source_and_can_roll_back(admin_user):
         slug="target-theory",
         status="published",
     )
-    KnowledgeNodeAlias.objects.create(node=source, alias="旧译名")
+    verified_alias = KnowledgeNodeAlias.objects.create(
+        node=source, alias="旧译名", source_kind=KnowledgeNodeAlias.SourceKind.EDITORIAL,
+        is_verified=True, created_by=admin_user,
+    )
+    unreviewed_alias = KnowledgeNodeAlias.objects.create(node=source, alias="尚未确认旧称")
     work, _edition, _asset = make_work("合并关系测试")
     WorkNodeRelation.objects.create(
         work=work,
@@ -292,6 +298,8 @@ def test_node_merge_preserves_source_and_can_roll_back(admin_user):
     source.refresh_from_db()
     assert source.status == "archived"
     assert target.aliases.filter(alias="旧译名").exists()
+    assert not target.aliases.filter(alias="尚未确认旧称").exists()
+    assert source.aliases.filter(pk__in=[verified_alias.pk, unreviewed_alias.pk]).count() == 2
     assert target.work_relations.filter(work=work, role="foundational_work").exists()
     assert KnowledgeNodeMergeRecord.objects.filter(pk=record.pk).exists()
     merge_events = DomainChangeEvent.objects.filter(
@@ -302,11 +310,17 @@ def test_node_merge_preserves_source_and_can_roll_back(admin_user):
         "withdraw",
         "update",
     }
+    merged = KnowledgePublicationEvent.objects.select_related("domain_event").get(
+        object_type="knowledge_node", object_id=target.pk, event_type="entity_merged",
+    )
+    assert merged.domain_event.change_kind == "update"
 
     rollback_merge(record.id, actor=admin_user)
     source.refresh_from_db()
     record.refresh_from_db()
     assert source.status == "published"
+    assert source.aliases.filter(pk__in=[verified_alias.pk, unreviewed_alias.pk]).count() == 2
+    assert not target.aliases.filter(alias="旧译名").exists()
     assert record.rolled_back_at is not None
     assert not target.work_relations.filter(work=work, role="foundational_work").exists()
     assert DomainChangeEvent.objects.filter(
@@ -516,7 +530,16 @@ def test_new_node_candidate_can_become_existing_alias(api_client, admin_user):
     )
 
     assert response.status_code == 200
-    assert node.aliases.filter(alias="互动关系理论").exists()
+    assert not node.aliases.filter(alias="互动关系理论").exists()
+    draft = EditorialRevision.objects.get(target_type="knowledge_node", target_id=node.pk, status="draft")
+    assert any(row["alias"] == "互动关系理论" for row in draft.patch["aliases"])
+    assert not KnowledgePublicationEvent.objects.filter(object_id=node.pk).exists()
+    published = api_client.post(f"/api/catalog/admin/editorial-revisions/{draft.pk}/publish/", {}, format="json")
+    assert published.status_code == 200, published.data
+    assert node.aliases.filter(alias="互动关系理论", is_verified=True).exists()
+    assert KnowledgePublicationEvent.objects.filter(
+        object_id=node.pk, idempotency_key=f"editorial-publish:{draft.pk}",
+    ).exists()
     assert TheoryReviewTask.objects.filter(
         task_type=TheoryReviewTask.TaskType.WORK_NODE,
         work=work,
@@ -575,6 +598,7 @@ def test_work_detail_only_exposes_confirmed_theory_evidence_and_focus(api_client
         review_status="suggested",
     )
 
+    activate_catalog_revision(edition, reader_asset=asset)
     detail = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
     assert detail.status_code == 200
     assert len(detail.data["theory_associations"]) == 1
