@@ -256,6 +256,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/people/{person_id}/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_people_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/people/{person_id}/merge-preview/": {
         parameters: {
             query?: never;
@@ -266,6 +282,38 @@ export interface paths {
         get: operations["admin_people_merge_preview_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/merge-records/{record_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_people_merge_records_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/merge-records/{record_id}/rollback/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["admin_people_merge_records_rollback_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -607,6 +655,40 @@ export interface components {
             merge_execution_available: boolean;
             coverage: unknown;
             preservation: string[];
+            execution_policy?: string;
+            execution_guidance?: string[];
+            context_impact?: unknown;
+        };
+        PersonMergeRecord: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            source_person_id: string;
+            /** Format: uuid */
+            target_person_id: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by_id: number | null;
+            /** Format: date-time */
+            rolled_back_at: string | null;
+            moved_counts: unknown;
+            affected_edition_ids: string[];
+            event_ids: string[];
+            rollback_event_ids: string[];
+            rollback: unknown;
+        };
+        PersonMergeRequestRequest: {
+            /** Format: uuid */
+            target_person: string;
+            fingerprint: string;
+            idempotency_key: string;
+            confirmed: boolean;
+            change_note?: string;
+        };
+        PersonMergeRollbackRequestRequest: {
+            fingerprint: string;
+            confirmed: boolean;
         };
         PersonResolutionSummary: {
             /** Format: uuid */
@@ -1249,6 +1331,33 @@ export interface operations {
             };
         };
     };
+    admin_people_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonMergeRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PersonMergeRequestRequest"];
+                "multipart/form-data": components["schemas"]["PersonMergeRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonMergeRecord"];
+                };
+            };
+        };
+    };
     admin_people_merge_preview_retrieve: {
         parameters: {
             query?: {
@@ -1268,6 +1377,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PersonMergePreviewResponse"];
+                };
+            };
+        };
+    };
+    admin_people_merge_records_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonMergeRecord"];
+                };
+            };
+        };
+    };
+    admin_people_merge_records_rollback_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonMergeRollbackRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PersonMergeRollbackRequestRequest"];
+                "multipart/form-data": components["schemas"]["PersonMergeRollbackRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonMergeRecord"];
                 };
             };
         };

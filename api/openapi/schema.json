@@ -987,6 +987,65 @@
                 }
             }
         },
+        "/api/catalog/admin/people/{person_id}/merge/": {
+            "post": {
+                "operationId": "admin_people_merge_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "person_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonMergeRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/people/{person_id}/merge-preview/": {
             "get": {
                 "operationId": "admin_people_merge_preview_retrieve",
@@ -1026,6 +1085,104 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PersonMergePreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/merge-records/{record_id}/": {
+            "get": {
+                "operationId": "admin_people_merge_records_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "record_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonMergeRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/merge-records/{record_id}/rollback/": {
+            "post": {
+                "operationId": "admin_people_merge_records_rollback_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "record_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRollbackRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRollbackRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PersonMergeRollbackRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonMergeRecord"
                                 }
                             }
                         },
@@ -2074,7 +2231,17 @@
                         "items": {
                             "type": "string"
                         }
-                    }
+                    },
+                    "execution_policy": {
+                        "type": "string"
+                    },
+                    "execution_guidance": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "context_impact": {}
                 },
                 "required": [
                     "affected_edition_count",
@@ -2097,6 +2264,125 @@
                     "target",
                     "target_profile",
                     "version"
+                ]
+            },
+            "PersonMergeRecord": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "moved_counts": {},
+                    "affected_edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "event_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "rollback_event_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "rollback": {}
+                },
+                "required": [
+                    "affected_edition_ids",
+                    "created_at",
+                    "created_by_id",
+                    "event_ids",
+                    "id",
+                    "moved_counts",
+                    "rollback",
+                    "rollback_event_ids",
+                    "rolled_back_at",
+                    "source_person_id",
+                    "status",
+                    "target_person_id"
+                ]
+            },
+            "PersonMergeRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "target_person": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "idempotency_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[A-Za-z0-9._:-]{1,160}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "change_note": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint",
+                    "idempotency_key",
+                    "target_person"
+                ]
+            },
+            "PersonMergeRollbackRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint"
                 ]
             },
             "PersonResolutionSummary": {

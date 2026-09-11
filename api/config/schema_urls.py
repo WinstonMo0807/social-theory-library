@@ -9,6 +9,7 @@ from catalog.urls import urlpatterns as catalog_patterns
 
 VERIFIED_NAMES = {
     "person-duplicates", "person-merge-preview",
+    "person-merge", "person-merge-record", "person-merge-rollback",
     "cataloging-session-list", "cataloging-session-detail", "cataloging-session-abandon",
     "cataloging-candidate-decision", "cataloging-metadata-import", "cataloging-metadata-decision",
     "catalog-field-contracts",

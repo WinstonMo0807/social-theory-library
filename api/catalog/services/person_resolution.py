@@ -55,6 +55,10 @@ def _assert_inventory():
     for owner, registry in ((models.Person, PERSON_REFERENCES), (models.ScholarProfile, PROFILE_REFERENCES)):
         actual = {(relation.related_model._meta.label, relation.field.name) for relation in owner._meta.related_objects}
         declared = {(model._meta.label, field) for model, field, _label in registry}
+        if owner is models.Person:
+            # Operation records preserve their historical endpoints; they are
+            # inventoried but never retargeted by a later identity merge.
+            declared.update({("catalog.PersonMergeRecord", "source_person"), ("catalog.PersonMergeRecord", "target_person")})
         if actual != declared:
             raise ValueError("人物引用结构已经变化，请先更新合并影响预览。")
 
@@ -288,7 +292,8 @@ def person_merge_preview(source, target=None):
         "lexicon_entries": lexicon,
         "complete_reference_listing": complete,
         "merge_execution_available": False,
-        "coverage": {"person_fk_types": len(PERSON_REFERENCES), "profile_fk_types": len(PROFILE_REFERENCES),
+        "coverage": {"person_fk_types": len(PERSON_REFERENCES) + 2, "profile_fk_types": len(PROFILE_REFERENCES),
+                     "preserved_audit_fk_types": 2,
                      "generic_candidate_payloads": "not_retargeted_or_exhaustively_scanned", "reader_private_data": "not_read"},
         "preservation": ["source_person", "original_files", "historical_publication_snapshots", "reader_private_data", "unreviewed_candidates"],
     })

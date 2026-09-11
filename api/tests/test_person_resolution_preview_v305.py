@@ -105,7 +105,8 @@ def test_preview_is_read_only_and_covers_direct_profile_and_publication_referenc
     with CaptureQueriesContext(connection) as captured:
         preview = person_merge_preview(source, target)
     assert all(not row["sql"].lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER")) for row in captured)
-    assert preview["coverage"]["person_fk_types"] == 9
+    assert preview["coverage"]["person_fk_types"] == 11
+    assert preview["coverage"]["preserved_audit_fk_types"] == 2
     assert preview["coverage"]["profile_fk_types"] == 5
     assert len(preview["references"]) == 14
     contributions = next(row for row in preview["references"] if row["model"] == "catalog.Contribution")
@@ -267,7 +268,8 @@ def test_resolution_api_preserves_staff_and_owner_boundaries(api_client, reader_
     response = api_client.get(preview_url, {"target_person": str(target.pk)})
     assert response.status_code == 200, response.data
     assert response["Cache-Control"] == "private, no-store"
-    assert response.data["merge_execution_available"] is False
+    assert response.data["merge_execution_available"] is True
+    assert response.data["execution_policy"] == "person-merge-noncolliding-v1"
     assert api_client.post(preview_url, {"target_person": str(target.pk)}, format="json").status_code == 405
     assert api_client.get(preview_url, {"target_person": "invalid"}).status_code == 400
     assert api_client.get(duplicates_url, {"limit": 51}).status_code == 400

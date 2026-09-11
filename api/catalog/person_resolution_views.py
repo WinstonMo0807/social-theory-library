@@ -3,10 +3,13 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from collections import Counter
 
 from common.permissions import CanAccessBackOffice, CanMergeAuthority
-from catalog.models import Person
+from catalog.models import Person, PersonMergeRecord
 from catalog.services.person_resolution import duplicate_people, person_merge_preview
+from catalog.services.person_merges import merge_people, prepare_person_merge, rollback_person_merge, rollback_preview
+from ingestion.models import AuditEvent
 
 
 class PersonDuplicateQuerySerializer(serializers.Serializer):
@@ -93,6 +96,59 @@ class PersonMergePreviewResponseSerializer(serializers.Serializer):
     merge_execution_available = serializers.BooleanField()
     coverage = serializers.JSONField()
     preservation = serializers.ListField(child=serializers.CharField())
+    execution_policy = serializers.CharField(required=False)
+    execution_guidance = serializers.ListField(child=serializers.CharField(), required=False)
+    context_impact = serializers.JSONField(required=False)
+
+
+class PersonMergeRequestSerializer(serializers.Serializer):
+    target_person = serializers.UUIDField()
+    fingerprint = serializers.RegexField(regex=r"^[a-f0-9]{64}$")
+    idempotency_key = serializers.RegexField(regex=r"^[A-Za-z0-9._:-]{1,160}$")
+    confirmed = serializers.BooleanField()
+    change_note = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
+class PersonMergeRollbackRequestSerializer(serializers.Serializer):
+    fingerprint = serializers.RegexField(regex=r"^[a-f0-9]{64}$")
+    confirmed = serializers.BooleanField()
+
+
+class PersonMergeRecordSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    source_person_id = serializers.UUIDField()
+    target_person_id = serializers.UUIDField()
+    status = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    created_by_id = serializers.IntegerField(allow_null=True)
+    rolled_back_at = serializers.DateTimeField(allow_null=True)
+    moved_counts = serializers.JSONField()
+    affected_edition_ids = serializers.ListField(child=serializers.UUIDField())
+    event_ids = serializers.ListField(child=serializers.UUIDField())
+    rollback_event_ids = serializers.ListField(child=serializers.UUIDField())
+    rollback = serializers.JSONField()
+
+
+def _record_response(record):
+    try:
+        reversal = rollback_preview(record)
+    except ValueError as error:
+        reversal = {"can_rollback": False, "fingerprint": "", "blockers": [str(error)]}
+    rollback_audit = AuditEvent.objects.filter(
+        action="person_merge_rollback", object_type="catalog.PersonMergeRecord", object_id=str(record.pk),
+    ).order_by("-created_at").first()
+    payload = {
+        "id": record.pk, "source_person_id": record.source_person_id, "target_person_id": record.target_person_id,
+        "status": "rolled_back" if record.rolled_back_at else "applied", "created_at": record.created_at,
+        "created_by_id": record.created_by_id, "rolled_back_at": record.rolled_back_at,
+        "moved_counts": dict(Counter(row["model"] for row in record.changes)),
+        "affected_edition_ids": record.affected_edition_ids, "event_ids": record.event_ids,
+        "rollback_event_ids": (rollback_audit.after or {}).get("event_ids", []) if rollback_audit else [],
+        "rollback": reversal,
+    }
+    response = Response(PersonMergeRecordSerializer(payload).data)
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 class AdminPersonDuplicateView(APIView):
@@ -119,9 +175,53 @@ class AdminPersonMergePreviewView(APIView):
         target_id = params.validated_data.get("target_person")
         target = get_object_or_404(Person, pk=target_id) if target_id else None
         try:
-            payload = person_merge_preview(source, target)
+            payload = prepare_person_merge(source, target) if target else person_merge_preview(source)
         except ValueError as error:
             return Response({"code": "person_preview_conflict", "detail": str(error)}, status=409)
         response = Response(PersonMergePreviewResponseSerializer(payload).data)
         response["Cache-Control"] = "private, no-store"
         return response
+
+
+class AdminPersonMergeView(APIView):
+    permission_classes = [CanMergeAuthority]
+
+    @extend_schema(request=PersonMergeRequestSerializer, responses=PersonMergeRecordSerializer)
+    def post(self, request, person_id):
+        serializer = PersonMergeRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        get_object_or_404(Person, pk=person_id)
+        get_object_or_404(Person, pk=data["target_person"])
+        try:
+            record = merge_people(person_id, data["target_person"], actor=request.user,
+                                  expected_fingerprint=data["fingerprint"], idempotency_key=data["idempotency_key"],
+                                  confirmed=data["confirmed"], change_note=data.get("change_note", ""))
+        except ValueError as error:
+            return Response({"code": "person_merge_conflict", "detail": str(error)}, status=409)
+        return _record_response(record)
+
+
+class AdminPersonMergeRecordView(APIView):
+    permission_classes = [CanMergeAuthority]
+
+    @extend_schema(responses=PersonMergeRecordSerializer)
+    def get(self, request, record_id):
+        return _record_response(get_object_or_404(PersonMergeRecord.objects.select_related("source_person", "target_person"), pk=record_id))
+
+
+class AdminPersonMergeRollbackView(APIView):
+    permission_classes = [CanMergeAuthority]
+
+    @extend_schema(request=PersonMergeRollbackRequestSerializer, responses=PersonMergeRecordSerializer)
+    def post(self, request, record_id):
+        serializer = PersonMergeRollbackRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        get_object_or_404(PersonMergeRecord, pk=record_id)
+        try:
+            record = rollback_person_merge(record_id, actor=request.user,
+                                           expected_fingerprint=serializer.validated_data["fingerprint"],
+                                           confirmed=serializer.validated_data["confirmed"])
+        except ValueError as error:
+            return Response({"code": "person_rollback_conflict", "detail": str(error)}, status=409)
+        return _record_response(record)

@@ -2,7 +2,7 @@
 
 ## 3.0.5 升级分支增量（尚未部署）
 
-人物查重与合并影响预览复用既有 Person、ScholarProfile 和 Authority 权限。当前仅新增只读服务/API，9类人物引用与5类学者档案引用由显式清单及模型元数据核对；没有第二套人物表或合并写入口。执行、持久回滚、通用引用处理及前端仍待完成，详见 `V3.0.5_PERSON_RESOLUTION.md`。
+人物查重、执行预览和非冲突合并复用既有Person、ScholarProfile、字段确认与持久发布服务。0051增加不可变操作记录，没有第二套人物表。9类人物业务引用和5类学者档案引用按明确清单核对，2类操作审计FK保留原端点。Owner确认后迁移无冲突引用，回滚拒绝后续人工修改，公开书目继续等待新修订处理。前端、双档案与重复关系取舍及PostgreSQL并发尚未验收，详见 `V3.0.5_PERSON_RESOLUTION.md`。
 
 CatalogingSession 记录上传、手工、导入和已有版本的编目过程，Work 身份由 Edition 推导。EntityResolutionCandidate 新增真实 session FK，旧 upload FK 保留兼容且可空，至少一个上下文由数据库约束保证。决定、撤销、证据和正式关联仍复用原服务。新 API 和 Web 会话入口不建立第二套书库。详细审计和未完成项见 `V3.0.5_ARCHITECTURE_AUDIT.md` 与根目录 CURRENT_PROGRESS。本节是当前开发源码，下面生产段落仍是历史版本记录。
 

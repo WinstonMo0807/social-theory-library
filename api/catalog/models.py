@@ -4219,6 +4219,67 @@ class KnowledgeNodeMergeRecord(UUIDTimeStampedModel):
         ordering = ["-created_at"]
 
 
+PERSON_MERGE_CONTENT_FIELDS = frozenset({
+    "source_person", "source_person_id", "target_person", "target_person_id",
+    "idempotency_key", "preview_fingerprint", "source_snapshot", "target_snapshot",
+    "changes", "affected_edition_ids", "event_ids", "rollback_fingerprint", "created_by", "created_by_id",
+})
+
+
+class PersonMergeRecordQuerySet(models.QuerySet):
+    def bulk_create(self, objs, batch_size=None, ignore_conflicts=False, update_conflicts=False, update_fields=None, unique_fields=None):
+        if update_conflicts:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("人物合并记录不可通过批量写入改写。")
+        return super().bulk_create(
+            objs, batch_size=batch_size, ignore_conflicts=ignore_conflicts,
+            update_conflicts=False, update_fields=update_fields, unique_fields=unique_fields,
+        )
+
+    def update(self, **kwargs):
+        if PERSON_MERGE_CONTENT_FIELDS.intersection(kwargs):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("人物合并记录不可改写。")
+        return super().update(**kwargs)
+
+    def delete(self):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("人物合并记录必须保留。")
+
+
+class PersonMergeRecord(UUIDTimeStampedModel):
+    """Immutable identity operation with guarded, auditable reversal."""
+
+    objects = models.Manager.from_queryset(PersonMergeRecordQuerySet)()
+    source_person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="source_merge_records")
+    target_person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="target_merge_records")
+    idempotency_key = models.CharField(max_length=160, unique=True)
+    preview_fingerprint = models.CharField(max_length=64)
+    source_snapshot = models.JSONField(default=dict)
+    target_snapshot = models.JSONField(default=dict)
+    changes = models.JSONField(default=list)
+    affected_edition_ids = models.JSONField(default=list)
+    event_ids = models.JSONField(default=list)
+    rollback_fingerprint = models.CharField(max_length=64)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="person_merges")
+    rolled_back_at = models.DateTimeField(null=True, blank=True)
+    rolled_back_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="person_merge_rollbacks")
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [models.CheckConstraint(condition=~models.Q(source_person=models.F("target_person")), name="person_merge_record_distinct")]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding and (kwargs.get("update_fields") is None or PERSON_MERGE_CONTENT_FIELDS.intersection(kwargs["update_fields"])):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("人物合并记录不可改写。")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("人物合并记录必须保留。")
+
+
 class QueryLexiconGeneration(UUIDTimeStampedModel):
     class Status(models.TextChoices):
         STAGING = "staging", "构建中"
