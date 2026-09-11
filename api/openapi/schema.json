@@ -938,6 +938,102 @@
                 }
             }
         },
+        "/api/catalog/admin/people/{person_id}/duplicates/": {
+            "get": {
+                "operationId": "admin_people_duplicates_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "default": 10
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "person_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonDuplicateResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/{person_id}/merge-preview/": {
+            "get": {
+                "operationId": "admin_people_merge_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "person_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "target_person",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonMergePreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
             "get": {
                 "operationId": "admin_works_recommendation_image_metadata_retrieve",
@@ -1729,6 +1825,313 @@
                         "minimum": 0
                     }
                 }
+            },
+            "PersonDuplicateCandidate": {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "$ref": "#/components/schemas/PersonResolutionSummary"
+                    },
+                    "matches": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "identity_conflicts": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "identity_conflicts",
+                    "matches",
+                    "person"
+                ]
+            },
+            "PersonDuplicateResponse": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "$ref": "#/components/schemas/PersonResolutionSummary"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonDuplicateCandidate"
+                        }
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    },
+                    "automatic_merge": {
+                        "type": "boolean"
+                    },
+                    "matching_policy": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "automatic_merge",
+                    "has_more",
+                    "limit",
+                    "matching_policy",
+                    "results",
+                    "source"
+                ]
+            },
+            "PersonLexiconEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "term": {
+                        "type": "string"
+                    },
+                    "normalized_term": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "term_type": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "trust_level": {
+                        "type": "string"
+                    },
+                    "source_ref": {
+                        "type": "string"
+                    },
+                    "displayable": {
+                        "type": "boolean"
+                    },
+                    "public_active": {
+                        "type": "boolean"
+                    },
+                    "admin_resolvable": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "admin_resolvable",
+                    "displayable",
+                    "entity_id",
+                    "id",
+                    "language",
+                    "normalized_term",
+                    "public_active",
+                    "source_kind",
+                    "source_ref",
+                    "term",
+                    "term_type",
+                    "trust_level"
+                ]
+            },
+            "PersonLexiconPreview": {
+                "type": "object",
+                "properties": {
+                    "scope": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "generation_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "normalization_version": {
+                        "type": "string"
+                    },
+                    "source_registry_version": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "integer"
+                    },
+                    "target": {
+                        "type": "integer"
+                    },
+                    "source_rows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonLexiconEntry"
+                        }
+                    },
+                    "target_rows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonLexiconEntry"
+                        }
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "available",
+                    "error",
+                    "generation_id",
+                    "normalization_version",
+                    "revision",
+                    "scope",
+                    "source",
+                    "source_registry_version",
+                    "source_rows",
+                    "status",
+                    "target",
+                    "target_rows",
+                    "truncated"
+                ]
+            },
+            "PersonMergePreviewResponse": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "source": {},
+                    "target": {
+                        "nullable": true
+                    },
+                    "source_profile": {
+                        "nullable": true
+                    },
+                    "target_profile": {
+                        "nullable": true
+                    },
+                    "references": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "affected_works": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "affected_editions": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "affected_edition_count": {
+                        "type": "integer"
+                    },
+                    "publication_revisions": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "publication_revision_count": {
+                        "type": "integer"
+                    },
+                    "editorial_drafts": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "identity_conflicts": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "review_issues": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "lexicon_entries": {
+                        "$ref": "#/components/schemas/PersonLexiconPreview"
+                    },
+                    "complete_reference_listing": {
+                        "type": "boolean"
+                    },
+                    "merge_execution_available": {
+                        "type": "boolean"
+                    },
+                    "coverage": {},
+                    "preservation": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "affected_edition_count",
+                    "affected_editions",
+                    "affected_works",
+                    "complete_reference_listing",
+                    "coverage",
+                    "editorial_drafts",
+                    "fingerprint",
+                    "identity_conflicts",
+                    "lexicon_entries",
+                    "merge_execution_available",
+                    "preservation",
+                    "publication_revision_count",
+                    "publication_revisions",
+                    "references",
+                    "review_issues",
+                    "source",
+                    "source_profile",
+                    "target",
+                    "target_profile",
+                    "version"
+                ]
+            },
+            "PersonResolutionSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "preferred_name": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "authority_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authority_status",
+                    "birth_year",
+                    "death_year",
+                    "id",
+                    "original_name",
+                    "preferred_name"
+                ]
             },
             "PublicCoverMedia": {
                 "type": "object",

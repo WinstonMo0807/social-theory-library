@@ -240,6 +240,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/people/{person_id}/duplicates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_people_duplicates_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/{person_id}/merge-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_people_merge_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
         parameters: {
             query?: never;
@@ -508,6 +540,82 @@ export interface components {
             focal_x?: number;
             /** Format: double */
             focal_y?: number;
+        };
+        PersonDuplicateCandidate: {
+            person: components["schemas"]["PersonResolutionSummary"];
+            matches: unknown[];
+            identity_conflicts: unknown[];
+        };
+        PersonDuplicateResponse: {
+            source: components["schemas"]["PersonResolutionSummary"];
+            results: components["schemas"]["PersonDuplicateCandidate"][];
+            limit: number;
+            has_more: boolean;
+            automatic_merge: boolean;
+            matching_policy: string;
+        };
+        PersonLexiconEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            entity_id: string;
+            term: string;
+            normalized_term: string;
+            language: string;
+            term_type: string;
+            source_kind: string;
+            trust_level: string;
+            source_ref: string;
+            displayable: boolean;
+            public_active: boolean;
+            admin_resolvable: boolean;
+        };
+        PersonLexiconPreview: {
+            scope: string;
+            available: boolean;
+            status: string;
+            /** Format: uuid */
+            generation_id: string | null;
+            revision: number | null;
+            normalization_version: string;
+            source_registry_version: string;
+            source: number;
+            target: number;
+            source_rows: components["schemas"]["PersonLexiconEntry"][];
+            target_rows: components["schemas"]["PersonLexiconEntry"][];
+            truncated: boolean;
+            error: string;
+        };
+        PersonMergePreviewResponse: {
+            version: string;
+            fingerprint: string;
+            source: unknown;
+            target: unknown;
+            source_profile: unknown;
+            target_profile: unknown;
+            references: unknown[];
+            affected_works: unknown[];
+            affected_editions: unknown[];
+            affected_edition_count: number;
+            publication_revisions: unknown[];
+            publication_revision_count: number;
+            editorial_drafts: unknown[];
+            identity_conflicts: unknown[];
+            review_issues: unknown[];
+            lexicon_entries: components["schemas"]["PersonLexiconPreview"];
+            complete_reference_listing: boolean;
+            merge_execution_available: boolean;
+            coverage: unknown;
+            preservation: string[];
+        };
+        PersonResolutionSummary: {
+            /** Format: uuid */
+            id: string;
+            preferred_name: string;
+            original_name: string;
+            birth_year: number | null;
+            death_year: number | null;
+            authority_status: string;
         };
         PublicCoverMedia: {
             /** Format: uuid */
@@ -1114,6 +1222,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaRendition"];
+                };
+            };
+        };
+    };
+    admin_people_duplicates_retrieve: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonDuplicateResponse"];
+                };
+            };
+        };
+    };
+    admin_people_merge_preview_retrieve: {
+        parameters: {
+            query?: {
+                target_person?: string;
+            };
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonMergePreviewResponse"];
                 };
             };
         };

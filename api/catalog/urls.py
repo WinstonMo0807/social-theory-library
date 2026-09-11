@@ -1,4 +1,5 @@
 from django.urls import path
+from .person_resolution_views import AdminPersonDuplicateView, AdminPersonMergePreviewView
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
@@ -187,6 +188,8 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/people/<uuid:person_id>/duplicates/", AdminPersonDuplicateView.as_view(), name="person-duplicates"),
+    path("admin/people/<uuid:person_id>/merge-preview/", AdminPersonMergePreviewView.as_view(), name="person-merge-preview"),
     path("works/<uuid:work_id>/cover-metadata/", PublicCoverMetadataView.as_view(), name="public-cover-metadata"),
     path("admin/editions/<uuid:edition_id>/media/cover/", WorkCoverMediaSelectionView.as_view(), name="work-cover-media-selection"),
     path("admin/editions/<uuid:edition_id>/media/recommendation/", WorkRecommendationMediaSelectionView.as_view(), name="work-recommendation-media-selection"),
