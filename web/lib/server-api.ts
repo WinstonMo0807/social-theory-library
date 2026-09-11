@@ -12,6 +12,7 @@ import { defaultSiteConfig, type SiteConfig } from "./site-config";
 import type { SearchContext } from "./search-context";
 import { WEB_APP_VERSION } from "./version";
 import { adaptApiScholar, adaptApiScholarDetail, adaptApiTopic, adaptApiWork, adaptRecommendationWork } from "./public-data-adapters";
+import type { components } from "./api/generated/schema";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -30,6 +31,7 @@ type ApiPerson = {
   original_name: string;
   aliases: string[];
   portrait?: string;
+  portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
   birth_year?: number | null;
   death_year?: number | null;
   biography?: string;

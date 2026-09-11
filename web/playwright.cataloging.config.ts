@@ -5,7 +5,7 @@ const python = resolve("..", ".venv", process.platform === "win32" ? "Scripts/py
 const fixtureServer = resolve("..", "scripts", "local_cataloging_e2e_api.py");
 
 export default defineConfig({
-  testDir: "./tests", testMatch: ["cataloging-session-v305.spec.ts", "person-resolution-v305.spec.ts"],
+  testDir: "./tests", testMatch: ["cataloging-session-v305.spec.ts", "person-resolution-v305.spec.ts", "scholar-portrait-v305.spec.ts"],
   timeout: 60_000, expect: { timeout: 15_000 }, workers: 1, retries: 0,
   reporter: [["list"]], outputDir: "test-results/cataloging-v305",
   use: { baseURL: "http://127.0.0.1:3105", headless: true, trace: "retain-on-failure", screenshot: "only-on-failure" },

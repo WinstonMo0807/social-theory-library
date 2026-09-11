@@ -3,6 +3,7 @@ import { ArrowRight, Eye, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Scholar, Work } from "@/lib/data";
 import { SaveWorkButton } from "./save-work-button";
+import { ResponsivePortraitImage } from "./responsive-portrait-image";
 
 export function ArchitecturalImage({ compact = false }: { compact?: boolean }) {
   return (
@@ -123,10 +124,10 @@ export function ScholarPortrait({ scholar, large = false }: { scholar: Scholar; 
   return (
     <div
       className={`scholar-portrait ${large ? "large" : ""} ${scholar.portrait ? "has-image" : ""}`}
-      style={scholar.portrait ? { backgroundImage: `url("${scholar.portrait}")` } : undefined}
+      style={scholar.portrait && !scholar.portraitSources?.length ? { backgroundImage: `url("${scholar.portrait}")` } : undefined}
       aria-label={scholar.portrait ? `${scholar.name}肖像` : `${scholar.name}肖像占位`}
     >
-      {!scholar.portrait ? <span>{initials}</span> : null}
+      {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : !scholar.portrait ? <span>{initials}</span> : null}
     </div>
   );
 }

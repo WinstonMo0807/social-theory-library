@@ -72,6 +72,8 @@ def main():
             ScholarProfile.objects.create(person=source, slug=f"e2e-person-source-{index}", short_description="来源档案保留")
         if index == 2:
             ScholarProfile.objects.create(person=target, slug="e2e-person-target-2", short_description="目标档案也保留")
+    portrait_person = Person.objects.create(id="30500000-0000-4000-8000-000000000092", preferred_name="E2E肖像学者", authority_status="verified")
+    ScholarProfile.objects.create(id="30500000-0000-4000-8000-000000000091", person=portrait_person, slug="e2e-portrait-scholar", editorial_status="published", short_description="已发布简介")
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
     call_command("runserver", "127.0.0.1:8105", use_reloader=False)
 

@@ -1282,6 +1282,102 @@
                 }
             }
         },
+        "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
+            "get": {
+                "operationId": "admin_scholars_portrait_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "scholar_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarPortraitState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "admin_scholars_portrait_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "scholar_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ScholarPortraitRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ScholarPortraitRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ScholarPortraitRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarPortraitState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
             "get": {
                 "operationId": "admin_works_recommendation_image_metadata_retrieve",
@@ -2861,6 +2957,82 @@
                     "updated_at",
                     "work_id",
                     "workbench_url"
+                ]
+            },
+            "ScholarPortraitRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "expected_person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                },
+                "required": [
+                    "expected_person_id",
+                    "fingerprint",
+                    "media_id"
+                ]
+            },
+            "ScholarPortraitState": {
+                "type": "object",
+                "properties": {
+                    "scholar_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "editorial_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "canonical_write_deferred": {
+                        "type": "boolean"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "canonical_write_deferred",
+                    "editor_url",
+                    "editorial_revision_id",
+                    "fingerprint",
+                    "media",
+                    "name",
+                    "person_id",
+                    "preview_url",
+                    "scholar_id"
                 ]
             },
             "SeverityEnum": {

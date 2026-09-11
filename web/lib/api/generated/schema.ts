@@ -352,6 +352,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_scholars_portrait_retrieve"];
+        put?: never;
+        post: operations["admin_scholars_portrait_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
         parameters: {
             query?: never;
@@ -829,6 +845,27 @@ export interface components {
             workbench_url: string;
             media_library_url: string;
             detail: string;
+        };
+        ScholarPortraitRequestRequest: {
+            /** Format: uuid */
+            media_id: string | null;
+            /** Format: uuid */
+            expected_person_id: string;
+            fingerprint: string;
+        };
+        ScholarPortraitState: {
+            /** Format: uuid */
+            scholar_id: string;
+            /** Format: uuid */
+            person_id: string;
+            name: string;
+            media: components["schemas"]["PublicCoverMedia"] | null;
+            preview_url: string;
+            /** Format: uuid */
+            editorial_revision_id: string | null;
+            canonical_write_deferred: boolean;
+            editor_url: string;
+            fingerprint: string;
         };
         /**
          * @description * `blocking` - blocking
@@ -1516,6 +1553,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PersonMergeRecord"];
+                };
+            };
+        };
+    };
+    admin_scholars_portrait_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarPortraitState"];
+                };
+            };
+        };
+    };
+    admin_scholars_portrait_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScholarPortraitRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ScholarPortraitRequestRequest"];
+                "multipart/form-data": components["schemas"]["ScholarPortraitRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarPortraitState"];
                 };
             };
         };

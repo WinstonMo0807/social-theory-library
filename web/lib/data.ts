@@ -95,6 +95,8 @@ export type Scholar = {
   name: string;
   originalName: string;
   portrait?: string;
+  portraitSources?: { id: string; width: number; height: number; url: string }[];
+  portraitAlt?: string;
   years: string;
   school: string;
   concerns: string[];

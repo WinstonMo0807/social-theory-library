@@ -157,6 +157,7 @@ TARGET_POLICIES = {
                 "curation",
                 "editorial_status",
                 "person",
+                "portrait_selection",
             }
         ),
     ),
@@ -269,6 +270,7 @@ SPECIAL_FIELDS = frozenset(
         "contributors",
         "reader",
         "person",
+        "portrait_selection",
         "stage_groups",
         "discipline_relations",
         "theory_relations",
@@ -476,7 +478,8 @@ def _special_snapshot(target) -> dict[str, Any]:
             ],
         }
     if isinstance(target, ScholarProfile):
-        return {"person": _scholar_person_snapshot(target)}
+        from catalog.services.scholar_media import portrait_selection
+        return {"person": _scholar_person_snapshot(target), "portrait_selection": portrait_selection(target)}
     if isinstance(target, Topic):
         return topic_relation_snapshot(target)
     if isinstance(target, PublisherAuthority):
@@ -855,6 +858,9 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                 patch[field_name] = normalized
     if isinstance(target, ScholarProfile) and "person" in patch:
         patch["person"] = _validated_scholar_person_patch(target, patch["person"])
+    if isinstance(target, ScholarProfile) and "portrait_selection" in patch:
+        from catalog.services.scholar_media import validate_portrait_selection
+        patch["portrait_selection"] = validate_portrait_selection(target, patch["portrait_selection"])
     if isinstance(target, Subdiscipline):
         discipline_id = str(patch.get("discipline") or target.discipline_id)
         if not Discipline.objects.filter(pk=discipline_id).exists():
@@ -1350,6 +1356,9 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
         _apply_knowledge_node_relations(target, patch, actor)
     if isinstance(target, ScholarProfile) and "person" in patch:
         _apply_scholar_person(target, patch["person"], actor)
+    if isinstance(target, ScholarProfile) and "portrait_selection" in patch:
+        from catalog.services.scholar_media import apply_portrait_selection
+        apply_portrait_selection(target, patch["portrait_selection"], actor=actor)
     if isinstance(target, Topic):
         _apply_topic_relations(target, patch, actor)
     if isinstance(target, PublisherAuthority) and "aliases" in patch:
@@ -1453,8 +1462,11 @@ def create_editorial_revision(
         or 0
     ) + 1
     preview = _target_snapshot(target, policy)
+    person_preview = {**preview.get("person", {}), **clean_patch.get("person", {})} if isinstance(target, ScholarProfile) else None
     preview.update(clean_patch)
-    return EditorialRevision.objects.create(
+    if person_preview is not None:
+        preview["person"] = person_preview
+    revision = EditorialRevision.objects.create(
         target_type=target_type,
         target_id=target.pk,
         base_revision=canonical.current_revision,
@@ -1467,6 +1479,10 @@ def create_editorial_revision(
         change_note=str(change_note or "")[:500],
         created_by=actor,
     )
+    if isinstance(target, ScholarProfile):
+        from catalog.services.scholar_media import protect_portrait_references
+        protect_portrait_references(revision, target)
+    return revision
 
 
 @transaction.atomic

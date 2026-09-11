@@ -337,6 +337,8 @@ def _structured_entries(value, key):
 
 class PersonCompactSerializer(serializers.ModelSerializer):
     scholar_slug = serializers.SerializerMethodField()
+    portrait = serializers.SerializerMethodField()
+    portrait_media = serializers.SerializerMethodField()
 
     class Meta:
         model = Person
@@ -350,6 +352,7 @@ class PersonCompactSerializer(serializers.ModelSerializer):
             "death_year",
             "biography",
             "portrait",
+            "portrait_media",
             "scholar_slug",
         )
 
@@ -362,6 +365,17 @@ class PersonCompactSerializer(serializers.ModelSerializer):
         ):
             return profile.slug
         return None
+
+    def get_portrait(self, obj):
+        if obj.portrait_rendition_id:
+            return f"/api/catalog/people/{obj.pk}/portrait/?rendition={obj.portrait_rendition_id}" if self.get_scholar_slug(obj) else ""
+        return obj.portrait.url if obj.portrait else ""
+
+    def get_portrait_media(self, obj):
+        if not obj.portrait_rendition_id or not self.get_scholar_slug(obj):
+            return None
+        from catalog.services.scholar_media import portrait_media
+        return portrait_media(obj)
 
 
 class ContributionSerializer(serializers.ModelSerializer):
@@ -2844,6 +2858,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     death_year = serializers.IntegerField(source="person.death_year", min_value=1000, max_value=2100, required=False, allow_null=True)
     biography = serializers.CharField(source="person.biography", required=False, allow_blank=True)
     portrait = serializers.ImageField(source="person.portrait", required=False, allow_null=True)
+    portrait_media = serializers.SerializerMethodField()
     slug = serializers.SlugField(required=False, allow_blank=True)
     suggestions = serializers.SerializerMethodField()
     authority_status = serializers.CharField(source="person.authority_status", read_only=True)
@@ -2866,6 +2881,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
             "death_year",
             "biography",
             "portrait",
+            "portrait_media",
             "short_description",
             "affiliations",
             "key_concerns",
@@ -2879,6 +2895,17 @@ class AdminScholarSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "suggestions", "created_at", "updated_at")
+
+    def get_portrait_media(self, obj):
+        from catalog.services.scholar_media import portrait_media
+        return portrait_media(obj.person, private=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        media = data.get("portrait_media")
+        if media:
+            data["portrait"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
+        return data
 
     def get_suggestions(self, obj):
         works = Work.objects.filter(

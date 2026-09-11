@@ -6,6 +6,7 @@ import logging
 import uuid
 from uuid import UUID
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Max, Q, Sum, Value, When
 from django.http import FileResponse
@@ -1495,16 +1496,22 @@ class AdminScholarDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpda
 
     def update(self, request, *args, **kwargs):
         scholar = self.get_object()
-        if scholar.editorial_status != "published":
-            return super().update(request, *args, **kwargs)
         if "portrait" in request.data:
-            return Response(
-                {
-                    "detail": "已发布学者的肖像尚不支持进入 JSON 编辑草稿。",
-                    "code": "published_binary_requires_revision",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            # Compatibility with the old editor's separate image PATCH. Never
+            # save a binary directly into an already-public Person record.
+            if set(request.data) != {"portrait"} or "portrait" not in request.FILES:
+                return Response({"detail": "请单独上传肖像，或在媒体选择中清除图片。", "code": "portrait_separate_selection_required"}, status=400)
+            from catalog.services.media import ingest_image
+            from catalog.services.scholar_media import select_scholar_portrait
+            try:
+                media, _ = ingest_image(request.FILES["portrait"], actor=request.user, metadata={"alt_text": f"{scholar.person.preferred_name}肖像"})
+                select_scholar_portrait(scholar.pk, media.pk, actor=request.user, expected_person_id=scholar.person_id)
+            except (ValueError, ValidationError) as error:
+                return Response({"detail": str(error), "code": "portrait_selection_failed"}, status=409)
+            return Response(self._draft_read_rows([scholar])[0], status=202)
+        from catalog.models import EditorialRevision
+        if scholar.editorial_status != "published" and not EditorialRevision.objects.filter(target_type="scholar_profile", target_id=scholar.pk, status="draft").exists():
+            return super().update(request, *args, **kwargs)
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(scholar, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -1519,15 +1526,10 @@ class AdminScholarDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpda
         )
 
         try:
-            revision = _draft_published_editorial_change(
-                request,
-                target_type=EditorialRevision.TargetType.SCHOLAR_PROFILE,
-                target=scholar,
-                patch=values,
-                change_note=str(
-                    request.data.get("change_note") or "知识工作室学者编辑草稿"
-                ),
-            )
+            from catalog.services.scholar_media import save_scholar_editorial_patch
+            revision = save_scholar_editorial_patch(scholar.pk, values, actor=request.user,
+                                                   request_key=request.headers.get("Idempotency-Key", ""),
+                                                   change_note=str(request.data.get("change_note") or "知识工作室学者编辑草稿"))
         except EditorialRevisionError as error:
             return Response(
                 {"detail": str(error), "code": "editorial_revision_error"},

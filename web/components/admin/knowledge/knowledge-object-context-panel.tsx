@@ -226,6 +226,7 @@ function previewLabel(perspective: PreviewPerspective | undefined, fallback: str
 }
 
 const fieldLabels: Record<string, string> = {
+  portrait_selection: "学者肖像",
   title: "标题",
   subtitle: "副标题",
   summary: "简介",

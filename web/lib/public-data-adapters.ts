@@ -64,6 +64,8 @@ export function adaptApiScholar(value: ApiScholar): Scholar {
     name: value.person.preferred_name,
     originalName: value.person.original_name || value.person.preferred_name,
     portrait: value.person.portrait || undefined,
+    portraitSources: value.person.portrait_media?.renditions,
+    portraitAlt: value.person.portrait_media?.alt_text || undefined,
     years: birth ? `${birth}—${death ?? ""}` : "",
     school: "本馆收录学者",
     concerns: value.key_concerns ?? [],

@@ -1566,6 +1566,9 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     death_year = models.PositiveSmallIntegerField(null=True, blank=True)
     biography = models.TextField(blank=True)
     portrait = models.ImageField(upload_to="public/people/%Y/%m/", blank=True)
+    portrait_rendition = models.ForeignKey(
+        "MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="person_portraits",
+    )
     external_ids = models.JSONField(default=dict, blank=True)
     merged_into = models.ForeignKey(
         "self",
@@ -3549,7 +3552,7 @@ class MediaAsset(UUIDTimeStampedModel):
 
 class MediaRendition(UUIDTimeStampedModel):
     objects = ImmutableMediaQuerySet.as_manager()
-    immutable_file_fields = frozenset({"media", "media_id", "variant_key", "kind", "requested_width", "file", "width", "height", "checksum", "byte_size", "metadata_snapshot"})
+    immutable_file_fields = frozenset({"media", "media_id", "variant_key", "group_key", "kind", "requested_width", "file", "width", "height", "checksum", "byte_size", "metadata_snapshot"})
 
     media = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, related_name="renditions")
     variant_key = models.CharField(max_length=64)
@@ -3577,6 +3580,16 @@ class CatalogPublicationMedia(UUIDTimeStampedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["catalog_revision", "rendition"], name="unique_catalog_publication_media")]
+
+
+class EditorialRevisionMedia(UUIDTimeStampedModel):
+    """Preserve exact image versions referenced before or after an edit."""
+
+    editorial_revision = models.ForeignKey(EditorialRevision, on_delete=models.PROTECT, related_name="media_references")
+    rendition = models.ForeignKey(MediaRendition, on_delete=models.PROTECT, related_name="editorial_references")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["editorial_revision", "rendition"], name="unique_editorial_revision_media")]
 
 
 class CatalogingSession(UUIDTimeStampedModel):

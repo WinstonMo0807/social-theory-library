@@ -32,6 +32,7 @@ import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { TopicMergePanel } from "@/components/admin/curation/topic-merge-panel";
+import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import {
@@ -999,6 +1000,7 @@ export function TaxonomyAdmin({
 
 type AdminScholar = {
   id: string;
+  updated_at: string;
   person_id: string;
   authority_status: string;
   public_eligible: boolean;
@@ -1104,7 +1106,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   );
   const [draft, setDraft] = useState<ScholarDraft>({ ...emptyScholar, name: createName });
   const [message, setMessage] = useState("");
-  const [portraitFile, setPortraitFile] = useState<File | null>(null);
+  const [portraitRevision, setPortraitRevision] = useState(0);
   const visible = resource.data?.results ?? [];
 
   useEffect(() => {
@@ -1229,16 +1231,6 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         },
         token,
       );
-      if (portraitFile) {
-        const portraitBody = new FormData();
-        portraitBody.append("portrait", portraitFile);
-        await apiRequest(
-          `/catalog/admin/scholars/${saved.id}/`,
-          { method: "PATCH", body: portraitBody },
-          token,
-        );
-        setPortraitFile(null);
-      }
       setDraft((current) => ({
         ...current,
         id: saved.id,
@@ -1298,7 +1290,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
-          <label className="knowledge-image-upload"><ImagePlus size={18} /><span>{portraitFile?.name || (detail.data?.portrait ? "替换学者肖像" : "上传学者肖像")}</span><input type="file" accept="image/*" onChange={(event) => setPortraitFile(event.target.files?.[0] ?? null)} /></label>
+          <p>肖像在右侧媒体面板中选择。新建学者请先保存资料。</p>
           <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
           <label><span>页面简介</span><textarea rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small>用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
           <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
@@ -1454,10 +1446,10 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace("/admin/scholars")}
           /> : null}
-        </form><div className="knowledge-object-editor-rail"><KnowledgeObjectContextPanel
+        </form><div className="knowledge-object-editor-rail">{draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => setPortraitRevision((value) => value + 1)} /> : null}<KnowledgeObjectContextPanel
           objectType="scholar"
           objectId={draft.id}
-          refreshKey={message}
+          refreshKey={`${message}:${portraitRevision}`}
           onChanged={detail.refresh}
         /></div></div> : null}
       </div>

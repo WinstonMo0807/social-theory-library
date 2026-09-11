@@ -5,6 +5,7 @@ from .person_resolution_views import (
     AdminPersonMergeRecordView, AdminPersonMergeRollbackView,
 )
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
+from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 
@@ -193,6 +194,8 @@ from .theory_system_views import (
 
 urlpatterns = [
     path("admin/people/", AdminPersonSearchView.as_view(), name="person-search"),
+    path("admin/scholars/<uuid:scholar_id>/portrait/", ScholarPortraitSelectionView.as_view(), name="scholar-portrait-selection"),
+    path("people/<uuid:person_id>/portrait/", PublicPersonPortraitView.as_view(), name="public-person-portrait"),
     path("admin/people/merge-records/", AdminPersonMergeHistoryView.as_view(), name="person-merge-history"),
     path("admin/people/<uuid:person_id>/duplicates/", AdminPersonDuplicateView.as_view(), name="person-duplicates"),
     path("admin/people/<uuid:person_id>/merge-preview/", AdminPersonMergePreviewView.as_view(), name="person-merge-preview"),

@@ -698,7 +698,7 @@ class KnowledgeObjectEditorAdapter:
                 }
                 for kind in NODE_OBJECT_TYPES
             },
-            "scholar": {"person"},
+            "scholar": {"person", "portrait_selection"},
             "topic": {
                 "discipline_relations",
                 "theory_relations",
@@ -726,6 +726,20 @@ class KnowledgeObjectEditorAdapter:
                         include_unpublished=include_unpublished,
                     )
                 elif object_type == "scholar":
+                    if field_name == "portrait_selection":
+                        from catalog.services.scholar_media import portrait_media, validate_portrait_selection
+
+                        selected = validate_portrait_selection(target, value)
+                        media = portrait_media(target.person, selection=selected, private=True)
+                        person = dict(materialized.get("person") or {})
+                        legacy = target.person.portrait
+                        person["portrait"] = (
+                            next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
+                            if media else legacy.url if selected["legacy_path"] else ""
+                        )
+                        person["portrait_media"] = media
+                        materialized["person"] = person
+                        continue
                     if not isinstance(value, dict):
                         raise ValueError("person preview is not an object")
                     person = dict(materialized.get("person") or {})
