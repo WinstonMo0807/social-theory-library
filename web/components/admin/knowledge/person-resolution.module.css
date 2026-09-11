@@ -1,0 +1,32 @@
+.workspace { color: var(--ink); }
+.content { display: grid; gap: 20px; max-width: 1160px; }
+.panel { display: grid; gap: 16px; padding: 24px; min-width: 0; font-size: 1rem; line-height: 1.65; }
+.panel h2, .panel h3, .panel h4, .panel p { margin: 0; }
+.panel h2 { font-size: 1.3rem; }
+.panel h3 { font-size: 1.1rem; }
+.heading, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+.search { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.search label { display: grid; gap: 6px; flex: 1 1 260px; }
+.search input { width: 100%; min-width: 0; font-size: 1rem; }
+.people, .rows { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.people { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.people > li { min-width: 0; border: 1px solid var(--line); background: var(--surface); }
+.people > li > a, .identity { display: grid; gap: 6px; padding: 16px; overflow-wrap: anywhere; }
+.people a { text-decoration: none; }
+.people a:hover { background: var(--paper); }
+.people a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.people b, .people span, .identity span { font-size: .875rem; }
+.people small, .identity small, .rows small { font-size: .8125rem; overflow-wrap: anywhere; color: var(--muted); }
+.rows > li { display: grid; gap: 6px; border-bottom: 1px solid var(--line); padding: 12px 0; }
+.comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.comparison > section { min-width: 0; padding: 16px; border: 1px solid var(--line); }
+.fields { margin: 12px 0; font-size: .875rem; }
+.fields > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fields dt { font-weight: 500; overflow-wrap: anywhere; }
+.fields dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice { border-left: 3px solid var(--ink); padding: 16px; background: var(--paper); overflow-wrap: anywhere; }
+.notice p { margin-bottom: 8px; }
+.reference { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.panel summary { cursor: pointer; overflow-wrap: anywhere; min-height: 32px; }
+.panel button, .panel a { overflow-wrap: anywhere; }
+@media (max-width: 760px) { .comparison { grid-template-columns: 1fr; } .panel { padding: 16px; } .fields > div { grid-template-columns: 1fr; gap: 4px; } }

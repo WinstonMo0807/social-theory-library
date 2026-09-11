@@ -938,6 +938,55 @@
                 }
             }
         },
+        "/api/catalog/admin/people/": {
+            "get": {
+                "operationId": "admin_people_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "default": 20
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
+                        }
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PersonSearchResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/people/{person_id}/duplicates/": {
             "get": {
                 "operationId": "admin_people_duplicates_retrieve",
@@ -1085,6 +1134,48 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PersonMergePreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/merge-records/": {
+            "get": {
+                "operationId": "admin_people_merge_records_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "source_person",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PersonMergeHistoryItem"
+                                    }
                                 }
                             }
                         },
@@ -2163,6 +2254,39 @@
                     "truncated"
                 ]
             },
+            "PersonMergeHistoryItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "rolled_back_at",
+                    "source_person_id",
+                    "target_person_id"
+                ]
+            },
             "PersonMergePreviewResponse": {
                 "type": "object",
                 "properties": {
@@ -2417,6 +2541,24 @@
                     "id",
                     "original_name",
                     "preferred_name"
+                ]
+            },
+            "PersonSearchResponse": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonResolutionSummary"
+                        }
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "has_more",
+                    "results"
                 ]
             },
             "PublicCoverMedia": {

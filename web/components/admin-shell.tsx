@@ -45,6 +45,7 @@ const navigation = [
   ["知识", [
     ["/admin/knowledge", Sparkles, "Knowledge Studio"],
     ["/admin/scholars", UserRound, "学者"],
+    ["/admin/people", Users, "人物查重"],
     ["/admin/disciplines", GraduationCap, "学科"],
     ["/admin/theories", CircleDot, "理论传统"],
     ["/admin/topics", Tags, "主题"],

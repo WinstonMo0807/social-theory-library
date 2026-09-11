@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.response import Response
@@ -27,6 +28,36 @@ class PersonResolutionSummarySerializer(serializers.Serializer):
     birth_year = serializers.IntegerField(allow_null=True)
     death_year = serializers.IntegerField(allow_null=True)
     authority_status = serializers.CharField()
+
+
+class PersonSearchQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(max_length=200, allow_blank=True, required=False, default="")
+    limit = serializers.IntegerField(min_value=1, max_value=50, default=20, required=False)
+
+
+class PersonSearchResponseSerializer(serializers.Serializer):
+    results = PersonResolutionSummarySerializer(many=True)
+    has_more = serializers.BooleanField()
+
+
+class AdminPersonSearchView(APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(parameters=[PersonSearchQuerySerializer], responses=PersonSearchResponseSerializer)
+    def get(self, request):
+        params = PersonSearchQuerySerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        search, limit = params.validated_data["search"], params.validated_data["limit"]
+        people = Person.objects.only("id", "preferred_name", "original_name", "birth_year", "death_year", "authority_status")
+        if search:
+            people = people.filter(
+                Q(preferred_name__icontains=search) | Q(original_name__icontains=search)
+                | Q(name_variants__name__icontains=search, name_variants__is_verified=True)
+            ).distinct()
+        rows = list(people.order_by("preferred_name", "pk")[:limit + 1])
+        response = Response(PersonSearchResponseSerializer({"results": rows[:limit], "has_more": len(rows) > limit}).data)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class PersonDuplicateCandidateSerializer(serializers.Serializer):
@@ -208,6 +239,35 @@ class AdminPersonMergeRecordView(APIView):
     @extend_schema(responses=PersonMergeRecordSerializer)
     def get(self, request, record_id):
         return _record_response(get_object_or_404(PersonMergeRecord.objects.select_related("source_person", "target_person"), pk=record_id))
+
+
+class PersonMergeHistoryQuerySerializer(serializers.Serializer):
+    source_person = serializers.UUIDField()
+
+
+class PersonMergeHistoryItemSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    source_person_id = serializers.UUIDField()
+    target_person_id = serializers.UUIDField()
+    created_at = serializers.DateTimeField()
+    rolled_back_at = serializers.DateTimeField(allow_null=True)
+
+
+class AdminPersonMergeHistoryView(APIView):
+    permission_classes = [CanMergeAuthority]
+
+    @extend_schema(parameters=[PersonMergeHistoryQuerySerializer], responses=PersonMergeHistoryItemSerializer(many=True))
+    def get(self, request):
+        params = PersonMergeHistoryQuerySerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        # Read-only recovery after navigation or a lost mutation response. No
+        # immutable snapshot, private annotation or rollback evaluation here.
+        records = PersonMergeRecord.objects.filter(source_person_id=params.validated_data["source_person"]).only(
+            "id", "source_person", "target_person", "created_at", "rolled_back_at",
+        ).order_by("-created_at", "-pk")[:20]
+        response = Response(PersonMergeHistoryItemSerializer(records, many=True).data)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class AdminPersonMergeRollbackView(APIView):

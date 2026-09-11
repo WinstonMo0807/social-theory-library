@@ -127,6 +127,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
     ["知识", [
       "/admin/knowledge",
       "/admin/scholars",
+      "/admin/people",
       "/admin/disciplines",
       "/admin/theories",
       "/admin/topics",
@@ -159,7 +160,7 @@ test("admin navigation uses the approved groups and only real routes", async () 
     const groupSource = navigationSource.slice(groupStart, groupEnd);
     const actualRoutes = [...groupSource.matchAll(/\["(\/admin[^"]*)",\s*[A-Za-z]+,/g)]
       .map((match) => match[1]);
-    assert.deepEqual(actualRoutes, expectedRoutes, `${group} contains only its existing entries`);
+    assert.deepEqual(actualRoutes, expectedRoutes, `${group} contains only its approved entries`);
     allRoutes.push(...actualRoutes);
   });
 

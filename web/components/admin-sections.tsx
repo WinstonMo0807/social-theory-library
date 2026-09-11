@@ -1278,7 +1278,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
         </section> : null}
         {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
-          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div></header>
+          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div>{draft.personId ? <Link className="button secondary" href={`/admin/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>

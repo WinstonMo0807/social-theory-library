@@ -1,5 +1,6 @@
 from django.urls import path
 from .person_resolution_views import (
+    AdminPersonSearchView, AdminPersonMergeHistoryView,
     AdminPersonDuplicateView, AdminPersonMergePreviewView, AdminPersonMergeView,
     AdminPersonMergeRecordView, AdminPersonMergeRollbackView,
 )
@@ -191,6 +192,8 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/people/", AdminPersonSearchView.as_view(), name="person-search"),
+    path("admin/people/merge-records/", AdminPersonMergeHistoryView.as_view(), name="person-merge-history"),
     path("admin/people/<uuid:person_id>/duplicates/", AdminPersonDuplicateView.as_view(), name="person-duplicates"),
     path("admin/people/<uuid:person_id>/merge-preview/", AdminPersonMergePreviewView.as_view(), name="person-merge-preview"),
     path("admin/people/<uuid:person_id>/merge/", AdminPersonMergeView.as_view(), name="person-merge"),
