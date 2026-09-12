@@ -170,6 +170,28 @@ def cover_media_snapshot(work, *, primary=None):
     return work_media_snapshot(work, slot="cover", primary=primary)
 
 
+def media_rendition_variants(primary):
+    variants = list(primary.media.renditions.filter(group_key=primary.group_key, kind=primary.kind).order_by("requested_width")) if primary.group_key else [primary]
+    by_width = {row.width: row for row in variants}
+    by_width[primary.width] = primary
+    return sorted(by_width.values(), key=lambda row: row.width)
+
+
+def media_rendition_snapshot(primary, url_for):
+    return {"media_id": str(primary.media_id), "primary_rendition_id": str(primary.pk),
+            **{field: primary.metadata_snapshot.get(field, "") for field in PUBLIC_METADATA_FIELDS},
+            "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height, "url": url_for(row)} for row in media_rendition_variants(primary)]}
+
+
+def protect_editorial_renditions(revision, identifiers):
+    from catalog.models import EditorialRevisionMedia
+
+    rows = {}
+    for primary in MediaRendition.objects.select_related("media").filter(pk__in=[value for value in identifiers if value]):
+        rows.update({row.pk: row for row in media_rendition_variants(primary)})
+    EditorialRevisionMedia.objects.bulk_create([EditorialRevisionMedia(editorial_revision=revision, rendition=row) for row in rows.values()])
+
+
 def preview_work_media(work, *, slot, preview=None):
     config = WORK_IMAGE_SLOTS[slot]
     identifier = (preview or {}).get(config["relation"], getattr(work, f"{config['relation']}_id"))

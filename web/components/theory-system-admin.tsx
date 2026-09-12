@@ -21,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
@@ -353,8 +355,15 @@ function nodeToDraft(node: KnowledgeNode): NodeDraft {
 }
 
 export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: string }) {
+  const search = useSearchParams();
+  const nodeId = search.get("node") || initialNodeId;
+  const legacyId = search.get("legacy_id") || "";
+  return <TheoryNodesEditor key={`${nodeId}:${legacyId}`} initialNodeId={nodeId} initialLegacyId={legacyId} />;
+}
+
+function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: string; initialLegacyId: string }) {
   const [nodeType, setNodeType] = useState("theory_tradition");
-  const [legacyId, setLegacyId] = useState("");
+  const [legacyId, setLegacyId] = useState(initialLegacyId);
   const [legacyOpened, setLegacyOpened] = useState(false);
   const [requestedNodeId, setRequestedNodeId] = useState(initialNodeId);
   const [requestedNodeOpened, setRequestedNodeOpened] = useState(false);
@@ -363,7 +372,7 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<KnowledgeNode | null>(null);
   const [draft, setDraft] = useState<NodeDraft>(emptyNodeDraft);
-  const [cover, setCover] = useState<File | null>(null);
+  const [imageRevision, setImageRevision] = useState(0);
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
   const { pendingAction, startAction, finishAction } = useActionGuard();
@@ -415,7 +424,6 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
       if (!active) return;
       setEditing(mapped);
       setDraft(nodeToDraft(mapped));
-      setCover(null);
       setMessage("已通过旧版映射打开规范节点。后续只需在本页维护。");
       setVersions(null);
       setMergeTarget("");
@@ -435,7 +443,6 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
       setNodeType(node.node_type);
       setEditing(node);
       setDraft(nodeToDraft(node));
-      setCover(null);
       setMessage("已从 Knowledge Studio 打开这个规范节点。");
       setVersions(null);
       setMergeTarget("");
@@ -450,7 +457,6 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
   function start(node?: KnowledgeNode) {
     setEditing(node ?? null);
     setDraft(node ? nodeToDraft(node) : { ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" });
-    setCover(null);
     setMessage("");
     setMessageState("idle");
     setEntityLabels({});
@@ -463,11 +469,6 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
     event?.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return false;
-    if (editing?.status === "published" && cover) {
-      setMessage("已发布节点的主视觉需要独立版本处理。请先发布文字草稿，再处理主视觉。");
-      setMessageState("error");
-      return false;
-    }
     const actionKey = "save-theory-node";
     if (!startAction(actionKey)) return false;
     setMessage("");
@@ -533,11 +534,6 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
         { method: editing ? "PATCH" : "POST", body: JSON.stringify(payload) },
         token,
       );
-      if (cover) {
-        const imageBody = new FormData();
-        imageBody.append("cover_asset", cover);
-        await apiRequest(`/catalog/admin/theory-system/nodes/${saved.id}/`, { method: "PATCH", body: imageBody }, token);
-      }
       setEditing(saved);
       setPendingRevision(saved.editorial_revision ?? null);
       if (!saved.editorial_revision) setDraft(nodeToDraft(saved));
@@ -646,6 +642,7 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
   }
 
   const visibleNodes = nodes.data?.results ?? [];
+  const openingNode = Boolean(requestedNodeId && !requestedNodeOpened) || Boolean(legacyId && !legacyOpened);
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
   const subdisciplineName = (id: string) => editing?.subdiscipline_links?.find((item) => item.subdiscipline.id === id)?.subdiscipline.name || entityLabels[id] || "已选择子学科";
   const topicName = (id: string) => editing?.topic_links?.find((item) => item.topic.id === id)?.topic.name || entityLabels[id] || "已选择主题";
@@ -681,7 +678,9 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
         </section>
 
         <div className="knowledge-object-editor-workspace">
-        <form className="admin-panel theory-node-editor" onSubmit={saveNode}>
+        {openingNode ? <div role="status"><p>正在读取指定节点，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
+        <form className="admin-panel theory-node-editor" onSubmit={saveNode} inert={openingNode} aria-busy={openingNode}>
+          <fieldset disabled={openingNode} style={{ display: "contents" }}>
           <header><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建节点"}</h2><p>{editing ? `馆藏 ${editing.work_count} · 关系 ${editing.relation_count}` : "建立规范节点后再审核馆藏关系"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/theories/nodes/${editing.slug}`} target="_blank">查看条目 <ExternalLink size={14} /></Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">预览图谱 <ExternalLink size={14} /></Link></div> : null}</header>
           <div className="inline-fields"><label><span>标准中文名</span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label><label><span>节点类型</span><select value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}>{editableNodeTypeEntries.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
           <CurationFieldAssistant
@@ -741,7 +740,7 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
           <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
           <div className="inline-fields three"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>
           <div className="inline-fields"><label><span>审核状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="rejected">拒绝</option><option value="archived">下线</option></select></label><label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
-          <label className="knowledge-image-upload"><ImagePlus size={18} /><span>{cover?.name || (editing?.cover_url ? "替换黑白几何主视觉" : "上传黑白几何主视觉")}</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCover(event.target.files?.[0] ?? null)} /></label>
+          <p>页面图片在媒体面板中选择。请先保存其他未保存内容。</p>
           {editing ? <div className="theory-node-secondary-actions"><ActionButton type="button" state={pendingAction === "load-node-versions" ? "pending" : "idle"} pendingLabel="读取中" disabled={Boolean(pendingAction) && pendingAction !== "load-node-versions"} onClick={() => void loadVersions()}><History size={14} />历史版本</ActionButton></div> : null}
           {versions ? <section className="theory-version-list"><header><strong>历史版本</strong><button type="button" aria-label="关闭历史版本" onClick={() => setVersions(null)}><X size={14} /></button></header>{versions.map((version) => <article key={version.id}><strong>第 {version.version_number} 版</strong><span>{version.change_note || "内容更新"}</span><small>{version.created_by_name || "系统"} · {asDate(version.created_at)}</small></article>)}</section> : null}
           {pendingRevision?.status === "draft" ? <section className="theory-editorial-revision"><div><strong>待发布编辑草稿</strong><p>第 {pendingRevision.revision} 版修改 {pendingRevision.changed_fields.join("、")}。当前公开页仍使用正式内容。</p></div><ActionButton className="button" type="button" state={pendingAction === "publish-node-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(pendingAction) || pendingRevision.has_conflict} onClick={() => void publishRevision()}><Check size={14} />单人确认并发布</ActionButton></section> : null}
@@ -749,13 +748,15 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
           {editing ? <EntityLifecycleActions kind="knowledge-node" id={editing.id} name={editing.canonical_name_zh} status={draft.status} previewHref={`/theories/nodes/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, status: snapshot.status })); setEditing((current) => current ? { ...current, status: snapshot.status } : current); nodes.refresh(); allNodes.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" }); nodes.refresh(); allNodes.refresh(); }} /> : null}
           <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{editing?.status === "published" ? "保存为编辑草稿" : draft.status === "published" ? "保存并发布" : "保存"}</ActionButton></div>
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
+          </fieldset>
         </form>
         <div className="knowledge-object-editor-rail">
+          {editing ? <KnowledgeImagePanel objectType="knowledge_node" objectId={editing.id} refreshKey={`${editing.updated_at}:${imageRevision}`} onChanged={() => setImageRevision((value) => value + 1)} /> : null}
           <KnowledgeObjectContextPanel
             objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)}
             objectId={editing?.id}
-            refreshKey={editing?.updated_at}
-            onChanged={() => { nodes.refresh(); allNodes.refresh(); requestedNode.refresh(); }}
+            refreshKey={`${editing?.updated_at}:${imageRevision}`}
+            onChanged={() => { nodes.refresh(); allNodes.refresh(); requestedNode.refresh(); setImageRevision((value) => value + 1); }}
           />
         </div>
         </div>

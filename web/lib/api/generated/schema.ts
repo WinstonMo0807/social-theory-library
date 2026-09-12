@@ -192,6 +192,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["admin_knowledge_media_retrieve"];
+        put?: never;
+        post: operations["admin_knowledge_media_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media/": {
         parameters: {
             query?: never;
@@ -539,6 +555,24 @@ export interface components {
          * @enum {string}
          */
         KindEnum: "cover" | "portrait" | "hero" | "card" | "thumbnail";
+        KnowledgeImageRequestRequest: {
+            /** Format: uuid */
+            media_id: string | null;
+            fingerprint: string;
+        };
+        KnowledgeImageState: {
+            object_type: components["schemas"]["ObjectTypeEnum"];
+            /** Format: uuid */
+            object_id: string;
+            name: string;
+            media: components["schemas"]["PublicCoverMedia"] | null;
+            preview_url: string;
+            /** Format: uuid */
+            editorial_revision_id: string | null;
+            canonical_write_deferred: boolean;
+            editor_url: string;
+            fingerprint: string;
+        };
         MediaAsset: {
             /** Format: uuid */
             readonly id: string;
@@ -622,6 +656,12 @@ export interface components {
         MetadataDecisionRequest: {
             action: components["schemas"]["MetadataDecisionActionEnum"];
         };
+        /**
+         * @description * `knowledge_node` - knowledge_node
+         *     * `reading_path` - reading_path
+         * @enum {string}
+         */
+        ObjectTypeEnum: "knowledge_node" | "reading_path";
         PatchedMediaMetadataRequest: {
             /** Format: date-time */
             expected_updated_at?: string;
@@ -1263,6 +1303,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    admin_knowledge_media_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeImageState"];
+                };
+            };
+        };
+    };
+    admin_knowledge_media_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeImageRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["KnowledgeImageRequestRequest"];
+                "multipart/form-data": components["schemas"]["KnowledgeImageRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeImageState"];
                 };
             };
         };

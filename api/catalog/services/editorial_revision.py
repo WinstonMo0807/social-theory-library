@@ -138,6 +138,7 @@ TARGET_POLICIES = {
                 "status",
                 "aliases",
                 "discipline_links",
+                "image_selection",
                 "subdiscipline_links",
                 "topic_links",
             }
@@ -252,6 +253,7 @@ TARGET_POLICIES = {
                 "sort_order",
                 "status",
                 "stage_groups",
+                "image_selection",
             }
         ),
     ),
@@ -260,6 +262,7 @@ TARGET_POLICIES = {
 
 SPECIAL_FIELDS = frozenset(
     {
+        "image_selection",
         "aliases",
         "discipline_links",
         "subdiscipline_links",
@@ -827,6 +830,9 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
+    if isinstance(target, (KnowledgeNode, ReadingPath)) and "image_selection" in patch:
+        from catalog.services.knowledge_media import validate_image_selection
+        patch["image_selection"] = validate_image_selection(target, patch["image_selection"])
     if isinstance(target, Work):
         from catalog.services.media import MediaValidationError, validate_work_image_patch
 
@@ -930,6 +936,9 @@ def _target_snapshot(target, policy: EditorialTargetPolicy) -> dict[str, Any]:
         for key, value in model_to_dict(target, fields=scalar_fields).items()
     }
     snapshot.update(_special_snapshot(target))
+    if isinstance(target, (KnowledgeNode, ReadingPath)):
+        from catalog.services.knowledge_media import image_selection
+        snapshot["image_selection"] = image_selection(target)
     return snapshot
 
 
@@ -1307,6 +1316,9 @@ def _apply_topic_relations(target: Topic, patch: dict[str, Any], actor) -> None:
 
 
 def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
+    if isinstance(target, (KnowledgeNode, ReadingPath)) and "image_selection" in patch:
+        from catalog.services.knowledge_media import apply_image_selection
+        apply_image_selection(target, patch["image_selection"], actor=actor)
     if isinstance(target, Work):
         from catalog.services.work_editor import (
             WorkflowEditError,
@@ -1482,6 +1494,9 @@ def create_editorial_revision(
     if isinstance(target, ScholarProfile):
         from catalog.services.scholar_media import protect_portrait_references
         protect_portrait_references(revision, target)
+    if isinstance(target, (KnowledgeNode, ReadingPath)):
+        from catalog.services.knowledge_media import protect_image_references
+        protect_image_references(revision, target)
     return revision
 
 

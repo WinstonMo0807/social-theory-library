@@ -6,6 +6,7 @@ from .person_resolution_views import (
 )
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
+from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeImageView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 
@@ -193,6 +194,8 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/knowledge-media/<str:object_type>/<uuid:object_id>/", KnowledgeImageSelectionView.as_view(), name="knowledge-image-selection"),
+    path("knowledge-media/<str:object_type>/<uuid:object_id>/file/", PublicKnowledgeImageView.as_view(), name="public-knowledge-image"),
     path("admin/people/", AdminPersonSearchView.as_view(), name="person-search"),
     path("admin/scholars/<uuid:scholar_id>/portrait/", ScholarPortraitSelectionView.as_view(), name="scholar-portrait-selection"),
     path("people/<uuid:person_id>/portrait/", PublicPersonPortraitView.as_view(), name="public-person-portrait"),

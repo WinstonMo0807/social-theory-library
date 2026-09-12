@@ -67,7 +67,7 @@ export function KnowledgeNodePublicView({
             <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
           </div>
           <div className="theory-node-hero-side">
-            <TheoryBanner image={node.cover_url} />
+            <TheoryBanner image={node.cover_url} media={node.cover_media} />
             <dl>
               {node.representative_scholars.length ? <><dt data-module-id="theory-scholars"><UsersRound size={17} />代表学者</dt><dd>{node.representative_scholars.map((person) => person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`} key={person.id}>{person.name}</Link> : <span key={person.id}>{person.name}</span>)}</dd></> : null}
               {node.period_label ? <><dt><CalendarDays size={17} />形成时期</dt><dd>{node.period_label}</dd></> : null}

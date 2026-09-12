@@ -695,6 +695,7 @@ class KnowledgeObjectEditorAdapter:
                     "discipline_links",
                     "subdiscipline_links",
                     "topic_links",
+                    "image_selection",
                 }
                 for kind in NODE_OBJECT_TYPES
             },
@@ -704,7 +705,7 @@ class KnowledgeObjectEditorAdapter:
                 "theory_relations",
                 "subdiscipline_relations",
             },
-            "reading_path": {"stage_groups"},
+            "reading_path": {"stage_groups", "image_selection"},
         }.get(object_type, set())
         unsupported = set(requested - supported)
         materialized = dict(data)
@@ -717,6 +718,14 @@ class KnowledgeObjectEditorAdapter:
                 unsupported.add(field_name)
                 continue
             try:
+                if field_name == "image_selection":
+                    from catalog.services.knowledge_media import image_media, validate_image_selection
+
+                    selected = validate_image_selection(target, value)
+                    media = image_media(target, selection=selected, private=True)
+                    materialized["cover_media"] = media
+                    materialized["cover_url"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else target.cover_asset.url if selected["legacy_path"] else ""
+                    continue
                 if object_type in NODE_OBJECT_TYPES:
                     cls._node_special_overlay(
                         target=target,

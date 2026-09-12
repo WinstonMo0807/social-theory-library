@@ -170,6 +170,8 @@ PROJECTION_DEPENDENCIES: dict[str, tuple[str, ...]] = {
 # Exact field impacts used by 3.0.4 publication events.  Calls without field
 # information deliberately retain the historical object-level mapping.
 FIELD_PROJECTION_DEPENDENCIES: dict[str, dict[str, tuple[str, ...]]] = {
+    "knowledge_node": {"image_selection": (ProjectionType.PUBLIC,)},
+    "reading_path": {"image_selection": (ProjectionType.PUBLIC,)},
     "scholar_profile": {"portrait_selection": (ProjectionType.PUBLIC,)},
     "work": {
         "cover": (ProjectionType.PUBLIC,),

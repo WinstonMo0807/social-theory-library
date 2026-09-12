@@ -17,6 +17,8 @@ import type {
   TheoryWorkCompact,
 } from "@/lib/server-api";
 import { ArchitecturalImage } from "./ui";
+import { ResponsiveMediaImage } from "./responsive-media-image";
+import type { components } from "@/lib/api/generated/schema";
 
 export const nodeTypeLabels: Record<string, string> = {
   theory_tradition: "理论传统",
@@ -36,7 +38,8 @@ export const workRoleLabels: Record<string, string> = {
   general_mention: "一般提及",
 };
 
-export function TheoryBanner({ image }: { image?: string }) {
+export function TheoryBanner({ image, media }: { image?: string; media?: components["schemas"]["PublicCoverMedia"] | null }) {
+  if (image && media?.renditions.length) return <div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}><div style={{ position: "absolute", inset: 0 }}><ResponsiveMediaImage src={image} sources={media.renditions} alt={media.alt_text || "页面配图"} sizes="(max-width: 760px) 90vw, 50vw" loading="eager" /></div></div>;
   return image ? (
     <div className="theory-system-banner has-image" style={{ backgroundImage: `url("${image}")` }} />
   ) : (

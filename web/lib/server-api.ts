@@ -456,6 +456,7 @@ export type TheoryWorkCompact = {
 };
 
 export type KnowledgeNodeListItem = {
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   id: string;
   node_type: "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem";
   canonical_name_zh: string;
@@ -630,6 +631,7 @@ export type NormalizedReadingPathItem = {
 };
 
 export type NormalizedReadingPath = {
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   id: string;
   title: string;
   slug: string;

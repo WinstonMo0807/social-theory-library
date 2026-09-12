@@ -33,6 +33,7 @@ def main():
         "DJANGO_CSRF_TRUSTED_ORIGINS": "http://127.0.0.1:3105",
         "CELERY_BROKER_URL": "memory://", "CELERY_TASK_ALWAYS_EAGER": "false",
         "PROCESS_INGESTION_INLINE": "false", "PYTHONIOENCODING": "utf-8",
+        "THEORY_SYSTEM_ENABLED": "true",
     })
     sys.path.insert(0, str(repository / "api"))
     import django
@@ -74,6 +75,10 @@ def main():
             ScholarProfile.objects.create(person=target, slug="e2e-person-target-2", short_description="目标档案也保留")
     portrait_person = Person.objects.create(id="30500000-0000-4000-8000-000000000092", preferred_name="E2E肖像学者", authority_status="verified")
     ScholarProfile.objects.create(id="30500000-0000-4000-8000-000000000091", person=portrait_person, slug="e2e-portrait-scholar", editorial_status="published", short_description="已发布简介")
+    from catalog.models import KnowledgeNode, ReadingPath, ReadingPathStage
+    KnowledgeNode.objects.create(id="30500000-0000-4000-8000-000000000101", canonical_name_zh="E2E理论配图", node_type="theory_tradition", slug="e2e-node-image", status="published")
+    image_path = ReadingPath.objects.create(id="30500000-0000-4000-8000-000000000102", title="E2E路径配图", slug="e2e-path-image", status="published")
+    ReadingPathStage.objects.create(id="30500000-0000-4000-8000-000000000103", reading_path=image_path, name="保留原阅读阶段", position=0)
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
     call_command("runserver", "127.0.0.1:8105", use_reloader=False)
 

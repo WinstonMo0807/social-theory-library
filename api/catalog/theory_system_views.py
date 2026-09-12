@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
@@ -780,21 +781,22 @@ class AdminKnowledgeNodeDetailView(
 
     def update(self, request, *args, **kwargs):
         node = self.get_object()
-        if node.status != "published":
+        if "cover_asset" in request.data:
+            if set(request.data) != {"cover_asset"} or "cover_asset" not in request.FILES:
+                return Response({"detail": "请单独上传图片，清除请使用媒体选择。"}, status=400)
+            from catalog.services.knowledge_media import stage_legacy_image_upload
+            try:
+                stage_legacy_image_upload(node, request.FILES["cover_asset"], actor=request.user)
+            except (ValueError, ValidationError) as error:
+                return Response({"detail": str(error), "code": "image_selection_failed"}, status=409)
+            return Response(self._draft_read_rows([node])[0], status=202)
+        if node.status != "published" and not EditorialRevision.objects.filter(target_type="knowledge_node", target_id=node.pk, status="draft").exists():
             return super().update(request, *args, **kwargs)
 
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(node, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         values = dict(serializer.validated_data)
-        if "cover_asset" in values:
-            return Response(
-                {
-                    "detail": "已发布节点的主视觉暂不能绕过编辑草稿直接替换。请先发布文字草稿，再单独处理主视觉版本。",
-                    "code": "published_binary_requires_revision",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
         aliases = values.get("aliases")
         if aliases is not None:
             values["aliases"] = [dict(row) for row in aliases]
@@ -848,36 +850,10 @@ class AdminKnowledgeNodeDetailView(
         )
 
         try:
-            patch = changed_editorial_patch(
-                target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
-                target=node,
-                patch=values,
-            )
-            if not patch:
-                return Response(self._draft_read_rows([node])[0])
-            current_revision = (
-                CanonicalObjectRevision.objects.filter(
-                    object_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
-                    object_id=node.id,
-                )
-                .values_list("current_revision", flat=True)
-                .first()
-                or 0
-            )
-            revision = create_editorial_revision(
-                target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
-                target_id=node.id,
-                patch=patch,
-                actor=request.user,
-                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
-                or editorial_idempotency_key(
-                    target_type=EditorialRevision.TargetType.KNOWLEDGE_NODE,
-                    target_id=node.id,
-                    base_revision=current_revision,
-                    patch=patch,
-                ),
-                change_note=str(request.data.get("change_note") or "知识工作室编辑草稿"),
-            )
+            from catalog.services.editorial_drafts import save_object_editorial_patch
+            revision = save_object_editorial_patch("knowledge_node", node.pk, values, actor=request.user,
+                                                   request_key=request.headers.get("Idempotency-Key", ""),
+                                                   change_note=str(request.data.get("change_note") or "知识工作室编辑草稿"))
         except EditorialRevisionError as error:
             return Response(
                 {"detail": str(error), "code": "editorial_revision_error"},
@@ -1512,16 +1488,21 @@ class AdminReadingPathDetailView(
 
     def update(self, request, *args, **kwargs):
         path = self.get_object()
-        if path.status != "published":
-            return super().update(request, *args, **kwargs)
         if "cover_asset" in request.data:
-            return Response(
-                {
-                    "detail": "已发布阅读路径的封面尚不支持进入 JSON 编辑草稿。",
-                    "code": "published_binary_requires_revision",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            from rest_framework import serializers
+            expected = serializers.DateTimeField(required=False).run_validation(request.data["expected_updated_at"]) if "expected_updated_at" in request.data else None
+            if expected is not None and path.updated_at != expected:
+                return Response({"detail": "阅读路径已变化，请重新读取。"}, status=409)
+            if set(request.data) - {"cover_asset", "expected_updated_at"} or "cover_asset" not in request.FILES:
+                return Response({"detail": "请单独上传图片，清除请使用媒体选择。"}, status=400)
+            from catalog.services.knowledge_media import stage_legacy_image_upload
+            try:
+                stage_legacy_image_upload(path, request.FILES["cover_asset"], actor=request.user)
+            except (ValueError, ValidationError) as error:
+                return Response({"detail": str(error), "code": "image_selection_failed"}, status=409)
+            return Response(self._draft_read_rows([path])[0], status=202)
+        if path.status != "published" and not EditorialRevision.objects.filter(target_type="reading_path", target_id=path.pk, status="draft").exists():
+            return super().update(request, *args, **kwargs)
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(path, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -1554,38 +1535,10 @@ class AdminReadingPathDetailView(
                 values["stage_groups"] = stage_groups
             elif items is not None:
                 values["stage_groups"] = stage_groups_from_items(path, items)
-            patch = changed_editorial_patch(
-                target_type=EditorialRevision.TargetType.READING_PATH,
-                target=path,
-                patch=values,
-            )
-            if not patch:
-                return Response(self._draft_read_rows([path])[0])
-            current_revision = (
-                CanonicalObjectRevision.objects.filter(
-                    object_type=EditorialRevision.TargetType.READING_PATH,
-                    object_id=path.id,
-                )
-                .values_list("current_revision", flat=True)
-                .first()
-                or 0
-            )
-            revision = create_editorial_revision(
-                target_type=EditorialRevision.TargetType.READING_PATH,
-                target_id=path.id,
-                patch=patch,
-                actor=request.user,
-                idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
-                or editorial_idempotency_key(
-                    target_type=EditorialRevision.TargetType.READING_PATH,
-                    target_id=path.id,
-                    base_revision=current_revision,
-                    patch=patch,
-                ),
-                change_note=str(
-                    request.data.get("change_note") or "阅读路径编辑草稿"
-                ),
-            )
+            from catalog.services.editorial_drafts import save_object_editorial_patch
+            revision = save_object_editorial_patch("reading_path", path.pk, values, actor=request.user,
+                                                   request_key=request.headers.get("Idempotency-Key", ""),
+                                                   change_note=str(request.data.get("change_note") or "阅读路径编辑草稿"))
         except (EditorialRevisionError, ReadingPathStructureError) as error:
             return Response(
                 {"detail": str(error), "code": "editorial_revision_error"},

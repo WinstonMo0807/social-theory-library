@@ -37,6 +37,8 @@ def _user_id(user):
 
 def node_snapshot(node: KnowledgeNode) -> dict:
     return {
+        "cover_asset": node.cover_asset.name or "",
+        "cover_rendition_id": str(node.cover_rendition_id) if node.cover_rendition_id else None,
         "id": str(node.id),
         "node_type": node.node_type,
         "canonical_name_zh": node.canonical_name_zh,

@@ -8,13 +8,18 @@ import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } fr
 import { useApiResource } from "@/lib/api/use-api-resource";
 import type { components } from "@/lib/api/generated/schema";
 import { scholarPortraitEndpoint, selectScholarPortrait, type ScholarPortraitState } from "@/lib/api/scholar-media";
+import { knowledgeImageEndpoint, selectKnowledgeImage, type KnowledgeImageState, type KnowledgeImageType } from "@/lib/api/knowledge-media";
 import styles from "./media-library.module.css";
 
 type Media = components["schemas"]["MediaAsset"];
 type Rendition = components["schemas"]["MediaRendition"];
 
-function MediaEditor({ media, onSaved, editionId, slot, scholar }: { media: Media; onSaved: () => void; editionId: string | null; slot: "cover" | "recommendation"; scholar: ScholarPortraitState | null }) {
-  const label = scholar ? "肖像" : slot === "cover" ? "封面" : "推荐图例";
+type Destination = { kind: "work"; editionId: string; slot: "cover" | "recommendation" } | { kind: "scholar"; data: ScholarPortraitState } | { kind: "knowledge"; data: KnowledgeImageState };
+
+function MediaEditor({ media, onSaved, destination }: { media: Media; onSaved: () => void; destination: Destination | null }) {
+  const label = destination?.kind === "scholar" ? "肖像" : destination?.kind === "knowledge" ? "页面图片" : destination?.slot === "recommendation" ? "推荐图例" : "封面";
+  const returnLabel = destination?.kind === "scholar" ? "返回学者页面" : destination?.kind === "knowledge" ? "返回编辑页面" : "返回编目工作台";
+  const choiceLabel = destination?.kind === "scholar" ? `用作${destination.data.name}的肖像` : destination?.kind === "knowledge" ? `用作${destination.data.name}的页面图片` : `用作当前作品${label}`;
   const [workbenchUrl, setWorkbenchUrl] = useState("");
   const [focalX, setFocalX] = useState(media.focal_x ?? 0.5);
   const [focalY, setFocalY] = useState(media.focal_y ?? 0.5);
@@ -22,20 +27,27 @@ function MediaEditor({ media, onSaved, editionId, slot, scholar }: { media: Medi
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [editVersion, setEditVersion] = useState(media.updated_at);
-  const [portraitFingerprint, setPortraitFingerprint] = useState(scholar?.fingerprint || "");
+  const [fingerprint, setFingerprint] = useState(destination && destination.kind !== "work" ? destination.data.fingerprint : "");
   async function chooseImage() {
-    if ((!editionId && !scholar) || busy) return;
+    if (!destination || busy) return;
     setBusy(true);
     try {
-      if (scholar) {
-        const result = await selectScholarPortrait(scholar.scholar_id, { media_id: media.id, expected_person_id: scholar.person_id, fingerprint: portraitFingerprint });
-        setPortraitFingerprint(result.fingerprint);
+      if (destination.kind === "scholar") {
+        const scholar = destination.data;
+        const result = await selectScholarPortrait(scholar.scholar_id, { media_id: media.id, expected_person_id: scholar.person_id, fingerprint });
+        setFingerprint(result.fingerprint);
         setWorkbenchUrl(result.editor_url);
         setMessage("肖像已保存到学者草稿。请返回学者页面核对后发布，原图片保留。");
         return;
       }
-      if (!editionId) return;
-      const result = await apiRequest<components["schemas"]["CoverMediaSelectionResult"]>(`/catalog/admin/editions/${encodeURIComponent(editionId)}/media/${slot}/`, {
+      if (destination.kind === "knowledge") {
+        const object = destination.data;
+        const result = await selectKnowledgeImage(object.object_type, object.object_id, media.id, fingerprint);
+        setFingerprint(result.fingerprint); setWorkbenchUrl(result.editor_url);
+        setMessage("图片已保存到编辑草稿。请返回对象页面确认发布，原图保留。");
+        return;
+      }
+      const result = await apiRequest<components["schemas"]["CoverMediaSelectionResult"]>(`/catalog/admin/editions/${encodeURIComponent(destination.editionId)}/media/${destination.slot}/`, {
         method: "POST", body: JSON.stringify({ media_id: media.id }),
       }, getServerSessionCredential());
       setWorkbenchUrl(result.workbench_url);
@@ -75,12 +87,12 @@ function MediaEditor({ media, onSaved, editionId, slot, scholar }: { media: Medi
       <label>使用权说明<textarea name="rights" defaultValue={media.rights} rows={2} /></label>
       <div className={styles.controls}><label>许可<input name="license" defaultValue={media.license} maxLength={200} /></label><label>署名<input name="credit" defaultValue={media.credit} maxLength={500} /></label></div>
       <div className={styles.controls}><label>水平焦点<input type="range" min={0} max={1} step={0.01} value={focalX} onChange={(event) => setFocalX(Number(event.target.value))} /></label><label>垂直焦点<input type="range" min={0} max={1} step={0.01} value={focalY} onChange={(event) => setFocalY(Number(event.target.value))} /></label></div>
-      <div className={styles.controls}><label>预览用途<select name="kind" defaultValue={scholar ? "portrait" : "cover"}><option value="cover">书封，保持比例</option><option value="portrait">肖像</option><option value="hero">横幅</option><option value="card">卡片</option></select></label><label>预览宽度<select name="width" defaultValue="640"><option value="320">320 px</option><option value="640">640 px</option><option value="1280">1280 px</option></select></label></div>
+      <div className={styles.controls}><label>预览用途<select name="kind" defaultValue={destination?.kind === "scholar" ? "portrait" : destination?.kind === "knowledge" ? "hero" : "cover"}><option value="cover">书封，保持比例</option><option value="portrait">肖像</option><option value="hero">横幅</option><option value="card">卡片</option></select></label><label>预览宽度<select name="width" defaultValue="640"><option value="320">320 px</option><option value="640">640 px</option><option value="1280">1280 px</option></select></label></div>
       <button className="button" type="submit" disabled={busy}>{busy ? "正在保存…" : "保存资料并生成预览"}</button>
     </form>
     {message ? <p className={styles.message} role="status">{message}</p> : null}
-    {editionId || scholar ? <button className="button" type="button" disabled={busy} onClick={() => void chooseImage()}>{scholar ? `用作${scholar.name}的肖像` : `用作当前作品${label}`}</button> : null}
-    {workbenchUrl ? <Link className="button secondary" prefetch={false} href={workbenchUrl}>{scholar ? "返回学者页面" : "返回编目工作台"}</Link> : null}
+    {destination ? <button className="button" type="button" disabled={busy} onClick={() => void chooseImage()}>{choiceLabel}</button> : null}
+    {workbenchUrl ? <Link className="button secondary" prefetch={false} href={workbenchUrl}>{returnLabel}</Link> : null}
     {preview ? <picture><source type="image/webp" srcSet={normalizePublicResourceUrl(preview.url)} /><img className={styles.preview} src={normalizePublicResourceUrl(preview.url)} alt={media.alt_text || "媒体预览"} width={preview.width} height={preview.height} /></picture> : <p>暂无衍生图。</p>}
   </section>;
 }
@@ -89,10 +101,16 @@ export function MediaLibrary() {
   const params = useSearchParams();
   const editionId = params.get("edition");
   const scholarId = params.get("scholar");
-  const scholarState = useApiResource<ScholarPortraitState>(scholarId ? scholarPortraitEndpoint(scholarId) : "", getServerSessionCredential());
+  const objectType = params.get("object_type"), objectId = params.get("object_id");
+  const knownObjectType = objectType === "knowledge_node" || objectType === "reading_path";
   const requestedSlot = params.get("slot") ?? "cover";
   const slot = requestedSlot === "recommendation" ? "recommendation" : "cover";
-  const validSlot = (requestedSlot === "cover" || requestedSlot === "recommendation") && !(scholarId && editionId);
+  const validSlot = (requestedSlot === "cover" || requestedSlot === "recommendation") && [scholarId, editionId, objectId].filter(Boolean).length <= 1 && (objectType || objectId ? knownObjectType && Boolean(objectId) : true);
+  const scholarState = useApiResource<ScholarPortraitState>(validSlot && scholarId ? scholarPortraitEndpoint(scholarId) : "", getServerSessionCredential());
+  const objectState = useApiResource<KnowledgeImageState>(validSlot && knownObjectType && objectId ? knowledgeImageEndpoint(objectType as KnowledgeImageType, objectId) : "", getServerSessionCredential());
+  const destination: Destination | null = scholarId && scholarState.data ? { kind: "scholar", data: scholarState.data } : objectId && objectState.data ? { kind: "knowledge", data: objectState.data } : editionId ? { kind: "work", editionId, slot } : null;
+  const destinationError = scholarId ? scholarState.error : objectId ? objectState.error : "";
+  const loadingDestination = Boolean(scholarId || objectId) && !destination;
   const { data, loading, error, retry } = useApiResource<Media[]>("/catalog/admin/media/", getServerSessionCredential());
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,6 +143,6 @@ export function MediaLibrary() {
         {row.renditions?.[0] ? <picture><source type="image/webp" srcSet={normalizePublicResourceUrl(row.renditions[0].url)} /><img className={styles.thumbnail} src={normalizePublicResourceUrl(row.renditions[0].url)} alt={row.alt_text || "图片"} width={row.renditions[0].width} height={row.renditions[0].height} loading="lazy" /></picture> : null}
         <span>{row.alt_text || row.source_label || "未填写说明"}</span><small>{row.width} × {row.height}</small>
       </button>)}</div>
-    </section>{!validSlot ? <p role="alert">图片用途或对象不明确，请返回编辑页面重新选择。</p> : scholarId && scholarState.error ? <p role="alert">{scholarState.error}<button type="button" onClick={scholarState.retry}>重新读取学者</button></p> : scholarId && !scholarState.data ? <p role="status">正在读取学者身份…</p> : selected ? <MediaEditor key={`${selected.id}:${editionId}:${slot}:${scholarId}:${scholarState.data?.person_id}`} media={selected} onSaved={retry} editionId={editionId} slot={slot} scholar={scholarId ? scholarState.data : null} /> : <section className="admin-panel"><h2>选择媒体</h2><p>可在此查看来源、使用说明和裁切预览。未关联并发布的图片不会出现在公开页面中。</p></section>}</div>
+    </section>{!validSlot ? <p role="alert">图片用途或对象不明确，请返回编辑页面重新选择。</p> : destinationError ? <p role="alert">{destinationError}<button type="button" onClick={scholarId ? scholarState.retry : objectState.retry}>重新读取编辑对象</button></p> : loadingDestination ? <p role="status">正在读取编辑对象…</p> : selected ? <MediaEditor key={`${selected.id}:${editionId}:${slot}:${scholarId}:${scholarState.data?.person_id}:${objectType}:${objectId}`} media={selected} onSaved={retry} destination={destination} /> : <section className="admin-panel"><h2>选择媒体</h2><p>可在此查看来源、使用说明和裁切预览。未关联并发布的图片不会出现在公开页面中。</p></section>}</div>
   </div>;
 }

@@ -703,6 +703,118 @@
                 }
             }
         },
+        "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
+            "get": {
+                "operationId": "admin_knowledge_media_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeImageState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "admin_knowledge_media_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeImageRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeImageRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeImageRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeImageState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/": {
             "get": {
                 "operationId": "admin_media_list",
@@ -1836,6 +1948,76 @@
                 "type": "string",
                 "description": "* `cover` - cover\n* `portrait` - portrait\n* `hero` - hero\n* `card` - card\n* `thumbnail` - thumbnail"
             },
+            "KnowledgeImageRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                },
+                "required": [
+                    "fingerprint",
+                    "media_id"
+                ]
+            },
+            "KnowledgeImageState": {
+                "type": "object",
+                "properties": {
+                    "object_type": {
+                        "$ref": "#/components/schemas/ObjectTypeEnum"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "editorial_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "canonical_write_deferred": {
+                        "type": "boolean"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "canonical_write_deferred",
+                    "editor_url",
+                    "editorial_revision_id",
+                    "fingerprint",
+                    "media",
+                    "name",
+                    "object_id",
+                    "object_type",
+                    "preview_url"
+                ]
+            },
             "MediaAsset": {
                 "type": "object",
                 "properties": {
@@ -2112,6 +2294,14 @@
                 "required": [
                     "action"
                 ]
+            },
+            "ObjectTypeEnum": {
+                "enum": [
+                    "knowledge_node",
+                    "reading_path"
+                ],
+                "type": "string",
+                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path"
             },
             "PatchedMediaMetadataRequest": {
                 "type": "object",

@@ -2592,6 +2592,7 @@ class KnowledgeNode(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     )
     sort_order = models.PositiveIntegerField(default=0)
     cover_asset = models.ImageField(upload_to="public/knowledge/nodes/%Y/%m/", blank=True)
+    cover_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="knowledge_node_covers")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -3082,6 +3083,7 @@ class ReadingPath(UUIDTimeStampedModel):
     difficulty = models.CharField(max_length=20, choices=Difficulty.choices, default=Difficulty.BEGINNER)
     estimated_reading = models.CharField(max_length=120, blank=True)
     cover_asset = models.ImageField(upload_to="public/knowledge/reading-paths/%Y/%m/", blank=True)
+    cover_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="reading_path_covers")
     status = models.CharField(
         max_length=20,
         choices=KnowledgePublicationStatus.choices,

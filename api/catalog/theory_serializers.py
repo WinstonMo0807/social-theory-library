@@ -476,6 +476,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
     relation_count = serializers.SerializerMethodField()
     representative_scholars = serializers.SerializerMethodField()
     cover_url = serializers.SerializerMethodField()
+    cover_media = serializers.SerializerMethodField()
 
     class Meta:
         model = KnowledgeNode
@@ -500,6 +501,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
             "relation_count",
             "representative_scholars",
             "cover_url",
+            "cover_media",
             "updated_at",
         )
 
@@ -552,7 +554,15 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
         return PersonNodeSerializer(queryset, many=True, context=self.context).data
 
     def get_cover_url(self, obj):
+        media = self.get_cover_media(obj)
+        if media:
+            return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
+
+    def get_cover_media(self, obj):
+        from catalog.services.knowledge_media import image_media
+        private = bool(self.context.get("include_unpublished_items"))
+        return image_media(obj, private=private) if obj.status == "published" or private else None
 
 
 class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
@@ -665,6 +675,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
     work_count = serializers.SerializerMethodField()
     relation_count = serializers.SerializerMethodField()
     cover_url = serializers.SerializerMethodField()
+    cover_media = serializers.SerializerMethodField()
 
     class Meta:
         model = KnowledgeNode
@@ -689,6 +700,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             "sort_order",
             "cover_asset",
             "cover_url",
+            "cover_media",
             "aliases",
             "discipline_links",
             "subdiscipline_links",
@@ -716,7 +728,15 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         return obj.outgoing_relations.count() + obj.incoming_relations.count()
 
     def get_cover_url(self, obj):
+        media = self.get_cover_media(obj)
+        if media:
+            return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
+
+    def get_cover_media(self, obj):
+        from catalog.services.knowledge_media import image_media
+        private = True
+        return image_media(obj, private=private) if obj.status == "published" or private else None
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -1073,6 +1093,7 @@ class ReadingPathSerializer(serializers.ModelSerializer):
     items = ReadingPathItemSerializer(many=True, required=False)
     stages = ReadingPathStageSerializer(many=True, read_only=True)
     cover_url = serializers.SerializerMethodField()
+    cover_media = serializers.SerializerMethodField()
     expected_updated_at = serializers.DateTimeField(write_only=True, required=False)
     stage_groups = serializers.JSONField(write_only=True, required=False)
 
@@ -1091,6 +1112,7 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             "estimated_reading",
             "cover_asset",
             "cover_url",
+            "cover_media",
             "status",
             "sort_order",
             "stages",
@@ -1104,7 +1126,15 @@ class ReadingPathSerializer(serializers.ModelSerializer):
         read_only_fields = ("published_at", "created_at", "updated_at")
 
     def get_cover_url(self, obj):
+        media = self.get_cover_media(obj)
+        if media:
+            return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
+
+    def get_cover_media(self, obj):
+        from catalog.services.knowledge_media import image_media
+        private = bool(self.context.get("include_unpublished_items"))
+        return image_media(obj, private=private) if obj.status == "published" or private else None
 
     def validate_status(self, value):
         request = self.context.get("request")
