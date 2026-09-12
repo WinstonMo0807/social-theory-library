@@ -2,6 +2,14 @@
 
 ## 3.0.5 升级分支增量（尚未部署）
 
+发布状态明确区分人工决定、活动书目和后台智能任务。首次metadata-only发布在真实公开书目消费者完成且PDF可读取时可以启用原不可变快照，不等待知识关系等派生处理；全文资格和已有活动版本更新保持原完整条件。投影计划捕获已登记的全部受支持状态，不能再用Edition默认子集漏掉catalog_publish明确要求的graph/timeline。
+
+Work编辑与旧MetadataReview成功保存时统一建立/复用CatalogingSession，GET只读取，不开会话。字段投影影响从catalog/contracts/projections.py共用声明生成，运行协调器和字段说明不再独立手写。旧表读取统计只记录按日/表类型的计数，不存SQL、查询内容和读者身份；未覆盖时间和后台范围不能证明旧表零读取，继续保留兼容表。
+
+Reader组件仅协调界面，访问/页缓存、导航缩放、文字选择、私人记录、文内搜索、引用、进度和页面标记拆为内部hooks；公开URL、PDF.js与权限服务不变。核心公开Work/Edition及Reader访问/manifest/页面响应由真实serializer生成契约，复杂历史Evidence仍是明确JSON兼容层。
+
+新增私有媒体使用NAS的private目录持久化挂载到所有API/Worker服务，不向Edge提供静态公开目录。原PDF、公开图片、模型和索引挂载路径不变。
+
 KnowledgeNode与ReadingPath图片通过0053的可空cover_rendition复用现有媒体和EditorialRevisionMedia。独立image_selection字段绑定对象类型、ID和具体衍生图，草稿先保持原图，人工发布才更改引用。对象编辑共用save_object_editorial_patch，组合说明、关系/阅读阶段与图片，不新建发布系统。仅图片变更触发Public投影，公开图片继承原功能开关和published过滤，历史书目和文件不改写。前端共享明确目标的媒体选择及响应式图片组件，指定编辑对象载入前禁用控件。该切片已完成本地测试，生产仍待验收。
 
 学者肖像沿用Person和MediaAsset/MediaRendition，0052仅增加可空肖像FK及EditorialRevisionMedia引用保护。编辑选择为ScholarProfile的独立portrait_selection字段，绑定当时Person并由同一编辑修订发布，其他元数据草稿会合并保留。仅图片变更触发Public投影，原书目快照和文件不改写。公开图片需同一人物已核验且学者档案已发布，只接受当前媒体组的具体rendition；私人草稿使用原后台文件接口。前端复用媒体库和现有确认发布，详见V3.0.5_MEDIA。真实PostgreSQL和生产恢复仍待验收。
