@@ -142,7 +142,7 @@ def _module(
 SCHOLAR_MODULES = {
     "identity": _module(
         "scholar-identity", "身份与名称", "ScholarIdentity", EDITORIAL,
-        ("person",), REQUIRED, "identity", canonical=("person",),
+        ("person",), REQUIRED, "identity", canonical=("person", "portrait_selection"),
         projections=("public", "query_lexicon"),
     ),
     "position": _module(
@@ -210,7 +210,7 @@ THEORY_MODULES = {
     "identity": _module(
         "theory-identity", "名称、外文名与别名", "KnowledgeNodeHero", EDITORIAL,
         ("canonical_name_zh", "canonical_name_en", "aliases"), REQUIRED, "identity",
-        canonical=("canonical_name_zh", "canonical_name_en", "aliases"),
+        canonical=("canonical_name_zh", "canonical_name_en", "aliases", "image_selection"),
         projections=("public", "query_lexicon"),
     ),
     "definition": _module(
@@ -514,6 +514,7 @@ ADMIN_FIELD_USAGE = {
         ),
         "editorial_status": ("Public visibility",),
         "person": ("scholar-identity", "Work contributor display", "QueryLexicon"),
+        "portrait_selection": ("scholar-identity",),
     },
     "theory": {
         "canonical_name_zh": ("theory-identity", "Search", "QueryLexicon"),
@@ -533,6 +534,7 @@ ADMIN_FIELD_USAGE = {
         "sort_order": ("Theory directory order",),
         "status": ("Public visibility",),
         "aliases": ("theory-identity", "Search", "QueryLexicon"),
+        "image_selection": ("theory-identity",),
         "discipline_links": ("theory-disciplines",),
         "subdiscipline_links": ("theory-disciplines",),
         "topic_links": ("theory-topics",),

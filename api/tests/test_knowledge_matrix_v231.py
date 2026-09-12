@@ -526,7 +526,26 @@ def test_admin_can_upload_scholar_portrait(api_client, admin_user, tmp_path, set
         {"portrait": portrait},
         format="multipart",
     )
-    assert updated.status_code == 200
-    assert updated.data["portrait"].endswith(".png")
+    assert updated.status_code == 202
+    assert updated.data["portrait"].startswith("/api/catalog/admin/media/")
+    assert updated.data["editorial_revision"]["status"] == "draft"
     profile = ScholarProfile.objects.select_related("person").get(pk=created.data["id"])
-    assert profile.person.portrait.name.startswith("public/people/")
+    assert not profile.person.portrait
+    assert profile.person.portrait_rendition_id is None
+
+    preview = api_client.get(updated.data["portrait"])
+    assert preview.status_code == 200
+    assert preview["Content-Type"] == "image/webp"
+    assert b"".join(preview.streaming_content).startswith(b"RIFF")
+
+    published = api_client.post(
+        f"/api{updated.data['editorial_revision']['publish_url']}",
+        {},
+        format="json",
+    )
+    assert published.status_code == 200
+    profile.person.refresh_from_db()
+    rendition = profile.person.portrait_rendition
+    assert rendition is not None
+    with rendition.media.file.open("rb") as original:
+        assert original.read() == output.getvalue()

@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from catalog.models import Edition, KnowledgePublicationEvent
 from catalog.services.knowledge_publication import retry_knowledge_publication
+from catalog.services.publication_commands import catalog_publication_state
 from common.capabilities import Capability, has_capability
 from common.permissions import CanAccessBackOffice
 
@@ -18,19 +19,30 @@ CONSUMER_LABELS = {
 }
 
 
-def publication_status(event, user):
+def publication_status(event, user, *, edition=None):
+    if edition is None and event is not None and event.catalog_revision_id:
+        edition = event.catalog_revision.edition
+    visibility = catalog_publication_state(edition) if edition is not None else {}
     if event is None:
-        return {"event_id": None, "state": "not_started", "label": "尚未开始智能内容更新", "can_retry": False, "failures": []}
+        return {"event_id": None, "state": "not_started", "label": "尚未开始智能内容更新", "can_retry": False, "failures": [], **visibility}
     failed = event.status in {"failed", "dead_letter"}
     complete = event.status == "completed"
     withdrawal = event.event_type == "catalog_withdrawn" or bool((event.payload.get("provenance") or {}).get("withdrawal"))
     capability = Capability.PUBLISH_WORK if event.catalog_revision_id else Capability.PUBLISH_AUTHORITY
+    label = "智能内容更新异常" if failed else ("已退出智能检索" if withdrawal else "已进入智能检索") if complete else "智能内容处理中"
+    if visibility:
+        if visibility["publicly_visible"]:
+            label = "书目已公开" + ("，部分智能处理异常" if failed else "，智能内容处理中" if not complete else "")
+        elif visibility["public_state"] == "publishing":
+            label = "已确认发布，公开版本尚未就绪"
     return {
         "event_id": str(event.pk), "state": "failed" if failed else "ready" if complete else "processing",
-        "label": "智能内容更新异常" if failed else ("已退出智能检索" if withdrawal else "已进入智能检索") if complete else "智能内容处理中",
+        "label": label,
         "can_retry": failed and has_capability(user, capability),
         "failures": [CONSUMER_LABELS.get(value, "智能内容处理") for value in event.deliveries.filter(status="failed").values_list("consumer", flat=True)],
+        "pending": [CONSUMER_LABELS.get(value, "智能内容处理") for value in event.deliveries.filter(status__in=["pending", "processing"]).values_list("consumer", flat=True)],
         "withdrawal": withdrawal,
+        **visibility,
     }
 
 
@@ -43,15 +55,18 @@ class AdminKnowledgePublicationStatusView(APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, edition_id=None):
+        edition = None
         if edition_id:
-            get_object_or_404(Edition, pk=edition_id)
+            edition = get_object_or_404(Edition, pk=edition_id)
             events = KnowledgePublicationEvent.objects.filter(catalog_revision__edition_id=edition_id)
         else:
             query = PublicationStatusQuery(data=request.query_params)
             query.is_valid(raise_exception=True)
             events = KnowledgePublicationEvent.objects.filter(**query.validated_data)
         event = events.order_by("-created_at", "-pk").first()
-        return Response(publication_status(event, request.user))
+        response = Response(publication_status(event, request.user, edition=edition))
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class AdminKnowledgePublicationRetryView(APIView):

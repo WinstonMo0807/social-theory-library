@@ -291,6 +291,19 @@ def _publish_edition(
         and not has_curated_drafts
         and not force_update
     ):
+        if not edition.active_catalog_revision_id:
+            from catalog.models import KnowledgePublicationEvent
+            from catalog.services.knowledge_publication import dispatch_knowledge_event
+
+            event = KnowledgePublicationEvent.objects.filter(
+                catalog_revision__edition=edition,
+            ).select_related("catalog_revision__edition", "domain_event").order_by("-created_at", "-pk").first()
+            if event is None:
+                raise PublicationBlocked(["已记录发布决定，但缺少正式发布记录，请先核查，不能仅凭状态重复发布。"])
+            # Wake the existing event after releasing the Edition lock. Its
+            # own lease and activation checks remain authoritative.
+            if event.status in {"pending", "processing", "failed"}:
+                transaction.on_commit(lambda event_id=event.pk: dispatch_knowledge_event(event_id))
         return edition
     preflight = publication_preflight(edition)
     if preflight["blockers"]:

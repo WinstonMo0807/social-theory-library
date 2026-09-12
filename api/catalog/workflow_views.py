@@ -535,10 +535,13 @@ class WorkMaintenancePublicationView(APIView):
             user=request.user,
             mode="maintenance",
         )
+        from catalog.services.publication_commands import catalog_publication_state
+
+        visibility = catalog_publication_state(edition)
         return Response(
             {
                 **workspace,
-                "detail": "馆藏版本已发布。",
+                **visibility,
                 "intelligence_status": edition.intelligence_status,
                 "published_editorial_revision": (
                     serialize_editorial_revision(published_revision)

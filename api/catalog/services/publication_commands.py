@@ -47,6 +47,40 @@ def publication_history(edition):
             for row in edition.catalog_revisions.order_by("-revision")[:50]]
 
 
+def catalog_publication_state(edition):
+    """Report actual public visibility separately from the editorial decision."""
+    edition = Edition.objects.select_related("active_catalog_revision").get(pk=edition.pk)
+    revision = edition.active_catalog_revision
+    visible = bool(
+        edition.state == "published" and edition.is_primary and revision is not None
+        and revision.edition_id == edition.pk and revision.status == "active" and revision.metadata_ready
+    )
+    if edition.state == "withdrawn":
+        state, detail = "withdrawn", "馆藏已撤回，文件与历史版本保留。"
+    elif visible:
+        state, detail = "published", "书目已公开。"
+        if edition.intelligence_status == "failed":
+            detail += "部分智能处理异常，不影响当前书目和获准阅读的 PDF。"
+        elif edition.intelligence_status == "processing":
+            detail += "智能内容仍在后台处理。"
+    elif edition.state == "published":
+        state = "publishing"
+        detail = "已确认发布，公开版本尚未就绪。请查看发布处理状态。"
+        if not edition.is_primary:
+            detail = "已确认发布。此版本不是主版本，不在公开书目列表中展示。"
+        elif not edition.catalog_revisions.exists():
+            detail = "已记录发布决定，但缺少正式发布修订，请核查历史发布记录。"
+    else:
+        state, detail = "unpublished", "馆藏尚未确认发布。"
+    return {
+        "editorial_state": edition.state, "public_state": state,
+        "publicly_visible": visible, "detail": detail,
+        "active_revision_id": str(revision.pk) if revision else None,
+        "fulltext_ready": bool(visible and revision.fulltext_ready and revision.document_revision_id),
+        "public_url": f"/works/{edition.public_slug}" if visible and edition.public_slug else "",
+    }
+
+
 def catalog_health(edition, *, field_state=None):
     from catalog.services.field_decisions import field_readiness
 
@@ -56,11 +90,13 @@ def catalog_health(edition, *, field_state=None):
         row.required and row.status == "empty" for row in editorial_fields
     ) else "needs_review" if any(row.status in {"stale", "needs_review"} for row in editorial_fields) else "ready"
     processing = {"draft": "idle", "processing": "processing", "failed": "failed", "active": "ready", "withdrawn": "idle"}.get(edition.intelligence_status, "partial")
-    if edition.state == "withdrawn":
-        publication = "withdrawn"
-    elif not edition.active_catalog_revision_id:
-        publication = "publishing" if processing == "processing" else "unpublished"
-    elif processing == "processing":
+    visibility = catalog_publication_state(edition)
+    if not visibility["publicly_visible"]:
+        publication = visibility["public_state"]
+    elif processing == "processing" and edition.catalog_revisions.filter(
+        revision__gt=edition.active_catalog_revision.revision,
+        status__in=["preparing", "failed"],
+    ).exists():
         publication = "publishing"
     elif EditorialRevision.objects.filter(target_type="work", target_id=edition.work_id, status="draft").exists():
         publication = "changes_pending"

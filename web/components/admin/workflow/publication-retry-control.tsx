@@ -11,6 +11,10 @@ type PublicationStatus = {
   label: string;
   can_retry: boolean;
   failures: string[];
+  pending?: string[];
+  detail?: string;
+  public_state?: string;
+  publicly_visible?: boolean;
   withdrawal?: boolean;
 };
 
@@ -65,9 +69,11 @@ export function PublicationRetryControl({ editionId, objectTarget, token, disabl
     }
   };
 
-  if (!error && (!current || current.state === "not_started")) return null;
+  if (!error && (!current || (current.state === "not_started" && current.public_state !== "publishing"))) return null;
   return <section className="workflow-editorial-revision" aria-live="polite">
     <div><strong>{current?.label || "智能内容状态"}</strong>
+      {current?.detail ? <p>{current.detail}</p> : null}
+      {current?.pending?.length ? <p>仍在处理{current.pending.join("、")}。</p> : null}
       {current?.state === "failed" ? <p>{current.withdrawal ? "内容退出检索尚未完成，请重新处理。" : "智能内容更新遇到异常。已经就绪的作品仍可正常阅读。"}{current.failures.length ? `需要重新处理的内容包括${current.failures.join("、")}。` : ""}</p> : null}
       {error ? <p role="alert">{error}</p> : null}
     </div>

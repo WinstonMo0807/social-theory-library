@@ -2141,6 +2141,8 @@ class MetadataReviewView(APIView):
             actor=request.user,
             locked_fields=review_lock_fields,
         )
+        from catalog.services.work_editor import _record_edit_process
+        _record_edit_process(edition, actor=request.user, confirmed=True)
 
         # Keep compatibility review and Workbench decisions on the same facts.
         actual, _ = formal_field_values(edition, include_editorial_draft=False)
@@ -2745,9 +2747,12 @@ class PublishUploadItemView(APIView):
                 },
                 request_ip=_request_ip(request),
             )
+        from catalog.services.publication_commands import catalog_publication_state
+
+        visibility = catalog_publication_state(published_edition)
         return Response(
             {
-                "detail": "文献已发布。",
+                **visibility,
                 "preflight": preflight,
                 "intelligence_status": published_edition.intelligence_status,
                 "scheduled_tasks": scheduled_tasks,

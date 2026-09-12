@@ -957,11 +957,18 @@ def build_admin_workspace(
 
         if pending_revision is not None:
             serialized_revision = serialize_editorial_revision(pending_revision)
-    from catalog.services.publication_commands import catalog_health
+    from catalog.services.publication_commands import catalog_health, catalog_publication_state
+    visibility = catalog_publication_state(edition)
+    data["publication"].update(visibility)
+    from catalog.models import CatalogingSession
+    from catalog.services.cataloging_sessions import OPEN_STATUSES, session_payload
+    session = CatalogingSession.objects.filter(edition=edition, status__in=OPEN_STATUSES).order_by("-created_at").first()
     return {
         "mode": mode,
+        "cataloging_session": session_payload(session) if session else None,
         "health": catalog_health(edition),
         "context": {
+            "cataloging_session_id": str(session.pk) if session else None,
             "item_id": str(item.id) if item else None,
             "work_id": str(work.id),
             "edition_id": str(edition.id),
@@ -974,11 +981,7 @@ def build_admin_workspace(
                 f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
             ),
             "page_preview_url": f"/admin/preview/works/{edition.id}",
-            "public_url": (
-                f"/works/{edition.public_slug}"
-                if edition.state == PublicationState.PUBLISHED and edition.public_slug
-                else ""
-            ),
+            "public_url": visibility["public_url"],
             "return_href": "/admin/review" if item else "/admin/library",
         },
         "workflow": workflow,
