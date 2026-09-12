@@ -23,11 +23,16 @@ test("upload drop zone supports keyboard selection and drag depth", async () => 
 
 test("public reader loads private records only after shared session bootstrap", async () => {
   const source = await readFile(new URL("../components/reader-shell.tsx", import.meta.url), "utf8");
+  const records = await readFile(new URL("../components/reader/use-reader-records.ts", import.meta.url), "utf8");
+  const progress = await readFile(new URL("../components/reader/use-reader-progress.ts", import.meta.url), "utf8");
   assert.match(source, /useSessionBootstrap\(\)/);
   assert.match(source, /readerSession\.status === "authenticated"/);
-  assert.match(source, /if \(!readerAuthenticated\) return/);
-  assert.match(source, /if \(!readerAuthenticated\) \{[\s\S]*setGate\("书签"\)/);
+  assert.match(source, /useReaderRecords\(\{[\s\S]*readerAuthenticated/);
+  assert.match(source, /useReaderProgress\(\{[\s\S]*readerAuthenticated/);
+  assert.match(progress, /if \(!readerAuthenticated\) return/);
+  assert.match(records, /if \(!readerAuthenticated\) \{[\s\S]*setGate\("书签"\)/);
   assert.doesNotMatch(source, /if \(!getServerSessionCredential\(\)\)/);
+  assert.doesNotMatch(records, /if \(!getServerSessionCredential\(\)\)/);
 });
 
 test("public save buttons wait for one shared authenticated session", async () => {

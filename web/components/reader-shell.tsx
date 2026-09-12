@@ -26,149 +26,25 @@ import {
 } from "lucide-react";
 import {
   useCallback,
-  useEffect,
-  useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
-  type ClipboardEvent as ReactClipboardEvent,
-  type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { Work } from "@/lib/data";
-import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
-import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, type ActionState } from "./action-feedback";
-import type { CanonicalBlock } from "./pdf-canvas";
-import {
-  PdfContinuousViewer,
-  type PdfPageOverlay,
-  type PdfScrollRequest,
-} from "./pdf-continuous-viewer";
+import { PdfContinuousViewer } from "./pdf-continuous-viewer";
 import { BookCover } from "./ui";
 import { UsageTracker } from "./usage-tracker";
 import { AskLibraryLink } from "./ask-library-link";
-
-type AccessPayload = {
-  url: string;
-  download_url: string;
-  original_download_url?: string;
-  download_rendition?: "normalized" | "ocr_pdf" | "web_derivative";
-  source: string;
-  expires_in: number | null;
-  download_filename: string;
-  edition_id: string;
-  page_count: number;
-  requested_asset_id: string;
-  served_asset_id: string;
-  source_artifact_id: string | null;
-  rendition: "normalized" | "ocr_pdf" | "web_derivative";
-  reader_rendition_policy: "auto" | "original" | "ocr";
-  reader_fallback_reason: string;
-  sha256: string;
-  ocr_status: "not_required" | "pending" | "running" | "succeeded" | "failed" | "disabled";
-  ocr_text_available: boolean;
-  page_label_status: "pending" | "ready" | "needs_review";
-  semantic_index_status: "not_indexed" | "pending" | "running" | "ready" | "failed";
-};
-
-type PagePayload = {
-  page_id: string;
-  page_index: number;
-  printed_label: string;
-  chapter_title: string;
-  text_source: "none" | "embedded" | "ocr" | "hybrid";
-  width: number;
-  height: number;
-  text: string;
-  blocks: CanonicalBlock[];
-};
-
-type ReaderAnnotation = {
-  id: string;
-  page: string;
-  kind: "highlight" | "underline" | "note";
-  selector: {
-    page_index?: number;
-    exact?: string;
-    bboxes?: number[][];
-  };
-  quote: string;
-  body_text: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type ReaderBookmark = {
-  id: string;
-  page: string;
-  page_index: number;
-  label: string;
-  created_at?: string;
-};
-
-type AnnotationDraft = {
-  kind: "highlight" | "underline" | "note";
-  pageIndex: number;
-  pageId: string;
-  quote: string;
-  bboxes: number[][];
-  body: string;
-};
-
-type SelectionSnapshot = Omit<AnnotationDraft, "kind" | "body"> & {
-  x: number;
-  y: number;
-};
-
-type SearchMatch = {
-  rank: number;
-  occurrence_count: number;
-  page_id: string;
-  page_index: number;
-  printed_label: string;
-  snippet: string;
-  width: number;
-  height: number;
-  blocks: { bbox: number[]; text: string; order: number }[];
-  highlights?: { bbox: number[]; text: string; source: "pdf-text" | "ocr-estimate" }[];
-};
-
-type PassageFocus = {
-  id: string;
-  asset_id: string;
-  title: string;
-  page_index: number;
-  printed_label: string;
-  width: number;
-  height: number;
-  bbox: number[];
-  text: string;
-};
-
-type CitationStyle = "gbt7714-2025" | "apa" | "chicago" | "mla" | "harvard";
-type CitationBundle = Record<CitationStyle, string> & {
-  page?: {
-    pdf_page: number;
-    printed_label: string;
-    citation_label: string;
-    source: "pdf-label" | "pdf-index" | "legacy" | "none";
-  };
-};
-type SidebarTab = "outline" | "thumbnails" | "highlights" | "bookmarks" | "notes";
-
-function formatReaderTimestamp(value?: string) {
-  if (!value) return "保存时间未知";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "保存时间未知";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+import type { CitationStyle, SidebarTab } from "./reader/types";
+import { useReaderNavigation } from "./reader/use-reader-navigation";
+import { useReaderSelection } from "./reader/use-reader-selection";
+import { useReaderRecords } from "./reader/use-reader-records";
+import { useReaderDocument, useReaderPageRequest } from "./reader/use-reader-document";
+import { useReaderSearch } from "./reader/use-reader-search";
+import { useReaderCitation } from "./reader/use-reader-citation";
+import { useReaderProgress } from "./reader/use-reader-progress";
+import { formatReaderTimestamp, useReaderPageOverlays } from "./reader/use-reader-page-overlays";
 
 function useMediaQuery(query: string) {
   const subscribe = useCallback((notify: () => void) => {
@@ -205,9 +81,6 @@ export function ReaderShell({
 }) {
   const { state: readerSession } = useSessionBootstrap();
   const readerAuthenticated = readerSession.status === "authenticated";
-  const [page, setPage] = useState(Math.min(Math.max(initialPage, 1), Math.max(work.pages, 1)));
-  const [zoom, setZoom] = useState(100);
-  const [query, setQuery] = useState(initialQuery);
   const [dark, setDark] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -217,778 +90,67 @@ export function ReaderShell({
   const isCompact = useMediaQuery("(max-width: 1050px)");
   const effectiveLeftOpen = isMobile ? mobileLeftOpen : leftOpen;
   const effectiveRightOpen = isCompact ? compactRightOpen : rightOpen;
-  const [access, setAccess] = useState<AccessPayload | null>(null);
-  const [accessError, setAccessError] = useState("");
-  const [documentPages, setDocumentPages] = useState(0);
-  const [pagePayloads, setPagePayloads] = useState<Record<number, PagePayload>>({});
-  const pagePayloadsRef = useRef<Record<number, PagePayload>>({});
-  const pendingPageRequests = useRef<Set<number>>(new Set());
-  const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([]);
-  const [activeSearchMatch, setActiveSearchMatch] = useState(0);
-  const [searchCandidatesOpen, setSearchCandidatesOpen] = useState(false);
-  const [passageFocus, setPassageFocus] = useState<PassageFocus | null>(null);
-  const [citationStyle, setCitationStyle] = useState<CitationStyle>("gbt7714-2025");
-  const [citations, setCitations] = useState<CitationBundle | null>(null);
-  const [annotations, setAnnotations] = useState<ReaderAnnotation[]>([]);
-  const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
-  const [annotationDraft, setAnnotationDraft] = useState<AnnotationDraft | null>(null);
-  const [focusedAnnotationId, setFocusedAnnotationId] = useState(initialFocus);
+  const { access, accessError, pagePayloads, requestPagePayload, trackDownload } = useReaderDocument({
+    assetId: work.id, workId: work.workId,
+  });
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
   const [gate, setGate] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [copyStatusState, setCopyStatusState] = useState<ActionState>("idle");
-  const [selectionTools, setSelectionTools] = useState<SelectionSnapshot | null>(null);
-  const { pendingAction, startAction, finishAction } = useActionGuard();
-  const [scrollRequest, setScrollRequest] = useState<PdfScrollRequest>({
-    page: Math.min(Math.max(initialPage, 1), Math.max(work.pages, 1)),
-    sequence: 0,
-    behavior: "auto",
+  const {
+    page, setPage, zoom, totalPages, progress, thumbnailPages, scrollRequest,
+    jumpToPage, changeZoom, onDocumentLoad, onVisiblePageChange,
+  } = useReaderNavigation({
+    initialPage, initialPageCount: work.pages, accessPageCount: access?.page_count,
   });
-  const readerDocumentRef = useRef<HTMLElement>(null);
-  const totalPages = Math.max(documentPages, access?.page_count ?? 0, work.pages, 1);
   const currentPagePayload = pagePayloads[page] ?? null;
-  const jumpToPage = useCallback((target: number, behavior: ScrollBehavior = "smooth") => {
-    const nextPage = Math.min(totalPages, Math.max(1, Math.round(target) || 1));
-    setPage(nextPage);
-    setScrollRequest((current) => ({
-      page: nextPage,
-      sequence: current.sequence + 1,
-      behavior,
-    }));
-  }, [totalPages]);
-  const changeZoom = useCallback((delta: number) => {
-    setZoom((value) => Math.min(180, Math.max(60, value + delta)));
-    setScrollRequest((current) => ({
-      page,
-      sequence: current.sequence + 1,
-      behavior: "auto",
-    }));
-  }, [page]);
   const setLeftPanel = useCallback((open: boolean) => {
     if (isMobile) setMobileLeftOpen(open);
     else setLeftOpen(open);
   }, [isMobile]);
 
-  useEffect(() => {
-    pagePayloadsRef.current = pagePayloads;
-  }, [pagePayloads]);
+  const {
+    readerDocumentRef, selectionTools, setSelectionTools, captureSelection,
+    showSelectionTools, showSelectionContextMenu, handleDocumentCopy, cleanCopy,
+  } = useReaderSelection({
+    page, pagePayloads, requestPagePayload, setCopyStatus, setCopyStatusState,
+  });
+  const {
+    annotations, bookmarks, annotationDraft, setAnnotationDraft, focusedAnnotationId,
+    setFocusedAnnotationId, bookmarkedPage, pendingAction, beginAnnotation,
+    saveAnnotation, deleteAnnotation, deleteBookmark, toggleBookmark, protectedAction, showSidebarTab,
+  } = useReaderRecords({
+    assetId: work.id, initialFocus, readerAuthenticated, page, pagePayloads, captureSelection,
+    setSelectionTools, setPage, jumpToPage, setLeftPanel, setSidebarTab, setGate,
+    setCopyStatus, setCopyStatusState,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    let refreshTimer: number | undefined;
+  useReaderPageRequest({ page, ocrStatus: access?.ocr_status, requestPagePayload });
 
-    async function loadAccess() {
-      try {
-        const payload = await apiRequest<AccessPayload>(`/distribution/assets/${work.id}/access/`);
-        if (cancelled) return;
-        const nextAccess = {
-          ...payload,
-          url: normalizePublicResourceUrl(payload.url),
-          download_url: normalizePublicResourceUrl(payload.download_url || payload.url),
-          original_download_url: payload.original_download_url
-            ? normalizePublicResourceUrl(payload.original_download_url)
-            : undefined,
-        };
-        setAccess((current) => {
-          if (current && current.ocr_status !== nextAccess.ocr_status) {
-            pagePayloadsRef.current = {};
-            pendingPageRequests.current.clear();
-            setPagePayloads({});
-          }
-          return nextAccess;
-        });
-        setAccessError("");
-        const statusRefreshSeconds = ["pending", "running"].includes(payload.ocr_status)
-          ? 20
-          : Number.POSITIVE_INFINITY;
-        const addressRefreshSeconds = payload.expires_in
-          ? Math.max(60, payload.expires_in - 120)
-          : Number.POSITIVE_INFINITY;
-        const refreshSeconds = Math.min(statusRefreshSeconds, addressRefreshSeconds);
-        if (Number.isFinite(refreshSeconds)) {
-          refreshTimer = window.setTimeout(
-            loadAccess,
-            refreshSeconds * 1000,
-          );
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          const message = error instanceof Error ? error.message : "";
-          setAccess(null);
-          setAccessError(
-            /failed to fetch|networkerror/i.test(message)
-              ? "暂时无法连接阅读文件服务，请稍后重试。"
-              : message || "公开阅读副本尚未就绪。",
-          );
-        }
-      }
-    }
+  const {
+    query, setQuery, searchMatches, setSearchMatches, activeSearchMatch,
+    searchCandidatesOpen, setSearchCandidatesOpen, passageFocus,
+    jumpToFirstSearchMatch, jumpToSearchMatch,
+  } = useReaderSearch({
+    assetId: work.id, initialQuery, initialPassage, initialEvidence, requestPagePayload, jumpToPage,
+  });
 
-    void loadAccess();
-    return () => {
-      cancelled = true;
-      if (refreshTimer) window.clearTimeout(refreshTimer);
-    };
-  }, [work.id]);
+  const { citationStyle, setCitationStyle, citations, copyCitation } = useReaderCitation({
+    editionId: work.editionId ?? access?.edition_id, page, setCopyStatus, setCopyStatusState,
+  });
 
-  useEffect(() => {
-    if (!readerAuthenticated) {
-      queueMicrotask(() => {
-        setAnnotations([]);
-        setBookmarks([]);
-      });
-      return;
-    }
-    const token = getServerSessionCredential();
-    if (!token) return;
-    let cancelled = false;
-    Promise.all([
-      apiRequest<{ results: ReaderAnnotation[] }>(
-        `/reading/annotations/?asset=${encodeURIComponent(work.id)}`,
-        {},
-        token,
-      ),
-      apiRequest<{ results: ReaderBookmark[] }>(
-        `/reading/bookmarks/?asset=${encodeURIComponent(work.id)}`,
-        {},
-        token,
-      ),
-    ])
-      .then(([annotationPayload, bookmarkPayload]) => {
-        if (cancelled) return;
-        setAnnotations(annotationPayload.results);
-        setBookmarks(bookmarkPayload.results);
-        if (initialFocus) {
-          const focused = annotationPayload.results.find((item) => item.id === initialFocus);
-          if (focused) {
-            jumpToPage(focused.selector.page_index || 1, "auto");
-            setSidebarTab(focused.kind === "note" ? "notes" : "highlights");
-            setLeftPanel(true);
-            setFocusedAnnotationId(focused.id);
-          }
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [initialFocus, jumpToPage, readerAuthenticated, setLeftPanel, work.id]);
+  useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated });
 
-  const requestPagePayload = useCallback((targetPage: number) => {
-    if (
-      targetPage < 1
-      || pagePayloadsRef.current[targetPage]
-      || pendingPageRequests.current.has(targetPage)
-    ) return;
-    pendingPageRequests.current.add(targetPage);
-    void apiRequest<PagePayload>(`/catalog/assets/${work.id}/pages/${targetPage}/`)
-      .then((payload) => {
-        pagePayloadsRef.current = {
-          ...pagePayloadsRef.current,
-          [payload.page_index]: payload,
-        };
-        setPagePayloads(pagePayloadsRef.current);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        pendingPageRequests.current.delete(targetPage);
-      });
-  }, [work.id]);
-
-  useEffect(() => {
-    requestPagePayload(page);
-  }, [access?.ocr_status, page, requestPagePayload]);
-
-  useEffect(() => {
-    if (!initialPassage) return;
-    let cancelled = false;
-    apiRequest<PassageFocus>(
-      `/catalog/passages/${encodeURIComponent(initialPassage)}/focus/`,
-    )
-      .then((payload) => {
-        if (cancelled || payload.asset_id !== work.id) return;
-        setPassageFocus(payload);
-        requestPagePayload(payload.page_index);
-        jumpToPage(payload.page_index, "auto");
-      })
-      .catch(() => {
-        if (!cancelled) setPassageFocus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialPassage, jumpToPage, requestPagePayload, work.id]);
-
-  useEffect(() => {
-    if (!initialEvidence) return;
-    let cancelled = false;
-    apiRequest<PassageFocus>(
-      `/catalog/theory-system/evidence/${encodeURIComponent(initialEvidence)}/focus/`,
-    )
-      .then((payload) => {
-        if (cancelled || payload.asset_id !== work.id) return;
-        setPassageFocus(payload);
-        requestPagePayload(payload.page_index);
-        jumpToPage(payload.page_index, "auto");
-      })
-      .catch(() => {
-        if (!cancelled) setPassageFocus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialEvidence, jumpToPage, requestPagePayload, work.id]);
-
-  useEffect(() => {
-    if (!query.trim()) {
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      apiRequest<{ matches: SearchMatch[] }>(
-        `/catalog/assets/${work.id}/search/?q=${encodeURIComponent(query.trim())}`,
-      )
-        .then((payload) => {
-          if (!cancelled) {
-            setSearchMatches(payload.matches);
-            setActiveSearchMatch(0);
-            setSearchCandidatesOpen(payload.matches.length > 0);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setSearchMatches([]);
-        });
-    }, 260);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [query, work.id]);
-
-  const editionId = work.editionId ?? access?.edition_id;
-  useEffect(() => {
-    if (!editionId) {
-      return;
-    }
-    let cancelled = false;
-    apiRequest<CitationBundle>(
-      `/catalog/editions/${editionId}/citations/?pdf_page=${page}`,
-    )
-      .then((payload) => {
-        if (!cancelled) setCitations(payload);
-      })
-      .catch(() => {
-        if (!cancelled) setCitations(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [editionId, page]);
-
-  useEffect(() => {
-    if (!readerAuthenticated) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        // Both writes are best-effort, but they target the same reader and asset.
-        // Keep them sequential so single-writer stores do not race each other.
-        await apiRequest(
-          "/reading/progress/",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              asset: work.id,
-              current_page: page,
-              progress_ratio: page / totalPages,
-              last_position: { page },
-            }),
-          },
-          token,
-        ).catch(() => undefined);
-        await apiRequest(
-          "/reading/history/",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              asset: work.id,
-              page_index: page,
-              session_seconds: 0,
-            }),
-          },
-          token,
-        ).catch(() => undefined);
-      })();
-    }, 650);
-    return () => window.clearTimeout(timer);
-  }, [page, readerAuthenticated, totalPages, work.id]);
-
-  const progress = Math.round((page / totalPages) * 100);
-  const pageOverlays = useMemo(() => {
-    const result: Record<number, PdfPageOverlay> = {};
-    const pageIndexes = new Set<number>([
-      ...Object.keys(pagePayloads).map(Number),
-      ...(query.trim() ? searchMatches.map((match) => match.page_index) : []),
-      ...(passageFocus ? [passageFocus.page_index] : []),
-      ...annotations
-        .map((annotation) => annotation.selector.page_index)
-        .filter((index): index is number => Boolean(index)),
-    ]);
-    pageIndexes.forEach((pageIndex) => {
-      const payload = pagePayloads[pageIndex];
-      const match = query.trim()
-        ? searchMatches.find((item) => item.page_index === pageIndex)
-        : undefined;
-      const focusedPassage = passageFocus?.page_index === pageIndex
-        ? passageFocus
-        : undefined;
-      result[pageIndex] = {
-        sourceWidth: payload?.width || match?.width || focusedPassage?.width || 0,
-        sourceHeight: payload?.height || match?.height || focusedPassage?.height || 0,
-        canonicalBlocks: payload?.blocks ?? [],
-        highlights: [
-          ...(focusedPassage?.bbox?.length === 4
-            ? [{
-                bbox: focusedPassage.bbox,
-                kind: "search" as const,
-              }]
-            : []),
-          ...(match?.highlights ?? []).map((highlight) => ({
-            bbox: highlight.bbox,
-            kind: "search" as const,
-          })),
-          ...annotations
-            .filter((annotation) => annotation.selector.page_index === pageIndex)
-            .flatMap((annotation) =>
-              (annotation.selector.bboxes ?? []).map((bbox) => ({
-                bbox,
-                kind: annotation.kind,
-              })),
-            ),
-        ],
-        notes: annotations
-          .filter(
-            (annotation) =>
-              annotation.kind === "note"
-              && annotation.selector.page_index === pageIndex,
-          )
-          .map((annotation) => ({
-            id: annotation.id,
-            bbox: annotation.selector.bboxes?.[0] ?? null,
-            body: annotation.body_text,
-            quote: annotation.quote,
-            createdAt: formatReaderTimestamp(annotation.created_at),
-            focused: annotation.id === focusedAnnotationId,
-          })),
-      };
-    });
-    return result;
-  }, [annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches]);
+  const pageOverlays = useReaderPageOverlays({
+    annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches,
+  });
   const readerOutline = outline.map((item) => [item.chapter_title, item.index] as const);
   const currentOutline = [...outline]
     .reverse()
     .find((item) => item.index <= page);
-  const thumbnailPages = useMemo(() => {
-    if (totalPages <= 400) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
-    }
-    const start = Math.max(1, Math.min(page - 120, totalPages - 239));
-    return Array.from({ length: 240 }, (_, index) => start + index);
-  }, [page, totalPages]);
-  const bookmarkedPage = Boolean(
-    currentPagePayload &&
-    bookmarks.some((bookmark) => bookmark.page === currentPagePayload.page_id),
-  );
-  const onDocumentLoad = useCallback((pages: number) => {
-    setDocumentPages(pages);
-  }, []);
-  const onVisiblePageChange = useCallback((visiblePage: number) => {
-    setPage((current) => current === visiblePage ? current : visiblePage);
-  }, []);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("page", String(page));
-    window.history.replaceState(window.history.state, "", url);
-  }, [page]);
-
-  function protectedAction(label: string) {
-    if (!readerAuthenticated) {
-      setGate(label);
-      return;
-    }
-    setGate(null);
-    if (label === "书签") {
-      void toggleBookmark();
-      return;
-    }
-    if (label === "笔记") {
-      beginAnnotation("note");
-      return;
-    }
-    beginAnnotation("highlight");
-  }
-
-  function captureSelection(clientX?: number, clientY?: number): SelectionSnapshot | null {
-    const selection = window.getSelection();
-    const quote = selection?.toString().trim() ?? "";
-    if (!quote || !selection?.rangeCount) return null;
-    const anchorElement = selection?.anchorNode instanceof Element
-      ? selection.anchorNode
-      : selection?.anchorNode?.parentElement;
-    if (!anchorElement || !readerDocumentRef.current?.contains(anchorElement)) return null;
-    const selectedStage = anchorElement?.closest<HTMLElement>(
-      ".pdf-canvas-stage[data-page-number]",
-    );
-    const stage = selectedStage;
-    const targetPage = Number(stage?.dataset.pageNumber) || page;
-    const targetPagePayload = pagePayloads[targetPage];
-    if (!stage || !targetPagePayload) {
-      requestPagePayload(targetPage);
-      setCopyStatus("该页规范文字层尚未就绪，请稍后再试");
-      setCopyStatusState("idle");
-      return null;
-    }
-    const range = selection.getRangeAt(0);
-    const stageRect = stage.getBoundingClientRect();
-    const rangeRects = Array.from(range.getClientRects())
-      .filter((rect) => (
-        rect.width > 1
-        && rect.height > 1
-        && rect.right > stageRect.left
-        && rect.left < stageRect.right
-        && rect.bottom > stageRect.top
-        && rect.top < stageRect.bottom
-      ));
-    const bboxes =
-      rangeRects.map((rect) => [
-        Math.max(0, ((rect.left - stageRect.left) / stageRect.width) * targetPagePayload.width),
-        Math.max(0, ((rect.top - stageRect.top) / stageRect.height) * targetPagePayload.height),
-        Math.min(targetPagePayload.width, ((rect.right - stageRect.left) / stageRect.width) * targetPagePayload.width),
-        Math.min(targetPagePayload.height, ((rect.bottom - stageRect.top) / stageRect.height) * targetPagePayload.height),
-      ]);
-    if (!bboxes.length) return null;
-    const lastRect = rangeRects.at(-1);
-    return {
-      pageIndex: targetPage,
-      pageId: targetPagePayload.page_id,
-      quote,
-      bboxes,
-      x: Math.min(
-        Math.max(clientX ?? lastRect?.left ?? stageRect.left, 12),
-        Math.max(window.innerWidth - 330, 12),
-      ),
-      y: Math.min(
-        Math.max(clientY ?? (lastRect?.bottom ?? stageRect.top) + 10, 12),
-        Math.max(window.innerHeight - 70, 12),
-      ),
-    };
-  }
-
-  function showSelectionTools(event: ReactMouseEvent<HTMLElement>) {
-    window.setTimeout(() => {
-      const snapshot = captureSelection(event.clientX, event.clientY + 8);
-      setSelectionTools(snapshot);
-    }, 0);
-  }
-
-  function showSelectionContextMenu(event: ReactMouseEvent<HTMLElement>) {
-    const snapshot = captureSelection(event.clientX, event.clientY);
-    if (!snapshot) return;
-    event.preventDefault();
-    setSelectionTools(snapshot);
-  }
-
-  function beginAnnotation(
-    kind: AnnotationDraft["kind"],
-    snapshot: SelectionSnapshot | null = captureSelection(),
-  ) {
-    if (!readerAuthenticated) {
-      setGate(kind === "note" ? "笔记" : kind === "underline" ? "划线" : "高亮");
-      return;
-    }
-    if (!snapshot) {
-      setCopyStatus("请先在 PDF 页面选择文字");
-      setCopyStatusState("idle");
-      return;
-    }
-    setPage(snapshot.pageIndex);
-    const draft: AnnotationDraft = {
-      kind,
-      pageIndex: snapshot.pageIndex,
-      pageId: snapshot.pageId,
-      quote: snapshot.quote,
-      bboxes: snapshot.bboxes,
-      body: "",
-    };
-    setSelectionTools(null);
-    if (kind === "note") {
-      setAnnotationDraft(draft);
-      return;
-    }
-    void persistAnnotation(draft);
-  }
-
-  async function persistAnnotation(draft: AnnotationDraft) {
-    if (!readerAuthenticated) {
-      setGate(draft.kind === "note" ? "笔记" : draft.kind === "underline" ? "划线" : "高亮");
-      return;
-    }
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = "save-annotation";
-    if (!startAction(actionKey)) return;
-    setCopyStatus(draft.kind === "note" ? "正在保存笔记……" : draft.kind === "underline" ? "正在保存划线……" : "正在保存高亮……");
-    setCopyStatusState("pending");
-    try {
-      const created = await apiRequest<ReaderAnnotation>(
-        "/reading/annotations/",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            asset: work.id,
-            page: draft.pageId,
-            kind: draft.kind,
-            quote: draft.quote,
-            body: draft.body,
-            color: "yellow",
-            selector: {
-              type: "TextQuoteSelector",
-              exact: draft.quote,
-              page_index: draft.pageIndex,
-              bboxes: draft.bboxes,
-            },
-          }),
-        },
-        token,
-      );
-      setAnnotations((items) => [created, ...items]);
-      setAnnotationDraft(null);
-      setFocusedAnnotationId(created.id);
-      setCopyStatus(draft.kind === "note" ? "笔记已保存" : draft.kind === "underline" ? "划线已保存" : "高亮已保存");
-      setCopyStatusState("success");
-      window.getSelection()?.removeAllRanges();
-    } catch (error) {
-      setCopyStatus(error instanceof Error ? error.message : "批注保存失败");
-      setCopyStatusState("error");
-    } finally {
-      finishAction(actionKey);
-    }
-  }
-
-  async function saveAnnotation() {
-    if (annotationDraft) await persistAnnotation(annotationDraft);
-  }
-
-  async function deleteAnnotation(annotationId: string) {
-    if (!readerAuthenticated) return;
-    const annotation = annotations.find((item) => item.id === annotationId);
-    if (!annotation || !window.confirm(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`)) {
-      return;
-    }
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = `delete-annotation:${annotationId}`;
-    if (!startAction(actionKey)) return;
-    setCopyStatus("正在删除个人阅读记录……");
-    setCopyStatusState("pending");
-    try {
-      await apiRequest(`/reading/annotations/${annotationId}/`, { method: "DELETE" }, token);
-      setAnnotations((items) => items.filter((item) => item.id !== annotationId));
-      if (focusedAnnotationId === annotationId) setFocusedAnnotationId("");
-      setCopyStatus("个人阅读记录已删除");
-      setCopyStatusState("success");
-    } catch (error) {
-      setCopyStatus(error instanceof Error ? error.message : "删除失败");
-      setCopyStatusState("error");
-    } finally {
-      finishAction(actionKey);
-    }
-  }
-
-  async function deleteBookmark(bookmarkId: string) {
-    if (!readerAuthenticated) return;
-    if (!window.confirm("确定删除这个书签吗？")) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = `delete-bookmark:${bookmarkId}`;
-    if (!startAction(actionKey)) return;
-    setCopyStatus("正在删除书签……");
-    setCopyStatusState("pending");
-    try {
-      await apiRequest(`/reading/bookmarks/${bookmarkId}/`, { method: "DELETE" }, token);
-      setBookmarks((items) => items.filter((item) => item.id !== bookmarkId));
-      setCopyStatus("书签已删除");
-      setCopyStatusState("success");
-    } catch (error) {
-      setCopyStatus(error instanceof Error ? error.message : "书签删除失败");
-      setCopyStatusState("error");
-    } finally {
-      finishAction(actionKey);
-    }
-  }
-
-  async function toggleBookmark(snapshot?: SelectionSnapshot | null) {
-    if (!readerAuthenticated) {
-      setGate("书签");
-      return;
-    }
-    const token = getServerSessionCredential();
-    if (!token) {
-      setGate("书签");
-      return;
-    }
-    const targetPagePayload = snapshot
-      ? pagePayloads[snapshot.pageIndex]
-      : currentPagePayload;
-    const targetPageIndex = snapshot?.pageIndex ?? page;
-    if (!targetPagePayload) {
-      setCopyStatus("页面信息尚未就绪");
-      setCopyStatusState("idle");
-      return;
-    }
-    const existing = bookmarks.find((bookmark) => bookmark.page === targetPagePayload.page_id);
-    const actionKey = `toggle-bookmark:${targetPagePayload.page_id}`;
-    if (!startAction(actionKey)) return;
-    setCopyStatus(existing ? "正在移除书签……" : "正在保存书签……");
-    setCopyStatusState("pending");
-    try {
-      if (existing) {
-        await apiRequest(
-          `/reading/bookmarks/${existing.id}/`,
-          { method: "DELETE" },
-          token,
-        );
-        setBookmarks((items) => items.filter((bookmark) => bookmark.id !== existing.id));
-        setCopyStatus("书签已移除");
-        setCopyStatusState("success");
-      } else {
-        const created = await apiRequest<ReaderBookmark>(
-          "/reading/bookmarks/",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              asset: work.id,
-              page: targetPagePayload.page_id,
-              label: targetPagePayload.chapter_title || `PDF 第 ${targetPageIndex} 页`,
-            }),
-          },
-          token,
-        );
-        setBookmarks((items) => [created, ...items]);
-        setCopyStatus("书签已保存");
-        setCopyStatusState("success");
-      }
-      setSelectionTools(null);
-    } catch (error) {
-      setCopyStatus(error instanceof Error ? error.message : "书签操作失败");
-      setCopyStatusState("error");
-    } finally {
-      finishAction(actionKey);
-    }
-  }
-
-  function cleanTextLocally(value: string) {
-    return value
-      .replace(/\u00ad/g, "")
-      .replace(/(\p{L})-\s*\n\s*(\p{L})/gu, "$1$2")
-      .replace(/[ \t]*\n[ \t]*\n+[ \t]*/g, "\n\n")
-      .replace(/[ \t]*\n[ \t]*/g, " ")
-      .replace(/[ \t]{2,}/g, " ")
-      .replace(/\s+([,.;:!?，。；：！？])/g, "$1")
-      .trim();
-  }
-
-  function handleDocumentCopy(event: ReactClipboardEvent<HTMLElement>) {
-    const selection = window.getSelection();
-    const selected = selection?.toString() ?? "";
-    const anchorElement = selection?.anchorNode instanceof Element
-      ? selection.anchorNode
-      : selection?.anchorNode?.parentElement;
-    if (!selected.trim() || !anchorElement || !readerDocumentRef.current?.contains(anchorElement)) return;
-    event.preventDefault();
-    event.clipboardData.setData("text/plain", cleanTextLocally(selected));
-    setCopyStatus("已自动清理复制格式");
-    setCopyStatusState("success");
-  }
-
-  async function cleanCopy(selectedText?: string) {
-    const selected = selectedText?.trim() || window.getSelection()?.toString().trim();
-    if (!selected) {
-      setCopyStatus("请先选择正文");
-      setCopyStatusState("idle");
-      return;
-    }
-    try {
-      const payload = await apiRequest<{ text: string; html: string }>("/catalog/clean-copy/", {
-        method: "POST",
-        body: JSON.stringify({ text: selected }),
-      });
-      if ("ClipboardItem" in window && navigator.clipboard.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/plain": new Blob([payload.text], { type: "text/plain" }),
-            "text/html": new Blob([payload.html], { type: "text/html" }),
-          }),
-        ]);
-      } else {
-        await navigator.clipboard.writeText(payload.text);
-      }
-      setCopyStatus("已清理并复制");
-      setCopyStatusState("success");
-    } catch {
-      await navigator.clipboard.writeText(cleanTextLocally(selected));
-      setCopyStatus("已在浏览器中清理并复制");
-      setCopyStatusState("success");
-    }
-    setSelectionTools(null);
-    window.getSelection()?.removeAllRanges();
-  }
-
-  async function copyCitation() {
-    const text = citations?.[citationStyle];
-    if (!text) {
-      setCopyStatus("引用数据尚未就绪");
-      setCopyStatusState("idle");
-      return;
-    }
-    await navigator.clipboard.writeText(text);
-    setCopyStatus("引用已复制");
-    setCopyStatusState("success");
-  }
-
-  function jumpToFirstSearchMatch() {
-    if (searchMatches[0]) {
-      jumpToSearchMatch(0);
-    }
-  }
-
-  function jumpToSearchMatch(index: number) {
-    const match = searchMatches[index];
-    if (!match) return;
-    setActiveSearchMatch(index);
-    setSearchCandidatesOpen(false);
-    setPassageFocus(null);
-    requestPagePayload(match.page_index);
-    jumpToPage(match.page_index);
-  }
-
   function setRightPanel(open: boolean) {
     if (isCompact) setCompactRightOpen(open);
     else setRightOpen(open);
-  }
-
-  function showSidebarTab(tab: SidebarTab, label?: string) {
-    if (
-      label
-      && !readerAuthenticated
-      && ["highlights", "bookmarks", "notes"].includes(tab)
-    ) {
-      setGate(label);
-      return;
-    }
-    setSidebarTab(tab);
-    setLeftPanel(true);
   }
 
   return (
@@ -1092,7 +254,7 @@ export function ReaderShell({
             label="问这本书"
             className="reader-ask-library"
           />
-          {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={() => { void apiRequest("/catalog/usage-events/", { method: "POST", body: JSON.stringify({ event_type: "download", asset_id: work.id, work_id: work.workId, source: "reader" }) }).catch(() => undefined); }}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
+          {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={trackDownload}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
           <button type="button" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
           <ActionButton className={bookmarkedPage ? "active" : ""} type="button" state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} pressed={bookmarkedPage} onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></ActionButton>
         </div>

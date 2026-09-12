@@ -10,6 +10,7 @@ const researchUrl = new URL("../components/admin/research/research-suggestion-pa
 const previewUrl = new URL("../components/admin/preview/work-page-preview.tsx", import.meta.url);
 const routeTransitionUrl = new URL("../components/route-transition.tsx", import.meta.url);
 const readerShellUrl = new URL("../components/reader-shell.tsx", import.meta.url);
+const readerRecordsUrl = new URL("../components/reader/use-reader-records.ts", import.meta.url);
 const theoryAdminUrl = new URL("../components/theory-system-admin.tsx", import.meta.url);
 const saveWorkUrl = new URL("../components/save-work-button.tsx", import.meta.url);
 const saveTopicUrl = new URL("../components/save-topic-button.tsx", import.meta.url);
@@ -113,16 +114,18 @@ test("interaction feedback preserves warm neutral styling and reduced motion", a
 });
 
 test("reader and curation mutations use synchronous action guards", async () => {
-  const [reader, theory, saveWork, saveTopic] = await Promise.all([
+  const [reader, records, theory, saveWork, saveTopic] = await Promise.all([
     readFile(readerShellUrl, "utf8"),
+    readFile(readerRecordsUrl, "utf8"),
     readFile(theoryAdminUrl, "utf8"),
     readFile(saveWorkUrl, "utf8"),
     readFile(saveTopicUrl, "utf8"),
   ]);
 
-  assert.match(reader, /const actionKey = "save-annotation";[\s\S]*startAction\(actionKey\)/);
-  assert.match(reader, /const actionKey = `toggle-bookmark:/);
-  assert.match(reader, /finishAction\(actionKey\)/);
+  assert.match(reader, /useReaderRecords\(/);
+  assert.match(records, /const actionKey = "save-annotation";[\s\S]*startAction\(actionKey\)/);
+  assert.match(records, /const actionKey = `toggle-bookmark:/);
+  assert.match(records, /finishAction\(actionKey\)/);
   assert.match(theory, /startAction\(actionKey\)/);
   assert.match(theory, /create-timeline-event/);
   assert.match(theory, /create-reading-path/);

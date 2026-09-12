@@ -1,6 +1,6 @@
 {
   "name": "social-theory-library-web",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -31,7 +31,7 @@
     "cross-env": "^10.1.0",
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.27.0",
-    "next": "16.2.12",
+    "next": "16.3.5",
     "pdfjs-dist": "^5.4.530",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -40,7 +40,7 @@
     "vite": "8.2.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.50.0",
+    "@cloudflare/vite-plugin": "1.54.8",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
@@ -48,16 +48,16 @@
     "@types/react-dom": "19.2.3",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.5",
     "openapi-typescript": "7.13.0",
     "tailwindcss": "4.2.1",
     "tsx": "^4.22.1",
     "typescript": "5.9.3",
-    "wrangler": "4.118.0"
+    "wrangler": "4.131.1"
   },
   "overrides": {
     "postcss": "8.5.25",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   },
   "type": "module"
 }
