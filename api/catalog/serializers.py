@@ -4,9 +4,17 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from uuid import UUID
 
 from common.capabilities import Capability, has_capability
+from .media_views import PublicCoverMediaSerializer
+from .public_response_serializers import (
+    PublicClassificationLinkSerializer, PublicContributionSnapshotSerializer,
+    PublicEntityLinkSerializer, PublicJournalContentSerializer,
+    PublicOutlineItemSerializer, PublicTheoryAssociationSerializer,
+    ReaderManifestBaseSerializer,
+)
 
 from .models import (
     AboutPageBlock,
@@ -356,7 +364,7 @@ class PersonCompactSerializer(serializers.ModelSerializer):
             "scholar_slug",
         )
 
-    def get_scholar_slug(self, obj):
+    def get_scholar_slug(self, obj) -> str | None:
         profile = getattr(obj, "scholar_profile", None)
         if (
             profile
@@ -366,11 +374,12 @@ class PersonCompactSerializer(serializers.ModelSerializer):
             return profile.slug
         return None
 
-    def get_portrait(self, obj):
+    def get_portrait(self, obj) -> str:
         if obj.portrait_rendition_id:
             return f"/api/catalog/people/{obj.pk}/portrait/?rendition={obj.portrait_rendition_id}" if self.get_scholar_slug(obj) else ""
         return obj.portrait.url if obj.portrait else ""
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_portrait_media(self, obj):
         if not obj.portrait_rendition_id or not self.get_scholar_slug(obj):
             return None
@@ -479,6 +488,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "readable_asset",
         )
 
+    @extend_schema_field(PublicJournalContentSerializer(many=True))
     def get_journal_contents(self, obj):
         from catalog.services.journal_issues import journal_contents_snapshot, public_journal_contents
 
@@ -489,6 +499,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             rows = snapshot.get("journal_contents", []) if snapshot else []
         return public_journal_contents(rows)
 
+    @extend_schema_field(PublicContributionSnapshotSerializer(many=True))
     def get_contributors(self, obj):
         snapshot = active_catalog_snapshot(obj)
         if snapshot:
@@ -508,6 +519,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
         queryset = obj.contributions.filter(approved=True).select_related("person")
         return ContributionSerializer(queryset, many=True).data
 
+    @extend_schema_field(AssetCompactSerializer(allow_null=True))
     def get_readable_asset(self, obj):
         queryset = obj.assets.filter(
             kind=Asset.Kind.NORMALIZED,
@@ -623,7 +635,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
     def _public_snapshot(self, obj):
         return self._public_catalog(obj)[1]
 
-    def get_cover(self, obj):
+    def get_cover(self, obj) -> str:
         snapshot = self._public_snapshot(obj)
         media = (snapshot.get("work") or {}).get("cover_media") if snapshot else None
         if media:
@@ -641,10 +653,11 @@ class WorkCardSerializer(serializers.ModelSerializer):
         # ``http://localhost:8000`` into server-rendered HTML.
         return reverse("public-work-cover", kwargs={"work_id": obj.id})
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
         return (self._public_snapshot(obj).get("work") or {}).get("cover_media")
 
-    def get_recommendation_image(self, obj):
+    def get_recommendation_image(self, obj) -> str:
         media = self.get_recommendation_media(obj)
         if media:
             return reverse("public-work-recommendation-image", kwargs={"work_id": obj.pk}) + f"?rendition={media['primary_rendition_id']}"
@@ -663,10 +676,12 @@ class WorkCardSerializer(serializers.ModelSerializer):
             kwargs={"work_id": obj.id},
         )
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_recommendation_media(self, obj):
         values = self._public_snapshot(obj).get("work") or {}
         return values.get("recommendation_media") if values.get("recommendation_image") else values.get("cover_media")
 
+    @extend_schema_field(EditionCompactSerializer(allow_null=True))
     def get_edition(self, obj):
         edition = self._public_edition(obj)
         return EditionCompactSerializer(edition, context=self.context).data if edition else None
@@ -684,6 +699,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
                 values.append({"id": str(target.id), "name": target.name, "slug": target.slug})
         return values
 
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
     def get_theories(self, obj):
         snapshot = self._public_snapshot(obj)
         if snapshot:
@@ -721,6 +737,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             values.append(row)
         return values
 
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
     def get_topics(self, obj):
         snapshot = self._public_snapshot(obj)
         if snapshot:
@@ -752,6 +769,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             values.append(row)
         return values
 
+    @extend_schema_field(PublicClassificationLinkSerializer(many=True))
     def get_disciplines(self, obj):
         snapshot = self._public_snapshot(obj)
         if snapshot:
@@ -769,6 +787,7 @@ class WorkCardSerializer(serializers.ModelSerializer):
             ).select_related("discipline")
         ]
 
+    @extend_schema_field(PublicClassificationLinkSerializer(many=True))
     def get_subdisciplines(self, obj):
         snapshot = self._public_snapshot(obj)
         if snapshot:
@@ -827,6 +846,7 @@ class WorkDetailSerializer(WorkCardSerializer):
             "curated_claims",
         )
 
+    @extend_schema_field(EditionCompactSerializer(many=True))
     def get_editions(self, obj):
         editions = public_editions().filter(work=obj).prefetch_related(
             "contributions__person",
@@ -834,6 +854,7 @@ class WorkDetailSerializer(WorkCardSerializer):
         )
         return EditionCompactSerializer(editions, many=True, context=self.context).data
 
+    @extend_schema_field(PublicOutlineItemSerializer(many=True))
     def get_outline(self, obj):
         edition = public_editions().filter(work=obj, is_primary=True).first()
         if not edition:
@@ -856,6 +877,7 @@ class WorkDetailSerializer(WorkCardSerializer):
             for page in asset.pages.exclude(chapter_title="").order_by("index")
         ]
 
+    @extend_schema_field(PublicTheoryAssociationSerializer(many=True))
     def get_theory_associations(self, obj):
         public_evidence = EvidenceSnippet.objects.filter(
             review_status=RelationReviewStatus.APPROVED,
@@ -914,6 +936,10 @@ class WorkDetailSerializer(WorkCardSerializer):
             for relation in relations
         ]
 
+    @extend_schema_field(serializers.DictField(
+        child=serializers.ListField(child=serializers.JSONField()),
+        help_text="Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract.",
+    ))
     def get_curated_claims(self, obj):
         """Expose evidence-backed human curation, never machine-only claims."""
         allowed_kinds = (
@@ -926,6 +952,10 @@ class WorkDetailSerializer(WorkCardSerializer):
             target_id=obj.id,
             allowed_kinds=allowed_kinds,
         )
+
+
+class ReaderManifestSerializer(ReaderManifestBaseSerializer):
+    work = WorkCardSerializer()
 
 
 class AdminWorkPagePreviewSerializer(WorkDetailSerializer):

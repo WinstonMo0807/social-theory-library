@@ -511,7 +511,7 @@ test("reader suppresses only expected PDF.js cancellations during responsive rer
 
 test("reader serializes independent progress and history writes", async () => {
   const source = await readFile(
-    new URL("../components/reader-shell.tsx", import.meta.url),
+    new URL("../components/reader/use-reader-progress.ts", import.meta.url),
     "utf8",
   );
   const progressStart = source.indexOf('"/reading/progress/"');

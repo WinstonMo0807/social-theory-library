@@ -18,6 +18,9 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
+from .public_response_serializers import ReaderPageContentSerializer
+from .serializers import ReaderManifestSerializer
 from urllib.parse import urlparse
 
 from .editorial_read import AdminEditorialDraftReadMixin, AdminPrivateResponseMixin
@@ -3303,6 +3306,7 @@ class PassageFocusView(APIView):
 class PublicAssetManifestView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=ReaderManifestSerializer)
     def get(self, request, asset_id):
         asset = get_object_or_404(
             Asset.objects.select_related("edition__work").filter(
@@ -3380,6 +3384,7 @@ class PublicAssetManifestView(APIView):
 class PublicPageContentView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=ReaderPageContentSerializer)
     def get(self, request, asset_id, page_index):
         asset = get_object_or_404(
             Asset.objects.filter(active_asset_q(asset_prefix="")),

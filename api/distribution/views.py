@@ -14,8 +14,10 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 
 from catalog.models import Asset, OcrStatus, ReaderRenditionPolicy
+from catalog.public_response_serializers import ReaderAssetAccessSerializer
 from catalog.services.publication_eligibility import active_asset_q, active_document_q
 from accounts.ownership import is_library_owner
 from common.permissions import (
@@ -200,6 +202,10 @@ def _x_accel_response(
 class AssetAccessView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        responses=ReaderAssetAccessSerializer,
+        parameters=[OpenApiParameter("download", str, description="original selects the original PDF; 1 or true selects the preferred download.")],
+    )
     def get(self, request, asset_id):
         anchor = _public_asset(asset_id, request)
         download_mode = _download_mode(request)

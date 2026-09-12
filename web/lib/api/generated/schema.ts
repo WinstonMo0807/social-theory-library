@@ -7,7 +7,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_catalog_field_contracts_retrieve"];
+        get: operations["catalog_admin_catalog_field_contracts_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -25,7 +25,7 @@ export interface paths {
         };
         get: operations["cataloging_sessions_list"];
         put?: never;
-        post: operations["admin_cataloging_sessions_create"];
+        post: operations["catalog_admin_cataloging_sessions_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -57,7 +57,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_cataloging_sessions_abandon_create"];
+        post: operations["catalog_admin_cataloging_sessions_abandon_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -73,7 +73,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_cataloging_sessions_candidates_decision_create"];
+        post: operations["catalog_admin_cataloging_sessions_candidates_decision_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -89,7 +89,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_cataloging_sessions_metadata_decision_create"];
+        post: operations["catalog_admin_cataloging_sessions_metadata_decision_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -105,7 +105,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_cataloging_sessions_metadata_import_create"];
+        post: operations["catalog_admin_cataloging_sessions_metadata_import_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -121,7 +121,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_editions_media_cover_create"];
+        post: operations["catalog_admin_editions_media_cover_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -137,7 +137,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_editions_media_recommendation_create"];
+        post: operations["catalog_admin_editions_media_recommendation_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -151,7 +151,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_editions_publication_history_list"];
+        get: operations["catalog_admin_editions_publication_history_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -167,7 +167,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_editions_publication_prepare_retrieve"];
+        get: operations["catalog_admin_editions_publication_prepare_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -185,7 +185,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_editions_publication_rollback_create"];
+        post: operations["catalog_admin_editions_publication_rollback_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -199,9 +199,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_knowledge_media_retrieve"];
+        get: operations["catalog_admin_knowledge_media_retrieve"];
         put?: never;
-        post: operations["admin_knowledge_media_create"];
+        post: operations["catalog_admin_knowledge_media_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -215,9 +215,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_media_list"];
+        get: operations["catalog_admin_media_list"];
         put?: never;
-        post: operations["admin_media_create"];
+        post: operations["catalog_admin_media_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -231,13 +231,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_media_retrieve"];
+        get: operations["catalog_admin_media_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["admin_media_partial_update"];
+        patch: operations["catalog_admin_media_partial_update"];
         trace?: never;
     };
     "/api/catalog/admin/media/{media_id}/renditions/": {
@@ -249,7 +249,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_media_renditions_create"];
+        post: operations["catalog_admin_media_renditions_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -263,7 +263,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_people_retrieve"];
+        get: operations["catalog_admin_people_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -279,7 +279,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_people_duplicates_retrieve"];
+        get: operations["catalog_admin_people_duplicates_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -297,7 +297,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_people_merge_create"];
+        post: operations["catalog_admin_people_merge_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -311,7 +311,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_people_merge_preview_retrieve"];
+        get: operations["catalog_admin_people_merge_preview_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -327,7 +327,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_people_merge_records_list"];
+        get: operations["catalog_admin_people_merge_records_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -343,7 +343,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_people_merge_records_retrieve"];
+        get: operations["catalog_admin_people_merge_records_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -361,7 +361,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["admin_people_merge_records_rollback_create"];
+        post: operations["catalog_admin_people_merge_records_rollback_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -375,9 +375,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_scholars_portrait_retrieve"];
+        get: operations["catalog_admin_scholars_portrait_retrieve"];
         put?: never;
-        post: operations["admin_scholars_portrait_create"];
+        post: operations["catalog_admin_scholars_portrait_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -391,7 +391,71 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["admin_works_recommendation_image_metadata_retrieve"];
+        get: operations["catalog_admin_works_recommendation_image_metadata_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/assets/{asset_id}/manifest/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_assets_manifest_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/assets/{asset_id}/pages/{page_index}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_assets_pages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/works/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_works_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/works/{slug}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_works_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -407,7 +471,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["works_cover_metadata_retrieve"];
+        get: operations["catalog_works_cover_metadata_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -423,7 +487,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["works_recommendation_image_metadata_retrieve"];
+        get: operations["catalog_works_recommendation_image_metadata_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/distribution/assets/{asset_id}/access/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_assets_access_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -436,6 +516,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `inherit` - 继承版本权限
+         *     * `private` - 仅后台可用
+         *     * `registered` - 登录读者
+         *     * `restricted` - 受限访问
+         *     * `public` - 公开访问
+         * @enum {string}
+         */
+        AccessStatusEnum: "inherit" | "private" | "registered" | "restricted" | "public";
         ApiError: {
             code: string;
             message: string;
@@ -443,6 +532,31 @@ export interface components {
             severity: components["schemas"]["SeverityEnum"];
             details: unknown;
         };
+        AssetCompact: {
+            /** Format: uuid */
+            readonly id: string;
+            kind: components["schemas"]["AssetCompactKindEnum"];
+            original_filename?: string;
+            mime_type?: string;
+            /** Format: int64 */
+            page_count?: number;
+            /** Format: int64 */
+            byte_size?: number;
+            sha256: string;
+            /** Format: double */
+            text_layer_quality?: number | null;
+            language_guess?: string;
+            access_status?: components["schemas"]["AccessStatusEnum"];
+            rights_note?: string;
+        };
+        /**
+         * @description * `original` - 原始文件
+         *     * `normalized` - 规范阅读文件
+         *     * `ocr_pdf` - OCR 阅读文件
+         *     * `web_derivative` - 网页阅读派生文件
+         * @enum {string}
+         */
+        AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
         /**
          * @description * `link_existing` - link_existing
          *     * `create_draft` - create_draft
@@ -546,15 +660,41 @@ export interface components {
          * @enum {string}
          */
         DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
-        /**
-         * @description * `cover` - cover
-         *     * `portrait` - portrait
-         *     * `hero` - hero
-         *     * `card` - card
-         *     * `thumbnail` - thumbnail
-         * @enum {string}
-         */
-        KindEnum: "cover" | "portrait" | "hero" | "card" | "thumbnail";
+        EditionCompact: {
+            /** Format: uuid */
+            readonly id: string;
+            public_slug?: (string) | null;
+            version_label?: string;
+            readonly edition_statement: string;
+            /** Format: date */
+            publication_date?: string | null;
+            /** Format: int64 */
+            publication_year?: number | null;
+            publisher?: string;
+            readonly publisher_verbatim: string;
+            /** Format: uuid */
+            publisher_authority?: string | null;
+            publication_place?: string;
+            readonly publication_place_verbatim: string;
+            distribution_place?: string;
+            distributor?: string;
+            manufacture_place?: string;
+            manufacturer?: string;
+            journal_title?: string;
+            readonly journal_contents: components["schemas"]["PublicJournalContent"][];
+            volume?: string;
+            issue?: string;
+            page_range?: string;
+            isbn?: string;
+            isbn10?: string;
+            isbn13?: string;
+            doi?: string;
+            series?: string;
+            extent?: string;
+            responsibility_statement?: string;
+            readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
+            readonly readable_asset: components["schemas"]["AssetCompact"] | null;
+        };
         KnowledgeImageRequestRequest: {
             /** Format: uuid */
             media_id: string | null;
@@ -616,11 +756,20 @@ export interface components {
             byte_size: number;
             readonly url: string;
         };
+        /**
+         * @description * `cover` - cover
+         *     * `portrait` - portrait
+         *     * `hero` - hero
+         *     * `card` - card
+         *     * `thumbnail` - thumbnail
+         * @enum {string}
+         */
+        MediaRenditionRequestKindEnum: "cover" | "portrait" | "hero" | "card" | "thumbnail";
         MediaRenditionRequestRequest: {
             /** @default 640 */
             width: components["schemas"]["WidthEnum"];
             /** @default cover */
-            kind: components["schemas"]["KindEnum"];
+            kind: components["schemas"]["MediaRenditionRequestKindEnum"];
         };
         /**
          * @description * `upload` - 人工上传
@@ -662,6 +811,21 @@ export interface components {
          * @enum {string}
          */
         ObjectTypeEnum: "knowledge_node" | "reading_path";
+        PaginatedWorkCardList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["WorkCard"][];
+        };
         PatchedMediaMetadataRequest: {
             /** Format: date-time */
             expected_updated_at?: string;
@@ -803,6 +967,18 @@ export interface components {
             results: components["schemas"]["PersonResolutionSummary"][];
             has_more: boolean;
         };
+        PublicClassificationLink: {
+            /** Format: uuid */
+            id: string | null;
+            name: string;
+            slug: string;
+            is_primary: boolean;
+        };
+        PublicContributionSnapshot: {
+            role: string;
+            order: number;
+            person: components["schemas"]["PublicPersonSnapshot"];
+        };
         PublicCoverMedia: {
             /** Format: uuid */
             media_id: string;
@@ -816,12 +992,76 @@ export interface components {
             credit: string;
             renditions: components["schemas"]["PublicMediaRendition"][];
         };
+        PublicEntityLink: {
+            /** Format: uuid */
+            id: string | null;
+            name: string;
+            slug: string;
+        };
+        PublicJournalContent: {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: uuid */
+            article_work_id?: string | null;
+            title: string;
+            author_display: string;
+            page_range: string;
+            position: number;
+            article_href: string;
+        };
         PublicMediaRendition: {
             /** Format: uuid */
             id: string;
             width: number;
             height: number;
             url: string;
+        };
+        PublicOutlineItem: {
+            index: number;
+            file_page_index?: number;
+            printed_label: string;
+            chapter_title: string;
+        };
+        PublicPersonSnapshot: {
+            /** Format: uuid */
+            id: string | null;
+            preferred_name: string;
+            original_name?: string;
+            aliases?: string[];
+            authority_status?: string;
+            birth_year?: number | null;
+            death_year?: number | null;
+            biography?: string;
+            portrait?: string;
+            /** @description Historical snapshot media is retained as JSON. */
+            portrait_media?: unknown;
+            scholar_slug?: string | null;
+        };
+        PublicTheoryAssociation: {
+            /** Format: uuid */
+            id: string;
+            node: components["schemas"]["PublicTheoryAssociationNode"];
+            role: string;
+            role_label: string;
+            strength: string;
+            evidence: components["schemas"]["PublicTheoryAssociationEvidence"][];
+        };
+        PublicTheoryAssociationEvidence: {
+            /** Format: uuid */
+            id: string;
+            page_number: number;
+            page_end: number | null;
+            printed_page_label: string;
+            quote: string;
+            reader_href: string;
+        };
+        PublicTheoryAssociationNode: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            foreign_name: string;
+            type: string;
         };
         PublicationFieldDiff: {
             field: string;
@@ -868,6 +1108,90 @@ export interface components {
             /** Format: uuid */
             source_revision_id: string;
             status: string;
+        };
+        ReaderAssetAccess: {
+            url: string;
+            download_url: string;
+            original_download_url: string;
+            download_rendition: string;
+            source: string;
+            expires_in: number | null;
+            supports_range: boolean;
+            download_filename: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            requested_asset_id: string;
+            /** Format: uuid */
+            served_asset_id: string;
+            /** Format: uuid */
+            source_artifact_id: string | null;
+            rendition: string;
+            reader_rendition_policy: string;
+            reader_fallback_reason: string;
+            sha256: string;
+            page_count: number;
+            ocr_status: string;
+            ocr_text_available: boolean;
+            page_label_status: string;
+            semantic_index_status: string;
+        };
+        ReaderManifest: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            page_count: number;
+            publication_status: string;
+            ocr_status: string;
+            semantic_index_status: string;
+            page_label_status: string;
+            reader_rendition_policy: string;
+            outline: components["schemas"]["PublicOutlineItem"][];
+            related_scholars: components["schemas"]["ReaderRelatedScholar"][];
+            related_theories: components["schemas"]["ReaderRelatedLink"][];
+            related_topics: components["schemas"]["ReaderRelatedLink"][];
+            work: components["schemas"]["WorkCard"];
+        };
+        ReaderPageContent: {
+            /** Format: uuid */
+            page_id: string;
+            page_index: number;
+            file_page_index: number;
+            printed_label: string;
+            citation_page_label: string;
+            label_source: string;
+            /** Format: double */
+            label_confidence: number;
+            chapter_title: string;
+            text_available: boolean;
+            text_source: components["schemas"]["TextSourceEnum"];
+            /** Format: double */
+            width: number;
+            /** Format: double */
+            height: number;
+            text: string;
+            blocks: components["schemas"]["ReaderTextBlock"][];
+        };
+        ReaderRelatedLink: {
+            name: string;
+            slug: string;
+        };
+        ReaderRelatedScholar: {
+            name: string;
+            slug: string | null;
+            years: string;
+        };
+        ReaderTextBlock: {
+            /** Format: uuid */
+            id: string;
+            order: number;
+            type: string;
+            text: string;
+            /** @description Existing geometric JSON, not restricted to an invented coordinate shape. */
+            bbox: unknown;
+            /** Format: double */
+            confidence: number;
         };
         RecommendationImagePreview: {
             /** Format: uuid */
@@ -925,12 +1249,77 @@ export interface components {
          */
         StatusEnum: "drafting" | "reviewing" | "ready" | "publishing" | "published" | "abandoned";
         /**
+         * @description * `none` - 尚无文字
+         *     * `embedded` - PDF 原生文本
+         *     * `ocr` - OCR
+         *     * `hybrid` - 混合
+         * @enum {string}
+         */
+        TextSourceEnum: "none" | "embedded" | "ocr" | "hybrid";
+        /**
          * @description * `320` - 320
          *     * `640` - 640
          *     * `1280` - 1280
          * @enum {integer}
          */
         WidthEnum: 320 | 640 | 1280;
+        WorkCard: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["EditionCompact"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+        };
+        WorkDetail: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["EditionCompact"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly editions: components["schemas"]["EditionCompact"][];
+            readonly outline: components["schemas"]["PublicOutlineItem"][];
+            readonly theory_associations: components["schemas"]["PublicTheoryAssociation"][];
+            /** @description Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract. */
+            readonly curated_claims: {
+                [key: string]: unknown[];
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -940,7 +1329,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    admin_catalog_field_contracts_retrieve: {
+    catalog_admin_catalog_field_contracts_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -980,7 +1369,7 @@ export interface operations {
             };
         };
     };
-    admin_cataloging_sessions_create: {
+    catalog_admin_cataloging_sessions_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1050,7 +1439,7 @@ export interface operations {
             };
         };
     };
-    admin_cataloging_sessions_abandon_create: {
+    catalog_admin_cataloging_sessions_abandon_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1079,7 +1468,7 @@ export interface operations {
             };
         };
     };
-    admin_cataloging_sessions_candidates_decision_create: {
+    catalog_admin_cataloging_sessions_candidates_decision_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1109,7 +1498,7 @@ export interface operations {
             };
         };
     };
-    admin_cataloging_sessions_metadata_decision_create: {
+    catalog_admin_cataloging_sessions_metadata_decision_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1139,7 +1528,7 @@ export interface operations {
             };
         };
     };
-    admin_cataloging_sessions_metadata_import_create: {
+    catalog_admin_cataloging_sessions_metadata_import_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1176,7 +1565,7 @@ export interface operations {
             };
         };
     };
-    admin_editions_media_cover_create: {
+    catalog_admin_editions_media_cover_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1203,7 +1592,7 @@ export interface operations {
             };
         };
     };
-    admin_editions_media_recommendation_create: {
+    catalog_admin_editions_media_recommendation_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1230,7 +1619,7 @@ export interface operations {
             };
         };
     };
-    admin_editions_publication_history_list: {
+    catalog_admin_editions_publication_history_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1251,7 +1640,7 @@ export interface operations {
             };
         };
     };
-    admin_editions_publication_prepare_retrieve: {
+    catalog_admin_editions_publication_prepare_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1272,7 +1661,7 @@ export interface operations {
             };
         };
     };
-    admin_editions_publication_rollback_create: {
+    catalog_admin_editions_publication_rollback_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1307,7 +1696,7 @@ export interface operations {
             };
         };
     };
-    admin_knowledge_media_retrieve: {
+    catalog_admin_knowledge_media_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1329,7 +1718,7 @@ export interface operations {
             };
         };
     };
-    admin_knowledge_media_create: {
+    catalog_admin_knowledge_media_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1357,7 +1746,7 @@ export interface operations {
             };
         };
     };
-    admin_media_list: {
+    catalog_admin_media_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1376,7 +1765,7 @@ export interface operations {
             };
         };
     };
-    admin_media_create: {
+    catalog_admin_media_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1408,7 +1797,7 @@ export interface operations {
             };
         };
     };
-    admin_media_retrieve: {
+    catalog_admin_media_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1429,7 +1818,7 @@ export interface operations {
             };
         };
     };
-    admin_media_partial_update: {
+    catalog_admin_media_partial_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -1456,7 +1845,7 @@ export interface operations {
             };
         };
     };
-    admin_media_renditions_create: {
+    catalog_admin_media_renditions_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1483,7 +1872,7 @@ export interface operations {
             };
         };
     };
-    admin_people_retrieve: {
+    catalog_admin_people_retrieve: {
         parameters: {
             query?: {
                 limit?: number;
@@ -1505,7 +1894,7 @@ export interface operations {
             };
         };
     };
-    admin_people_duplicates_retrieve: {
+    catalog_admin_people_duplicates_retrieve: {
         parameters: {
             query?: {
                 limit?: number;
@@ -1528,7 +1917,7 @@ export interface operations {
             };
         };
     };
-    admin_people_merge_create: {
+    catalog_admin_people_merge_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1555,7 +1944,7 @@ export interface operations {
             };
         };
     };
-    admin_people_merge_preview_retrieve: {
+    catalog_admin_people_merge_preview_retrieve: {
         parameters: {
             query?: {
                 target_person?: string;
@@ -1578,7 +1967,7 @@ export interface operations {
             };
         };
     };
-    admin_people_merge_records_list: {
+    catalog_admin_people_merge_records_list: {
         parameters: {
             query: {
                 source_person: string;
@@ -1599,7 +1988,7 @@ export interface operations {
             };
         };
     };
-    admin_people_merge_records_retrieve: {
+    catalog_admin_people_merge_records_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1620,7 +2009,7 @@ export interface operations {
             };
         };
     };
-    admin_people_merge_records_rollback_create: {
+    catalog_admin_people_merge_records_rollback_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1647,7 +2036,7 @@ export interface operations {
             };
         };
     };
-    admin_scholars_portrait_retrieve: {
+    catalog_admin_scholars_portrait_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1668,7 +2057,7 @@ export interface operations {
             };
         };
     };
-    admin_scholars_portrait_create: {
+    catalog_admin_scholars_portrait_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -1695,7 +2084,7 @@ export interface operations {
             };
         };
     };
-    admin_works_recommendation_image_metadata_retrieve: {
+    catalog_admin_works_recommendation_image_metadata_retrieve: {
         parameters: {
             query?: {
                 edition_id?: string;
@@ -1718,7 +2107,106 @@ export interface operations {
             };
         };
     };
-    works_cover_metadata_retrieve: {
+    catalog_assets_manifest_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderManifest"];
+                };
+            };
+        };
+    };
+    catalog_assets_pages_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                page_index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderPageContent"];
+                };
+            };
+        };
+    };
+    catalog_works_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `book` - 图书
+                 *     * `journal_article` - 期刊论文
+                 *     * `journal_issue` - 整期期刊
+                 *     * `thesis` - 学位论文
+                 *     * `report` - 研究报告
+                 */
+                document_type?: "book" | "journal_article" | "journal_issue" | "report" | "thesis";
+                language?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedWorkCardList"];
+                };
+            };
+        };
+    };
+    catalog_works_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkDetail"];
+                };
+            };
+        };
+    };
+    catalog_works_cover_metadata_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1739,7 +2227,7 @@ export interface operations {
             };
         };
     };
-    works_recommendation_image_metadata_retrieve: {
+    catalog_works_recommendation_image_metadata_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -1756,6 +2244,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicCoverMedia"];
+                };
+            };
+        };
+    };
+    distribution_assets_access_retrieve: {
+        parameters: {
+            query?: {
+                /** @description original selects the original PDF; 1 or true selects the preferred download. */
+                download?: string;
+            };
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderAssetAccess"];
                 };
             };
         };

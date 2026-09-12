@@ -9,6 +9,7 @@ x-service-hardening: &service-hardening
 x-api-volumes: &api-volumes
   - ${NAS_HOST_ROOT:-./data}/archive:/data/archive
   - ${NAS_HOST_ROOT:-./data}/public:/data/public
+  - ${NAS_HOST_ROOT:-./data}/private:/data/private
   - ${NAS_HOST_ROOT:-./data}/incoming:/data/incoming
   - ${NAS_HOST_ROOT:-./data}/backups:/data/backups
   - ${NAS_HOST_ROOT:-./data}/models:/models

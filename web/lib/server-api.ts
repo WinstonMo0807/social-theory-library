@@ -13,6 +13,8 @@ import type { SearchContext } from "./search-context";
 import { WEB_APP_VERSION } from "./version";
 import { adaptApiScholar, adaptApiScholarDetail, adaptApiTopic, adaptApiWork, adaptRecommendationWork } from "./public-data-adapters";
 import type { components } from "./api/generated/schema";
+import type { ApiWork, ReaderManifest, ReaderManifestPayload } from "./api/public-catalog";
+export type { ApiWork, ReaderManifest, ReaderOutlineItem } from "./api/public-catalog";
 
 const SERVER_API =
   process.env.INTERNAL_API_URL?.replace(/\/$/, "") ??
@@ -58,54 +60,6 @@ export type PublicKnowledgeNodeLink = {
   relation_label: string;
   is_representative?: boolean;
   relation_source?: "person_relation" | "published_work_relation";
-};
-
-export type ApiWork = {
-  cover_media?: import("./api/generated/schema").components["schemas"]["PublicCoverMedia"] | null;
-  recommendation_media?: import("./api/generated/schema").components["schemas"]["PublicCoverMedia"] | null;
-  id: string;
-  document_type: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
-  title: string;
-  subtitle: string;
-  abstract: string;
-  language: string;
-  cover: string;
-  recommendation_image: string;
-  edition: {
-    id: string;
-    public_slug: string;
-    publication_year: number | null;
-    publisher: string;
-    journal_title: string;
-    journal_contents?: import("./data").Work["journalContents"];
-    contributors: { role: string; person: ApiPerson }[];
-    readable_asset: { id: string; page_count: number } | null;
-  } | null;
-  theories: { name: string; slug: string }[];
-  topics: { name: string; slug: string }[];
-  disciplines: { name: string; slug: string; is_primary: boolean }[];
-  subdisciplines: { name: string; slug: string; is_primary: boolean }[];
-  theory_associations?: {
-    id: string;
-    node: { id: string; name: string; foreign_name: string; slug: string; type: string };
-    role: string;
-    role_label: string;
-    strength: string;
-    evidence: {
-      id: string;
-      page_number: number;
-      page_end: number | null;
-      printed_page_label: string;
-      quote: string;
-      reader_href: string;
-    }[];
-  }[];
-  curated_claims?: {
-    core_viewpoint: import("./data").CuratedWorkClaim[];
-    major_criticism: import("./data").CuratedWorkClaim[];
-    major_response: import("./data").CuratedWorkClaim[];
-  };
-  outline?: { index: number; printed_label: string; chapter_title: string }[];
 };
 
 export type ApiScholar = {
@@ -2166,32 +2120,9 @@ export async function loadViewpointSearch(
   }
 }
 
-export type ReaderOutlineItem = {
-  index: number;
-  printed_label: string;
-  chapter_title: string;
-};
-
-export type ReaderManifest = {
-  work: Work;
-  outline: ReaderOutlineItem[];
-  scholars: { name: string; slug: string; years: string }[];
-  theories: { name: string; slug: string }[];
-  topics: { name: string; slug: string }[];
-};
-
 export async function loadReaderManifest(assetId: string): Promise<ReaderManifest | null> {
   try {
-    const payload = await serverRequest<{
-      asset_id: string;
-      edition_id: string;
-      page_count: number;
-      work: ApiWork;
-      outline: ReaderOutlineItem[];
-      related_scholars: { name: string; slug: string; years: string }[];
-      related_theories: { name: string; slug: string }[];
-      related_topics: { name: string; slug: string }[];
-    }>(`/catalog/assets/${encodeURIComponent(assetId)}/manifest/`);
+    const payload = await serverRequest<ReaderManifestPayload>(`/catalog/assets/${encodeURIComponent(assetId)}/manifest/`);
     return {
       work: {
         ...adaptWork(payload.work),
@@ -2200,7 +2131,7 @@ export async function loadReaderManifest(assetId: string): Promise<ReaderManifes
         pages: payload.page_count,
       },
       outline: payload.outline,
-      scholars: payload.related_scholars,
+      scholars: payload.related_scholars.flatMap((scholar) => typeof scholar.slug === "string" && scholar.slug ? [{ ...scholar, slug: scholar.slug }] : []),
       theories: payload.related_theories,
       topics: payload.related_topics,
     };

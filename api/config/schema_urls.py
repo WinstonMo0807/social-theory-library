@@ -5,9 +5,11 @@ preserve their real /api/catalog prefix and original permission-protected view.
 """
 from django.urls import include, path
 from catalog.urls import urlpatterns as catalog_patterns
+from distribution.urls import urlpatterns as distribution_patterns
 
 
 VERIFIED_NAMES = {
+    "work-list", "work-detail", "asset-manifest", "asset-page-content",
     "knowledge-image-selection",
     "scholar-portrait-selection",
     "person-search", "person-merge-history",
@@ -24,4 +26,7 @@ VERIFIED_NAMES = {
     "work-recommendation-media-selection", "public-recommendation-metadata",
     "recommendation-image-metadata",
 }
-urlpatterns = [path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES]))]
+urlpatterns = [
+    path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
+    path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name == "asset-access"])),
+]

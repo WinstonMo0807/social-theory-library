@@ -34,6 +34,7 @@ services:
     volumes:
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/archive:/data/archive
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/public:/data/public
+      - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/private:/data/private
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/incoming:/data/incoming
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/backups:/data/backups
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/models:/models
@@ -79,6 +80,7 @@ services:
     volumes:
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/archive:/data/archive
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/public:/data/public
+      - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/private:/data/private
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/incoming:/data/incoming
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/backups:/data/backups
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/models:/models

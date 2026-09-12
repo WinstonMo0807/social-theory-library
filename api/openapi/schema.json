@@ -8,9 +8,9 @@
     "paths": {
         "/api/catalog/admin/catalog-field-contracts/": {
             "get": {
-                "operationId": "admin_catalog_field_contracts_retrieve",
+                "operationId": "catalog_admin_catalog_field_contracts_retrieve",
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -39,7 +39,7 @@
             "get": {
                 "operationId": "cataloging_sessions_list",
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -63,9 +63,9 @@
                 }
             },
             "post": {
-                "operationId": "admin_cataloging_sessions_create",
+                "operationId": "catalog_admin_cataloging_sessions_create",
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -154,7 +154,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -180,7 +180,7 @@
         },
         "/api/catalog/admin/cataloging-sessions/{session_id}/abandon/": {
             "post": {
-                "operationId": "admin_cataloging_sessions_abandon_create",
+                "operationId": "catalog_admin_cataloging_sessions_abandon_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -193,7 +193,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -229,7 +229,7 @@
         },
         "/api/catalog/admin/cataloging-sessions/{session_id}/candidates/{candidate_id}/decision/": {
             "post": {
-                "operationId": "admin_cataloging_sessions_candidates_decision_create",
+                "operationId": "catalog_admin_cataloging_sessions_candidates_decision_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -251,7 +251,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -298,7 +298,7 @@
         },
         "/api/catalog/admin/cataloging-sessions/{session_id}/metadata/{candidate_id}/decision/": {
             "post": {
-                "operationId": "admin_cataloging_sessions_metadata_decision_create",
+                "operationId": "catalog_admin_cataloging_sessions_metadata_decision_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -320,7 +320,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -367,7 +367,7 @@
         },
         "/api/catalog/admin/cataloging-sessions/{session_id}/metadata/import/": {
             "post": {
-                "operationId": "admin_cataloging_sessions_metadata_import_create",
+                "operationId": "catalog_admin_cataloging_sessions_metadata_import_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -380,7 +380,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -437,7 +437,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/media/cover/": {
             "post": {
-                "operationId": "admin_editions_media_cover_create",
+                "operationId": "catalog_admin_editions_media_cover_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -450,7 +450,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -496,7 +496,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/media/recommendation/": {
             "post": {
-                "operationId": "admin_editions_media_recommendation_create",
+                "operationId": "catalog_admin_editions_media_recommendation_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -509,7 +509,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -555,7 +555,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/publication/history/": {
             "get": {
-                "operationId": "admin_editions_publication_history_list",
+                "operationId": "catalog_admin_editions_publication_history_list",
                 "parameters": [
                     {
                         "in": "path",
@@ -568,7 +568,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -597,7 +597,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/publication/prepare/": {
             "get": {
-                "operationId": "admin_editions_publication_prepare_retrieve",
+                "operationId": "catalog_admin_editions_publication_prepare_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -610,7 +610,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -636,7 +636,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/publication/rollback/": {
             "post": {
-                "operationId": "admin_editions_publication_rollback_create",
+                "operationId": "catalog_admin_editions_publication_rollback_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -649,7 +649,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -705,7 +705,7 @@
         },
         "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
             "get": {
-                "operationId": "admin_knowledge_media_retrieve",
+                "operationId": "catalog_admin_knowledge_media_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -726,7 +726,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -750,7 +750,7 @@
                 }
             },
             "post": {
-                "operationId": "admin_knowledge_media_create",
+                "operationId": "catalog_admin_knowledge_media_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -771,7 +771,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -817,9 +817,9 @@
         },
         "/api/catalog/admin/media/": {
             "get": {
-                "operationId": "admin_media_list",
+                "operationId": "catalog_admin_media_list",
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -846,9 +846,9 @@
                 }
             },
             "post": {
-                "operationId": "admin_media_create",
+                "operationId": "catalog_admin_media_create",
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -899,7 +899,7 @@
         },
         "/api/catalog/admin/media/{media_id}/": {
             "get": {
-                "operationId": "admin_media_retrieve",
+                "operationId": "catalog_admin_media_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -912,7 +912,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -936,7 +936,7 @@
                 }
             },
             "patch": {
-                "operationId": "admin_media_partial_update",
+                "operationId": "catalog_admin_media_partial_update",
                 "parameters": [
                     {
                         "in": "path",
@@ -949,7 +949,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -994,7 +994,7 @@
         },
         "/api/catalog/admin/media/{media_id}/renditions/": {
             "post": {
-                "operationId": "admin_media_renditions_create",
+                "operationId": "catalog_admin_media_renditions_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -1007,7 +1007,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -1052,7 +1052,7 @@
         },
         "/api/catalog/admin/people/": {
             "get": {
-                "operationId": "admin_people_retrieve",
+                "operationId": "catalog_admin_people_retrieve",
                 "parameters": [
                     {
                         "in": "query",
@@ -1075,7 +1075,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1101,7 +1101,7 @@
         },
         "/api/catalog/admin/people/{person_id}/duplicates/": {
             "get": {
-                "operationId": "admin_people_duplicates_retrieve",
+                "operationId": "catalog_admin_people_duplicates_retrieve",
                 "parameters": [
                     {
                         "in": "query",
@@ -1124,7 +1124,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1150,7 +1150,7 @@
         },
         "/api/catalog/admin/people/{person_id}/merge/": {
             "post": {
-                "operationId": "admin_people_merge_create",
+                "operationId": "catalog_admin_people_merge_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -1163,7 +1163,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -1209,7 +1209,7 @@
         },
         "/api/catalog/admin/people/{person_id}/merge-preview/": {
             "get": {
-                "operationId": "admin_people_merge_preview_retrieve",
+                "operationId": "catalog_admin_people_merge_preview_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1230,7 +1230,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1256,7 +1256,7 @@
         },
         "/api/catalog/admin/people/merge-records/": {
             "get": {
-                "operationId": "admin_people_merge_records_list",
+                "operationId": "catalog_admin_people_merge_records_list",
                 "parameters": [
                     {
                         "in": "query",
@@ -1269,7 +1269,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1298,7 +1298,7 @@
         },
         "/api/catalog/admin/people/merge-records/{record_id}/": {
             "get": {
-                "operationId": "admin_people_merge_records_retrieve",
+                "operationId": "catalog_admin_people_merge_records_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1311,7 +1311,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1337,7 +1337,7 @@
         },
         "/api/catalog/admin/people/merge-records/{record_id}/rollback/": {
             "post": {
-                "operationId": "admin_people_merge_records_rollback_create",
+                "operationId": "catalog_admin_people_merge_records_rollback_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -1350,7 +1350,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -1396,7 +1396,7 @@
         },
         "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
             "get": {
-                "operationId": "admin_scholars_portrait_retrieve",
+                "operationId": "catalog_admin_scholars_portrait_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1409,7 +1409,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1433,7 +1433,7 @@
                 }
             },
             "post": {
-                "operationId": "admin_scholars_portrait_create",
+                "operationId": "catalog_admin_scholars_portrait_create",
                 "parameters": [
                     {
                         "in": "path",
@@ -1446,7 +1446,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "requestBody": {
                     "content": {
@@ -1492,7 +1492,7 @@
         },
         "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
             "get": {
-                "operationId": "admin_works_recommendation_image_metadata_retrieve",
+                "operationId": "catalog_admin_works_recommendation_image_metadata_retrieve",
                 "parameters": [
                     {
                         "in": "query",
@@ -1513,7 +1513,7 @@
                     }
                 ],
                 "tags": [
-                    "admin"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1537,9 +1537,216 @@
                 }
             }
         },
+        "/api/catalog/assets/{asset_id}/manifest/": {
+            "get": {
+                "operationId": "catalog_assets_manifest_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderManifest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/assets/{asset_id}/pages/{page_index}/": {
+            "get": {
+                "operationId": "catalog_assets_pages_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "page_index",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderPageContent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/works/": {
+            "get": {
+                "operationId": "catalog_works_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "document_type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "book",
+                                "journal_article",
+                                "journal_issue",
+                                "report",
+                                "thesis"
+                            ]
+                        },
+                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+                    },
+                    {
+                        "in": "query",
+                        "name": "language",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedWorkCardList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/works/{slug}/": {
+            "get": {
+                "operationId": "catalog_works_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/works/{work_id}/cover-metadata/": {
             "get": {
-                "operationId": "works_cover_metadata_retrieve",
+                "operationId": "catalog_works_cover_metadata_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1552,7 +1759,7 @@
                     }
                 ],
                 "tags": [
-                    "works"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1579,7 +1786,7 @@
         },
         "/api/catalog/works/{work_id}/recommendation-image-metadata/": {
             "get": {
-                "operationId": "works_recommendation_image_metadata_retrieve",
+                "operationId": "catalog_works_recommendation_image_metadata_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1592,7 +1799,7 @@
                     }
                 ],
                 "tags": [
-                    "works"
+                    "catalog"
                 ],
                 "security": [
                     {
@@ -1616,10 +1823,69 @@
                     }
                 }
             }
+        },
+        "/api/distribution/assets/{asset_id}/access/": {
+            "get": {
+                "operationId": "distribution_assets_access_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "download",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "original selects the original PDF; 1 or true selects the preferred download."
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderAssetAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
         "schemas": {
+            "AccessStatusEnum": {
+                "enum": [
+                    "inherit",
+                    "private",
+                    "registered",
+                    "restricted",
+                    "public"
+                ],
+                "type": "string",
+                "description": "* `inherit` - 继承版本权限\n* `private` - 仅后台可用\n* `registered` - 登录读者\n* `restricted` - 受限访问\n* `public` - 公开访问"
+            },
             "ApiError": {
                 "type": "object",
                 "properties": {
@@ -1645,6 +1911,75 @@
                     "message",
                     "severity"
                 ]
+            },
+            "AssetCompact": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/AssetCompactKindEnum"
+                    },
+                    "original_filename": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "mime_type": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "page_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "byte_size": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64"
+                    },
+                    "sha256": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "text_layer_quality": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "language_guess": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "access_status": {
+                        "$ref": "#/components/schemas/AccessStatusEnum"
+                    },
+                    "rights_note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "sha256"
+                ]
+            },
+            "AssetCompactKindEnum": {
+                "enum": [
+                    "original",
+                    "normalized",
+                    "ocr_pdf",
+                    "web_derivative"
+                ],
+                "type": "string",
+                "description": "* `original` - 原始文件\n* `normalized` - 规范阅读文件\n* `ocr_pdf` - OCR 阅读文件\n* `web_derivative` - 网页阅读派生文件"
             },
             "CatalogingCandidateDecisionActionEnum": {
                 "enum": [
@@ -1937,16 +2272,161 @@
                 "type": "string",
                 "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
             },
-            "KindEnum": {
-                "enum": [
-                    "cover",
-                    "portrait",
-                    "hero",
-                    "card",
-                    "thumbnail"
-                ],
-                "type": "string",
-                "description": "* `cover` - cover\n* `portrait` - portrait\n* `hero` - hero\n* `card` - card\n* `thumbnail` - thumbnail"
+            "EditionCompact": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "public_slug": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 180,
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "version_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "edition_statement": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "publisher_verbatim": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "publisher_authority": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "publication_place": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "publication_place_verbatim": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "distribution_place": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "distributor": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "manufacture_place": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "manufacturer": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "journal_title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "journal_contents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicJournalContent"
+                        },
+                        "readOnly": true
+                    },
+                    "volume": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "issue": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "page_range": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "isbn10": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "isbn13": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "doi": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "series": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "extent": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "responsibility_statement": {
+                        "type": "string"
+                    },
+                    "contributors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicContributionSnapshot"
+                        },
+                        "readOnly": true
+                    },
+                    "readable_asset": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AssetCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "contributors",
+                    "edition_statement",
+                    "id",
+                    "journal_contents",
+                    "publication_place_verbatim",
+                    "publisher_verbatim",
+                    "readable_asset"
+                ]
             },
             "KnowledgeImageRequestRequest": {
                 "type": "object",
@@ -2181,6 +2661,17 @@
                     "width"
                 ]
             },
+            "MediaRenditionRequestKindEnum": {
+                "enum": [
+                    "cover",
+                    "portrait",
+                    "hero",
+                    "card",
+                    "thumbnail"
+                ],
+                "type": "string",
+                "description": "* `cover` - cover\n* `portrait` - portrait\n* `hero` - hero\n* `card` - card\n* `thumbnail` - thumbnail"
+            },
             "MediaRenditionRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -2195,7 +2686,7 @@
                     "kind": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/KindEnum"
+                                "$ref": "#/components/schemas/MediaRenditionRequestKindEnum"
                             }
                         ],
                         "default": "cover"
@@ -2302,6 +2793,37 @@
                 ],
                 "type": "string",
                 "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path"
+            },
+            "PaginatedWorkCardList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkCard"
+                        }
+                    }
+                }
             },
             "PatchedMediaMetadataRequest": {
                 "type": "object",
@@ -2847,6 +3369,50 @@
                     "results"
                 ]
             },
+            "PublicClassificationLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "is_primary",
+                    "name",
+                    "slug"
+                ]
+            },
+            "PublicContributionSnapshot": {
+                "type": "object",
+                "properties": {
+                    "role": {
+                        "type": "string"
+                    },
+                    "order": {
+                        "type": "integer"
+                    },
+                    "person": {
+                        "$ref": "#/components/schemas/PublicPersonSnapshot"
+                    }
+                },
+                "required": [
+                    "order",
+                    "person",
+                    "role"
+                ]
+            },
             "PublicCoverMedia": {
                 "type": "object",
                 "properties": {
@@ -2895,6 +3461,64 @@
                     "source_url"
                 ]
             },
+            "PublicEntityLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "PublicJournalContent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "article_work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "author_display": {
+                        "type": "string"
+                    },
+                    "page_range": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "article_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_href",
+                    "author_display",
+                    "page_range",
+                    "position",
+                    "title"
+                ]
+            },
             "PublicMediaRendition": {
                 "type": "object",
                 "properties": {
@@ -2917,6 +3541,175 @@
                     "id",
                     "url",
                     "width"
+                ]
+            },
+            "PublicOutlineItem": {
+                "type": "object",
+                "properties": {
+                    "index": {
+                        "type": "integer"
+                    },
+                    "file_page_index": {
+                        "type": "integer"
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "chapter_title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "chapter_title",
+                    "index",
+                    "printed_label"
+                ]
+            },
+            "PublicPersonSnapshot": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "preferred_name": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "authority_status": {
+                        "type": "string"
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "biography": {
+                        "type": "string"
+                    },
+                    "portrait": {
+                        "type": "string"
+                    },
+                    "portrait_media": {
+                        "nullable": true,
+                        "description": "Historical snapshot media is retained as JSON."
+                    },
+                    "scholar_slug": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "preferred_name"
+                ]
+            },
+            "PublicTheoryAssociation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node": {
+                        "$ref": "#/components/schemas/PublicTheoryAssociationNode"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "strength": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTheoryAssociationEvidence"
+                        }
+                    }
+                },
+                "required": [
+                    "evidence",
+                    "id",
+                    "node",
+                    "role",
+                    "role_label",
+                    "strength"
+                ]
+            },
+            "PublicTheoryAssociationEvidence": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_number": {
+                        "type": "integer"
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "page_end",
+                    "page_number",
+                    "printed_page_label",
+                    "quote",
+                    "reader_href"
+                ]
+            },
+            "PublicTheoryAssociationNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "foreign_name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "foreign_name",
+                    "id",
+                    "name",
+                    "slug",
+                    "type"
                 ]
             },
             "PublicationFieldDiff": {
@@ -3090,6 +3883,314 @@
                     "status"
                 ]
             },
+            "ReaderAssetAccess": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string"
+                    },
+                    "download_url": {
+                        "type": "string"
+                    },
+                    "original_download_url": {
+                        "type": "string"
+                    },
+                    "download_rendition": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "supports_range": {
+                        "type": "boolean"
+                    },
+                    "download_filename": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "requested_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "served_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_artifact_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "rendition": {
+                        "type": "string"
+                    },
+                    "reader_rendition_policy": {
+                        "type": "string"
+                    },
+                    "reader_fallback_reason": {
+                        "type": "string"
+                    },
+                    "sha256": {
+                        "type": "string"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "ocr_status": {
+                        "type": "string"
+                    },
+                    "ocr_text_available": {
+                        "type": "boolean"
+                    },
+                    "page_label_status": {
+                        "type": "string"
+                    },
+                    "semantic_index_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "download_filename",
+                    "download_rendition",
+                    "download_url",
+                    "edition_id",
+                    "expires_in",
+                    "ocr_status",
+                    "ocr_text_available",
+                    "original_download_url",
+                    "page_count",
+                    "page_label_status",
+                    "reader_fallback_reason",
+                    "reader_rendition_policy",
+                    "rendition",
+                    "requested_asset_id",
+                    "semantic_index_status",
+                    "served_asset_id",
+                    "sha256",
+                    "source",
+                    "source_artifact_id",
+                    "supports_range",
+                    "url"
+                ]
+            },
+            "ReaderManifest": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "publication_status": {
+                        "type": "string"
+                    },
+                    "ocr_status": {
+                        "type": "string"
+                    },
+                    "semantic_index_status": {
+                        "type": "string"
+                    },
+                    "page_label_status": {
+                        "type": "string"
+                    },
+                    "reader_rendition_policy": {
+                        "type": "string"
+                    },
+                    "outline": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicOutlineItem"
+                        }
+                    },
+                    "related_scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedScholar"
+                        }
+                    },
+                    "related_theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedLink"
+                        }
+                    },
+                    "related_topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedLink"
+                        }
+                    },
+                    "work": {
+                        "$ref": "#/components/schemas/WorkCard"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "edition_id",
+                    "ocr_status",
+                    "outline",
+                    "page_count",
+                    "page_label_status",
+                    "publication_status",
+                    "reader_rendition_policy",
+                    "related_scholars",
+                    "related_theories",
+                    "related_topics",
+                    "semantic_index_status",
+                    "work"
+                ]
+            },
+            "ReaderPageContent": {
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_index": {
+                        "type": "integer"
+                    },
+                    "file_page_index": {
+                        "type": "integer"
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "citation_page_label": {
+                        "type": "string"
+                    },
+                    "label_source": {
+                        "type": "string"
+                    },
+                    "label_confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "chapter_title": {
+                        "type": "string"
+                    },
+                    "text_available": {
+                        "type": "boolean"
+                    },
+                    "text_source": {
+                        "$ref": "#/components/schemas/TextSourceEnum"
+                    },
+                    "width": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "blocks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderTextBlock"
+                        }
+                    }
+                },
+                "required": [
+                    "blocks",
+                    "chapter_title",
+                    "citation_page_label",
+                    "file_page_index",
+                    "height",
+                    "label_confidence",
+                    "label_source",
+                    "page_id",
+                    "page_index",
+                    "printed_label",
+                    "text",
+                    "text_available",
+                    "text_source",
+                    "width"
+                ]
+            },
+            "ReaderRelatedLink": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "slug"
+                ]
+            },
+            "ReaderRelatedScholar": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "years": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "slug",
+                    "years"
+                ]
+            },
+            "ReaderTextBlock": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "order": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "bbox": {
+                        "description": "Existing geometric JSON, not restricted to an invented coordinate shape."
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "bbox",
+                    "confidence",
+                    "id",
+                    "order",
+                    "text",
+                    "type"
+                ]
+            },
             "RecommendationImagePreview": {
                 "type": "object",
                 "properties": {
@@ -3246,6 +4347,16 @@
                 "type": "string",
                 "description": "* `drafting` - 编目中\n* `reviewing` - 核对中\n* `ready` - 准备发布\n* `publishing` - 发布中\n* `published` - 已发布\n* `abandoned` - 已结束编辑"
             },
+            "TextSourceEnum": {
+                "enum": [
+                    "none",
+                    "embedded",
+                    "ocr",
+                    "hybrid"
+                ],
+                "type": "string",
+                "description": "* `none` - 尚无文字\n* `embedded` - PDF 原生文本\n* `ocr` - OCR\n* `hybrid` - 混合"
+            },
             "WidthEnum": {
                 "enum": [
                     320,
@@ -3254,6 +4365,294 @@
                 ],
                 "type": "integer",
                 "description": "* `320` - 320\n* `640` - 640\n* `1280` - 1280"
+            },
+            "WorkCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "cover": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_image": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "recommendation_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover",
+                    "cover_media",
+                    "disciplines",
+                    "document_type",
+                    "edition",
+                    "id",
+                    "recommendation_image",
+                    "recommendation_media",
+                    "subdisciplines",
+                    "theories",
+                    "title",
+                    "topics"
+                ]
+            },
+            "WorkDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "cover": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_image": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "recommendation_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "editions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditionCompact"
+                        },
+                        "readOnly": true
+                    },
+                    "outline": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicOutlineItem"
+                        },
+                        "readOnly": true
+                    },
+                    "theory_associations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTheoryAssociation"
+                        },
+                        "readOnly": true
+                    },
+                    "curated_claims": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "description": "Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract.",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover",
+                    "cover_media",
+                    "curated_claims",
+                    "disciplines",
+                    "document_type",
+                    "edition",
+                    "editions",
+                    "id",
+                    "outline",
+                    "recommendation_image",
+                    "recommendation_media",
+                    "subdisciplines",
+                    "theories",
+                    "theory_associations",
+                    "title",
+                    "topics"
+                ]
             }
         },
         "securitySchemes": {
