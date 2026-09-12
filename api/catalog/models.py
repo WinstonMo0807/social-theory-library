@@ -171,7 +171,12 @@ class Edition(UUIDTimeStampedModel):
         BIBLIOGRAPHIC = "bibliographic", "纯书目"
 
     work = models.ForeignKey(Work, on_delete=models.PROTECT, related_name="editions")
-    publication_mode = models.CharField(max_length=16, choices=PublicationMode.choices, default=PublicationMode.DOCUMENT)
+    publication_mode = models.CharField(
+        max_length=16,
+        choices=PublicationMode.choices,
+        default=PublicationMode.DOCUMENT,
+        db_default=PublicationMode.DOCUMENT,
+    )
     version_label = models.CharField(max_length=120, blank=True)
     publication_year = models.PositiveSmallIntegerField(null=True, blank=True, db_index=True)
     publication_date = models.DateField(null=True, blank=True, db_index=True)

@@ -4,6 +4,8 @@
 
 ## 3.0.5 当前动作
 
+2026-09-12 22:44继续统一发布。生产数据库备份已在隔离PG16实际恢复完成。上线前复核发现0044新增publication_mode没有数据库默认值，旧API回退后新增Edition可能失败；已增加0054正式迁移与模型db_default，专项2项通过，退出0，45.94秒，Django/migration drift通过。所有Compose默认应用版本统一3.0.5。原2b13c68934候选尚未部署，因NAS依赖下载缓慢且补充迁移而停止其临时构建，日志保留。正在重新冻结源码并以原生产依赖加8个校验wheel构建API，Web使用新锁文件及已下载Linux依赖缓存离线构建，未复用旧Web依赖。尚未公网切换，未推送。
+
 2026-09-12 22:10本次统一收口。已修复实际发布调度漏掉knowledge_graph/timeline的问题，并允许满足真实书目/PDF条件的metadata-only首发先公开；后台提示按活动公开修订，不按state标志假报成功。核心定向79项通过，退出0，73.25秒。ReaderShell已拆为访问/页缓存、导航缩放、搜索定位、选择复制、批注书签、引用、进度及页面标记模块，保持原UI和请求语义。公开书目/Edition和Reader五个实际GET纳入生成契约；复杂策展证据仍明确JSON，未伪称所有旧接口自动生成。
 
 旧上传/维护保存现在共用真实CatalogingSession，字段投影映射集中到单一contract，新增兼容表按日读取统计，不存SQL/查询值/身份，也不把未观察日期算零读取。ISSN/ORCID/VIAF/OCLC/OpenAlex/Wikidata/URL规则与已有ISBN/DOI统一，新值校验、未知scheme和旧JSON保留。完整前端构建204项通过，退出0，30.135秒，媒体私有目录持久化单项通过；lint退出0/9个导航建议warning，Django/migration drift通过。版本常量统一3.0.5。正在冻结候选以NAS构建和PG副本迁移验证，尚未上线、未推送。
