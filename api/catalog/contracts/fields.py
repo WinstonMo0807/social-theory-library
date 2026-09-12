@@ -3,7 +3,8 @@
 Research producer policies remain adapters; they may propose values but do
 not define canonical requirements or silently loosen publication validation.
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from catalog.contracts.projections import catalog_contract_projection_impact
 
 
 DOCUMENT_TYPES = ("book", "journal_article", "journal_issue", "thesis", "report")
@@ -109,6 +110,7 @@ FIELDS = (
     CatalogFieldContract("curation", "work", "curation", "策展", data_type="boolean", projection_impact=("recommendation",)),
 )
 
+FIELDS = tuple(replace(field, projection_impact=catalog_contract_projection_impact(field.name, field.domain_object, field.section)) for field in FIELDS)
 FIELD_CONTRACTS = {field.name: field for field in FIELDS}
 if len(FIELD_CONTRACTS) != len(FIELDS):
     raise RuntimeError("字段契约名称重复。")

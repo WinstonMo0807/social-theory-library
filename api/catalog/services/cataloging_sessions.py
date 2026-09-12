@@ -135,3 +135,21 @@ def session_payload(session):
         "created_at": session.created_at, "updated_at": session.updated_at,
         "workbench_url": f"/admin/cataloging/{session.pk}",
     }
+
+
+def record_cataloging_edit(edition, *, actor, confirmed=False):
+    """Successful old and new editing entries share one actual process.
+
+    Reads never open a process, and a published Work starts maintenance rather
+    than taking ownership of a historical upload's completed process.
+    """
+    item = None
+    if edition.state != "published":
+        item = UploadItem.objects.filter(edition=edition).exclude(status="deleted").order_by("-updated_at").first()
+    session, _ = open_cataloging_session(actor=actor, edition_id=edition.pk,
+                                         upload_item_id=item.pk if item else None,
+                                         source_type="upload" if item else "existing")
+    if session.status != CatalogingSession.Status.PUBLISHING:
+        session.status = CatalogingSession.Status.REVIEWING if confirmed else CatalogingSession.Status.DRAFTING
+        session.save(update_fields=["status", "updated_at"])
+    return session

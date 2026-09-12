@@ -412,11 +412,19 @@ def _source_note(candidate) -> str:
 
 @FIELD_MUTATIONS.register("person_external_identifier")
 def _person_external_identifier(*, target, value, candidate, actor):
+    from catalog.contracts.identifiers import canonical_identifier_scheme, normalize_identifier
+
     identifiers = dict(target.external_ids or {})
-    existing = str(identifiers.get(value["scheme"]) or "").strip()
-    if existing and existing.casefold() != value["value"].casefold():
-        raise ValueError("该人物已有不同的同类型标识符，需先解决来源冲突。")
-    if existing:
+    matches = [(scheme, existing) for scheme, existing in identifiers.items()
+               if canonical_identifier_scheme(scheme) == value["scheme"]]
+    for scheme, existing in matches:
+        try:
+            equal = normalize_identifier(scheme, existing) == value["value"]
+        except ValueError:
+            equal = existing == value["value"]
+        if not equal:
+            raise ValueError("该人物已有不同的同类型标识符，需先解决来源冲突。")
+    if matches:
         return MutationResult("catalog.Person", target.id, False, False)
     identifiers[value["scheme"]] = value["value"]
     target.external_ids = identifiers

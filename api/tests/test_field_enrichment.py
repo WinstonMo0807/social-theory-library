@@ -212,8 +212,8 @@ def test_person_identity_gate_rejects_same_name_without_corroboration(admin_user
         [
             _observation(
                 field_name="external_identifier",
-                value={"scheme": "orcid", "value": "0000-0001-0002-0003"},
-                identity_claims={"name": "John Smith", "external_ids": {"orcid": "0000-0001-0002-0003"}},
+                value={"scheme": "orcid", "value": "0000-0002-1825-0097"},
+                identity_claims={"name": "John Smith", "external_ids": {"orcid": "0000-0002-1825-0097"}},
             )
         ]
     )
@@ -305,7 +305,7 @@ def test_search_snippet_can_never_become_final_evidence(admin_user):
         [
             _observation(
                 field_name="external_identifier",
-                value={"scheme": "orcid", "value": "0000-0001-0002-0003"},
+                value={"scheme": "orcid", "value": "0000-0002-1825-0097"},
                 identity_claims={"name": person.preferred_name, "birth_year": 1930},
                 method="search_snippet",
             )
@@ -362,7 +362,7 @@ def test_safe_fetch_stores_actual_page_and_extractor_uses_page_text(monkeypatch)
         "catalog.services.field_enrichment.web._resolve_addresses",
         lambda hostname, port: {"93.184.216.34"},
     )
-    html = b"""<html><head><title>Official profile</title><link rel='canonical' href='https://example.com/profile'></head><body><main><h1>Pierre Bourdieu</h1><p>Pierre Bourdieu born 1930. ORCID 0000-0001-0002-0003.</p></main><script>ignore()</script></body></html>"""
+    html = b"""<html><head><title>Official profile</title><link rel='canonical' href='https://example.com/profile'></head><body><main><h1>Pierre Bourdieu</h1><p>Pierre Bourdieu born 1930. ORCID 0000-0002-1825-0097.</p></main><script>ignore()</script></body></html>"""
     client = FakeClient([FakeResponse(200, html, {"content-type": "text/html; charset=utf-8"})])
     fetcher = SafeWebFetcher(client_factory=lambda **kwargs: client)
 
@@ -378,7 +378,7 @@ def test_safe_fetch_stores_actual_page_and_extractor_uses_page_text(monkeypatch)
     assert document.title == "Official profile"
     assert "ignore" not in document.text
     assert observations[0].value["scheme"] == "orcid"
-    assert "0000-0001-0002-0003" in observations[0].supporting_text
+    assert "0000-0002-1825-0097" in observations[0].supporting_text
     record = SourceRecord.objects.get(provider="field_enrichment:web_fetch")
     assert record.raw_response["stored_text_is_bounded_extraction"] is True
 
@@ -848,7 +848,7 @@ def test_provider_partial_failure_keeps_other_candidates(admin_user):
     person = _person()
     observation = _observation(
         field_name="external_identifier",
-        value={"scheme": "orcid", "value": "0000-0001-0002-0003"},
+        value={"scheme": "orcid", "value": "0000-0002-1825-0097"},
         identity_claims={"name": person.preferred_name, "birth_year": person.birth_year},
     )
     adapter = FakeStructuredAdapter(
@@ -867,7 +867,7 @@ def test_page_level_web_request_fetches_each_source_once(admin_user):
     person = _person()
     document = _document(
         "https://university.example/profile",
-        "Pierre Bourdieu born 1930. 皮埃尔·布迪厄（Pierre Bourdieu）。ORCID 0000-0001-0002-0003.",
+        "Pierre Bourdieu born 1930. 皮埃尔·布迪厄（Pierre Bourdieu）。ORCID 0000-0002-1825-0097.",
         source_class=EnrichmentSourceClass.UNIVERSITY,
     )
     search = FakeSearchAdapter([SearchResult(url=document.source_url, title=document.title, provider="fake")])

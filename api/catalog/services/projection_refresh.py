@@ -127,7 +127,10 @@ def _captured_states(target_type: str, target_id) -> list[dict]:
         for row in ProjectionState.objects.filter(
             object_type=target_type,
             object_id=target_id,
-            projection_type__in=projection_types_for(target_type),
+            # An event may explicitly request more than the default target
+            # mapping (catalog_publish includes graph and timeline). Capture
+            # the durable requested states, never silently drop those tasks.
+            projection_type__in=ProjectionState.ProjectionType.values,
         ).order_by("projection_type")
     ]
 

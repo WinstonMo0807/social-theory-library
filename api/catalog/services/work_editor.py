@@ -60,6 +60,14 @@ class WorkflowEditConflict(WorkflowEditError):
     pass
 
 
+def _record_edit_process(edition, *, actor, confirmed):
+    from catalog.services.cataloging_sessions import record_cataloging_edit
+    try:
+        return record_cataloging_edit(edition, actor=actor, confirmed=confirmed)
+    except ValueError as error:
+        raise WorkflowEditConflict(str(error)) from error
+
+
 @dataclass(frozen=True, slots=True)
 class WorkflowSectionResult:
     edition: Edition
@@ -735,6 +743,8 @@ def save_workflow_section(
             decision=decision_value,
             note=note,
         )
+    if not publishing_revision:
+        _record_edit_process(edition, actor=actor, confirmed=confirm_section)
     return WorkflowSectionResult(edition=edition, decision=decision)
 
 
@@ -776,6 +786,7 @@ def save_editorial_workflow_section(edition, step_key, values, *, actor, confirm
         )
     if confirm_section:
         _register_confirmed_draft_entities(edition, actor=actor, reviewed_fields=reviewed, values=after, include_editorial_draft=True)
+    _record_edit_process(edition, actor=actor, confirmed=confirm_section)
     return revision
 
 

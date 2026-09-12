@@ -37,6 +37,7 @@ from catalog.models import (
 )
 
 from catalog.services.canonical_identity import canonical_work_node_role
+from common.legacy_telemetry import legacy_read_snapshot
 
 
 def _grouped(queryset, field: str) -> dict[str, int]:
@@ -418,6 +419,7 @@ def build_inventory() -> dict:
             "editorial_revisions_by_status": _grouped(EditorialRevision.objects.all(), "status"),
         },
         "runtime": {
+            "legacy_reads": legacy_read_snapshot(),
             "projection_states_by_status": _grouped(ProjectionState.objects.all(), "status"),
             "projection_states_by_type": _grouped(
                 ProjectionState.objects.all(), "projection_type"

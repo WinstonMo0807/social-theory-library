@@ -1,7 +1,25 @@
 import pytest
+from django.core.cache import caches
 from rest_framework.test import APIClient
 
 from accounts.models import User
+
+
+@pytest.fixture(autouse=True)
+def isolated_default_cache(settings):
+    # Database rollback does not reset DRF's throttle history or other cached
+    # reads. Never clear a configured Redis cache when running local tests.
+    settings.CACHES = {
+        **settings.CACHES,
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "social-theory-library-pytest",
+        },
+    }
+    test_cache = caches["default"]
+    test_cache.clear()
+    yield
+    test_cache.clear()
 
 
 @pytest.fixture

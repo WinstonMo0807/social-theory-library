@@ -2,28 +2,19 @@ from __future__ import annotations
 
 from datetime import date, datetime
 import json
-import re
 import unicodedata
 from uuid import UUID
 
+from catalog.contracts.identifiers import (
+    canonical_identifier_scheme,
+    normalize_identifier,
+)
 from catalog.models import (
     KnowledgeNodeAlias,
     KnowledgeRelation,
     PersonNameVariant,
     TheoryTimelineEvent,
 )
-
-
-IDENTIFIER_SCHEMES = {
-    "doi",
-    "isbn",
-    "isni",
-    "loc",
-    "openalex",
-    "orcid",
-    "viaf",
-    "wikidata",
-}
 
 
 def normalize_text(value) -> str:
@@ -81,11 +72,12 @@ def _short_text(value, label: str, limit: int) -> str:
 
 def _identifier(value):
     row = _mapping(value)
-    scheme = normalize_text(row.get("scheme")).casefold()
-    identifier = _short_text(row.get("value"), "标识符", 500)
-    if scheme not in IDENTIFIER_SCHEMES:
-        raise ValueError("不支持的标识符类型。")
-    return {"scheme": scheme, "value": identifier}
+    scheme, identifier = row.get("scheme"), row.get("value")
+    if not isinstance(scheme, str) or not scheme.strip() or len(scheme) > 80:
+        raise ValueError("标识符类型为空或过长。")
+    if not isinstance(identifier, str) or not identifier.strip() or len(identifier) > 500:
+        raise ValueError("标识符必须是非空文本，且不超过500字符。")
+    return {"scheme": canonical_identifier_scheme(scheme), "value": normalize_identifier(scheme, identifier)}
 
 
 def _affiliation(value):
@@ -121,17 +113,11 @@ def _publication_year(value):
 
 
 def _isbn(value):
-    text = re.sub(r"[^0-9Xx]", "", normalize_text(value))
-    if len(text) not in {10, 13}:
-        raise ValueError("ISBN 必须是 10 或 13 位。")
-    return text.upper()
+    return normalize_identifier("isbn", value)
 
 
 def _doi(value):
-    text = normalize_text(value).removeprefix("https://doi.org/").removeprefix("http://doi.org/")
-    if not re.fullmatch(r"10\.\d{4,9}/\S+", text, re.I):
-        raise ValueError("DOI 格式无效。")
-    return text
+    return normalize_identifier("doi", value)
 
 
 def _date(value):
@@ -239,8 +225,8 @@ VALUE_NORMALIZERS = {
     "edition_publication_date": _date,
     "edition_publisher": lambda value: _short_text(value, "出版社", 300),
     "edition_isbn": _isbn,
-    "edition_isbn10": _isbn,
-    "edition_isbn13": _isbn,
+    "edition_isbn10": lambda value: normalize_identifier("isbn10", value),
+    "edition_isbn13": lambda value: normalize_identifier("isbn13", value),
     "edition_doi": _doi,
     "edition_version_label": lambda value: _short_text(value, "版本说明", 120),
     "edition_publication_place": lambda value: _short_text(value, "出版地", 200),
@@ -282,7 +268,10 @@ def normalize_candidate_value(mutation_adapter: str, value):
         normalizer = VALUE_NORMALIZERS[mutation_adapter]
     except KeyError as exc:
         raise ValueError("该字段尚未配置候选值校验器。") from exc
-    return normalize_json(normalizer(value))
+    result = normalizer(value)
+    # Unknown identifier schemes are deliberately opaque, including case and
+    # whitespace. Normalizing arbitrary JSON would silently change their IDs.
+    return result if mutation_adapter == "person_external_identifier" else normalize_json(result)
 
 
 def candidate_identity_value(mutation_adapter: str, value):

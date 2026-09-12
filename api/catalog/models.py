@@ -1256,6 +1256,11 @@ class OrganizationAuthority(UUIDTimeStampedModel):
             ),
         ]
 
+    def clean(self):
+        super().clean()
+        from catalog.contracts.identifiers import validate_model_external_identifiers
+        validate_model_external_identifiers(self)
+
 
 class OrganizationContribution(UUIDTimeStampedModel):
     class Role(models.TextChoices):
@@ -1595,6 +1600,11 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
 
     def __str__(self):
         return self.preferred_name
+
+    def clean(self):
+        super().clean()
+        from catalog.contracts.identifiers import validate_model_external_identifiers
+        validate_model_external_identifiers(self)
 
     def validate_query_lexicon_authority_state(self):
         from django.core.exceptions import ValidationError

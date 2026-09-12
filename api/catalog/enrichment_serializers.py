@@ -48,6 +48,7 @@ class EnrichmentCandidateSerializer(serializers.ModelSerializer):
     evidence_records = EnrichmentEvidenceSerializer(many=True, read_only=True)
     evidence_count = serializers.SerializerMethodField()
     independent_source_count = serializers.SerializerMethodField()
+    identifier_details = serializers.SerializerMethodField()
 
     class Meta:
         model = EnrichmentCandidate
@@ -79,6 +80,7 @@ class EnrichmentCandidateSerializer(serializers.ModelSerializer):
             "accepted_authority_id",
             "evidence_count",
             "independent_source_count",
+            "identifier_details",
             "evidence_records",
             "created_at",
             "updated_at",
@@ -89,6 +91,15 @@ class EnrichmentCandidateSerializer(serializers.ModelSerializer):
 
     def get_independent_source_count(self, obj):
         return obj.evidence_records.filter(is_current=True).values("canonical_url").distinct().count()
+
+    def get_identifier_details(self, obj) -> dict | None:
+        if obj.field_name != "external_identifier" or not isinstance(obj.proposed_value, dict):
+            return None
+        from catalog.contracts.identifiers import describe_identifier
+        return describe_identifier(
+            obj.proposed_value.get("scheme", ""), obj.proposed_value.get("value"),
+            source={"kind": "candidate", "candidate_id": str(obj.pk), "source_class": obj.source_class},
+        )
 
 
 class FieldEnrichmentRequestSerializer(serializers.Serializer):
