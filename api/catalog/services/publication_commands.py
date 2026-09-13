@@ -1,4 +1,5 @@
 """Publication commands over the existing canonical snapshot/outbox services."""
+from datetime import date
 from hashlib import sha256
 import json
 from uuid import UUID
@@ -105,13 +106,27 @@ def catalog_health(edition, *, field_state=None):
         public = _public_values(snapshot)
         actual = {row.field_name: row.value for row in fields}
         relevant = set(actual).intersection(public) - {"file", "reader_asset", "publication_mode"}
-        pending_changes = any(actual[name] != public[name] and not (actual[name] in (None, "", []) and public[name] in (None, "", [])) for name in relevant)
+        pending_changes = any(not _same_public_value(public[name], actual[name]) for name in relevant)
         publication = "changes_pending" if pending_changes else "published"
     return {"editorial": editorial, "processing": processing, "publication": publication}
 
 
+def _same_public_value(before, after):
+    # Model DateFields are date objects; immutable JSON snapshots use ISO text.
+    # Compare their public value without changing either the draft or snapshot.
+    if isinstance(before, date):
+        before = before.isoformat()
+    if isinstance(after, date):
+        after = after.isoformat()
+    empty = (None, "", [])
+    return before == after or (before in empty and after in empty)
+
+
 def _public_values(snapshot):
     values = {**snapshot.get("work", {}), **snapshot.get("edition", {})}
+    if snapshot.get("edition"):
+        # Pre-3.0.5 publications were document-backed and lacked this new field.
+        values.setdefault("publication_mode", "document")
     roles = {"authors": "author", "translators": "translator", "chief_editors": "chief_editor",
              "editors": "editor", "annotators": "annotator", "photographers": "photographer", "other_contributors": "other"}
     for name, role in roles.items():
@@ -197,7 +212,7 @@ def prepare_revision(edition):
             if media_values[key]:
                 after = {"file": after, "media": media_values[key]}
         empty = (None, "", [])
-        state = "unchanged" if before == after or (before in empty and after in empty) else "added" if before in empty else "removed" if after in empty else "changed"
+        state = "unchanged" if _same_public_value(before, after) else "added" if before in empty else "removed" if after in empty else "changed"
         changes.append({"field": name, "label": field.label, "change": state,
                         "before": before, "after": after, "before_display": display(before, name, previous=True), "after_display": display(after, name)})
     checks = publication_preflight(edition)
