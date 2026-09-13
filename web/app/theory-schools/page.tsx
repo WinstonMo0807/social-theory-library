@@ -4,12 +4,9 @@ import { ArrowRight, BookOpen, CircleDot, Layers3, Network, Search } from "lucid
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ArchitecturalImage, BookCover, SearchField, SectionHeading } from "@/components/ui";
-import {
-  loadKnowledgeMatrix,
-  loadRecommendations,
-  loadTheorySchoolPage,
-  recommendationWorks,
-} from "@/lib/server-api";
+import { loadKnowledgeMatrix } from "@/lib/api/taxonomy.server";
+import { loadRecommendations, recommendationWorks } from "@/lib/api/recommendations.server";
+import { loadTheorySchoolPage } from "@/lib/api/theories.server";
 import { searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = {

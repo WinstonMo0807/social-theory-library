@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { BookCard, ScholarCard } from "@/components/ui";
-import type { LibraryTopic } from "@/lib/server-api";
+import type { LibraryTopic } from "@/lib/api/topics.types";
 
 export const topicSectionTitles: Record<string, string> = {
   works: "奠基文献",

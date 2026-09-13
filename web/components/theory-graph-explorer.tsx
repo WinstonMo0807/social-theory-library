@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, LocateFixed, Minus, Network, Plus, RotateCcw, Search, Share2, UserRound } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import type { LocalTheoryGraph } from "@/lib/server-api";
+import type { LocalTheoryGraph } from "@/lib/api/knowledge.types";
 import { nodeTypeLabels } from "./theory-system-ui";
 
 type Point = { x: number; y: number };

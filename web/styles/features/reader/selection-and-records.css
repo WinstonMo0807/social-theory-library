@@ -1,0 +1,369 @@
+.copy-helper {
+  position: sticky;
+  z-index: 8;
+  bottom: 12px;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  margin: 30px auto 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.copy-helper button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.copy-helper span {
+  padding-right: 8px;
+  color: var(--muted);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.reader-copy-status {
+  position: sticky;
+  z-index: 8;
+  bottom: 12px;
+  display: block;
+  width: fit-content;
+  min-height: 20px;
+  padding: 4px 8px;
+  margin: 18px auto 0;
+  background: rgb(255 255 255 / 92%);
+  color: var(--muted);
+  font-size: calc(9px + var(--font-bump));
+  pointer-events: none;
+}
+
+.reader-copy-status:empty {
+  display: none;
+}
+
+.reader-selection-menu {
+  position: fixed;
+  z-index: 520;
+  display: flex;
+  align-items: stretch;
+  padding: 4px;
+  border: 1px solid #bdbdb7;
+  background: #111;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+  color: white;
+}
+
+.reader-selection-menu button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  color: inherit;
+  cursor: pointer;
+  font-size: calc(10px + var(--font-bump));
+  white-space: nowrap;
+}
+
+.reader-selection-menu button:hover,
+.reader-selection-menu button:focus-visible {
+  background: #333;
+}
+
+.reader-selection-menu button.close {
+  width: 34px;
+  justify-content: center;
+  padding: 0;
+  border-left: 1px solid #444;
+}
+
+.reader-right section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.reader-right h2 {
+  margin: 0 0 12px;
+  font-size: calc(10px + var(--font-bump));
+  text-transform: uppercase;
+}
+
+.reader-right section > strong,
+.reader-right section > p {
+  display: block;
+  margin: 3px 0;
+  font-size: calc(10px + var(--font-bump));
+}
+
+.side-progress {
+  height: 3px;
+  margin: 18px 0 10px;
+  background: var(--line);
+}
+
+.progress-label {
+  display: flex !important;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.reader-right select {
+  width: 100%;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.reader-right section:nth-of-type(2) > p {
+  margin: 12px 0;
+  font-family: var(--serif);
+  line-height: 1.5;
+}
+
+.reader-right .button {
+  min-height: 32px;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.reader-right section > a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.tiny-portrait {
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: #878781;
+  border-radius: 50%;
+}
+
+.reader-right section > a p {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.reader-right section > a small {
+  color: var(--muted);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.reader-bottom {
+  grid-area: bottom;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 45px 1fr 45px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 calc(var(--reader-right) + 28px) 0 calc(var(--reader-left) + 28px);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.reader-bottom > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: calc(10px + var(--font-bump));
+}
+
+.reader-bottom > div {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.reader-bottom > div button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+}
+
+.reader-bottom > div .continuous-mode-indicator {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border-left: 1px solid var(--line);
+  white-space: nowrap;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.open-panel {
+  position: fixed;
+  z-index: 175;
+  top: 108px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  place-items: center;
+}
+
+.open-panel.left { left: 8px; }
+.open-panel.right { right: 8px; }
+
+.login-gate,
+.annotation-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.48);
+  place-items: center;
+}
+
+.login-gate > div {
+  position: relative;
+  width: min(430px, 100%);
+  padding: 34px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.annotation-composer {
+  position: fixed;
+  z-index: 215;
+  top: 116px;
+  right: calc(var(--reader-right) + 22px);
+  width: min(330px, calc(100vw - 40px));
+}
+
+.annotation-composer > form {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 11px;
+  padding: 20px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 14%);
+}
+
+.annotation-composer .panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.annotation-composer h2 {
+  margin: 0;
+  font-size: calc(22px + var(--font-bump));
+}
+
+.annotation-composer blockquote {
+  max-height: 92px;
+  overflow: auto;
+  padding: 12px;
+  margin: 0;
+  border-left: 3px solid var(--annotation);
+  background: var(--surface);
+  font-family: var(--serif);
+  font-size: calc(11px + var(--font-bump));
+}
+
+.annotation-composer label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.annotation-composer label span {
+  font-size: calc(8px + var(--font-bump));
+  font-weight: 700;
+}
+
+.annotation-composer textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: calc(10px + var(--font-bump));
+}
+
+.reader-library-entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  border-bottom: 1px solid var(--line);
+}
+
+.reader-library-entry.active {
+  background: var(--surface);
+}
+
+.reader-library-open {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.reader-library-open small {
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.reader-library-open span {
+  overflow: hidden;
+  font-size: calc(9px + var(--font-bump));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-library-delete {
+  display: grid;
+  min-width: 34px;
+  color: var(--muted);
+  cursor: pointer;
+  place-items: center;
+}
+
+.reader-library-delete:hover {
+  color: var(--danger);
+}
+
+.login-gate .panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.login-gate h2 {
+  margin: 0;
+  font-size: calc(30px + var(--font-bump));
+  letter-spacing: -0.04em;
+}
+
+.login-gate p:not(.eyebrow) {
+  margin: 16px 0 22px;
+  color: var(--muted);
+  font-size: calc(11px + var(--font-bump));
+}
+
+.login-gate .button {
+  width: 100%;
+  margin-top: 8px;
+}

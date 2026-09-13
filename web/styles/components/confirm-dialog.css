@@ -1,0 +1,53 @@
+/* 2026-08 admin publication, processing and reader interaction repair */
+.confirm-dialog {
+  width: min(var(--stl-container-dialog), calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(20 20 18 / 58%);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-dialog-card {
+  border: var(--stl-border-hairline) solid #1b1b19;
+  background: var(--surface, #fff);
+  box-shadow: var(--stl-shadow-dialog);
+}
+
+.confirm-dialog-card > header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: .8rem;
+  align-items: start;
+  padding: 1.1rem;
+  border-bottom: var(--stl-border-hairline) solid var(--line);
+}
+
+.confirm-dialog-card > header > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--stl-radius-round);
+  background: #eee9de;
+  place-items: center;
+}
+
+.confirm-dialog.danger .confirm-dialog-card > header > span {
+  background: #fae8e5;
+  color: #9b2c2c;
+}
+
+.confirm-dialog-card h2,
+.confirm-dialog-card p { margin: 0; }
+.confirm-dialog-card h2 { font-size: 1.05rem; }
+.confirm-dialog-card p { margin-top: .3rem; color: var(--muted); line-height: var(--stl-type-line-body); }
+.confirm-dialog-card > header > button { padding: .25rem; cursor: pointer; }
+.confirm-dialog-card > ul { margin: 0; padding: 1rem 1.2rem 0 2.4rem; }
+.confirm-dialog-card > label { display: grid; gap: .4rem; padding: 1rem 1.1rem 0; }
+.confirm-dialog-card > label textarea { width: 100%; resize: vertical; }
+.confirm-dialog-card > footer { display: flex; justify-content: flex-end; gap: .6rem; padding: 1rem 1.1rem; }

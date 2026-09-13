@@ -6,7 +6,7 @@ import { ActionButton, AsyncStatus } from "@/components/action-feedback";
 import { WorkDetailView } from "@/components/work-detail-view";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import type { Work } from "@/lib/data";
-import type { ApiWork } from "@/lib/server-api";
+import type { ApiWork } from "@/lib/api/public-catalog";
 
 type PreviewPayload = {
   preview_mode: true;

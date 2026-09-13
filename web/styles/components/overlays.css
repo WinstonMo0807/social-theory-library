@@ -1,0 +1,73 @@
+/* Shared native overlays. Feature-specific cards and menu panels keep their styles. */
+.ui-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(28rem, 100%);
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: var(--stl-space-6);
+  border: 0;
+  border-left: var(--stl-border-hairline) solid var(--line);
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.ui-drawer::backdrop {
+  background: rgb(10 10 10 / 34%);
+}
+
+.ui-drawer.site-menu-layer {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.ui-drawer.site-menu-layer::backdrop {
+  background: transparent;
+}
+
+/* Author display rules must not make a closed native dialog visible. */
+.ui-drawer:not([open]) {
+  display: none;
+}
+
+.ui-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ui-tooltip-content {
+  position: absolute;
+  z-index: var(--stl-z-menu);
+  bottom: 100%;
+  left: 50%;
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: var(--stl-space-2) var(--stl-space-3);
+  border: var(--stl-border-hairline) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--stl-type-label);
+  font-weight: normal;
+  line-height: var(--stl-type-line-body);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: var(--stl-shadow-toast);
+  transform: translateX(-50%);
+}
+
+.ui-tooltip-content[hidden] {
+  display: none;
+}

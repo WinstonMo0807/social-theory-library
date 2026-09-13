@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Check, Circle, Clock3, GraduationCap } from "lucide-react";
 import type { ReactNode } from "react";
 import { TheoryBanner, WorkCompactCard } from "@/components/theory-system-ui";
-import type { loadNormalizedReadingPath } from "@/lib/server-api";
+import type { loadNormalizedReadingPath } from "@/lib/api/knowledge.server";
 
 type ReadingPathPayload = NonNullable<Awaited<ReturnType<typeof loadNormalizedReadingPath>>>;
 

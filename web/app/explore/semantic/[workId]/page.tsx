@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Quote } from "lucide-react";
 import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SiteFooter } from "@/components/site-footer";
-import { loadSemanticSearch } from "@/lib/server-api";
+import { loadSemanticSearch } from "@/lib/api/search.server";
 import { semanticResponseLabel } from "@/lib/semantic-search-ui";
 
 export const metadata: Metadata = {

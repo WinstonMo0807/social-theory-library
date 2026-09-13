@@ -9,7 +9,7 @@ import {
   TheorySectionHeading,
   TheoryStat,
 } from "@/components/theory-system-ui";
-import type { loadTheoryDisciplinePage } from "@/lib/server-api";
+import type { loadTheoryDisciplinePage } from "@/lib/api/knowledge.server";
 
 type DisciplinePagePayload = NonNullable<Awaited<ReturnType<typeof loadTheoryDisciplinePage>>>;
 

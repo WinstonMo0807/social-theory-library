@@ -1,0 +1,42 @@
+.admin-page-title {
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+}
+
+.admin-page-title p,
+.admin-page-title h1,
+.admin-page-title span {
+  margin: 0;
+}
+
+.admin-page-title p {
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+  font-weight: var(--stl-type-weight-strong);
+  text-transform: uppercase;
+}
+
+.admin-page-title h1 {
+  font-size: calc(30px + var(--font-bump));
+  letter-spacing: -0.04em;
+}
+
+.admin-page-title span {
+  color: var(--muted);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.admin-page-title a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--stl-space-2);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-page-title > strong {
+  font-size: calc(18px + var(--font-bump));
+}

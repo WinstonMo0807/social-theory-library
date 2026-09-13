@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { ReaderShell } from "@/components/reader-shell";
-import { loadReaderManifest } from "@/lib/server-api";
+import { loadReaderManifest } from "@/lib/api/reader.server";
 
 export const metadata: Metadata = {
   title: "在线阅读",

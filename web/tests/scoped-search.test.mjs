@@ -9,7 +9,7 @@ const {
   scopedSearchHref,
   searchPage,
 } = await import("../lib/search-context.ts");
-const { loadScopedSearch } = await import("../lib/server-api.ts");
+const { loadScopedSearch } = await import("../lib/api/search.server.ts");
 
 
 test("scoped search URLs preserve explicit context, query, filters and page", () => {

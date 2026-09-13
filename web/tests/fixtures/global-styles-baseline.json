@@ -1,0 +1,348 @@
+{
+  "sourceRef": "d51928deab6c7a6ca93084d17b030ceb4c535919",
+  "sourcePath": "web/app/globals.css",
+  "sourceSha256": "08812a4518747fb779b3e6e1be208d31db20a8587223c5e40cac41822696652d",
+  "semantic": {
+    "sha256": "c435f6304e01b949a082656e51b5ded0869a512d2934b941ba4da0928393465f",
+    "rules": 3413,
+    "declarations": 10728
+  },
+  "tokenSubstitutions": 189,
+  "sections": [
+    {
+      "file": "tokens/theme.css",
+      "originalStartLine": 3,
+      "originalEndLine": 26
+    },
+    {
+      "file": "features/explore/landing-and-modes.css",
+      "originalStartLine": 28,
+      "originalEndLine": 386
+    },
+    {
+      "file": "features/explore/assistant.css",
+      "originalStartLine": 388,
+      "originalEndLine": 715
+    },
+    {
+      "file": "features/explore/entry-responsive.css",
+      "originalStartLine": 717,
+      "originalEndLine": 831
+    },
+    {
+      "file": "features/knowledge/matrix-profiles.css",
+      "originalStartLine": 833,
+      "originalEndLine": 1102
+    },
+    {
+      "file": "base/document.css",
+      "originalStartLine": 1104,
+      "originalEndLine": 1230
+    },
+    {
+      "file": "layout/site-header.css",
+      "originalStartLine": 1232,
+      "originalEndLine": 1305
+    },
+    {
+      "file": "components/icon-button.css",
+      "originalStartLine": 1307,
+      "originalEndLine": 1323
+    },
+    {
+      "file": "layout/site-menu.css",
+      "originalStartLine": 1325,
+      "originalEndLine": 1499
+    },
+    {
+      "file": "layout/page-shell.css",
+      "originalStartLine": 1501,
+      "originalEndLine": 1504
+    },
+    {
+      "file": "features/home/hero.css",
+      "originalStartLine": 1506,
+      "originalEndLine": 1682
+    },
+    {
+      "file": "components/panel.css",
+      "originalStartLine": 1684,
+      "originalEndLine": 1713
+    },
+    {
+      "file": "features/home/featured-grid.css",
+      "originalStartLine": 1715,
+      "originalEndLine": 1724
+    },
+    {
+      "file": "components/book-card.css",
+      "originalStartLine": 1726,
+      "originalEndLine": 1944
+    },
+    {
+      "file": "features/home/random-recommendation.css",
+      "originalStartLine": 1946,
+      "originalEndLine": 2011
+    },
+    {
+      "file": "components/button.css",
+      "originalStartLine": 2013,
+      "originalEndLine": 2032
+    },
+    {
+      "file": "features/home/topics.css",
+      "originalStartLine": 2034,
+      "originalEndLine": 2106
+    },
+    {
+      "file": "components/search-and-tags.css",
+      "originalStartLine": 2108,
+      "originalEndLine": 2158
+    },
+    {
+      "file": "features/home/scholar-spotlight.css",
+      "originalStartLine": 2160,
+      "originalEndLine": 2168
+    },
+    {
+      "file": "components/scholar-card.css",
+      "originalStartLine": 2170,
+      "originalEndLine": 2237
+    },
+    {
+      "file": "layout/site-footer.css",
+      "originalStartLine": 2239,
+      "originalEndLine": 2259
+    },
+    {
+      "file": "layout/public-responsive.css",
+      "originalStartLine": 2261,
+      "originalEndLine": 2475
+    },
+    {
+      "file": "features/explore/search-results.css",
+      "originalStartLine": 2477,
+      "originalEndLine": 3042
+    },
+    {
+      "file": "features/explore/filters-and-exact-results.css",
+      "originalStartLine": 3044,
+      "originalEndLine": 3463
+    },
+    {
+      "file": "features/knowledge/directories.css",
+      "originalStartLine": 3465,
+      "originalEndLine": 4055
+    },
+    {
+      "file": "features/knowledge/directory-responsive.css",
+      "originalStartLine": 4057,
+      "originalEndLine": 4194
+    },
+    {
+      "file": "features/account/authentication.css",
+      "originalStartLine": 4196,
+      "originalEndLine": 4428
+    },
+    {
+      "file": "features/account/reader-center.css",
+      "originalStartLine": 4430,
+      "originalEndLine": 4922
+    },
+    {
+      "file": "features/account/responsive.css",
+      "originalStartLine": 4924,
+      "originalEndLine": 5020
+    },
+    {
+      "file": "layout/admin-shell.css",
+      "originalStartLine": 5022,
+      "originalEndLine": 5234
+    },
+    {
+      "file": "features/admin/dashboard.css",
+      "originalStartLine": 5236,
+      "originalEndLine": 5675
+    },
+    {
+      "file": "components/admin-page-title.css",
+      "originalStartLine": 5677,
+      "originalEndLine": 5718
+    },
+    {
+      "file": "components/admin-primitives.css",
+      "originalStartLine": 5720,
+      "originalEndLine": 6040
+    },
+    {
+      "file": "features/admin/intake-controls.css",
+      "originalStartLine": 6042,
+      "originalEndLine": 6206
+    },
+    {
+      "file": "features/admin/upload-pipeline.css",
+      "originalStartLine": 6208,
+      "originalEndLine": 6883
+    },
+    {
+      "file": "features/about.css",
+      "originalStartLine": 6885,
+      "originalEndLine": 7080
+    },
+    {
+      "file": "features/admin/metadata-review.css",
+      "originalStartLine": 7082,
+      "originalEndLine": 7671
+    },
+    {
+      "file": "features/admin/relations-and-attempts.css",
+      "originalStartLine": 7673,
+      "originalEndLine": 8028
+    },
+    {
+      "file": "features/admin/entity-editors.css",
+      "originalStartLine": 8030,
+      "originalEndLine": 8401
+    },
+    {
+      "file": "features/admin/settings-and-backups.css",
+      "originalStartLine": 8403,
+      "originalEndLine": 8975
+    },
+    {
+      "file": "layout/admin-responsive.css",
+      "originalStartLine": 8977,
+      "originalEndLine": 9175
+    },
+    {
+      "file": "features/reader/chrome.css",
+      "originalStartLine": 9177,
+      "originalEndLine": 9771
+    },
+    {
+      "file": "features/reader/document.css",
+      "originalStartLine": 9773,
+      "originalEndLine": 10224
+    },
+    {
+      "file": "features/reader/selection-and-records.css",
+      "originalStartLine": 10226,
+      "originalEndLine": 10594
+    },
+    {
+      "file": "features/reader/responsive.css",
+      "originalStartLine": 10596,
+      "originalEndLine": 10839
+    },
+    {
+      "file": "features/knowledge/detail-pages.css",
+      "originalStartLine": 10841,
+      "originalEndLine": 11612
+    },
+    {
+      "file": "features/knowledge/detail-responsive.css",
+      "originalStartLine": 11614,
+      "originalEndLine": 11738
+    },
+    {
+      "file": "components/entity-picker.css",
+      "originalStartLine": 11740,
+      "originalEndLine": 11793
+    },
+    {
+      "file": "features/admin/processing-and-curation.css",
+      "originalStartLine": 11795,
+      "originalEndLine": 12385
+    },
+    {
+      "file": "features/knowledge/subdisciplines.css",
+      "originalStartLine": 12386,
+      "originalEndLine": 12498
+    },
+    {
+      "file": "features/knowledge/matrix-navigation.css",
+      "originalStartLine": 12499,
+      "originalEndLine": 12960
+    },
+    {
+      "file": "features/knowledge/theory-system.css",
+      "originalStartLine": 12962,
+      "originalEndLine": 13304
+    },
+    {
+      "file": "features/admin/theory-system.css",
+      "originalStartLine": 13306,
+      "originalEndLine": 13502
+    },
+    {
+      "file": "components/route-states.css",
+      "originalStartLine": 13504,
+      "originalEndLine": 13571
+    },
+    {
+      "file": "features/admin/relation-preview-and-publication.css",
+      "originalStartLine": 13573,
+      "originalEndLine": 13906
+    },
+    {
+      "file": "components/confirm-dialog.css",
+      "originalStartLine": 13908,
+      "originalEndLine": 13960
+    },
+    {
+      "file": "features/admin/publication-desk.css",
+      "originalStartLine": 13962,
+      "originalEndLine": 14070
+    },
+    {
+      "file": "components/action-feedback.css",
+      "originalStartLine": 14072,
+      "originalEndLine": 14197
+    },
+    {
+      "file": "features/admin/functional-health.css",
+      "originalStartLine": 14199,
+      "originalEndLine": 14630
+    },
+    {
+      "file": "features/admin/metadata-candidates.css",
+      "originalStartLine": 14632,
+      "originalEndLine": 15020
+    },
+    {
+      "file": "features/admin/processing-review.css",
+      "originalStartLine": 15022,
+      "originalEndLine": 15130
+    },
+    {
+      "file": "features/admin/authority-fields.css",
+      "originalStartLine": 15132,
+      "originalEndLine": 15273
+    },
+    {
+      "file": "features/explore/editorial-landing.css",
+      "originalStartLine": 15275,
+      "originalEndLine": 15501
+    },
+    {
+      "file": "features/explore/editorial-exact.css",
+      "originalStartLine": 15503,
+      "originalEndLine": 15983
+    },
+    {
+      "file": "features/explore/editorial-semantic.css",
+      "originalStartLine": 15985,
+      "originalEndLine": 16274
+    },
+    {
+      "file": "features/explore/editorial-assistant.css",
+      "originalStartLine": 16276,
+      "originalEndLine": 16623
+    },
+    {
+      "file": "features/explore/editorial-responsive.css",
+      "originalStartLine": 16625,
+      "originalEndLine": 16921
+    }
+  ]
+}

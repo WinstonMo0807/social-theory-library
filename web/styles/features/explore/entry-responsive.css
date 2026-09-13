@@ -1,0 +1,115 @@
+@media (max-width: 1100px) {
+  .explore-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .explore-entry-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 260px;
+  }
+
+  .ask-library-workspace {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .ask-source-panel {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .ask-source-panel > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .explore-landing-hero {
+    min-height: 480px;
+  }
+
+  .explore-landing-copy {
+    align-self: start;
+    padding: 32px 24px;
+  }
+
+  .explore-landing-copy h1 {
+    font-size: clamp(50px, 16vw, 78px);
+  }
+
+  .explore-landing-architecture {
+    inset: 42% 0 0;
+  }
+
+  .explore-landing-architecture .architectural-image.compact {
+    min-height: 280px;
+  }
+
+  .explore-entry-grid {
+    grid-template-columns: 1fr;
+    margin: -18px 10px 30px;
+  }
+
+  .explore-entry-card,
+  .explore-entry-card:last-child {
+    grid-column: auto;
+    min-height: 310px;
+  }
+
+  .mobile-filter-disclosure {
+    display: block;
+  }
+
+  .semantic-comparison > div,
+  .ask-library-workspace,
+  .ask-source-panel > div {
+    grid-template-columns: 1fr;
+  }
+
+  .semantic-comparison article + article {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .semantic-work-result-card {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 10px;
+    padding: 16px 12px;
+  }
+
+  .semantic-passage-block > footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ask-conversation-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ask-conversation-list > div {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, 72vw);
+    overflow-x: auto;
+  }
+
+  .ask-message-list {
+    max-height: none;
+    padding: 18px 12px;
+  }
+
+  .ask-message,
+  .ask-message.user {
+    width: 100%;
+  }
+
+  .ask-composer > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ask-service-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

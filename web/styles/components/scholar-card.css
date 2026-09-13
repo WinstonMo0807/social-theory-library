@@ -1,0 +1,68 @@
+.scholar-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.scholar-portrait {
+  position: relative;
+  display: grid;
+  width: 72px;
+  height: 94px;
+  overflow: hidden;
+  background: #cbcbc6;
+  color: #555;
+  font-family: var(--serif);
+  font-size: calc(var(--stl-type-title) + var(--font-bump));
+  place-items: center;
+  filter: grayscale(1);
+}
+
+.scholar-portrait::after {
+  position: absolute;
+  right: -8px;
+  bottom: -24px;
+  left: -8px;
+  height: 58px;
+  background: #595957;
+  border-radius: 50% 50% 0 0;
+  content: "";
+}
+
+.scholar-portrait.has-image {
+  background-position: center 18%;
+  background-size: cover;
+}
+
+.scholar-portrait.has-image::after {
+  display: none;
+}
+
+.scholar-portrait.large {
+  width: 100%;
+  height: 100%;
+  min-height: 410px;
+  font-size: calc(80px + var(--font-bump));
+}
+
+.scholar-card h3,
+.scholar-card p {
+  margin: 0;
+}
+
+.scholar-card h3 {
+  font-size: calc(11px + var(--font-bump));
+}
+
+.scholar-card p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  line-height: 1.45;
+}
+
+.scholar-card .arrow-only {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--stl-space-2);
+}

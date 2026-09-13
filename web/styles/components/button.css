@@ -1,0 +1,20 @@
+.button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px var(--stl-space-4);
+  border: var(--stl-border-hairline) solid var(--ink);
+  background: var(--ink);
+  color: var(--stl-ink-inverse);
+  cursor: pointer;
+  font-size: calc(var(--stl-type-label) + var(--font-bump));
+  font-weight: 680;
+  transition: background-color var(--stl-motion-control) var(--ease-out), color var(--stl-motion-control) var(--ease-out), transform var(--stl-motion-press) var(--ease-out);
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--ink);
+}

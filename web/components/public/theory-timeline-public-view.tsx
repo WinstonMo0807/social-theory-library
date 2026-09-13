@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BookOpen, CalendarDays, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { TheoryEmpty } from "@/components/theory-system-ui";
-import type { NormalizedTimelineEvent } from "@/lib/server-api";
+import type { NormalizedTimelineEvent } from "@/lib/api/knowledge.types";
 
 export const theoryTimelineEventTypeLabels: Record<string, string> = {
   publication: "重要著作出版",

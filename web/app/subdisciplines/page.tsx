@@ -4,7 +4,7 @@ import { ArrowRight, Layers3 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ArchitecturalImage, SearchField, SectionHeading } from "@/components/ui";
-import { loadDisciplines, loadSubdisciplinePage } from "@/lib/server-api";
+import { loadDisciplines, loadSubdisciplinePage } from "@/lib/api/taxonomy.server";
 import { scopedSearchHref, searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = { title: "子学科" };

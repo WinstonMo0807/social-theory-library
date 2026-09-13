@@ -10,11 +10,7 @@ import {
   nodeTypeLabels,
   workRoleLabels,
 } from "@/components/theory-system-ui";
-import type {
-  loadKnowledgeNode,
-  loadNormalizedReadingPaths,
-  loadNormalizedTheoryTimeline,
-} from "@/lib/server-api";
+import type { loadKnowledgeNode, loadNormalizedReadingPaths, loadNormalizedTheoryTimeline } from "@/lib/api/knowledge.server";
 
 type KnowledgeNodePayload = NonNullable<Awaited<ReturnType<typeof loadKnowledgeNode>>>;
 type ReadingPathPayload = Awaited<ReturnType<typeof loadNormalizedReadingPaths>>;

@@ -13,7 +13,8 @@ import {
   WorkCompactCard,
   nodeTypeLabels,
 } from "@/components/theory-system-ui";
-import { loadScopedSearch, loadTheorySystemOverview } from "@/lib/server-api";
+import { loadScopedSearch } from "@/lib/api/search.server";
+import { loadTheorySystemOverview } from "@/lib/api/knowledge.server";
 import { searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = {

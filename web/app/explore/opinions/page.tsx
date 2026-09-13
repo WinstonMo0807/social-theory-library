@@ -11,14 +11,8 @@ import {
 import { SiteFooter } from "@/components/site-footer";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
 import { SearchField } from "@/components/ui";
-import {
-  loadViewpointSearch,
-  type SearchFilters,
-  type ViewpointFacetOption,
-  type ViewpointSearchPayload,
-  type ViewpointSearchResult,
-  type ViewpointStance,
-} from "@/lib/server-api";
+import { loadViewpointSearch } from "@/lib/api/search.server";
+import type { SearchFilters, ViewpointFacetOption, ViewpointSearchPayload, ViewpointSearchResult, ViewpointStance } from "@/lib/api/search.types";
 import { SearchModeSwitch } from "@/components/search-mode-switch";
 import styles from "./viewpoint-search.module.css";
 

@@ -4,7 +4,8 @@ import { ArrowRight, Search } from "lucide-react";
 import { TheoryTimelinePublicList, theoryTimelineEventTypeLabels } from "@/components/public/theory-timeline-public-view";
 import { SiteFooter } from "@/components/site-footer";
 import { TheoryBanner } from "@/components/theory-system-ui";
-import { loadDisciplines, loadNormalizedTheoryTimelinePage, loadTheorySystemNodes } from "@/lib/server-api";
+import { loadDisciplines } from "@/lib/api/taxonomy.server";
+import { loadNormalizedTheoryTimelinePage, loadTheorySystemNodes } from "@/lib/api/knowledge.server";
 
 export const metadata: Metadata = { title: "社会理论历史时间轴", description: "按学科、理论传统、事件类型和馆藏证据浏览社会理论历史。" };
 

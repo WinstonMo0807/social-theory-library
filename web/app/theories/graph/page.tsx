@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Network, Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
-import { loadDisciplines, loadLocalTheoryGraph, loadTheorySystemNodes } from "@/lib/server-api";
+import { loadDisciplines } from "@/lib/api/taxonomy.server";
+import { loadLocalTheoryGraph, loadTheorySystemNodes } from "@/lib/api/knowledge.server";
 
 export const metadata: Metadata = { title: "社会理论图谱", description: "以一个理论为中心，浏览经过人工确认的局部理论关系。" };
 

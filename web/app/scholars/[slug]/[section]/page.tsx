@@ -4,7 +4,8 @@ import {
   ScholarSectionPublicView,
   scholarSectionTitles,
 } from "@/components/public/scholar-section-public-view";
-import { loadScholar, loadTheorySchools } from "@/lib/server-api";
+import { loadScholar } from "@/lib/api/people.server";
+import { loadTheorySchools } from "@/lib/api/theories.server";
 
 export async function generateMetadata({
   params,

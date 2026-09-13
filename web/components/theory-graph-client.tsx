@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { TheoryGraph } from "@/lib/server-api";
+import type { TheoryGraph } from "@/lib/api/theories.types";
 
 export function TheoryGraphClient({ graph }: { graph: TheoryGraph }) {
   const [selectedId, setSelectedId] = useState(graph.nodes[0]?.id ?? "");

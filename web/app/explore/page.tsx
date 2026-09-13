@@ -23,15 +23,8 @@ import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
 import { semanticResponseLabel } from "@/lib/semantic-search-ui";
 import { SearchModeSwitch } from "@/components/search-mode-switch";
-import {
-  loadHotSearches,
-  loadSearch,
-  loadSemanticSearch,
-  type SearchFacetOption,
-  type SearchFilters,
-  type SemanticSearchPayload,
-  type SemanticSearchResult,
-} from "@/lib/server-api";
+import { loadHotSearches, loadSearch, loadSemanticSearch } from "@/lib/api/search.server";
+import type { SearchFacetOption, SearchFilters, SemanticSearchPayload, SemanticSearchResult } from "@/lib/api/search.types";
 
 export const metadata: Metadata = {
   title: "探索书库",

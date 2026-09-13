@@ -1,0 +1,244 @@
+@media (max-width: 1350px) {
+  .reader {
+    --reader-left: 275px;
+    --reader-right: 280px;
+  }
+
+  .reader-toolbar {
+    grid-template-columns: 160px 170px 110px minmax(150px, 1fr) 80px 170px 140px;
+  }
+
+  .page-control {
+    grid-template-columns: 22px 34px minmax(34px, 1fr) 30px minmax(0, 1fr) 22px;
+    padding-inline: 8px;
+  }
+
+  .reader-logo {
+    padding-left: 18px;
+  }
+
+  .footnote-card {
+    right: -80px;
+    width: 145px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .reader {
+    --reader-left: 250px;
+    --reader-right: 0px;
+  }
+
+  .reader-toolbar {
+    grid-template-columns: 120px 170px 110px 1fr 80px 150px;
+  }
+
+  .page-control {
+    grid-template-columns: 22px 34px minmax(34px, 1fr) 30px minmax(0, 1fr) 22px;
+    padding-inline: 8px;
+  }
+
+  .reader-progress-top {
+    display: none;
+  }
+
+  .reader-right {
+    position: fixed;
+    z-index: 190;
+    top: 96px;
+    right: 0;
+    bottom: 64px;
+    width: 300px;
+    border-left: 1px solid var(--line);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(100%);
+    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  }
+
+  .reader:not(.right-closed) .reader-right {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .reader.right-closed .reader-right {
+    transform: translateX(100%);
+  }
+
+  .open-panel.right {
+    display: grid;
+  }
+
+  .pdf-page {
+    padding-right: 70px;
+    padding-left: 70px;
+  }
+
+  .footnote-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .continuous-pdf-viewer {
+    padding-right: 0;
+  }
+
+  .pdf-margin-note {
+    display: none;
+  }
+
+  .annotation-composer {
+    right: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .reader {
+    --reader-left: 0px;
+    grid-template:
+      "toolbar" 66px
+      "document" minmax(0, 1fr)
+      "bottom" 54px
+      / 1fr;
+  }
+
+  .reader-toolbar {
+    grid-template-columns: 54px 1fr auto;
+  }
+
+  .annotation-composer {
+    top: auto;
+    right: 12px;
+    bottom: 66px;
+    left: 12px;
+    width: auto;
+  }
+
+  .annotation-composer > form {
+    max-height: min(52vh, 410px);
+    overflow-y: auto;
+  }
+
+  .reader-logo,
+  .zoom-control,
+  .reader-search,
+  .theme-control,
+  .reader-actions span {
+    display: none;
+  }
+
+  .page-control {
+    grid-template-columns: auto 34px auto auto;
+    border-left: 0;
+  }
+
+  .page-control .reader-printed-page {
+    display: none;
+  }
+
+  .page-control > span:first-child {
+    display: none;
+  }
+
+  .reader-actions {
+    grid-column: 3;
+    border-left: 0;
+  }
+
+  .reader-actions a,
+  .reader-actions button {
+    width: 42px;
+  }
+
+  .reader-actions button:nth-child(3) {
+    display: none;
+  }
+
+  .reader-left {
+    position: fixed;
+    z-index: 190;
+    top: 66px;
+    bottom: 54px;
+    left: 0;
+    width: min(320px, 88vw);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100%);
+    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  }
+
+  .reader:not(.left-closed) .reader-left {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .reader-document {
+    padding: 18px 8px 70px;
+  }
+
+  .reader-selection-menu {
+    right: 8px;
+    left: 8px !important;
+    max-width: calc(100vw - 16px);
+    overflow-x: auto;
+  }
+
+  .reader-selection-menu button {
+    min-height: 44px;
+  }
+
+  .pdf-page {
+    min-height: 720px;
+    padding: 42px 28px 60px;
+  }
+
+  .pdf-page h1 {
+    font-size: calc(24px + var(--font-bump));
+  }
+
+  .pdf-prose > p {
+    font-size: calc(14px + var(--font-bump));
+  }
+
+  .reader-bottom {
+    grid-template-columns: auto 1fr auto;
+    padding: 0 12px;
+  }
+
+  .reader-bottom > span,
+  .reader-bottom > b {
+    display: none;
+  }
+
+  .reader-bottom > div {
+    grid-column: 2;
+  }
+
+  .reader-bottom > div .continuous-mode-indicator {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .reader-bottom > div .continuous-mode-indicator {
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .reader-bottom > div .continuous-mode-indicator svg {
+    flex: none;
+  }
+
+  .open-panel {
+    top: 76px;
+  }
+
+  .open-panel.right {
+    display: none;
+  }
+}

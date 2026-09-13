@@ -1,0 +1,138 @@
+@media (max-width: 1100px) {
+  .search-layout,
+  .semantic-search-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+
+  .search-aside {
+    display: none;
+  }
+
+  .theory-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .featured-theory {
+    grid-row: auto;
+  }
+
+  .theory-browser,
+  .school-scholars {
+    grid-column: 1 / -1;
+  }
+
+  .theory-card-grid,
+  .scholar-directory-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .conceptual-neighbors {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .explore-hero,
+  .theory-hero,
+  .directory-hero,
+  .detail-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .explore-hero h1,
+  .theory-hero h1,
+  .directory-hero h1 {
+    font-size: calc(52px + var(--font-bump));
+  }
+
+  .search-layout,
+  .semantic-search-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-sidebar,
+  .semantic-filter-sidebar {
+    display: none;
+  }
+
+  .search-mode-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .search-mode-switch small {
+    display: none;
+  }
+
+  .semantic-result-card {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 12px;
+    padding-inline: 12px;
+  }
+
+  .semantic-results-header,
+  .semantic-passage-block > footer,
+  .semantic-more-evidence > summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .semantic-results-header .sort-form,
+  .semantic-passage-block > footer .button,
+  .semantic-rewrite-form input,
+  .semantic-rewrite-form button,
+  .semantic-rewrite-form a {
+    width: 100%;
+  }
+
+  .semantic-understanding,
+  .semantic-rewrite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .semantic-result-card > .button {
+    grid-column: 1 / -1;
+  }
+
+  .result-books,
+  .scholar-results > div {
+    grid-template-columns: 1fr;
+  }
+
+  .fulltext-result,
+  .article-result {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .fulltext-result .button,
+  .article-actions {
+    grid-column: 1 / -1;
+  }
+
+  .theory-filters,
+  .theory-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .theory-filters > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .theory-browser,
+  .school-scholars,
+  .conceptual-neighbors {
+    grid-column: span 1;
+  }
+
+  .theory-card-grid,
+  .scholar-directory-grid,
+  .topic-directory-grid,
+  .four-book-grid,
+  .two-column-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .scholar-ribbon {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

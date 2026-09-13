@@ -4,7 +4,9 @@ import { ArrowRight, BookOpen, CircleHelp, Search, Shapes } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ArchitecturalImage, SearchField, SectionHeading, TagList } from "@/components/ui";
-import { loadDisciplines, loadRecommendations, loadTopicPage } from "@/lib/server-api";
+import { loadDisciplines } from "@/lib/api/taxonomy.server";
+import { loadRecommendations } from "@/lib/api/recommendations.server";
+import { loadTopicPage } from "@/lib/api/topics.server";
 import { scopedSearchHref, searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = { title: "从研究主题进入社会理论" };

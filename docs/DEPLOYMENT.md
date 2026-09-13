@@ -1,8 +1,20 @@
 # 部署说明
 
-更新日期为 2026-09-05。本文件记录源码中的部署入口、安全要求和正式生产切换快照。任何后续部署仍需重新检查实时状态。
+更新日期为2026-09-13。当前摘要见CURRENT_STATE.md，后续部署仍需重新检查实时状态。
 
-15:52 最新状态：公网 Cloudflare 1033 尚未恢复，书库内网正常。cloudflared 已固定当前镜像并持久化独立 netns 的 tcp_retries2=8，宿主与其他服务未改。出站 7844 连通性仍需进一步处理，详见 [隧道恢复记录](CLOUDFLARE_TUNNEL_RECOVERY.md)。下方成功切换记录不能代表当前公网可用。
+## 3.0.5生产记录
+
+2026-09-12已从源树3e3a3103c941febb1a4ad7ea904ac73034c237d2构建并部署API与Web。源提交d51928d，989文件，归档SHA256为4432aa8f24df1ad34a23b80d9f7867ab876c18646945fec45437549429e5f8a4。API镜像1c9d2a295492f80bf7333f9838c5a3cbf56154a38c1cfd4431a971f501688f66，Web镜像1947ae15d1fc6290986842e2b5bd37df4978c53035ece862a3ea154d168f6154。后续收尾镜像以CURRENT_PROGRESS为准。
+
+NAS下载缓慢，API保留核验一致的原运行依赖，使用no-index/no-deps/require-hashes加入8个固定schema依赖，pip check及旧包一致性通过。冻结API源文件逐一核对SHA。Web按新锁文件离线npm ci实际安装Linux依赖并构建，不复用旧Web node_modules。
+
+实际数据库备份恢复、catalog0043至0054/ingestion0015至0016迁移、旧API真实插入回滚验证通过。生产API、两个Worker、Web和Edge已更新，容器HTTP和两Worker响应通过，公网ready为3.0.5/迁移0，Beat在精准书目恢复后恢复。cloudflared身份、镜像和重启次数未变，未改隧道配置。
+
+原PDF、页记录、暂停OCR和语义索引保留。storage/private属主uid100/gid101、模式0750，仅挂载API和Worker。旧源码、环境、Compose、数据库及回退脚本位于storage/backups/pre-v305-20260912-2148/deploy-record。公网验收包括真实书目和Reader，不将readiness代替业务验收。
+
+### 历史隧道事件
+
+2026-09-05曾发生Cloudflare1033，详见[隧道恢复记录](CLOUDFLARE_TUNNEL_RECOVERY.md)。2026-09-12本次部署前后公网均可用，该历史故障不代表当前状态。
 
 ## Version 3.0.4 production cutover
 

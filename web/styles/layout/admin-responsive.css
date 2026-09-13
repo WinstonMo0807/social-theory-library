@@ -1,0 +1,199 @@
+@media (max-width: 1280px) {
+  .metric-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .admin-grid.top,
+  .admin-grid.middle,
+  .admin-grid.bottom {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .taxonomy-admin-grid,
+  .distribution-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .taxonomy-layout,
+  .admin-master-detail {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-sidebar {
+    width: min(290px, 84vw);
+    transform: translateX(-100%);
+    transition: transform var(--stl-motion-navigation) var(--ease-out);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-mobile-close {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+  }
+
+  .admin-main {
+    margin-left: 0;
+  }
+
+  .admin-topbar {
+    grid-template-columns: 36px 1fr 36px 100px;
+    padding-left: 10px;
+  }
+
+  .admin-menu-button {
+    display: grid !important;
+  }
+
+  .admin-topbar > form {
+    display: none;
+  }
+
+  .admin-content {
+    padding: var(--stl-space-3);
+  }
+
+  .metric-grid,
+  .admin-grid.top,
+  .admin-grid.middle,
+  .admin-grid.bottom,
+  .taxonomy-admin-grid,
+  .distribution-cards,
+  .user-admin-grid,
+  .settings-grid,
+  .taxonomy-layout,
+  .admin-master-detail,
+  .distribution-layout,
+  .review-editor > form {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "pdf"
+      "metadata"
+      "impact"
+      "candidates";
+  }
+
+  .review-pdf {
+    position: static;
+  }
+
+  .relation-assignment-editor article {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-side-editor {
+    position: static;
+  }
+
+  .curated-selector > div,
+  .processing-health {
+    grid-template-columns: 1fr;
+  }
+
+  .processing-health b {
+    white-space: normal;
+  }
+
+  .provider-list,
+  .usage-editor {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .usage-editor,
+  .settings-label-grid,
+  .review-source-summary dl {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-explainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .review-list,
+  .admin-entity-table {
+    overflow-x: auto;
+  }
+
+  .review-list > header,
+  .review-list > article,
+  .admin-entity-table > header,
+  .admin-entity-table > article {
+    min-width: 720px;
+  }
+
+  .form-grid,
+  .cloud-config > .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .wide {
+    grid-column: span 1;
+  }
+
+  .cover-candidate-review > header {
+    flex-direction: column;
+  }
+
+  .cover-candidate-review > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about-page {
+    padding-top: 42px;
+  }
+
+  .about-hero,
+  .about-why,
+  .about-principles,
+  .about-boundaries,
+  .about-warning {
+    grid-template-columns: 1fr;
+  }
+
+  .about-hero {
+    gap: var(--stl-space-page-inline);
+  }
+
+  .about-hero .breadcrumbs {
+    margin-bottom: 6px;
+  }
+
+  .about-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .about-ingestion ol {
+    grid-template-columns: 1fr;
+  }
+
+  .about-ingestion li svg {
+    transform: rotate(90deg);
+  }
+
+  .about-boundaries article {
+    border-bottom: var(--stl-border-hairline) solid var(--line);
+  }
+
+  .about-warning .button {
+    width: fit-content;
+  }
+
+  .publication-place-evidence-list,
+  .semantic-index-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .publication-place-history p {
+    grid-template-columns: 1fr;
+  }
+}

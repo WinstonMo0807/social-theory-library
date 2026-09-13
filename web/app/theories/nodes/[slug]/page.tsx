@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { KnowledgeNodePublicView } from "@/components/public/knowledge-node-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadKnowledgeNode, loadNormalizedReadingPaths, loadNormalizedTheoryTimeline } from "@/lib/server-api";
+import { loadKnowledgeNode, loadNormalizedReadingPaths, loadNormalizedTheoryTimeline } from "@/lib/api/knowledge.server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

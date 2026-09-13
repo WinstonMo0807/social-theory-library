@@ -4,7 +4,7 @@ import {
   TopicSectionPublicView,
   topicSectionTitles,
 } from "@/components/public/topic-section-public-view";
-import { loadTopic } from "@/lib/server-api";
+import { loadTopic } from "@/lib/api/topics.server";
 
 export async function generateMetadata({
   params,

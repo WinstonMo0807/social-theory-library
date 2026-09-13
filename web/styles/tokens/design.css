@@ -1,0 +1,85 @@
+/* Stable literal defaults; legacy aliases and route-scoped palettes remain independent. */
+:root {
+  /* typography */
+  --stl-type-sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --stl-type-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --stl-type-body: 14px;
+  --stl-type-label: 12px;
+  --stl-type-title: 24px;
+  --stl-type-line-body: 1.55;
+  --stl-type-weight-strong: 700;
+
+  /* spacing */
+  --stl-space-1: 4px;
+  --stl-space-2: 8px;
+  --stl-space-3: 12px;
+  --stl-space-4: 16px;
+  --stl-space-5: 20px;
+  --stl-space-6: 24px;
+  --stl-space-7: 28px;
+  --stl-space-8: 32px;
+  --stl-space-10: 40px;
+  --stl-space-admin: 14px;
+  --stl-space-page-inline: 26px;
+
+  /* container */
+  --stl-container-copy: 760px;
+  --stl-container-admin-sidebar: 205px;
+  --stl-container-dialog: 34rem;
+  --stl-container-page-width: 100%;
+  --stl-container-header-height: 78px;
+  --stl-control-height: 38px;
+
+  /* surface */
+  --stl-surface-paper: #f7f7f4;
+  --stl-surface-default: #ffffff;
+  --stl-surface-wash: #eeeeea;
+  --stl-surface-admin: #f8f8f6;
+
+  /* ink */
+  --stl-ink-primary: #0a0a0a;
+  --stl-ink-muted: #62625e;
+  --stl-ink-inverse: white;
+
+  /* border */
+  --stl-border-default: #d9d9d3;
+  --stl-border-strong: #a8a8a1;
+  --stl-border-hairline: 1px;
+  --stl-border-focus: 2px;
+
+  /* accent */
+  --stl-accent-annotation: #f3d778;
+  --stl-accent-danger: #a31d1d;
+  --stl-accent-success: #1d6242;
+  --stl-accent-info: #315f6b;
+  --stl-accent-warning: #7a5318;
+  --stl-accent-focus: #285f91;
+
+  /* radius */
+  --stl-radius-round: 50%;
+  --stl-radius-pill: 999px;
+  --stl-radius-small: 4px;
+
+  /* shadow */
+  --stl-shadow-sticky: 0 -4px 16px rgb(0 0 0 / 5%);
+  --stl-shadow-dialog: 0 24px 80px rgb(0 0 0 / 28%);
+  --stl-shadow-toast: 0 12px 35px rgba(31, 29, 25, .14);
+
+  /* motion */
+  --stl-motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --stl-motion-press: 130ms;
+  --stl-motion-control: 160ms;
+  --stl-motion-navigation: 180ms;
+  --stl-motion-panel: 220ms;
+
+  /* z-index */
+  --stl-z-sticky: 20;
+  --stl-z-header: 100;
+  --stl-z-reader: 150;
+  --stl-z-admin-topbar: 160;
+  --stl-z-admin-sidebar: 180;
+  --stl-z-skip-link: 200;
+  --stl-z-menu: 220;
+  --stl-z-toast: 1200;
+
+}

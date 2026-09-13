@@ -65,7 +65,10 @@ test("admin preview keeps reader, download, save and public links inactive", asy
 test("public work routes preserve API 404 semantics without masking service failures", async () => {
   const [publicPage, serverApi] = await Promise.all([
     readFile(new URL("../app/works/[slug]/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../lib/server-api.ts", import.meta.url), "utf8"),
+    Promise.all([
+      readFile(new URL("../lib/api/server-request.ts", import.meta.url), "utf8"),
+      readFile(new URL("../lib/api/catalog.server.ts", import.meta.url), "utf8"),
+    ]).then((sources) => sources.join("\n")),
   ]);
 
   assert.match(serverApi, /export class ServerApiError extends Error/);

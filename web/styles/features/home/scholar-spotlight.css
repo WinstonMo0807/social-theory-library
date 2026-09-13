@@ -1,0 +1,9 @@
+.scholar-spotlight {
+  grid-column: span 1;
+}
+
+.scholar-pair {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}

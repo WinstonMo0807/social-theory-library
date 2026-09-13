@@ -1,0 +1,321 @@
+/* Shared administration interface primitives. */
+.admin-ui-page-header,
+.admin-ui-empty-state,
+.admin-ui-form-section,
+.admin-ui-sticky-action-bar,
+.admin-ui-candidate-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-ui-page-header {
+  flex-wrap: wrap;
+  gap: var(--admin-space-md);
+}
+
+.admin-ui-page-header-copy,
+.admin-ui-page-header-heading {
+  min-width: 0;
+}
+
+.admin-ui-page-header-heading,
+.admin-ui-page-header-actions,
+.admin-ui-form-section-actions,
+.admin-ui-sticky-action-controls,
+.admin-ui-candidate-card > header,
+.admin-ui-candidate-card > footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--admin-space-sm);
+}
+
+.admin-ui-page-header-heading {
+  margin: 2px 0 var(--stl-space-1);
+}
+
+.admin-ui-page-header-copy > span {
+  display: block;
+  max-width: var(--stl-container-copy);
+  overflow-wrap: anywhere;
+  line-height: var(--stl-type-line-body);
+}
+
+.admin-ui-page-header-actions {
+  justify-content: flex-end;
+}
+
+.admin-ui-page-header-actions > a,
+.admin-ui-page-header-actions > button {
+  min-height: var(--admin-control-height);
+  margin-bottom: 0;
+}
+
+.admin-ui-status-badge {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 22px;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 7px;
+  border: var(--stl-border-hairline) solid var(--line-dark);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: calc(7px + var(--font-bump));
+  font-weight: var(--stl-type-weight-strong);
+  line-height: 1.2;
+}
+
+.admin-ui-status-badge > i {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  background: var(--muted);
+  border-radius: var(--stl-radius-round);
+}
+
+.admin-ui-status-badge > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-ui-status-badge.tone-info { border-color: color-mix(in srgb, var(--admin-info) 45%, var(--line)); color: var(--admin-info); }
+.admin-ui-status-badge.tone-info > i { background: var(--admin-info); }
+.admin-ui-status-badge.tone-success { border-color: color-mix(in srgb, var(--success) 45%, var(--line)); color: var(--success); }
+.admin-ui-status-badge.tone-success > i { background: var(--success); }
+.admin-ui-status-badge.tone-warning { border-color: color-mix(in srgb, var(--admin-warning) 45%, var(--line)); color: var(--admin-warning); }
+.admin-ui-status-badge.tone-warning > i { background: var(--admin-warning); }
+.admin-ui-status-badge.tone-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); color: var(--danger); }
+.admin-ui-status-badge.tone-danger > i { background: var(--danger); }
+
+.admin-ui-empty-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--admin-space-md);
+  align-items: center;
+  min-height: 116px;
+  padding: var(--stl-space-5);
+  border: var(--stl-border-hairline) dashed var(--line-dark);
+  background: color-mix(in srgb, var(--wash) 52%, var(--surface));
+}
+
+.admin-ui-empty-state.compact {
+  min-height: 64px;
+  padding: var(--stl-space-3);
+  border-width: 0 0 1px;
+}
+
+.admin-table > .admin-ui-empty-state {
+  grid-column: 1 / -1;
+}
+
+.admin-ui-empty-state-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border: var(--stl-border-hairline) solid var(--line-dark);
+  place-items: center;
+}
+
+.admin-ui-empty-state strong,
+.admin-ui-empty-state p {
+  display: block;
+  margin: 0;
+}
+
+.admin-ui-empty-state p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+  line-height: 1.5;
+}
+
+.admin-ui-empty-state-action {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.admin-ui-form-section,
+.admin-ui-candidate-card {
+  border: var(--stl-border-hairline) solid var(--line);
+  background: var(--surface);
+}
+
+.admin-ui-form-section > header,
+.admin-ui-candidate-card > header {
+  justify-content: space-between;
+  gap: var(--admin-space-md);
+  padding: var(--stl-space-3) var(--admin-space-md);
+  border-bottom: var(--stl-border-hairline) solid var(--line);
+}
+
+.admin-ui-form-section h2,
+.admin-ui-form-section p,
+.admin-ui-candidate-card h3,
+.admin-ui-candidate-value p,
+.admin-ui-candidate-value small {
+  margin: 0;
+}
+
+.admin-ui-form-section h2,
+.admin-ui-candidate-card h3 {
+  font-size: calc(10px + var(--font-bump));
+}
+
+.admin-ui-form-section header p,
+.admin-ui-candidate-value p,
+.admin-ui-candidate-value small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+  line-height: 1.5;
+}
+
+.admin-ui-form-section-body,
+.admin-ui-candidate-value,
+.admin-ui-candidate-evidence-body,
+.admin-ui-candidate-conflicts {
+  min-width: 0;
+  padding: var(--admin-space-md);
+}
+
+.admin-ui-sticky-action-bar {
+  position: sticky;
+  z-index: var(--stl-z-sticky);
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--admin-space-md);
+  padding: 10px var(--admin-space-md);
+  border: var(--stl-border-hairline) solid var(--line-dark);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--stl-shadow-sticky);
+  backdrop-filter: blur(8px);
+}
+
+.admin-ui-sticky-action-status {
+  min-width: 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-ui-evidence-chip {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: var(--stl-space-1) var(--stl-space-2);
+  border: var(--stl-border-hairline) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.admin-ui-evidence-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ui-evidence-chip small { color: var(--muted); }
+.admin-ui-evidence-chip b { font-size: calc(7px + var(--font-bump)); }
+.admin-ui-evidence-chip.interactive { cursor: pointer; }
+
+.admin-ui-confidence {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(86px, auto) minmax(70px, 1fr) auto;
+  gap: var(--admin-space-sm);
+  align-items: center;
+  padding: 0 var(--admin-space-md) var(--admin-space-md);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.admin-ui-confidence-track {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  background: var(--wash);
+}
+
+.admin-ui-confidence-track > i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+
+.admin-ui-candidate-value {
+  display: grid;
+  gap: var(--stl-space-1);
+  overflow-wrap: anywhere;
+}
+
+.admin-ui-candidate-value p > span {
+  margin-right: 7px;
+  font-weight: var(--stl-type-weight-strong);
+}
+
+.admin-ui-candidate-evidence {
+  border-top: var(--stl-border-hairline) solid var(--line);
+}
+
+.admin-ui-candidate-evidence > summary {
+  padding: 9px var(--admin-space-md);
+  cursor: pointer;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+  font-weight: var(--stl-type-weight-strong);
+}
+
+.admin-ui-candidate-evidence > summary:focus-visible {
+  outline: var(--stl-border-focus) solid var(--admin-focus);
+  outline-offset: -2px;
+}
+
+.admin-ui-candidate-evidence[open] > summary {
+  border-bottom: var(--stl-border-hairline) solid var(--line);
+  color: var(--ink);
+}
+
+.admin-ui-candidate-evidence-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--admin-space-sm);
+}
+
+.admin-ui-candidate-conflicts {
+  border-top: var(--stl-border-hairline) solid color-mix(in srgb, var(--danger) 35%, var(--line));
+  color: var(--danger);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-ui-candidate-card > footer {
+  justify-content: flex-end;
+  padding: 10px var(--admin-space-md);
+  border-top: var(--stl-border-hairline) solid var(--line);
+}
+
+.admin-ui-page-header-actions :is(a, button):focus-visible,
+.admin-ui-form-section-actions :is(a, button):focus-visible,
+.admin-ui-sticky-action-controls :is(a, button):focus-visible,
+.admin-ui-empty-state-action :is(a, button):focus-visible,
+.admin-ui-candidate-card > footer :is(a, button):focus-visible,
+.admin-ui-evidence-chip:focus-visible {
+  outline: var(--stl-border-focus) solid var(--admin-focus);
+  outline-offset: var(--stl-border-focus);
+}
+
+@media (max-width: 700px) {
+  .admin-ui-page-header { align-items: flex-start; }
+  .admin-ui-page-header-actions,
+  .admin-ui-page-header-actions > *,
+  .admin-ui-sticky-action-controls { width: 100%; }
+  .admin-ui-empty-state { grid-template-columns: 1fr; }
+  .admin-ui-confidence { grid-template-columns: 1fr auto; }
+  .admin-ui-confidence-track { grid-column: 1 / -1; grid-row: 2; }
+}

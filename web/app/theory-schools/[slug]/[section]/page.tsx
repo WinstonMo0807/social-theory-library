@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import { BookCard, ScholarCard } from "@/components/ui";
-import { loadTheorySchool } from "@/lib/server-api";
+import { loadTheorySchool } from "@/lib/api/theories.server";
 
 const titles: Record<string, string> = {
   works: "奠基文献与策展书目",

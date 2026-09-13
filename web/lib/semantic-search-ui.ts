@@ -1,4 +1,4 @@
-import type { SemanticSearchResult } from "@/lib/server-api";
+import type { SemanticSearchResult } from "@/lib/api/search.types";
 
 const responseTypeLabels: Record<string, string> = {
   direct_response: "可能直接回应",

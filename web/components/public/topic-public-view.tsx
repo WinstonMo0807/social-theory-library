@@ -16,7 +16,7 @@ import { AskLibraryLink } from "@/components/ask-library-link";
 import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { SaveTopicButton } from "@/components/save-topic-button";
 import { ArchitecturalImage, BookCard, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
-import type { LibraryTopic } from "@/lib/server-api";
+import type { LibraryTopic } from "@/lib/api/topics.types";
 
 function TextItems({ items, empty }: { items: string[]; empty: string }) {
   return items.length

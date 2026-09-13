@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
 import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
+import { Button } from "./ui/controls";
 
 export type ActionState = "idle" | "pending" | "success" | "error";
 
@@ -60,7 +61,7 @@ export function ActionButton({
     element.dataset.physicalPress = String(active);
   };
   return (
-    <button
+    <Button
       {...buttonProps}
       className={`action-feedback action-button ${className}`.trim()}
       type={type}
@@ -107,7 +108,7 @@ export function ActionButton({
       <ActionContent state={state} pendingLabel={pendingLabel} successLabel={successLabel} errorLabel={errorLabel}>
         {children}
       </ActionContent>
-    </button>
+    </Button>
   );
 }
 

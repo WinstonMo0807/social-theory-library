@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const source = fs.readFileSync(path.join(root, "components", "metadata-review.tsx"), "utf8");
-const css = fs.readFileSync(path.join(root, "app", "globals.css"), "utf8");
+const css = readStyleSource();
 
 test("metadata candidates appear beside their corresponding fields", () => {
   for (const field of [

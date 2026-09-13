@@ -1,0 +1,24 @@
+:root {
+  --paper: var(--stl-surface-paper);
+  --surface: var(--stl-surface-default);
+  --ink: var(--stl-ink-primary);
+  --muted: var(--stl-ink-muted);
+  --line: var(--stl-border-default);
+  --line-dark: var(--stl-border-strong);
+  --wash: var(--stl-surface-wash);
+  --annotation: var(--stl-accent-annotation);
+  --danger: var(--stl-accent-danger);
+  --success: var(--stl-accent-success);
+  --admin-info: var(--stl-accent-info);
+  --admin-warning: var(--stl-accent-warning);
+  --admin-focus: var(--stl-accent-focus);
+  --admin-space-xs: var(--stl-space-1);
+  --admin-space-sm: var(--stl-space-2);
+  --admin-space-md: var(--stl-space-admin);
+  --admin-control-height: var(--stl-control-height);
+  --sans: var(--stl-type-sans);
+  --serif: var(--stl-type-serif);
+  --ease-out: var(--stl-motion-ease-out);
+  --header-height: var(--stl-container-header-height);
+  --font-bump: 1px;
+}

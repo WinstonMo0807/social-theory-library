@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 const primitivesUrl = new URL("../components/action-feedback.tsx", import.meta.url);
 const healthUrl = new URL("../components/functional-health-panel.tsx", import.meta.url);
@@ -14,7 +15,6 @@ const readerRecordsUrl = new URL("../components/reader/use-reader-records.ts", i
 const theoryAdminUrl = new URL("../components/theory-system-admin.tsx", import.meta.url);
 const saveWorkUrl = new URL("../components/save-work-button.tsx", import.meta.url);
 const saveTopicUrl = new URL("../components/save-topic-button.tsx", import.meta.url);
-const stylesUrl = new URL("../app/globals.css", import.meta.url);
 
 test("action primitives expose controlled idle, pending, success and error states", async () => {
   const source = await readFile(primitivesUrl, "utf8");
@@ -104,7 +104,7 @@ test("workflow, research and page preview use shared pending and result feedback
 });
 
 test("interaction feedback preserves warm neutral styling and reduced motion", async () => {
-  const styles = await readFile(stylesUrl, "utf8");
+  const styles = readStyleSource();
 
   assert.match(styles, /\.action-feedback\[data-action-state="success"\]/);
   assert.match(styles, /\.action-feedback\[data-action-state="error"\]/);

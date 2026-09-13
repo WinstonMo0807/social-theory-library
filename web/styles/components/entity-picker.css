@@ -1,0 +1,54 @@
+/* Review relationships, processing center and curated secondary pages */
+.entity-picker {
+  position: relative;
+}
+
+.entity-input {
+  position: relative;
+  flex: 1 1 260px;
+}
+
+.entity-input > input {
+  min-width: 220px;
+}
+
+.entity-options {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 310px;
+  overflow-y: auto;
+  border: var(--stl-border-hairline) solid var(--line-dark);
+  background: var(--surface);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 10%);
+}
+
+.entity-options > button,
+.entity-options > a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--stl-space-3);
+  padding: 9px var(--stl-space-3);
+  border-bottom: var(--stl-border-hairline) solid var(--line);
+  text-align: left;
+}
+
+.entity-options > button:hover,
+.entity-options > a:hover {
+  background: var(--wash);
+}
+
+.entity-options span {
+  display: grid;
+}
+
+.entity-options small,
+.entity-picker-help {
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}

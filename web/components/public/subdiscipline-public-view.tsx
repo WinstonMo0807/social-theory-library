@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, CalendarDays, CircleDot, Layers3, MessagesSquare, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 import { ArchitecturalImage, BookCover, SectionHeading } from "@/components/ui";
-import type { loadSubdiscipline } from "@/lib/server-api";
+import type { loadSubdiscipline } from "@/lib/api/taxonomy.server";
 
 type SubdisciplinePayload = NonNullable<Awaited<ReturnType<typeof loadSubdiscipline>>>;
 

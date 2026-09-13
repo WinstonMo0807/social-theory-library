@@ -1,0 +1,125 @@
+@media (max-width: 1180px) {
+  .scholar-hero {
+    grid-template-columns: 250px 1fr 1fr;
+  }
+
+  .scholar-quote {
+    display: none;
+  }
+
+  .scholar-body-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .essential-texts {
+    grid-row: span 1;
+  }
+
+  .topic-hero {
+    grid-template-columns: 1fr 1.1fr;
+  }
+
+  .topic-hero aside {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .topic-hero aside h2,
+  .topic-hero aside .button {
+    grid-column: span 5;
+  }
+
+  .topic-content-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .foundational-books {
+    grid-column: 1 / -1;
+  }
+
+  .work-hero {
+    grid-template-columns: 150px 1fr;
+  }
+
+  .work-hero aside {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .scholar-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .scholar-portrait.large {
+    min-height: 330px;
+  }
+
+  .scholar-timeline {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .scholar-body-grid,
+  .scholar-key-grid,
+  .topic-hero,
+  .topic-content-grid,
+  .work-hero,
+  .work-body {
+    grid-template-columns: 1fr;
+  }
+
+  .scholar-body-grid > section,
+  .topic-content-grid > section {
+    grid-column: span 1;
+  }
+
+  .topic-hero aside {
+    grid-template-columns: 1fr;
+  }
+
+  .topic-hero aside h2,
+  .topic-hero aside .button {
+    grid-column: span 1;
+  }
+
+  .foundational-books > div {
+    grid-template-columns: 1fr;
+  }
+
+  .reading-paths > a {
+    grid-template-columns: 28px minmax(0, 1fr) 18px;
+  }
+
+  .reading-paths > a > span {
+    grid-column: 2;
+    white-space: normal;
+  }
+
+  .topic-timeline > div {
+    grid-template-columns: 1fr;
+  }
+
+  .topic-timeline > div::before {
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 4px;
+    width: 1px;
+    height: auto;
+  }
+
+  .topic-timeline article {
+    padding: 0 0 10px 22px;
+  }
+
+  .topic-timeline article > span {
+    top: 4px;
+    left: 1px;
+  }
+
+  .work-hero .book-cover {
+    justify-self: start;
+  }
+}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useId, type ReactNode } from "react";
+import { Badge } from "./ui/controls";
 
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
 
@@ -55,13 +56,13 @@ export function StatusBadge({
   className = "",
 }: StatusBadgeProps) {
   return (
-    <span
+    <Badge
       className={`admin-ui-status-badge tone-${tone} ${className}`.trim()}
       aria-label={ariaLabel ?? `状态：${label}`}
     >
       <i aria-hidden="true" />
       <span>{label}</span>
-    </span>
+    </Badge>
   );
 }
 

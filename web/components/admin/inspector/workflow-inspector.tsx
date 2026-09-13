@@ -7,6 +7,9 @@ import { type CandidateActionDescriptor } from "../research/candidate-action-con
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
 import { EvidenceEnvelopeCard } from "../research/evidence-envelope-card";
 import type { WorkflowCandidate } from "../workflow/workflow-types";
+import { Inspector } from "@/components/ui/inspector";
+import { IconButton } from "@/components/ui/controls";
+import { ErrorState, Skeleton } from "@/components/ui/feedback";
 
 export type InspectorSelection = {
   kind: "candidate" | "entity" | "evidence" | "pdf" | "page_preview" | "history" | "publication";
@@ -113,23 +116,23 @@ export function WorkflowInspector({
 
   if (!selection) {
     return (
-      <aside className="workflow-inspector is-empty" aria-label="证据与候选检查器">
+      <Inspector className="workflow-inspector is-empty" aria-label="证据与候选检查器">
         <FileSearch size={22} />
         <strong>检查器</strong>
         <p>选择字段建议、作者或译者、知识关系及 PDF 证据后，在这里核对。</p>
-      </aside>
+      </Inspector>
     );
   }
 
   return (
-    <aside className="workflow-inspector is-open" aria-label={selection.title}>
+    <Inspector className="workflow-inspector is-open" aria-label={selection.title}>
       <header>
         <div><small>查看依据</small><h2>{selection.title}</h2>{selection.description ? <p>{selection.description}</p> : null}</div>
-        <button type="button" onClick={onClose} aria-label="关闭检查器"><PanelRightClose size={17} /></button>
+        <IconButton onClick={onClose} aria-label="关闭检查器"><PanelRightClose size={17} /></IconButton>
       </header>
       {selection.kind === "pdf" ? (
         <div className="workflow-inspector-pdf">
-          {previewUrl ? <iframe title={selection.title} src={previewUrl} /> : <p>{previewError || "正在准备 PDF 预览……"}</p>}
+          {previewUrl ? <iframe title={selection.title} src={previewUrl} /> : previewError ? <ErrorState>{previewError}</ErrorState> : <Skeleton>正在准备 PDF 预览……</Skeleton>}
         </div>
       ) : selection.kind === "page_preview" && selection.previewUrl ? (
         <div className="workflow-inspector-page-preview">
@@ -172,6 +175,6 @@ export function WorkflowInspector({
           {!selection.items?.length ? <p>当前任务没有可展示的候选或证据。</p> : null}
         </div>
       )}
-    </aside>
+    </Inspector>
   );
 }

@@ -1,0 +1,213 @@
+/* Administration */
+.admin-shell {
+  min-height: 100vh;
+  background: var(--stl-surface-admin);
+}
+
+.admin-auth-loading {
+  display: grid;
+  min-height: 100vh;
+  color: var(--muted);
+  font-size: calc(11px + var(--font-bump));
+  place-items: center;
+}
+
+.admin-auth-loading strong {
+  font-size: 1.05rem;
+}
+
+.admin-auth-loading p {
+  color: var(--muted);
+  margin: 0;
+  max-width: 34rem;
+}
+
+.admin-auth-loading button {
+  align-items: center;
+  background: #0a0a0a;
+  border: var(--stl-border-hairline) solid #0a0a0a;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.45rem;
+  min-height: 2.6rem;
+  padding: 0 1rem;
+}
+
+.admin-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: var(--stl-z-admin-sidebar);
+  display: flex;
+  width: var(--stl-container-admin-sidebar);
+  flex-direction: column;
+  padding: 18px 7px var(--stl-space-admin);
+  border-right: var(--stl-border-hairline) solid var(--line);
+  background: var(--surface);
+}
+
+.admin-logo {
+  padding: 2px 15px var(--stl-space-6);
+}
+
+.admin-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.admin-nav-group { display: grid; gap: 2px; padding-bottom: var(--stl-space-2); }
+.admin-nav-group > p { margin: var(--stl-space-1) var(--stl-space-admin) 2px; color: var(--muted); font-size: 8px; font-weight: 750; letter-spacing: 0.12em; }
+
+.admin-sidebar nav a {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--stl-space-admin);
+  border: var(--stl-border-hairline) solid transparent;
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 580;
+}
+
+.admin-sidebar nav a.active {
+  background: var(--ink);
+  color: var(--stl-ink-inverse);
+}
+
+.admin-sidebar nav a b {
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: var(--stl-radius-pill);
+  background: var(--wash);
+  color: var(--ink);
+  font-size: calc(7px + var(--font-bump));
+  place-items: center;
+}
+
+.system-status {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 2px 6px;
+  margin-top: auto;
+  padding: var(--stl-space-admin) 10px;
+  border-top: var(--stl-border-hairline) solid var(--line);
+}
+
+.system-status > span {
+  grid-row: span 2;
+  width: 7px;
+  height: 7px;
+  margin-top: var(--stl-space-admin);
+  background: var(--success);
+  border-radius: var(--stl-radius-round);
+}
+
+.system-status small {
+  color: var(--muted);
+  font-size: calc(6px + var(--font-bump));
+  text-transform: uppercase;
+}
+
+.system-status strong {
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-sidebar footer {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  font-size: calc(7px + var(--font-bump));
+}
+
+.admin-mobile-close,
+.admin-menu-button {
+  display: none;
+}
+
+.admin-main {
+  margin-left: var(--stl-container-admin-sidebar);
+}
+
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--stl-z-admin-topbar);
+  display: grid;
+  grid-template-columns: 1fr 270px 36px 120px;
+  align-items: center;
+  min-height: 59px;
+  padding: 0 18px 0 25px;
+  border-bottom: var(--stl-border-hairline) solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.admin-topbar > strong {
+  font-size: calc(10px + var(--font-bump));
+  text-transform: uppercase;
+}
+
+.admin-topbar > form > label {
+  display: flex;
+  align-items: center;
+  gap: var(--stl-space-2);
+  min-height: 34px;
+}
+
+.admin-topbar input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-topbar > button,
+.admin-processing-link {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.admin-topbar > .admin-menu-button {
+  display: none;
+}
+
+.admin-user {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 7px;
+  align-items: center;
+}
+
+.admin-user > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  background: var(--ink);
+  color: var(--stl-ink-inverse);
+  border-radius: var(--stl-radius-round);
+  font-size: calc(8px + var(--font-bump));
+  place-items: center;
+}
+
+.admin-user p {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.admin-user small {
+  color: var(--muted);
+  font-size: calc(6px + var(--font-bump));
+}
+
+.admin-content {
+  padding: var(--stl-space-5);
+}

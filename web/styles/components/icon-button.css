@@ -1,0 +1,17 @@
+.icon-button {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  place-items: center;
+  transition: background-color var(--stl-motion-control) var(--ease-out), transform var(--stl-motion-press) var(--ease-out);
+}
+
+.icon-button:active,
+.button:active,
+.book-actions a:active,
+.book-actions button:active,
+.tag-list button:active,
+.tag-list a:active {
+  transform: scale(0.97);
+}

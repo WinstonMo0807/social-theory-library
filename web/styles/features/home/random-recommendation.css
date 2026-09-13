@@ -1,0 +1,66 @@
+.random-image {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.random-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.random-heading h2 {
+  margin: 0;
+  font-size: calc(12px + var(--font-bump));
+  text-transform: uppercase;
+}
+
+.random-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0 5px 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.random-heading button:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.random-heading button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.random-recommendation-content {
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+
+.random-recommendation-content.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.random-recommendation-content.is-entering {
+  animation: random-recommendation-in 220ms var(--ease-out);
+}
+
+@keyframes random-recommendation-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.random-book .button {
+  width: 100%;
+  margin-top: 18px;
+}

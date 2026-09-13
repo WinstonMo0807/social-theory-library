@@ -5,7 +5,7 @@ import test from "node:test";
 test("public Work adapts CuratedClaim envelopes without exposing DerivedClaim", async () => {
   const [data, serverApi, adapters] = await Promise.all([
     readFile(new URL("../lib/data.ts", import.meta.url), "utf8"),
-    readFile(new URL("../lib/server-api.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/api/public-catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/public-data-adapters.ts", import.meta.url), "utf8"),
   ]);
 

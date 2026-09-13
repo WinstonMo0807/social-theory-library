@@ -1,0 +1,21 @@
+.site-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: var(--stl-space-5);
+  min-height: 64px;
+  padding: var(--stl-space-3) var(--stl-space-7);
+  border-top: var(--stl-border-hairline) solid var(--line);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.site-footer nav {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+}
+
+.site-footer p {
+  margin: 0;
+  text-align: right;
+}

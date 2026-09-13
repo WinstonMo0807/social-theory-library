@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("Topic and Scholar pages prefer normalized Knowledge Core relations", async () => {
   const [serverApi, topic, scholar, topicSection, scholarSection] = await Promise.all([
-    read("../lib/server-api.ts"),
+    Promise.all([read("../lib/api/people.types.ts"), read("../lib/api/topics.types.ts")]).then((sources) => sources.join("\n")),
     read("../components/public/topic-public-view.tsx"),
     read("../components/public/scholar-public-view.tsx"),
     read("../components/public/topic-section-public-view.tsx"),
@@ -25,7 +25,7 @@ test("Topic and Scholar pages prefer normalized Knowledge Core relations", async
 
 test("Reading Path renders canonical learning goals and prerequisites with compatibility fallback", async () => {
   const [serverApi, page] = await Promise.all([
-    read("../lib/server-api.ts"),
+    read("../lib/api/knowledge.types.ts"),
     read("../components/public/reading-path-public-view.tsx"),
   ]);
 

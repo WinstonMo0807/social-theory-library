@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -42,8 +43,8 @@ test("exact search uses real hot searches and preserves passage focus", async ()
 test("opinion search presents auditable candidates without calibrated relevance claims", async () => {
   const [page, css, serverApi, labels] = await Promise.all([
     read("../app/explore/page.tsx"),
-    read("../app/globals.css"),
-    read("../lib/server-api.ts"),
+    readStyleSource(),
+    read("../lib/api/search.server.ts"),
     read("../lib/semantic-search-ui.ts"),
   ]);
 
@@ -73,7 +74,7 @@ test("opinion search presents auditable candidates without calibrated relevance 
 test("opinion search has a restrained two-stage accessible loading state", async () => {
   const [loading, css] = await Promise.all([
     read("../app/explore/opinions/loading.tsx"),
-    read("../app/globals.css"),
+    readStyleSource(),
   ]);
 
   assert.match(loading, /正在匹配馆藏原文/);
@@ -112,7 +113,7 @@ test("library assistant follows the authenticated status and SSE API contract", 
 test("explore workspaces use the reference-aligned responsive three-column composition", async () => {
   const [page, css] = await Promise.all([
     read("../app/explore/page.tsx"),
-    read("../app/globals.css"),
+    readStyleSource(),
   ]);
 
   assert.match(page, /className="explore-workbench-head exact-workbench-head"/);
@@ -129,7 +130,7 @@ test("explore workspaces use the reference-aligned responsive three-column compo
 });
 
 test("explore motion and responsive filters remain accessible", async () => {
-  const css = await read("../app/globals.css");
+  const css = readStyleSource();
 
   assert.match(css, /\.explore-entry-card[\s\S]*transition: transform 190ms/);
   assert.match(css, /\.explore-entry-card:focus-visible/);

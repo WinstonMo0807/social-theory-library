@@ -3,6 +3,7 @@
 import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { Input, Select, Textarea } from "@/components/ui/controls";
 
 export type SelectOption = { value: string; label: string };
 export type EntityValue = { id: string | null; name: string; status?: string; [key: string]: unknown };
@@ -87,11 +88,11 @@ export function CanonicalField({
         </span>
       </div>
       {options ? (
-        <select {...common}>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
+        <Select {...common}>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</Select>
       ) : multiline ? (
-        <textarea {...common} rows={rows} />
+        <Textarea {...common} rows={rows} />
       ) : (
-        <input {...common} type={type} />
+        <Input {...common} type={type} />
       )}
       {help ? <small className="workflow-field-help" id={helpId}>{help}</small> : null}
       {error ? <small className="workflow-field-error" id={errorId} role="alert">{error}</small> : null}

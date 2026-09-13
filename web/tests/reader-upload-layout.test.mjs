@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 test("reader toolbar allocates the optional printed-page control without overflow", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const css = readStyleSource();
   const source = await readFile(new URL("../components/reader-shell.tsx", import.meta.url), "utf8");
   assert.match(source, /className="reader-printed-page"/);
   assert.match(css, /\.page-control\s*\{[\s\S]*grid-template-columns: 24px 40px minmax\(42px, 1fr\) 38px minmax\(0, 1fr\) 24px/);

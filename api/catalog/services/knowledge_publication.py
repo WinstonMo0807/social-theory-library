@@ -946,7 +946,7 @@ def create_catalog_publication_event(
     # administrator action cannot emit two catalog revisions or two knowledge
     # events.  Ordinary catalog updates are never coalesced by recency alone.
     coalescing_candidates = (
-        KnowledgePublicationEvent.objects.select_for_update()
+        KnowledgePublicationEvent.objects.select_for_update(of=("self",))
         .select_related("catalog_revision")
         .filter(
             catalog_revision__edition=edition,
@@ -1479,7 +1479,7 @@ def _finish_event(
     now = timezone.now()
     with transaction.atomic():
         event = (
-            KnowledgePublicationEvent.objects.select_for_update()
+            KnowledgePublicationEvent.objects.select_for_update(of=("self",))
             .select_related("catalog_revision")
             .get(pk=event_id)
         )

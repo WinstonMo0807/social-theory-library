@@ -18,7 +18,7 @@ import {
   SectionHeading,
   TagList,
 } from "@/components/ui";
-import { loadTheoryEntity, loadTheorySchool } from "@/lib/server-api";
+import { loadTheoryEntity, loadTheorySchool } from "@/lib/api/theories.server";
 
 export async function generateMetadata({
   params,

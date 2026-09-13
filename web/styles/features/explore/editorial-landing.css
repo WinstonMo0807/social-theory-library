@@ -1,0 +1,227 @@
+/* Explore public workspace — reference-aligned editorial layout */
+.explore-landing-page {
+  padding: 0 10px 28px;
+  overflow-x: clip;
+}
+
+.explore-landing-hero {
+  position: relative;
+  display: block;
+  min-height: clamp(500px, 57vw, 650px);
+  overflow: hidden;
+  border: 1px solid #e1e0db;
+  border-radius: 0 0 14px 14px;
+  background: #f5f3ef;
+}
+
+.explore-landing-hero::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, rgb(249 248 245 / 100%) 0%, rgb(249 248 245 / 96%) 33%, rgb(249 248 245 / 25%) 61%, transparent 76%);
+  content: "";
+  pointer-events: none;
+}
+
+.explore-landing-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(.42) contrast(.92) brightness(1.04);
+}
+
+.explore-landing-copy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  align-content: start;
+  width: min(66%, 1100px);
+  min-height: clamp(460px, 53vw, 610px);
+  padding: clamp(44px, 5.4vw, 92px) 0 clamp(44px, 5.4vw, 92px) clamp(44px, 5.4vw, 92px);
+}
+
+.explore-landing-kicker {
+  margin: 0 0 22px;
+  font-size: clamp(20px, 2.1vw, 34px);
+}
+
+.explore-landing-copy h1 {
+  max-width: 940px;
+  font-size: clamp(58px, 6.2vw, 108px);
+  font-weight: 560;
+  letter-spacing: -.075em;
+  text-wrap: balance;
+  white-space: nowrap;
+}
+
+.explore-landing-copy > span {
+  width: 52px;
+  margin: 30px 0 25px;
+}
+
+.explore-landing-copy > p:last-child {
+  max-width: 690px;
+  font-size: clamp(15px, 1.15vw, 19px);
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+
+.explore-entry-grid {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: clamp(-260px, -17.7vw, -210px) clamp(28px, 4vw, 74px) 24px;
+}
+
+.explore-entry-card {
+  position: relative;
+  display: grid;
+  min-height: clamp(380px, 28vw, 430px);
+  align-content: start;
+  padding: clamp(28px, 2.7vw, 44px);
+  overflow: hidden;
+  border: 1px solid rgb(174 172 165 / 65%);
+  border-radius: 14px;
+  background: rgb(255 255 253 / 92%);
+  box-shadow: 0 20px 52px rgb(35 31 25 / 8%);
+  isolation: isolate;
+  transition: transform 190ms var(--ease-out);
+}
+
+.explore-entry-card::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 92% 42%, rgb(208 204 194 / 25%), transparent 45%);
+  content: "";
+}
+
+.explore-entry-card:hover {
+  border-color: #77746c;
+  background: #fff;
+  box-shadow: 0 24px 62px rgb(35 31 25 / 13%);
+  transform: translateY(-4px);
+}
+
+.explore-entry-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+
+.explore-entry-index {
+  position: relative;
+  z-index: 2;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.explore-entry-badge {
+  position: absolute;
+  top: clamp(24px, 2.3vw, 36px);
+  right: clamp(24px, 2.3vw, 36px);
+  z-index: 3;
+  padding: 7px 12px;
+  border: 1px solid #bab6ad;
+  border-radius: 7px;
+  background: rgb(255 255 253 / 84%);
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.explore-entry-card.dialogue::before {
+  position: absolute;
+  right: -30%;
+  bottom: -36%;
+  z-index: -1;
+  width: 112%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 44px, rgb(135 130 120 / 12%) 45px 46px);
+  content: "";
+  pointer-events: none;
+}
+
+.explore-entry-card h2 {
+  position: relative;
+  z-index: 2;
+  max-width: 70%;
+  margin: 18px 0 13px;
+  font-size: clamp(34px, 3.15vw, 54px);
+  font-weight: 590;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.explore-entry-card > p {
+  position: relative;
+  z-index: 2;
+  max-width: 60%;
+  color: #3f3e3a;
+  font-size: clamp(12px, .92vw, 15px);
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+.explore-entry-card ul {
+  position: relative;
+  z-index: 2;
+  gap: 8px;
+  max-width: 62%;
+  margin: 28px 0 58px;
+  font-size: clamp(11px, .85vw, 14px);
+  line-height: 1.5;
+}
+
+.explore-entry-card > strong {
+  position: absolute;
+  bottom: clamp(24px, 2.3vw, 38px);
+  left: clamp(28px, 2.7vw, 44px);
+  z-index: 3;
+  font-size: clamp(13px, 1vw, 16px);
+}
+
+.explore-entry-card > strong svg {
+  transition: transform 170ms var(--ease-out);
+}
+
+.explore-entry-card:hover > strong svg {
+  transform: translateX(5px);
+}
+
+.explore-entry-visual {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  transition: transform 260ms var(--ease-out), opacity 180ms ease;
+}
+
+.explore-entry-card:hover .explore-entry-visual {
+  transform: translate3d(-4px, -4px, 0) scale(1.025);
+}
+
+.explore-entry-card.magnifier .explore-entry-visual {
+  right: -12%;
+  bottom: -13%;
+  width: 70%;
+}
+
+.explore-entry-card.door .explore-entry-visual {
+  right: -4%;
+  bottom: -17%;
+  width: 51%;
+}
+
+.explore-entry-card.dialogue .explore-entry-visual {
+  right: -5%;
+  bottom: -12%;
+  width: 63%;
+}

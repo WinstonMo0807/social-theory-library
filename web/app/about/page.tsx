@@ -11,7 +11,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
-import { loadAboutBlocks, loadSiteConfig, loadSiteStats, type AboutPageBlock } from "@/lib/server-api";
+import { loadAboutBlocks, loadSiteConfig, loadSiteStats } from "@/lib/api/site.server";
+import type { AboutPageBlock } from "@/lib/api/site.types";
 
 export const metadata: Metadata = {
   title: "关于书库",

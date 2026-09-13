@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { WorkDetailView } from "@/components/work-detail-view";
-import { loadWork, loadWorks } from "@/lib/server-api";
+import { loadWork, loadWorks } from "@/lib/api/catalog.server";
 
 export async function generateMetadata({
   params,

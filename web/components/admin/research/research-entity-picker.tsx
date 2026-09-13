@@ -12,6 +12,7 @@ import {
   type CandidateActionDescriptor,
 } from "./candidate-action-contract";
 import { CandidateDecisionBar } from "./candidate-decision-bar";
+import { Input } from "@/components/ui/controls";
 
 type DiscoveryGroup = "local" | "local_draft" | "authority" | "external_web" | "unresolved";
 
@@ -527,7 +528,7 @@ export function ResearchEntityPicker({
       <div className="workflow-entity-values">{values.map((value, index) => <button type="button" disabled={disabled || Boolean(acting)} aria-label={`移除${value.name}`} key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_row, rowIndex) => rowIndex !== index))}>{value.name}{value.id ? "" : " · 未解析"} ×</button>)}</div>
       <div className="workflow-universal-entity-combobox">
         <Search size={14} aria-hidden="true" />
-        <input
+        <Input
           id={inputId}
           value={query}
           disabled={disabled || Boolean(acting)}

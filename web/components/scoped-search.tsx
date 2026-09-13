@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { scopedSearchHref, type SearchContext } from "@/lib/search-context";
+import { Pagination } from "./ui/pagination";
 
 export function ScopedSearchPagination({
   path,
@@ -14,18 +14,10 @@ export function ScopedSearchPagination({
   totalPages: number;
   params?: Record<string, string | number | null | undefined>;
 }) {
-  if (totalPages <= 1) return null;
   return (
-    <nav className="theory-timeline-pagination" aria-label="搜索结果分页">
-      <Link
-        aria-disabled={page <= 1}
-        href={scopedSearchHref(path, context, { ...params, page: Math.max(1, page - 1) })}
-      >上一页</Link>
-      <span>第 {page} / {totalPages} 页</span>
-      <Link
-        aria-disabled={page >= totalPages}
-        href={scopedSearchHref(path, context, { ...params, page: Math.min(totalPages, page + 1) })}
-      >下一页</Link>
-    </nav>
+    <Pagination className="theory-timeline-pagination" label="搜索结果分页" page={page} totalPages={totalPages}
+      previousHref={scopedSearchHref(path, context, { ...params, page: Math.max(1, page - 1) })}
+      nextHref={scopedSearchHref(path, context, { ...params, page: Math.min(totalPages, page + 1) })}
+    />
   );
 }

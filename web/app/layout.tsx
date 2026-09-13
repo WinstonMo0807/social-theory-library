@@ -4,7 +4,7 @@ import "./globals.css";
 import "./editorial-v2.css";
 import "./editorial-workspaces.css";
 import { SiteHeader } from "@/components/site-header";
-import { loadSiteConfig } from "@/lib/server-api";
+import { loadSiteConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
 

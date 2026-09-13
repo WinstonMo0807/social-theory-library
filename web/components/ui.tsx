@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Scholar, Work } from "@/lib/data";
 import { SaveWorkButton } from "./save-work-button";
 import { ResponsivePortraitImage } from "./responsive-portrait-image";
+import { SearchInput } from "./ui/controls";
 
 export function ArchitecturalImage({ compact = false }: { compact?: boolean }) {
   return (
@@ -178,13 +179,12 @@ export function SearchField({
   return (
     <label className="search-field">
       <Search size={20} />
-      <input
+      <SearchInput
         aria-label="搜索"
         autoComplete="off"
         defaultValue={defaultValue}
         name="q"
         placeholder={placeholder}
-        type="search"
       />
       <span className="sr-only">搜索</span>
     </label>

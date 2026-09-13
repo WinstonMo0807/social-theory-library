@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { loadSiteConfig } from "@/lib/server-api";
+import { loadSiteConfig } from "@/lib/api/site.server";
 
 export async function SiteFooter() {
   const config = await loadSiteConfig();

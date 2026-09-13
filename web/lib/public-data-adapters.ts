@@ -1,12 +1,8 @@
 import type { Scholar, TheorySchool, Work } from "./data";
-import type {
-  ApiScholar,
-  ApiTopic,
-  ApiWork,
-  LibraryTopic,
-  PublicCuratedClaimGroups,
-  PublicKnowledgeNodeLink,
-} from "./server-api";
+import type { ApiScholar } from "./api/people.types";
+import type { ApiTopic, LibraryTopic } from "./api/topics.types";
+import type { ApiWork } from "./api/public-catalog";
+import type { PublicCuratedClaimGroups, PublicKnowledgeNodeLink } from "./api/curation.types";
 
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 

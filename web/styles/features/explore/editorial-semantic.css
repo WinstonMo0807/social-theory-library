@@ -1,0 +1,290 @@
+.semantic-results-header {
+  min-height: 62px;
+  padding: 13px 18px;
+}
+
+.semantic-results-header h2 {
+  font-size: 16px;
+}
+
+.semantic-notice {
+  padding: 10px 18px;
+  background: #fbfaf7;
+}
+
+.semantic-understanding {
+  margin: 12px;
+  border: 1px solid #e5e2db;
+  border-radius: 10px;
+  background: #f6f4ef;
+}
+
+.semantic-evidence-sections {
+  padding: 0 0 10px;
+}
+
+.semantic-evidence-sections > section,
+.semantic-more-evidence {
+  border: 0;
+}
+
+.semantic-top-evidence > header,
+.semantic-comparison > header,
+.semantic-more-evidence > summary {
+  margin: 0 12px;
+  padding: 14px 4px 10px;
+  border-bottom: 1px solid #d9d6cf;
+  background: transparent;
+}
+
+.semantic-top-evidence > header > span,
+.semantic-comparison > header > span,
+.semantic-more-evidence > summary > span {
+  border: 0;
+  font-size: 16px;
+  font-weight: 760;
+}
+
+.semantic-top-evidence > header h2,
+.semantic-comparison > header h2 {
+  font-size: 14px;
+}
+
+.semantic-result-card {
+  margin: 8px 12px;
+  border: 1px solid #e2dfd8;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.semantic-result-card:hover {
+  border-color: #aaa69d;
+  background: #fff;
+  box-shadow: 0 9px 22px rgb(36 31 24 / 7%);
+  transform: translateY(-1px);
+}
+
+.semantic-work-result-card {
+  grid-template-columns: 48px 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.semantic-rank {
+  align-self: stretch;
+  align-content: start;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 5px;
+  border: 0;
+  border-radius: 8px;
+  background: #f1eee7;
+  text-align: center;
+}
+
+.semantic-rank span {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 27px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.semantic-rank strong {
+  color: #5e5a52;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.semantic-source-mark {
+  display: flex;
+  width: 72px;
+  height: 104px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 7px;
+  overflow: hidden;
+  border: 1px solid #c9c4b9;
+  background: linear-gradient(145deg, #f1ebdc, #fffdf7);
+  box-shadow: 4px 4px 0 #e6e3dd;
+  font-family: var(--serif);
+}
+
+.semantic-source-cover {
+  display: grid;
+  width: 72px;
+  min-width: 0;
+  place-items: start center;
+}
+
+.semantic-source-cover > img {
+  display: block;
+  width: 72px;
+  height: 104px;
+  border: 1px solid #c9c4b9;
+  background: #f2efe8;
+  box-shadow: 4px 4px 0 #e6e3dd;
+  object-fit: contain;
+}
+
+.semantic-source-cover.compact {
+  width: 54px;
+}
+
+.semantic-source-cover.compact > img,
+.semantic-source-cover.compact .semantic-source-mark {
+  width: 54px;
+  height: 78px;
+}
+
+.semantic-source-mark::after {
+  align-self: center;
+  width: 36px;
+  height: 1px;
+  background: #807b70;
+  content: "";
+}
+
+.semantic-source-mark span {
+  font-size: 10px;
+}
+
+.semantic-source-mark small {
+  overflow: hidden;
+  color: #5d584d;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semantic-work-result-copy > header {
+  padding-bottom: 8px;
+}
+
+.semantic-work-result-copy > header h3 {
+  font-size: 16px;
+}
+
+.semantic-passage-block {
+  padding: 10px 0 3px;
+}
+
+.semantic-passage-block > blockquote {
+  margin: 9px 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.semantic-passage-block > blockquote .semantic-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.semantic-work-detail-link {
+  font-size: 11px;
+}
+
+.semantic-more-evidence > summary {
+  border-top: 1px solid #d9d6cf;
+  cursor: pointer;
+}
+
+.semantic-comparison > div {
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.semantic-comparison article,
+.semantic-comparison article + article {
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 11px;
+  border: 1px solid #e2dfd8;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.semantic-comparison article > div:last-child {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+}
+
+.semantic-search-aside section:first-child p {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.semantic-aside-analysis > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.semantic-aside-explainer > div {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid #ebe8e1;
+}
+
+.semantic-aside-explainer > div > svg {
+  padding: 6px;
+  border: 1px solid #ddd9d0;
+  border-radius: 50%;
+  box-sizing: content-box;
+}
+
+.semantic-aside-explainer > div p,
+.semantic-aside-explainer > div strong,
+.semantic-aside-explainer > div span {
+  display: block;
+  margin: 0;
+}
+
+.semantic-aside-explainer > div strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.semantic-aside-explainer > div span {
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.semantic-aside-explainer dl {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #ebe8e1;
+  font-size: 10px;
+}
+
+.semantic-aside-explainer dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.semantic-aside-explainer dd {
+  margin: 0;
+  font-weight: 720;
+}
+
+.semantic-aside-tips ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 17px;
+  color: #4e4b45;
+  font-size: 11px;
+  line-height: 1.55;
+}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ReadingPathPublicView } from "@/components/public/reading-path-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadNormalizedReadingPath } from "@/lib/server-api";
+import { loadNormalizedReadingPath } from "@/lib/api/knowledge.server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ScholarPublicView } from "@/components/public/scholar-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadScholar, loadTheorySchools } from "@/lib/server-api";
+import { loadScholar } from "@/lib/api/people.server";
+import { loadTheorySchools } from "@/lib/api/theories.server";
 
 export async function generateMetadata({
   params,

@@ -1,0 +1,126 @@
+.action-feedback {
+  position: relative;
+  isolation: isolate;
+}
+
+.action-feedback[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .62;
+}
+
+.action-feedback[data-action-state="pending"] { cursor: progress; }
+.action-feedback[data-action-state="success"] { border-color: #326b49; color: #28573d; }
+.action-feedback[data-action-state="error"] { border-color: #9b2c2c; color: #842b28; }
+.action-feedback.button[data-action-state="success"] { background: #edf5ef; }
+.action-feedback.button[data-action-state="error"] { background: #fff0ed; }
+.action-feedback.button:not(.secondary)[data-action-state="success"] { background: #28573d; color: #fff; }
+.action-feedback.button:not(.secondary)[data-action-state="error"] { background: #842b28; color: #fff; }
+.action-feedback[data-pressed="true"] {
+  background: #e9e5db;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.action-feedback.button:not(.secondary)[data-pressed="true"] { background: #171717; color: #fff; }
+.action-feedback[data-physical-press="true"]:not([aria-disabled="true"]) {
+  filter: brightness(.94);
+  transform: translateY(1px) scale(.99);
+}
+
+:where(button, a[href], summary, [role="button"]):not([aria-disabled="true"]):focus-visible {
+  outline: var(--stl-border-focus) solid #171717;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  :where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
+    transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease, filter 80ms ease;
+  }
+  :where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]):hover {
+    filter: brightness(.96);
+  }
+}
+
+:where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]):active {
+  filter: brightness(.92);
+  transform: translateY(1px) scale(.99);
+}
+
+a[data-route-pending="true"] {
+  cursor: progress;
+  opacity: .72;
+}
+
+.route-content-transition[aria-busy="true"] {
+  cursor: progress;
+}
+
+.action-feedback-indicator { flex: 0 0 auto; }
+
+.async-status {
+  display: flex;
+  width: fit-content;
+  max-width: min(42rem, 100%);
+  align-items: flex-start;
+  gap: .45rem;
+  padding: .55rem .7rem;
+  border: var(--stl-border-hairline) solid #cfcac0;
+  background: #f5f2eb;
+  color: #4e4a43;
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.async-status svg { flex: 0 0 auto; margin-top: .1rem; }
+.async-status.pending { border-color: #a9a398; }
+.async-status.success { border-color: #91ad9a; background: #edf5ef; color: #28573d; }
+.async-status.error { border-color: #d5a09b; background: #fff0ed; color: #842b28; }
+
+.toast-host {
+  position: fixed;
+  z-index: var(--stl-z-toast);
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  display: grid;
+  width: min(25rem, calc(100vw - 2rem));
+  gap: .5rem;
+  pointer-events: none;
+}
+
+.toast-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  border: var(--stl-border-hairline) solid #cfcac0;
+  background: #fff;
+  box-shadow: var(--stl-shadow-toast);
+  pointer-events: auto;
+  animation: action-feedback-enter var(--stl-motion-navigation) var(--ease-out);
+}
+
+.toast-item > .async-status { width: 100%; max-width: none; border: 0; background: transparent; }
+.toast-item > button {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: .25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}
+
+.toast-item.success { border-left: 3px solid #326b49; background: #f7fbf8; }
+.toast-item.error { border-left: 3px solid #9b2c2c; background: #fff8f6; }
+.toast-item.pending { border-left: 3px solid #6f685d; background: #faf8f3; }
+
+@keyframes action-feedback-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-feedback,
+  .action-feedback-indicator,
+  .toast-item,
+  :where(button, a[href], summary, [role="button"]) { animation: none !important; transition: none !important; transform: none !important; }
+}

@@ -1,0 +1,97 @@
+@media (max-width: 850px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-visual {
+    display: none;
+  }
+
+  .auth-form-side {
+    min-height: calc(100vh - var(--header-height));
+    padding: 28px 18px;
+  }
+
+  .reader-center {
+    grid-template-columns: 1fr;
+  }
+
+  .account-sidebar {
+    width: 100%;
+    max-width: 100vw;
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .account-sidebar nav {
+    width: 100%;
+    max-width: calc(100vw - 32px);
+    flex-direction: row;
+    margin-top: 14px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .account-sidebar nav button {
+    flex: 0 0 auto;
+  }
+
+  .logout-button {
+    display: none;
+  }
+
+  .account-content {
+    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100vw;
+    padding: 18px 14px;
+  }
+
+  .reader-note-previews {
+    grid-template-columns: 1fr;
+  }
+
+  .reader-note-previews > article {
+    min-height: 140px;
+  }
+
+  .reader-book-note-list > article {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .reader-book-note-list > article > .reader-data-actions {
+    grid-column: 2;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .account-content > *,
+  .continue-reading,
+  .account-books,
+  .account-data-panel,
+  .reader-data-row,
+  .reader-saved-row {
+    min-width: 0;
+  }
+
+  .account-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .continue-reading-entry {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .continue-reading-entry > .button {
+    width: fit-content;
+  }
+
+  .reader-saved-actions {
+    align-items: flex-start;
+    padding: 8px 0 12px;
+  }
+}

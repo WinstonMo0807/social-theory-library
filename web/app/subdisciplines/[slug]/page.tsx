@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SubdisciplinePublicView } from "@/components/public/subdiscipline-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadSubdiscipline } from "@/lib/server-api";
+import { loadSubdiscipline } from "@/lib/api/taxonomy.server";
 
 export const metadata: Metadata = { title: "子学科详情" };
 

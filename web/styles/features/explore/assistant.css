@@ -1,0 +1,328 @@
+.ask-library-workspace {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 290px;
+  min-height: 620px;
+  margin-top: 14px;
+  border: 1px solid var(--line-dark);
+  background: var(--surface);
+}
+
+.ask-conversation-list,
+.ask-source-panel {
+  min-width: 0;
+  background: var(--wash);
+}
+
+.ask-conversation-list {
+  border-right: 1px solid var(--line);
+}
+
+.ask-conversation-list > header,
+.ask-chat-panel > header,
+.ask-source-panel > header {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ask-conversation-list > header div,
+.ask-conversation-list > header button,
+.ask-chat-panel > header div,
+.ask-chat-panel > header label {
+  display: grid;
+  gap: 4px;
+}
+
+.ask-conversation-list > header button {
+  display: inline-flex;
+  grid-auto-flow: column;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--line-dark);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ask-conversation-list > div {
+  display: grid;
+  padding: 8px;
+}
+
+.ask-conversation-list > div > button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.ask-conversation-list > div > button:hover,
+.ask-conversation-list > div > button.active {
+  border-color: var(--line-dark);
+  background: var(--surface);
+}
+
+.ask-conversation-list small,
+.ask-conversation-list > div > p,
+.ask-source-panel > p,
+.ask-chat-panel > header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.ask-chat-panel {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto auto minmax(340px, 1fr) auto auto;
+}
+
+.ask-service-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #f6f1e6;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.ask-service-notice span {
+  min-width: 0;
+  flex: 1;
+  color: var(--muted);
+}
+
+.ask-service-notice a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-bottom: 1px solid currentColor;
+  font-weight: 700;
+}
+
+.ask-chat-panel > header h2,
+.ask-chat-panel > header p,
+.ask-source-panel > header h2,
+.ask-source-panel > header p {
+  margin: 0;
+}
+
+.ask-chat-panel > header h2,
+.ask-source-panel > header h2 {
+  font-size: calc(14px + var(--font-bump));
+}
+
+.ask-chat-panel > header select {
+  min-height: 34px;
+  padding: 5px 30px 5px 8px;
+  border: 1px solid var(--line-dark);
+  background: var(--surface);
+}
+
+.ask-message-list {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  max-height: 620px;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.ask-empty-message,
+.ask-library-state {
+  display: grid;
+  min-height: 390px;
+  padding: 40px;
+  place-content: center;
+  justify-items: center;
+  gap: 11px;
+  text-align: center;
+}
+
+.ask-empty-message h3,
+.ask-empty-message p,
+.ask-library-state h2,
+.ask-library-state p {
+  max-width: 620px;
+  margin: 0;
+}
+
+.ask-message {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 11px;
+  max-width: 780px;
+}
+
+.ask-message.user {
+  justify-self: end;
+  width: min(88%, 680px);
+}
+
+.ask-message > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.ask-message.user > span {
+  background: var(--line-dark);
+  color: var(--ink);
+}
+
+.ask-message > div {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.ask-message.user > div {
+  background: var(--wash);
+}
+
+.ask-message > div > p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.75;
+}
+
+.ask-message footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ask-message footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ask-error {
+  margin: 0;
+  padding: 9px 16px;
+  border-top: 1px solid var(--line);
+  color: #8a1f11;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.ask-composer {
+  display: grid;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.ask-composer > label {
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 720;
+}
+
+.ask-composer textarea {
+  width: 100%;
+  min-height: 82px;
+  resize: vertical;
+  padding: 11px;
+  border: 1px solid var(--line-dark);
+  background: var(--surface);
+  font: inherit;
+}
+
+.ask-composer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ask-composer .button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+}
+
+.ask-source-panel {
+  padding-bottom: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.ask-source-panel > p {
+  padding: 16px;
+  line-height: 1.6;
+}
+
+.ask-source-panel > div {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.ask-source-panel article {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.ask-source-panel article h3,
+.ask-source-panel article p,
+.ask-source-panel article blockquote {
+  margin: 0;
+}
+
+.ask-source-panel article h3 {
+  font-size: calc(10px + var(--font-bump));
+}
+
+.ask-source-panel article p,
+.ask-source-panel article span {
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.ask-source-panel article blockquote {
+  font-family: var(--serif);
+  font-size: calc(9px + var(--font-bump));
+  line-height: 1.65;
+}
+
+.ask-source-panel article a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  border-bottom: 1px solid currentColor;
+  font-weight: 700;
+}
+
+.spin {
+  animation: explore-spin 900ms linear infinite;
+}
+
+@keyframes explore-spin {
+  to { transform: rotate(360deg); }
+}

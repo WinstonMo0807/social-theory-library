@@ -2,6 +2,8 @@
 
 ## 2026-09-06 3.0.5 开发状态
 
+2026-09-13当前问题摘要优先于下方历史过程。目标书已经恢复公开、可搜和可读；知识图/时间线遗漏已通过原任务完成。另有发布完成阶段PostgreSQL可空JOIN锁问题，补丁及隔离PG验证已完成，正在随最终候选上线。CSS、基础组件和API领域文件拆分已完成源码收尾，212项前端与构建通过。依赖为0 critical/2 high/4 moderate，非下方早期19项。最终上线证据见CURRENT_STATE及CURRENT_PROGRESS。保留外部Provider、暂停OCR、复杂人物冲突和旧契约兼容边界，不把尚未实测或有条件能力说成全面通过。
+
 - 2026-09-12发布前发现新增Edition.publication_mode只设应用默认值，旧版本回退后省略该列的插入会失败。已增加0054与数据库默认值document，不改既有document/bibliographic值；专项2项通过，真实PostgreSQL副本及旧镜像插入复核将在切换前执行。
 - 本次真实生产故障确认于2026-09-12。Edition b372b27b-7774-4439-9959-fdf5868fb578的metadata-only首发已确认、元数据消费者完成，却等待knowledge_graph/person_search且无活动修订，用户看不到《质的研究方法与社会科学研究》。后台PUBLISHED提示早于真实公开，重复普通发布不能补救。该缺陷发生在仍运行的3.0.4，并非3.0.5前端不识别旧PDF；正在本地修复，尚未上线。
 - 2026-09-12新鲜npm audit报告19项依赖风险，1 critical、12 high、6 moderate；维护者严重公告与当前锁定Next版本已核对。当前运行采用Vinext，具体暴露仍待检查，不能只看包名判定线上状态。未改依赖或执行强制audit fix，源码仍在checkpoint5回归期间冻结；详见V3.0.5_API_CONTRACT安全检查，上线门槛未通过。

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 const panelUrl = new URL("../components/functional-health-panel.tsx", import.meta.url);
 const processingUrl = new URL("../components/processing-center.tsx", import.meta.url);
-const stylesUrl = new URL("../app/globals.css", import.meta.url);
 
 test("processing center leads with persisted functional health", async () => {
   const [panel, processing] = await Promise.all([
@@ -83,7 +83,7 @@ test("health cards expose the four product dimensions and actionable diagnostics
 });
 
 test("functional health layout remains usable on narrow screens", async () => {
-  const styles = await readFile(stylesUrl, "utf8");
+  const styles = readStyleSource();
 
   assert.match(styles, /\.functional-health-capability-grid/);
   assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.functional-health-dimensions \{ grid-template-columns: repeat\(2/);

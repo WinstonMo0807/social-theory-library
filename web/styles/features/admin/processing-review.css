@@ -1,0 +1,109 @@
+.processing-review-queue {
+  display: grid;
+  gap: var(--admin-space-4, 1rem);
+}
+
+.processing-review-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--admin-space-3, .75rem);
+}
+
+.processing-review-cards > article {
+  min-width: 0;
+  border: 1px solid var(--border);
+  padding: 1rem;
+  display: grid;
+  gap: .7rem;
+  background: var(--surface, #fff);
+}
+
+.processing-review-cards header,
+.processing-review-cards header span,
+.processing-review-cards footer {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.processing-review-cards header {
+  justify-content: space-between;
+  font-size: .78rem;
+}
+
+.processing-review-cards h3,
+.processing-review-cards p,
+.processing-review-cards dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.processing-review-cards dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.processing-review-cards dl div { min-width: 0; }
+.processing-review-cards dt { color: var(--muted); font-size: .72rem; }
+
+.processing-review-cards footer {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: .7rem;
+}
+
+.processing-review-cards footer a,
+.processing-review-cards footer button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: .2em;
+  cursor: pointer;
+}
+
+@media (max-height: 820px) and (min-width: 1101px) {
+  .review-pdf { position: static; max-height: none; }
+}
+
+@media (max-width: 1100px) {
+  .publication-desk-layout { grid-template-columns: 1fr; }
+  .publication-item-list { position: static; max-height: 20rem; }
+  .publication-preview { grid-template-columns: 1fr; }
+  .publication-impact-summary > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 780px) {
+  .review-publication-handoff,
+  .publication-preview,
+  .functional-health-capability-grid,
+  .processing-health-grid,
+  .processing-job-cards { grid-template-columns: 1fr; }
+  .review-publication-handoff a { grid-column: 1; grid-row: auto; }
+  .functional-health-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .functional-health-overview > div:nth-child(2) { border-right: 0; }
+  .functional-health-overview > div:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
+  .functional-health-incident dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .functional-health-recovery-list article { grid-template-columns: minmax(0, 1fr) auto; }
+  .processing-job-card dl { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .functional-health-panel > header,
+  .functional-health-incidents > header,
+  .functional-health-recoveries > header,
+  .functional-health-capability > header,
+  .functional-health-incident > header { align-items: stretch; flex-direction: column; }
+  .functional-health-header-actions { justify-content: flex-start; }
+  .functional-health-overview { grid-template-columns: 1fr; }
+  .functional-health-overview > div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .functional-health-overview > div:last-child { border-bottom: 0; }
+  .functional-health-dimensions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .functional-health-dependencies dl,
+  .functional-health-incident dl { grid-template-columns: 1fr; }
+  .functional-health-recovery-list article { grid-template-columns: 1fr; gap: .3rem; }
+}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DisciplinePublicView } from "@/components/public/discipline-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadTheoryDisciplinePage } from "@/lib/server-api";
+import { loadTheoryDisciplinePage } from "@/lib/api/knowledge.server";
 
 const allowedTypes = new Set(["theory_tradition", "subdiscipline", "debate"]);
 

@@ -1,0 +1,590 @@
+.review-list > header,
+.review-list > article,
+.admin-entity-table > header,
+.admin-entity-table > article {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.6fr 1fr 0.65fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.review-list > header,
+.admin-entity-table > header {
+  min-height: 31px;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.review-list article > p {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
+
+.review-list article > p span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.review-list article small {
+  color: var(--muted);
+  font-size: calc(6px + var(--font-bump));
+}
+
+.review-list article > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-editor > form {
+  display: grid;
+  grid-template-columns: minmax(310px, 0.8fr) minmax(520px, 1.35fr) minmax(280px, 0.68fr);
+  grid-template-areas:
+    "pdf metadata impact"
+    "pdf metadata candidates";
+  gap: 12px;
+  align-items: start;
+}
+
+.review-form {
+  grid-area: metadata;
+}
+
+.review-form > header span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.review-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--ink);
+  background: var(--surface);
+}
+
+.review-error p {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.review-unavailable {
+  padding: 28px;
+}
+
+.review-unavailable > p {
+  max-width: 680px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.review-unavailable > .button {
+  margin: 12px 0 22px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 14px;
+}
+
+.form-grid > label,
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.form-grid label > span,
+.tag-editor > span {
+  font-size: calc(7px + var(--font-bump));
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.review-field-label {
+  display: flex;
+  min-height: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-field-label > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: calc(6px + var(--font-bump));
+  font-weight: 500;
+  text-transform: none;
+}
+
+.review-field-label > button.locked {
+  color: var(--ink);
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  min-height: 33px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  outline: 0;
+  background: var(--surface);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.form-grid input:focus,
+.form-grid textarea:focus,
+.form-grid select:focus {
+  border-color: var(--ink);
+}
+
+.tag-editor > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 36px;
+  padding: 5px;
+  border: 1px solid var(--line);
+}
+
+.tag-editor .tag-value,
+.tag-editor .tag-input > button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-size: calc(7px + var(--font-bump));
+}
+
+.tag-editor .tag-input {
+  display: inline-flex;
+  min-width: 190px;
+  flex: 1;
+  gap: 5px;
+}
+
+.tag-editor .tag-input input {
+  min-height: 24px;
+  flex: 1;
+  padding: 2px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tag-editor .tag-input > button {
+  white-space: nowrap;
+}
+
+.review-form > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.review-form > .form-message {
+  margin: 0 12px 12px;
+}
+
+.publication-place-review {
+  padding: 20px 12px 22px;
+  border-top: 1px solid var(--line);
+}
+
+.publication-place-review > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.publication-place-review h3 {
+  margin: 0;
+  font-size: calc(17px + var(--font-bump));
+}
+
+.publication-place-review header p {
+  max-width: 850px;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  line-height: 1.55;
+}
+
+.publication-place-evidence-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.publication-place-evidence-list > article {
+  padding: 12px;
+  border: 1px solid var(--line);
+}
+
+.publication-place-evidence-list > article.primary {
+  border-color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.publication-place-evidence-list article > header,
+.publication-place-evidence-list article > header div,
+.publication-place-evidence-actions,
+.publication-place-evidence-list article label > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.publication-place-evidence-list article > header {
+  justify-content: space-between;
+}
+
+.publication-place-evidence-list article > header span,
+.publication-place-evidence-list article > header b {
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.publication-place-evidence-list dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  margin: 12px 0;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.publication-place-evidence-list dl div {
+  padding: 7px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.publication-place-evidence-list dt,
+.publication-place-evidence-list dd {
+  margin: 0;
+  font-size: calc(7px + var(--font-bump));
+}
+
+.publication-place-evidence-list dt {
+  color: var(--muted);
+}
+
+.publication-place-evidence-list blockquote {
+  min-height: 52px;
+  margin: 0 0 10px;
+  padding: 9px;
+  border-left: 2px solid var(--ink);
+  background: var(--wash);
+  font-family: var(--font-serif);
+  line-height: 1.55;
+}
+
+.publication-place-evidence-actions {
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.publication-place-evidence-actions a,
+.publication-place-evidence-actions button,
+.publication-place-evidence-list article label button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid currentColor;
+  cursor: pointer;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.publication-place-evidence-list article label {
+  display: grid;
+  gap: 5px;
+}
+
+.publication-place-evidence-list article label input {
+  min-width: 0;
+  flex: 1;
+}
+
+.publication-place-history {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+}
+
+.publication-place-history p {
+  display: grid;
+  grid-template-columns: 150px 100px 1fr;
+  gap: 9px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.cover-candidate-review {
+  padding: 20px 12px 22px;
+  border-top: 1px solid var(--line);
+}
+
+.cover-candidate-review > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.cover-candidate-review h3 {
+  margin: 0;
+  font-size: calc(17px + var(--font-bump));
+}
+
+.cover-candidate-review header p {
+  max-width: 760px;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  line-height: 1.55;
+}
+
+.cover-candidate-review > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cover-candidate-review article {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+}
+
+.cover-candidate-review article.selected {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.cover-candidate-image {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  place-items: center;
+  border: 1px solid var(--line);
+  background-color: var(--surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.cover-candidate-image span {
+  max-width: 16ch;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  line-height: 1.45;
+  text-align: center;
+}
+
+.cover-candidate-image.failed {
+  border-style: dashed;
+}
+
+.cover-candidate-review article header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.cover-candidate-review article p {
+  margin: 0;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  line-height: 1.5;
+}
+
+.cover-candidate-review article button {
+  width: fit-content;
+  padding-bottom: 2px;
+  margin-top: auto;
+  border-bottom: 1px solid currentColor;
+  cursor: pointer;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.cover-candidate-review article button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.recommendation-image-review {
+  margin: 0 22px 22px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+.recommendation-image-review > header,
+.recommendation-image-review > header > div:last-child,
+.recommendation-image-body,
+.recommendation-image-body > div:last-child {
+  display: flex;
+}
+
+.recommendation-image-review > header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.recommendation-image-review > header h3 {
+  margin: 0 0 5px;
+  font-size: 18px;
+}
+
+.recommendation-image-review > header p,
+.recommendation-image-body small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.recommendation-image-review > header > div:last-child {
+  gap: 8px;
+}
+
+.recommendation-image-review > header button {
+  border: 1px solid var(--ink);
+  background: transparent;
+  min-height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.recommendation-image-body {
+  align-items: stretch;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.recommendation-image-preview {
+  width: 220px;
+  min-height: 132px;
+  flex: 0 0 220px;
+  border: 1px solid var(--line);
+  background-color: #ecece8;
+  background-position: center;
+  background-size: cover;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.recommendation-image-preview.missing {
+  background: repeating-linear-gradient(135deg, #f7f7f4, #f7f7f4 12px, #efefeb 12px, #efefeb 24px);
+}
+
+.recommendation-image-body > div:last-child {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .recommendation-image-review > header,
+  .recommendation-image-body {
+    flex-direction: column;
+  }
+
+  .recommendation-image-preview {
+    width: 100%;
+    min-height: 180px;
+    flex-basis: auto;
+  }
+}
+
+.candidate-panel article {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.candidate-panel > header > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: calc(7px + var(--font-bump));
+}
+
+.candidate-panel article.candidate-selected {
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+
+.candidate-panel article header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.candidate-panel article header strong,
+.candidate-panel article header b,
+.candidate-panel article small,
+.candidate-panel article button {
+  font-size: calc(7px + var(--font-bump));
+}
+
+.candidate-panel {
+  grid-area: candidates;
+}
+
+@media (min-width: 821px) {
+  .candidate-panel {
+    align-self: start;
+    max-height: calc(100dvh - 76px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .candidate-panel > header {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    background: var(--surface);
+  }
+}

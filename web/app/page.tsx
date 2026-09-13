@@ -4,18 +4,12 @@ import { ArrowRight, BookOpen, Compass, Network, Search, Users } from "lucide-re
 import { RandomRecommendation } from "@/components/random-recommendation";
 import { SiteFooter } from "@/components/site-footer";
 import { BookCard, ScholarCard, SearchField, SectionHeading } from "@/components/ui";
-import {
-  loadCatalogOverview,
-  loadRecommendedScholars,
-  loadSiteConfig,
-  loadRecommendations,
-  loadHotSearches,
-  loadTheorySchools,
-  loadTopics,
-  loadWorks,
-  recommendationSlugs,
-  recommendationWorks,
-} from "@/lib/server-api";
+import { loadCatalogOverview, loadWorks } from "@/lib/api/catalog.server";
+import { loadRecommendedScholars, loadRecommendations, recommendationSlugs, recommendationWorks } from "@/lib/api/recommendations.server";
+import { loadSiteConfig } from "@/lib/api/site.server";
+import { loadHotSearches } from "@/lib/api/search.server";
+import { loadTheorySchools } from "@/lib/api/theories.server";
+import { loadTopics } from "@/lib/api/topics.server";
 
 export const metadata: Metadata = {
   title: "首页",

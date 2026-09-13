@@ -1,0 +1,4 @@
+.page-shell {
+  width: var(--stl-container-page-width);
+  padding: 0 var(--stl-space-page-inline) var(--stl-space-7);
+}

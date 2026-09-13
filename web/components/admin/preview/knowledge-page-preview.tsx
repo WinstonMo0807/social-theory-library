@@ -18,17 +18,10 @@ import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import type { TheorySchool } from "@/lib/data";
 import { adaptApiScholarDetail, adaptApiTopic, adaptApiWork } from "@/lib/public-data-adapters";
-import type {
-  ApiScholar,
-  ApiTopic,
-  Discipline,
-  KnowledgeNodeDetail,
-  LocalTheoryGraph,
-  NormalizedTimelineEvent,
-  NormalizedReadingPath,
-  Subdiscipline,
-  TheoryDisciplinePage,
-} from "@/lib/server-api";
+import type { ApiScholar } from "@/lib/api/people.types";
+import type { ApiTopic } from "@/lib/api/topics.types";
+import type { Discipline, Subdiscipline } from "@/lib/api/taxonomy.types";
+import type { KnowledgeNodeDetail, LocalTheoryGraph, NormalizedTimelineEvent, NormalizedReadingPath, TheoryDisciplinePage } from "@/lib/api/knowledge.types";
 
 type PreviewPerspective = {
   source: string;

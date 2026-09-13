@@ -3,7 +3,8 @@ import { Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { ScholarCard, SearchField, SectionHeading, TagList } from "@/components/ui";
-import { loadRecommendations, loadRecommendedScholars, loadScholarPage } from "@/lib/server-api";
+import { loadRecommendations, loadRecommendedScholars } from "@/lib/api/recommendations.server";
+import { loadScholarPage } from "@/lib/api/people.server";
 import { searchPage, scopedSearchHref } from "@/lib/search-context";
 
 export const metadata: Metadata = {

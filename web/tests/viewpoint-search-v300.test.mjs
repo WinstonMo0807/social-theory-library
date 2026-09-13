@@ -3,10 +3,14 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+const readSearch = () => Promise.all([
+  read("../lib/api/search.types.ts"),
+  read("../lib/api/search.server.ts"),
+]).then((sources) => sources.join("\n"));
 
 test("viewpoint search uses the dedicated EvidenceSpan-backed public contract", async () => {
   const [serverApi, page] = await Promise.all([
-    read("../lib/server-api.ts"),
+    readSearch(),
     read("../app/explore/opinions/page.tsx"),
   ]);
 
@@ -43,7 +47,7 @@ test("viewpoint UI groups relations and keeps the benchmark-gated baseline visib
 
 test("viewpoint filters round-trip canonical IDs and bounded public fields in the URL", async () => {
   const [serverApi, page, styles] = await Promise.all([
-    read("../lib/server-api.ts"),
+    readSearch(),
     read("../app/explore/opinions/page.tsx"),
     read("../app/explore/opinions/viewpoint-search.module.css"),
   ]);

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { readStyleSource } from "../scripts/style-source.mjs";
 
 test("user administration exposes only Reader Editor and Administrator roles", async () => {
   const [sections, shell] = await Promise.all([
@@ -372,7 +373,7 @@ test("scholar summary and full biography remain distinct on the public profile",
 test("admin primitives are integrated without fixed-width dashboard overflow", async () => {
   const [dashboard, styles] = await Promise.all([
     readFile(new URL("../components/admin-dashboard.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readStyleSource(),
   ]);
 
   assert.match(dashboard, /import \{ EmptyState, PageHeader, StatusBadge, type StatusTone \} from "\.\/admin-ui"/);
@@ -381,7 +382,8 @@ test("admin primitives are integrated without fixed-width dashboard overflow", a
   assert.match(dashboard, /<EmptyState compact title="尚无上传记录"/);
   assert.doesNotMatch(dashboard, /<CheckCircle2/);
 
-  assert.match(styles, /--admin-control-height: 38px/);
+  assert.match(styles, /--admin-control-height: var\(--stl-control-height\)/);
+  assert.match(styles, /--stl-control-height: 38px/);
   assert.match(styles, /\.admin-ui-page-header,[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;/);
   assert.match(styles, /\.admin-ui-page-header \{[\s\S]*?flex-wrap: wrap;/);
   assert.match(styles, /\.admin-ui-sticky-action-bar \{[\s\S]*?flex-wrap: wrap;/);
@@ -432,10 +434,7 @@ test("metadata review uses confirmed entity decisions and review-only bibliograp
 });
 
 test("candidate evidence and action layouts wrap inside the review sidebar", async () => {
-  const styles = await readFile(
-    new URL("../app/globals.css", import.meta.url),
-    "utf8",
-  );
+  const styles = readStyleSource();
 
   assert.match(styles, /\.candidate-panel > header \{[\s\S]*?flex-wrap: wrap;/);
   assert.match(styles, /\.candidate-count-summary \{[\s\S]*?overflow-wrap: anywhere;/);

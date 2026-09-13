@@ -1,0 +1,452 @@
+.reader-document {
+  grid-area: document;
+  position: relative;
+  overflow: auto;
+  padding: 24px 7% 90px;
+  background: #ecece8;
+  scrollbar-gutter: stable;
+}
+
+.reader-document.continuous-scroll-mode {
+  overscroll-behavior: contain;
+}
+
+.reader-processing-status {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  width: min(760px, calc(100% - 24px));
+  margin: 0 auto 12px;
+  padding: 9px 12px;
+  border: 1px solid #c8b98e;
+  background: rgba(250, 247, 237, 0.96);
+  color: #51482f;
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.reader-processing-status strong { white-space: nowrap; }
+.reader-processing-status.status-succeeded { border-color: #91ae9c; color: #315f43; }
+.reader-processing-status.status-failed { border-color: #c9988f; color: #7d372e; }
+
+.reader.dark .reader-document {
+  background: #111;
+}
+
+.pdf-canvas-stage {
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+  background: white;
+  color: #171717;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+}
+
+.continuous-pdf-viewer {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding-right: 184px;
+  box-sizing: border-box;
+}
+
+.continuous-pdf-loading {
+  display: grid;
+  min-height: 420px;
+  margin: 0;
+  color: var(--muted);
+  place-items: center;
+}
+
+.pdf-page-shell {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  scroll-margin-top: 22px;
+}
+
+.pdf-page-shell .pdf-canvas-stage {
+  margin: 0 auto;
+}
+
+.pdf-page-shell.current .pdf-canvas-stage {
+  box-shadow: 0 3px 16px rgb(0 0 0 / 10%);
+}
+
+.pdf-page-label {
+  position: absolute;
+  right: 10px;
+  bottom: -16px;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-margin-note {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  width: 164px;
+  max-height: 180px;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  padding: 8px 10px;
+  border: 1px solid #cfc9b7;
+  border-left: 3px solid #b38d21;
+  background: #fffdf4;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 8%);
+  color: #27251f;
+  text-align: left;
+}
+
+.pdf-note-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 164px;
+  pointer-events: none;
+}
+
+.pdf-margin-note {
+  pointer-events: auto;
+}
+
+.pdf-margin-note header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pdf-margin-note strong,
+.pdf-margin-note time {
+  font-size: calc(9px + var(--font-bump));
+}
+
+.pdf-margin-note time {
+  color: #6e695d;
+  font-size: calc(7px + var(--font-bump));
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-margin-note span {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: calc(9px + var(--font-bump));
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.pdf-margin-note small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #6e695d;
+  font-family: var(--serif);
+  font-size: calc(7px + var(--font-bump));
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pdf-margin-note > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pdf-margin-note button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  cursor: pointer;
+  font-size: calc(7px + var(--font-bump));
+}
+
+.pdf-margin-note.focused {
+  border-color: #7f6419;
+  box-shadow: 0 0 0 2px rgb(179 141 33 / 22%);
+}
+
+.pdf-canvas-stage.continuous {
+  flex: none;
+}
+
+.pdf-canvas-stage canvas {
+  display: block;
+  max-width: none;
+  background: white;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.pdf-canvas-stage.is-rendering canvas {
+  opacity: 0.72;
+}
+
+.canonical-text-layer,
+.pdf-native-text-layer,
+.pdf-search-highlights {
+  position: absolute;
+  inset: 0;
+}
+
+.pdf-native-text-layer {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  z-index: 3;
+  opacity: 1;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+}
+
+.pdf-native-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  cursor: text;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+
+.pdf-native-text-layer > :not(.markedContent),
+.pdf-native-text-layer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  z-index: 1;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdf-native-text-layer .markedContent {
+  display: contents;
+}
+
+.pdf-native-text-layer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.canonical-text-layer {
+  z-index: 3;
+  overflow: hidden;
+  line-height: 1.15;
+  text-size-adjust: none;
+}
+
+.canonical-text-layer span {
+  position: absolute;
+  overflow: hidden;
+  color: transparent;
+  cursor: text;
+  font-family: var(--serif);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.canonical-text-layer span::selection {
+  background: rgba(224, 190, 71, 0.46);
+  color: transparent;
+}
+
+.pdf-native-text-layer ::selection {
+  background: rgba(224, 190, 71, 0.46);
+}
+
+.pdf-search-highlights {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pdf-search-highlights i {
+  position: absolute;
+  display: block;
+  background: rgba(243, 208, 78, 0.48);
+  border-radius: 2px;
+  outline: 1px solid rgba(176, 139, 20, 0.45);
+}
+
+.pdf-search-highlights i.underline {
+  background: transparent;
+  border-bottom: 2px solid #a98619;
+  outline: 0;
+}
+
+.pdf-search-highlights i.note {
+  background: rgba(243, 215, 120, 0.25);
+  outline-style: dashed;
+}
+
+.pdf-render-status {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  right: 16px;
+  padding: 6px 9px;
+  margin: 0;
+  border: 1px solid #d4d4cf;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.pdf-render-error,
+.reader-unavailable {
+  display: flex;
+  min-height: 520px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px;
+  text-align: center;
+}
+
+.pdf-render-error {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.pdf-render-error strong,
+.reader-unavailable strong {
+  font-size: calc(13px + var(--font-bump));
+}
+
+.pdf-render-error span,
+.reader-unavailable p {
+  max-width: 420px;
+  color: var(--muted);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.reader-unavailable {
+  width: min(690px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.reader-unavailable a,
+.pdf-render-error a {
+  padding-bottom: 2px;
+  border-bottom: 1px solid currentColor;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.pdf-page {
+  position: relative;
+  width: min(690px, 100%);
+  min-height: 900px;
+  padding: 50px 90px 65px;
+  margin: 0 auto;
+  background: #fff;
+  color: #171717;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  transform-origin: top center;
+  transition: transform 180ms var(--ease-out);
+}
+
+.pdf-page > header {
+  text-align: center;
+}
+
+.pdf-page > header span {
+  font-family: var(--serif);
+  font-size: calc(13px + var(--font-bump));
+  letter-spacing: 0.25em;
+}
+
+.pdf-page > header i {
+  display: block;
+  width: 44px;
+  height: 1px;
+  margin: 18px auto;
+  background: #444;
+}
+
+.pdf-page h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: calc(31px + var(--font-bump));
+  font-weight: 500;
+}
+
+.pdf-prose {
+  position: relative;
+  margin-top: 38px;
+}
+
+.pdf-prose > p {
+  margin: 0 0 18px;
+  font-family: var(--serif);
+  font-size: calc(16px + var(--font-bump));
+  line-height: 1.75;
+  text-align: justify;
+  text-indent: 2em;
+}
+
+.pdf-prose mark {
+  padding: 0 2px;
+  background: var(--annotation);
+}
+
+.footnote-card {
+  position: absolute;
+  z-index: 4;
+  top: 160px;
+  right: -145px;
+  width: 165px;
+  padding: 14px;
+  border: 1px solid #d5d5d0;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: var(--sans);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.footnote-card b {
+  margin-right: 8px;
+}
+
+.footnote-card p {
+  line-height: 1.55;
+}
+
+.footnote-card button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: calc(8px + var(--font-bump));
+}
+
+.pdf-page > footer {
+  position: absolute;
+  right: 70px;
+  bottom: 38px;
+  left: 70px;
+  padding-top: 12px;
+  border-top: 1px solid #bbb;
+  font-family: var(--serif);
+  font-size: calc(8px + var(--font-bump));
+}

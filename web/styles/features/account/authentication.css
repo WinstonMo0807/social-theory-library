@@ -1,0 +1,233 @@
+/* Authentication and reader account */
+.auth-page {
+  min-height: calc(100vh - var(--header-height));
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  border-top: 1px solid var(--line);
+}
+
+.auth-visual {
+  position: relative;
+  display: flex;
+  min-height: 650px;
+  flex-direction: column;
+  padding: 38px;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+}
+
+.auth-wordmark {
+  display: flex;
+  flex-direction: column;
+  font-size: calc(13px + var(--font-bump));
+  font-weight: 850;
+  letter-spacing: -0.07em;
+  line-height: 0.83;
+}
+
+.auth-visual h2 {
+  max-width: 740px;
+  margin: 70px 0 10px;
+  font-size: clamp(52px, 6.5vw, 96px);
+  font-weight: 780;
+  letter-spacing: -0.07em;
+  line-height: 0.88;
+}
+
+.auth-visual > p {
+  max-width: 420px;
+  margin: 0;
+}
+
+.auth-visual .architectural-image {
+  position: relative;
+  inset: auto;
+  width: 78%;
+  height: 150px;
+  margin: 50px 0 0 auto;
+}
+
+.auth-visual dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: auto 0 0;
+}
+
+.auth-visual dl div {
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.auth-visual dt {
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.auth-visual dd {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: calc(10px + var(--font-bump));
+}
+
+.auth-form-side {
+  display: grid;
+  padding: 40px;
+  background: var(--surface);
+  place-items: center;
+}
+
+.auth-form {
+  width: min(410px, 100%);
+}
+
+.auth-form h1 {
+  margin: 0;
+  font-size: calc(38px + var(--font-bump));
+  letter-spacing: -0.05em;
+}
+
+.auth-intro {
+  margin: 8px 0 26px;
+  color: var(--muted);
+  font-size: calc(11px + var(--font-bump));
+}
+
+.auth-form > label,
+.submission-panel label,
+.direct-reset label,
+.cloud-config label,
+.settings-grid form > label,
+.backup-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.auth-form > label > span,
+.submission-panel label span,
+.direct-reset label span,
+.cloud-config label span,
+.settings-grid label span {
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 680;
+}
+
+.auth-form input,
+.submission-panel input,
+.submission-panel textarea,
+.direct-reset input,
+.cloud-config input,
+.settings-grid input,
+.settings-grid textarea,
+.settings-grid select {
+  width: 100%;
+  min-height: 43px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-dark);
+  border-radius: 0;
+  outline: 0;
+  background: var(--surface);
+}
+
+.auth-form input:focus,
+.submission-panel input:focus,
+.submission-panel textarea:focus,
+.direct-reset input:focus,
+.cloud-config input:focus,
+.settings-grid input:focus,
+.settings-grid textarea:focus,
+.settings-grid select:focus {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.ai-runtime-settings fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+
+.ai-runtime-settings legend {
+  padding: 0 6px;
+  font-size: calc(10px + var(--font-bump));
+  font-weight: 700;
+}
+
+.ai-runtime-settings fieldset > label:not(.switch-row) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-runtime-settings fieldset > .button {
+  justify-self: start;
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-input button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.field-help {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: calc(8px + var(--font-bump));
+}
+
+.form-message {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  font-size: calc(9px + var(--font-bump));
+}
+
+.form-message.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.form-message.success {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.auth-submit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: calc(9px + var(--font-bump));
+}
+
+.spin {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

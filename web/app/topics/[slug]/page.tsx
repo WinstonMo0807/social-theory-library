@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TopicPublicView } from "@/components/public/topic-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadTopic } from "@/lib/server-api";
+import { loadTopic } from "@/lib/api/topics.server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const data = await loadTopic((await params).slug);

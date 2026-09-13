@@ -10,12 +10,7 @@ import {
   Search,
   UsersRound,
 } from "lucide-react";
-import type {
-  KnowledgeNodeListItem,
-  NormalizedReadingPath,
-  TheoryDisciplineCompact,
-  TheoryWorkCompact,
-} from "@/lib/server-api";
+import type { KnowledgeNodeListItem, NormalizedReadingPath, TheoryDisciplineCompact, TheoryWorkCompact } from "@/lib/api/knowledge.types";
 import { ArchitecturalImage } from "./ui";
 import { ResponsiveMediaImage } from "./responsive-media-image";
 import type { components } from "@/lib/api/generated/schema";

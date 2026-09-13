@@ -20,6 +20,8 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus } from "./action-feedback";
 import { DisplayPreferences } from "./display-preferences";
 import { usePublicSession } from "./public-session-provider";
+import { Drawer } from "./ui/dialog";
+import { IconButton } from "./ui/controls";
 
 export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
   return (
@@ -42,8 +44,6 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
   const user = session.status === "authenticated" && session.user ? session.user : null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const menuPanelRef = useRef<HTMLElement>(null);
-  const wasMenuOpenRef = useRef(false);
   const navigation = [
     ["/", config.navigation.home],
     ["/explore", config.navigation.explore],
@@ -54,49 +54,7 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
-    if (!open) {
-      if (wasMenuOpenRef.current) menuButtonRef.current?.focus();
-      wasMenuOpenRef.current = false;
-      return () => document.body.classList.remove("menu-open");
-    }
-
-    wasMenuOpenRef.current = true;
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const panel = menuPanelRef.current;
-      if (!panel) return;
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ));
-      if (!focusable.length) {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !panel.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.classList.remove("menu-open");
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.body.classList.remove("menu-open");
   }, [open]);
 
   function closeMenu() {
@@ -154,7 +112,7 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>
-        <button
+        <IconButton
           ref={menuButtonRef}
           className="icon-button menu-button"
           type="button"
@@ -164,20 +122,20 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
           onClick={() => setOpen((value) => !value)}
         >
           {open ? <X size={25} /> : <Menu size={25} />}
-        </button>
+        </IconButton>
       </div>
       {open ? (
-        <div className="site-menu-layer" id="site-menu">
+        <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
           <button className="site-menu-backdrop" type="button" aria-label="关闭菜单" onClick={closeMenu} />
-          <aside ref={menuPanelRef} className="site-menu-panel" role="dialog" aria-modal="true" aria-labelledby="site-menu-title">
+          <aside className="site-menu-panel" aria-labelledby="site-menu-title">
             <header className="site-menu-head">
               <div>
                 <p>Social Theory Library</p>
                 <strong id="site-menu-title">书库导航</strong>
               </div>
-              <button ref={closeButtonRef} type="button" aria-label="关闭菜单" onClick={closeMenu}>
+              <IconButton ref={closeButtonRef} aria-label="关闭菜单" onClick={closeMenu}>
                 <X size={25} />
-              </button>
+              </IconButton>
             </header>
 
             <nav className="site-menu-nav" aria-label="书库导航">
@@ -236,7 +194,7 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
               <Link href="/about" prefetch={false} onClick={closeMenu}>关于书库 <ArrowUpRight size={14} /></Link>
             </footer>
           </aside>
-        </div>
+        </Drawer>
       ) : null}
     </header>
   );

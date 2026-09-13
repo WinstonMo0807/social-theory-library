@@ -9,7 +9,8 @@ import {
   getServerSessionCredential,
   isUnauthenticatedError,
 } from "@/lib/api";
-import { adaptWork, type ApiWork } from "@/lib/server-api";
+import { adaptApiWork as adaptWork } from "@/lib/public-data-adapters";
+import type { ApiWork } from "@/lib/api/public-catalog";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";

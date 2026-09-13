@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { KnowledgeNodeCard, TheoryEmpty, nodeTypeLabels } from "@/components/theory-system-ui";
-import { loadDisciplines, loadTheorySystemNodes } from "@/lib/server-api";
+import { loadDisciplines } from "@/lib/api/taxonomy.server";
+import { loadTheorySystemNodes } from "@/lib/api/knowledge.server";
 
 export const metadata: Metadata = { title: "理论知识目录", description: "浏览公开的理论传统、子学科、概念、争论和研究问题。" };
 

@@ -4,6 +4,9 @@ import { Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { SectionHeading } from "./ui";
+import { Button } from "./ui/controls";
+import { Tabs } from "./ui/tabs";
+import { Tooltip } from "./ui/tooltip";
 
 type CitationStyle = "gbt7714-2025" | "apa" | "chicago" | "mla" | "harvard";
 type CitationPayload = Record<CitationStyle, string> & { csl: Record<string, unknown> };
@@ -55,22 +58,8 @@ export function WorkCitationPanel({ editionId }: { editionId?: string }) {
   return (
     <section className="panel citation-panel" id="citation">
       <SectionHeading title="引用本书库版本" />
-      <div className="citation-tabs" role="tablist" aria-label="引用格式">
-        {labels.map(([value, label]) => (
-          <button
-            className={style === value ? "active" : ""}
-            id={`citation-tab-${value}`}
-            type="button"
-            role="tab"
-            aria-selected={style === value}
-            aria-controls="work-citation-text"
-            key={value}
-            onClick={() => setStyle(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs className="citation-tabs" aria-label="引用格式" value={style} onChange={setStyle}
+        items={labels.map(([value, label]) => ({ value, label, id: `citation-tab-${value}`, panelId: "work-citation-text" }))} />
       <blockquote
         id="work-citation-text"
         role="tabpanel"
@@ -79,8 +68,8 @@ export function WorkCitationPanel({ editionId }: { editionId?: string }) {
         {payload?.[style] || "正在根据馆藏元数据生成引用……"}
       </blockquote>
       <div className="citation-actions">
-        <button className="button secondary" type="button" onClick={copy} disabled={!payload}><Copy size={15} /> 复制引用</button>
-        <button className="button secondary" type="button" onClick={exportCsl} disabled={!payload}>导出 CSL JSON</button>
+        <Button className="button secondary" onClick={copy} disabled={!payload}><Copy size={15} /> 复制引用</Button>
+        <Tooltip content="导出当前馆藏版本的结构化引用资料"><Button className="button secondary" onClick={exportCsl} disabled={!payload}>导出 CSL JSON</Button></Tooltip>
       </div>
       <p aria-live="polite">{message || "进入阅读器后可生成带具体页码的引用。"}</p>
     </section>

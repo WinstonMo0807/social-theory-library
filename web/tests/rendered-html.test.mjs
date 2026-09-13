@@ -382,7 +382,7 @@ test("homepage and scholar directory consume only valid scholars from the shared
   const [homeSource, scholarSource, apiSource] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/scholars/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../lib/server-api.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/api/recommendations.server.ts", import.meta.url), "utf8"),
   ]);
   assert.match(homeSource, /const shownScholars = recommendedScholars/);
   assert.doesNotMatch(homeSource, /loadScholars/);
@@ -390,9 +390,8 @@ test("homepage and scholar directory consume only valid scholars from the shared
   assert.match(scholarSource, /loadRecommendedScholars\(bundle, 3\)/);
 
   const helperStart = apiSource.indexOf("export async function loadRecommendedScholars");
-  const helperEnd = apiSource.indexOf("export const adaptWork", helperStart);
-  assert.ok(helperStart >= 0 && helperEnd > helperStart);
-  const helperSource = apiSource.slice(helperStart, helperEnd);
+  assert.ok(helperStart >= 0);
+  const helperSource = apiSource.slice(helperStart);
   assert.match(helperSource, /recommendationSlugs\(bundle, "home_scholars", "scholar"\)/);
   assert.match(helperSource, /if \(detail\) return detail\.scholar/);
   assert.match(helperSource, /return null/);

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { CalendarDays, Network } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ArchitecturalImage } from "@/components/ui";
-import { loadDisciplines, loadTheoryTimeline } from "@/lib/server-api";
+import { loadDisciplines } from "@/lib/api/taxonomy.server";
+import { loadTheoryTimeline } from "@/lib/api/theories.server";
 
 export const metadata: Metadata = { title: "理论历史时间轴" };
 
