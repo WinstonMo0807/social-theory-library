@@ -4,6 +4,10 @@
 
 ## 3.0.5 当前动作
 
+2026-09-13 14:16仓库交接资料完成，尚未推送。新增GPT_ARCHITECTURE_CONTEXT、INGESTION_AND_PUBLICATION、REDESIGN_BRIEF及docs/README，修正根README和旧GPT交接/基线审计的时间歧义，AGENTS加入重设计阅读顺序。本次只改文档，未改业务实现或生产。8份入口文档93个本地链接、51个源码路径全部存在，引用检查与git diff --check退出0。已部署源码HEAD及远端尚未包含的Git对象安全检查通过，1094路径、1415blob中禁止路径/真实凭据/超过10MiB均0，宽泛提示为已核对隔离测试数据。准备提交文档、快进已有main并推送，不新建分支/不强推。
+
+2026-09-13 13:56收到用户将当前版本直接更新仓库默认分支并补GPT整体重设计上下文的要求。fresh fetch及GitHub确认仓库PUBLIC、默认main，main为当前82d4d97祖先，0个远端独有/59个本地后续提交，可正常快进，不需要强推或新分支。已部署应用保持不变；正在核对场景、上架过程、数据职责和现存限制，修正README旧版描述，完成源码安全检查后再推送main。此条仅记录当前动作，尚未推送。
+
 2026-09-13 12:25本次升级与发布故障修复已完成公网部署。API/两个Worker/Beat为3.0.5-6c43f6e34f，源提交a829bb8、树6c43f6e34fb0abe2a79ec90d09076c067884c532，镜像2486aee8fa947bab75f71f3e0a7ea2c3956de8de9539b76fe2fc5ed1593b1b62。Web保留3.0.5-e6fedd6b57，源提交fa6b3bc，已核对与a829bb8的web源文件完全相同；镜像1b1fa591011686e42b80903b8fce3dc96d478d2d4fa9c5e0d4013cdd310ef15a。最终API提示修正不改数据库内容或schema。
 
 真实书目《质的研究方法与社会科学研究》健康状态为editorial=ready、processing=ready、publication=published，prepare changes为空，event=completed；不再误报发布中或有待更新。公网可搜、详情200、馆藏7本、544页PDF Range206及%PDF-通过。菜单焦点/背景模态、Escape关闭归焦、引用方向键切换到Chicago且单一tab入口，以及390px文档宽度390均通过。9个原件、3679页及语义UID/3005条记录保持不变。6个OCR任务仍暂停；保留今日已是false的全局开关，没有替用户改回昨晚的true。

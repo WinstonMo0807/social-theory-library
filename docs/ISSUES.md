@@ -1,5 +1,16 @@
 # 当前问题
 
+## 2026-09-13重设计前的现状核对
+
+README旧版本和GPT-HANDOFF旧入口已修正，[实际架构](GPT_ARCHITECTURE_CONTEXT.md)及[上架过程](INGESTION_AND_PUBLICATION.md)提供当前事实。此次只整理文档，不把下面的问题当作已修复。
+
+- Reader服务端manifest loader把错误统一转null，页面不能区分不存在、授权拒绝、后台等待和API故障。公开访问条件继续保留，后续应改进错误契约。
+- 旧ingestion撤回要求IsLibraryAdmin，维护发布的withdraw使用CanPublishWork。Editor实际可经后者撤回，重设计应明确统一政策。
+- R2恢复由通用ProcessingJob和专项恢复共同负责，重试有次数边界。人工force重排不会重置attempt，不能宣称所有失败自动恢复或可无限重试。
+- WorkflowEditor和部分后端模型/视图仍复杂，多入口与多状态需要重新考虑任务组织。CSS和API文件拆分不等于整个后台设计完成。
+
+这些已确认代码行为与用户操作痛点假设需要区分。新的设计问题及交付要求见[REDESIGN_BRIEF](REDESIGN_BRIEF.md)。
+
 ## 2026-09-06 3.0.5 开发状态
 
 2026-09-13最终状态见CURRENT_STATE。发布任务遗漏、PG可空JOIN锁、日期同值误报均已修复上线，目标书公开且后台状态一致。CSS/组件/API领域收敛已部署。下方“正在修复”“未上线”等描述为历史过程，不再表示当前进度。保留的限制是复杂冲突人工取舍、未登记旧接口兼容、外部Provider与真实OCR/私人写入未实测、兼容表观察期及已记录的依赖告警，不把它们伪造为全部通过。

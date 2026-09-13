@@ -2,7 +2,15 @@
 
 Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项目包含公开知识网站、原文与观点检索、PDF Reader、账户中心、批量入库、元数据复核、知识组织、书库问答和管理后台。
 
-当前源码版本为 2.8.0，生产仍保持最后核实的 2.7.1。2.8 馆藏与策展工作流目前只完成本地实现与预览，尚未部署公网。新 GPT 或 Codex 会话应先阅读 [GPT 项目交接与联动审计](docs/GPT-HANDOFF.md)，再读取架构、进度和问题文档。生产部署与历史验收可能随时间变化，仍需重新执行环境检查。
+当前源码版本为 **3.0.5**，已于2026-09-13完成公网部署。仓库默认分支 `main` 用作当前版本与后续整体重设计的基线。源码提交与运行镜像不必具有相同的文档提交号，具体上线依据见[当前状态](docs/CURRENT_STATE.md)和[部署记录](docs/DEPLOYMENT.md)。部署记录是有日期的快照，不代表任何未来时刻的服务保证。
+
+## 给准备重设计书库的 GPT
+
+先读[实际架构与应用场景](docs/GPT_ARCHITECTURE_CONTEXT.md)，再读[上架与发布流程](docs/INGESTION_AND_PUBLICATION.md)和[重设计任务说明](docs/REDESIGN_BRIEF.md)。这些资料描述正在使用的系统，包括普通读者、馆员、Owner的操作，真实数据职责，旧入口与新入口的关系，以及已知限制。当前实现不是必须照搬的未来设计。
+
+用户下一步需要重新思考整体架构，尤其后台和上架过程。本次提交只准备可靠基线和上下文，并未替用户决定新技术栈、重写后台或迁移生产数据。提出方案时先说明用户操作和数据变化，再给代码和迁移设计。
+
+阅读顺序为 `AGENTS.md`、以上三份说明、`CURRENT_STATE.md`，然后按问题进入实际源码。`CURRENT_PROGRESS.md`、`PROGRESS.md`和旧版文档保留历史过程，不能把其中的旧“未上线”文字当作当前状态。原[GPT-HANDOFF](docs/GPT-HANDOFF.md)已经标记为2.9.2历史快照。
 
 ## 主要能力
 
@@ -12,6 +20,9 @@ Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项�
 - 入库支持批次、文件级幂等、分片上传、失败重试、PDF 校验、原生文本提取、OCR、元数据候选、人工锁、实体关系、索引和发布预检。
 - 原文检索与版本化观点检索使用真实馆藏文本。书库问答的新实现位于 `api/reading`，依赖登录、语义检索和可选 AI 服务。
 - 管理后台覆盖上传、处理中心、元数据复核、发布、馆藏、知识对象、推荐、检索评估、用户、配置和备份。
+- 手工编目可不依赖上传记录。纯书目、带PDF的馆藏和已发布维护使用真实编目会话与现有发布服务。
+- 书目可公开、PDF可阅读和正文智能检索就绪是不同条件。后台保存不会直接改变正式页面，人工发布也不能只靠一个 `published` 标志判断完成。
+- 人物整理支持有预览和回滚的非冲突人工合并。统一媒体覆盖封面、推荐图、肖像、知识节点及阅读路径，保留草稿和历史文件。
 
 ## 技术栈
 
@@ -24,6 +35,8 @@ Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项�
 - Nginx、可选 Caddy 与 Cloudflare Tunnel
 
 完整结构见 [架构文档](docs/ARCHITECTURE.md)。
+
+生产是NAS上的模块化单体，Web和API分容器运行但共用一套后台服务。公网Cloudflare Tunnel与局域网入口最终访问相同的API、PostgreSQL、任务和NAS。R2可作上传临时中转，不是第二个永久书库。仓库中的Sites/Worker/Drizzle适配文件不代表当前生产已经改用D1或在Cloudflare Workers运行。
 
 ## 目录
 
@@ -40,13 +53,13 @@ Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项�
 
 ## 本地开发
 
-复制安全示例并设置本地 Secret：
+Compose使用根目录`.env`。只复制安全示例并填写自己的本地配置，不要复用生产凭据：
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-后端使用项目虚拟环境：
+在宿主机直接启动Django前，需要将本地配置提供为进程环境变量。直接运行`manage.py`不会自动加载根目录`.env`；未设置`DATABASE_URL`时会使用开发SQLite。`postgres`和`api`等Compose服务名不能直接用作普通宿主机地址。已有虚拟环境时：
 
 ```powershell
 Set-Location api
@@ -94,12 +107,18 @@ npm.cmd test
 
 ## 开发文档
 
-- [GPT-HANDOFF.md](docs/GPT-HANDOFF.md) 是新会话的首要入口，记录当前生产快照、功能联动、剩余风险和继续工作的边界。
+- [GPT_ARCHITECTURE_CONTEXT.md](docs/GPT_ARCHITECTURE_CONTEXT.md) 是当前GPT入口，描述实际产品场景、运行结构、数据与代码定位。
+- [INGESTION_AND_PUBLICATION.md](docs/INGESTION_AND_PUBLICATION.md) 说明上传、手工编目、复核、发布、撤回和正文处理的真实变化。
+- [REDESIGN_BRIEF.md](docs/REDESIGN_BRIEF.md) 记录这次用户提出的整体重设计目的、待决策问题和交付要求，不伪装为已经实现的方案。
+- [CURRENT_STATE.md](docs/CURRENT_STATE.md) 给出最近部署结果、已验证项目与能力边界。
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) 记录真实模块、数据职责和部署模式。
 - [PROGRESS.md](docs/PROGRESS.md) 记录已实现内容、近期验证和下一阶段。
-- [ISSUES.md](docs/ISSUES.md) 记录当前七项产品问题及证据。
+- [ISSUES.md](docs/ISSUES.md) 记录已知问题及历史修复，当前判断优先看最新摘要。
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) 记录环境、构建依赖、迁移、上线与回退要求。
 - [AGENTS.md](AGENTS.md) 约束后续 Codex agent 的修改与验证方式。
+- [UI_3.0.5.md](docs/UI_3.0.5.md) 记录共享组件和CSS分层。它不表示后台工作流程已重新设计。
+
+GitHub只保存源码、示例与文档。一次`git push`不会自动重新部署NAS，也不能让全新clone获得真实馆藏、数据库或Provider授权。
 
 ## 数据安全
 
