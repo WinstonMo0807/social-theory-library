@@ -4,6 +4,12 @@
 
 ## 3.0.5 当前动作
 
+2026-09-13 12:25本次升级与发布故障修复已完成公网部署。API/两个Worker/Beat为3.0.5-6c43f6e34f，源提交a829bb8、树6c43f6e34fb0abe2a79ec90d09076c067884c532，镜像2486aee8fa947bab75f71f3e0a7ea2c3956de8de9539b76fe2fc5ed1593b1b62。Web保留3.0.5-e6fedd6b57，源提交fa6b3bc，已核对与a829bb8的web源文件完全相同；镜像1b1fa591011686e42b80903b8fce3dc96d478d2d4fa9c5e0d4013cdd310ef15a。最终API提示修正不改数据库内容或schema。
+
+真实书目《质的研究方法与社会科学研究》健康状态为editorial=ready、processing=ready、publication=published，prepare changes为空，event=completed；不再误报发布中或有待更新。公网可搜、详情200、馆藏7本、544页PDF Range206及%PDF-通过。菜单焦点/背景模态、Escape关闭归焦、引用方向键切换到Chicago且单一tab入口，以及390px文档宽度390均通过。9个原件、3679页及语义UID/3005条记录保持不变。6个OCR任务仍暂停；保留今日已是false的全局开关，没有替用户改回昨晚的true。
+
+前端构建212项通过，日期/发布17项通过，API契约漂移和TypeScript通过，lint仅9个既有导航建议。保留外部Provider/真实OCR/登录读者写入等未实测条件、复杂人物冲突和历史接口兼容边界，见docs/CURRENT_STATE.md。初次及最终数据库备份均已在独立PG实际恢复。回退记录保留pre-v305-20260912-2148、pre-v305-final-20260913-1200和pre-v305-date-status-20260913-1220。临时演练库及其独立卷/网络、4个可重建构建目录已清理；备份、源包、日志、回退镜像和原部署访问保留。最终390px Reader已渲染4个画布、loading=false、无水平溢出，截图已查看。应用代码已提交，交付完成，未推送。
+
 2026-09-13 12:15最终版本fa6b3bc/e6fedd6b57已于12:01:56上线，12:03:06历史发布event正常completed，知识job succeeded/attempt2、所有投影current。公网ready3.0.5/迁移0、7本、PDF Range和原件/索引摘要通过。菜单原生modal、初始焦点、Escape关闭及焦点归还通过，390px实书截图已查看。最后只读核对发现date对象和快照ISO字符串被误比成修改，且旧snapshot缺publication_mode显示新增；已补同值比较和旧document默认读取，不改数据。17项专项通过退出0/54.50秒，真实PG副本只读确认publication=published且changes=[]。准备API-only提示热修，Web代码不变。当前OCR总开关已是false（00:47由账号1修改），6个paused任务不变，部署保留该当前值。未推送。
 
 2026-09-13 11:50最终收尾。目标书已恢复公开，公网列表7本、题名命中、544页PDF Range206/%PDF-及真实Reader画布通过，桌面无水平溢出；两项遗漏投影均current，同一job以attempt2完成。后台事件完成阶段另发现PostgreSQL可空JOIN锁错误，两个查询已改为只锁事件主行，原事务和修订锁保留。11项本地XML通过54.064秒，旧句柄退出码未知；隔离PG先复现原异常，再验证补丁完成及租约释放，两个命令退出0且事务回滚，补丁未上线。server-api领域拆分保持101声明、45消费者正文及90导出等价；CSS拆为67个职责文件、11类token、189处等值替换。基础组件已接确认框/工作台/引用/公开菜单/搜索/分页。当前16项结构/接口/反馈检查通过，退出0，1.491秒，正在最后统一构建，尚未最终部署。
