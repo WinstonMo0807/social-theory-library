@@ -312,21 +312,19 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
     """
 
     work = edition.work
-    current_assets = edition.assets.filter(is_current=True)
-    original = current_assets.filter(
-        kind=Asset.Kind.ORIGINAL,
-        status=Asset.Status.READY,
-    ).exclude(validation_status=Asset.ValidationStatus.INVALID).first()
-    normalized = current_assets.filter(
-        kind=Asset.Kind.NORMALIZED,
-        status=Asset.Status.READY,
-    ).exclude(validation_status=Asset.ValidationStatus.INVALID).first()
-
-    contributions = list(
-        edition.contributions.filter(approved=True)
-        .order_by("order", "created_at")
-        .values_list("role", "person_id")
+    # Use prefetched relations when present. The same field rules serve a
+    # single workspace and the full, filter-before-page administrative queue.
+    current_assets = sorted(
+        (row for row in edition.assets.all() if row.is_current and row.status == Asset.Status.READY
+         and row.validation_status == Asset.ValidationStatus.VALID),
+        key=lambda row: (row.version, row.created_at, str(row.pk)), reverse=True,
     )
+    original = next((row for row in current_assets if row.kind == Asset.Kind.ORIGINAL), None)
+    normalized = next((row for row in current_assets if row.kind == Asset.Kind.NORMALIZED), None)
+
+    contributions = [(row.role, row.person_id) for row in sorted(
+        edition.contributions.all(), key=lambda row: (row.order, row.created_at, str(row.pk)),
+    ) if row.approved]
     role_values: dict[str, list[str]] = {
         "authors": [],
         "translators": [],
@@ -347,43 +345,19 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
     for role, person_id in contributions:
         role_values[role_fields.get(role, "other_contributors")].append(str(person_id))
 
-    discipline_rows = list(
-        work.discipline_relations.exclude(
-            review_status=RelationReviewStatus.REJECTED
-        ).values_list("discipline_id", "review_status")
-    )
-    subdiscipline_rows = list(
-        work.subdiscipline_relations.exclude(
-            review_status=RelationReviewStatus.REJECTED
-        ).values_list("subdiscipline_id", "review_status")
-    )
-    topic_rows = list(
-        work.topic_relations.exclude(
-            review_status=RelationReviewStatus.REJECTED
-        ).values_list("topic_id", "review_status")
-    )
-    legacy_topic_rows = list(
-        work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.TOPIC,
-        )
-        .exclude(review_status=RelationReviewStatus.REJECTED)
-        .values_list("topic_id", "review_status", "approved")
-    )
-    theory_rows = list(
-        work.node_relations.exclude(
-            status__in=[
-                KnowledgePublicationStatus.REJECTED,
-                KnowledgePublicationStatus.ARCHIVED,
-            ]
-        ).values_list("node_id", "status")
-    )
-    legacy_theory_rows = list(
-        work.knowledge_relations.filter(
-            kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-        )
-        .exclude(review_status=RelationReviewStatus.REJECTED)
-        .values_list("theory_school_id", "review_status", "approved")
-    )
+    discipline_rows = [(row.discipline_id, row.review_status) for row in work.discipline_relations.all()
+                       if row.review_status != RelationReviewStatus.REJECTED]
+    subdiscipline_rows = [(row.subdiscipline_id, row.review_status) for row in work.subdiscipline_relations.all()
+                          if row.review_status != RelationReviewStatus.REJECTED]
+    topic_rows = [(row.topic_id, row.review_status) for row in work.topic_relations.all()
+                  if row.review_status != RelationReviewStatus.REJECTED]
+    legacy_rows = [row for row in work.knowledge_relations.all() if row.review_status != RelationReviewStatus.REJECTED]
+    legacy_topic_rows = [(row.topic_id, row.review_status, row.approved) for row in legacy_rows
+                         if row.kind == WorkKnowledgeRelation.Kind.TOPIC]
+    theory_rows = [(row.node_id, row.status) for row in work.node_relations.all()
+                   if row.status not in {KnowledgePublicationStatus.REJECTED, KnowledgePublicationStatus.ARCHIVED}]
+    legacy_theory_rows = [(row.theory_school_id, row.review_status, row.approved) for row in legacy_rows
+                          if row.kind == WorkKnowledgeRelation.Kind.THEORY_SCHOOL]
 
     values: dict[str, Any] = {
         "file": [str(original.id), str(normalized.id)] if original and normalized else [],
@@ -421,17 +395,16 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
         "reader_asset": str(normalized.id) if normalized else None,
         "ocr_text": edition.ocr_status in {"succeeded", "not_required"},
         "page_labels": edition.page_label_status == "ready",
-        "curation": bool(
-            ReadingPathItem.objects.filter(work=work).exists()
-            or RecommendationOverride.objects.filter(work=work, active=True).exists()
-        ),
+        "curation": bool(list(work.reading_path_items.all())
+                         or any(row.active for row in work.recommendationoverride_set.all())),
     }
     from catalog.services.journal_issues import journal_contents_snapshot
 
-    values["journal_contents"] = journal_contents_snapshot(edition)
+    values["journal_contents"] = (edition._admin_journal_contents if hasattr(edition, "_admin_journal_contents")
+                                  else journal_contents_snapshot(edition))
     historical_published = edition.state == PublicationState.PUBLISHED or bool(edition.active_catalog_revision_id)
     from ingestion.models import FieldLock
-    locked_fields = set(FieldLock.objects.filter(edition=edition).values_list("field_name", flat=True))
+    locked_fields = {row.field_name for row in edition.field_locks.all()}
     formally_confirmed = {
         field_name
         for field_name, value in values.items()
@@ -462,9 +435,10 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
     if include_editorial_draft:
         from catalog.models import EditorialRevision
 
-        draft = EditorialRevision.objects.filter(
-            target_type="work", target_id=work.pk, status=EditorialRevision.Status.DRAFT,
-        ).order_by("-revision").first()
+        draft = (work._admin_editorial_draft if hasattr(work, "_admin_editorial_draft") else
+                 EditorialRevision.objects.filter(
+                     target_type="work", target_id=work.pk, status=EditorialRevision.Status.DRAFT,
+                 ).order_by("-revision").first())
         if draft is not None:
             original_values = dict(values)
             patch = dict(draft.patch or {})
@@ -582,13 +556,13 @@ def section_statuses(edition: Edition) -> dict[str, dict[str, Any]]:
 
 def document_required(edition: Edition) -> bool:
     # A malformed or missing file must not be hidden by selecting metadata-only.
-    return edition.publication_mode != Edition.PublicationMode.BIBLIOGRAPHIC or edition.assets.exists()
+    return edition.publication_mode != Edition.PublicationMode.BIBLIOGRAPHIC or bool(list(edition.assets.all()))
 
 
-def publication_field_check(edition: Edition) -> dict[str, Any]:
+def publication_field_check(edition: Edition, *, field_state=None) -> dict[str, Any]:
     from catalog.contracts.validation import field_error
 
-    rows = field_readiness(edition)
+    rows = field_state if field_state is not None else field_readiness(edition)
     blockers = []
     warnings = []
     for row in rows:

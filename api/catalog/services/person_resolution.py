@@ -299,3 +299,37 @@ def person_merge_preview(source, target=None):
     })
     payload["fingerprint"] = sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
     return payload
+
+
+def person_business_impact(edition_ids, person_ids, *, event_ids=()):
+    """Read-only presentation alongside (never inside) merge fingerprints."""
+    from catalog.services.publication_commands import catalog_publication_state
+
+    editions = list(models.Edition.objects.filter(pk__in=edition_ids).select_related(
+        "work", "active_catalog_revision",
+    ).prefetch_related("contributions__person", "catalog_revisions").order_by("work__title", "publication_year", "pk"))
+    people = {str(value) for value in person_ids}
+    rows = []
+    for edition in editions:
+        publication = catalog_publication_state(edition)
+        rows.append({
+            "edition_id": str(edition.pk), "work_id": str(edition.work_id), "title": edition.work.title,
+            "edition_label": " · ".join(str(value) for value in (edition.publisher, edition.publication_year, edition.edition_statement) if value) or "出版信息尚未填写",
+            "roles": [{"name": row.person.preferred_name, "role": row.role, "role_label": row.get_role_display(), "approved": row.approved}
+                      for row in edition.contributions.all() if str(row.person_id) in people],
+            "publication": publication,
+            "editor_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#contributors",
+            "publication_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
+        })
+    edition_by_id = {str(row.pk): row for row in editions}
+    events = []
+    for event in models.KnowledgePublicationEvent.objects.filter(pk__in=event_ids).select_related("catalog_revision").prefetch_related("deliveries").order_by("created_at", "pk"):
+        edition = edition_by_id.get(str(event.catalog_revision.edition_id)) if event.catalog_revision else None
+        events.append({
+            "id": str(event.pk), "status": event.status, "status_label": event.get_status_display(),
+            "title": edition.work.title if edition else "人物与知识关联更新",
+            "updated_at": event.updated_at, "error_code": event.last_error_code,
+            "inspect_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication" if edition else f"/admin/scholars/{event.object_id}" if event.object_type == "scholar_profile" else f"/admin/people?source={event.object_id}" if event.object_type == "person" else f"/admin/system-health/knowledge?object_type={event.object_type}&object_id={event.object_id}",
+            "deliveries": [{"label": row.get_consumer_display(), "status": row.get_status_display(), "source_revision": row.source_revision} for row in event.deliveries.all()],
+        })
+    return {"editions": rows, "events": events, "roles_are_preserved": True, "reader_private_data": "not_read"}

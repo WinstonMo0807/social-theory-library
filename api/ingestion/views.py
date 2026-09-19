@@ -31,6 +31,7 @@ from catalog.models import (
     Edition,
     EvidenceSnippet,
     KnowledgeNode,
+    KnowledgePublicationEvent,
     KnowledgePublicationStatus,
     OcrStatus,
     PageLabelStatus,
@@ -72,6 +73,7 @@ from catalog.services.publication_places import (
 from common.permissions import (
     CanEditMetadata,
     CanPublishWork,
+    CanWithdrawWork,
     CanRunDestructiveMaintenance,
     CanUpload,
     IsCatalogEditor,
@@ -208,12 +210,21 @@ class ReviewTaskListView(APIView):
             page_size = min(200, max(1, int(request.query_params.get("page_size") or 100)))
         except (TypeError, ValueError):
             page_size = 100
+        from .services.processing_center import page_number
+        count = rows.count()
+        pages = max(1, (count + page_size - 1) // page_size)
+        page = min(page_number(request.query_params.get("page")), pages)
+        rows = rows.order_by("-priority", "created_at", "id")
+        offset = (page - 1) * page_size
         return Response(
             {
-                "count": rows.count(),
+                "count": count,
+                "page": page, "pages": pages,
+                "next_page": page + 1 if page < pages else None,
+                "previous_page": page - 1 if page > 1 else None,
                 "counts": counts,
                 "can_manage": IsCatalogEditor().has_permission(request, self),
-                "results": ReviewTaskSerializer(rows[:page_size], many=True).data,
+                "results": ReviewTaskSerializer(rows[offset:offset + page_size], many=True).data,
             }
         )
 
@@ -1155,7 +1166,7 @@ class UploadItemListView(generics.ListAPIView):
     serializer_class = UploadItemSerializer
     filterset_fields = ("status",)
     search_fields = ("source_filename", "edition__work__title")
-    ordering_fields = ("created_at", "updated_at", "status")
+    ordering_fields = ("created_at", "updated_at", "status", "id")
     queryset = (
         UploadItem.objects.select_related(
             "batch__created_by",
@@ -1395,20 +1406,16 @@ class QueueHealthView(APIView):
             )
         ).count()
         inline = settings.CELERY_TASK_ALWAYS_EAGER
-        from ingestion.services.health import (
-            cache_health,
-            celery_broker_health,
-            http_service_health,
-            worker_runtime_status,
-        )
+        from ingestion.services.health import stored_queue_health
 
-        cache_status = cache_health(probe_key="ingestion:api-health-probe")
-        broker_status = celery_broker_health()
-        worker_status = worker_runtime_status(max_age_seconds=150)
+        observations = stored_queue_health()
+        cache_status = observations["cache"]
+        broker_status = observations["worker"]
+        worker_status = {"online": broker_status["functional"], "heartbeat_at": broker_status["checked_at"], "source": "stored_health_check"}
         broker_reachable = broker_status["reachable"]
         worker_online = inline or worker_status["online"]
-        ocr = http_service_health(settings.PADDLEOCR_SERVICE_URL, "/ready", timeout=5)
-        search = http_service_health(settings.MEILISEARCH_URL, "/health", timeout=2)
+        ocr = observations["ocr"]
+        search = observations["semantic"]
         pending_dispatches = UploadItem.objects.filter(
             dispatch_status__in=[
                 UploadItem.DispatchStatus.PENDING,
@@ -1423,7 +1430,7 @@ class QueueHealthView(APIView):
                 UploadItem.Status.FAILED,
             ]
         ).count()
-        healthy = bool(inline or (cache_status["reachable"] and broker_reachable and worker_online))
+        healthy = True if inline else None if None in (cache_status["reachable"], broker_reachable, worker_online) else bool(cache_status["reachable"] and broker_reachable and worker_online)
         return Response(
             {
                 "mode": "inline" if inline else "worker",
@@ -1431,6 +1438,9 @@ class QueueHealthView(APIView):
                 "stalled_count": stalled,
                 "pending_dispatches": pending_dispatches,
                 "healthy": healthy,
+                "checked_at": broker_status["checked_at"],
+                "stale": any(row["stale"] for row in observations.values()),
+                "page_load_performs_live_probes": False,
                 "cache_reachable": cache_status["reachable"],
                 "broker_reachable": broker_reachable,
                 "worker_online": worker_online,
@@ -1444,9 +1454,10 @@ class QueueHealthView(APIView):
                     "本地同步处理已启用，上传请求会直接执行识别流程。"
                     if inline
                     else (
-                        "后台 worker 正常，上传任务会自动处理。"
+                        "最近一次检查通过，后台任务可继续处理。"
                         if healthy
-                        else "后台 worker 暂时不可用。PDF 已保留，服务恢复后会自动重新派发。"
+                        else "后台服务状态尚未确认或检查已过期；可在服务检查中重新检测。现有文件保持不变。" if healthy is None
+                        else "最近一次后台服务检查未通过。PDF 已保留，请查看服务检查和恢复操作。"
                     )
                 ),
             }
@@ -1500,144 +1511,25 @@ class ReplaceUploadItemView(APIView):
 
     @transaction.atomic
     def post(self, request, item_id):
+        from catalog.services.edition_files import EditionFileError, submit_edition_file
+
         target_item = get_object_or_404(
-            _locked_upload_items(
-                "edition__work",
-                "batch",
-            ),
+            _locked_upload_items("edition__work"),
             pk=item_id,
         )
         if target_item.edition is None:
             return Response({"detail": "该上传记录没有可替换的文献。"}, status=409)
-        if target_item.edition.state != PublicationState.PUBLISHED:
-            return Response({"detail": "仅已发布文献可以替换 PDF。"}, status=409)
-        active_replacement = (
-            UploadItem.objects.filter(
-                edition=target_item.edition,
-                replacement_of_asset__isnull=False,
+        try:
+            replacement, created = submit_edition_file(
+                edition_id=target_item.edition_id, actor=request.user,
+                uploaded=request.FILES.get("file"), action="replace",
+                request_key=request.data.get("request_key"), require_context=False,
             )
-            .exclude(
-                status__in=[
-                    UploadItem.Status.PUBLISHED,
-                    UploadItem.Status.FAILED,
-                    UploadItem.Status.NEEDS_REVIEW,
-                    UploadItem.Status.WITHDRAWN,
-                    UploadItem.Status.DELETED,
-                ]
-            )
-            .exists()
-        )
-        if active_replacement:
-            return Response(
-                {"detail": "该文献已有替换任务，请先等待处理或解决待复核项。"},
-                status=409,
-            )
-        old_asset = target_item.edition.assets.select_for_update().filter(
-            kind=Asset.Kind.NORMALIZED,
-            status=Asset.Status.READY,
-            is_current=True,
-        ).first()
-        if old_asset is None:
-            return Response({"detail": "当前规范阅读文件未就绪。"}, status=409)
-        uploaded = request.FILES.get("file")
-        if uploaded is None:
-            return Response({"file": ["请选择一个 PDF。"]}, status=400)
-        original_name = Path(uploaded.name).name
-        signature = uploaded.read(5)
-        uploaded.seek(0)
-        if uploaded.size > settings.MAX_UPLOAD_BYTES:
-            return Response({"file": ["文件超过单文件上限。"]}, status=400)
-        if Path(original_name).suffix.casefold() != ".pdf" or signature != b"%PDF-":
-            return Response({"file": ["扩展名或文件内容不是 PDF。"]}, status=400)
-
-        edition = target_item.edition
-        work = edition.work
-        authors = list(
-            edition.contributions.filter(
-                role=Contribution.Role.AUTHOR,
-                approved=True,
-            )
-            .order_by("order")
-            .values_list("person__preferred_name", flat=True)
-        )
-        theory_schools = list(
-            work.knowledge_relations.filter(
-                kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-                approved=True,
-            ).values_list("theory_school__name", flat=True)
-        )
-        topics = list(
-            work.knowledge_relations.filter(
-                kind=WorkKnowledgeRelation.Kind.TOPIC,
-                approved=True,
-            ).values_list("topic__name", flat=True)
-        )
-        locked_values = {
-            "title": work.title,
-            "document_type": work.document_type,
-            "language": work.language,
-            "abstract": work.abstract,
-            "authors": authors,
-            "publication_year": edition.publication_year,
-            "publisher": edition.publisher,
-            "publisher-place": edition.publication_place,
-            "publication_place": edition.publication_place,
-            "journal_title": edition.journal_title,
-            "volume": edition.volume,
-            "issue": edition.issue,
-            "page_range": edition.page_range,
-            "degree_institution": edition.degree_institution,
-            "degree_type": edition.degree_type,
-            "report_institution": edition.report_institution,
-            "isbn": edition.isbn,
-            "doi": edition.doi,
-            "theory_schools": theory_schools,
-            "topics": topics,
-        }
-        for field_name, value in locked_values.items():
-            FieldLock.objects.update_or_create(
-                edition=edition,
-                field_name=field_name,
-                defaults={
-                    "locked_by": request.user,
-                    "locked_value": value,
-                    "reason": "替换 PDF 时保护已发布元数据",
-                },
-            )
-
-        batch = UploadBatch.objects.create(
-            created_by=request.user,
-            source="replacement",
-            expected_count=1,
-            status=UploadBatch.Status.PROCESSING,
-            notes=f"替换已发布文献：{work.title}",
-        )
-        replacement = UploadItem.objects.create(
-            batch=batch,
-            source_filename=original_name,
-            file=uploaded,
-            edition=edition,
-            replacement_of_asset=old_asset,
-        )
-        AuditEvent.objects.create(
-            actor=request.user,
-            action="pdf_replacement_requested",
-            object_type="Edition",
-            object_id=str(edition.id),
-            before={
-                "asset_id": str(old_asset.id),
-                "version": old_asset.version,
-            },
-            after={
-                "upload_item_id": str(replacement.id),
-                "source_filename": original_name,
-            },
-            request_ip=_request_ip(request),
-        )
-        schedule_upload_item(str(replacement.id))
+        except EditionFileError as error:
+            return Response({"detail": str(error), "code": error.code}, status=error.status)
         return Response(
             UploadItemSerializer(replacement).data,
-            status=status.HTTP_202_ACCEPTED,
+            status=status.HTTP_202_ACCEPTED if created else status.HTTP_200_OK,
         )
 
 
@@ -2762,7 +2654,7 @@ class PublishUploadItemView(APIView):
 
 
 class WithdrawUploadItemView(APIView):
-    permission_classes = [IsLibraryAdmin]
+    permission_classes = [CanWithdrawWork]
 
     def post(self, request, item_id):
         item = get_object_or_404(UploadItem.objects.select_related("edition", "batch"), pk=item_id)
@@ -2799,108 +2691,48 @@ class ProcessingCenterView(APIView):
     permission_classes = [IsLibraryStaff]
 
     def get(self, request):
-        job_type = str(request.query_params.get("job_type") or "").strip()
-        status_filter = str(request.query_params.get("status") or "").strip()
-        jobs = ProcessingJob.objects.select_related(
-            "edition__work",
-            "asset",
-            "upload_item",
-        )
-        if job_type:
-            jobs = jobs.filter(job_type=job_type)
-        if status_filter:
-            jobs = jobs.filter(status=status_filter)
-        rows = [
-            {
-                "id": str(job.id),
-                "source": "processing_job",
-                "job_type": job.job_type,
-                "item_id": str(job.upload_item_id) if job.upload_item_id else None,
-                "asset_id": str(job.asset_id) if job.asset_id else None,
-                "title": job.edition.work.title if job.edition_id else "",
-                "status": job.status,
-                "progress": job.progress,
-                "engine": job.engine,
-                "attempt": job.attempt,
-                "max_attempts": job.max_attempts,
-                "settings_version": job.settings_version,
-                "created_at": job.created_at,
-                "started_at": job.started_at,
-                "finished_at": job.finished_at,
-                "duration_seconds": (
-                    round(((job.finished_at or timezone.now()) - job.started_at).total_seconds(), 2)
-                    if job.started_at
-                    else None
-                ),
-                "last_error": job.error_message,
-                "error_code": job.error_code,
-                "stats": job.stats,
-            }
-            for job in jobs[:300]
-        ]
-        semantic_jobs = SemanticIndexJob.objects.select_related("asset__edition__work")
-        if job_type and job_type != ProcessingJob.JobType.SEMANTIC_INDEX:
-            semantic_jobs = semantic_jobs.none()
-        semantic_status_map = {
-            SemanticIndexJob.Status.QUEUED: ProcessingJob.Status.PENDING,
-            SemanticIndexJob.Status.RUNNING: ProcessingJob.Status.RUNNING,
-            SemanticIndexJob.Status.COMPLETED: ProcessingJob.Status.SUCCEEDED,
-            SemanticIndexJob.Status.PARTIAL: ProcessingJob.Status.FAILED,
-            SemanticIndexJob.Status.FAILED: ProcessingJob.Status.FAILED,
-            SemanticIndexJob.Status.CANCELED: ProcessingJob.Status.CANCELED,
-            SemanticIndexJob.Status.PAUSED: ProcessingJob.Status.PAUSED,
-        }
-        for job in semantic_jobs[:300]:
-            mapped_status = semantic_status_map[job.status]
-            if status_filter and mapped_status != status_filter:
-                continue
-            rows.append(
-                {
-                    "id": str(job.id),
-                    "source": "semantic_index_job",
-                    "job_type": ProcessingJob.JobType.SEMANTIC_INDEX,
-                    "item_id": None,
-                    "asset_id": str(job.asset_id) if job.asset_id else None,
-                    "title": job.asset.edition.work.title if job.asset_id else "",
-                    "status": mapped_status,
-                    "progress": job.progress,
-                    "engine": job.model_name,
-                    "attempt": job.attempts,
-                    "max_attempts": 3,
-                    "settings_version": job.chunk_version,
-                    "created_at": job.created_at,
-                    "started_at": job.started_at,
-                    "finished_at": job.finished_at,
-                    "duration_seconds": (
-                        round(((job.finished_at or timezone.now()) - job.started_at).total_seconds(), 2)
-                        if job.started_at
-                        else None
-                    ),
-                    "last_error": job.error_message,
-                    "error_code": job.error_code,
-                    "stats": job.stats,
-                }
-            )
-        rows.sort(key=lambda row: row["created_at"], reverse=True)
-        return Response(
-            {
-                "results": rows[:300],
-                "counts": {
-                    value: sum(1 for row in rows if row["status"] == value)
-                    for value in ProcessingJob.Status.values
-                },
+        if "ocr_edition_id" in request.query_params:
+            from .services.catalog_ocr import edition_for, ocr_context
+
+            edition = edition_for(request.query_params.get("ocr_edition_id"))
+            if request.query_params.get("work_id") and str(edition.work_id) != request.query_params["work_id"]:
+                return Response({"detail": "这个出版版本不属于所选馆藏，请重新选择。"}, status=400)
+            response = Response(ocr_context(edition, request.user, page=request.query_params.get("ocr_page", 1)))
+            response["Cache-Control"] = "no-store"
+            return response
+        from .services.processing_center import page_number, processing_task_page
+
+        payload = processing_task_page(request.query_params, request.user)
+        payload.update({
                 "workloads": {
                     job_type: {"paused": processing_workload_paused(job_type)}
                     for job_type in PROCESSING_PAUSE_KEYS
                 },
-                "paused_ocr_inventory": paused_ocr_inventory(),
-            }
-        )
+                "paused_ocr_inventory": paused_ocr_inventory(
+                    page=page_number(request.query_params.get("ocr_inventory_page")), page_size=10,
+                    query=str(request.query_params.get("ocr_query") or "").strip()[:200], actor=request.user,
+                ),
+        })
+        response = Response(payload)
+        response["Cache-Control"] = "no-store"
+        return response
 
     def post(self, request):
         if not has_capability(request.user, Capability.RETRY_JOBS):
-            return Response({"detail": "只有管理员可以暂停、恢复、重试或取消处理任务。"}, status=403)
+            return Response({"detail": "只有管理员或系统所有者可以发起、暂停、恢复、重试或取消处理任务。"}, status=403)
         action = str(request.data.get("action") or "").strip()
+        if action in {"start_ocr", "pause_catalog_ocr", "resume_catalog_ocr", "cancel_catalog_ocr"}:
+            from .services.catalog_ocr import catalog_ocr_action, edition_for, progress_row, start_catalog_ocr
+
+            try:
+                if action == "start_ocr":
+                    job, replayed = start_catalog_ocr(request.data, request.user)
+                else:
+                    job, replayed = catalog_ocr_action(request.data, request.user), False
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            job.refresh_from_db()
+            return Response({"job": progress_row(job, actor=request.user, edition=edition_for(job.edition_id)), "replayed": replayed}, status=200 if replayed else 202)
         workload_job_type = str(request.data.get("job_type") or "").strip()
         if action in {"pause_workload", "resume_workload"}:
             if workload_job_type not in PROCESSING_PAUSE_KEYS:
@@ -2968,6 +2800,14 @@ class ProcessingCenterView(APIView):
             ProcessingJob.objects.select_related("asset", "upload_item"),
             pk=job_id,
         )
+        if job.job_type == "ocr" and job.stats.get("requested_mode") == "all_pages" and action in {"pause", "resume", "retry", "cancel"}:
+            from .services.catalog_ocr import catalog_ocr_action
+
+            try:
+                job = catalog_ocr_action({"action": {"pause": "pause_catalog_ocr", "resume": "resume_catalog_ocr", "retry": "resume_catalog_ocr", "cancel": "cancel_catalog_ocr"}[action], "edition_id": str(job.edition_id), "job_id": str(job.pk)}, request.user)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response({"job_id": str(job.pk), "status": job.status}, status=202)
         if action == "resolve_paused_ocr":
             try:
                 job, classification = decide_paused_ocr_job(
@@ -3158,9 +2998,12 @@ class DashboardView(APIView):
     permission_classes = [IsLibraryStaff]
 
     def get(self, request):
+        from catalog.services.publication_eligibility import public_edition_q
+
         edition_stats = Edition.objects.aggregate(
             total=Count("id"),
-            published=Count("id", filter=Q(state=PublicationState.PUBLISHED)),
+            published=Count("id", filter=public_edition_q()),
+            listed_publicly=Count("id", filter=public_edition_q() & Q(is_primary=True)),
             withdrawn=Count("id", filter=Q(state=PublicationState.WITHDRAWN)),
         )
         return Response(

@@ -15,6 +15,7 @@ from catalog.models import (
     Work,
 )
 from catalog.services.semantic_chunks import CHUNK_VERSION, PARSER_VERSION
+from catalog.services.query_lexicon.sync import ensure_query_lexicon_state
 from catalog.services.semantic_search_evaluation_environment import (
     export_evaluation_bundle,
     evaluation_index_uid,
@@ -193,6 +194,12 @@ def test_postgres_bundle_import_rebuilds_lexicon_and_clones_only_evaluation_vers
     Edition._base_manager.all().delete()
     Work._base_manager.all().delete()
     SemanticIndexVersion._base_manager.all().delete()
+    # Transactional pytest flushes migration-seeded rows between scenarios.
+    # Recreate the same empty lexicon a freshly migrated destination has; the
+    # import still runs its real non-empty/private-data rejection checks.
+    state = ensure_query_lexicon_state()
+    assert state.revision == 0
+    assert state.active_generation.entry_count == 0
     uid = evaluation_index_uid(snapshot_id)
     monkeypatch.setattr(
         "catalog.services.semantic_search_evaluation_environment.evaluation_write_guard",

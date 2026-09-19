@@ -4,6 +4,62 @@
   gap: 7px;
 }
 
+.curation-prefill-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  background: var(--wash);
+}
+.curation-prefill-notice p { flex: 1 1 240px; margin: 0; overflow-wrap: anywhere; }
+.curation-prefill-notice button { flex: 0 1 auto; min-height: 40px; white-space: normal; }
+
+.processing-center-page .processing-ocr-inventory .processing-job-cards {
+  grid-template-columns: minmax(0, 1fr);
+}
+.processing-center-page .processing-ocr-inventory article,
+.processing-center-page .processing-ocr-inventory header > div {
+  min-width: 0;
+}
+.processing-center-page .processing-ocr-inventory h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.processing-center-page .ocr-page-summary,
+.processing-center-page .processing-pagination,
+.processing-center-page .processing-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 14px;
+}
+.processing-center-page .processing-search label {
+  display: grid;
+  flex: 1 1 240px;
+  min-width: 0;
+  gap: 6px;
+}
+.processing-center-page .processing-search input { width: 100%; min-width: 0; }
+.processing-center-page .processing-pagination button { white-space: nowrap; }
+.processing-center-page .processing-ocr-inventory progress { width: 100%; height: 12px; accent-color: var(--ink); }
+.processing-center-page .ocr-task-details,
+.processing-center-page .ocr-task-actions { margin-block: 14px; }
+.processing-center-page .ocr-task-details summary,
+.processing-center-page .ocr-task-actions summary { cursor: pointer; padding-block: 8px; }
+.processing-center-page .ocr-task-details dl { display: grid; grid-template-columns: minmax(0, 1fr); }
+.processing-center-page .ocr-task-details dl > div { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 10px; }
+.processing-center-page .ocr-task-details dd { margin: 0; overflow-wrap: anywhere; }
+.processing-center-page .ocr-task-actions input { width: 100%; min-width: 0; }
+.processing-center-page .ocr-task-actions footer { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .processing-center-page .processing-ocr-inventory article > header { align-items: flex-start; flex-wrap: wrap; }
+  .processing-center-page .ocr-task-details dl > div { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+}
+
 .review-status-filter select {
   min-width: 150px;
   border: 0;
@@ -589,3 +645,20 @@
     font-size: clamp(40px, 11vw, 72px);
   }
 }
+.catalog-ocr-control, .catalog-ocr-picker {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line, #d8d3cb);
+  border-radius: 8px;
+}
+.catalog-ocr-control p, .catalog-ocr-picker p, .catalog-ocr-control summary { margin: 0; overflow-wrap: anywhere; }
+.catalog-ocr-control label, .catalog-ocr-picker > label { display: grid; gap: 6px; min-width: 0; }
+.catalog-ocr-control select, .catalog-ocr-picker > label select { width: 100%; min-width: 0; max-width: 100%; padding: 10px; font: inherit; }
+.catalog-ocr-progress { display: grid; gap: 8px; margin-block: 12px; }
+.catalog-ocr-progress progress { display: block; width: 100%; height: 16px; accent-color: #3a5546; }
+.catalog-ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.catalog-ocr-actions button, .catalog-ocr-control > button { min-height: 40px; white-space: normal; }
+.catalog-ocr-jobs { display: grid; gap: 12px; }
+.catalog-ocr-jobs > details { padding-block: 10px; border-top: 1px solid var(--line, #d8d3cb); }

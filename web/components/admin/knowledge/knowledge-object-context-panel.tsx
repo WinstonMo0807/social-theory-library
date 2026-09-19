@@ -20,6 +20,7 @@ import {
 import { CandidateDecisionBar } from "@/components/admin/research/candidate-decision-bar";
 import { EvidenceEnvelopeCard } from "@/components/admin/research/evidence-envelope-card";
 import { PublicPageTree, type PublicControl } from "@/components/admin/knowledge/public-page-tree";
+import { AssistanceUsagePanel, type AssistanceUsage } from "./assistance-usage-panel";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 export type KnowledgeObjectType =
@@ -154,6 +155,7 @@ type KnowledgeSelection = {
   };
   preview_url?: string;
   public_control?: PublicControl;
+  assistance_usage?: AssistanceUsage;
 };
 
 type KnowledgeWorkspacePayload = {
@@ -296,12 +298,14 @@ export function KnowledgeObjectContextPanel({
   refreshKey,
   onChanged,
   onApplyCandidate,
+  hasUnsavedChanges = false,
 }: {
   objectType: KnowledgeObjectType;
   objectId?: string | null;
   refreshKey?: string | number | null;
   onChanged?: () => void;
   onApplyCandidate?: (candidate: CandidateRow, value: unknown) => Promise<void> | void;
+  hasUnsavedChanges?: boolean;
 }) {
   const [selection, setSelection] = useState<KnowledgeSelection | null>(null);
   const [loading, setLoading] = useState(false);
@@ -372,7 +376,7 @@ export function KnowledgeObjectContextPanel({
       setMessageState("pending");
       try {
         await onApplyCandidate(candidate, editedValue ?? candidate.proposed_value);
-        setMessage("候选已经写入当前编辑草稿，尚未发布。");
+        setMessage("建议已填入当前表单，尚未保存或发布。请在本页核对后保存。");
         setMessageState("success");
       } catch (reason) {
         setMessage(reason instanceof Error ? reason.message : "候选写入草稿失败。");
@@ -384,6 +388,11 @@ export function KnowledgeObjectContextPanel({
     }
     if (!descriptor.url) {
       setMessage(descriptor.disabledReason || "后端没有为此候选提供安全操作入口。");
+      setMessageState("error");
+      return;
+    }
+    if (hasUnsavedChanges && descriptor.action !== "reject") {
+      setMessage("本页还有未保存的填写。请先保存，再单独处理此建议；不会自动替你保存整页。");
       setMessageState("error");
       return;
     }
@@ -412,6 +421,8 @@ export function KnowledgeObjectContextPanel({
 
   async function publishRevision(revision: RevisionRow) {
     if (!revision.publish_url || publishingRevision) return;
+    if (hasUnsavedChanges) { setMessage("本页还有未保存的填写，请先保存，再发布已保存的修改。"); setMessageState("error"); return; }
+    if (!window.confirm(`发布第 ${revision.revision} 版已保存内容？读者页面将按这份保存内容更新。`)) return;
     setPublishingRevision(revision.id);
     setMessageState("pending");
     try {
@@ -420,7 +431,7 @@ export function KnowledgeObjectContextPanel({
         { method: "POST", body: JSON.stringify({}) },
         getServerSessionCredential(),
       );
-      setMessage(`第 ${revision.revision} 版已发布，相关智能内容正在更新。`);
+      setMessage(`第 ${revision.revision} 版已提交发布，相关页面和搜索结果正在更新。`);
       setMessageState("success");
       await load();
       onChanged?.();
@@ -436,7 +447,7 @@ export function KnowledgeObjectContextPanel({
     return (
       <aside className="admin-panel knowledge-object-context-panel is-empty" aria-label="编辑参考">
         <Sparkles size={18} />
-        <div><strong>编辑参考</strong><p>先保存这个新对象，随后可在这里查看公开完整度、依据、字段建议和发布后更新状态。</p></div>
+        <div><strong>预览与发布</strong><p>先保存，再查看读者页面、补充建议和发布结果。</p></div>
       </aside>
     );
   }
@@ -466,27 +477,18 @@ export function KnowledgeObjectContextPanel({
       </header>
 
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
-      {loading && !selection ? <p className="knowledge-object-context-state">正在读取真实知识上下文……</p> : null}
+      {loading && !selection ? <p className="knowledge-object-context-state">正在读取页面和修改记录…</p> : null}
 
       {selection ? <>
         {publicControl ? <PublicPageTree control={publicControl} /> : null}
-
-        {publicControl?.public_appearances?.length ? <details open className="knowledge-object-context-section public-appearances">
-          <summary><ExternalLink size={14} /><span>公开出现位置</span><b>{publicControl.public_appearances.length}</b></summary>
-          <div className="knowledge-object-context-list">{publicControl.public_appearances.map((row) => <article key={`${row.page_id}:${row.route}`}><header><strong>{row.label}</strong><span>{row.count}</span></header><Link href={row.route} target="_blank">预览公开位置 <ExternalLink size={12} /></Link></article>)}</div>
-        </details> : null}
-
-        {publicControl?.draft_published_diff?.length ? <details open className="knowledge-object-context-section">
-          <summary><FileClock size={14} /><span>草稿与公开版变化</span><b>{publicControl.draft_published_diff.length}</b></summary>
-          <div className="knowledge-object-context-list">{publicControl.draft_published_diff.map((row) => <article key={row.field}><header><strong>{changedFieldLabel(row.field)}</strong><span>{row.kind === "collection" ? "多项内容变化" : "已修改"}</span></header>{row.added?.length ? <small>新增 {row.added.length} 项</small> : null}{row.removed?.length ? <small>删除 {row.removed.length} 项</small> : null}</article>)}</div>
-        </details> : null}
+        {selection.assistance_usage ? <AssistanceUsagePanel key={`${objectType}:${objectId}`} usage={selection.assistance_usage} /> : null}
 
         {!publicControl ? <section className="knowledge-object-completeness" aria-label="前台内容完整度">
           <header><strong>前台内容完整度</strong><span>{completeness ? `${completeness.complete_module_count}/${completeness.module_count}` : "未接通"}</span></header>
           {completeness ? <div>{completeness.modules.map((module) => <article className={module.complete ? "is-complete" : module.available ? "is-partial" : "is-empty"} key={module.label}><span>{module.label}</span><b>{module.complete ? "完整" : module.available ? "待补" : "缺失"}</b>{module.missing_fields.length ? <small>缺少 {module.missing_fields.join("、")}</small> : null}</article>)}</div> : <p className="knowledge-object-context-state">API 尚未返回基于公开 serializer 的完整度。</p>}
         </section> : null}
 
-        <details open className="knowledge-object-context-section">
+        <details open={candidates.length > 0} className="knowledge-object-context-section">
           <summary><Sparkles size={14} /><span>字段建议</span><b>{candidates.length}</b></summary>
           <p className="knowledge-object-context-state">{publicControl?.ai_status?.workspace_message || "自动建议会在启用后显示，不影响人工编辑和发布。"}</p>
           <div className="knowledge-object-context-list">{candidates.map((candidate) => {
@@ -496,7 +498,7 @@ export function KnowledgeObjectContextPanel({
           })}{!candidates.length ? <p className="knowledge-object-context-state">当前没有需要人工处理的高价值候选。</p> : null}</div>
         </details>
 
-        <details open className="knowledge-object-context-section">
+        <details open={knowledgeUpdates.length > 0} className="knowledge-object-context-section">
           <summary><Sparkles size={14} /><span>关联建议</span><b>{knowledgeUpdates.length}</b></summary>
           <p className="knowledge-object-context-state">新资料和研究建议经过整理后显示在这里，不会自动修改正式知识。</p>
           <div className="knowledge-object-context-list">{knowledgeUpdates.map((candidate) => {
@@ -521,20 +523,21 @@ export function KnowledgeObjectContextPanel({
           <div className="knowledge-object-context-list">{relations.map((relation) => <article key={relation.id}><header><strong>{relation.label}</strong><span>{statusLabels[relation.status] || relation.status}</span></header><p>{relation.target}</p>{relation.description ? <small>{relation.description}</small> : null}</article>)}{!relations.length ? <p className="knowledge-object-context-state">尚未建立正式关系。</p> : null}</div>
         </details>
 
-        <details open className="knowledge-object-context-section">
-          <summary><FileClock size={14} /><span>草稿与预览</span><b>{revisions.length}</b></summary>
-          <div className="knowledge-object-preview-status"><p><strong>正式预览</strong><span>{previewLabel(publishedPreview, "对象尚未公开")}</span></p><p><strong>草稿预览</strong><span>{previewLabel(draftPreview, "当前没有待发布修改")}</span></p>{draftPreview?.unsupported_preview_fields?.length ? <small>部分特殊关系暂时只能预览主要内容。</small> : null}</div>
-          <div className="knowledge-object-context-list">{revisions.map((revision) => <article key={revision.id}><header><strong>第 {revision.revision} 版</strong><span>{revision.has_conflict ? "与正式版本冲突" : statusLabels[revision.status] || revision.status}</span></header><p>{Array.from(new Set(revision.changed_fields.map(changedFieldLabel))).join("、") || "内容更新"}</p><small>{revision.change_note || "无编辑说明"}</small>{revision.publish_url ? <ActionButton state={publishingRevision === revision.id ? "pending" : "idle"} pendingLabel="发布中" disabled={Boolean(publishingRevision) || revision.has_conflict} onClick={() => void publishRevision(revision)}>确认并发布</ActionButton> : null}</article>)}</div>
+        <details open={revisions.some((revision) => revision.status === "draft")} className="knowledge-object-context-section">
+          <summary><FileClock size={14} /><span>已保存修改与预览</span><b>{revisions.length}</b></summary>
+          <div className="knowledge-object-preview-status"><p><strong>读者当前看到的内容</strong><span>{previewLabel(publishedPreview, "对象尚未公开")}</span></p><p><strong>保存后尚未发布的内容</strong><span>{previewLabel(draftPreview, "当前没有待发布修改")}</span></p>{draftPreview?.unsupported_preview_fields?.length ? <small>部分特殊关系暂时只能预览主要内容。</small> : null}</div>
+          {hasUnsavedChanges ? <p className="knowledge-object-context-state">本页还有未保存的填写，不会出现在此处预览中。请先保存，再预览或发布。</p> : null}
+          <div className="knowledge-object-context-list">{revisions.map((revision) => <article key={revision.id}><header><strong>第 {revision.revision} 版</strong><span>{revision.has_conflict ? "与正式版本冲突" : statusLabels[revision.status] || revision.status}</span></header><p>{Array.from(new Set(revision.changed_fields.map(changedFieldLabel))).join("、") || "内容更新"}</p><small>{revision.change_note || "无编辑说明"}</small>{revision.publish_url ? <ActionButton state={publishingRevision === revision.id ? "pending" : "idle"} pendingLabel="发布中" disabled={Boolean(publishingRevision) || revision.has_conflict || hasUnsavedChanges} onClick={() => void publishRevision(revision)}>确认并发布</ActionButton> : null}</article>)}</div>
         </details>
 
         <section className="knowledge-object-impact" aria-label="发布后更新">
-          <header><strong>发布后更新</strong><span>{impact ? staleProjections.length ? `${staleProjections.length} 项处理中` : "已进入智能检索" : "状态待读取"}</span></header>
-          {impact ? <><p>{Array.from(new Set((impact.modules ?? []).map(updateAreaLabel))).join("、") || "没有需要更新的公开内容。"}</p><div>{projectionStates.map((row) => <article key={row.type}><span>{updateAreaLabel(`${row.type} ${row.name} ${row.label}`)}</span><b>{statusLabels[row.status] || "处理中"}</b>{row.last_error_code ? <small>智能处理异常，可在系统诊断中查看并重新处理。</small> : null}</article>)}</div>{!projectionStates.length ? <p className="knowledge-object-context-state">当前没有需要处理的智能内容。</p> : null}</> : <p className="knowledge-object-context-state">暂时无法读取发布后更新状态。</p>}
+          <header><strong>发布后更新</strong><span>{impact ? staleProjections.length ? `${staleProjections.length} 项尚未完成` : projectionStates.length ? "已完成更新" : "暂无更新记录" : "状态待读取"}</span></header>
+          {impact ? <><p>{Array.from(new Set((impact.modules ?? []).map(updateAreaLabel))).join("、") || "没有需要更新的公开内容。"}</p>{projectionStates.length ? <details open={staleProjections.length > 0}><summary>查看各处更新结果</summary><div>{projectionStates.map((row) => <article key={row.type}><span>{updateAreaLabel(`${row.type} ${row.name} ${row.label}`)}</span><b>{statusLabels[row.status] || "处理中"}</b>{row.last_error_code ? <small>此处更新失败，可在处理与服务中查看原因和恢复操作。</small> : null}</article>)}</div></details> : null}</> : <p className="knowledge-object-context-state">暂时无法读取发布后更新状态。</p>}
         </section>
 
         <footer>
           <Link href={studioHref}>查看完整知识资料</Link>
-          {previewRoutes?.draft ? <Link href={previewRoutes.draft} target="_blank">预览当前草稿 <ExternalLink size={12} /></Link> : null}
+          {previewRoutes?.draft ? <Link href={previewRoutes.draft} target="_blank">预览已保存的修改 <ExternalLink size={12} /></Link> : null}
           {previewRoutes?.published ? <Link href={previewRoutes.published} target="_blank">查看当前公开版 <ExternalLink size={12} /></Link> : null}
         </footer>
       </> : null}

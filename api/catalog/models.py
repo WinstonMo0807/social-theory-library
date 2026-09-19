@@ -1857,6 +1857,7 @@ class NamedKnowledgeObject(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
 
 
 class Discipline(NamedKnowledgeObject):
+    hero_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="discipline_images")
     code = models.SlugField(max_length=80, unique=True)
     foreign_name = models.CharField(max_length=240, blank=True)
     introduction = models.TextField(blank=True)
@@ -1904,6 +1905,7 @@ class Concept(NamedKnowledgeObject):
 
 
 class Subdiscipline(NamedKnowledgeObject):
+    hero_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="subdiscipline_images")
     discipline = models.ForeignKey(
         Discipline,
         on_delete=models.PROTECT,
@@ -3460,6 +3462,8 @@ class EditorialRevision(UUIDTimeStampedModel):
         TOPIC = "topic", "主题"
         PUBLISHER = "publisher", "出版社"
         READING_PATH = "reading_path", "阅读路径"
+        KNOWLEDGE_RELATION = "knowledge_relation", "理论关系"
+        TIMELINE_EVENT = "timeline_event", "时间线事件"
 
     class Status(models.TextChoices):
         DRAFT = "draft", "草稿"

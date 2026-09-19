@@ -755,7 +755,7 @@ def save_editorial_workflow_section(edition, step_key, values, *, actor, confirm
 
     edition = Edition.objects.select_for_update().select_related("work").get(pk=edition.pk)
     before, _ = formal_field_values(edition)
-    revision = save_workflow_editorial_revision(work_id=edition.work_id, actor=actor, **kwargs)
+    revision = save_workflow_editorial_revision(work_id=edition.work_id, edition_id=edition.pk, actor=actor, **kwargs)
     after, _ = formal_field_values(edition)
     changed = {name for name in set(before) | set(after) if _json_safe(before.get(name)) != _json_safe(after.get(name))}
     invalidate_dependent_fields(edition, changed, actor=actor)

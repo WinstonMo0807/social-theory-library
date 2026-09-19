@@ -4,7 +4,7 @@ from hashlib import sha256
 import json
 from typing import Any
 
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.utils import timezone
 
 from catalog.models import (
@@ -14,9 +14,6 @@ from catalog.models import (
     Contribution,
     Edition,
     EditionWorkflowDecision,
-    EnrichmentCandidate,
-    IntelligenceStatus,
-    KnowledgePublicationEvent,
     KnowledgePublicationStatus,
     PublicationState,
     ReadingPathItem,
@@ -552,11 +549,20 @@ def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
     if not document_required(edition):
         return _step_payload("file", "文件与识别", "skipped", [], "纯书目记录，尚未附带文献。", "")
     if item is None:
+        problems = []
+        for kind, label in ((Asset.Kind.ORIGINAL, "原始 PDF"), (Asset.Kind.NORMALIZED, "规范阅读文件")):
+            asset = edition.assets.filter(kind=kind, is_current=True).order_by("-version", "-created_at").first()
+            if asset is None or asset.status != Asset.Status.READY:
+                problems.append(_issue(f"{kind}_not_ready", f"{label}尚未就绪。", "file", severity="blocker"))
+            elif asset.validation_status != Asset.ValidationStatus.VALID:
+                problems.append(_issue(f"{kind}_{asset.validation_status}",
+                                       f"{label}等待验证。" if asset.validation_status == "pending" else f"{label}验证失败。",
+                                       "file", severity="blocker"))
         return _step_payload(
             "file",
             "文件与识别",
-            "skipped",
-            [],
+            "blocked" if problems else "skipped",
+            problems,
             "维护模式沿用当前版本文件，不要求存在上传记录。",
             "查看当前文件",
         )
@@ -591,8 +597,14 @@ def _file_step(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
         issues.append(_issue("original_asset_missing", "原始 PDF 尚未建立。", "file", severity="blocker"))
     elif original.validation_status == Asset.ValidationStatus.INVALID:
         issues.append(_issue("original_asset_invalid", "原始 PDF 验证失败。", "file", severity="blocker"))
+    elif original.validation_status == Asset.ValidationStatus.PENDING:
+        issues.append(_issue("original_asset_pending", "原始 PDF 等待验证，通过后才能发布。", "file", severity="blocker"))
     if normalized is None and item.status not in ACTIVE_UPLOAD_STATUSES:
         issues.append(_issue("normalized_asset_missing", "规范阅读文件尚未建立。", "file", severity="blocker"))
+    elif normalized is not None and normalized.validation_status != Asset.ValidationStatus.VALID:
+        pending = normalized.validation_status == Asset.ValidationStatus.PENDING
+        issues.append(_issue("normalized_asset_pending" if pending else "normalized_asset_invalid",
+                             "规范阅读文件等待验证。" if pending else "规范阅读文件验证失败。", "file", severity="blocker"))
     if any(row["severity"] == "blocker" for row in issues):
         status = "blocked"
     elif item.status in ACTIVE_UPLOAD_STATUSES or block_reason == "staging_not_ready":
@@ -781,6 +793,8 @@ def _reader_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, A
         issues.append(_issue("reader_asset_missing", "规范阅读文件尚未就绪。", "reader", severity="blocker"))
     elif normalized.validation_status == Asset.ValidationStatus.INVALID:
         issues.append(_issue("reader_asset_invalid", "规范阅读文件验证失败。", "reader", severity="blocker"))
+    elif normalized.validation_status == Asset.ValidationStatus.PENDING:
+        issues.append(_issue("reader_asset_pending", "规范阅读文件等待验证。", "reader", severity="blocker"))
     if edition.ocr_status == "failed":
         issues.append(_issue("ocr_failed", "全文文字层生成失败，当前仍可使用原始 PDF 阅读。", "reader"))
     if edition.page_label_status != "ready":
@@ -867,9 +881,15 @@ def _publication_step(edition: Edition) -> tuple[dict[str, Any], dict[str, list[
                 field=target_field,
             )
         )
-    if edition.state == PublicationState.PUBLISHED:
+    from catalog.services.publication_commands import catalog_publication_state
+
+    publication = catalog_publication_state(edition)
+    if publication["catalog_revision_active"]:
         status = "complete"
         action = "管理已发布版本"
+    elif publication["public_state"] == "publishing":
+        status = "working"
+        action = "核查公开版本处理结果"
     elif preflight["blockers"]:
         status = "blocked"
         action = "定位必须解决的问题"
@@ -919,7 +939,10 @@ def build_edition_workflow(edition: Edition, *, upload_item: UploadItem | None =
         for step in steps
         for issue in step["issues"]
     )
-    if edition.state == PublicationState.PUBLISHED:
+    from catalog.services.publication_commands import catalog_publication_state
+
+    public_state = catalog_publication_state(edition)
+    if public_state["catalog_revision_active"]:
         overall_status = "published"
     elif any(row["status"] == "blocked" for row in steps):
         overall_status = "blocked"
@@ -940,6 +963,7 @@ def build_edition_workflow(edition: Edition, *, upload_item: UploadItem | None =
         "warnings_count": warnings_count,
         "blockers_count": blockers_count,
         "publication_preflight": preflight,
+        "publication": public_state,
     }
 
 
@@ -992,570 +1016,3 @@ def build_intake_workflow(item: UploadItem) -> dict[str, Any]:
             "publication_preflight": {"blockers": ["文献记录尚未建立"], "warnings": [], "background_tasks": []},
         }
     return build_edition_workflow(item.edition, upload_item=item)
-
-
-def _serialize_work(edition: Edition) -> dict[str, Any]:
-    work = edition.work
-    return {
-        "id": str(work.id),
-        "document_type": work.document_type,
-        "title": work.title,
-        "subtitle": work.subtitle,
-        "original_title": work.original_title,
-        "uniform_title": work.uniform_title,
-        "language": work.language,
-        "original_language": work.original_language,
-        "first_publication_date": work.first_publication_date,
-        "translation_of": str(work.translation_of_id) if work.translation_of_id else None,
-        "abstract": work.abstract,
-        "updated_at": work.updated_at,
-    }
-
-
-def _serialize_bibliography(edition: Edition) -> dict[str, Any]:
-    from catalog.services.journal_issues import journal_contents_snapshot
-
-    return {
-        "id": str(edition.id),
-        **{field: getattr(edition, field) for field in BIBLIOGRAPHY_FIELDS},
-        "journal_contents": journal_contents_snapshot(edition),
-        "state": edition.state,
-        "public_slug": edition.public_slug,
-        "is_primary": edition.is_primary,
-        "updated_at": edition.updated_at,
-    }
-
-
-def _serialize_candidates(edition: Edition) -> dict[str, Any]:
-    metadata_rows = []
-    metadata = (
-        MetadataCandidate.objects.filter(upload_item__edition=edition)
-        .select_related("upload_item")
-        .prefetch_related("evidence_records")
-        .order_by("field_name", "-confidence", "created_at")
-    )
-    for row in metadata:
-        metadata_rows.append(
-            {
-                "id": str(row.id),
-                "upload_item_id": str(row.upload_item_id),
-                "field_name": row.field_name,
-                "value": row.value,
-                "source": row.source,
-                "confidence": row.confidence,
-                "lifecycle": row.lifecycle,
-                "selected": row.selected,
-                "is_locked": row.is_locked,
-                "conflicts": row.conflict_group,
-                "evidence": list(
-                    row.evidence_records.values(
-                        "id",
-                        "asset_id",
-                        "page_number",
-                        "text_quote",
-                        "source_kind",
-                        "external_identifier",
-                    )
-                ),
-            }
-        )
-    entity_rows = list(
-        EntityResolutionCandidate.objects.filter(upload_item__edition=edition)
-        .order_by("target_type", "source_name", "-match_score", "created_at")
-        .values(
-            "id",
-            "upload_item_id",
-            "target_type",
-            "source_name",
-            "candidate_entity_type",
-            "candidate_entity_id",
-            "label",
-            "match_score",
-            "match_reasons",
-            "conflicts",
-            "preview_data",
-            "status",
-        )
-    )
-    enrichment_rows = list(
-        EnrichmentCandidate.objects.filter(
-            Q(target_type=EnrichmentCandidate.TargetType.WORK, target_id=edition.work_id)
-            | Q(target_type=EnrichmentCandidate.TargetType.EDITION, target_id=edition.id)
-        )
-        .prefetch_related("evidence_records")
-        .order_by("field_name", "-confidence", "created_at")
-        .values(
-            "id",
-            "target_type",
-            "target_id",
-            "field_name",
-            "candidate_kind",
-            "proposed_value",
-            "current_value",
-            "source_class",
-            "confidence",
-            "conflicts",
-            "identity_status",
-            "status",
-        )
-    )
-    theory_rows = list(
-        TheoryReviewTask.objects.filter(work=edition.work)
-        .order_by("-confidence", "created_at")
-        .values(
-            "id",
-            "task_type",
-            "candidate_node_id",
-            "suggested_node_name",
-            "suggested_relation_type",
-            "confidence",
-            "evidence_pages",
-            "evidence_text",
-            "status",
-        )
-    )
-    return {
-        "metadata": metadata_rows,
-        "entities": entity_rows,
-        "enrichment": enrichment_rows,
-        "theory": theory_rows,
-    }
-
-
-def _serialize_upload_file(item: UploadItem) -> dict[str, Any]:
-    preflight = dict(item.preflight_summary or {})
-    block_reason = initial_ingestion_block_reason(item)
-    staging_owns_status = is_r2_pre_import_block(block_reason)
-    can_retry = block_reason == "staging_import_failed" or (
-        not staging_owns_status and item.status == UploadItem.Status.FAILED
-    )
-    return {
-        "id": str(item.id),
-        "source_filename": item.source_filename,
-        "filename": item.source_filename,
-        "status": item.staging_status if staging_owns_status else item.status,
-        "ingestion_status": item.status,
-        "workflow_state": item.workflow_state,
-        "stage_progress": item.stage_progress,
-        "error_code": (
-            item.staging_error_code if staging_owns_status else item.error_code
-        ),
-        "error_message": (
-            item.staging_error_message if staging_owns_status else item.error_message
-        ),
-        "preflight_summary": preflight,
-        "validation": preflight.get("mime_type") or "pending",
-        "page_count": preflight.get("page_count") or 0,
-        "text_profile": preflight.get("text_profile") or "",
-        "ocr_strategy": preflight.get("ocr_strategy") or item.batch.ocr_strategy,
-        "exact_duplicate": bool(preflight.get("exact_duplicate")),
-        "staging_backend": item.staging_backend,
-        "staging_status": item.staging_status,
-        "staging_block_reason": block_reason,
-        "can_retry": can_retry,
-        "retry_label": "重新导入" if block_reason == "staging_import_failed" else "重试",
-        "can_resume": False,
-        "can_replace": False,
-    }
-
-
-def _workspace_data(edition: Edition, item: UploadItem | None, workflow: dict[str, Any]) -> dict[str, Any]:
-    work = edition.work
-    contributions = list(
-        edition.contributions.select_related("person")
-        .order_by("order", "created_at")
-        .values(
-            "id",
-            "person_id",
-            "person__preferred_name",
-            "person__authority_status",
-            "role",
-            "order",
-            "approved",
-            "source",
-        )
-    )
-    disciplines = list(
-        work.discipline_relations.select_related("discipline")
-        .order_by("-is_primary", "discipline__name")
-        .values(
-            "id",
-            "discipline_id",
-            "discipline__name",
-            "is_primary",
-            "review_status",
-            "evidence_page",
-            "evidence_printed_label",
-            "evidence_text",
-        )
-    )
-    subdisciplines = list(
-        work.subdiscipline_relations.select_related("subdiscipline")
-        .order_by("-is_primary", "subdiscipline__name")
-        .values(
-            "id",
-            "subdiscipline_id",
-            "subdiscipline__name",
-            "is_primary",
-            "strength",
-            "review_status",
-            "evidence_page",
-            "evidence_printed_label",
-            "evidence_text",
-        )
-    )
-    legacy_relations = list(
-        work.knowledge_relations.select_related("theory_school", "topic", "concept")
-        .order_by("kind", "-is_primary", "id")
-        .values(
-            "id",
-            "kind",
-            "theory_school_id",
-            "theory_school__name",
-            "topic_id",
-            "topic__name",
-            "concept_id",
-            "concept__name",
-            "role",
-            "strength",
-            "is_primary",
-            "approved",
-            "review_status",
-            "evidence_asset_id",
-            "evidence_page",
-            "evidence_printed_label",
-            "evidence_text",
-        )
-    )
-    node_relations = list(
-        work.node_relations.select_related("node")
-        .order_by("role", "node__canonical_name_zh")
-        .values(
-            "id",
-            "node_id",
-            "node__canonical_name_zh",
-            "node__node_type",
-            "role",
-            "strength",
-            "is_primary",
-            "confidence",
-            "status",
-            "source",
-        )
-    )
-    assets = list(
-        edition.assets.order_by("kind", "-version", "created_at").values(
-            "id",
-            "kind",
-            "original_filename",
-            "mime_type",
-            "byte_size",
-            "page_count",
-            "text_layer_quality",
-            "access_status",
-            "status",
-            "validation_status",
-            "validation_details",
-            "is_current",
-            "version",
-        )
-    )
-    reading_paths = list(
-        ReadingPathItem.objects.filter(work=work)
-        .select_related("reading_path", "stage")
-        .order_by("reading_path__sort_order", "stage__position", "position", "created_at")
-        .values(
-            "id",
-            "reading_path_id",
-            "reading_path__title",
-            "reading_path__status",
-            "stage_id",
-            "stage__name",
-            "stage_name",
-            "recommendation_reason",
-            "position",
-            "reading_order",
-            "is_required",
-            "editorial_note",
-        )
-    )
-    recommendations = list(
-        RecommendationOverride.objects.filter(work=work)
-        .select_related("policy")
-        .order_by("policy__placement", "position", "created_at")
-        .values(
-            "id",
-            "policy_id",
-            "policy__placement",
-            "policy__title",
-            "action",
-            "position",
-            "active",
-            "note",
-        )
-    )
-    return {
-        "file": {
-            "item": _serialize_upload_file(item) if item else None,
-            "assets": assets,
-        },
-        "work": _serialize_work(edition),
-        "bibliography": _serialize_bibliography(edition),
-        "contributors": contributions,
-        "classification": {
-            "disciplines": disciplines,
-            "subdisciplines": subdisciplines,
-        },
-        "knowledge": {
-            "relations": legacy_relations,
-            "node_relations": node_relations,
-            "topics": [
-                {"id": str(row.topic_id), "name": row.topic.name, "is_primary": row.is_primary}
-                for row in work.topic_relations.exclude(review_status=RelationReviewStatus.REJECTED).select_related("topic")
-            ],
-            "nodes": [
-                {"id": str(row["node_id"]), "name": row["node__canonical_name_zh"], "role": row["role"], "strength": row["strength"], "is_primary": row["is_primary"]}
-                for row in node_relations if row["status"] not in {"rejected", "archived"}
-            ],
-        },
-        "reader": {
-            "reader_rendition_policy": edition.reader_rendition_policy,
-            "ocr_status": edition.ocr_status,
-            "page_label_status": edition.page_label_status,
-            "semantic_index_status": edition.semantic_index_status,
-            "search_indexed_at": edition.search_indexed_at,
-            "assets": assets,
-        },
-        "curation": {
-            "reading_paths": reading_paths,
-            "recommendations": recommendations,
-        },
-        "publication": {
-            "state": edition.state,
-            "published_at": edition.published_at,
-            "first_published_at": edition.first_published_at,
-            "last_published_at": edition.last_published_at,
-            "preflight": workflow["publication_preflight"],
-        },
-        "revisions": {
-            "work_updated_at": work.updated_at,
-            "edition_updated_at": edition.updated_at,
-            "section_fingerprints": {
-                key: step_fingerprint(edition, key)
-                for key in EditionWorkflowDecision.Step.values
-            },
-        },
-    }
-
-
-def _workspace_queue(item: UploadItem | None) -> dict[str, Any]:
-    scope = UploadItem.objects.filter(
-        status__in=[
-            UploadItem.Status.NEEDS_REVIEW,
-            UploadItem.Status.READY,
-            UploadItem.Status.FAILED,
-        ]
-    ).exclude(status=UploadItem.Status.DELETED)
-    if item is not None:
-        scope = scope.exclude(pk=item.pk)
-    next_item = scope.select_related("edition__work").order_by("-priority", "created_at").first()
-    return {
-        "pending_count": scope.count(),
-        "next_item": (
-            {
-                "item_id": str(next_item.id),
-                "title": next_item.edition.work.title if next_item.edition_id else next_item.source_filename,
-                "source_filename": next_item.source_filename,
-            }
-            if next_item
-            else None
-        ),
-    }
-
-
-def build_workspace_payload(
-    edition: Edition,
-    *,
-    mode: str,
-    upload_item: UploadItem | None = None,
-    permissions: dict[str, bool] | None = None,
-) -> dict[str, Any]:
-    edition = Edition.objects.select_related("work").get(pk=edition.pk)
-    workflow = build_edition_workflow(edition, upload_item=upload_item)
-    return {
-        "mode": mode,
-        "context": {
-            "item_id": str(upload_item.id) if upload_item else None,
-            "work_id": str(edition.work_id),
-            "edition_id": str(edition.id),
-            "title": edition.work.title,
-            "document_type": edition.work.document_type,
-            "publication_state": edition.state,
-            "updated_at": edition.updated_at,
-        },
-        "workflow": workflow,
-        "data": _workspace_data(edition, upload_item, workflow),
-        "candidates": _serialize_candidates(edition),
-        "permissions": permissions or {},
-        "queue": _workspace_queue(upload_item),
-    }
-
-
-def build_intake_workspace_payload(
-    item: UploadItem,
-    *,
-    permissions: dict[str, bool] | None = None,
-) -> dict[str, Any]:
-    item = UploadItem.objects.select_related("edition__work").get(pk=item.pk)
-    if item.edition_id is None:
-        return {
-            "mode": "intake",
-            "context": {
-                "item_id": str(item.id),
-                "work_id": None,
-                "edition_id": None,
-                "title": item.source_filename,
-                "document_type": item.document_type_hint,
-                "publication_state": None,
-                "updated_at": item.updated_at,
-            },
-            "workflow": build_intake_workflow(item),
-            "data": {
-                "file": {
-                    "item": _serialize_upload_file(item),
-                    "assets": [],
-                }
-            },
-            "candidates": {
-                "metadata": [],
-                "entities": [],
-                "enrichment": [],
-                "theory": [],
-            },
-            "permissions": permissions or {},
-            "queue": _workspace_queue(item),
-        }
-    return build_workspace_payload(
-        item.edition,
-        mode="intake",
-        upload_item=item,
-        permissions=permissions,
-    )
-
-
-def _queue_row(item: UploadItem) -> dict[str, Any]:
-    workflow = build_intake_workflow(item)
-    current = next(
-        (row for row in workflow["steps"] if row["key"] == workflow["current_step"]),
-        None,
-    )
-    return {
-        "item_id": str(item.id),
-        "title": item.edition.work.title if item.edition_id else item.source_filename,
-        "source_filename": item.source_filename,
-        "document_type": item.edition.work.document_type if item.edition_id else item.document_type_hint,
-        "current_step": workflow["current_step"],
-        "current_step_label": current["label"] if current else "",
-        "overall_status": workflow["overall_status"],
-        "unresolved_count": workflow["unresolved_count"],
-        "warnings_count": workflow["warnings_count"],
-        "blockers_count": workflow["blockers_count"],
-        "updated_at": item.updated_at,
-    }
-
-
-def workflow_queue_payload(*, limit: int = 50) -> dict[str, Any]:
-    limit = max(1, min(int(limit), 100))
-    queryset = (
-        UploadItem.objects.select_related("edition__work")
-        .exclude(status__in=[UploadItem.Status.DELETED, UploadItem.Status.WITHDRAWN])
-        .order_by("-priority", "-updated_at")[:limit]
-    )
-    rows = [_queue_row(item) for item in queryset]
-    continue_items = [row for row in rows if row["overall_status"] not in {"published"}][:12]
-    attention_items = [row for row in rows if row["warnings_count"] and not row["blockers_count"]][:12]
-    exception_items = [row for row in rows if row["blockers_count"]][:12]
-    publication_ready = [
-        row
-        for row in rows
-        if row["current_step"] == "publication" and row["blockers_count"] == 0
-    ][:12]
-    candidate_review_count = (
-        MetadataCandidate.objects.filter(lifecycle=MetadataCandidate.Lifecycle.PROPOSED).count()
-        + EntityResolutionCandidate.objects.filter(status=EntityResolutionCandidate.Status.PROPOSED).count()
-        + TheoryReviewTask.objects.filter(status=TheoryReviewTask.TaskStatus.PENDING).count()
-        + EnrichmentCandidate.objects.filter(status=EnrichmentCandidate.Status.PENDING).count()
-    )
-    return {
-        "continue_items": continue_items,
-        "attention_items": attention_items,
-        "exception_items": exception_items,
-        "exceptions": exception_items,
-        "publication_ready": publication_ready,
-        "recent_items": rows[:12],
-        "candidate_review_count": candidate_review_count,
-    }
-
-
-def work_library_payload(*, query: str = "", document_type: str = "", state: str = "", limit: int = 100) -> dict[str, Any]:
-    limit = max(1, min(int(limit), 200))
-    queryset = Edition.objects.select_related("work").prefetch_related(
-        "contributions__person",
-        "assets",
-        "work__knowledge_relations",
-        "work__node_relations",
-        "work__reading_path_items",
-    )
-    if query:
-        queryset = queryset.filter(
-            Q(work__title__icontains=query)
-            | Q(work__original_title__icontains=query)
-            | Q(contributions__person__preferred_name__icontains=query)
-        )
-    if document_type:
-        queryset = queryset.filter(work__document_type=document_type)
-    if state:
-        queryset = queryset.filter(state=state)
-    edition_ids = (
-        queryset.order_by("work_id", "-is_primary", "-publication_year", "-updated_at")
-        .values_list("id", flat=True)
-        .distinct()
-    )
-    editions = list(
-        Edition.objects.filter(id__in=list(edition_ids[:limit]))
-        .select_related("work")
-        .prefetch_related("contributions__person", "assets")
-        .order_by("work__title", "-is_primary", "-publication_year")
-    )
-    primary_by_work: dict[Any, Edition] = {}
-    for edition in editions:
-        primary_by_work.setdefault(edition.work_id, edition)
-    rows = []
-    for work_id, edition in primary_by_work.items():
-        work = edition.work
-        contributors = [
-            row.person.preferred_name
-            for row in edition.contributions.all()
-            if row.approved
-        ]
-        current_assets = [row for row in edition.assets.all() if row.is_current]
-        asset_state = "ready" if any(row.status == Asset.Status.READY for row in current_assets) else "attention"
-        knowledge_count = work.knowledge_relations.filter(approved=True).count()
-        knowledge_count += work.node_relations.filter(status=KnowledgePublicationStatus.PUBLISHED).count()
-        rows.append(
-            {
-                "work_id": str(work_id),
-                "title": work.title,
-                "document_type": work.document_type,
-                "language": work.language,
-                "contributors": contributors,
-                "edition_count": work.editions.count(),
-                "primary_edition_id": str(edition.id),
-                "publication_state": edition.state,
-                "asset_state": asset_state,
-                "knowledge_status": "complete" if knowledge_count else "attention",
-                "curation_status": "complete" if work.reading_path_items.exists() else "draft",
-                "updated_at": max(work.updated_at, edition.updated_at),
-            }
-        )
-    return {"count": len(rows), "results": rows}

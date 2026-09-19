@@ -9,6 +9,8 @@ import type { AccessPayload, PagePayload } from "./types";
 export function useReaderDocument({ assetId, workId }: { assetId: string; workId: Work["workId"] }) {
   const [access, setAccess] = useState<AccessPayload | null>(null);
   const [accessError, setAccessError] = useState("");
+  const [accessRequest, setAccessRequest] = useState(0);
+  const retryAccess = useCallback(() => setAccessRequest(value => value + 1), []);
   const [pagePayloads, setPagePayloads] = useState<Record<number, PagePayload>>({});
   const pagePayloadsRef = useRef<Record<number, PagePayload>>({});
   const pendingPageRequests = useRef<Set<number>>(new Set());
@@ -73,7 +75,7 @@ export function useReaderDocument({ assetId, workId }: { assetId: string; workId
       cancelled = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
     };
-  }, [assetId]);
+  }, [assetId, accessRequest]);
 
   const requestPagePayload = useCallback((targetPage: number) => {
     if (
@@ -98,7 +100,7 @@ export function useReaderDocument({ assetId, workId }: { assetId: string; workId
 
   const trackDownload = useCallback(() => { void apiRequest("/catalog/usage-events/", { method: "POST", body: JSON.stringify({ event_type: "download", asset_id: assetId, work_id: workId, source: "reader" }) }).catch(() => undefined); }, [assetId, workId]);
 
-  return { access, accessError, pagePayloads, requestPagePayload, trackDownload };
+  return { access, accessError, pagePayloads, requestPagePayload, trackDownload, retryAccess };
 }
 
 /** The page effect follows navigation without coupling access refresh to every scroll. */

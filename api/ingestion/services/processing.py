@@ -215,11 +215,13 @@ def _claim_processing_job(
         if not stats.get("batch_session_started") or previous_status == ProcessingJob.Status.FAILED:
             job.attempt += 1
         stats["batch_session_started"] = True
+        stats.setdefault("session_started_at", timezone.now().isoformat())
         job.stats = stats
     else:
         job.attempt += 1
     job.status = ProcessingJob.Status.RUNNING
     job.progress = max(progress_floor, job.progress)
+    # Recovery uses this batch lease, not the whole-document start time.
     job.started_at = timezone.now()
     job.finished_at = None
     job.error_code = ""
@@ -859,7 +861,11 @@ def run_query_lexicon_candidate_job(
         raise
 
 
-def _remaining_ocr_page_indexes(asset: Asset) -> tuple[int, int, list[int]]:
+def _remaining_ocr_page_indexes(asset: Asset, job: ProcessingJob | None = None) -> tuple[int, int, list[int]]:
+    if job and (job.stats or {}).get("requested_mode") == "all_pages":
+        count = int(job.stats.get("total_pages") or asset.page_count)
+        completed = set(job.stats.get("completed_page_indexes") or [])
+        return count, count, [index for index in range(1, count + 1) if index not in completed]
     rows = list(
         asset.pages.order_by("index").values_list("index", "text_source")
     )
@@ -890,12 +896,18 @@ def _remaining_ocr_page_indexes(asset: Asset) -> tuple[int, int, list[int]]:
 
 @transaction.atomic
 def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
-    locked = ProcessingJob.objects.select_for_update().select_related("asset__edition").get(pk=job.pk)
+    Edition.objects.select_for_update().get(pk=job.edition_id)
+    locked = ProcessingJob.objects.select_for_update(of=("self",)).select_related("asset__edition").get(pk=job.pk)
     if locked.asset is None:
+        return locked
+    from .catalog_ocr import ensure_source_current
+
+    ensure_source_current(locked)
+    if (locked.stats or {}).get("staging_asset_id") == str(locked.asset_id):
         return locked
     staged = stage_document_asset(
         locked.asset, stage_key=f"ocr-job:{locked.pk}",
-        reset_ocr=bool((locked.stats or {}).get("force_reprocess")),
+        reset_ocr=bool((locked.stats or {}).get("force_reprocess")) and (locked.stats or {}).get("requested_mode") != "all_pages",
     )
     if staged.pk != locked.asset_id:
         locked.stats = {
@@ -905,6 +917,67 @@ def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
         locked.asset = staged
         locked.save(update_fields=["asset", "stats", "updated_at"])
     return locked
+
+
+def _ocr_phase(job, stats, phase, *, pages=()):
+    stats.update(ocr_phase=phase, active_page_indexes=list(pages), phase_started_at=timezone.now().isoformat())
+    ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(stats=stats, updated_at=timezone.now())
+
+
+@transaction.atomic
+def _persist_claimed_ocr_pages(job, pages, claim_task_id):
+    Edition.objects.select_for_update().get(pk=job.edition_id)
+    current = ProcessingJob.objects.select_for_update(of=("self",)).select_related("edition").get(pk=job.pk)
+    if current.status != "running" or current.task_id != claim_task_id:
+        return False
+    from .catalog_ocr import ensure_source_current
+
+    ensure_source_current(current)
+    persist_page_batch(job.asset, pages)
+    if current.stats.get("requested_mode") == "all_pages":
+        completed = sorted(set(current.stats.get("completed_page_indexes") or []).union(page.index for page in pages))
+        job.stats = {**current.stats, "completed_page_indexes": completed, "processed_pages": len(completed), "remaining_pages": current.stats["total_pages"] - len(completed), "active_page_indexes": []}
+        current.stats = job.stats
+        current.save(update_fields=["stats", "updated_at"])
+    return True
+
+
+@transaction.atomic
+def _publish_ocr_result(job, stats, claim_task_id):
+    edition = Edition.objects.select_for_update().get(pk=job.edition_id)
+    current = ProcessingJob.objects.select_for_update(of=("self",)).select_related("edition").get(pk=job.pk)
+    if current.status != "running" or current.task_id != claim_task_id:
+        return False
+    from .catalog_ocr import ensure_source_current
+
+    ensure_source_current(current)
+    from catalog.services.publication_commands import catalog_publication_state
+
+    may_update_public = edition.state == PublicationState.PUBLISHED
+    if current.stats.get("requested_mode") == "all_pages":
+        may_update_public = catalog_publication_state(edition)["catalog_revision_active"]
+    if may_update_public:
+        intelligence = stats.get("document_intelligence") or {}
+        document_revision_id = intelligence.get("revision_id")
+        if intelligence.get("status") != "ready" or not document_revision_id:
+            raise ValueError("正文质量与引用信息未能完成，新正文尚未发布。")
+        from catalog.services.knowledge_publication import create_catalog_publication_event
+
+        event = create_catalog_publication_event(
+            edition, event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+            changed_fields=["ocr", "fulltext"], actor=job.created_by,
+            idempotency_key=f"ocr-doc:{document_revision_id}", content_asset_id=job.asset_id,
+            provenance={"source": "ocr_completion", "processing_job_id": str(job.pk)},
+        )
+        stats["knowledge_publication_event_id"] = str(event.pk)
+    elif job.stats.get("staging_asset_id") and not may_update_public:
+        # A withdrawn historical PDF still uses a new text interpretation.
+        # Make it available for the next explicit publication without publishing it.
+        Asset.objects.filter(edition=edition, kind=Asset.Kind.NORMALIZED, is_current=True).exclude(pk=job.asset_id).update(is_current=False, updated_at=timezone.now())
+        Asset.objects.filter(pk=job.asset_id).update(is_current=True, updated_at=timezone.now())
+    current.stats = stats
+    current.save(update_fields=["stats", "updated_at"])
+    return True
 
 
 def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
@@ -952,29 +1025,34 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     cleanup = None
     next_task_id = ""
     try:
+        _ocr_phase(job, stats, "preparing")
         job = _stage_ocr_job_asset(job)
         asset = job.asset
         edition = asset.edition
         stats = dict(job.stats or {})
-        document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset)
+        document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset, job)
         if document_page_count <= 0:
             raise ValueError("OCR 目标文件没有可处理的页面。")
 
         provider = str(stats.get("engine") or asset.extraction_method or "paddleocr_nas")
         if remaining:
-            batch_indexes = remaining[: settings.OCR_PAGE_BATCH_SIZE]
+            batch_size = 1 if stats.get("requested_mode") == "all_pages" else settings.OCR_PAGE_BATCH_SIZE
+            batch_indexes = remaining[:batch_size]
             local_path, cleanup = materialize_field_file(asset.file)
+            _ocr_phase(job, stats, "recognizing", pages=batch_indexes)
             pages, provider = extract_ocr_page_batch(local_path, batch_indexes)
             returned_indexes = {page.index for page in pages}
-            if returned_indexes != set(batch_indexes):
+            if returned_indexes != set(batch_indexes) or len(pages) != len(batch_indexes):
                 raise ValueError(
                     "OCR 批次返回页码与请求不一致："
                     f"请求 {batch_indexes[0]}-{batch_indexes[-1]}，"
                     f"返回 {sorted(returned_indexes)}。"
                 )
-            persist_page_batch(asset, pages)
+            if not _persist_claimed_ocr_pages(job, pages, claim_task_id):
+                return ProcessingJob.objects.get(pk=job.pk)
+            stats = dict(job.stats or {})
 
-            document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset)
+            document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset, job)
             processed_pages = target_page_count - len(remaining)
             providers = list(stats.get("providers") or [])
             if provider not in providers:
@@ -987,7 +1065,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     "target_pages": target_page_count,
                     "processed_pages": processed_pages,
                     "remaining_pages": len(remaining),
-                    "page_batch_size": settings.OCR_PAGE_BATCH_SIZE,
+                    "page_batch_size": batch_size,
+                    "active_page_indexes": [],
                     "last_batch_page_indexes": batch_indexes,
                     "completed_batches": int(stats.get("completed_batches") or 0) + 1,
                 }
@@ -1056,6 +1135,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             job.progress = 92
             job.stats = stats
             job.save(update_fields=["progress", "stats", "updated_at"])
+            _ocr_phase(job, stats, "finalizing")
 
         if next_task_id:
             return job
@@ -1082,7 +1162,9 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         configured_ocr_pages = (asset.validation_details or {}).get(
             "ocr_required_page_indexes"
         )
-        if isinstance(configured_ocr_pages, list):
+        if stats.get("requested_mode") == "all_pages":
+            completed_ocr_pages = list(stats.get("completed_page_indexes") or [])
+        elif isinstance(configured_ocr_pages, list):
             completed_ocr_pages = sorted(
                 {
                     int(index)
@@ -1099,6 +1181,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 .values_list("index", flat=True)
             )
         runtime_config = ocr_runtime_config()
+        if not _processing_claim_is_current(job, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
         stats["document_intelligence"] = best_effort_ocr_completion(
             asset,
             page_indexes=completed_ocr_pages,
@@ -1154,8 +1238,9 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             except Exception as exc:
                 stats["taxonomy_candidate_warning"] = str(exc)[:2000]
         reason_counts = (asset.validation_details or {}).get("ocr_reason_counts") or {}
-        should_build_ocr_pdf = not reason_counts or int(reason_counts.get("scanned_page") or 0) > 0
+        should_build_ocr_pdf = stats.get("requested_mode") == "all_pages" or not reason_counts or int(reason_counts.get("scanned_page") or 0) > 0
         if should_build_ocr_pdf:
+            _ocr_phase(job, stats, "pdf")
             try:
                 derivative = create_searchable_ocr_pdf(
                     asset,
@@ -1194,22 +1279,9 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
 
         # OCR prepares one immutable text interpretation. Only its explicit
         # publication event may update the reader-facing derived systems.
-        edition.refresh_from_db()
-        if edition.state == PublicationState.PUBLISHED:
-            intelligence = stats.get("document_intelligence") or {}
-            document_revision_id = intelligence.get("revision_id")
-            if intelligence.get("status") != "ready" or not document_revision_id:
-                raise ValueError("正文质量与引用信息未能完成，新正文尚未发布。")
-            from catalog.services.knowledge_publication import create_catalog_publication_event
-
-            event = create_catalog_publication_event(
-                edition, event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
-                changed_fields=["ocr", "fulltext"], actor=job.created_by,
-                idempotency_key=f"ocr-doc:{document_revision_id}",
-                content_asset_id=asset.pk,
-                provenance={"source": "ocr_completion", "processing_job_id": str(job.pk)},
-            )
-            stats["knowledge_publication_event_id"] = str(event.pk)
+        _ocr_phase(job, stats, "publishing")
+        if not _publish_ocr_result(job, stats, claim_task_id):
+            return ProcessingJob.objects.get(pk=job.pk)
         try:
             stats["theory_suggestions"] = generate_theory_review_tasks(
                 asset,
@@ -1218,12 +1290,12 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             )
         except Exception as exc:
             stats["theory_suggestion_warning"] = str(exc)[:2000]
-        queue_page_label_job(
-            asset,
-            upload_item=job.upload_item,
-            actor=job.created_by,
-            force=True,
-        )
+        try:
+            queue_page_label_job(asset, upload_item=job.upload_item, actor=job.created_by, force=True)
+        except Exception as exc:
+            # Text and its publication event are already durable; retain the
+            # optional page-label failure instead of re-running paid OCR.
+            stats["page_label_warning"] = str(exc)[:2000]
         if not _processing_claim_is_current(job, claim_task_id):
             return ProcessingJob.objects.get(pk=job.pk)
         job.status = ProcessingJob.Status.SUCCEEDED
@@ -1233,6 +1305,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 "pages": document_page_count,
                 "target_pages": target_page_count,
                 "engine": provider,
+                "ocr_phase": "complete",
+                "active_page_indexes": [],
             }
         )
         job.stats = stats

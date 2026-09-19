@@ -1216,11 +1216,12 @@ def _claim_event(event_id) -> tuple[KnowledgePublicationEvent | None, uuid.UUID 
 
 
 def metadata_activation_preflight(event: KnowledgePublicationEvent, *, require_idle: bool = False) -> dict:
-    """Read-only eligibility for a first, metadata-only public catalog.
+    """Read-only eligibility for an approved catalog and its reading file.
 
-    Graph/recommendation work cannot hold an approved book hostage. This does
-    not authorize replacing a serving snapshot or publishing unverified text.
-    The two public deliveries must retain real projection completion evidence.
+    Public catalog and fulltext delivery have separate completion evidence.
+    Optional consumers never authorize either, nor block a ready catalog. The
+    latest approved snapshot may replace the serving one only after its own
+    public deliveries complete; editorial drafts are never read here.
     """
     revision = event.catalog_revision
     blockers = []
@@ -1233,20 +1234,19 @@ def metadata_activation_preflight(event: KnowledgePublicationEvent, *, require_i
         and revision.status == CatalogPublicationRevision.Status.ACTIVE
         and revision.metadata_ready
     )
-    if already_public:
-        return {"eligible": False, "already_public": True, "blockers": []}
     if require_idle and event.lease_expires_at and event.lease_expires_at > timezone.now():
         blockers.append("发布任务仍持有有效执行租约，请等待本次处理结束。")
-    if event.event_type != KnowledgePublicationEvent.EventType.CATALOG_PUBLISHED:
-        blockers.append("仅支持已经人工批准的首次馆藏发布。")
+    if event.event_type not in {
+        KnowledgePublicationEvent.EventType.CATALOG_PUBLISHED,
+        KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
+    }:
+        blockers.append("仅支持已经批准的馆藏发布或更新。")
     if edition.state != PublicationState.PUBLISHED:
         blockers.append("馆藏尚未批准发布或已经撤回。")
-    if event.payload.get("requested_fulltext_ready") is not False or revision.fulltext_ready:
-        blockers.append("本次发布包含正文检索资格，仍需等待完整正文处理。")
-    if revision.status not in {CatalogPublicationRevision.Status.PREPARING, CatalogPublicationRevision.Status.FAILED}:
+    if revision.status not in {
+        CatalogPublicationRevision.Status.PREPARING, CatalogPublicationRevision.Status.FAILED,
+    } and not already_public:
         blockers.append("该修订已被取代、撤回或不处于可恢复状态。")
-    if edition.active_catalog_revision_id or edition.catalog_revisions.filter(activated_at__isnull=False).exists():
-        blockers.append("已有正式公开版本，必须保留原有完整切换条件。")
     if edition.catalog_revisions.filter(revision__gt=revision.revision).exists():
         blockers.append("已有更新的发布修订，不能激活旧版本。")
     domain = event.domain_event
@@ -1256,7 +1256,7 @@ def metadata_activation_preflight(event: KnowledgePublicationEvent, *, require_i
     ):
         blockers.append("发布事件与正式来源记录不一致。")
     if blockers:
-        return {"eligible": False, "already_public": False, "blockers": blockers}
+        return {"eligible": False, "already_public": already_public, "blockers": blockers}
     from catalog.services.publication_commands import validate_revision
     from ingestion.services.publication import _asset_storage_readable
 
@@ -1276,26 +1276,43 @@ def metadata_activation_preflight(event: KnowledgePublicationEvent, *, require_i
         KnowledgeProjectionDelivery.Consumer.BIBLIOGRAPHIC_SEARCH,
         KnowledgeProjectionDelivery.Consumer.PUBLIC_CACHE,
     }
-    deliveries = {row.consumer: row for row in event.deliveries.filter(consumer__in=public_consumers)}
+    deliveries = {
+        row.consumer: row for row in event.deliveries.filter(
+            consumer__in=public_consumers | {KnowledgeProjectionDelivery.Consumer.FULLTEXT},
+        )
+    }
     states = {
         row.projection_type: row for row in ProjectionState.objects.filter(
             object_type=event.object_type, object_id=event.object_id,
         )
     }
-    for consumer in sorted(public_consumers):
+    def completed(consumer, projection):
         delivery = deliveries.get(consumer)
         requirements = (delivery.result or {}).get("required_projections") if delivery else None
-        if (
-            delivery is None or delivery.status != KnowledgeProjectionDelivery.Status.COMPLETED
-            or domain is None or delivery.source_revision != domain.canonical_revision
-            or requirements != [ProjectionType.PUBLIC]
-            or any(
-                name not in states or states[name].projected_revision < delivery.source_revision
-                for name in (requirements or [])
-            )
-        ):
+        return bool(
+            delivery is not None and delivery.status == KnowledgeProjectionDelivery.Status.COMPLETED
+            and delivery.source_revision == domain.canonical_revision
+            and requirements == [projection]
+            and projection in states
+            and states[projection].projected_revision >= delivery.source_revision
+        )
+
+    for consumer in sorted(public_consumers):
+        if not completed(consumer, ProjectionType.PUBLIC):
             blockers.append(f"公开书目处理尚未完成或缺少完成依据（{consumer}）。")
-    return {"eligible": not blockers, "already_public": False, "blockers": blockers}
+    fulltext_consumer = KnowledgeProjectionDelivery.Consumer.FULLTEXT
+    fulltext_ready = bool(
+        event.payload.get("requested_fulltext_ready") and revision.document_revision_id
+        and (
+            completed(fulltext_consumer, ProjectionType.FULLTEXT)
+            if fulltext_consumer in deliveries
+            else revision.fulltext_ready  # Unchanged text retains its prior index.
+        )
+    )
+    return {
+        "eligible": not blockers and (not already_public or (fulltext_ready and not revision.fulltext_ready)),
+        "already_public": already_public, "blockers": blockers, "fulltext_ready": fulltext_ready,
+    }
 
 
 def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_only: bool = False, actor=None) -> None:
@@ -1304,10 +1321,14 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
         return
     edition = Edition.objects.select_for_update().get(pk=revision.edition_id)
     revision = CatalogPublicationRevision.objects.select_for_update().get(pk=revision.pk)
+    previous_revision_id = edition.active_catalog_revision_id
+    previous_fulltext_ready = bool(edition.active_catalog_revision and edition.active_catalog_revision.fulltext_ready)
+    preflight = None
     if metadata_only:
         revision.edition = edition
         event.catalog_revision = revision
-        if not metadata_activation_preflight(event)["eligible"]:
+        preflight = metadata_activation_preflight(event)
+        if not preflight["eligible"]:
             return
     if revision.status not in {CatalogPublicationRevision.Status.PREPARING, CatalogPublicationRevision.Status.ACTIVE, CatalogPublicationRevision.Status.WITHDRAWN} and not metadata_only:
         return
@@ -1332,7 +1353,7 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
         edition.save(update_fields=["intelligence_status", "updated_at"])
         _sync_published_work_terms(edition)
         return
-    requested_fulltext = not metadata_only and bool(event.payload.get("requested_fulltext_ready"))
+    requested_fulltext = preflight["fulltext_ready"] if metadata_only else bool(event.payload.get("requested_fulltext_ready"))
     if revision.status in {CatalogPublicationRevision.Status.PREPARING, CatalogPublicationRevision.Status.FAILED}:
         previous = (
             CatalogPublicationRevision.objects.select_for_update()
@@ -1347,7 +1368,7 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
         revision.status = CatalogPublicationRevision.Status.ACTIVE
         revision.activated_at = timezone.now()
     revision.metadata_ready = True
-    revision.fulltext_ready = requested_fulltext or revision.fulltext_ready
+    revision.fulltext_ready = requested_fulltext
     if not metadata_only:
         revision.failure_code = ""
         revision.failure_message = ""
@@ -1364,8 +1385,9 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
     )
     now = timezone.now()
     edition.active_catalog_revision = revision
-    edition.metadata_ready_at = now
-    edition.fulltext_ready_at = now if revision.fulltext_ready else None
+    if previous_revision_id != revision.pk or edition.metadata_ready_at is None:
+        edition.metadata_ready_at = now
+    edition.fulltext_ready_at = (edition.fulltext_ready_at or now) if revision.fulltext_ready else None
     if not metadata_only:
         edition.intelligence_status = IntelligenceStatus.ACTIVE
     edition.save(
@@ -1414,11 +1436,14 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
             action="catalog.metadata_activated",
             object_type="Edition",
             object_id=str(edition.pk),
-            before={"active_catalog_revision_id": None},
+            before={
+                "active_catalog_revision_id": str(previous_revision_id) if previous_revision_id else None,
+                "fulltext_ready": previous_fulltext_ready,
+            },
             after={
                 "active_catalog_revision_id": str(revision.pk),
                 "knowledge_event_id": str(event.pk),
-                "fulltext_ready": False,
+                "fulltext_ready": revision.fulltext_ready,
                 "derived_processing_preserved": True,
             },
         )
@@ -1446,7 +1471,7 @@ def recover_catalog_metadata(event_id, *, expected_edition_id, actor=None) -> di
     revision.edition = edition
     event.catalog_revision = revision
     preflight = metadata_activation_preflight(event, require_idle=True)
-    if preflight["already_public"]:
+    if preflight["already_public"] and not preflight["eligible"]:
         return {**preflight, "changed": False, "event_id": str(event.pk), "edition_id": str(edition.pk)}
     if preflight["blockers"]:
         raise ValueError(" ".join(preflight["blockers"]))
@@ -1457,7 +1482,7 @@ def recover_catalog_metadata(event_id, *, expected_edition_id, actor=None) -> di
     return {
         "changed": True, "event_id": str(event.pk), "edition_id": str(edition.pk),
         "active_catalog_revision_id": str(revision.pk), "event_status": event.status,
-        "fulltext_ready": False, "derived_processing_preserved": True,
+        "fulltext_ready": edition.active_catalog_revision.fulltext_ready, "derived_processing_preserved": True,
     }
 
 
@@ -1486,8 +1511,8 @@ def _finish_event(
         if event.lease_token != token:
             return event
         if pending or failed:
-            # Publish an approved metadata-only first edition once its public
-            # projection is ready. Optional graph work retains its true state.
+            # Catalog/PDF and fulltext become public from their own completed
+            # deliveries. Other consumers retain their actual pending/failure.
             _activate_completed_revision(event, metadata_only=True)
         max_attempts = max(1, int(getattr(settings, "KNOWLEDGE_EVENT_MAX_ATTEMPTS", 8)))
         if failed:

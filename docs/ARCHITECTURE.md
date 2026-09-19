@@ -1,12 +1,40 @@
 # Social Theory Library 架构
 
+当前3.0.6的精简阅读入口是[实际运行架构](GPT_ARCHITECTURE_CONTEXT.md)、[管理端功能画像](ADMIN_ARCHITECTURE_PROFILE.md)和[上架发布流程](INGESTION_AND_PUBLICATION.md)。本文件保留按阶段追加的实现记录；下方“未测试/未部署/尚未实现”等只对当时时点成立，不是当前缺口清单。2026-09-20最终运行与证据边界见[当前状态](CURRENT_STATE.md)及[最终交付](V3.0.6_COMPLETION_RELEASE.md)。
+
+3.0.6封面补充复用CoverCandidate、媒体、CatalogFieldDecision、EditorialRevision和AuditEvent，不新增表或第二套处理服务。入库在原件/阅读副本准备后优先渲染少量前部PDF候选，再进入AI书目和全文/OCR；封面不依赖OCR就绪。Edition级接口只在明确操作时渲染任意指定页或上传图片，按角色、Work/Edition、当前文件指纹及同请求回执校验。普通GET只读取候选，自动任务不选择封面、不覆盖人工决定；公开读取继续沿用有效修订，原PDF/Page不改变。
+
+3.0.6补漏继续使用既有架构与修订/任务记录。0056只为Discipline/Subdiscipline添加可空hero_rendition引用，复用EditorialRevision及媒体历史；公开读取含DisciplineCompactSerializer。推荐预览复用同一选择服务，以签名绑定对象/版本/名单，确认命令保留原回执幂等。健康GET读取已有检查记录，过期为未知，不隐式外调。候选条件指纹只含公开编目字段；使用反馈记入原审计事件，无新分析或训练系统。
+
 ## 当前阅读入口与重设计用途
+
+2026-09-20剩余开发交付（本地实现、未测试）：处理中心的普通/语义任务继续存放于ProcessingJob/SemanticIndexJob，通过数据库全范围筛选/计数和UNION稳定分页提供同一响应，不建平行任务表。OCR显示名称在读取时由当前Edition→Work及已有Work编辑修订计算；PDF仍是该版本的文件上下文，任务ID只是展开的追踪编号，绝不以文件名或任务号另建馆藏。页数/进度取实际处理记录，控制沿用RETRY_JOBS及既有暂停/恢复/取消命令。
+
+知识表单复用AdminEditorialDraftReadMixin的对象锁和If-Match。预填建议仅在浏览器；显式保存时校验EnrichmentCandidate/ResearchRun，再由原编辑器保存字段，采用记录与正常修改同事务。学者名称变体需要的结构化数据继续经原字段 mutation 与EditorialRevision服务写入，不把aliases字符串冒充完整身份记录；后台私有响应返回最终同一份修改版本。单独关联操作不会隐式保存整页，权限、旧公开稿和发布资格不变。未新增数据库schema、公开字段、训练表或另一份public control清单。本轮按最新用户指令不执行开发后的测试/检查/部署，旧段落中的“完成后统一测试”不再是当前执行安排。
+
+2026-09-20字段联动增量（本地实现、未测试）：研究上下文可带白名单内的未保存书目信息，但仅用于查找，不修改正式实体或人工锁。字段依赖沿用CatalogFieldContract/AssistantFieldPolicy，ResearchRun的字段指纹区分有效输入，已有结果只读轮询，外部查找须明确请求并通过原能力检查。普通标量字段的预填仍在浏览器，正式保存由原Edition edits事务校验并记入CatalogFieldDecision/Log和AuditEvent；未增加训练表/导出，私人阅读数据不进入上下文。知识助手的名称填入与既有候选采用写库明确分开，后者继续使用原安全校验及EditorialRevision。知识子学科建议及当前值已改为真实Subdiscipline/KnowledgeNodeSubdiscipline，不复用旧parent语义；无数据迁移。
+
+2026-09-20新增OCR（本地实现，未测试）：`ProcessingCenterView`新增Edition范围的只读进度查询及start/pause/resume/cancel命令，馆藏与处理中心共用`EditionOcrControl`。原ProcessingJob保存全本识别模式、来源版本、已完成页序和当前阶段，AuditEvent记录同请求回执，不增表或并行队列。人工重跑逐页使用原OCR服务，传输临时PDF片段后映射原页序；只有已持久化的页算进度。已公开/历史公开Asset继续由stage_document_asset创建新正文解释，原Page与私人引用不动；未公开文件原Page ID保留。公开更新仍经原CatalogPublicationRevision/事件资格，不将state=published或OCR100%冒充公开生效。后台权限沿用RETRY_JOBS，不扩大Editor权限；读取不触发外部检测。用户要求全部功能完成后才统一测试，当前新增代码未构建或验收。
+
+时间线出处复用TheoryTimelineEvent既有evidence_asset/evidence_page与EditorialRevision，前端分别选择事件关联作品和出处作品/Edition/文件。公开链接由原active_asset_q批量检查资格，不复制public control登记、不重建Page。
+
+2026-09-20身份建议增量：作者、译者和出版社复用整页`edits`及原FieldAssistant采用服务，在当前表单预填，保存才写入。人物采用传明确Person ID及职责，服务重验候选、身份、人工锁与编辑版本；移除预填不算采用，多作者不覆盖原名单，同人不同职责分别保留。元数据匹配馆内实体仍保留原候选来源。使用结果增加范围说明：人物按selected_identity记录，接受另一作者不算人工改写了原人物选择；标量按field_value比较，完整原值/建议值/最终值仍保留。未知姓名只进入原新建框，原查重/显式创建流程保留，不自动合并或创建。以上不增加表、迁移、训练导出或公开字段；完整未保存表单驱动检索尚未实现。
+
+2026-09-20本地3.0.6增量：整份Edition工作页保存入口为`POST catalog/admin/library/works/{work_id}/edits/`。共同edit_version同时反映作品、版本、编辑修订及字段决定/锁；整份修改复用原分节服务，已公开作品继续走EditorialRevision。AuditEvent保存重试回执，候选和最终人工值复用CatalogFieldDecision/Log，不新增草稿或训练语料表。简介/出版年份在浏览器预填不写库；显式保存才记录使用结果。现有Work级待发布草稿保留其Edition上下文；另一个Edition不能替换或混入已有稿，新整页、旧分节和助手写入均检查并返回409。训练资格和正确性仍未评估，不据此外传或训练。当前为本地实现，非生产发布声明。
 
 2026-09-13已补[实际架构与应用场景](GPT_ARCHITECTURE_CONTEXT.md)、[上架与发布过程](INGESTION_AND_PUBLICATION.md)和[重设计任务说明](REDESIGN_BRIEF.md)。它们把当前代码、最近生产快照和下一步设计目标分开，是整体重设计的首读材料。本文件保留历次实现细节，旧版的“当前生产”或开发期“待验收”只对当时成立；最新状态以CURRENT_STATE、CURRENT_PROGRESS及实际源码核对。
 
 本次文档/Git同步没有再次改变运行架构。后续允许对整体后台与上架过程提出重大改进，但技术栈、存储或生产迁移必须作为明确设计决策，不能从“需要重设计”推导成当前已获准删除数据或新建第二套书库。
 
 ## 3.0.5架构增量
+
+### 3.0.6 待部署增量
+
+2026-09-19补齐：理论关系及时间线事件也使用同一私有edit_version/If-Match和EditorialRevision。新增0055只扩展既有target_type的choices，不新建草稿表，不迁移Page或文件。保存/准备下线不改变公开对象，正式发布重验约束；关系保留KnowledgeRelationVersion及既有实体发布事件，时间线保留原canonical change的依赖更新。普通Editor的发布资格不变。包含此增量的迁移/构建/浏览器与回退仍按本版账本验收，下文“六类无migration”为此前增量的历史范围。
+
+书目/待办/工作台共用catalog_publication_state、catalog_health及catalog_availability的只读结果；上传、手工编目与维护仍是不同来源，文件命令由当前Edition发起。未创建第二套书库或状态表，原Page、资产和私人数据关系保持。
+
+六类后台知识编辑（学者、主题、学科、子学科、理论节点、阅读路径）私有GET新增edit_version。PATCH/PUT/DELETE必须携带读取时的If-Match，缺少为428，旧内容或正在保存为409；事务内再次核对并锁定对象，Scholar还核对Person。值来自对象时间、既有CanonicalObjectRevision及最新EditorialRevision，不新建表，也不在公开响应暴露。连续编辑复用save_object_editorial_patch组合旧草稿，未发布部分不直接写公开对象。旧客户端必须先重新读取，不能用通配符绕过；当前六类前端均已接入。该增量不需要migration，最终部署/兼容验收见3.0.6账本。
 
 核心增量已于2026-09-12部署，最新上线和收尾源码范围见CURRENT_STATE.md及CURRENT_PROGRESS.md。下方保留设计与历史验证范围，早期待验收描述不等于当前未部署。
 

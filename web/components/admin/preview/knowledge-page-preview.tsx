@@ -20,6 +20,7 @@ import type { TheorySchool } from "@/lib/data";
 import { adaptApiScholarDetail, adaptApiTopic, adaptApiWork } from "@/lib/public-data-adapters";
 import type { ApiScholar } from "@/lib/api/people.types";
 import type { ApiTopic } from "@/lib/api/topics.types";
+import { adminListHref, safeAdminHref } from "@/lib/admin-route-context";
 import type { Discipline, Subdiscipline } from "@/lib/api/taxonomy.types";
 import type { KnowledgeNodeDetail, LocalTheoryGraph, NormalizedTimelineEvent, NormalizedReadingPath, TheoryDisciplinePage } from "@/lib/api/knowledge.types";
 
@@ -188,6 +189,7 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
   const searchParams = useSearchParams();
   const pageId = searchParams.get("page") || "overview";
   const moduleId = searchParams.get("module") || "";
+  const returnHref = safeAdminHref(searchParams.get("return_to"), `/admin/knowledge?object_type=${encodeURIComponent(objectType)}&object_id=${encodeURIComponent(objectId)}`);
   const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
   const [message, setMessage] = useState("");
   const [anchorMessage, setAnchorMessage] = useState("");
@@ -265,26 +267,26 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
       <div className="page-shell">
         <div className="admin-page-preview-banner" role="status">
           <ShieldCheck size={16} />
-          <strong>受保护的知识页面预览</strong>
+          <strong>页面预览 · 仅管理员可见</strong>
           <span>
             {payload.active_perspective === "draft"
-              ? `正在使用${payload.source === "canonical_draft" ? "未发布正式草稿" : "已保存 EditorialRevision"}渲染“${payload.label}”。普通访客仍看到已发布内容。`
+              ? `正在预览“${payload.label}”已保存但尚未发布的修改。读者仍看到原内容。`
               : `当前没有待发布草稿，正在显示“${payload.label}”的公开版本。`}
-            {unsupported.length ? ` ${unsupported.length} 个字段暂不能完整物化，已在下方标明预览边界。` : ""}
+            {unsupported.length ? ` ${unsupported.length} 项内容暂不能完整预览，请查看下方说明。` : ""}
           </span>
         </div>
         <nav className="admin-preview-actions" aria-label="预览操作">
-          <Link className="button secondary" href="/admin/knowledge">返回 Knowledge Studio</Link>
+          <Link className="button secondary" href={returnHref}>返回当前对象编辑</Link>
           {payload.preview_routes.published ? <Link className="button secondary" href={payload.preview_routes.published} target="_blank">查看当前公开版</Link> : null}
         </nav>
         {payload.public_control?.page_tree?.length ? <nav className="admin-preview-page-switcher" aria-label="公开页面预览">
           {payload.public_control.page_tree.filter((page) => page.preview?.supported !== false).map((page) => <Link
             className={page.page_id === pageId ? "is-active" : ""}
-            href={`?page=${encodeURIComponent(page.page_id)}`}
+            href={adminListHref(`/admin/preview/knowledge/${encodeURIComponent(objectType)}/${encodeURIComponent(objectId)}`, searchParams.toString(), { page: page.page_id, module: null })}
             key={page.page_id}
           >{page.display_name}</Link>)}
         </nav> : null}
-        {unsupported.length ? <p className="admin-preview-warning">暂未物化字段：{unsupported.join("、")}。发布前请回到 Knowledge Studio 核对。</p> : null}
+        {unsupported.length ? <details className="admin-preview-warning"><summary>有内容暂不能完整预览</summary><p>{unsupported.join("、")}。请返回编辑页核对这些内容后再发布。</p></details> : null}
         {anchorMessage ? <p className="admin-preview-warning">{anchorMessage}</p> : null}
       </div>
       <div className="admin-knowledge-page-preview-body" inert>

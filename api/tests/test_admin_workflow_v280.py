@@ -382,7 +382,9 @@ def test_maintenance_mode_work_library_and_permissions(
     assert library.status_code == 200
     assert library.data["count"] == 1
     assert library.data["results"][0]["id"] == str(work.id)
-    assert library.data["results"][0]["publication_state"] == "published"
+    # A recorded decision without an activated snapshot is not public.
+    assert library.data["results"][0]["publication_state"] == "unpublished"
+    assert not library.data["results"][0]["publication"]["catalog_revision_active"]
 
     maintenance = api_client.get(f"/api/catalog/admin/library/works/{work.id}/")
     assert maintenance.status_code == 200

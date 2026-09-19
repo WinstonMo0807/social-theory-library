@@ -128,7 +128,7 @@ test("reader and curation mutations use synchronous action guards", async () => 
   assert.match(records, /finishAction\(actionKey\)/);
   assert.match(theory, /startAction\(actionKey\)/);
   assert.match(theory, /create-timeline-event/);
-  assert.match(theory, /create-reading-path/);
+  const readingPath = await readFile(new URL("../components/admin/curation/reading-path-workbench.tsx", import.meta.url), "utf8"); assert.match(readingPath, /startAction\(actionKey\)/); assert.match(readingPath, /finishAction\(actionKey\)/);
   assert.match(saveWork, /pressed=\{Boolean\(effectiveSavedId\)\}/);
   assert.match(saveTopic, /usePublicSession\(\)/);
   assert.match(saveTopic, /pressed=\{Boolean\(effectiveSavedId\)\}/);

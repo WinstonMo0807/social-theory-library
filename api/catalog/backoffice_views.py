@@ -371,10 +371,11 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
     def get(self, request, edition_id):
         from catalog.models import Edition, EditorialRevision
         from catalog.services.editorial_revision import serialize_editorial_revision
+        from catalog.services.publication_commands import catalog_publication_state, editorial_draft_applies_to_edition
         from ingestion.models import UploadItem
 
         edition = get_object_or_404(
-            Edition.objects.select_related("work").prefetch_related(
+            Edition.objects.select_related("work", "active_catalog_revision").prefetch_related(
                 "assets__pages",
                 "contributions__person",
                 "work__editions",
@@ -396,6 +397,8 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
             target_id=edition.work_id,
             status=EditorialRevision.Status.DRAFT,
         ).order_by("-revision").first()
+        if not editorial_draft_applies_to_edition(draft_revision, edition):
+            draft_revision = None
         data = AdminWorkPagePreviewSerializer(
             edition.work,
             context={
@@ -416,15 +419,18 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
             if intake_item is not None and edition.state != "published"
             else f"/admin/library/works/{edition.work_id}?edition={edition.id}"
         )
+        publication = catalog_publication_state(edition)
         return Response({
             "preview_mode": True,
-            "publication_state": edition.state,
+            "publication_state": publication["public_state"],
+            "editorial_state": edition.state,
+            "publication": publication,
             "editorial_revision": (
                 serialize_editorial_revision(draft_revision)
                 if draft_revision is not None
                 else None
             ),
-            "public_url": f"/works/{edition.public_slug}" if edition.state == "published" and edition.public_slug else "",
+            "public_url": publication["public_url"],
             "pdf_preview_url": f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else "",
             "return_url": return_url,
             "work": data,

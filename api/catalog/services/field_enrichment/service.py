@@ -60,6 +60,8 @@ def _request_context(value: dict) -> dict:
         "research_draft_hash",
         "research_trigger_input_hash",
         "is_current_context",
+        "curation_fingerprint",
+        "curation_context",
     }
     return normalize_json({key: value[key] for key in allowed if key in value})
 
@@ -155,13 +157,8 @@ def _enrich_form_context(target_type: str, form_context: dict) -> dict:
         )
     if target_type == "knowledge_node":
         context["subdiscipline_options"] = list(
-            KnowledgeNode.objects.filter(
-                node_type=KnowledgeNode.NodeType.SUBDISCIPLINE,
-                status__in=["draft", "pending", "published"],
-            ).values("id", "canonical_name_zh")[:200]
+            Subdiscipline.objects.exclude(editorial_status="archived").values("id", "name")[:200]
         )
-        for row in context["subdiscipline_options"]:
-            row["name"] = row.pop("canonical_name_zh")
         target_node_id = str(context.get("target_node_id") or "").strip()
         if target_node_id:
             try:
@@ -177,6 +174,12 @@ def _enrich_form_context(target_type: str, form_context: dict) -> dict:
 
 
 def _draft_aware_target_context(target_type: str, context: dict, form_context: dict) -> dict:
+    curation = form_context.get("curation_context")
+    if isinstance(curation, dict):
+        context = {**context, **{key: value for key, value in curation.items() if key in {
+            "name", "original_name", "title", "birth_year", "death_year", "affiliations", "node_type", "primary_discipline_id", "summary", "definition", "learning_goal", "language",
+        }}}
+        context["canonical_terms"] = [str(context[key]).strip() for key in ("name", "original_name", "title") if context.get(key)]
     research = form_context.get("research_context")
     if not isinstance(research, dict):
         return context
@@ -192,13 +195,13 @@ def _draft_aware_target_context(target_type: str, context: dict, form_context: d
         "title", "original_title", "canonical_title", "uniform_title", "language",
         "publication_date", "publication_year", "publisher", "isbn", "isbn10", "isbn13", "doi",
     ):
-        if field_name in section and section[field_name] not in (None, ""):
+        if field_name in section:
             merged[field_name] = section[field_name]
     if target_type == "edition":
         work_draft = draft.get("work")
         if isinstance(work_draft, dict):
             for field_name in ("title", "original_title", "language", "document_type"):
-                if work_draft.get(field_name) not in (None, ""):
+                if field_name in work_draft:
                     merged[field_name] = work_draft[field_name]
     canonical = [
         merged.get("title"),
@@ -212,8 +215,11 @@ def _draft_aware_target_context(target_type: str, context: dict, form_context: d
         merged["authors"] = [
             str(row.get("display_name") or "").strip()
             for row in contributors.get("items") or []
-            if isinstance(row, dict) and str(row.get("display_name") or "").strip()
+            if isinstance(row, dict) and row.get("role", "author") == "author" and str(row.get("display_name") or "").strip()
         ]
+        merged["translators"] = [str(row.get("display_name") or "").strip()
+                                 for row in contributors.get("items") or []
+                                 if isinstance(row, dict) and row.get("role") == "translator" and str(row.get("display_name") or "").strip()]
     return merged
 
 
@@ -406,6 +412,7 @@ class FieldEnrichmentService:
                 candidate_identity_value(policy.mutation_adapter, normalized_value),
                 policy.policy_version,
                 str(form_context.get("research_context_fingerprint") or ""),
+                str(form_context.get("curation_fingerprint") or ""),
             )
             confidence, confidence_factors = _confidence(
                 policy,

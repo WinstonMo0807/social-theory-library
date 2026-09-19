@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { safeAdminHref } from "../lib/admin-route-context.ts";
 
 test("public work and authenticated preview reuse one presentational component", async () => {
   const [publicPage, previewRoute, previewPage, view] = await Promise.all([
@@ -16,7 +17,9 @@ test("public work and authenticated preview reuse one presentational component",
   assert.match(previewPage, /\/catalog\/admin\/page-preview\/editions\/\$\{editionId\}\//);
   assert.match(view, /草稿预览/);
   assert.match(view, /返回编辑/);
-  assert.match(previewPage, /returnHref: payload\.return_url/);
+  assert.match(previewPage, /returnHref: safeAdminHref\(routeParams\.get\("return_to"\), payload\.return_url\)/);
+  assert.equal(safeAdminHref(null, "/admin/library/works/work?edition=edition"), "/admin/library/works/work?edition=edition");
+  assert.equal(safeAdminHref("https://external.invalid", "/admin/library/works/work?edition=edition"), "/admin/library/works/work?edition=edition");
 });
 
 test("full draft preview removes the normal admin navigation shell", async () => {

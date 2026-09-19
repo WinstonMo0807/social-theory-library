@@ -5,11 +5,23 @@ from uuid import UUID
 
 from django.db import transaction
 
-from catalog.models import EditorialRevision, KnowledgeNode, MediaRendition, ReadingPath
+from catalog.models import Discipline, Subdiscipline, EditorialRevision, KnowledgeNode, MediaRendition, ReadingPath
 from catalog.services.editorial_drafts import save_object_editorial_patch
 from catalog.services.media import RENDITION_WIDTHS, build_rendition, media_rendition_snapshot, protect_editorial_renditions
 
-TARGETS = {"knowledge_node": KnowledgeNode, "reading_path": ReadingPath}
+TARGETS = {"knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline}
+
+
+def image_fields(target):
+    return ("hero_rendition", "hero_image") if isinstance(target, (Discipline, Subdiscipline)) else ("cover_rendition", "cover_asset")
+
+
+def image_legacy_file(target):
+    return getattr(target, image_fields(target)[1])
+
+
+def image_status(target):
+    return getattr(target, "editorial_status", getattr(target, "status", ""))
 
 
 def image_target_type(target):
@@ -17,12 +29,13 @@ def image_target_type(target):
 
 
 def image_selection(target):
+    identifier = getattr(target, f"{image_fields(target)[0]}_id")
     return {"object_type": image_target_type(target), "object_id": str(target.pk),
-            "rendition_id": str(target.cover_rendition_id) if target.cover_rendition_id else None, "legacy_path": target.cover_asset.name or ""}
+            "rendition_id": str(identifier) if identifier else None, "legacy_path": image_legacy_file(target).name or ""}
 
 
 def image_fingerprint(target, draft):
-    state = {"canonical": image_selection(target), "status": target.status,
+    state = {"canonical": image_selection(target), "status": image_status(target),
              "draft": str(draft.pk) if draft else None, "selection": draft.materialized_preview.get("image_selection") if draft else None}
     return sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
@@ -44,13 +57,13 @@ def validate_image_selection(target, value):
         if rendition is None or not rendition.file.storage.exists(rendition.file.name):
             raise EditorialRevisionError("所选横幅图片不存在或不能读取。")
     path = value["legacy_path"]
-    if not isinstance(path, str) or path not in {"", target.cover_asset.name or ""}:
+    if not isinstance(path, str) or path not in {"", image_legacy_file(target).name or ""}:
         raise EditorialRevisionError("不能使用任意路径替换图片。")
     return {**value, "rendition_id": identifier}
 
 
 def image_media(target, *, selection=None, private=False):
-    identifier = selection["rendition_id"] if selection is not None else target.cover_rendition_id
+    identifier = selection["rendition_id"] if selection is not None else image_selection(target)["rendition_id"]
     if not identifier:
         return None
     primary = MediaRendition.objects.select_related("media").get(pk=identifier, kind="hero")
@@ -59,7 +72,7 @@ def image_media(target, *, selection=None, private=False):
 
 
 def protect_image_references(revision, target):
-    identifiers = [target.cover_rendition_id, (revision.materialized_preview.get("image_selection") or {}).get("rendition_id")]
+    identifiers = [image_selection(target)["rendition_id"], (revision.materialized_preview.get("image_selection") or {}).get("rendition_id")]
     protect_editorial_renditions(revision, identifiers)
 
 
@@ -68,9 +81,10 @@ def apply_image_selection(target, value, *, actor):
 
     before = image_selection(target)
     value = validate_image_selection(target, value)
-    target.cover_rendition_id = value["rendition_id"]
-    target.cover_asset = value["legacy_path"]
-    target.save(update_fields=["cover_rendition", "cover_asset", "updated_at"])
+    rendition_field, file_field = image_fields(target)
+    setattr(target, f"{rendition_field}_id", value["rendition_id"])
+    setattr(target, file_field, value["legacy_path"])
+    target.save(update_fields=[rendition_field, file_field, "updated_at"])
     AuditEvent.objects.create(actor=actor, action="knowledge.image_publish", object_type=image_target_type(target), object_id=str(target.pk), before=before, after=value)
 
 

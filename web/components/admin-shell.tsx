@@ -27,36 +27,52 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ADMIN_VERSION_LABEL } from "@/lib/version";
 import { AdminSessionContext } from "@/lib/admin-session";
+import { adminLoginHref, adminTaskScope } from "@/lib/admin-route-context";
 import { Wordmark } from "./site-header";
 
 const navigation = [
-  ["工作", [
+  ["待办与上架", [
     ["/admin", LayoutDashboard, "今日工作"],
-    ["/admin/uploads", Upload, "上传与上架"],
-    ["/admin/review", Boxes, "待处理"],
-    ["/admin/publication", Send, "发布准备"],
+    ["/admin/uploads", Upload, "上传与批次"],
+    ["/admin/cataloging/new", BookOpen, "手工编目"],
+    ["/admin/review", Boxes, "待办与复核"],
+    ["/admin/publication", Send, "发布管理"],
   ]],
   ["馆藏", [
     ["/admin/library", BookOpen, "作品"],
-    ["/admin/media", BookOpen, "媒体"],
+    ["/admin/media", BookOpen, "图片库"],
     ["/admin/library?view=editions", Boxes, "版本与文件"],
     ["/admin/library?view=quality", Activity, "馆藏质量"],
   ]],
-  ["知识", [
-    ["/admin/knowledge", Sparkles, "Knowledge Studio"],
+  ["知识与关联", [
+    ["/admin/knowledge", Sparkles, "内容管理"],
     ["/admin/scholars", UserRound, "学者"],
     ["/admin/people", Users, "人物查重"],
     ["/admin/disciplines", GraduationCap, "学科"],
+    ["/admin/subdisciplines", GraduationCap, "子学科"],
     ["/admin/theories", CircleDot, "理论传统"],
     ["/admin/topics", Tags, "主题"],
+    ["/admin/theory-relations", Boxes, "知识关系"],
   ]],
-  ["策展", [
+  ["公开展示", [
+    ["/admin/knowledge#studio-public-pages", BookOpen, "网站页面"],
     ["/admin/reading-paths", BookOpen, "阅读路径"],
     ["/admin/recommendations", Sparkles, "推荐"],
+    ["/admin/about", BookOpen, "关于书库内容"],
+    ["/admin/settings#public-display", Tags, "品牌与首页"],
   ]],
-  ["系统", [
-    ["/admin/processing", ChartNoAxesCombined, "Processing Center"],
-    ["/admin/distribution", Cloud, "备份与存储"],
+  ["处理与服务", [
+    ["/admin/processing", ChartNoAxesCombined, "处理中心"],
+    ["/admin/processing?surface=research-sources", Search, "资料来源"],
+    ["/admin/processing?surface=ai-models", Sparkles, "AI 服务"],
+    ["/admin/query-lexicon", Tags, "检索词管理"],
+    ["/admin/semantic-index", Boxes, "语义检索管理"],
+    ["/admin/status", Activity, "运行状态"],
+    ["/admin/system-health", Activity, "专业自检"],
+  ]],
+  ["系统管理", [
+    ["/admin/distribution", Cloud, "文件存储"],
+    ["/admin/settings#backups", Boxes, "备份"],
     ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
     ["/admin/users", Users, "用户与权限"],
     ["/admin/settings", Sparkles, "运行设置"],
@@ -71,7 +87,8 @@ const routeCapabilities: Record<string, string[]> = {
   "/admin/semantic-index": ["can_view_semantic_index"],
   "/admin/analytics": ["can_view_audit_log"],
   "/admin/users": ["can_manage_users"],
-  "/admin/distribution": ["can_run_backup"],
+  "/admin/distribution": ["can_configure_providers"],
+  "/admin/settings#backups": ["can_run_backup"],
   "/admin/settings": ["can_manage_ai", "can_manage_search_runtime"],
 };
 
@@ -94,6 +111,7 @@ const staffRoles = ["admin", "editor"] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const scope = adminTaskScope(pathname);
   const searchParams = useSearchParams();
   const focusMode = /^\/admin\/(?:intake\/[^/]+|cataloging\/(?!new\/?$)[^/]+|library\/works\/[^/]+|preview\/works\/[^/]+)\/?$/.test(pathname);
   const [open, setOpen] = useState(false);
@@ -101,6 +119,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
@@ -117,6 +136,16 @@ export function AdminShell({ children }: { children: ReactNode }) {
     if (!compactNavigation || !open) return;
     const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Tab") {
+        const controls = Array.from(sidebarRef.current?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled),summary') ?? []).filter((element) => {
+          const folded=element.closest('details:not([open])');
+          return (!folded || element.tagName === "SUMMARY" && element.parentElement === folded) && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden";
+        });
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        return;
+      }
       if (event.key !== "Escape") return;
       setOpen(false);
       window.requestAnimationFrame(() => menuButtonRef.current?.focus());
@@ -137,9 +166,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
-      window.location.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      window.location.replace(adminLoginHref(pathname, searchParams.toString(), window.location.hash));
     }
-  }, [pathname, session.status]);
+  }, [pathname, searchParams, session.status]);
 
   if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
@@ -180,9 +209,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     // only a display fallback; all mutations and page APIs still enforce the
     // server-side capability checks.
     if (capabilities === null) {
-      return user.role === "admin" || !administratorOnlyRoutes.has(href);
+      if (href === "/admin/settings#backups") return user.is_library_owner === true;
+      return user.role === "admin" || !administratorOnlyRoutes.has(href.split(/[?#]/)[0]);
     }
-    const required = routeCapabilities[href];
+    const required = routeCapabilities[href] ?? routeCapabilities[href.split(/[?#]/)[0]];
     if (!required) return true;
     return required.some((capability) => capabilities.has(capability));
   }
@@ -191,9 +221,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <AdminSessionContext.Provider value={user}>
     <div className={`admin-shell ${focusMode ? "focus-mode" : ""}`}>
       {!focusMode ? <aside
+        ref={sidebarRef}
         id="admin-navigation"
         className={`admin-sidebar ${open ? "open" : ""}`}
         aria-label="后台导航"
+        role={compactNavigation && open ? "dialog" : undefined}
+        aria-modal={compactNavigation && open ? true : undefined}
         aria-hidden={compactNavigation && !open}
         inert={compactNavigation && !open}
       >
@@ -204,26 +237,27 @@ export function AdminShell({ children }: { children: ReactNode }) {
             const visibleLinks = links.filter(([href]) => canViewRoute(href));
             if (!visibleLinks.length) return null;
             return (
-            <section className="admin-nav-group" key={group}>
-              <p>{group}</p>
+            <details className="admin-nav-group" key={group} open={visibleLinks.some(([href]) => { const path=href.split(/[?#]/)[0]; return path === "/admin" ? pathname === path : pathname.startsWith(path); })}>
+              <summary>{group}</summary>
               {visibleLinks.map(([href, Icon, label]) => {
-                const [hrefPath, hrefQuery = ""] = href.split("?");
+                const [hrefPath, hrefQuery = ""] = href.split("#")[0].split("?");
                 const requestedView = new URLSearchParams(hrefQuery).get("view");
                 const currentView = searchParams.get("view");
+                const requestedSurface = new URLSearchParams(hrefQuery).get("surface");
                 const active = hrefPath === "/admin"
                   ? pathname === hrefPath
                   : pathname.startsWith(hrefPath)
-                    && (requestedView ? currentView === requestedView : hrefPath !== "/admin/library" || !currentView);
+                    && (requestedView ? currentView === requestedView : hrefPath !== "/admin/library" || !currentView)
+                    && (requestedSurface ? searchParams.get("surface") === requestedSurface : hrefPath !== "/admin/processing" || !searchParams.get("surface"));
                 return <Link className={active ? "active" : ""} href={href} key={href} prefetch={false} onClick={closeNavigation}><Icon size={17} />{label}</Link>;
               })}
-            </section>
+            </details>
             );
           })}
         </nav>
-        <div className="system-status"><span /><small>当前会话</small><strong>API 已连接</strong></div>
         <footer><strong>社会理论书库</strong><span>{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
-      <div className="admin-main">
+      <div className="admin-main" inert={compactNavigation && open}>
         {!focusMode ? <header className="admin-topbar">
           <button
             ref={menuButtonRef}
@@ -234,7 +268,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <strong>管理后台</strong>
+          <strong aria-label="当前管理范围">{scope.title}</strong>
           <form action="/admin/library">
             <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏……" aria-label="搜索后台馆藏" /></label>
             <button className="sr-only" type="submit">搜索</button>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
 
-export default async function MetadataReviewPage({ params }: { params: Promise<{ itemId: string }> }) {
+export default async function MetadataReviewPage({ params, searchParams }: { params: Promise<{ itemId: string }>; searchParams: Promise<AdminSearchParams> }) {
   const { itemId } = await params;
-  redirect(`/admin/intake/${encodeURIComponent(itemId)}#bibliography`);
+  redirect(preservingAdminRedirect(`/admin/intake/${encodeURIComponent(itemId)}`, await searchParams, "bibliography"));
 }

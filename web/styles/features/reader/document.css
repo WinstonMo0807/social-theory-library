@@ -52,7 +52,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 18px;
-  padding-right: 184px;
+  padding-right: var(--pdf-note-rail-width, 0px);
   box-sizing: border-box;
 }
 
@@ -113,6 +113,8 @@
   width: 164px;
   pointer-events: none;
 }
+
+.continuous-pdf-viewer[data-note-rail="false"] .pdf-note-rail { display: none; }
 
 .pdf-margin-note {
   pointer-events: auto;

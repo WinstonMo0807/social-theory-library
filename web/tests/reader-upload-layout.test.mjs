@@ -7,7 +7,8 @@ test("reader toolbar allocates the optional printed-page control without overflo
   const css = readStyleSource();
   const source = await readFile(new URL("../components/reader-shell.tsx", import.meta.url), "utf8");
   assert.match(source, /className="reader-printed-page"/);
-  assert.match(css, /\.page-control\s*\{[\s\S]*grid-template-columns: 24px 40px minmax\(42px, 1fr\) 38px minmax\(0, 1fr\) 24px/);
+  assert.match(css, /\.page-control\s*\{[\s\S]*grid-template-columns: 32px 46px minmax\(0, 1fr\) 32px/);
+  assert.match(css, /\.page-control > button:last-child\s*\{ grid-column: 4; grid-row: 2;/);
   const statusBlock = css.slice(css.indexOf(".reader-processing-status {"), css.indexOf(".reader-processing-status strong"));
   assert.match(statusBlock, /position: relative/);
   assert.doesNotMatch(statusBlock, /position: sticky/);

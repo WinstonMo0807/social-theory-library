@@ -256,6 +256,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/media/collection/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_media_collection_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/people/": {
         parameters: {
             query?: never;
@@ -741,6 +757,42 @@ export interface components {
             readonly updated_at: string;
             readonly renditions: components["schemas"]["MediaRendition"][];
         };
+        MediaCollection: {
+            count: number;
+            page: number;
+            page_size: number;
+            pages: number;
+            results: components["schemas"]["MediaAsset"][];
+        };
+        MediaDetail: {
+            /** Format: uuid */
+            readonly id: string;
+            media_type: string;
+            source_type?: components["schemas"]["MediaSourceTypeEnum"];
+            source_url?: string;
+            source_label?: string;
+            rights?: string;
+            license?: string;
+            credit?: string;
+            alt_text?: string;
+            /** Format: int64 */
+            width: number;
+            /** Format: int64 */
+            height: number;
+            checksum: string;
+            /** Format: int64 */
+            byte_size: number;
+            /** Format: double */
+            focal_x?: number;
+            /** Format: double */
+            focal_y?: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly renditions: components["schemas"]["MediaRendition"][];
+            readonly references: unknown;
+        };
         MediaRendition: {
             /** Format: uuid */
             readonly id: string;
@@ -808,9 +860,11 @@ export interface components {
         /**
          * @description * `knowledge_node` - knowledge_node
          *     * `reading_path` - reading_path
+         *     * `discipline` - discipline
+         *     * `subdiscipline` - subdiscipline
          * @enum {string}
          */
-        ObjectTypeEnum: "knowledge_node" | "reading_path";
+        ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline";
         PaginatedWorkCardList: {
             /** @example 123 */
             count: number;
@@ -899,6 +953,7 @@ export interface components {
             rolled_back_at: string | null;
         };
         PersonMergePreviewResponse: {
+            business_impact?: unknown;
             version: string;
             fingerprint: string;
             source: unknown;
@@ -924,6 +979,9 @@ export interface components {
             context_impact?: unknown;
         };
         PersonMergeRecord: {
+            business_impact?: unknown;
+            source_name?: string;
+            target_name?: string;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1813,7 +1871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MediaAsset"];
+                    "application/json": components["schemas"]["MediaDetail"];
                 };
             };
         };
@@ -1868,6 +1926,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaRendition"];
+                };
+            };
+        };
+    };
+    catalog_admin_media_collection_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaCollection"];
                 };
             };
         };

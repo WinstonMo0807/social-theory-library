@@ -22,6 +22,7 @@ from catalog.models import (
     DerivedClaim,
     Discipline,
     EditorialRevision,
+    Edition,
     EnrichmentCandidate,
     EvidenceSnippet,
     EvidenceSpan,
@@ -250,7 +251,8 @@ class KnowledgeObjectEditorAdapter:
             )
         if object_type in {"discipline", "subdiscipline", "topic"}:
             return target.editorial_status == KnowledgePublicationStatus.PUBLISHED
-        return target.editions.filter(state=PublicationState.PUBLISHED).exists()
+        from catalog.services.publication_eligibility import public_edition_q
+        return target.editions.filter(public_edition_q(), is_primary=True).exists()
 
     @classmethod
     def _draft_target(cls, target_type: str, target, revision: EditorialRevision):
@@ -706,6 +708,8 @@ class KnowledgeObjectEditorAdapter:
                 "subdiscipline_relations",
             },
             "reading_path": {"stage_groups", "image_selection"},
+            "discipline": {"image_selection"},
+            "subdiscipline": {"image_selection"},
         }.get(object_type, set())
         unsupported = set(requested - supported)
         materialized = dict(data)
@@ -719,12 +723,13 @@ class KnowledgeObjectEditorAdapter:
                 continue
             try:
                 if field_name == "image_selection":
-                    from catalog.services.knowledge_media import image_media, validate_image_selection
+                    from catalog.services.knowledge_media import image_media, image_legacy_file, validate_image_selection
 
                     selected = validate_image_selection(target, value)
                     media = image_media(target, selection=selected, private=True)
                     materialized["cover_media"] = media
-                    materialized["cover_url"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else target.cover_asset.url if selected["legacy_path"] else ""
+                    image_url = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else image_legacy_file(target).url if selected["legacy_path"] else ""
+                    materialized["hero_image" if object_type in {"discipline", "subdiscipline"} else "cover_url"] = image_url
                     continue
                 if object_type in NODE_OBJECT_TYPES:
                     cls._node_special_overlay(
@@ -806,6 +811,12 @@ class KnowledgeObjectEditorAdapter:
 
         draft_target = cls._draft_target(target_type, target, revision)
         data = dict(serializer(draft_target).data)
+        if target_type in {"knowledge_relation", "timeline_event"}:
+            if target_type == "timeline_event":
+                from catalog.services.relation_editorial import serialize_timeline_draft
+                data["relations"] = serialize_timeline_draft(target, revision, serializer(draft_target).context)
+            data["editorial_revision"] = serialize_editorial_revision(revision)
+            return data
         object_type = next((name for name, kind in cls.TARGET_TYPES.items() if kind == target_type), None)
         if object_type is None:
             raise ValueError("该对象的编辑草稿暂不能安全显示，请返回编辑版本查看。")
@@ -858,7 +869,24 @@ class KnowledgeObjectEditorAdapter:
                     unsupported_fields,
                 )
             target = cls._draft_target(cls.TARGET_TYPES[object_type], target, revision)
-        serialized = dict(serializer_class(target, context={}).data)
+        if object_type == "topic":
+            # The real Topic endpoint adds approved works, scholars and
+            # passages after its base serializer. Reuse that same producer,
+            # rather than reporting a registered but empty preview module.
+            from django.contrib.auth.models import AnonymousUser
+            from django.test import RequestFactory
+            from catalog.views import TopicDetailView
+            request = RequestFactory().get(f"/api/catalog/topics/{target.slug}/")
+            request.user = AnonymousUser()
+            view = TopicDetailView()
+            view.request, view.format_kwarg, view.kwargs = request, None, {}
+            serialized = dict(view.public_payload(target, request))
+        else:
+            serialized = dict(serializer_class(target, context={}).data)
+        if object_type == "theory":
+            secondary = _theory_secondary_preview(object_id=str(target.pk), active_data=serialized)
+            serialized["timeline"] = secondary["timeline"]
+            serialized["reading_paths"] = secondary["reading_paths"]
         if revision is not None:
             serialized, unsupported_fields = cls._special_overlay(
                 object_type=object_type,
@@ -993,7 +1021,7 @@ class KnowledgeObjectEditorAdapter:
         impact["public_serializer"] = serializer_name
         impact["modules"] = [row["label"] for row in modules]
         impact["module_readiness"] = modules
-        if object_type in {"scholar", "theory", "topic"}:
+        if object_type in {"scholar", "theory", "topic", "work", "reading_path", "discipline", "subdiscipline"}:
             from catalog.services.public_knowledge_control import (
                 build_public_control,
             )
@@ -1165,19 +1193,21 @@ def _catalog_work_queryset() -> QuerySet[Work]:
     return Work.objects.all()
 
 
-def _work_status(work: Work) -> str:
-    states = [edition.state for edition in work.editions.all()]
-    if PublicationState.PUBLISHED in states:
+def _work_status(work: Work, *, editions=None) -> str:
+    from catalog.services.publication_commands import catalog_publication_state
+    editions = list(work.editions.all()) if editions is None else editions
+    publication = [catalog_publication_state(edition) for edition in editions]
+    if any(row["catalog_revision_active"] for row in publication):
         return PublicationState.PUBLISHED
-    if PublicationState.READY in states:
-        return PublicationState.READY
-    if states and all(state == PublicationState.WITHDRAWN for state in states):
+    if any(row["public_state"] == "publishing" for row in publication):
+        return "publishing"
+    if publication and all(row["public_state"] == "withdrawn" for row in publication):
         return PublicationState.WITHDRAWN
-    return PublicationState.DRAFT
+    return "unpublished"
 
 
 def _work_directory(query: str, limit: int) -> list[dict[str, Any]]:
-    queryset = _catalog_work_queryset().prefetch_related("editions")
+    queryset = _catalog_work_queryset().prefetch_related(Prefetch("editions", queryset=Edition.objects.select_related("active_catalog_revision").prefetch_related("catalog_revisions")))
     if query:
         queryset = queryset.filter(
             Q(title__icontains=query)
@@ -2742,16 +2772,17 @@ def _reading_path_selection(path: ReadingPath) -> dict[str, Any]:
 
 
 def _work_selection(work: Work) -> dict[str, Any]:
+    from catalog.services.publication_commands import catalog_publication_state
     editions = list(
-        work.editions.prefetch_related("contributions__person").order_by(
+        work.editions.select_related("active_catalog_revision").prefetch_related("contributions__person", "catalog_revisions").order_by(
             "-published_at", "-publication_year", "-created_at"
         )
     )
     published_edition = next(
-        (row for row in editions if row.state == PublicationState.PUBLISHED),
+        (row for row in editions if catalog_publication_state(row)["listed_publicly"]),
         None,
     )
-    primary_edition = published_edition or (editions[0] if editions else None)
+    primary_edition = published_edition or next((row for row in editions if row.is_primary), None) or (editions[0] if editions else None)
     canonical = {
         "title": work.title,
         "subtitle": work.subtitle,
@@ -2848,7 +2879,7 @@ def _work_selection(work: Work) -> dict[str, Any]:
             ]
         ).order_by("-confidence", "created_at")[:MAX_SECTION_ROWS]
     )
-    status_value = _work_status(work)
+    status_value = _work_status(work, editions=editions)
     public_url = (
         f"/works/{published_edition.public_slug}"
         if published_edition and published_edition.public_slug
@@ -2900,6 +2931,7 @@ def _work_selection(work: Work) -> dict[str, Any]:
         "object_type": "work",
         "label": work.title,
         "status": status_value,
+        "publication_detail": "有合法公开版本，但没有主版本作为作品列表入口。" if status_value == "published" and published_edition is None else "尚无有效公开修订，不能从发布决定推断已公开。" if status_value == "publishing" else "",
         "canonical": _bounded_json(canonical),
         "relations": relations[: MAX_SECTION_ROWS * 3],
         "evidence": _claim_evidence(
@@ -3024,6 +3056,8 @@ def _selection(
         selection=selection,
     )
     selection["field_assistant_values"] = _assistant_field_values(object_type, target, selection)
+    if assistant_target is not None:
+        selection["assistance_usage"] = _assistance_usage(*assistant_target)
     knowledge_updates = _knowledge_update_bundle(
         object_type=object_type,
         target=target,
@@ -3042,6 +3076,51 @@ def _selection(
         )
     }
     return selection
+
+
+def _assistance_usage(target_type, target_id):
+    """Count existing field-candidate records, never private reader activity.
+
+    This deliberately names its scope and unknowns: candidate adoption is not
+    accuracy, event timestamps are not active editing time, and overwritten
+    candidate values cannot prove whether adoption included a modification.
+    """
+    from django.db.models import Count, Min, Max
+    from django.utils import timezone
+    from ingestion.models import AuditEvent
+
+    candidates = EnrichmentCandidate.objects.filter(target_type=target_type, target_id=target_id)
+    counts = dict(candidates.values("status").annotate(total=Count("pk")).values_list("status", "total"))
+    actions = ("accept_field_enrichment_candidate", "reject_field_enrichment_candidate", "field_prefill_modified_adoption", "field_prefill_removed", "field_prefill_removed_or_edited")
+    events = AuditEvent.objects.filter(
+        object_type="catalog.EnrichmentCandidate", object_id__in=[str(value) for value in candidates.values_list("id", flat=True)], action__in=actions,
+    ).order_by("-created_at", "-pk")
+    period = candidates.aggregate(first=Min("created_at"), last=Max("updated_at"))
+    accepted, rejected = counts.get("accepted", 0), counts.get("rejected", 0)
+    return {
+        "scope": "当前对象的字段补全候选记录（EnrichmentCandidate），不含私人阅读数据或未登记来源",
+        "target_type": target_type, "target_id": str(target_id), "generated_at": timezone.now(),
+        "period_start": period["first"], "period_end": period["last"], "total": sum(counts.values()),
+        "counts": counts, "reviewed": accepted + rejected,
+        "acceptance": {"numerator": accepted, "denominator": accepted + rejected, "is_accuracy": False},
+        "modified_adoptions": events.filter(action="field_prefill_modified_adoption").values("object_id").distinct().count(),
+        "removed_prefills": events.filter(action="field_prefill_removed").values("object_id").distinct().count(),
+        "unclassified_prefill_changes": events.filter(action="field_prefill_removed_or_edited").values("object_id").distinct().count(),
+        "withdrawals": None, "sample_reviews": None,
+        "active_time_seconds": None, "verified_cost": None,
+        "unknown_reason": "修改后采用与不再使用仅统计管理员明确记录的候选，各自按候选去重；旧的修改或移除记录不作推断。撤回、抽检、人工耗时或计费缺乏可靠记录，显示无数据。",
+        "event_count": events.count(), "event_limit": 20,
+        "events": [{"id": str(row.pk), "candidate_id": row.object_id, "action": row.action,
+                    "created_at": row.created_at,
+                    "record_url": f"/catalog/admin/field-enrichment/candidates/{row.object_id}/"}
+                   for row in events[:20]],
+        "candidate_records": [{"id": str(row.pk), "field": row.field_name, "status": row.status,
+                               "source": row.source_class, "reviewed_at": row.reviewed_at,
+                               "reason": row.review_reason,
+                               "record_url": f"/catalog/admin/field-enrichment/candidates/{row.pk}/"}
+                              for row in candidates.order_by("-updated_at", "-pk")[:20]],
+        "page_load_performs_live_probes": False,
+    }
 
 
 def knowledge_object_editor_snapshot(

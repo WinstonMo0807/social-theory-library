@@ -29,6 +29,9 @@ from catalog.models import (
 )
 from catalog.services.recommendations import current_snapshot, generate_snapshot
 from .v304_helpers import activate_catalog_revision
+from .test_recommendation_commands_v306 import command as recommendation_command
+
+from .editorial_fixtures import editorial_request
 
 
 def create_published_work(title: str, document_type: str, year: int):
@@ -99,6 +102,7 @@ def test_recommendations_are_shared_rotate_together_and_accept_all_document_type
     manual = api_client.post(
         "/api/catalog/admin/recommendations/home_featured/refresh/",
         {
+            **recommendation_command(policy),
             "items": [
                 {"target_type": "work", "id": str(works[3].id)},
                 {"target_type": "work", "id": str(works[0].id)},
@@ -151,6 +155,7 @@ def test_scholar_recommendations_preserve_manual_order_and_reject_invalid_items(
     manual = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
         {
+            **recommendation_command(policy),
             "items": [
                 {"target_type": "scholar", "id": str(identifier)}
                 for identifier in ordered_ids
@@ -178,6 +183,7 @@ def test_scholar_recommendations_preserve_manual_order_and_reject_invalid_items(
     duplicate = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
         {
+            **recommendation_command(policy),
             "items": [
                 {"target_type": "scholar", "id": str(scholars[0].id)},
                 {"target_type": "scholar", "id": str(scholars[0].id)},
@@ -191,6 +197,7 @@ def test_scholar_recommendations_preserve_manual_order_and_reject_invalid_items(
     too_many = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
         {
+            **recommendation_command(policy),
             "items": [
                 {"target_type": "scholar", "id": str(scholar.id)}
                 for scholar in scholars
@@ -203,7 +210,7 @@ def test_scholar_recommendations_preserve_manual_order_and_reject_invalid_items(
 
     unpublished = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
-        {"items": [{"target_type": "scholar", "id": str(draft.id)}]},
+        {**recommendation_command(policy), "items": [{"target_type": "scholar", "id": str(draft.id)}]},
         format="json",
     )
     assert unpublished.status_code == 400
@@ -211,7 +218,7 @@ def test_scholar_recommendations_preserve_manual_order_and_reject_invalid_items(
 
     wrong_type = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
-        {"items": [{"target_type": "work", "id": str(scholars[0].id)}]},
+        {**recommendation_command(policy), "items": [{"target_type": "work", "id": str(scholars[0].id)}]},
         format="json",
     )
     assert wrong_type.status_code == 400
@@ -250,7 +257,8 @@ def test_archived_scholar_is_removed_while_valid_manual_priority_is_preserved(
             "items": [
                 {"target_type": "scholar", "id": str(scholars[0].id)},
                 {"target_type": "scholar", "id": str(scholars[1].id)},
-            ]
+            ],
+            **recommendation_command(policy),
         },
         format="json",
     )
@@ -321,7 +329,7 @@ def test_admin_random_scholar_refresh_is_automatic_and_due_rotation_is_stable(
 
     refreshed = api_client.post(
         "/api/catalog/admin/recommendations/home_scholars/refresh/",
-        {},
+        recommendation_command(policy),
         format="json",
     )
     assert refreshed.status_code == 200
@@ -521,7 +529,7 @@ def test_admin_can_upload_scholar_portrait(api_client, admin_user, tmp_path, set
         output.getvalue(),
         content_type="image/png",
     )
-    updated = api_client.patch(
+    updated = editorial_request(api_client, "patch",
         f"/api/catalog/admin/scholars/{created.data['id']}/",
         {"portrait": portrait},
         format="multipart",

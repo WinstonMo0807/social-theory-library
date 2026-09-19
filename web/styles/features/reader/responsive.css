@@ -5,12 +5,7 @@
   }
 
   .reader-toolbar {
-    grid-template-columns: 160px 170px 110px minmax(150px, 1fr) 80px 170px 140px;
-  }
-
-  .page-control {
-    grid-template-columns: 22px 34px minmax(34px, 1fr) 30px minmax(0, 1fr) 22px;
-    padding-inline: 8px;
+    grid-template-columns: 100px 190px 104px minmax(140px, 1fr) 76px 168px 112px;
   }
 
   .reader-logo {
@@ -30,12 +25,7 @@
   }
 
   .reader-toolbar {
-    grid-template-columns: 120px 170px 110px 1fr 80px 150px;
-  }
-
-  .page-control {
-    grid-template-columns: 22px 34px minmax(34px, 1fr) 30px minmax(0, 1fr) 22px;
-    padding-inline: 8px;
+    grid-template-columns: 96px 184px 96px minmax(140px, 1fr) 72px 160px;
   }
 
   .reader-progress-top {
@@ -43,12 +33,15 @@
   }
 
   .reader-right {
-    position: fixed;
+    position: relative;
+    grid-area: document;
+    justify-self: end;
+    align-self: stretch;
     z-index: 190;
-    top: 96px;
-    right: 0;
-    bottom: 64px;
-    width: 300px;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: min(310px, 88vw);
     border-left: 1px solid var(--line);
     opacity: 0;
     pointer-events: none;
@@ -64,10 +57,6 @@
 
   .reader.right-closed .reader-right {
     transform: translateX(100%);
-  }
-
-  .open-panel.right {
-    display: grid;
   }
 
   .pdf-page {
@@ -91,31 +80,39 @@
     display: none;
   }
 
-  .annotation-composer {
-    right: 18px;
-  }
 }
 
 @media (max-width: 760px) {
   .reader {
     --reader-left: 0px;
+    --reader-toolbar-height: 102px;
+    --reader-bottom-height: calc(54px + env(safe-area-inset-bottom));
     grid-template:
-      "toolbar" 66px
+      "toolbar" minmax(var(--reader-toolbar-height), max-content)
       "document" minmax(0, 1fr)
-      "bottom" 54px
-      / 1fr;
+      "bottom" var(--reader-bottom-height)
+      / minmax(0, 1fr);
   }
 
   .reader-toolbar {
-    grid-template-columns: 54px 1fr auto;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: minmax(54px, auto) 46px;
+    padding-top: env(safe-area-inset-top);
   }
 
+  .reader-toolbar-tools { display: block; grid-column: 2; grid-row: 1; align-self: center; }
+  .reader-tools-toggle { display: block; min-width: 44px; min-height: 44px; padding: 4px; cursor: pointer; }
+  .reader-tool-groups { display: none; position: absolute; top: 100%; left: 8px; right: 8px; max-height: calc(100dvh - 176px); overflow: auto; overscroll-behavior: contain; padding: 10px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 12px 30px rgb(0 0 0 / 20%); }
+  .reader-tool-groups[data-open="true"] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .reader-tool-groups .zoom-control { min-height: 70px; grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .reader-tool-groups .zoom-control button { width: 44px; height: 44px; }
+  .reader-tool-groups .theme-control { min-height: 70px; }
+  .reader-tool-groups .reader-search-candidates { position: relative; width: 100%; max-height: 220px; }
+
   .annotation-composer {
-    top: auto;
-    right: 12px;
-    bottom: 66px;
-    left: 12px;
-    width: auto;
+    width: calc(100% - 24px);
+    max-height: calc(100% - 24px);
+    margin: 12px;
   }
 
   .annotation-composer > form {
@@ -123,21 +120,15 @@
     overflow-y: auto;
   }
 
-  .reader-logo,
-  .zoom-control,
-  .reader-search,
-  .theme-control,
-  .reader-actions span {
+  .reader-logo {
     display: none;
   }
 
   .page-control {
-    grid-template-columns: auto 34px auto auto;
+    grid-column: 1;
+    grid-row: 1;
+    padding: 8px;
     border-left: 0;
-  }
-
-  .page-control .reader-printed-page {
-    display: none;
   }
 
   .page-control > span:first-child {
@@ -145,25 +136,30 @@
   }
 
   .reader-actions {
-    grid-column: 3;
+    grid-column: 1 / -1;
+    grid-row: 2;
     border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .reader-actions a,
   .reader-actions button {
-    width: 42px;
-  }
-
-  .reader-actions button:nth-child(3) {
-    display: none;
+    width: auto;
+    min-height: 44px;
+    flex-direction: row;
+    gap: 5px;
+    overflow: visible;
   }
 
   .reader-left {
-    position: fixed;
+    position: relative;
+    grid-area: document;
+    justify-self: start;
+    align-self: stretch;
     z-index: 190;
-    top: 66px;
-    bottom: 54px;
-    left: 0;
+    top: auto;
+    bottom: auto;
+    left: auto;
     width: min(320px, 88vw);
     opacity: 0;
     pointer-events: none;
@@ -220,25 +216,17 @@
   }
 
   .reader-bottom > div .continuous-mode-indicator {
-    width: 30px;
-    padding: 0;
+    width: auto;
+    padding: 0 4px;
     justify-content: center;
   }
 
   .reader-bottom > div .continuous-mode-indicator {
-    overflow: hidden;
-    font-size: 0;
+    font-size: 10px;
   }
 
   .reader-bottom > div .continuous-mode-indicator svg {
     flex: none;
   }
 
-  .open-panel {
-    top: 76px;
-  }
-
-  .open-panel.right {
-    display: none;
-  }
 }

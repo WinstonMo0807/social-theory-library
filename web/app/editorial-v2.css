@@ -2480,7 +2480,7 @@
 
 [data-ui-scope="editorial-v2"] .scholar-timeline > p {
   display: grid;
-  grid-template-columns: 70px 1fr;
+  grid-template-columns: 70px minmax(0, 1fr);
   gap: 10px;
   padding: 12px 0;
   border-bottom: 1px solid var(--stl2-line);
@@ -2492,6 +2492,7 @@
 }
 
 [data-ui-scope="editorial-v2"] .scholar-quote {
+  display: flex;
   grid-column: 2 / -1;
   margin: 0;
   padding: 30px 0 0;
@@ -2560,6 +2561,7 @@
 
 [data-ui-scope="editorial-v2"] :where(.theory-profile-copy, .topic-problem-hero > div:first-child, .subdiscipline-hero > div:first-child) {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   justify-content: center;
   padding: clamp(38px, 5vw, 72px);
@@ -2716,10 +2718,28 @@
 
 [data-ui-scope="editorial-v2"] :where(.timeline-detail-list, .definition-list) > article {
   display: grid;
-  grid-template-columns: minmax(80px, 0.22fr) minmax(160px, 0.5fr) minmax(0, 1.28fr);
   gap: 20px;
   padding: 22px 0;
   border-bottom: 1px solid var(--stl2-line);
+}
+
+/* Timeline rows have two children, definitions have three plus a source.
+   These structures cannot share column placement, including narrow screens. */
+[data-ui-scope="editorial-v2"] .timeline-detail-list > article {
+  grid-template-columns: minmax(56px, 0.18fr) minmax(0, 1fr);
+}
+
+[data-ui-scope="editorial-v2"] .definition-list > article {
+  grid-template-columns: 44px minmax(140px, 0.45fr) minmax(0, 1fr);
+}
+
+[data-ui-scope="editorial-v2"] :where(.timeline-detail-list, .definition-list) > article > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+[data-ui-scope="editorial-v2"] .definition-list > article > small {
+  grid-column: 2 / -1;
 }
 
 [data-ui-scope="editorial-v2"] .secondary-link-list > a {
@@ -2768,10 +2788,13 @@
   }
 
   [data-ui-scope="editorial-v2"] .work-hero,
-  [data-ui-scope="editorial-v2"] .scholar-detail .scholar-hero,
-  [data-ui-scope="editorial-v2"] :where(.theory-profile-hero, .topic-problem-hero, .subdiscipline-hero),
   [data-ui-scope="editorial-v2"] .work-body {
     grid-template-columns: 1fr;
+  }
+
+  [data-ui-scope="editorial-v2"] .scholar-detail .scholar-hero,
+  [data-ui-scope="editorial-v2"] :where(.theory-profile-hero, .topic-problem-hero, .subdiscipline-hero) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   [data-ui-scope="editorial-v2"] .work-hero > .book-cover.large {
@@ -2826,12 +2849,16 @@
     margin-inline: 8px;
   }
 
-  [data-ui-scope="editorial-v2"] :where(.timeline-detail-list, .definition-list) > article {
-    grid-template-columns: 56px 1fr;
+  [data-ui-scope="editorial-v2"] .timeline-detail-list > article {
+    grid-template-columns: 56px minmax(0, 1fr);
   }
 
-  [data-ui-scope="editorial-v2"] :where(.timeline-detail-list, .definition-list) > article > p {
-    grid-column: 1 / -1;
+  [data-ui-scope="editorial-v2"] .definition-list > article {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  [data-ui-scope="editorial-v2"] .definition-list > article > :where(p, small) {
+    grid-column: 2;
   }
 }
 
@@ -2925,6 +2952,7 @@
 [data-ui-scope="editorial-v2"] :where(.theory-system-home-hero, .theory-discipline-hero, .theory-node-hero, .reading-path-hero, .theory-timeline-hero) > div:first-child,
 [data-ui-scope="editorial-v2"] .theory-node-intro {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   justify-content: center;
   padding: clamp(38px, 5.5vw, 78px);

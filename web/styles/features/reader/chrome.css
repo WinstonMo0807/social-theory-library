@@ -2,14 +2,16 @@
 .reader {
   --reader-left: 330px;
   --reader-right: 330px;
+  --reader-toolbar-height: 96px;
+  --reader-bottom-height: 64px;
   position: fixed;
   inset: 0;
   z-index: 150;
   display: grid;
   grid-template:
-    "toolbar toolbar toolbar" 96px
+    "toolbar toolbar toolbar" minmax(var(--reader-toolbar-height), max-content)
     "left document right" minmax(0, 1fr)
-    "bottom bottom bottom" 64px
+    "bottom bottom bottom" var(--reader-bottom-height)
     / var(--reader-left) minmax(420px, 1fr) var(--reader-right);
   background: #f6f6f3;
   color: var(--ink);
@@ -20,6 +22,7 @@
 .reader.right-closed { --reader-right: 0px; }
 
 .reader.dark {
+  color-scheme: dark;
   --paper: #1b1b1a;
   --surface: #242423;
   --ink: #ededeb;
@@ -34,7 +37,7 @@
   z-index: 220;
   grid-area: toolbar;
   display: grid;
-  grid-template-columns: 280px 180px 130px minmax(190px, 1fr) 90px 200px 190px;
+  grid-template-columns: minmax(96px, .8fr) 200px 112px minmax(160px, 1.5fr) 80px 180px 120px;
   align-items: stretch;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
@@ -64,18 +67,26 @@
 }
 
 .toolbar-group {
+  position: relative;
   display: grid;
-  grid-template-columns: 24px 40px minmax(42px, 1fr) 38px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 4px;
-  padding: 12px 10px;
+  padding: 8px;
 }
 
 .page-control {
-  grid-template-columns: 24px 40px minmax(42px, 1fr) 38px minmax(0, 1fr) 24px;
+  grid-template-columns: 32px 46px minmax(0, 1fr) 32px;
+  align-content: center;
 }
 
-.toolbar-group > span:first-child,
+.page-control > button:first-of-type { grid-column: 1; grid-row: 2; }
+.page-control input { grid-column: 2; grid-row: 2; }
+.page-control > span:nth-of-type(2) { grid-column: 3; grid-row: 2; }
+.page-control > button:last-child { grid-column: 4; grid-row: 2; }
+.toolbar-group > span:first-child { grid-column: 1 / -1; grid-row: 1; margin: 0; color: var(--muted); font-size: calc(9px + var(--font-bump)); }
+.reader-toolbar-tools, .reader-tool-groups { display: contents; }
+.reader-tools-toggle { display: none; }
+
 .reader-search > span,
 .theme-control > span,
 .reader-progress-top > span {
@@ -88,17 +99,17 @@
 
 .toolbar-group button {
   display: grid;
-  width: 25px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   place-items: center;
 }
 
 .page-control input {
-  width: 42px;
+  width: 46px;
   max-width: 100%;
   height: 30px;
-  margin-top: 18px;
+  margin-top: 0;
   border: 1px solid var(--line);
   background: transparent;
   text-align: center;
@@ -106,25 +117,28 @@
 
 .page-control > span:nth-of-type(2),
 .page-control button {
-  margin-top: 18px;
+  margin-top: 0;
   white-space: nowrap;
   font-size: calc(9px + var(--font-bump));
 }
 
 .page-control .reader-printed-page {
+  grid-column: 1 / -1;
+  grid-row: 3;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .zoom-control {
-  grid-template-columns: auto auto 42px auto;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
 }
 
 .zoom-control button,
 .zoom-control b {
-  margin-top: 18px;
+  margin-top: 0;
 }
 
 .zoom-control b {
@@ -140,6 +154,8 @@
   justify-content: center;
   padding: 12px 18px;
 }
+
+.reader-search > span { top: 8px; left: 18px; margin-top: 0; }
 
 .reader-search-field {
   min-width: 0;
@@ -275,24 +291,27 @@
 }
 
 .theme-control {
+  position: relative;
   display: grid;
   min-width: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
+  align-content: center;
   justify-content: stretch;
   gap: 2px;
-  padding-inline: 4px;
+  padding: 22px 4px 8px;
 }
 
 .theme-control > span {
-  margin-left: -4px;
+  top: 8px;
+  left: 4px;
+  margin: 0;
 }
 
 .theme-control button {
   display: grid;
   width: 34px;
   height: 34px;
-  margin-top: 18px;
+  margin-top: 0;
   border: 1px solid var(--line);
   cursor: pointer;
   place-items: center;
@@ -329,6 +348,7 @@
 }
 
 .reader-progress-top {
+  position: relative;
   min-width: 0;
   padding-inline: 10px;
 }
@@ -427,10 +447,13 @@
 
 .current-book {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 64px minmax(0, 1fr);
   gap: 14px;
   padding: 48px 20px 20px;
 }
+
+.current-book > *, .reader-right section > *, .outline-list button > * { min-width: 0; overflow-wrap: anywhere; }
+.reader-progress-top > span { top: 8px; left: 10px; margin: 0; }
 
 .current-book .book-cover {
   width: 60px;

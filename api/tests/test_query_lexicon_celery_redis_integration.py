@@ -207,7 +207,7 @@ class CeleryRedisRuntime:
 
 
 @pytest.fixture
-def celery_redis_runtime(tmp_path):
+def celery_redis_runtime(tmp_path, settings, monkeypatch):
     if connection.vendor != "postgresql":
         pytest.skip("requires PostgreSQL")
     redis_server = os.getenv("QUERY_LEXICON_TEST_REDIS_SERVER", "").strip()
@@ -230,6 +230,15 @@ def celery_redis_runtime(tmp_path):
             "PYTHONIOENCODING": "utf-8",
         }
     )
+    # The parent publisher and child worker must share this isolated broker.
+    # The suite-wide memory:// broker cannot communicate across processes.
+    # Celery Settings.broker_url explicitly gives the process environment
+    # priority over app.conf, including after Django override_settings.
+    monkeypatch.setenv("CELERY_BROKER_URL", environment["CELERY_BROKER_URL"])
+    settings.CELERY_BROKER_URL = environment["CELERY_BROKER_URL"]
+    monkeypatch.setitem(celery_app.conf, "broker_url", environment["CELERY_BROKER_URL"])
+    celery_app.close()
+    assert celery_app.connection_for_write().as_uri() == f"redis://127.0.0.1:{redis_port}/14"
     ensure_query_lexicon_state()
     runtime = CeleryRedisRuntime(
         redis_server=Path(redis_server),
@@ -237,10 +246,10 @@ def celery_redis_runtime(tmp_path):
         temp_dir=tmp_path,
         environment=environment,
     )
-    runtime.start_redis()
-    runtime.start_worker()
-    runtime.start_beat()
     try:
+        runtime.start_redis()
+        runtime.start_worker()
+        runtime.start_beat()
         yield runtime
     finally:
         runtime.close()

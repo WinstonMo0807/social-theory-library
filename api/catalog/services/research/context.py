@@ -10,6 +10,7 @@ from django.db.models import Q
 from catalog.models import (
     Asset,
     CanonicalObjectRevision,
+    DocumentType,
     Edition,
     EnrichmentCandidate,
     KnowledgePublicationStatus,
@@ -408,7 +409,7 @@ def build_research_context(
         "work_id": str(edition.work_id),
         "edition_id": str(edition.id),
         "upload_item_id": str(item.id) if item else None,
-        "document_type": edition.work.document_type,
+        "document_type": str((draft.get("work") or {}).get("document_type") or edition.work.document_type) if str((draft.get("work") or {}).get("document_type") or edition.work.document_type) in DocumentType.values else edition.work.document_type,
         "active_step": str(active_step or "work").strip().casefold(),
         "persisted_data": _json_value(persisted),
         "draft_data": draft,
@@ -426,8 +427,16 @@ def build_research_context(
         "trigger_input_values": trigger_input_values,
         "trigger_input_hash": trigger_input_hash,
     }
+    def stable_workflow(value):
+        # Display evaluation timestamps are observations, not new source
+        # content. Keep all actual state, versions and modified-at values.
+        if isinstance(value, dict):
+            return {key: stable_workflow(item) for key, item in value.items() if key not in {"evaluated_at", "generated_at"}}
+        if isinstance(value, list):
+            return [stable_workflow(item) for item in value]
+        return value
     fingerprint = sha256(
-        json.dumps(base, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        json.dumps({**base, "workflow_status": stable_workflow(base["workflow_status"])}, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
     ).hexdigest()
     return ResearchContext(
         work_id=base["work_id"],

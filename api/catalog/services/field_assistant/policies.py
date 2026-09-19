@@ -23,6 +23,7 @@ class AssistantFieldPolicy:
     query_context_fields: tuple[str, ...] = (
         "title",
         "original_title",
+        "authors",
         "isbn",
         "publisher",
         "publication_year",

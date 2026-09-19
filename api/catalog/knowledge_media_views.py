@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.media_views import PublicCoverMediaSerializer
 from catalog.models import EditorialRevision, MediaAsset
-from catalog.services.knowledge_media import TARGETS, image_fingerprint, image_media, image_selection, select_knowledge_image, validate_image_selection
+from catalog.services.knowledge_media import TARGETS, image_fingerprint, image_media, image_selection, image_legacy_file, select_knowledge_image, validate_image_selection
 from catalog.theory_system_views import TheorySystemFeatureMixin
 from common.permissions import CanAccessBackOffice, IsKnowledgeEditor
 
@@ -21,7 +21,7 @@ class KnowledgeImageRequestSerializer(serializers.Serializer):
 
 
 class KnowledgeImageStateSerializer(serializers.Serializer):
-    object_type = serializers.ChoiceField(choices=["knowledge_node", "reading_path"])
+    object_type = serializers.ChoiceField(choices=list(TARGETS))
     object_id = serializers.UUIDField()
     name = serializers.CharField()
     media = PublicCoverMediaSerializer(allow_null=True)
@@ -37,7 +37,7 @@ def image_target(object_type, object_id, *, public=False):
         raise NotFound("不支持的图片对象。")
     query = TARGETS[object_type].objects.all()
     if public:
-        query = query.filter(status="published")
+        query = query.filter(**{"editorial_status" if object_type in {"discipline", "subdiscipline"} else "status": "published"})
     return get_object_or_404(query, pk=object_id)
 
 
@@ -46,10 +46,10 @@ def image_state(target, object_type):
     selection = (draft.materialized_preview.get("image_selection") if draft else None) or image_selection(target)
     selection = validate_image_selection(target, selection)
     media = image_media(target, selection=selection, private=True)
-    url = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else target.cover_asset.url if selection["legacy_path"] else ""
-    return {"object_type": object_type, "object_id": target.pk, "name": getattr(target, "canonical_name_zh", getattr(target, "title", "")), "media": media, "preview_url": url,
+    url = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else image_legacy_file(target).url if selection["legacy_path"] else ""
+    return {"object_type": object_type, "object_id": target.pk, "name": getattr(target, "name", getattr(target, "canonical_name_zh", getattr(target, "title", ""))), "media": media, "preview_url": url,
             "editorial_revision_id": draft.pk if draft else None, "canonical_write_deferred": draft is not None, "fingerprint": image_fingerprint(target, draft),
-            "editor_url": f"/admin/theory-nodes?node={target.pk}" if object_type == "knowledge_node" else f"/admin/reading-paths?path={target.pk}"}
+            "editor_url": {"knowledge_node": f"/admin/theory-nodes?node={target.pk}", "reading_path": f"/admin/reading-paths?path={target.pk}", "discipline": f"/admin/disciplines?discipline={target.pk}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target.pk}"}[object_type]}
 
 
 class KnowledgeImageSelectionView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):

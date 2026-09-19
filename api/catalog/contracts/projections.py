@@ -69,6 +69,9 @@ FIELD_PROJECTION_DEPENDENCIES: dict[str, dict[str, tuple[str, ...]]] = {
         # Edition.  Work-owned fields therefore have explicit Edition aliases.
         "catalog_publish": ALL_PROJECTIONS,
         "catalog_withdraw": ALL_PROJECTIONS,
+        # A primary selection changes which existing Edition serves the Work
+        # listing and its derived consumers; it never triggers a global index.
+        "is_primary": ALL_PROJECTIONS,
         "cover": ("public",),
         "cover_rendition": ("public",),
         "recommendation_image": ("public",),

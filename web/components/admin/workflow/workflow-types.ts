@@ -96,6 +96,8 @@ export type WorkflowCandidate = {
 };
 
 export type WorkflowPayload = {
+  publication?: Record<string, unknown>;
+  editing?: Record<string, unknown>;
   health?: Record<string, string>;
   mode: "intake" | "maintenance";
   context: WorkflowContext;

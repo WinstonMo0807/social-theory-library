@@ -7,7 +7,7 @@ import type {
 } from "pdfjs-dist/types/src/display/api";
 import type { TextLayer } from "pdfjs-dist/types/src/display/text_layer";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { CanonicalBlock, PageHighlight } from "./pdf-canvas";
 
 const pdfWorkerUrl = "/pdfjs/pdf.worker.min.js";
@@ -70,6 +70,7 @@ function ContinuousPdfPage({
   onRequestPage,
   onNoteSelect,
   onNoteDelete,
+  onRetry,
 }: {
   pdfDocument: PDFDocumentProxy;
   pageNumber: number;
@@ -83,13 +84,11 @@ function ContinuousPdfPage({
   onRequestPage: (page: number) => void;
   onNoteSelect: (annotationId: string) => void;
   onNoteDelete: (annotationId: string) => void;
+  onRetry?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   const [naturalSize, setNaturalSize] = useState<PageSize>(fallbackSize);
-  const [renderedSize, setRenderedSize] = useState<PageSize>(
-    fittedSize(fallbackSize, availableWidth, zoom),
-  );
   const [status, setStatus] = useState("");
   const [failure, setFailure] = useState("");
   const [useOcrTextLayer, setUseOcrTextLayer] = useState(false);
@@ -131,10 +130,7 @@ function ContinuousPdfPage({
 
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
       setNaturalSize(nextNaturalSize);
-      setRenderedSize({ width: viewport.width, height: viewport.height });
       textContainer.replaceChildren();
       textContainer.style.setProperty("--total-scale-factor", String(viewport.scale));
       setUseOcrTextLayer(false);
@@ -186,7 +182,10 @@ function ContinuousPdfPage({
     };
   }, [active, availableWidth, onRequestPage, pageNumber, pdfDocument, preferOcrTextLayer, zoom]);
 
-  const displaySize = active ? renderedSize : targetSize;
+  // Rendering an offscreen page must not restore the dimensions it had on
+  // mount. That shrank earlier pages after a sidebar resize and moved jumps
+  // back by a page. The layout footprint always follows the current viewport.
+  const displaySize = targetSize;
   const scale = {
     x: displaySize.width / Math.max(overlay?.sourceWidth ?? 0, 1),
     y: displaySize.height / Math.max(overlay?.sourceHeight ?? 0, 1),
@@ -205,7 +204,7 @@ function ContinuousPdfPage({
         style={{ width: displaySize.width, height: displaySize.height }}
         aria-busy={Boolean(status)}
       >
-        {active ? <canvas ref={canvasRef} aria-label={`PDF 第 ${pageNumber} 页画布`} /> : null}
+        {active ? <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} aria-label={`PDF 第 ${pageNumber} 页画布`} /> : null}
         {active ? (
           <div
             className="textLayer pdf-native-text-layer"
@@ -270,6 +269,7 @@ function ContinuousPdfPage({
           <div className="pdf-render-error" role="alert">
             <strong>第 {pageNumber} 页暂时无法显示</strong>
             <span>{failure}</span>
+            {onRetry ? <button type="button" onClick={onRetry}>重新加载这一页</button> : null}
           </div>
         ) : null}
       </div>
@@ -319,6 +319,7 @@ export function PdfContinuousViewer({
   onRequestPage,
   onNoteSelect,
   onNoteDelete,
+  onRetry,
 }: {
   url: string;
   pageCount: number;
@@ -332,10 +333,14 @@ export function PdfContinuousViewer({
   onRequestPage: (page: number) => void;
   onNoteSelect: (annotationId: string) => void;
   onNoteDelete: (annotationId: string) => void;
+  onRetry?: () => void;
 }) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [availableWidth, setAvailableWidth] = useState(720);
+  const [noteRailWidth, setNoteRailWidth] = useState(0);
+  const hasMarginNotes = Object.values(overlays).some(overlay => overlay.notes.length > 0);
   const [fallbackSize, setFallbackSize] = useState<PageSize>({ width: 612, height: 792 });
   const [nearPages, setNearPages] = useState<Set<number>>(
     () => new Set([Math.max(1, scrollRequest.page - 1), scrollRequest.page, scrollRequest.page + 1]),
@@ -354,7 +359,8 @@ export function PdfContinuousViewer({
     const viewer = viewerRef.current;
     if (!viewer) return;
     const updateWidth = () => {
-      const noteRail = viewer.clientWidth >= 720 ? 184 : 0;
+      const noteRail = hasMarginNotes && viewer.clientWidth >= 720 ? 184 : 0;
+      setNoteRailWidth(noteRail);
       setAvailableWidth(Math.max(viewer.clientWidth - noteRail, 280));
     };
     const frame = window.requestAnimationFrame(updateWidth);
@@ -364,7 +370,7 @@ export function PdfContinuousViewer({
       window.cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, []);
+  }, [hasMarginNotes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -404,7 +410,7 @@ export function PdfContinuousViewer({
       cancelled = true;
       void loadingTask?.destroy();
     };
-  }, [onDocumentLoad, url]);
+  }, [onDocumentLoad, url, loadAttempt]);
 
   const renderedPageCount = Math.max(pdfDocument?.numPages ?? 0, pageCount, 1);
   const pages = useMemo(
@@ -505,13 +511,14 @@ export function PdfContinuousViewer({
       <div className="reader-unavailable" role="alert">
         <strong>PDF 暂时无法显示</strong>
         <p>{failure}</p>
+        <button type="button" className="button secondary" onClick={() => { onRetry?.(); setLoadAttempt(value => value + 1); }}>重试加载 PDF</button>
         <a href={url}>直接打开 PDF</a>
       </div>
     );
   }
 
   return (
-    <div className="continuous-pdf-viewer" ref={viewerRef} aria-label="PDF 连续阅读区">
+    <div className="continuous-pdf-viewer" ref={viewerRef} aria-label="PDF 连续阅读区" data-note-rail={noteRailWidth > 0} style={{"--pdf-note-rail-width":`${noteRailWidth}px`} as CSSProperties}>
       {!pdfDocument ? <p className="continuous-pdf-loading" role="status">正在载入 PDF……</p> : null}
       {pdfDocument ? pages.map((pageNumber) => (
         <ContinuousPdfPage
@@ -527,6 +534,7 @@ export function PdfContinuousViewer({
           onRequestPage={onRequestPage}
           onNoteSelect={onNoteSelect}
           onNoteDelete={onNoteDelete}
+          onRetry={() => { onRetry?.(); setLoadAttempt(value => value + 1); }}
           key={pageNumber}
         />
       )) : null}

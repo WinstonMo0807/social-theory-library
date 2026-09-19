@@ -66,7 +66,7 @@ test("Processing Center 3.0.1 exposes product-oriented work surfaces", async () 
     readFile(diagnosticsUrl, "utf8"),
   ]);
 
-  for (const label of ["总览", "Research Sources", "AI 与模型", "OCR 与文档", "任务与 Worker", "Projection 一致性", "故障与恢复"]) {
+  for (const label of ["总览", "资料来源", "AI 与模型", "OCR 与文档", "后台任务", "公开内容更新", "故障与恢复"]) {
     assert.match(processingCenter, new RegExp(label));
   }
   assert.match(healthPanel, /<ResearchSourceRegistryPanel revision=\{revision\}/);

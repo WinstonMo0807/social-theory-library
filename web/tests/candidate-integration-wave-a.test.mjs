@@ -99,7 +99,7 @@ test("Wave A consumers share decisions and evidence while Admin Shell narrows no
   assert.match(inspector, /edited_value/);
   assert.match(shell, /const staffRoles = \["admin", "editor"\]/);
   assert.match(shell, /"\/admin\/processing": \["can_view_system_status"\]/);
-  assert.doesNotMatch(shell, /\["\/admin\/subdisciplines",/);
+  assert.match(shell, /\["\/admin\/subdisciplines",/);
   assert.doesNotMatch(shell, /\["系统高级",/);
   assert.doesNotMatch(shell, /\["\/admin\/query-lexicon", Search, "QueryLexicon"\]/);
   assert.doesNotMatch(shell, /\["\/admin\/semantic-index", ScanSearch, "语义索引"\]/);

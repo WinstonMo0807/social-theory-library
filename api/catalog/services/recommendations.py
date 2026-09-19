@@ -9,7 +9,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from catalog.models import (
-    PublicationState,
     RecommendationItem,
     RecommendationOverride,
     RecommendationPolicy,
@@ -82,8 +81,9 @@ def _target_kwargs(instance):
 def _queryset_for_policy(policy):
     target = PLACEMENT_TARGETS.get(policy.placement)
     if target == "work":
+        from catalog.services.publication_eligibility import public_edition_q
         return (
-            Work.objects.filter(editions__state=PublicationState.PUBLISHED)
+            Work.objects.filter(public_edition_q(prefix="editions"), editions__is_primary=True)
             .prefetch_related("editions__contributions__person", "editions__assets")
             .distinct()
             .order_by("id")
@@ -194,11 +194,9 @@ def _automatic_targets(policy, starts_at, *, preferred_targets=()):
     return (prioritized + pool)[: policy.item_count], seed, preferred_keys
 
 
-@transaction.atomic
-def generate_snapshot(policy, *, actor=None, selected_targets=None, source=None, now=None):
+def select_recommendation_targets(policy, *, selected_targets=None, now=None):
+    """The same selection rules serve preview and scheduled publication."""
     now = now or timezone.now()
-    policy = RecommendationPolicy.objects.select_for_update().get(pk=policy.pk)
-    RecommendationSnapshot.objects.filter(policy=policy, is_current=True).update(is_current=False)
     if selected_targets is None:
         targets, seed, manual_keys = _automatic_targets(policy, now)
     elif policy.placement == RecommendationPolicy.Placement.HOME_SCHOLARS:
@@ -224,6 +222,22 @@ def generate_snapshot(policy, *, actor=None, selected_targets=None, source=None,
             if len(targets) >= policy.item_count:
                 break
         seed = "manual-selection"
+    return targets, seed, manual_keys
+
+
+@transaction.atomic
+def generate_snapshot(policy, *, actor=None, selected_targets=None, source=None, now=None, previewed=False):
+    now = now or timezone.now()
+    policy = RecommendationPolicy.objects.select_for_update().get(pk=policy.pk)
+    if previewed:
+        targets = list(selected_targets or [])
+        allowed = {_target_key(target) for target in _queryset_for_policy(policy)}
+        if len(targets) > policy.item_count or any(_target_key(target) not in allowed for target in targets):
+            raise ValueError("预览中的内容已不符合公开推荐条件，请重新预览。")
+        seed, manual_keys = "confirmed-preview", {_target_key(target) for target in targets} if source == RecommendationSnapshot.Source.MANUAL else set()
+    else:
+        targets, seed, manual_keys = select_recommendation_targets(policy, selected_targets=selected_targets, now=now)
+    RecommendationSnapshot.objects.filter(policy=policy, is_current=True).update(is_current=False)
     source = source or (
         RecommendationSnapshot.Source.MANUAL
         if actor is not None or selected_targets is not None

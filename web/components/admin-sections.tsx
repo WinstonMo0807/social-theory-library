@@ -1,8 +1,9 @@
 "use client";
 
+import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
+
 import {
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
   Cloud,
   Database,
@@ -17,20 +18,23 @@ import {
   Save,
   Search,
   Server,
-  Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
+import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { useActionGuard } from "@/lib/use-action-guard";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
+import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
 import { TopicMergePanel } from "@/components/admin/curation/topic-merge-panel";
 import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
@@ -105,178 +109,11 @@ function useAdminResource<T>(path: string | null) {
   };
 }
 
-type AdminUploadItem = {
-  id: string;
-  source_filename: string;
-  status: string;
-  stage_progress: number;
-  error_message: string;
-  replacement_of_asset: string | null;
-  created_at: string;
-  review_data: null | {
-    title: string;
-    document_type: "book" | "journal_article" | "thesis" | "report";
-    publication_year: number | null;
-    authors: string[];
-    publication_state: string;
-    ocr_status: string;
-    semantic_index_status: string;
-    page_label_status: string;
-    public_slug: string | null;
-  };
-};
-
-const documentLabels = {
-  book: "图书",
-  journal_article: "期刊论文",
-  thesis: "学位论文",
-  report: "研究报告",
-};
-
-const uploadStatusLabels: Record<string, string> = {
-  received: "已接收",
-  validating: "校验中",
-  deduplicating: "查重中",
-  extracting: "提取文本",
-  ocr: "OCR 中",
-  metadata: "识别元数据",
-  linking: "建立关联",
-  indexing: "建立索引",
-  preparing_public_asset: "准备公开文件",
-  syncing_cloud: "同步云端",
-  ready: "可发布",
-  published: "已发布",
-  needs_review: "待复核",
-  failed: "失败",
-  withdrawn: "已下架",
-  deleted: "已删除",
-};
-
-export function LibraryAdmin({ initialQuery = "" }: { initialQuery?: string }) {
-  const [query, setQuery] = useState(initialQuery);
-  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
-  const [message, setMessage] = useState("");
-  const [replacing, setReplacing] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<{ item: AdminUploadItem; type: "withdraw" | "delete" } | null>(null);
-  const path = `/ingestion/items/?ordering=-created_at${submittedQuery ? `&search=${encodeURIComponent(submittedQuery)}` : ""}`;
-  const resource = useAdminResource<Paginated<AdminUploadItem>>(path);
-
-  async function action(item: AdminUploadItem, type: "retry" | "withdraw" | "delete") {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    try {
-      await apiRequest(
-        `/ingestion/items/${item.id}/${type}/`,
-        {
-          method: "POST",
-          body: type === "withdraw"
-            ? JSON.stringify({ reason: "管理员从馆藏后台下架" })
-            : type === "delete"
-              ? JSON.stringify({ confirmed: true })
-              : undefined,
-        },
-        token,
-      );
-      setMessage(type === "retry" ? "文件已进入重试队列。" : type === "withdraw" ? "文献已下架。" : "记录已移出馆藏和处理队列，NAS 文件仍保留。");
-      setPendingAction(null);
-      resource.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "操作失败。");
-    }
-  }
-
-  async function replacePdf(item: AdminUploadItem, file: File) {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    if (!window.confirm(`确认用“${file.name}”替换“${item.review_data?.title ?? item.source_filename}”的公开 PDF 吗？旧文件会保留，新文件处理完成前不会影响当前阅读。`)) return;
-    const body = new FormData();
-    body.append("file", file);
-    setReplacing(item.id);
-    try {
-      await apiRequest(
-        `/ingestion/items/${item.id}/replace/`,
-        { method: "POST", body },
-        token,
-      );
-      setMessage("替换文件已进入处理队列。新文件全部就绪后才会接管在线阅读。");
-      resource.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "替换文件提交失败。");
-    } finally {
-      setReplacing(null);
-    }
-  }
-
-  return (
-    <AdminPageFrame eyebrow="馆藏管理" title="馆藏项目" description="公开统计由已发布记录实时计算。每个 PDF 保留独立状态、错误与重试入口。">
-      <Toolbar
-        query={query}
-        onQueryChange={setQuery}
-        onSubmit={() => setSubmittedQuery(query.trim())}
-        createHref="/admin/uploads"
-        createLabel="批量上传"
-      />
-      {message ? <p className="form-message" role="status">{message}</p> : null}
-      <ResourceState loading={resource.loading} error={resource.error} empty={!resource.data?.results.length} />
-      {resource.data?.results.length ? (
-        <section className="admin-entity-table admin-panel">
-          <header><span>文献</span><span>类型</span><span>作者</span><span>年份</span><span>处理状态</span><span>操作</span></header>
-          {resource.data.results.map((item) => {
-            const metadata = item.review_data;
-            const published = metadata?.publication_state === "published" && metadata.public_slug;
-            const withdrawn = metadata?.publication_state === "withdrawn";
-            return (
-              <article key={item.id}>
-                <p><span className="mini-cover line" /><span><strong>{metadata?.title || item.source_filename}</strong><small>{item.source_filename}</small></span></p>
-                <span>{metadata ? documentLabels[metadata.document_type] : "待识别"}</span>
-                <span>{metadata?.authors.join("、") || "待识别"}</span>
-                <span>{metadata?.publication_year || "—"}</span>
-                <b className={`status-${item.status}`}><CheckCircle2 size={13} />{uploadStatusLabels[item.status] ?? item.status} {item.stage_progress}%{metadata ? <small>OCR {metadata.ocr_status} · 页码 {metadata.page_label_status} · 语义 {metadata.semantic_index_status}</small> : null}</b>
-                <span className="admin-row-actions">
-                  {published ? <Link href={`/works/${metadata.public_slug}`}>查看 <ArrowRight size={13} /></Link> : <Link href={`/admin/intake/${item.id}#bibliography`}>继续处理 <ArrowRight size={13} /></Link>}
-                  {!published && metadata ? <Link href={`/admin/intake/${item.id}#publication`}>{withdrawn ? "重新发布" : "发布检查"} <ArrowRight size={13} /></Link> : null}
-                  {published ? <Link href={`/admin/intake/${item.id}#work`}><Pencil size={13} /> 编辑</Link> : null}
-                  {published ? (
-                    <label className={`admin-inline-file ${replacing === item.id ? "disabled" : ""}`}>
-                      {replacing === item.id ? "上传中" : "替换 PDF"}
-                      <input
-                        className="sr-only"
-                        type="file"
-                        accept="application/pdf,.pdf"
-                        disabled={replacing !== null}
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          event.currentTarget.value = "";
-                          if (file) void replacePdf(item, file);
-                        }}
-                      />
-                    </label>
-                  ) : null}
-                  {published ? <button type="button" onClick={() => setPendingAction({ item, type: "withdraw" })}>下架</button> : null}
-                  {item.status === "failed" ? <button type="button" onClick={() => void action(item, "retry")}>重试</button> : null}
-                  {!published && !withdrawn ? <button className="danger-link" type="button" onClick={() => setPendingAction({ item, type: "delete" })}><Trash2 size={13} />删除记录</button> : null}
-                </span>
-              </article>
-            );
-          })}
-          <footer>共 {resource.data.count} 个上传项目。列表仅显示当前页。</footer>
-        </section>
-      ) : null}
-      <ConfirmDialog
-        open={Boolean(pendingAction)}
-        title={pendingAction?.type === "withdraw" ? `下架“${pendingAction.item.review_data?.title ?? pendingAction.item.source_filename}”` : `移除“${pendingAction?.item.review_data?.title ?? pendingAction?.item.source_filename ?? "馆藏记录"}”`}
-        description={pendingAction?.type === "withdraw" ? "确认后所有公开列表和检索会停止展示，文件、处理结果与稳定地址继续保留。" : "确认后记录会从馆藏、处理中心和复核队列隐藏，NAS 原始文件与审计记录继续保留。"}
-        confirmLabel={pendingAction?.type === "withdraw" ? "确认下架" : "确认移除"}
-        tone="danger"
-        onCancel={() => setPendingAction(null)}
-        onConfirm={() => pendingAction ? void action(pendingAction.item, pendingAction.type) : undefined}
-      />
-    </AdminPageFrame>
-  );
-}
 
 type AdminTheory = {
   id: string;
+  editorial_revision?: { id: string } | null;
+  edit_version?: string;
   name: string;
   slug: string;
   description: string;
@@ -295,6 +132,8 @@ type AdminTheory = {
 
 type AdminTopic = {
   id: string;
+  editorial_revision?: { id: string } | null;
+  edit_version?: string;
   name: string;
   slug: string;
   description: string;
@@ -352,6 +191,7 @@ type ReadingPathDraft = {
 
 type TaxonomyDraft = {
   id: string | null;
+  edit_version?: string;
   kind: "theory" | "topic";
   name: string;
   slug: string;
@@ -426,11 +266,13 @@ export function TaxonomyAdmin({
   const editorOnly = entityId !== undefined;
   const showTheories = mode !== "topic";
   const showTopics = mode !== "theory";
+  const theoryPaging = useAdminListPage("theories_page");
+  const topicPaging = useAdminListPage("topics_page");
   const theories = useAdminResource<Paginated<AdminTheory>>(
-    !editorOnly && showTheories ? "/catalog/admin/theory-schools/" : null,
+    !editorOnly && showTheories ? `/catalog/admin/theory-schools/?page=${theoryPaging.page}` : null,
   );
   const topics = useAdminResource<Paginated<AdminTopic>>(
-    !editorOnly && showTopics ? "/catalog/admin/topics/" : null,
+    !editorOnly && showTopics ? `/catalog/admin/topics/?page=${topicPaging.page}` : null,
   );
   const detailBase = mode === "topic"
     ? "/catalog/admin/topics"
@@ -440,17 +282,27 @@ export function TaxonomyAdmin({
       ? `${detailBase}/${entityId}/`
       : null,
   );
-  const [draft, setDraft] = useState<TaxonomyDraft>({
+  const [draft, setDraftState] = useState<TaxonomyDraft>({
     ...emptyTaxonomy,
     kind: mode === "topic" ? "topic" : "theory",
     name: createName,
   });
   const [message, setMessage] = useState("");
   const [heroFile, setHeroFile] = useState<File | null>(null);
+  const unsaved = useRef(false);
+  const editVersion = useRef(0);
+  function setDraft(value: React.SetStateAction<TaxonomyDraft>) {
+    unsaved.current = true;
+    editVersion.current += 1;
+    setDraftState(value);
+  }
+  const prefills = useEditorialPrefills(draft.id || "new-topic", draft, setDraft, () => { unsaved.current = true; editVersion.current += 1; });
+  const { pendingAction, startAction, finishAction } = useActionGuard();
+  const [editConflict, setEditConflict] = useState(false);
 
   function editTheory(item: AdminTheory) {
     const curation = item.curation ?? {};
-    setDraft({
+    setDraftState({
       id: item.id,
       kind: "theory",
       name: item.name,
@@ -491,8 +343,9 @@ export function TaxonomyAdmin({
 
   function editTopic(item: AdminTopic) {
     const curation = item.curation ?? {};
-    setDraft({
+    setDraftState({
       id: item.id,
+      edit_version: item.edit_version,
       kind: "topic",
       name: item.name,
       slug: item.slug,
@@ -541,7 +394,7 @@ export function TaxonomyAdmin({
     if (!editorOnly || entityId === "new" || !detail.data) return;
     let active = true;
     Promise.resolve().then(() => {
-      if (!active) return;
+      if (!active || detail.data?.id !== entityId || unsaved.current) return;
       if (mode === "topic") editTopic(detail.data as AdminTopic);
       else editTheory(detail.data as AdminTheory);
     });
@@ -550,11 +403,17 @@ export function TaxonomyAdmin({
     };
   }, [detail.data, editorOnly, entityId, mode]);
 
+  useUnsavedForm(unsaved.current, false);
+
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return false;
+    if (!token || (editorOnly && entityId !== "new" && draft.id !== entityId)) return false;
+    if (!startAction("save-taxonomy")) return false;
+    const submittedVersion = editVersion.current;
+    setEditConflict(false);
     const base = draft.kind === "theory" ? "/catalog/admin/theory-schools" : "/catalog/admin/topics";
+    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !window.confirm(`保存并公开这份${draft.kind === "topic" ? "主题" : "理论"}资料？读者将看到本页内容。`)) { finishAction("save-taxonomy"); return false; }
     const terms = splitValues(draft.terms);
     const curation = draft.kind === "theory"
       ? {
@@ -631,44 +490,65 @@ export function TaxonomyAdmin({
           curation,
           editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
         };
+    let metadataSaved = false;
     try {
-      const saved = await apiRequest<AdminTheory | AdminTopic>(
+      let saved = await apiRequest<AdminTheory | AdminTopic>(
         `${base}/${draft.id ? `${draft.id}/` : ""}`,
-        { method: draft.id ? "PATCH" : "POST", body: JSON.stringify(body) },
+        { method: draft.id ? "PATCH" : "POST", headers: draft.id && draft.kind === "topic" ? editorialHeaders(draft) : undefined, body: JSON.stringify(body) },
         token,
       );
+      metadataSaved = true;
+      // Preserve the successful write before a separate image request. A retry
+      // must update this object with its latest version, never create it again.
+      setDraftState((current) => ({ ...current, id: saved.id, edit_version: saved.edit_version, slug: saved.slug,
+        baseCuration: saved.curation ?? current.baseCuration, suggestions: saved.suggestions ?? current.suggestions }));
+      prefills.clear();
       if (heroFile) {
         const imageBody = new FormData();
         imageBody.append("hero_image", heroFile);
-        await apiRequest(
+        saved = await apiRequest<AdminTheory | AdminTopic>(
           `${base}/${saved.id}/`,
-          { method: "PATCH", body: imageBody },
+          { method: "PATCH", headers: draft.kind === "topic" ? editorialHeaders(saved) : undefined, body: imageBody },
           token,
         );
         setHeroFile(null);
       }
-      setDraft((current) => ({
+      setDraftState((current) => ({
         ...current,
         id: saved.id,
+        edit_version: saved.edit_version,
         slug: saved.slug,
         baseCuration: saved.curation ?? current.baseCuration,
         suggestions: saved.suggestions ?? current.suggestions,
       }));
-      setMessage("知识分类已经保存。公开状态会立即影响前台目录，但不会自动改变文献关系。");
+      unsaved.current = editVersion.current !== submittedVersion;
+      prefills.clear();
+      setMessage(`${draft.kind === "topic" ? "主题" : "理论"}资料已保存（${new Date().toLocaleTimeString("zh-CN")}）。${saved.editorial_revision ? "尚未发布，读者看到的内容未改变。" : saved.editorial_status === "published" ? "此资料已公开。" : "尚未公开。"}${entityId === "new" ? "已打开新建资料的编辑页。" : "你仍在当前编辑页。"}`);
       theories.refresh();
       topics.refresh();
       if (editorOnly && entityId === "new") {
         router.replace(
           draft.kind === "theory"
-            ? `/admin/theory-schools/${saved.id}`
+            ? `/admin/theories?legacy_id=${encodeURIComponent(saved.id)}&node_type=theory_tradition`
             : `/admin/topics/${saved.id}`,
         );
       }
       return true;
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "保存失败。");
+      setEditConflict(isEditorialConflict(reason));
+      setMessage(`${metadataSaved ? "文字资料已保存，图片未保存。已保留当前对象和图片，可以重试保存。" : "填写尚未保存，输入已保留。"}${reason instanceof Error ? reason.message : "请稍后重试。"}`);
+    } finally {
+      finishAction("save-taxonomy");
     }
     return false;
+  }
+
+  if (editorOnly && entityId !== "new" && (detail.data?.id !== entityId || draft.id !== entityId)) {
+    return <AdminPageFrame eyebrow="知识资料" title={mode === "topic" ? "主题" : "理论"} description="正在读取所选资料。">
+      <ResourceState loading={detail.loading || !detail.error} error={detail.error} empty={false} />
+      {detail.error ? <button className="button secondary" type="button" onClick={detail.refresh}>重新读取资料</button> : null}
+      <Link href={mode === "topic" ? "/admin/topics" : "/admin/theories"}>返回列表</Link>
+    </AdminPageFrame>;
   }
 
   return (
@@ -687,7 +567,7 @@ export function TaxonomyAdmin({
             <>
               <div className="admin-list-toolbar">
                 <h2>理论流派</h2>
-                <Link href="/admin/theory-schools/new"><Plus size={15} />新建流派</Link>
+                <Link href="/admin/theories?node_type=theory_tradition"><Plus size={15} />新建规范理论</Link>
               </div>
               <ResourceState loading={theories.loading} error={theories.error} empty={!theories.data?.results.length} />
               <div className="taxonomy-admin-grid">
@@ -697,7 +577,7 @@ export function TaxonomyAdmin({
                     <h2>{school.name}</h2>
                     <p>{school.description || "尚未填写说明。"}</p>
                     <dl><div><dt>关联馆藏</dt><dd>{school.work_count}</dd></div><div><dt>状态</dt><dd>{school.editorial_status === "published" ? "公开" : "草稿"}</dd></div></dl>
-                    <Link href={`/admin/theory-schools/${school.id}`}><Pencil size={14} />编辑</Link>
+                    <Link href={`/admin/theories?legacy_id=${encodeURIComponent(school.id)}&node_type=theory_tradition`}><Pencil size={14} />核对规范映射并编辑</Link>
                   </article>
                 ))}
               </div>
@@ -705,6 +585,7 @@ export function TaxonomyAdmin({
           ) : null}
           {showTopics ? (
             <>
+              {showTheories ? <AdminListPages data={theories.data} paging={theoryPaging} loading={theories.loading} /> : null}
               <div className={`admin-list-toolbar ${showTheories ? "taxonomy-topic-heading" : ""}`}>
                 <h2>主题</h2>
                 <Link href="/admin/topics/new"><Plus size={15} />新建主题</Link>
@@ -721,13 +602,16 @@ export function TaxonomyAdmin({
                   </article>
                 ))}
               </div>
+              <AdminListPages data={topics.data} paging={topicPaging} loading={topics.loading} />
             </>
           ) : null}
         </section> : null}
-        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={save}>
+        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={save} onChangeCapture={() => { unsaved.current = true; editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
+          <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
+          <EditorialPrefillNotice state={prefills} />
           <header>
             <div>
-              <Link href={draft.kind === "theory" ? "/admin/theory-schools" : "/admin/topics"}>返回列表</Link>
+              <Link href={draft.kind === "theory" ? "/admin/theories" : "/admin/topics"}>返回列表</Link>
               <h2>{draft.id ? "编辑" : "新建"}{draft.kind === "theory" ? "理论流派" : "主题"}</h2>
             </div>
           </header>
@@ -735,15 +619,17 @@ export function TaxonomyAdmin({
           <label><span>名称</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <CurationFieldAssistant
             label="名称"
+            scopeId={draft.id || "new"}
+            affectedFields={draft.kind === "theory" ? ["名称", "外文名称"] : ["名称"]}
             authorityType={draft.kind === "theory" ? "theory_tradition" : "topic"}
             query={draft.foreignName.trim() || draft.name}
-            onApply={(_value, suggestion) => suggestion && setDraft((current) => ({
-              ...current,
-              name: suggestion.label || current.name,
-              foreignName: suggestion.originalName || current.foreignName,
-            }))}
+            onApply={(_value, suggestion) => {
+              if (!suggestion) return;
+              prefills.fill("", (current) => ({ ...current, name: suggestion.label || current.name,
+                foreignName: current.kind === "theory" ? suggestion.originalName || current.foreignName : current.foreignName }));
+            }}
           />
-          {draft.kind === "topic" ? <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+          {draft.kind === "topic" ? <CurationFieldAssistant hasUnsavedChanges={unsaved.current}
             label="学科分类"
             targetType="topic"
             targetId={draft.id}
@@ -819,9 +705,9 @@ export function TaxonomyAdmin({
             ]}
             onChange={(value) => setDraft({ ...draft, timeline: formatEditorRows(value, ["year", "node", "description"]) })}
           /> : null}
-          <label><span>说明</span><textarea rows={7} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+          <label><span>{draft.kind === "topic" ? "主题说明" : "理论说明"}</span><textarea rows={7} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           <fieldset className="curation-fieldset">
-            <legend>自动建议与人工策展</legend>
+            <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
             <CuratedSelector
               label="奠基文献"
@@ -830,7 +716,7 @@ export function TaxonomyAdmin({
               onChange={(primaryWorkIds) => setDraft({ ...draft, primaryWorkIds })}
             />
             <CuratedSelector
-              label={draft.kind === "theory" ? "策展阅读书目" : "最近入库"}
+              label={draft.kind === "theory" ? "人工推荐书目" : "最近入库"}
               options={draft.suggestions.works ?? []}
               selected={draft.secondaryWorkIds}
               onChange={(secondaryWorkIds) => setDraft({ ...draft, secondaryWorkIds })}
@@ -883,7 +769,7 @@ export function TaxonomyAdmin({
           /> : null}
           {draft.kind === "topic" ? (
             <fieldset className="reading-path-editor">
-              <legend>策展阅读路径</legend>
+              <legend>人工编排的阅读路径</legend>
               <p>每条路径独立选择文献，不再自动复用奠基文献。</p>
               {draft.readingPaths.map((path, index) => (
                 <div className="reading-path-admin-row" key={`${index}-${path.title}`}>
@@ -972,8 +858,9 @@ export function TaxonomyAdmin({
             </fieldset>
           ) : null}
           <label><span>编辑状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
-          <button className="button" type="submit"><Save size={15} />保存</button>
+          <button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{pendingAction ? "正在保存…" : draft.status === "published" && detail.data?.editorial_status !== "published" ? "保存并公开本页资料" : "保存本页主题资料"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
+          <EditorialConflictHelp visible={editConflict} href={draft.kind === "topic" ? `/admin/topics/${draft.id}` : `/admin/theories?legacy_id=${draft.id}`} />
           {draft.id ? <EntityLifecycleActions
             kind={draft.kind === "topic" ? "topic" : "theory-school"}
             id={draft.id}
@@ -989,6 +876,7 @@ export function TaxonomyAdmin({
           previewHref={draft.kind === "topic" ? `/topics/${draft.slug}` : `/theory-schools/${draft.slug}`}
         /> : null}{draft.kind === "topic" ? <KnowledgeObjectContextPanel
           objectType="topic"
+          hasUnsavedChanges={unsaved.current}
           objectId={draft.id}
           refreshKey={message}
           onChanged={detail.refresh}
@@ -1000,7 +888,9 @@ export function TaxonomyAdmin({
 
 type AdminScholar = {
   id: string;
+  edit_version?: string;
   updated_at: string;
+  editorial_revision?: { id: string; status: string } | null;
   person_id: string;
   authority_status: string;
   public_eligible: boolean;
@@ -1032,6 +922,7 @@ type AdminScholar = {
 
 type ScholarDraft = {
   id: string | null;
+  edit_version?: string;
   personId: string | null;
   slug: string;
   name: string;
@@ -1087,6 +978,7 @@ const emptyScholar: ScholarDraft = {
 };
 
 export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
+  const paging = useAdminListPage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const createName = searchParams.get("create")?.trim() ?? "";
@@ -1097,16 +989,27 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const resource = useAdminResource<Paginated<AdminScholar>>(
     editorOnly
       ? null
-      : `/catalog/admin/scholars/${submittedQuery ? `?search=${encodeURIComponent(submittedQuery)}` : ""}`,
+      : `/catalog/admin/scholars/?page=${paging.page}&search=${encodeURIComponent(submittedQuery)}`,
   );
   const detail = useAdminResource<AdminScholar>(
     editorOnly && scholarId !== "new"
       ? `/catalog/admin/scholars/${scholarId}/`
       : null,
   );
-  const [draft, setDraft] = useState<ScholarDraft>({ ...emptyScholar, name: createName });
+  const [draft, setDraftState] = useState<ScholarDraft>({ ...emptyScholar, name: createName });
   const [message, setMessage] = useState("");
   const [portraitRevision, setPortraitRevision] = useState(0);
+  const unsaved = useRef(false);
+  const editVersion = useRef(0);
+  const savingRef = useRef(false);
+  function setDraft(value: React.SetStateAction<ScholarDraft>) {
+    unsaved.current = true;
+    editVersion.current += 1;
+    setDraftState(value);
+  }
+  const [saving, setSaving] = useState(false);
+  const prefills = useEditorialPrefills(draft.id || "new-scholar", draft, setDraft, () => { unsaved.current = true; editVersion.current += 1; });
+  const [editConflict, setEditConflict] = useState(false);
   const visible = resource.data?.results ?? [];
 
   useEffect(() => {
@@ -1124,8 +1027,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   function edit(scholar: AdminScholar) {
     const curation = scholar.curation ?? {};
     const network = Array.isArray(curation.network) ? curation.network : [];
-    setDraft({
+    setDraftState({
       id: scholar.id,
+      edit_version: scholar.edit_version,
       personId: scholar.person_id,
       slug: scholar.slug,
       name: scholar.preferred_name,
@@ -1171,18 +1075,25 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
     const scholar = detail.data;
     let active = true;
     Promise.resolve().then(() => {
-      if (active) edit(scholar);
+      if (active && scholar.id === scholarId && !unsaved.current) edit(scholar);
     });
     return () => {
       active = false;
     };
   }, [detail.data, editorOnly, scholarId]);
 
+  useUnsavedForm(unsaved.current, false);
+
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return false;
+    if (!token || savingRef.current || (editorOnly && scholarId !== "new" && draft.id !== scholarId)) return false;
+    savingRef.current = true;
+    setSaving(true);
+    setEditConflict(false);
+    const submittedVersion = editVersion.current;
     const curation = {
+      // Suggestions only persist together with this explicit form save.
       ...draft.baseCuration,
       essential_work_ids: draft.essentialWorkIds,
       key_concepts: parseStructuredLines(
@@ -1203,14 +1114,18 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       frequently_read_scholar_ids: draft.frequentScholarIds,
       related_theory_ids: draft.relatedTheoryIds,
     };
+    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !window.confirm("保存并公开这位学者的资料？读者将看到本页内容。")) { savingRef.current = false; setSaving(false); return false; }
     try {
       const saved = await apiRequest<AdminScholar>(
         `/catalog/admin/scholars/${draft.id ? `${draft.id}/` : ""}`,
         {
           method: draft.id ? "PATCH" : "POST",
+          headers: draft.id ? editorialHeaders(draft) : undefined,
           body: JSON.stringify({
             slug: draft.slug,
             preferred_name: draft.name,
+            assisted_candidates: prefills.ids,
+            assisted_candidate_decisions: prefills.decisions,
             original_name: draft.originalName,
             aliases: splitValues(draft.aliases),
             birth_year: Number(draft.birthYear) || null,
@@ -1231,24 +1146,53 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         },
         token,
       );
-      setDraft((current) => ({
+      setDraftState((current) => ({
         ...current,
         id: saved.id,
         personId: saved.person_id,
+        edit_version: saved.edit_version,
         slug: saved.slug,
         baseCuration: saved.curation ?? current.baseCuration,
         suggestions: saved.suggestions ?? current.suggestions,
       }));
-      setMessage("学者档案已保存。作品列表仍由作者贡献关系自动汇总。");
+      unsaved.current = editVersion.current !== submittedVersion;
+      prefills.clear();
+      setMessage(`学者资料已保存（${new Date().toLocaleTimeString("zh-CN")}）。${saved.editorial_revision ? "尚未发布，读者看到的内容未改变。" : saved.editorial_status === "published" ? "此资料已公开。" : "尚未公开。"}${scholarId === "new" ? "已打开新建学者的编辑页。" : "你仍在当前编辑页。"}`);
       resource.refresh();
       if (editorOnly && scholarId === "new") {
         router.replace(`/admin/scholars/${saved.id}`);
       }
       return true;
     } catch (reason) {
+      setEditConflict(isEditorialConflict(reason));
       setMessage(reason instanceof Error ? reason.message : "保存失败。");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
     return false;
+  }
+
+  async function refreshScholarSuggestion() {
+    if (!draft.id) return;
+    const updated = await apiRequest<AdminScholar>(`/catalog/admin/scholars/${draft.id}/`, {}, getServerSessionCredential());
+    setDraftState((current) => current.id === updated.id ? {
+      ...current, edit_version: updated.edit_version,
+      baseCuration: updated.curation ?? current.baseCuration,
+      suggestions: updated.suggestions ?? current.suggestions,
+    } : current);
+    resource.refresh();
+    setMessage("建议已保存到这位学者的编辑内容，尚未正式发布。");
+  }
+
+  // Never expose a blank, editable form before the requested scholar arrives:
+  // the first response would otherwise overwrite a fast user's input.
+  if (editorOnly && scholarId !== "new" && (detail.data?.id !== scholarId || draft.id !== scholarId)) {
+    return <AdminPageFrame eyebrow="人物资料" title="学者" description="正在读取所选学者的资料。">
+      <ResourceState loading={detail.loading || !detail.error} error={detail.error} empty={false} />
+      {detail.error ? <button className="button secondary" type="button" onClick={detail.refresh}>重新读取学者</button> : null}
+      <Link href="/admin/scholars">返回学者列表</Link>
+    </AdminPageFrame>;
   }
 
   return (
@@ -1268,58 +1212,59 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             </article>
           ))}
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
+          <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
-        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save}>
+        {editorOnly ? <div className="knowledge-object-editor-workspace knowledge-object-editor-workspace--dedicated"><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={save} onChangeCapture={() => { unsaved.current = true; editVersion.current += 1; }} aria-busy={saving}>
+          <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
+          <EditorialPrefillNotice state={prefills} />
           <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div>{draft.personId ? <Link className="button secondary" href={`/admin/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <CurationFieldAssistant
             label="学者姓名"
+            scopeId={draft.id || "new"}
+            affectedFields={["主要显示名", "原名"]}
             authorityType="person"
             query={draft.originalName.trim() || draft.name}
-            onApply={(_value, suggestion) => suggestion && setDraft((current) => ({
-              ...current,
-              name: suggestion.label || current.name,
-              originalName: suggestion.originalName || current.originalName,
-              aliases: mergeUniqueStrings(editorLines(current.aliases), suggestion.aliases).join("\n"),
-              birthYear: suggestion.birthYear === null ? current.birthYear : String(suggestion.birthYear),
-              deathYear: suggestion.deathYear === null ? current.deathYear : String(suggestion.deathYear),
-              description: current.description || suggestion.description,
-            }))}
+            onApply={(_value, suggestion) => {
+              if (!suggestion) return;
+              prefills.fill("", (current) => ({ ...current, name: suggestion.label || current.name,
+                originalName: suggestion.originalName || current.originalName }));
+            }}
           />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
           <p>肖像在右侧媒体面板中选择。新建学者请先保存资料。</p>
           <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
-          <label><span>页面简介</span><textarea rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small>用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
+          <label><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
           <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
-          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+          <CurationFieldAssistant hasUnsavedChanges={unsaved.current}
             label="译名或别名"
             targetType="person"
             targetId={draft.personId}
             fieldName="name_variant"
             currentValue={editorLines(draft.aliases)}
             query={draft.originalName.trim() || draft.name}
-            formContext={{ language: "zh" }}
-            onApply={(value) => {
+            formContext={{ language: "zh", name: draft.name, original_name: draft.originalName, birth_year: Number(draft.birthYear) || null, death_year: Number(draft.deathYear) || null }}
+            onFillSuggestion={(candidateId, value) => {
               const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
               const name = String(row.name || row.alias || "").trim();
-              if (name) setDraft((current) => ({ ...current, aliases: mergeUniqueStrings(editorLines(current.aliases), [name]).join("\n") }));
+              return Boolean(name) && prefills.fill(candidateId, (current) => ({ ...current, aliases: mergeUniqueStrings(editorLines(current.aliases), [name]).join("\n") }));
             }}
-            onAccepted={resource.refresh}
+            onAccepted={refreshScholarSuggestion}
           />
           <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
-          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+          <CurationFieldAssistant hasUnsavedChanges={unsaved.current}
             label="外部标识"
             targetType="person"
             targetId={draft.personId}
             fieldName="external_identifier"
             query={draft.originalName.trim() || draft.name}
-            formContext={{ language: "zh" }}
-            onAccepted={resource.refresh}
+            formContext={{ language: "zh", name: draft.name, original_name: draft.originalName, birth_year: Number(draft.birthYear) || null, death_year: Number(draft.deathYear) || null }}
+            onAccepted={refreshScholarSuggestion}
           />
-          <CurationFieldAssistant beforeAction={() => save(undefined, true)}
+          <CurationFieldAssistant hasUnsavedChanges={unsaved.current}
             label="机构"
             targetType="person"
             targetId={draft.personId}
@@ -1327,15 +1272,16 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             currentValue={editorLines(draft.affiliations)}
             formContext={{
               language: "zh",
-              known_birth_year: Number(draft.birthYear) || null,
-              known_death_year: Number(draft.deathYear) || null,
+              name: draft.name, original_name: draft.originalName,
+              birth_year: Number(draft.birthYear) || null,
+              death_year: Number(draft.deathYear) || null,
             }}
-            onApply={(value) => {
+            onFillSuggestion={(candidateId, value) => {
               const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
               const name = String(row.name || "").trim();
-              if (name) setDraft((current) => ({ ...current, affiliations: mergeUniqueStrings(editorLines(current.affiliations), [name]).join("\n") }));
+              return Boolean(name) && prefills.fill(candidateId, (current) => ({ ...current, affiliations: mergeUniqueStrings(editorLines(current.affiliations), [name]).join("\n") }));
             }}
-            onAccepted={resource.refresh}
+            onAccepted={refreshScholarSuggestion}
           />
           <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
           <StructuredRowsEditor
@@ -1397,7 +1343,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             onChange={(value) => setDraft({ ...draft, conceptMap: formatEditorRows(value, ["source", "target", "relation", "description"]) })}
           />
           <fieldset className="curation-fieldset">
-            <legend>自动建议与人工策展</legend>
+            <legend>系统建议与人工编排</legend>
             <p>系统依据作者贡献和共同流派、主题给出候选，管理员选择后才进入公开学者页。</p>
             <CuratedSelector
               label="重要文献"
@@ -1435,8 +1381,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>
           <label><span>语录来源</span><input value={draft.quoteSource} onChange={(event) => setDraft({ ...draft, quoteSource: event.target.value })} /></label>
           <label><span>编辑状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
-          <button className="button" type="submit"><Save size={15} />保存学者</button>
-          {message ? <p className="form-message">{message}</p> : null}
+          <button className="button" type="submit" disabled={saving}><Save size={15} />{saving ? "正在保存…" : draft.status === "published" && detail.data?.editorial_status !== "published" ? "保存并公开学者资料" : "保存本页学者资料"}</button>
+          {message ? <p className="form-message" role="status">{message}</p> : null}
+          <EditorialConflictHelp visible={editConflict} href={`/admin/scholars/${draft.id}`} />
           {draft.id ? <EntityLifecycleActions
             kind="scholar"
             id={draft.id}
@@ -1448,6 +1395,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           /> : null}
         </form><div className="knowledge-object-editor-rail">{draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => setPortraitRevision((value) => value + 1)} /> : null}<KnowledgeObjectContextPanel
           objectType="scholar"
+          hasUnsavedChanges={unsaved.current}
           objectId={draft.id}
           refreshKey={`${message}:${portraitRevision}`}
           onChanged={detail.refresh}
@@ -1718,7 +1666,7 @@ export function DistributionAdmin() {
   }
 
   return (
-    <AdminPageFrame eyebrow="在线阅读基础设施" title="云端分发" description="NAS 保存主副本。生产环境通过私有对象存储签名地址提供公开阅读副本。">
+    <AdminPageFrame eyebrow="在线阅读基础设施" title="存储与分发配置" description="NAS保存主副本。这里管理可选分发服务，是否启用与可用以实际配置和检查结果为准。">
       <section className="distribution-cards">
         <StatusCard icon={HardDrive} title="NAS 主副本" value="部署目录" description="原始归档和规范副本不从后台删除" />
         <StatusCard icon={Cloud} title="对象存储" value={resource.data?.results.some((item) => item.enabled && item.is_default) ? "已启用" : "未启用"} description={`${resource.data?.count ?? 0} 个服务商配置`} />
@@ -1914,7 +1862,7 @@ const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
   knowledge_relation_reasoning: "知识关系推理",
   debate_discovery: "Debate 发现",
   reading_path_generation: "Reading Path 生成",
-  curation_reasoning: "策展推理",
+  curation_reasoning: "内容编排建议",
 };
 
 const aiCapabilityGuidance: Partial<Record<AIRuntimeCapability, string>> = {
@@ -1945,13 +1893,20 @@ const defaultSemanticRuntime: SemanticRuntime = {
   api_key_configured: false,
 };
 
+const settingsSections=[['public-display','网站内容'],['submissions','荐书邮箱'],['ocr','文字识别'],['ai','AI 服务'],['search','检索'],['backups','备份'],['prompts','AI 提示词']] as const;
 export function SettingsAdmin() {
+  const sections=settingsSections;
+  const [activeSection,setActiveSection]=useState('public-display');
+  useEffect(()=>{const sync=()=>{const requested=window.location.hash.slice(1);if(settingsSections.some(([key])=>key===requested))setActiveSection(requested);};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[]);
+  const user = useAdminSession();
+  const canRunBackup = hasAdminCapability(user, "can_run_backup");
+  const canManagePrompts = hasAdminCapability(user, "can_manage_prompt_registry");
   const configResource = useAdminResource<SiteConfig>("/catalog/site-config/");
   const submissionResource = useAdminResource<{ email: string }>("/catalog/admin/reader-submission/");
   const ocrResource = useAdminResource<OcrRuntime>("/catalog/admin/ocr-runtime/");
   const semanticResource = useAdminResource<SemanticRuntime>("/catalog/admin/semantic-runtime/");
   const aiRuntimeResource = useAdminResource<AIRuntimeDocument>("/reading/admin/ai-runtime-profiles/");
-  const backups = useAdminResource<Paginated<BackupJob>>("/distribution/backups/");
+  const backups = useAdminResource<Paginated<BackupJob>>(canRunBackup ? "/distribution/backups/" : null);
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [ocrDraft, setOcrDraft] = useState<OcrRuntime | null>(null);
   const [semanticDraft, setSemanticDraft] = useState<SemanticRuntime | null>(null);
@@ -2014,7 +1969,7 @@ export function SettingsAdmin() {
 
   async function createBackup() {
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || !canRunBackup) return;
     await runSettingsAction("create-backup", "正在提交手动备份……", "备份创建失败。", async () => {
       await apiRequest(
         "/distribution/backups/",
@@ -2193,9 +2148,10 @@ export function SettingsAdmin() {
   }
 
   return (
-    <AdminPageFrame eyebrow="网站内容" title="网站设置" description="名称、首页文字、导航和主要区块标题都可编辑。未启用自动每日备份。">
-      <section className="settings-grid">
-        <form className="admin-panel settings-content-form" onSubmit={saveConfig}>
+    <AdminPageFrame eyebrow="系统管理" title="设置" description="选择要修改的设置。各部分单独保存，切换栏目不会清空已填写的内容。">
+      <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
+      <section className="settings-grid settings-tabbed">
+        <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
           <header><h2>品牌与首页</h2></header>
           <label><span>网站名称</span><input value={config.site_name} onChange={(event) => updateConfig({ site_name: event.target.value })} /></label>
           <label><span>英文标识，每行一段</span><textarea rows={3} value={config.wordmark_lines.join("\n")} onChange={(event) => updateConfig({ wordmark_lines: splitLines(event.target.value) })} /></label>
@@ -2204,7 +2160,7 @@ export function SettingsAdmin() {
           <label><span>首页简介，每行一段</span><textarea rows={4} value={config.intro_lines.join("\n")} onChange={(event) => updateConfig({ intro_lines: splitLines(event.target.value) })} /></label>
           <label><span>关于页标题</span><input value={config.about_title} onChange={(event) => updateConfig({ about_title: event.target.value })} /></label>
           <label><span>关于页说明</span><textarea rows={5} value={config.about_body} onChange={(event) => updateConfig({ about_body: event.target.value })} /></label>
-          <details className="about-settings-fields" open>
+          <details className="about-settings-fields">
             <summary>关于书库页面内容</summary>
             <label><span>建设缘起标题</span><input value={config.about_why_title} onChange={(event) => updateConfig({ about_why_title: event.target.value })} /></label>
             <label><span>建设缘起正文</span><textarea rows={6} value={config.about_why_body} onChange={(event) => updateConfig({ about_why_body: event.target.value })} /></label>
@@ -2232,13 +2188,13 @@ export function SettingsAdmin() {
           </div>
           <ActionButton className="button" type="submit" state={pendingAction === "save-site-config" ? "pending" : "idle"} pendingLabel="正在保存内容" disabled={Boolean(pendingAction) && pendingAction !== "save-site-config"}><Save size={15} />保存内容</ActionButton>
         </form>
-        <form className="admin-panel submission-email-settings" onSubmit={saveSubmissionEmail}>
+        <form className="admin-panel submission-email-settings" hidden={activeSection!=='submissions'} role="tabpanel" aria-labelledby="settings-tab-submissions" id="submissions" onSubmit={saveSubmissionEmail}>
           <header><h2>读者荐书投稿</h2></header>
           <p>网站不直接接收 PDF，也不依赖 SMTP。读者填写荐书信息后会打开自己的邮件应用。</p>
           <label><span>投稿邮箱</span><input type="email" value={submissionEmail} onChange={(event) => setSubmissionEmail(event.target.value)} required /></label>
           <ActionButton className="button secondary" type="submit" state={pendingAction === "save-submission-email" ? "pending" : "idle"} pendingLabel="正在保存邮箱" disabled={Boolean(pendingAction) && pendingAction !== "save-submission-email"}><Save size={15} />保存投稿邮箱</ActionButton>
         </form>
-        <form className="admin-panel ocr-runtime-settings" onSubmit={saveOcrRuntime}>
+        <form className="admin-panel ocr-runtime-settings" hidden={activeSection!=='ocr'} role="tabpanel" aria-labelledby="settings-tab-ocr" id="ocr" onSubmit={saveOcrRuntime}>
           <header><h2>OCR 资源</h2></header>
           <p>配置与运行状态分开显示。远程 URL、模型和 API Key 必须同时齐全，远程回退才会参与任务。</p>
           <label>
@@ -2269,7 +2225,7 @@ export function SettingsAdmin() {
           <small>远程密钥只写入服务器的 <code>OCR_REMOTE_API_KEY</code> 环境变量，后台页面不会读取或显示密钥原文。</small>
           <div className="admin-action-row"><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_nas" ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== "test-ocr:test_nas"} onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</ActionButton><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_remote" ? "pending" : "idle"} pendingLabel="测试中" disabled={!ocrRuntime.remote_fallback_available || (Boolean(pendingAction) && pendingAction !== "test-ocr:test_remote")} onClick={() => void testOcrRuntime("test_remote")}>测试远程 OCR</ActionButton><ActionButton className="button" type="submit" state={pendingAction === "save-ocr-runtime" ? "pending" : "idle"} pendingLabel="正在保存 OCR" disabled={Boolean(pendingAction) && pendingAction !== "save-ocr-runtime"}><Save size={15} />保存 OCR 设置</ActionButton></div>
         </form>
-        <form className="admin-panel ai-runtime-settings" onSubmit={saveAiRuntime}>
+        <form className="admin-panel ai-runtime-settings" hidden={activeSection!=='ai'} role="tabpanel" aria-labelledby="settings-tab-ai" id="ai" onSubmit={saveAiRuntime}>
           <header><h2>服务器 AI 能力（可选）</h2></header>
           <p>注册读者可以在 Ask 页面使用自己的云端模型。这里仅维护元数据处理、联网补全和可选的服务器默认问答服务，不是读者配置入口；密钥和实际 endpoint 只由服务器环境提供。</p>
           {aiRuntime ? <>
@@ -2303,8 +2259,8 @@ export function SettingsAdmin() {
             <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存 AI Runtime" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存 AI Runtime</ActionButton>
           </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
-        <PromptRegistryAdmin />
-        <form className="admin-panel semantic-runtime-settings" onSubmit={saveSemanticRuntime}>
+        <div hidden={activeSection!=='prompts'} role="tabpanel" aria-labelledby="settings-tab-prompts" id="prompts">{canManagePrompts ? <PromptRegistryAdmin /> : <section className="admin-panel"><h2>AI 提示词</h2><p>只有书库所有者可以查看和修改。</p></section>}</div>
+        <form className="admin-panel semantic-runtime-settings" hidden={activeSection!=='search'} role="tabpanel" aria-labelledby="settings-tab-search" id="search" onSubmit={saveSemanticRuntime}>
           <header><h2>观点检索资源</h2><Link href="/admin/semantic-index">打开索引管理</Link></header>
           <p>原文检索不受这里影响。向量模式会为公开全文段落生成嵌入；发生故障时，是否完成关键词降级要以测试查询返回的运行结果为准。</p>
           {semanticRuntimeReady ? <>
@@ -2375,18 +2331,21 @@ export function SettingsAdmin() {
             </p>
           )}
         </form>
-        <section className="admin-panel backup-settings">
+        <section className="admin-panel backup-settings" hidden={activeSection!=='backups'} role="tabpanel" aria-labelledby="settings-tab-backups" id="backups">
+          {!canRunBackup ? <><h2>备份与恢复依据</h2><p>仅System Owner可读取正式备份和创建归档。当前页面没有请求或展示敏感备份目录。</p><p>已有备份文件不等于可恢复，正式恢复仍需核对校验、隔离恢复演练和当前部署回退记录。</p></> : <>
           <header><h2>手动备份</h2><ActionButton type="button" state={backups.loading ? "pending" : "idle"} pendingLabel="刷新中" disabled={Boolean(pendingAction)} onClick={backups.refresh}><RefreshCw size={14} />刷新</ActionButton></header>
           <Download size={28} />
           <p>备份写入指定 NAS 目录，并生成数据库、文件清单和 SHA-256 校验值。不会自动安排每日任务。</p>
           <label><span>容器内备份目录</span><input value={backupPath} onChange={(event) => setBackupPath(event.target.value)} /></label>
           <label className="switch-row"><input type="checkbox" checked={includeOriginals} onChange={(event) => setIncludeOriginals(event.target.checked)} /><span>归档内再包含原始 PDF</span></label>
           <ActionButton className="button secondary" type="button" state={pendingAction === "create-backup" ? "pending" : "idle"} pendingLabel="正在提交备份" disabled={Boolean(pendingAction) && pendingAction !== "create-backup"} onClick={() => void createBackup()}>立即创建备份</ActionButton>
-          <small>同一台 NAS 上的备份可恢复误操作，但不能替代异地灾难备份。</small>
+          <small>同一台NAS的备份不能替代异地灾难备份。文件存在、任务完成和校验值不证明可恢复；需要有对应的隔离恢复演练记录。</small>
           <div className="backup-history">
+            {backups.error ? <p className="attempt-error" role="alert">备份记录未能读取：{backups.error}<button type="button" onClick={backups.refresh}>重新读取备份</button></p> : null}
             {backups.data?.results.slice(0, 6).map((job) => <article key={job.id}><header><strong>{job.status}</strong><time>{new Date(job.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></header><p>{job.archive_path || job.destination_path}</p>{job.checksum ? <small>SHA-256 {job.checksum}</small> : null}{job.error_message ? <small className="attempt-error">{job.error_message}</small> : null}</article>)}
-            {!backups.data?.results.length ? <p className="empty-state">尚无手动备份记录。</p> : null}
+            {backups.data && !backups.data.results.length ? <p className="empty-state">尚无手动备份记录。</p> : null}
           </div>
+          </>}
         </section>
       </section>
       {message ? <AsyncStatus state={messageState} message={message} /> : null}

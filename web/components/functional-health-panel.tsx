@@ -32,6 +32,9 @@ type DimensionValue = boolean | null;
 export type FunctionalHealthSurface = "overview" | "research-sources" | "ai-models" | "workers" | "projections" | "faults";
 
 type HealthDependency = {
+  stale?: boolean;
+  fresh?: boolean;
+  observation_id?: string | null;
   probe_key: string;
   label: string;
   status: HealthStatus;
@@ -136,7 +139,7 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "故障",
   recovering: "恢复中",
   paused: "已暂停",
-  unknown: "待探测",
+  unknown: "待检查",
   open: "待处理",
   resolved: "已恢复",
   queued: "等待执行",
@@ -153,10 +156,10 @@ const DIMENSION_LABELS = {
 } as const;
 
 const RECOVERY_LABELS: Record<string, string> = {
-  rerun_probe: "重新探测",
+  rerun_probe: "重新检查",
   recover_ingestion_queue: "恢复入库队列",
   recover_semantic_queue: "恢复语义队列",
-  recover_query_lexicon: "恢复 QueryLexicon",
+  recover_query_lexicon: "恢复检索词典",
   retry_failed_research: "重试失败研究",
 };
 
@@ -411,7 +414,7 @@ export function FunctionalHealthPanel({
         token,
       );
       if (!mountedRef.current || diagnosticController.signal.aborted) return;
-      setFeedback({ state: "success", message: `${action.label}已提交，请观察下一次 revision 快照。`, actionKey });
+      setFeedback({ state: "success", message: `${action.label}请求已提交。请刷新结果，确认后台是否处理完成。`, actionKey });
       await loadSnapshot(true);
     } catch (reason) {
       if (!mountedRef.current || diagnosticController.signal.aborted) return;
@@ -436,16 +439,16 @@ export function FunctionalHealthPanel({
   }
 
   const surfaceCopy = surface === "research-sources"
-    ? ["Research Sources", "检查来源用途、配置要求、最近成功和受影响功能。页面不会回显 Secret。"]
+    ? ["资料来源", "查看来源的用途、设置要求、最近成功时间和受影响功能。不显示密钥。"]
     : surface === "ai-models"
-      ? ["AI 与模型", "检查 runtime profile、Provider、Prompt 和人工接受表现。"]
+      ? ["AI 与模型", "查看服务和模型是否可用，以及建议的人工处理记录。"]
       : surface === "workers"
-        ? ["任务与 Worker", "检查 capability 缺口、executor heartbeat、backlog 和负载。"]
+        ? ["后台任务", "查看正在处理、排队或失败的任务，以及可用的处理服务。"]
         : surface === "projections"
-          ? ["Projection 一致性", "检查 source revision、projected revision 和公开功能影响。"]
+          ? ["公开内容更新", "核对已保存的修改是否已出现在公开页面、搜索和推荐中。"]
           : surface === "faults"
-            ? ["故障与恢复", "保留真实故障、探测依据和后端允许的安全恢复动作。"]
-            : ["从读者功能查看系统是否真正可用", "页面读取最近一次探测结果，不会在打开时连接外部服务。探测和恢复只在明确点击后执行。"];
+            ? ["故障与恢复", "查看失败原因、检查时间和可执行的恢复操作。"]
+            : ["功能是否可用", "此页只读取已有检查记录。重新检查和恢复任务需要您明确点击，不会在打开页面时调用外部服务。"];
   const diagnosticsView = surface === "ai-models" || surface === "workers" || surface === "projections"
     ? surface
     : surface === "overview"
@@ -478,7 +481,7 @@ export function FunctionalHealthPanel({
             errorLabel="重新刷新"
             onClick={() => void loadSnapshot()}
             disabled={Boolean(pendingAction)}
-          ><RefreshCw size={15} />刷新快照</ActionButton>
+          ><RefreshCw size={15} />刷新结果</ActionButton>
         </div>
       </header>
 
@@ -495,8 +498,8 @@ export function FunctionalHealthPanel({
           {surface === "overview" ? <div className="functional-health-overview" aria-label="功能健康摘要">
             <div><Activity size={16} /><span>功能</span><strong>{payload.capabilities.length}</strong></div>
             <div><ShieldAlert size={16} /><span>待处理事件</span><strong>{payload.incidents.length}</strong></div>
-            <div><Clock3 size={16} /><span>快照时间</span><strong>{timeLabel(payload.generated_at)}</strong></div>
-            <div><Wrench size={16} /><span>已登记探测</span><strong>{payload.probe_count}</strong></div>
+            <div><Clock3 size={16} /><span>记录读取时间</span><strong>{timeLabel(payload.generated_at)}</strong></div>
+            <div><Wrench size={16} /><span>检查项目</span><strong>{payload.probe_count}</strong></div>
           </div> : null}
 
           {payload.diagnostics && diagnosticsView ? (
@@ -534,10 +537,11 @@ export function FunctionalHealthPanel({
                     <details key={dependency.probe_key}>
                       <summary>
                         <span><StatusIcon status={dependency.status} />{dependency.label}</span>
-                        <b>{statusLabel(dependency.status)}</b>
+                        <b>{dependency.stale ? "已过期，待重新检测" : statusLabel(dependency.status)}</b>
                       </summary>
                       <p>{dependency.summary || "本次探测没有附加说明。"}</p>
                       <DimensionList source={dependency} />
+                      <p>有产出只表示探测取得结果，不代表候选内容准确。过期记录不计为当前通过。</p>
                       <dl>
                         <div><dt>探测键</dt><dd>{dependency.probe_key}</dd></div>
                         <div><dt>最近探测</dt><dd>{timeLabel(dependency.last_checked_at)}</dd></div>

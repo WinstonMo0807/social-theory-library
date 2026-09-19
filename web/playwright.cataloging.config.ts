@@ -12,7 +12,9 @@ export default defineConfig({
   webServer: [
     {
       command: `"${python}" "${fixtureServer}"`,
-      url: "http://127.0.0.1:8105/api/ready/", timeout: 120_000, reuseExistingServer: false,
+      // This server applies every migration to a new disposable database.
+      // A measured cold startup took 126s; business action timeouts are unchanged.
+      url: "http://127.0.0.1:8105/api/ready/", timeout: 240_000, reuseExistingServer: false,
     },
     {
       command: "npm run start -- --port 3105 --hostname 127.0.0.1",

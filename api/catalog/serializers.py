@@ -8,6 +8,7 @@ from drf_spectacular.utils import extend_schema_field
 from uuid import UUID
 
 from common.capabilities import Capability, has_capability
+from catalog.services.timeline_evidence import TimelineEvidenceListSerializer
 from .media_views import PublicCoverMediaSerializer
 from .public_response_serializers import (
     PublicClassificationLinkSerializer, PublicContributionSnapshotSerializer,
@@ -1790,7 +1791,18 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
         return values
 
 
-class DisciplineSerializer(serializers.ModelSerializer):
+class TaxonomyImageSerializerMixin:
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.hero_rendition_id:
+            from catalog.services.knowledge_media import image_media
+            request = self.context.get("request")
+            media = image_media(instance, private=bool(request and "/admin/" in request.path))
+            data["hero_image"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
+        return data
+
+
+class DisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
     theory_count = serializers.SerializerMethodField()
     subdiscipline_count = serializers.SerializerMethodField()
     topic_count = serializers.SerializerMethodField()
@@ -1847,7 +1859,7 @@ class DisciplineSerializer(serializers.ModelSerializer):
         return direct.distinct().count()
 
 
-class SubdisciplineSerializer(serializers.ModelSerializer):
+class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
     discipline = serializers.SerializerMethodField()
     parent = serializers.SerializerMethodField()
     theories = serializers.SerializerMethodField()
@@ -2087,6 +2099,7 @@ class RecommendationPolicySerializer(serializers.ModelSerializer):
             "enabled",
             "last_generated_at",
             "next_refresh_at",
+            "updated_at",
             "current",
         )
 
@@ -2118,7 +2131,8 @@ class AboutPageBlockSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_at", "updated_at")
 
 
-class AdminDisciplineSerializer(serializers.ModelSerializer):
+class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
+    edit_version = serializers.CharField(read_only=True)
     slug = serializers.SlugField(required=False, allow_blank=True)
     code = serializers.SlugField(required=False, allow_blank=True)
     counts = serializers.SerializerMethodField()
@@ -2127,6 +2141,7 @@ class AdminDisciplineSerializer(serializers.ModelSerializer):
         model = Discipline
         fields = (
             "id",
+            "edit_version",
             "code",
             "name",
             "foreign_name",
@@ -2181,13 +2196,15 @@ class AdminDisciplineSerializer(serializers.ModelSerializer):
         return super().update(instance, self._complete_identity(validated_data, instance))
 
 
-class AdminSubdisciplineSerializer(serializers.ModelSerializer):
+class AdminSubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
+    edit_version = serializers.CharField(read_only=True)
     slug = serializers.SlugField(required=False, allow_blank=True)
 
     class Meta:
         model = Subdiscipline
         fields = (
             "id",
+            "edit_version",
             "name",
             "foreign_name",
             "slug",
@@ -2289,6 +2306,9 @@ class AdminTimelineEventRelationSerializer(serializers.ModelSerializer):
 
 
 class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
+    evidence_file = serializers.SerializerMethodField()
+    evidence_work_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    evidence_edition_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     relations = AdminTimelineEventRelationSerializer(
         source="normalized_relations",
         many=True,
@@ -2297,13 +2317,29 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TheoryTimelineEvent
+        list_serializer_class = TimelineEvidenceListSerializer
         fields = tuple(
             field.name
             for field in TheoryTimelineEvent._meta.fields
-        ) + ("relations",)
+        ) + ("relations", "evidence_file", "evidence_work_id", "evidence_edition_id")
         read_only_fields = ("reviewed_by", "reviewed_at")
 
+    def get_evidence_file(self, obj):
+        from catalog.services.timeline_evidence import admin_timeline_file
+        return admin_timeline_file(obj, self.context)
+
     def validate(self, attrs):
+        from catalog.services.timeline_evidence import validate_timeline_file
+        asset = attrs.get("evidence_asset", getattr(self.instance, "evidence_asset", None))
+        work_id = attrs.pop("evidence_work_id", None)
+        edition_id = attrs.pop("evidence_edition_id", None)
+        if asset and ((work_id and work_id != asset.edition.work_id) or (edition_id and edition_id != asset.edition_id)):
+            raise serializers.ValidationError({"evidence_asset": "出处文件不属于所选作品或出版版本，请重新选择。"})
+        if attrs.get("review_status", getattr(self.instance, "review_status", "")) != "rejected":
+            try:
+                validate_timeline_file(asset, attrs.get("evidence_page", getattr(self.instance, "evidence_page", None)))
+            except ValueError as error:
+                raise serializers.ValidationError({"evidence_asset": str(error)}) from error
         normalized_relations = attrs.get("normalized_relations")
         has_existing_relations = bool(
             self.instance
@@ -2743,6 +2779,7 @@ class AdminTheorySchoolSerializer(serializers.ModelSerializer):
 
 
 class AdminTopicSerializer(serializers.ModelSerializer):
+    edit_version = serializers.CharField(read_only=True)
     work_count = serializers.SerializerMethodField()
     suggestions = serializers.SerializerMethodField()
     slug = serializers.SlugField(required=False, allow_blank=True)
@@ -2752,6 +2789,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
         model = Topic
         fields = (
             "id",
+            "edit_version",
             "name",
             "slug",
             "description",
@@ -2880,6 +2918,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
 
 
 class AdminScholarSerializer(serializers.ModelSerializer):
+    edit_version = serializers.CharField(read_only=True)
     person_id = serializers.UUIDField(source="person.id", read_only=True)
     preferred_name = serializers.CharField(source="person.preferred_name", max_length=240)
     original_name = serializers.CharField(source="person.original_name", max_length=240, required=False, allow_blank=True)
@@ -2899,6 +2938,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
         model = ScholarProfile
         fields = (
             "id",
+            "edit_version",
             "person_id",
             "authority_status",
             "public_eligible",

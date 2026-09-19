@@ -19,6 +19,7 @@ type CanonicalFieldProps = {
   rows?: number;
   required?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   placeholder?: string;
   help?: ReactNode;
   status?: string;
@@ -49,6 +50,7 @@ export function CanonicalField({
   rows = 4,
   required = false,
   disabled = false,
+  readOnly = false,
   placeholder,
   help,
   status,
@@ -90,9 +92,9 @@ export function CanonicalField({
       {options ? (
         <Select {...common}>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</Select>
       ) : multiline ? (
-        <Textarea {...common} rows={rows} />
+        <Textarea {...common} rows={rows} readOnly={readOnly} />
       ) : (
-        <Input {...common} type={type} />
+        <Input {...common} type={type} readOnly={readOnly} />
       )}
       {help ? <small className="workflow-field-help" id={helpId}>{help}</small> : null}
       {error ? <small className="workflow-field-error" id={errorId} role="alert">{error}</small> : null}
@@ -184,6 +186,8 @@ export function EntityPicker({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<EntityValue[]>([]);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -193,6 +197,7 @@ export function EntityPicker({
     let active = true;
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setError("");
       const suffix = query.trim() && queryParam ? `${endpoint.includes("?") ? "&" : "?"}${encodeURIComponent(queryParam)}=${encodeURIComponent(query.trim())}` : "";
       void apiRequest<{ results?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>(`${endpoint}${suffix}`, {}, token)
         .then((payload) => {
@@ -205,11 +210,11 @@ export function EntityPicker({
           }));
           setActiveIndex(0);
         })
-        .catch(() => { if (active) setOptions([]); })
+        .catch((reason) => { if (active) { setOptions([]); setError(reason instanceof Error ? reason.message : "馆内条目暂时无法读取，请重试。"); } })
         .finally(() => { if (active) setLoading(false); });
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [endpoint, idField, nameField, open, query, queryParam]);
+  }, [endpoint, idField, nameField, open, query, queryParam, retry]);
 
   const unresolvedOption = allowUnresolved && query.trim()
     ? { id: null, name: query.trim(), status: "unresolved" } satisfies EntityValue
@@ -268,15 +273,16 @@ export function EntityPicker({
         </button>
       ))}</div>
       <div className="workflow-entity-combobox">
-        <Search size={14} />
+        <Search size={14} aria-hidden="true" />
         <input id={inputId} value={query} placeholder={placeholder} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-describedby={liveId} aria-activedescendant={open && keyboardOptions.length ? `${listboxId}-option-${activeIndex}` : undefined} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} />
-        <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} /></button>
+        <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} aria-hidden="true" /></button>
         <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>
           {loading ? <small>正在搜索……</small> : null}
           {!loading ? visibleOptions.map((option, index) => { const selected = values.some((value) => value.id === option.id); return <button id={`${listboxId}-option-${index}`} type="button" role="option" aria-selected={selected} tabIndex={index === activeIndex ? 0 : -1} key={option.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
           {!loading && unresolvedOption ? <button id={`${listboxId}-option-${visibleOptions.length}`} type="button" role="option" aria-selected={false} tabIndex={visibleOptions.length === activeIndex ? 0 : -1} onMouseEnter={() => setActiveIndex(visibleOptions.length)} onClick={() => select(unresolvedOption)}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
-          {!loading && !visibleOptions.length && !allowUnresolved ? <small>没有匹配的正式条目。</small> : null}
+          {!loading && error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>重试馆内搜索</button></div> : null}
+          {!loading && !error && !visibleOptions.length && !allowUnresolved ? <small>没有找到匹配条目，请换个关键词。</small> : null}
         </div> : null}
       </div>
     </div>

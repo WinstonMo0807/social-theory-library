@@ -67,7 +67,10 @@ test("reader shell delegates selection, navigation and private mutations to real
   assert.match(shell, /useReaderProgress\(/);
   assert.match(shell, /useReaderPageOverlays\(/);
   assert.doesNotMatch(shell, /function captureSelection|function persistAnnotation|function toggleBookmark|setScrollRequest\(/);
-  assert.doesNotMatch(shell, /apiRequest|useEffect|function copyCitation|function jumpToSearchMatch/);
+  assert.doesNotMatch(shell, /apiRequest|function copyCitation|function jumpToSearchMatch/);
+  // Local layout and Escape effects belong to the UI; private writes remain
+  // in the record hooks, not forbidden merely because the shell has an effect.
+  assert.match(shell, /readerDocumentRef/);
   assert.match(shell, /<PdfContinuousViewer[\s\S]*url=\{access\.url\}/);
   assert.match(shell, /onCopy=\{handleDocumentCopy\}/);
 });

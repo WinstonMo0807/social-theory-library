@@ -8,7 +8,7 @@ from collections import Counter
 
 from common.permissions import CanAccessBackOffice, CanMergeAuthority
 from catalog.models import Person, PersonMergeRecord
-from catalog.services.person_resolution import duplicate_people, person_merge_preview
+from catalog.services.person_resolution import duplicate_people, person_merge_preview, person_business_impact
 from catalog.services.person_merges import merge_people, prepare_person_merge, rollback_person_merge, rollback_preview
 from ingestion.models import AuditEvent
 
@@ -107,6 +107,7 @@ class PersonLexiconPreviewSerializer(serializers.Serializer):
 
 
 class PersonMergePreviewResponseSerializer(serializers.Serializer):
+    business_impact = serializers.JSONField(required=False)
     version = serializers.CharField()
     fingerprint = serializers.CharField()
     source = serializers.JSONField()
@@ -146,6 +147,9 @@ class PersonMergeRollbackRequestSerializer(serializers.Serializer):
 
 
 class PersonMergeRecordSerializer(serializers.Serializer):
+    business_impact = serializers.JSONField(required=False)
+    source_name = serializers.CharField(required=False)
+    target_name = serializers.CharField(required=False)
     id = serializers.UUIDField()
     source_person_id = serializers.UUIDField()
     target_person_id = serializers.UUIDField()
@@ -177,6 +181,9 @@ def _record_response(record):
         "rollback_event_ids": (rollback_audit.after or {}).get("event_ids", []) if rollback_audit else [],
         "rollback": reversal,
     }
+    payload["source_name"] = record.source_person.preferred_name
+    payload["target_name"] = record.target_person.preferred_name
+    payload["business_impact"] = person_business_impact(record.affected_edition_ids, [record.source_person_id, record.target_person_id], event_ids=[*record.event_ids, *payload["rollback_event_ids"]])
     response = Response(PersonMergeRecordSerializer(payload).data)
     response["Cache-Control"] = "private, no-store"
     return response
@@ -209,6 +216,7 @@ class AdminPersonMergePreviewView(APIView):
             payload = prepare_person_merge(source, target) if target else person_merge_preview(source)
         except ValueError as error:
             return Response({"code": "person_preview_conflict", "detail": str(error)}, status=409)
+        payload["business_impact"] = person_business_impact([row["id"] for row in payload["affected_editions"]], [source.pk, *([target.pk] if target else [])])
         response = Response(PersonMergePreviewResponseSerializer(payload).data)
         response["Cache-Control"] = "private, no-store"
         return response

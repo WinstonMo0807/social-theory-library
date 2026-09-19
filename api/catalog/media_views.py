@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import Edition, MediaAsset, MediaRendition
-from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_image, update_media_metadata
+from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_image, update_media_metadata, media_reference_inventory
 from common.permissions import CanAccessBackOffice, CanEditMetadata
 
 
@@ -51,6 +51,37 @@ class MediaUploadSerializer(MediaMetadataSerializer):
     image = serializers.FileField()
 
 
+class MediaCollectionSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    pages = serializers.IntegerField()
+    results = MediaAssetSerializer(many=True)
+
+
+class MediaCollectionView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=MediaCollectionSerializer)
+    def get(self, request):
+        from django.core.paginator import Paginator, InvalidPage
+        rows = MediaAsset.objects.prefetch_related("renditions").order_by("-created_at", "pk")
+        pagination = Paginator(rows, 30)
+        try:
+            page = pagination.page(request.query_params.get("page", 1))
+        except (ValueError, InvalidPage):
+            return Response({"detail": "媒体页码不存在，请返回第一页。"}, status=404)
+        return Response(MediaCollectionSerializer({"count": pagination.count, "page": page.number, "page_size": 30,
+                                                  "pages": pagination.num_pages, "results": page.object_list}).data)
+
+
+class MediaDetailSerializer(MediaAssetSerializer):
+    references = serializers.JSONField(read_only=True)
+
+    class Meta(MediaAssetSerializer.Meta):
+        fields = MediaAssetSerializer.Meta.fields + ("references",)
+
+
 class MediaListView(AdminPrivateResponseMixin, APIView):
     parser_classes = [MultiPartParser, FormParser]
 
@@ -80,9 +111,11 @@ class MediaDetailView(AdminPrivateResponseMixin, APIView):
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "PATCH" else [CanAccessBackOffice()]
 
-    @extend_schema(responses=MediaAssetSerializer)
+    @extend_schema(responses=MediaDetailSerializer)
     def get(self, request, media_id):
-        return Response(MediaAssetSerializer(get_object_or_404(MediaAsset, pk=media_id)).data)
+        media = get_object_or_404(MediaAsset.objects.prefetch_related("renditions"), pk=media_id)
+        media.references = media_reference_inventory(media.pk)
+        return Response(MediaDetailSerializer(media).data)
 
     @extend_schema(request=MediaMetadataSerializer, responses=MediaAssetSerializer)
     def patch(self, request, media_id):

@@ -35,6 +35,8 @@ from catalog.services.knowledge_nodes import merge_nodes, rollback_merge
 from catalog.services.theory_suggestions import generate_theory_review_tasks
 from .v304_helpers import activate_catalog_revision
 
+from .editorial_fixtures import editorial_request
+
 
 def make_work(title="理论测试馆藏"):
     work = Work.objects.create(document_type=DocumentType.BOOK, title=title, language="zh-CN")
@@ -133,7 +135,7 @@ def test_editor_can_create_and_publish_node_without_superadmin(api_client):
     assert draft.status_code == 201
     assert KnowledgeNodeAlias.objects.filter(node_id=draft.data["id"], alias="编辑别名").exists()
 
-    published = api_client.patch(
+    published = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/nodes/{draft.data['id']}/",
         {"status": "published"},
         format="json",

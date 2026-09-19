@@ -143,7 +143,7 @@ def current_field_value(target_type: str, target, field_name: str) -> Any:
                 )
             )
         if field_name == "subdiscipline":
-            return str(target.parent_id or "")
+            return list(target.subdiscipline_links.values("subdiscipline_id", "is_primary", "status"))
         if field_name == "relation":
             return list(
                 target.outgoing_relations.values(

@@ -2,7 +2,7 @@
 
 ## 架构重设计阅读入口
 
-- 讨论整体架构、后台或上架流程重设计时，先读`docs/GPT_ARCHITECTURE_CONTEXT.md`、`docs/INGESTION_AND_PUBLICATION.md`、`docs/REDESIGN_BRIEF.md`和`docs/CURRENT_STATE.md`，再按定位阅读源码。
+- 讨论整体架构、后台或上架流程重设计时，先读`docs/GPT_ARCHITECTURE_CONTEXT.md`、`docs/ADMIN_ARCHITECTURE_PROFILE.md`、`docs/INGESTION_AND_PUBLICATION.md`、`docs/REDESIGN_BRIEF.md`和`docs/CURRENT_STATE.md`，再按定位阅读源码。
 - 这些资料区分当前实现、历史记录、验证范围和用户下一步目标。不要把历史方案当正在运行的系统，也不要把当前实现当作永远不得调整的设计。
 - 用户已经提出重新设计整体架构，尤其后台和上架过程。可以比较重大设计变化，但此处记录意图不等于授权执行尚未确认的数据迁移、技术栈更换或生产破坏性操作。先提出有事实依据的方案和迁移边界，再按当前明确请求实施。
 

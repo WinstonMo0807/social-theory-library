@@ -1,6 +1,6 @@
 # 当前上架与发布流程
 
-更新于2026-09-13，说明3.0.5真实行为。供重设计后台和上架过程使用，不把现有步骤当作未来必选界面。完整产品背景见[实际架构](GPT_ARCHITECTURE_CONTEXT.md)。
+更新于2026-09-20，说明3.0.6当前源码行为。供重设计后台和上架过程使用，不把现有步骤当作未来必选界面。完整产品背景见[实际架构](GPT_ARCHITECTURE_CONTEXT.md)，逐页保存含义和管理范围见[管理端画像](ADMIN_ARCHITECTURE_PROFILE.md)。
 
 ## 1. 一个用户任务，四种入口
 
@@ -24,7 +24,8 @@ flowchart TD
     Direct --> Parse[原件校验和文档处理]
     Import --> Parse
     Parse --> Identity[Work Edition Asset及页面]
-    Identity --> Edit[人工编目和字段决定]
+    Identity --> Cover[优先准备封面候选，不自动选定]
+    Cover --> Edit[人工编目和字段决定]
     Manual[无上传的手工编目会话] --> Edit
     Edit --> Preview[保存草稿和检查发布差异]
     Preview --> Approve[馆员明确批准发布]
@@ -36,6 +37,8 @@ flowchart TD
 ```
 
 图是职责关系，不是必须顺序点完的页面向导。OCR与候选研究可以延后或等待能力；纯书目没有文件，不会进入伪造的PDF处理。
+
+3.0.6在上传安全校验、Work/Edition与文件副本准备后，由原Worker优先准备少量PDF封面候选，早于整本文字/OCR和AI书目填写。当前版本页自动读取，管理员可选推荐、指定任意PDF物理页、上传图片或保持默认样式；封面可选，期刊文章不强制有图。新上传尚无版本或Worker未处理时如实等待，不承诺刚进队列就已完成。实现为`pipeline.py:prepare_early_cover_candidates`、`catalog/services/covers.py`、`catalog/cover_views.py`和EditionCoverEditor，不建立新OCR/AI服务。
 
 R2实际函数位于[services/r2_staging.py](../api/ingestion/services/r2_staging.py)。`create_r2_upload`建立暂存上下文，签名/确认分片后`complete_r2_upload`核对对象并派发导入。`import_r2_staging_object`进入NAS入库过程，`mark_r2_cleanup_ready`、`cleanup_r2_staging_object`管理临时对象清理。重试/恢复使用原ProcessingJob和任务服务，不是复制一条已发布书目。
 
@@ -49,16 +52,17 @@ NAS文件及Asset存在、业务状态已到needs_review/ready/published时可�
 
 Work和Edition分工不同。作品题名、原文语言、作品关系等属于Work；出版年月、出版社、版本、ISBN/DOI等在Edition。Asset属于Edition，Person通过贡献角色关联，不是题名框旁的一段不可追踪作者字符串。
 
-当前工作台有文件、作品、版本、作者与贡献者、学科、知识、阅读、策展和发布等工作内容。字段规则来自[contracts/fields.py](../api/catalog/contracts/fields.py)，校验与标识符来自同目录validation/identifiers，依赖与派生影响来自projections。确切步骤以[admin_workflow.py](../api/catalog/services/admin_workflow.py)为准。
+当前工作台外层为书目信息、文件与阅读、人物及知识关联、预览与发布四组；底层保留文件、作品、版本、作者与贡献者、学科、知识、阅读、策展等领域步骤。字段规则来自[contracts/fields.py](../api/catalog/contracts/fields.py)，校验与标识符来自同目录validation/identifiers，依赖与派生影响来自projections。步骤以[admin_workflow.py](../api/catalog/services/admin_workflow.py)为准；封面、可选主题、观点提取不能无依据地成为上架必填。
 
-- 手工填写与采用候选是明确写操作。保存成功后记录字段决定和适用的人工锁，失效的机器建议不能覆盖已确认值。
+- 手工输入与可预填建议先修改当前浏览器表单，可撤销/改写；显式保存才是持久写入。保存成功记录字段决定、来源和适用人工锁，失效建议不能覆盖已确认值。人物须确认具体身份和职责；关系/观点等独立动作仍走明确采用命令，不能假称所有建议都只是填框。
+- 新查找可使用白名单内当前未保存编目信息，字段依赖指纹识别过期候选。打开只读已有结果，新外部查找须明确点击；ResearchRun结果轮询回到原字段。私人笔记等不送入该上下文。
 - Provider、原生文本、OCR和AI建议是候选。网页搜索摘要只用于发现资料，不能当作原文Evidence直接发布。
 - 新建并关联人物或知识实体先作为当前编目包中的草稿，父书批准发布时也只发布经过确认、范围匹配的对象。
 - `MetadataReview`是视图/序列化与过程名称，不是另一张名为MetadataReview的馆藏模型。
 - 手工会话建立时非空题名、类型、语言被记录为人工确认；import来源不会因此自动算人工确认。已有开放会话复用原source和base_public_revision，不由另一上传抢占。
 - 旧Review在未发布阶段可以保存，已发布Work被409引导到维护草稿。`record_cataloging_edit`让旧成功保存与新工作台共用真实会话，GET不会偷偷开会话。
 
-主要入口为[work_editor.py](../api/catalog/services/work_editor.py)的`save_workflow_section`、`save_editorial_workflow_section`，以及[field_assistant/service.py](../api/catalog/services/field_assistant/service.py)。`CatalogingSession`的创建、复用、放弃和请求幂等在[cataloging_sessions.py](../api/catalog/services/cataloging_sessions.py)。
+当前主页面整页保存由[workspace_edits.py](../api/catalog/services/workspace_edits.py)协调，底层复用[work_editor.py](../api/catalog/services/work_editor.py)的`save_workflow_section`、`save_editorial_workflow_section`及[field_assistant/service.py](../api/catalog/services/field_assistant/service.py)。Edition、edit_version、同一请求ID和候选最终值在同一事务校验；过期或跨Edition混入Work草稿返回冲突。`CatalogingSession`创建、复用、放弃及幂等在[cataloging_sessions.py](../api/catalog/services/cataloging_sessions.py)。
 
 ## 4. 保存、预览与发布分别做什么
 
@@ -71,6 +75,8 @@ Work和Edition分工不同。作品题名、原文语言、作品关系等属于
 | 后台处理完成 | 消费者结果与投影版本更新 | 对应派生能力可用，不改人工事实 |
 | 撤回 | 撤回状态及相应事件 | 不再公开；文件、记录和历史仍在 |
 | 恢复历史公开版本 | 用合法旧快照生成序号更高的恢复发布 | 准备完成前仍保留当前稳定公开版本 |
+
+顶部“保存书目修改”保存当前页所有改动并停留；“确认本节”保存并确认本节，不再强制跳下一节。“保存草稿并退出”才主动离开。封面、图片、文件和其他独立操作先说明自己的范围，不隐式保存整页。表单未保存时不能拿旧服务器稿冒充最新预览/发布；详见管理端画像的保存范围表。
 
 差异入口为[publication_commands.py](../api/catalog/services/publication_commands.py)的`prepare_revision`，命令层包含`activate_revision`、`withdraw_revision`及`rollback_revision`，具体导出以源码为准。旧ingestion的publish/withdraw服务是同一领域命令的兼容适配。维护页的发布事务还需合并应用原EditorialRevision，不能只单独改`Edition.state`。
 
@@ -112,9 +118,13 @@ Work和Edition分工不同。作品题名、原文语言、作品关系等属于
 - replacement分支以新正文Asset建立catalog_updated事件；OCR完成只在文档解释ready且存在DocumentRevision时发起正文更新。`system_content_update`隔离未发布的人工元数据草稿，不能让OCR顺带发布正在编辑的题名或作者。
 - 图片选中进入草稿，人工发布才改变正式引用；Media原件、衍生图及历史引用不能就地删除。
 
-当前撤回权限仍有入口差异。旧`/api/ingestion/items/{id}/withdraw/`使用`IsLibraryAdmin`；维护`/api/catalog/admin/library/works/{work_id}/publication/`的withdraw分支使用`CanPublishWork`。重设计时应明确统一规则，本次文档不会擅自扩大或收紧权限。
+3.0.6撤回馆藏统一为`CanWithdrawWork`：Administrator/Owner可执行，Editor不可撤回但仍可保存和发布。旧`/api/ingestion/items/{id}/withdraw/`与维护`/api/catalog/admin/library/works/{work_id}/publication/`都执行后端校验，按钮使用相同能力。3.0.5入口差异是历史，不是当前未修事实。
 
-## 8. 已修复的发布故障作为设计样本
+文件操作从`/api/catalog/admin/editions/{id}/files/`发起，内部复用原上传服务，不要求管理员找UploadItem ID。替换创建新文件身份并保留旧原件/阅读数据；不能把“保留旧Page”误解为任何新PDF都使用旧Page ID。
+
+全本重新OCR在当前版本与处理中心复用`EditionOcrControl`、`ProcessingCenterView`、`catalog_ocr.py`和原ProcessingJob。选择当前有效阅读PDF，按RETRY_JOBS权限显式开始，逐页保存后计算真实进度，可暂停/恢复/取消。识别100%后仍可能整理或等待公开更新；来源版本和较新任务再次校验，同文件Page身份不重建。已公开结果沿用文档暂存与原发布事件，不顺带发布未公开的题名/作者修改。真实外部OCR吞吐仍未在这次最小发布中实测。
+
+## 8. 历史：3.0.5已修复的发布故障
 
 2026-09的《质的研究方法与社会科学研究》被人工发布后，旧版显示published，活动公开修订却为空。调度没有捕获graph/timeline；完成查询又因PostgreSQL对可空连接加锁而异常；最后同值日期的Python对象与JSON字符串比较还会误报待更新。
 
@@ -122,8 +132,8 @@ Work和Edition分工不同。作品题名、原文语言、作品关系等属于
 
 这不证明未来所有故障都解决了。它说明新的上架设计至少应让馆员看见可追踪的保存结果、公开版本、待处理项目和可用恢复动作，且重试不能重复创建书目或清空失败证据。
 
-## 9. 后续设计前值得补充的真实场景
+## 9. 后续审计与验证边界
 
-请和用户核对批量规模、最常见资源类型、外文/译本/期刊关系、多人同时编辑频率、是否希望双人审核、OCR资源和NAS性能预算。还要核对手工建书后补PDF、替换主版本、发布途中继续编辑、仅改封面、跨对象关系更新等完整旅程。
+单人有权限即可发布、显式保存、封面可选、时间线归理论管理已经是确定要求，不再当成开放设计问题。批量规模、多人协作频率和OCR/NAS预算仍需实际资料。后续修改应重新走手工建书补PDF、替换文件、多版本、发布途中继续编辑、仅改封面和跨对象关系更新等旅程。
 
-这些需要从现有API和生产样本验证，不能因为有模型或按钮就宣布每个组合场景均已打通。当前未实测项见[CURRENT_STATE](CURRENT_STATE.md)。
+3.0.6按用户最新授权执行最小验证并已上线，不代表最终源码所有组合场景都重验。具体本地/PG/浏览器/公网结果见[最终交付](V3.0.6_COMPLETION_RELEASE.md)；不能因为有模型或按钮就宣布真实外部服务、全部角色与全视口均通过。当前边界见[CURRENT_STATE](CURRENT_STATE.md)。

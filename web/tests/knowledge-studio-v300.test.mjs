@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const studioUrl = new URL("../components/knowledge-workspace-diagnostics.tsx", import.meta.url);
+const studioUrl = new URL("../components/knowledge-workspace.tsx", import.meta.url);
+const diagnosticUrl = new URL("../components/knowledge-workspace-diagnostics.tsx", import.meta.url);
 const editorialStudioUrl = new URL("../components/knowledge-workspace.tsx", import.meta.url);
 const shellUrl = new URL("../components/admin-shell.tsx", import.meta.url);
 const nodeEditorUrl = new URL("../components/theory-system-admin.tsx", import.meta.url);
@@ -32,7 +33,7 @@ test("Knowledge Studio is the primary knowledge entry and reuses specialist edit
     readFile(readingPathEditorUrl, "utf8"),
   ]);
 
-  assert.match(shell, /\["\/admin\/knowledge", Sparkles, "Knowledge Studio"\]/);
+  assert.match(shell, /\["\/admin\/knowledge", Sparkles,/);
   assert.match(studio, /href="\/admin\/theories"/);
   assert.match(studio, /href="\/admin\/scholars"/);
   assert.match(studio, /href="\/admin\/topics"/);
@@ -41,33 +42,27 @@ test("Knowledge Studio is the primary knowledge entry and reuses specialist edit
   assert.match(nodeEditor, /search\.get\("node"\)/);
   assert.match(nodeEditor, /已从 Knowledge Studio 打开这个规范节点/);
   assert.match(taxonomyEditor, /searchParams\.get\("subdiscipline"\)/);
-  assert.match(taxonomyEditor, /已从 Knowledge Studio 打开这个子学科/);
+  assert.match(taxonomyEditor, /已打开所选子学科/);
   assert.match(readingPathEditor, /searchParams\.get\("path"\)/);
   assert.match(readingPathEditor, /encodeURIComponent\(requestedPath\)/);
 });
 
-test("Knowledge Studio presents every required evidence-led object section", async () => {
+test("the actual primary Studio owns public scope, editorial sections and publication", async () => {
   const studio = await readFile(studioUrl, "utf8");
 
-  for (const label of ["正式内容", "关系", "Evidence", "Claims", "AI/Research 候选", "EditorialRevision", "前台影响", "Preview"]) {
+  for (const label of ["基本资料", "相关内容", "观点与讨论", "发布与记录", "页面内容"]) {
     assert.match(studio, new RegExp(label));
   }
   for (const objectType of ["theory", "concept", "debate", "scholar", "discipline", "subdiscipline", "topic", "reading_path", "work"]) {
     assert.match(studio, new RegExp(`${objectType}:`));
   }
-  assert.match(studio, /DerivedClaim · Shadow/);
-  assert.match(studio, /不会自动写入正式知识/);
-  assert.match(studio, /EvidenceEnvelopeCard/);
-  assert.match(studio, /实际前台位置/);
-  assert.match(studio, /impact\?\.projection_states/);
-  assert.match(studio, /impact\?\.modules/);
-  assert.match(studio, /当前 API 未提供 dependency 和 projection 元数据/);
-  assert.match(studio, /published_changes_require_revision/);
-  assert.match(studio, /确认发布此修订/);
-  assert.match(studio, /onPublishRevision/);
-  assert.match(studio, /Knowledge Growth/);
-  assert.match(studio, /knowledge_update_suggestions/);
-  assert.match(studio, /为什么现在处理/);
+  assert.match(studio, /<PublicPageTree control=\{selection\.public_control\}/);
+  assert.match(studio, /<AssistanceUsagePanel/);
+  assert.match(studio, /<CurationFieldAssistant/);
+  assert.match(studio, /ReaderEvidence/);
+  assert.match(studio, /确认发布本次编辑/);
+  assert.match(studio, /onPublish/);
+  assert.match(studio, /有修改还没有发布/);
 });
 
 test("Scholar Discipline Theory and Topic share the bounded object Inspector", async () => {
@@ -97,36 +92,29 @@ test("Knowledge Studio requests a bounded selected-object read model", async () 
   const studio = await readFile(studioUrl, "utf8");
 
   assert.match(studio, /limit: "40"/);
-  assert.match(studio, /params\.set\("selected_type", selected\.type\)/);
-  assert.match(studio, /params\.set\("selected_id", selected\.id\)/);
+  assert.match(studio, /params\.set\("selected_type", selectedType\)/);
+  assert.match(studio, /params\.set\("selected_id", selectedId\)/);
   assert.match(studio, /\/catalog\/admin\/knowledge-workspace\//);
-  assert.match(studio, /payload\.new_authority\.slice\(0, 20\)/);
   assert.match(studio, /subdiscipline: "子学科"/);
   assert.match(studio, /reading_path: "阅读路径"/);
-  assert.match(studio, /work: "重要作品"/);
-  assert.match(studio, /studio\.object_types\.map/);
-  assert.match(studio, /aria-label="知识对象导航"/);
+  assert.match(studio, /work: "作品"/);
+  assert.match(studio, /Object\.entries\(objectLabels\)/);
+  assert.match(studio, /aria-label="内容导航"/);
   assert.match(studio, /studio\.selection_error/);
 });
 
-test("Knowledge Studio distinguishes empty sections from backend capabilities that are not connected", async () => {
-  const studio = await readFile(studioUrl, "utf8");
-
-  for (const state of [
-    "尚未建立正式关系",
-    "当前对象类型尚未接通关系汇总",
-    "尚无人工采用的策展命题",
-    "当前对象类型尚未接通 CuratedClaim 汇总",
-    "本页不会伪造预览",
-    "统一人工决定",
-  ]) assert.match(studio, new RegExp(state));
-
-  assert.match(studio, /CandidateDecisionBar/);
-  assert.match(studio, /generated_candidates/);
-
-  for (const sectionId of ["studio-canonical", "studio-candidates", "studio-growth", "studio-evidence", "studio-claims", "studio-relations", "studio-revisions", "studio-impact", "studio-preview"]) {
-    assert.match(studio, new RegExp(sectionId));
-  }
+test("professional diagnostics retain identity and source checks without a parallel editor", async () => {
+  const diagnostics = await readFile(diagnosticUrl, "utf8");
+  assert.match(diagnostics, /useApiResource<KnowledgePayload>/);
+  assert.match(diagnostics, /params\.set\("selected_type", kind\)/);
+  assert.match(diagnostics, /params\.set\("selected_id", objectId\)/);
+  assert.match(diagnostics, /source_revision/);
+  assert.match(diagnostics, /projected_revision/);
+  assert.match(diagnostics, /EvidenceEnvelopeCard/);
+  assert.match(diagnostics, /返回当前对象工作台/);
+  assert.match(diagnostics, /无法找到指定对象，没有显示其他对象的结果/);
+  assert.doesNotMatch(diagnostics, /apiRequest\(|CandidateDecisionBar|async function publishRevision|async function decideCandidate/);
+  assert.doesNotMatch(diagnostics, /id="studio-canonical"|id="studio-preview"/);
 });
 
 test("Knowledge Studio inherits editorial tokens and collapses on narrow screens", async () => {
@@ -148,11 +136,11 @@ test("published subdiscipline edits remain revision drafts until explicit public
   ]);
 
   assert.match(taxonomyEditor, /saved\.editorial_revision/);
-  assert.match(taxonomyEditor, /正式页面尚未改变/);
+  assert.match(taxonomyEditor, /读者页面尚未改变/);
   assert.match(taxonomyEditor, /editing\?\.editorial_status === "published"/);
   assert.match(lifecycle, /LifecycleRevisionResponse/);
-  assert.match(lifecycle, /已建立 Revision/);
-  assert.match(lifecycle, /Knowledge Studio 预览并确认发布/);
+  assert.match(lifecycle, /下线草稿已保存/);
+  assert.match(lifecycle, /内容管理中预览，再确认发布/);
 });
 
 test("Reading Path keeps explicit learning goals and prerequisites inside revisions", async () => {

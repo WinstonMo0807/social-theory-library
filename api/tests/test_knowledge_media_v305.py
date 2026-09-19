@@ -12,6 +12,7 @@ from catalog.services.editorial_revision import EditorialRevisionError, create_e
 from catalog.services.knowledge_media import image_media, image_selection, image_target_type, select_knowledge_image
 from catalog.services.media import build_rendition, ingest_image, update_media_metadata
 from .test_media_v305 import picture
+from .editorial_fixtures import editorial_request
 
 pytestmark = pytest.mark.django_db
 
@@ -148,12 +149,12 @@ def test_legacy_image_patch_and_admin_preview_share_the_new_draft(fixture):
     url = f"/api/catalog/admin/theory-system/{endpoint}/{target.pk}/"
     client = APIClient()
     client.force_authenticate(actor)
-    response = client.patch(url, {"cover_asset": picture()}, format="multipart")
+    response = editorial_request(client, "patch", url, {"cover_asset": picture()}, format="multipart")
     assert response.status_code == 202
     assert response.data["cover_url"].startswith("/api/catalog/admin/media/")
     assert response.data["cover_media"]["renditions"]
     field = "summary" if object_type == "knowledge_node" else "introduction"
-    updated = client.patch(url, {field: "随后保存说明"}, format="json")
+    updated = editorial_request(client, "patch", url, {field: "随后保存说明"}, format="json")
     assert updated.status_code == 202 and updated.data["cover_url"] == response.data["cover_url"]
     assert updated.data[field] == "随后保存说明"
     target.refresh_from_db()

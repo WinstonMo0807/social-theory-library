@@ -21,7 +21,7 @@ from catalog.models import (
 from catalog.services.authority_suggestions import authority_suggestions
 from catalog.services.field_enrichment import FieldEnrichmentRequest, FieldEnrichmentService
 from catalog.services.field_enrichment.policies import FIELD_POLICIES
-from catalog.services.field_enrichment.targets import get_target
+from catalog.services.field_enrichment.targets import get_target, target_context
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ def _work_claim_field(target, field_name, *, context, actor):
             "field": {"name": field_name}, "scope": "curation"}
 
 
-def lookup_curation_field(*, object_type, object_id=None, field_name="identity", query="", authority_type="", current_value=None, form_context=None, actor=None):
+def lookup_curation_field(*, object_type, object_id=None, field_name="identity", query="", authority_type="", current_value=None, form_context=None, actor=None, allow_external=False):
     """Aggregate first, then expose a small field-specific result to Admin."""
     if object_type not in TARGET_TYPES:
         raise ValueError("不支持的策展对象。")
@@ -184,15 +184,18 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
         raise ValueError("不支持的馆内对象类型。")
     target = get_target(object_type, object_id) if object_id else None
     query = " ".join(str(query or "").split())[:240]
-    context = form_context if isinstance(form_context, dict) else {}
+    # Only public editorial input enters external lookup, never arbitrary
+    # client keys, private notes, credentials or confirmation flags.
+    allowed = {"language", "name", "original_name", "title", "birth_year", "death_year", "affiliations", "node_type", "primary_discipline_id", "summary", "definition", "learning_goal", "target_node_id", "relation_type", "edition_id", "editorial_context"}
+    context = {key: value for key, value in (form_context or {}).items() if key in allowed} if isinstance(form_context, dict) else {}
     if object_type == "work" and field_name in WORK_CLAIM_FIELDS:
         if target is None:
             raise ValueError("请先保存作品，再查找观点建议。")
         # Reuse the existing bounded, evidence-backed claim selector. Do not
         # cache reviewer decisions or introduce another interpretation pipeline.
         return _work_claim_field(target, field_name, context=context, actor=actor)
-    digest = hashlib.sha256(json.dumps([object_type, str(object_id or ""), field_name, query, authority_type, current_value, context, str(getattr(target, "updated_at", ""))], sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
-    cache_key = f"curation-field-assistant:v304:{digest}"
+    digest = hashlib.sha256(json.dumps([object_type, str(object_id or ""), field_name, query, authority_type, current_value, context, str(getattr(target, "updated_at", "")), allow_external], sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
+    cache_key = f"curation-field-assistant:v306:{digest}"
     cached = cache.get(cache_key)
     if cached is not None:
         identifiers = [row["enrichment"]["id"] for row in [*cached["results"], *cached.get("more_results", [])] if row.get("enrichment")]
@@ -204,23 +207,33 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
     local = _formal_identity_rows(authority_type, query) if authority_type else []
     rows.extend(_identity(row, local=True) for row in local)
     policy = next((row for row in FIELD_POLICIES.for_target(object_type) if row.field_name == field_name), None)
+    state = "not_applicable" if policy is None and not authority_type else "not_run"
     if target is not None and policy is not None:
-        candidates = list(EnrichmentCandidate.objects.filter(target_type=object_type, target_id=target.pk, field_name=field_name, status="pending", refresh_after__gte=timezone.now()).prefetch_related("evidence_records").order_by("-confidence")[:30])
+        input_fingerprint = hashlib.sha256(json.dumps([object_type, str(target.pk), field_name, query, current_value, context, target_context(object_type, target)], sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
+        candidates = list(EnrichmentCandidate.objects.filter(target_type=object_type, target_id=target.pk, field_name=field_name, status="pending", refresh_after__gte=timezone.now(), request_context__curation_fingerprint=input_fingerprint).prefetch_related("evidence_records").order_by("-confidence", "pk")[:30])
+        state = "ready" if candidates else "not_run"
         if not candidates:
+            notices.append("尚无对应当前填写的建议。其他填写条件下的旧建议不会混入；需要时请点击查找新建议。")
+        if allow_external:
             try:
+                lookup_context = {**context, "curation_fingerprint": input_fingerprint,
+                                  "curation_context": {**({"title" if object_type in {"work", "reading_path"} else "name": query} if query else {}), **context}}
                 result = FieldEnrichmentService().enrich(FieldEnrichmentRequest(
                     target_type=object_type, target_id=target.pk, field_names=(field_name,),
                     current_value={field_name: current_value} if current_value is not None else None,
-                    form_context=context, requested_mode="full", visibility="admin",
+                    form_context=lookup_context, requested_mode="full", visibility="admin",
                 ), actor=actor)
                 candidates = list(result.candidates)
+                state = "partial" if candidates and result.errors else "ready" if candidates else "unavailable" if result.errors else "empty"
+                notices = ["已按当前填写完成查找。" if candidates else "本次查找没有合适建议，可以继续手工填写。"]
                 if result.errors:
-                    notices.append("部分资料暂时不可用，可以继续手工编辑。")
+                    notices.append("部分资料查询未完成，不能将无结果理解为内容不存在；可以稍后重试。")
             except (httpx.HTTPError, OSError, TimeoutError) as exc:
                 logger.warning("curation field evidence unavailable type=%s field=%s error=%s", object_type, field_name, type(exc).__name__)
                 notices.append("资料查询暂时不可用，可以继续手工编辑。")
+                state = "unavailable"
         rows.extend(_enrichment(row) for row in candidates)
-    if authority_type and len(query) >= 2 and not local:
+    if allow_external and authority_type and len(query) >= 2 and not local:
         try:
             # The provider's local entries may include editorial drafts. Only
             # this adapter's formal-query result can be labelled internal.
@@ -232,6 +245,10 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
             logger.warning("curation identity evidence unavailable type=%s error=%s", object_type, type(exc).__name__)
             notices.append("身份资料暂时不可用，可以继续手工编辑。")
     combined = _merge(rows)
-    response = {"results": combined[:3], "more_results": combined[3:12], "has_more": len(combined) > 3, "message": " ".join(dict.fromkeys(notices)), "field": {"name": field_name}, "scope": "curation"}
-    cache.set(cache_key, response, timeout=60)
+    if not allow_external:
+        notices.append("已按本页填写读取馆内记录和已有建议，没有调用外部服务。需要新资料时可明确发起查找。")
+    response = {"results": combined[:3], "more_results": combined[3:12], "has_more": len(combined) > 3, "message": " ".join(dict.fromkeys(notices)), "state": state, "field": {"name": field_name}, "scope": "curation"}
+    # Local reads must notice evidence produced by a concurrent explicit lookup.
+    if allow_external:
+        cache.set(cache_key, response, timeout=60)
     return response

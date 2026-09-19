@@ -1,242 +1,139 @@
 "use client";
 
-import { AlertCircle, BookOpen, CheckCircle2, ExternalLink, FileText, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowRight, ExternalLink, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiBlob, apiRequest, getServerSessionCredential } from "@/lib/api";
-import { ItemPublicationControl, type PublicationPreflight } from "./item-publication-control";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
+import { apiBlob, getServerSessionCredential } from "@/lib/api";
+import { useApiResource } from "@/lib/api/use-api-resource";
+import { publicationDescription, publicationPresentation, publicationPublicHref, queueWorkbenchHref, queueWorkspaceApi, selectedQueueItem, sourceLabels, type WorkflowQueueItem, type WorkflowQueuePage } from "@/lib/api/admin-collections";
+import { adminListHref, adminPageNumber, withAdminReturn } from "@/lib/admin-route-context";
+import { asArray, asRecord, asString } from "./admin/workflow/workflow-types";
+import { PublicationDiff, type PublicationPreparation } from "./admin/workflow/publication-diff";
+import { CatalogHealth } from "./admin/workflow/catalog-health";
+import { PageHeader, StatusBadge } from "./admin-ui";
+import { Pagination } from "./ui/pagination";
+import styles from "./admin/library/admin-collection.module.css";
 
-type ImpactItem = { label: string; href: string };
+const publicFilters: Record<string, string> = { all: "全部公开状态", unpublished: "尚未公开", publishing: "发布处理中", published: "已公开版本", withdrawn: "已撤回" };
 
-type PublicationItem = {
-  id: string;
-  source_filename: string;
-  status: string;
-  updated_at: string;
-  publication_preflight: PublicationPreflight;
-  can_manage_publication: boolean;
-  review_data: null | {
-    edition_id: string;
-    title: string;
-    document_type: string;
-    language: string;
-    publication_state: string;
-    ocr_status: string;
-    semantic_index_status: string;
-    page_label_status: string;
-    review_status: string;
-    review_progress: number;
-    reader_rendition_policy: "auto" | "original" | "ocr";
-    publication_year: number | null;
-    publisher: string;
-    publication_place: string;
-    authors: string[];
-    public_slug: string | null;
-    page_count: number;
-    release_impact: {
-      work: ImpactItem;
-      scholars: ImpactItem[];
-      disciplines: ImpactItem[];
-      theories: ImpactItem[];
-      subdisciplines: ImpactItem[];
-      topics: ImpactItem[];
-      search: ImpactItem;
-    };
-  };
-};
-
-type Paginated<T> = { count: number; results: T[] };
-type PublicationFilter = "attention" | "all" | "published" | "withdrawn";
-
-const stateLabels: Record<string, string> = {
-  draft: "草稿",
-  ready: "待发布",
-  published: "已发布",
-  withdrawn: "已下架",
-};
-
-const documentLabels: Record<string, string> = {
-  book: "图书",
-  journal_article: "期刊论文",
-  thesis: "学位论文",
-  report: "研究报告",
-};
-
-export function PublicationDesk() {
-  const [items, setItems] = useState<PublicationItem[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [filter, setFilter] = useState<PublicationFilter>("attention");
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
-
-  const load = useCallback(async () => {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    try {
-      const payload = await apiRequest<Paginated<PublicationItem>>(
-        "/ingestion/items/?scope=publication&ordering=-updated_at&page_size=100",
-        {},
-        token,
-      );
-      const available = payload.results.filter((item) => item.review_data);
-      setItems(available);
-      setSelectedId((current) => {
-        const fromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("item") ?? "" : "";
-        const candidate = current || fromUrl;
-        if (candidate && available.some((item) => item.id === candidate)) return candidate;
-        return available.find((item) => item.review_data?.publication_state !== "published")?.id ?? available[0]?.id ?? "";
-      });
-      setError("");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "发布台加载失败。");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+function PdfPreview({ path, title }: { path: string; title: string }) {
+  const [result, setResult] = useState<{ path: string; url: string; error: string } | null>(null);
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-
-  const filtered = useMemo(() => items.filter((item) => {
-    const state = item.review_data?.publication_state;
-    if (filter === "published") return state === "published";
-    if (filter === "withdrawn") return state === "withdrawn";
-    if (filter === "attention") return state !== "published";
-    return true;
-  }), [filter, items]);
-
-  const active = filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
-
-  useEffect(() => {
-    const token = getServerSessionCredential();
-    if (!token || !active) {
-      const timer = window.setTimeout(() => setPreviewUrl(""), 0);
-      return () => window.clearTimeout(timer);
-    }
+    if (!path) return;
     let alive = true;
-    let objectUrl = "";
-    void apiBlob(`/ingestion/items/${active.id}/preview/`, token)
-      .then((blob) => {
-        if (!alive) return;
-        objectUrl = URL.createObjectURL(blob);
-        setPreviewUrl(objectUrl);
-      })
-      .catch(() => {
-        if (alive) setPreviewUrl("");
-      });
-    return () => {
-      alive = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [active]);
-
-  const counts = useMemo(() => ({
-    attention: items.filter((item) => item.review_data?.publication_state !== "published").length,
-    published: items.filter((item) => item.review_data?.publication_state === "published").length,
-    withdrawn: items.filter((item) => item.review_data?.publication_state === "withdrawn").length,
-    all: items.length,
-  }), [items]);
-
-  function selectItem(itemId: string) {
-    setSelectedId(itemId);
-    const url = new URL(window.location.href);
-    url.searchParams.set("item", itemId);
-    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }
-
-  return (
-    <div className="admin-page publication-desk-page">
-      <header className="admin-page-title">
-        <div><p>发布与发现</p><h1>发布台</h1><span>保存元数据与最终公开分开。管理员在这里预览、核对影响并决定发布或下架。</span></div>
-        <button className="button secondary" type="button" onClick={() => void load()}><RefreshCw size={15} />刷新</button>
-      </header>
-      {message ? <p className="form-message" role="status">{message}</p> : null}
-      {error ? <p className="review-error" role="alert"><AlertCircle size={16} />{error}</p> : null}
-      <nav className="publication-filter-tabs" aria-label="发布状态筛选">
-        {(["attention", "all", "published", "withdrawn"] as const).map((value) => (
-          <button type="button" className={filter === value ? "active" : ""} aria-pressed={filter === value} onClick={() => setFilter(value)} key={value}>
-            {{ attention: "待处理", all: "全部", published: "已发布", withdrawn: "已下架" }[value]} <strong>{counts[value]}</strong>
-          </button>
-        ))}
-      </nav>
-      {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取馆藏……</p> : null}
-      {!loading && !items.length ? <p className="admin-list-state">尚无可进入发布台的馆藏记录。</p> : null}
-      {items.length ? (
-        <div className="publication-desk-layout">
-          <aside className="publication-item-list admin-panel" aria-label="馆藏发布列表">
-            {filtered.map((item) => {
-              const review = item.review_data!;
-              const warningCount = item.publication_preflight.warnings.length;
-              const blockerCount = item.publication_preflight.blockers.length;
-              return (
-                <button type="button" className={item.id === active?.id ? "active" : ""} onClick={() => selectItem(item.id)} key={item.id}>
-                  <FileText size={17} />
-                  <span><strong>{review.title || item.source_filename}</strong><small>{documentLabels[review.document_type] ?? review.document_type} · {review.publication_year || "年份待补"}</small></span>
-                  <b>{stateLabels[review.publication_state] ?? review.publication_state}</b>
-                  <small>{blockerCount ? `${blockerCount} 个阻止项` : warningCount ? `${warningCount} 个警告` : "检查通过"}</small>
-                </button>
-              );
-            })}
-            {!filtered.length ? <p>当前筛选下没有馆藏。</p> : null}
-          </aside>
-          {active?.review_data ? (
-            <main className="publication-workspace">
-              <section className="publication-preview admin-panel">
-                <div className="publication-preview-document">
-                  {previewUrl ? <iframe title={`发布预览：${active.review_data.title}`} src={previewUrl} /> : <div><BookOpen size={28} /><span>PDF 预览正在准备</span></div>}
-                </div>
-                <div className="publication-preview-metadata">
-                  <header><div><p>{documentLabels[active.review_data.document_type] ?? active.review_data.document_type}</p><h2>{active.review_data.title}</h2></div><span>{stateLabels[active.review_data.publication_state] ?? active.review_data.publication_state}</span></header>
-                  <dl>
-                    <div><dt>作者</dt><dd>{active.review_data.authors.join("、") || "待补"}</dd></div>
-                    <div><dt>出版信息</dt><dd>{[active.review_data.publication_place, active.review_data.publisher, active.review_data.publication_year].filter(Boolean).join(" · ") || "待补"}</dd></div>
-                    <div><dt>PDF</dt><dd>{active.review_data.page_count || "待确认"} 页</dd></div>
-                    <div><dt>人工复核</dt><dd>{active.review_data.review_progress}%</dd></div>
-                  </dl>
-                  <div className="publication-preview-actions">
-                    <Link className="button secondary" href={`/admin/intake/${active.id}#publication`}>打开馆藏工作流</Link>
-                    {active.review_data.public_slug && active.review_data.publication_state === "published" ? <Link className="button secondary" href={`/works/${active.review_data.public_slug}`} target="_blank">查看公网 <ExternalLink size={14} /></Link> : null}
-                  </div>
-                </div>
-              </section>
-              <section className="publication-impact-summary admin-panel">
-                <header><div><h2>公开影响预览</h2><p>发布后只在已确认关系对应的页面展示。</p></div><CheckCircle2 size={18} /></header>
-                <div>
-                  <ImpactGroup label="学科" values={active.review_data.release_impact.disciplines} />
-                  <ImpactGroup label="子学科" values={active.review_data.release_impact.subdisciplines} />
-                  <ImpactGroup label="理论流派" values={active.review_data.release_impact.theories} />
-                  <ImpactGroup label="学者" values={active.review_data.release_impact.scholars} />
-                  <ImpactGroup label="主题" values={active.review_data.release_impact.topics} />
-                </div>
-              </section>
-              <ItemPublicationControl
-                key={`${active.id}-${active.updated_at}`}
-                itemId={active.id}
-                editionId={active.review_data.edition_id}
-                publicationState={active.review_data.publication_state}
-                ocrStatus={active.review_data.ocr_status}
-                semanticStatus={active.review_data.semantic_index_status}
-                pageLabelStatus={active.review_data.page_label_status}
-                reviewStatus={active.review_data.review_status}
-                reviewProgress={active.review_data.review_progress}
-                readerPolicy={active.review_data.reader_rendition_policy}
-                initialPreflight={active.publication_preflight}
-                canManagePublication={active.can_manage_publication}
-                onChanged={load}
-                onMessage={setMessage}
-              />
-            </main>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
+    let url = "";
+    void apiBlob(path, getServerSessionCredential()).then((blob) => {
+      if (!alive) return;
+      url = URL.createObjectURL(blob);
+      setResult({ path, url, error: "" });
+    }, (reason) => {
+      if (alive) setResult({ path, url: "", error: reason instanceof Error ? reason.message : "PDF预览读取失败。" });
+    });
+    return () => { alive = false; if (url) URL.revokeObjectURL(url); };
+  }, [path]);
+  if (!path) return <p>当前没有PDF预览。纯书目可继续核对书目信息；有文件的版本请在共同工作页查看校验与处理结果。</p>;
+  const current = result?.path === path ? result : null;
+  if (current?.error) return <p role="alert">PDF预览暂不可用：{current.error}。可重新选择本项或打开当前版本安全重试。</p>;
+  return current?.url ? <iframe className={styles.previewFrame} title={`PDF预览：${title}`} src={current.url} /> : <p role="status">正在读取当前版本PDF…</p>;
 }
 
-function ImpactGroup({ label, values }: { label: string; values: ImpactItem[] }) {
-  return <article><strong>{label}</strong><span>{values.length ? values.map((item) => item.label).join("、") : "未关联"}</span></article>;
+function PublicationDetails({ item, returnTo }: { item: WorkflowQueueItem; returnTo: string }) {
+  const result = useApiResource<Record<string, unknown>>(queueWorkspaceApi(item), getServerSessionCredential(), item.id);
+  const payload = result.data;
+  const context = asRecord(payload?.context);
+  const data = asRecord(payload?.data);
+  const validIdentity = payload && (
+    item.edition_id
+      ? context.edition_id === item.edition_id && context.work_id === item.work_id
+      : context.item_id === item.item_id
+  );
+  const destination = queueWorkbenchHref(item);
+  if (result.error) return <div className={styles.error} role="alert">当前版本预览读取失败：{result.error}<button onClick={result.retry} type="button">重试当前版本预览</button></div>;
+  if (result.loading) return <p role="status">正在读取选定对象的保存内容和公开影响…</p>;
+  if (!validIdentity) return <p className={styles.error} role="alert">返回内容与指定作品或出版版本不一致，已停止显示预览。请重新打开原记录，不会显示其他馆藏。</p>;
+  const work = asRecord(data.work);
+  const bibliography = asRecord(data.bibliography);
+  const contributors = asArray(asRecord(data.contributors).items);
+  const classification = asRecord(data.classification);
+  const knowledge = asRecord(data.knowledge);
+  const labels = (values: unknown) => asArray(values).map((value) => { const row = asRecord(value); return asString(row.display_name || row.name || row.label); }).filter(Boolean).join("、") || "尚未关联";
+  const publication = publicationPresentation(item.publication);
+  const publicHref = publicationPublicHref(item.publication);
+  return <section className={styles.preview} aria-label="当前版本公开预览">
+    <header><div><h2>{asString(context.title || work.title, item.title)}</h2><p>{sourceLabels[item.source_type] || item.source_type} · 当前出版版本{asString(bibliography.version_label) ? `：${asString(bibliography.version_label)}` : ""}</p></div><StatusBadge {...publication} /></header>
+    <p className={styles.scope}>{item.publication?.detail} 此处读取已保存内容。编辑、候选复核、文件处理与明确发布在同一共同工作页完成，保存后仍保留旧公开版本直到新修订生效。</p>
+    <div className={styles.actions}>{destination ? <Link className="button" href={withAdminReturn(destination, returnTo, "publication")}>继续复核与发布 <ArrowRight size={14} /></Link> : null}
+      {item.edition_id ? <Link className="button secondary" href={withAdminReturn(`/admin/preview/works/${encodeURIComponent(item.edition_id)}`, returnTo)} target="_blank">真实公开样式预览 <ExternalLink size={14} /></Link> : null}
+      {publicHref ? <Link className="button secondary" href={publicHref} target="_blank">核验当前公开结果 <ExternalLink size={14} /></Link> : null}
+      <button className="button secondary" onClick={result.retry} type="button">刷新此版本结果</button>
+    </div>
+    {payload?.health ? <CatalogHealth value={payload.health as Record<string, string>} /> : null}
+    <dl className={styles.impact} aria-label="书目信息与公开影响">
+      <div><dt>责任者及原职责</dt><dd>{contributors.map((value) => { const row = asRecord(value); const role = ({ author: "作者", translator: "译者", editor: "编者" } as Record<string, string>)[asString(row.role)] || asString(row.role); return `${asString(row.display_name)}（${role}）`; }).join("、") || "待确认"}</dd></div>
+      <div><dt>出版信息</dt><dd>{[bibliography.publisher, bibliography.publication_year, bibliography.publication_place, bibliography.version_label].filter(Boolean).map(String).join(" · ") || "尚未填写"}</dd></div>
+      <div><dt>学科页面关联</dt><dd>{labels([...asArray(classification.primary_disciplines), ...asArray(classification.related_disciplines)])}</dd></div>
+      <div><dt>子学科页面关联</dt><dd>{labels(classification.subdisciplines)}</dd></div>
+      <div><dt>理论与概念页面关联</dt><dd>{labels(knowledge.nodes)}</dd></div>
+      <div><dt>主题页面关联</dt><dd>{labels(knowledge.topics)}</dd></div>
+    </dl>
+    <p className={styles.scope}>以上是本次已保存的关联范围，不代表尚未确认或未发布的关联已在前台展示。公开位置以正式修订和关联对象当前资格为准。</p>
+    {item.edition_id ? <PreparedPublication editionId={item.edition_id} /> : <p>文件来源尚未建立出版版本，暂不能执行发布预检。来源任务仍保留在待办。</p>}
+    <details open><summary>当前阅读文件预览</summary><PdfPreview key={`${item.id}:${item.updated_at}`} path={asString(context.pdf_preview_url)} title={item.title} /></details>
+  </section>;
+}
+
+function PreparedPublication({ editionId }: { editionId: string }) {
+  const result = useApiResource<PublicationPreparation>(`/catalog/admin/editions/${encodeURIComponent(editionId)}/publication/prepare/`, getServerSessionCredential());
+  if (result.error) return <p role="alert">发布差异暂时不可读：{result.error}<button type="button" onClick={result.retry}>重试差异预检</button></p>;
+  return result.data ? <PublicationDiff value={result.data} /> : <p role="status">正在计算已保存草稿与当前公开内容的差异…</p>;
+}
+
+export function PublicationDesk() {
+  const search = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const filter = search.get("publication") || (search.get("filter") === "attention" ? "unpublished" : search.get("filter")) || "all";
+  const source = search.get("source") || "";
+  const query = search.get("q") || "";
+  const selectedId = search.get("selection") || "";
+  const params = new URLSearchParams({ scope: "publication", category: "all", page: String(adminPageNumber(search.get("page"))) });
+  if (filter !== "all") params.set("publication", filter);
+  if (source) params.set("source", source);
+  if (query) params.set("q", query);
+  const result = useApiResource<WorkflowQueuePage>(`/catalog/admin/workflows/queue/?${params}`, getServerSessionCredential());
+  const page = result.data;
+  const selected = selectedQueueItem(page?.results || [], selectedId);
+  const returnTo = `${pathname}${search.size ? `?${search}` : ""}`;
+  const change = (values: Record<string, string | number | null>) => router.push(adminListHref(pathname, search.toString(), { page: 1, filter: null, ...values }, true));
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
+  }
+  return <div className="admin-page publication-desk-page">
+    <PageHeader eyebrow="待办与上架" title="发布管理" description="查看哪些文献还未公开、哪些正在更新。选择文献后，可以预览并继续发布。" />
+    <form className={styles.toolbar} onSubmit={submit}>
+      <label>题名或来源<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部出版版本" /></label>
+      <label>公开状态<select value={filter} onChange={(event) => change({ publication: event.target.value })}>{Object.entries(publicFilters).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <label>来源<select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <button className="button" type="submit">搜索</button><button className="button secondary" onClick={result.retry} type="button"><RefreshCw size={15} />刷新发布结果</button>
+    </form>
+    <p className={styles.count} role="status">{page ? `当前完整筛选共 ${page.count} 项，第 ${page.page} 页显示 ${page.results.length} 项。先筛选再分页，包含非上传来源。` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>
+    {result.error ? <div className={styles.error} role="alert"><AlertCircle size={16} />{result.error}<button type="button" onClick={result.retry}>重试发布列表</button></div> : null}
+    {result.loading ? <p role="status">正在读取当前页…</p> : null}
+    <section className={styles.rows} aria-label="馆藏发布列表">{page?.results.map((item) => {
+      const destination = queueWorkbenchHref(item);
+      return <article className={styles.row} key={item.id} data-record-id={item.id}>
+        <div className={styles.cell}><small>作品与来源</small><strong>{item.title || item.source_filename || "未命名来源"}</strong><span>{sourceLabels[item.source_type] || "来源待核实"}</span><small>{item.edition_id ? "具体出版版本" : "尚未建立版本的来源任务"}</small></div>
+        <div className={styles.cell}><small>是否公开</small><StatusBadge {...publicationPresentation(item.publication)} /><span>{publicationDescription(item.publication)}</span></div>
+        <div className={styles.cell}><small>当前建议</small><span>{item.current_step_label}</span><span>{item.blockers_count} 项阻断 · {item.warnings_count} 项建议</span></div>
+        <div className={styles.cell}><small>最后更新</small><time>{new Date(item.updated_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></div>
+        <div className={styles.cell}><Link aria-current={selectedId === item.id ? "true" : undefined} href={adminListHref(pathname, search.toString(), { selection: item.id })}>预览与影响</Link>{destination ? <Link href={withAdminReturn(destination, returnTo, "publication")}>继续复核与发布 <ArrowRight size={14} /></Link> : <span>工作位置待核实</span>}</div>
+      </article>;
+    })}</section>
+    {page && !page.results.length ? <p className="admin-list-state">当前筛选下没有记录。可选择全部公开状态或其他来源。</p> : null}
+    {page ? <Pagination className={styles.pagination} label="发布列表分页" page={page.page} totalPages={page.total_pages} previousHref={adminListHref(pathname, search.toString(), { page: Math.max(1, page.page - 1) }, true)} nextHref={adminListHref(pathname, search.toString(), { page: Math.min(page.total_pages, page.page + 1) }, true)} /> : null}
+    {page && selectedId && !selected ? <p className={styles.error} role="alert">指定记录不在当前筛选或当前页中，未显示其他作品。请恢复原筛选和页码，或明确重新选择记录。</p> : null}
+    {selected ? <PublicationDetails key={selected.id} item={selected} returnTo={returnTo} /> : page && !selectedId ? <p className={styles.scope}>请选择要查看的文献。</p> : null}
+  </div>;
 }

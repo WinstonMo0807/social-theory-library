@@ -79,6 +79,11 @@ class CanPublishWork(RequiresCapability):
     message = "当前账户不能发布馆藏。"
 
 
+class CanWithdrawWork(RequiresCapability):
+    capability = Capability.WITHDRAW_WORK
+    message = "仅 Administrator 或 System Owner 可以撤回馆藏；Editor 仍可保存和发布。"
+
+
 class CanPublishAuthority(RequiresCapability):
     capability = Capability.PUBLISH_AUTHORITY
     message = "当前账户不能发布 authority。"

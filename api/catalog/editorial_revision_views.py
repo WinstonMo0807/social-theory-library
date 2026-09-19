@@ -32,6 +32,8 @@ EDIT_CAPABILITY = {
     EditorialRevision.TargetType.TOPIC: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.PUBLISHER: Capability.EDIT_DRAFT_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.EDIT_DRAFT_AUTHORITY,
+    EditorialRevision.TargetType.KNOWLEDGE_RELATION: Capability.EDIT_DRAFT_AUTHORITY,
+    EditorialRevision.TargetType.TIMELINE_EVENT: Capability.EDIT_DRAFT_AUTHORITY,
 }
 
 PUBLISH_CAPABILITY = {
@@ -44,6 +46,8 @@ PUBLISH_CAPABILITY = {
     EditorialRevision.TargetType.TOPIC: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.PUBLISHER: Capability.PUBLISH_AUTHORITY,
     EditorialRevision.TargetType.READING_PATH: Capability.PUBLISH_AUTHORITY,
+    EditorialRevision.TargetType.KNOWLEDGE_RELATION: Capability.PUBLISH_AUTHORITY,
+    EditorialRevision.TargetType.TIMELINE_EVENT: Capability.PUBLISH_AUTHORITY,
 }
 
 

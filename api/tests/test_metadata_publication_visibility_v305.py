@@ -125,13 +125,14 @@ def test_graph_failure_remains_failed_without_hiding_approved_book(settings, tmp
     assert public_work_queryset().filter(pk=work.pk).exists()
 
 
-def test_fulltext_request_and_existing_public_version_keep_complete_activation_gate(settings, tmp_path, admin_user):
+def test_fulltext_and_updates_use_their_own_delivery_gate_not_optional_graph(settings, tmp_path, admin_user):
     _work, edition, _original, _reader, event = publication(settings, tmp_path, admin_user, text_ready=True)
     assert event.payload["requested_fulltext_ready"] is True
     finish_except_graph(event)
     process_knowledge_event(event.pk)
     edition.refresh_from_db()
-    assert edition.active_catalog_revision_id is None
+    assert edition.active_catalog_revision_id == event.catalog_revision_id
+    assert edition.active_catalog_revision.fulltext_ready
     ProjectionState.objects.filter(object_type=event.object_type, object_id=event.object_id).update(
         projected_revision=F("source_revision"), status="current",
     )
@@ -146,7 +147,10 @@ def test_fulltext_request_and_existing_public_version_keep_complete_activation_g
     finish_except_graph(update)
     process_knowledge_event(update.pk)
     edition.refresh_from_db()
-    assert edition.active_catalog_revision_id == previous
+    assert edition.active_catalog_revision_id == update.catalog_revision_id
+    assert edition.active_catalog_revision_id != previous
+    assert edition.active_catalog_revision.fulltext_ready
+    assert update.deliveries.get(consumer="knowledge_graph").status == "pending"
 
 
 def test_recovery_dry_run_and_apply_preserve_event_tasks_snapshot_and_files(settings, tmp_path, admin_user, api_client):
@@ -166,7 +170,8 @@ def test_recovery_dry_run_and_apply_preserve_event_tasks_snapshot_and_files(sett
     before = api_client.get(f"/api/catalog/admin/editions/{edition.pk}/knowledge-status/")
     assert before.status_code == 200
     assert before.json()["publicly_visible"] is False
-    assert "尚未就绪" in before.json()["detail"]
+    assert before.json()["public_state"] == "publishing"
+    assert "正在准备" in before.json()["detail"]
 
     output = StringIO()
     call_command("reconcile_catalog_metadata", event_id=event.pk, edition_id=edition.pk, apply=True, stdout=output)

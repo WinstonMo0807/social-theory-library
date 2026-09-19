@@ -146,7 +146,7 @@ def accept_candidates_from_review(
 
 
 @transaction.atomic
-def set_candidate_decision(candidate: MetadataCandidate, *, action: str, actor) -> MetadataCandidate:
+def set_candidate_decision(candidate: MetadataCandidate, *, action: str, actor, reason: str = "") -> MetadataCandidate:
     from .candidate_context import lock_candidate_context
 
     lock_candidate_context(candidate)
@@ -191,6 +191,7 @@ def set_candidate_decision(candidate: MetadataCandidate, *, action: str, actor) 
         metadata_candidate=candidate,
         actor=actor,
         action=f"{action}_metadata_candidate",
+        reason=str(reason or "")[:4000],
         target_type="metadata_candidate",
         target_id=str(candidate.id),
         before=before,

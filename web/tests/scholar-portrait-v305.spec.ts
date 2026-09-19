@@ -32,7 +32,7 @@ test("an editor selects, publishes and clears a scholar portrait without exposin
   await page.getByLabel("来源名称", { exact: true }).fill("本地测试图片");
   await page.getByLabel("许可", { exact: true }).fill("本地测试使用");
   await page.getByRole("button", { name: "保存资料并生成预览", exact: true }).click();
-  await expect(page.getByText("媒体资料已保存。此操作不会直接更改公开书目。", { exact: true })).toBeVisible();
+  await expect(page.getByText("图片信息已保存。请回到使用这张图片的页面发布修改。", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "用作E2E肖像学者的肖像", exact: true }).click();
   await expect(page.getByText("肖像已保存到学者草稿。请返回学者页面核对后发布，原图片保留。", { exact: true })).toBeVisible();
   const pending = await page.request.get(`${api}/admin/scholars/${scholarId}/portrait/`);

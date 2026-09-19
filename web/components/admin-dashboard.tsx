@@ -10,6 +10,8 @@ import { useMemo } from "react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
+import { queueWorkbenchHref, sourceLabels, type WorkflowQueueItem, type WorkflowQueuePage } from "@/lib/api/admin-collections";
+import { withAdminReturn } from "@/lib/admin-route-context";
 import { EmptyState, PageHeader, StatusBadge, type StatusTone } from "./admin-ui";
 
 type MetadataCandidate = {
@@ -56,30 +58,6 @@ type HotSearchPayload = {
   results: { query: string; search_count: number; unique_sessions: number; click_count: number; zero_result_count: number }[];
 };
 
-type WorkflowQueueItem = {
-  item_id: string;
-  title: string;
-  source_filename?: string;
-  document_type?: string;
-  current_step: string;
-  current_step_label?: string;
-  overall_status: string;
-  unresolved_count: number;
-  warnings_count: number;
-  blockers_count: number;
-  updated_at: string;
-};
-
-type WorkflowQueuePayload = {
-  continue_items: WorkflowQueueItem[];
-  attention_items: WorkflowQueueItem[];
-  exception_items?: WorkflowQueueItem[];
-  exceptions?: WorkflowQueueItem[];
-  publication_ready: WorkflowQueueItem[];
-  recent_items: WorkflowQueueItem[];
-  candidate_review_count: number;
-};
-
 const statusLabels: Record<string, string> = {
   received: "已接收",
   validating: "校验中",
@@ -92,7 +70,7 @@ const statusLabels: Record<string, string> = {
   preparing_public_asset: "准备公开文件",
   syncing_cloud: "同步云端",
   ready: "可发布",
-  published: "已发布",
+  published: "发布决定已保存",
   needs_review: "需要复核",
   failed: "失败",
   withdrawn: "已下架",
@@ -125,7 +103,7 @@ export function AdminDashboard() {
   const canViewAnalytics = hasAdminCapability(user, "can_view_audit_log");
   const canViewSystemStatus = hasAdminCapability(user, "can_view_system_status");
   const dashboard = useApiResource<DashboardData>("/ingestion/dashboard/", credential, contextKey);
-  const queue = useApiResource<WorkflowQueuePayload>("/catalog/admin/workflows/queue/", credential, contextKey);
+  const queue = useApiResource<WorkflowQueuePage>("/catalog/admin/workflows/queue/", credential, contextKey);
   const analytics = useApiResource<UsageSummary>(canViewAnalytics ? "/catalog/admin/usage-analytics/?days=30" : "", credential, contextKey);
   const hot = useApiResource<HotSearchPayload>("/catalog/hot-searches/?days=30&limit=8", credential, contextKey);
   const live = dashboard.data;
@@ -153,7 +131,7 @@ export function AdminDashboard() {
 
   const displayCards = live
     ? [
-        ["馆藏总量", String(live.documents.total), `${live.documents.published} 已发布`],
+        ["馆藏总量", String(live.documents.total), `${live.documents.published} 已公开`],
         ["PDF 文档", String(live.pdf_assets), "规范阅读副本"],
         ["理论流派", String(live.theory_schools), "公开与草稿合计"],
         ["学者", String(live.scholars), "人物档案"],
@@ -166,7 +144,7 @@ export function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <PageHeader
-        eyebrow="工作"
+        eyebrow="待办与上架"
         title="今日工作"
         description="继续当前馆藏，优先解决异常和人工确认，再处理发布准备。"
         actions={(
@@ -179,11 +157,11 @@ export function AdminDashboard() {
       {error ? <p className="admin-error" role="alert">{error}<button type="button" onClick={dashboard.retry}>重新读取概况</button></p> : null}
       <section className="admin-work-entry-grid" aria-label="今日工作入口">
         {queue.error ? <p className="admin-error" role="alert">工作队列读取失败。{queue.error}<button type="button" onClick={queue.retry}>重试工作队列</button></p> : queue.loading ? <p role="status">正在读取工作队列…</p> : <>
-        <WorkflowQueuePanel title="继续处理" items={workflowQueue?.continue_items ?? []} empty="当前没有中断的馆藏工作。" />
-        <WorkflowQueuePanel title="待人工确认" items={workflowQueue?.attention_items ?? []} empty="当前没有待确认项目。" />
-        <WorkflowQueuePanel title="异常" items={workflowQueue?.exception_items ?? workflowQueue?.exceptions ?? []} empty="当前没有处理异常。" tone="danger" />
-        <WorkflowQueuePanel title="待发布" items={workflowQueue?.publication_ready ?? []} empty="当前没有完成发布准备的项目。" step="publication" />
-        <WorkflowQueuePanel title="最近处理" items={workflowQueue?.recent_items ?? []} empty="尚无最近处理记录。" />
+        <WorkflowQueuePanel title="继续处理" total={workflowQueue?.counts?.continue} href="/admin/review?category=continue" items={workflowQueue?.continue_items ?? []} empty="当前没有中断的馆藏工作。" />
+        <WorkflowQueuePanel title="待人工确认" total={workflowQueue?.counts?.attention} href="/admin/review?category=attention" items={workflowQueue?.attention_items ?? []} empty="当前没有待确认项目。" />
+        <WorkflowQueuePanel title="异常" total={workflowQueue?.counts?.exception} href="/admin/review?category=exception" items={workflowQueue?.exception_items ?? []} empty="当前没有处理异常。" tone="danger" />
+        <WorkflowQueuePanel title="待发布" total={workflowQueue?.counts?.publication_ready} href="/admin/review?category=publication_ready" items={workflowQueue?.publication_ready ?? []} empty="当前没有完成发布准备的项目。" step="publication" />
+        <WorkflowQueuePanel title="较早待办" total={workflowQueue?.counts?.all} href="/admin/review?category=all" items={workflowQueue?.recent_items ?? []} empty="尚无待处理记录。" />
         </>}
         <section className="admin-panel admin-work-queue-panel">
           <header><h2>知识策展</h2><Link href="/admin/knowledge">打开字段工作台 <ArrowRight size={13} /></Link></header>
@@ -226,9 +204,9 @@ export function AdminDashboard() {
           <Link className="admin-panel-action" href="/admin/uploads"><Plus size={14} /> 上传新文档</Link>
         </AdminPanel>
 
-        <AdminPanel title="OCR 与元数据识别" href="/admin/uploads" className="recognition-panel">
+        <AdminPanel title="上传阶段记录" href="/admin/uploads" className="recognition-panel">
           <div className="donut-wrap">
-            <svg viewBox="0 0 120 120" aria-label={`处理进度 ${recognitionPercent}%`}>
+            <svg viewBox="0 0 120 120" aria-label={`初始上传处理已结束的记录占比 ${recognitionPercent}%，包含待复核和失败`}>
               <circle cx="60" cy="60" r="45" />
               <circle
                 className="progress"
@@ -242,7 +220,7 @@ export function AdminDashboard() {
             </svg>
             <div>
               {[
-                ["已发布", live?.status_counts.published ?? 0],
+                ["已保存发布决定", live?.status_counts.published ?? 0],
                 ["需要复核", live?.status_counts.needs_review ?? 0],
                 ["处理中", live?.processing ?? 0],
                 ["失败", live?.status_counts.failed ?? 0],
@@ -251,10 +229,11 @@ export function AdminDashboard() {
               ))}
             </div>
           </div>
+          <p className="empty-state">分母为全部上传记录，分子为已结束初始处理阶段的记录，包含待复核和失败。不表示OCR质量、PDF可读或公开就绪。</p>
           <footer><span>上传项目总数</span><strong>{totalItems}</strong></footer>
         </AdminPanel>
 
-        <AdminPanel title="修正队列" href="/admin/review" badge={String(live?.needs_review ?? 0)} className="correction-queue">
+        <AdminPanel title="最近上传异常" href="/admin/review?source=upload&category=attention" badge={String(reviewItems.length)} className="correction-queue">
           <div className="admin-table">
             <header><span>项目</span><span>问题</span><span>进度</span><span>操作</span></header>
             {reviewItems.slice(0, 6).map((item) => (
@@ -265,13 +244,13 @@ export function AdminDashboard() {
                 <Link href={`/admin/intake/${item.id}#bibliography`}>继续 <ArrowRight size={13} /></Link>
               </p>
             ))}
-            {live && !reviewItems.length ? <p className="empty-state">当前没有需要人工处理的项目。</p> : null}
+            {live && !reviewItems.length ? <p className="empty-state">最近上传中没有待展示的异常；完整待办请查看全部。</p> : null}
           </div>
         </AdminPanel>
       </div>
 
       <div className="admin-grid middle">
-        <AdminPanel title="元数据候选" href="/admin/review" badge={String(candidates.length)}>
+        <AdminPanel title="最近上传的元数据候选" href="/admin/review?source=upload" badge={`本页 ${candidates.length}`}>
           {candidates.map(({ item, candidate }) => (
             <div className="candidate-row" key={candidate.id}>
               <span>{candidate.field_name}</span>
@@ -309,7 +288,7 @@ export function AdminDashboard() {
 
       <div className="admin-grid bottom">
         <AdminPanel title="系统健康" href={canViewSystemStatus ? "/admin/system-health" : undefined}>
-          {[["Web 应用", "已连接"], ["数据库", live ? "可查询" : "等待"], ["搜索索引", "需独立探测"]].map(([service, state]) => (
+          {[["Web 应用", "当前页面已加载"], ["数据库", live ? "摘要请求已返回，不代表全部功能" : "未取得摘要结果"], ["搜索索引", "需独立探测"]].map(([service, state]) => (
             <p className="health-row" key={service}><i /><strong>{service}</strong><span>{state}</span></p>
           ))}
         </AdminPanel>
@@ -341,12 +320,16 @@ export function AdminDashboard() {
 
 function WorkflowQueuePanel({
   title,
+  total,
+  href,
   items,
   empty,
   tone = "neutral",
   step,
 }: {
   title: string;
+  total?: number;
+  href: string;
   items: WorkflowQueueItem[];
   empty: string;
   tone?: "neutral" | "danger";
@@ -354,18 +337,21 @@ function WorkflowQueuePanel({
 }) {
   return (
     <section className={`admin-panel admin-work-queue-panel tone-${tone}`}>
-      <header><h2>{title}</h2><span>{items.length}</span></header>
+      <header><h2>{title}</h2><span>{total ?? "—"}</span><Link href={href}>查看全部 <ArrowRight size={13} /></Link></header>
       {items.slice(0, 4).map((item) => {
         const targetStep = step ?? item.current_step ?? "file";
         const issueCount = item.blockers_count + item.unresolved_count;
+        const destination = queueWorkbenchHref(item);
+        if (!destination) return <p key={item.id} role="status">{item.title}：工作位置待核实，请刷新。</p>;
         return (
-          <Link className="admin-work-queue-item" href={`/admin/intake/${item.item_id}#${targetStep}`} key={item.item_id}>
-            <span><strong>{item.title || item.source_filename || "未命名馆藏"}</strong><small>{item.current_step_label || targetStep}</small></span>
+          <Link className="admin-work-queue-item" href={withAdminReturn(destination, href, targetStep)} key={item.id}>
+            <span><strong>{item.title || item.source_filename || "未命名馆藏"}</strong><small>{sourceLabels[item.source_type] || "来源待核实"} · {item.current_step_label || targetStep}</small></span>
             <b>{issueCount ? `${issueCount} 项` : "继续"}<ArrowRight size={13} /></b>
           </Link>
         );
       })}
       {!items.length ? <p className="empty-state">{empty}</p> : null}
+      {items.length ? <p className="empty-state">仅展示前{Math.min(items.length, 4)}项。优先级优先，同级较早更新在前；完整数量来自全量查询。</p> : null}
     </section>
   );
 }

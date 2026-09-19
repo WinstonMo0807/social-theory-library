@@ -44,7 +44,7 @@ for (const object of cases) {
     const descriptionInput = page.getByRole("textbox", { name: object.type === "knowledge_node" ? "简介" : "路径介绍", exact: true });
     await descriptionInput.fill(description);
     await expect(descriptionInput).toHaveValue(description);
-    await page.getByRole("button", { name: object.type === "knowledge_node" ? "保存为编辑草稿" : "保存并发布路径", exact: true }).click();
+    await page.getByRole("button", { name: object.type === "knowledge_node" ? "保存为编辑草稿" : "保存阅读路径", exact: true }).click();
     await expect(page.getByText(object.type === "knowledge_node" ? "修改已保存为编辑草稿。公开页继续读取原正式内容，确认发布后才会更新。" : "阅读路径的编辑草稿已保存，确认发布后更新公开页面。", { exact: true })).toBeVisible();
     const panel = page.getByRole("region", { name: "页面图片", exact: true });
     await expect(panel).toContainText("当前没有选择图片。");
@@ -67,6 +67,7 @@ for (const object of cases) {
     await expect.poll(() => panel.getByRole("img").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(640);
     await page.getByRole("button", { name: "确认并发布", exact: true }).click();
     await expect(panel).toContainText("当前显示已保存图片。");
+    await expect(descriptionInput).toHaveValue(description);
     expect((await page.request.get(publicImage)).status()).toBe(200);
     const published = await (await page.request.get(`${api}/theory-system/${object.endpoint}/${object.slug}/`)).json();
     expect(published[object.field]).toBe(description);

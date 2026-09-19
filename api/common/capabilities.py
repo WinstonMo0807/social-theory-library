@@ -14,6 +14,7 @@ class Capability:
     CREATE_AUTHORITY = "can_create_authority"
     REVIEW_CANDIDATE = "can_review_candidate"
     PUBLISH_WORK = "can_publish_work"
+    WITHDRAW_WORK = "can_withdraw_work"
     PUBLISH_AUTHORITY = "can_publish_authority"
     RUN_ENRICHMENT = "can_run_enrichment"
     RETRY_JOBS = "can_retry_jobs"
@@ -65,6 +66,7 @@ ROLE_CAPABILITIES = {
         Capability.CREATE_AUTHORITY,
         Capability.REVIEW_CANDIDATE,
         Capability.PUBLISH_WORK,
+        Capability.WITHDRAW_WORK,
         Capability.PUBLISH_AUTHORITY,
         Capability.RUN_ENRICHMENT,
         Capability.RETRY_JOBS,

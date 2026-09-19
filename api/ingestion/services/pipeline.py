@@ -313,12 +313,22 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
         reconciliation_mode = str(reconciliation.get("mode") or "")
         if (
             item.replacement_of_asset_id
+            or item.batch.source == "edition-supplement"
             or reconciliation_mode == "existing_edition"
             or edition.state in {PublicationState.PUBLISHED, PublicationState.WITHDRAWN}
         ):
             # Extraction may continue to add auditable candidates, but an
             # existing or published canonical edition is changed only through
             # the editor/revision workflow.
+            if not edition.canonical_filename:
+                # A manual record may receive its first PDF before any form
+                # save has generated the operational filename. Derive only
+                # this filename from existing values; never adopt extraction
+                # candidates or replace human locks to make the copy work.
+                authors = list(edition.contributions.filter(role=Contribution.Role.AUTHOR, approved=True)
+                               .order_by("order", "created_at").values_list("person__preferred_name", flat=True))
+                edition.canonical_filename = canonical_pdf_filename(work.title, authors, edition.publication_year)
+                edition.save(update_fields=["canonical_filename", "updated_at"])
             return edition
         reused_existing_work = reconciliation_mode == "existing_work"
     else:
@@ -615,81 +625,6 @@ def _replacement_readiness(item: UploadItem, normalized: Asset) -> list[str]:
 
 
 @transaction.atomic
-def _activate_replacement(item: UploadItem, normalized: Asset) -> Asset:
-    from reading.models import Annotation
-
-    item = UploadItem.objects.select_for_update(of=("self",)).select_related(
-        "batch",
-        "edition",
-        "asset",
-    ).get(pk=item.pk)
-    old_asset = Asset.objects.select_for_update().get(pk=item.replacement_of_asset_id)
-    normalized = Asset.objects.select_for_update().get(pk=normalized.pk)
-    if old_asset.edition_id != item.edition_id or normalized.edition_id != item.edition_id:
-        raise PublicationBlocked(["替换文件与目标版本不属于同一文献"])
-    if not old_asset.is_current:
-        if normalized.is_current:
-            return old_asset
-        raise PublicationBlocked(["替换目标已变化，请重新选择当前 PDF"])
-    if normalized.kind != Asset.Kind.NORMALIZED or normalized.status != Asset.Status.READY:
-        raise PublicationBlocked(["新规范阅读文件未就绪"])
-    new_original = item.asset
-    if (
-        new_original is None
-        or new_original.kind != Asset.Kind.ORIGINAL
-        or new_original.version != normalized.version
-    ):
-        raise PublicationBlocked(["新原始文件未就绪"])
-
-    current_original = (
-        Asset.objects.select_for_update()
-        .filter(
-            edition=item.edition,
-            kind=Asset.Kind.ORIGINAL,
-            is_current=True,
-        )
-        .exclude(pk=new_original.pk)
-        .first()
-    )
-    Asset.objects.filter(
-        edition=item.edition,
-        kind=Asset.Kind.NORMALIZED,
-        is_current=True,
-    ).exclude(pk=normalized.pk).update(is_current=False, updated_at=timezone.now())
-    normalized.is_current = True
-    normalized.save(update_fields=["is_current", "updated_at"])
-    Asset.objects.filter(
-        edition=item.edition,
-        kind=Asset.Kind.ORIGINAL,
-        is_current=True,
-    ).exclude(pk=new_original.pk).update(is_current=False, updated_at=timezone.now())
-    new_original.is_current = True
-    new_original.save(update_fields=["is_current", "updated_at"])
-    orphaned_count = Annotation.objects.filter(asset=old_asset).update(
-        orphaned=True,
-        updated_at=timezone.now(),
-    )
-    AuditEvent.objects.create(
-        actor=item.batch.created_by,
-        action="pdf_replaced",
-        object_type="Edition",
-        object_id=str(item.edition_id),
-        before={
-            "normalized_asset_id": str(old_asset.id),
-            "original_asset_id": str(current_original.id) if current_original else None,
-            "version": old_asset.version,
-        },
-        after={
-            "normalized_asset_id": str(normalized.id),
-            "original_asset_id": str(new_original.id),
-            "version": normalized.version,
-            "orphaned_annotations": orphaned_count,
-        },
-    )
-    return old_asset
-
-
-@transaction.atomic
 def _finalize_item_publication(item: UploadItem, normalized: Asset) -> dict:
     if item.replacement_of_asset_id:
         reasons = _replacement_readiness(item, normalized)
@@ -849,6 +784,22 @@ def resume_reviewed_item_publication(item_id: str) -> UploadItem:
         refresh_batch(item.batch)
 
 
+def prepare_early_cover_candidates(item, asset):
+    """Optional local previews precede AI, whole-document extraction and OCR."""
+    try:
+        with processing_attempt(item, "cover_detection", reuse_completed=False) as attempt:
+            options = generate_cover_candidates(asset, auto_select=False)
+            attempt.output_summary = {"candidate_count": len(options), "auto_selected": False,
+                                      "method": "local_pdf_layout", "before_fulltext": True,
+                                      "asset_id": str(asset.pk), "source_checksum": asset.sha256}
+            attempt.save(update_fields=["output_summary", "updated_at"])
+    except Exception:
+        # processing_attempt retained the actual failure. A missing cover is
+        # never a publication prerequisite; the editor offers a safe retry.
+        return False
+    return True
+
+
 def run_pipeline(item_id: str) -> UploadItem:
     item = UploadItem.objects.select_related("batch").get(pk=item_id)
     if item.status in {
@@ -898,6 +849,9 @@ def run_pipeline(item_id: str) -> UploadItem:
                     kind=Asset.Kind.ORIGINAL,
                 ).exclude(pk=item.asset_id).select_related("edition__work").first()
                 item.preflight_summary = {
+                    **({"catalog_reconciliation": item.preflight_summary["catalog_reconciliation"]}
+                       if item.batch.source in {"edition-supplement", "edition-replace"}
+                       and (item.preflight_summary or {}).get("catalog_reconciliation") else {}),
                     "filename": item.source_filename,
                     "size_bytes": item.byte_size,
                     "sha256": item.sha256,
@@ -936,11 +890,7 @@ def run_pipeline(item_id: str) -> UploadItem:
                     provider_warnings = ["该批次已关闭外部元数据补充。"]
                 ai_summary = {"status": "disabled"}
                 if item.batch.ai_suggestions_enabled:
-                    ai_candidates, ai_summary = metadata_candidates_from_ai(
-                        first_text,
-                        upload_item=item,
-                    )
-                    candidates.extend(ai_candidates)
+                    ai_summary = {"status": "deferred_for_cover"}
                 candidates.extend(controlled_vocabulary_candidates(first_text))
                 selected = select_best(candidates)
                 _persist_candidates(item, candidates, selected)
@@ -997,6 +947,19 @@ def run_pipeline(item_id: str) -> UploadItem:
                     sha256=item.sha256,
                     text_revision=0,
                 )
+
+        prepare_early_cover_candidates(item, normalized)
+        if ai_summary.get("status") == "deferred_for_cover":
+            with processing_attempt(item, "metadata_ai", reuse_completed=False) as attempt:
+                ai_candidates, ai_summary = metadata_candidates_from_ai(first_text, upload_item=item)
+                candidates.extend(ai_candidates)
+                selected = select_best(candidates)
+                _persist_candidates(item, candidates, selected)
+                item.recognized_metadata = selected
+                item.save(update_fields=["recognized_metadata", "updated_at"])
+                edition = _create_or_update_catalog(item, selected, candidates, first_text)
+                attempt.output_summary = ai_summary
+                attempt.save(update_fields=["output_summary", "updated_at"])
 
         with processing_attempt(item, "text_extraction", reuse_completed=False) as attempt:
             from catalog.services.document_intelligence import stage_document_asset
@@ -1262,22 +1225,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             }
             attempt.save(update_fields=["output_summary", "updated_at"])
 
-        if edition.work.document_type in {"book", "journal_issue"}:
-            with processing_attempt(item, "cover_detection", reuse_completed=False) as attempt:
-                candidates = generate_cover_candidates(normalized)
-                attempt.output_summary = {
-                    "candidate_count": len(candidates),
-                    "selected_page": next(
-                        (
-                            candidate.page_index
-                            for candidate in candidates
-                            if candidate.selected
-                        ),
-                        None,
-                    ),
-                }
-                attempt.save(update_fields=["output_summary", "updated_at"])
-        else:
+        if edition.work.document_type not in {"book", "journal_issue"}:
             with processing_attempt(item, "recommendation_image", reuse_completed=False) as attempt:
                 image = generate_recommendation_image(normalized)
                 attempt.output_summary = {
@@ -1358,10 +1306,17 @@ def run_pipeline(item_id: str) -> UploadItem:
     except ProcessingCancelled:
         return UploadItem.objects.get(pk=item.pk)
     except DuplicateDocument as exc:
-        item.asset = exc.asset
-        item.edition = exc.asset.edition
+        edition_bound_file = item.batch.source in {"edition-supplement", "edition-replace"}
+        if not edition_bound_file:
+            item.asset = exc.asset
+            item.edition = exc.asset.edition
         policy = item.batch.duplicate_policy
-        if policy == UploadBatch.DuplicatePolicy.BLOCK_EXACT:
+        if edition_bound_file:
+            item.status = UploadItem.Status.NEEDS_REVIEW
+            item.error_code = "duplicate_edition_file"
+            item.error_message = "发现与已有馆藏相同的 PDF，请核对重复判断。当前作品和出版版本保持不变，未自动关联另一版本。"
+            target_workflow = UploadItem.WorkflowState.NEEDS_REVIEW
+        elif policy == UploadBatch.DuplicatePolicy.BLOCK_EXACT:
             item.status = UploadItem.Status.FAILED
             item.error_code = "duplicate_document_blocked"
             item.error_message = f"{exc}。该批次设置为阻止完全重复文件。"

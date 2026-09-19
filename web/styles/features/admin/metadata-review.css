@@ -466,6 +466,7 @@
 }
 
 .recommendation-image-review > header {
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
@@ -484,10 +485,12 @@
 }
 
 .recommendation-image-review > header > div:last-child {
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .recommendation-image-review > header button {
+  flex-shrink: 0;
   border: 1px solid var(--ink);
   background: transparent;
   min-height: 38px;
@@ -495,6 +498,23 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.workflow-recommendation-image {
+  margin: 0 22px 22px;
+  border-top: 1px solid var(--line);
+}
+
+.workflow-recommendation-image > summary {
+  padding: 16px 0;
+  cursor: pointer;
+  line-height: 1.6;
+}
+
+.workflow-recommendation-image .recommendation-image-review {
+  margin: 0;
+  border-top: 0;
+  padding-top: 0;
 }
 
 .recommendation-image-body {

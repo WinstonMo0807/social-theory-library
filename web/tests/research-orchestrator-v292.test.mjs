@@ -158,7 +158,7 @@ test("workflow editor provides unsaved drafts and decision handling to research 
   assert.match(editor, /operationRef\.current/);
   assert.match(editor, /<ActionButton/);
   assert.match(editor, /<AsyncStatus/);
-  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="author"/);
+  assert.match(editor, /WorkflowFieldAssistant[^\n]*fieldName="author"/);
   assert.match(editor, /EntityPicker label="主要学科"/);
   assert.match(editor, /<WorkCurationEditor/);
   assert.match(editor, /editionId: asString|editionId,/);
@@ -247,11 +247,13 @@ test("maintenance editor pins the exact Edition across load, save and publicatio
   const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
   assert.match(page, /query\.edition/);
   assert.match(page, /editionId=\{editionId\}/);
-  assert.match(library, /primary_edition_id/);
-  assert.match(library, /\?edition=\$\{encodeURIComponent\(work\.primary_edition_id\)\}/);
+  assert.match(library, /safeAdminHref\(work\.workbench_url, ""\)/);
+  assert.match(library, /withAdminReturn\(destination, returnTo, "file"\)/);
   assert.match(editor, /requestedEditionId \|\| asString\(payload\?\.context\.edition_id\)/);
   assert.match(editor, /const scopedEndpoint = mode === "maintenance"/);
-  assert.match(editor, /sections\/\$\{step\}\/\$\{maintenanceQuery\}/);
+  assert.match(editor, /library\/works\/\$\{payload\.context\.work_id\}\/edits\//);
+  assert.match(editor, /edition_id: payload\.context\.edition_id/);
+  assert.match(editor, /edit_version: payload\.editing\?\.edit_version/);
   assert.match(editor, /sections\/curation\/\$\{maintenanceQuery\}/);
   assert.equal(editor.match(/publication\/\$\{maintenanceQuery\}/g)?.length, 2);
   assert.match(editor, /edition_id: maintenanceEditionId/);

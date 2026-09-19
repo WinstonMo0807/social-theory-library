@@ -1251,42 +1251,10 @@ def _draft_published_editorial_change(
     patch: dict,
     change_note: str,
 ):
-    from catalog.models import CanonicalObjectRevision
-    from catalog.services.editorial_revision import (
-        changed_editorial_patch,
-        create_editorial_revision,
-        editorial_idempotency_key,
-    )
-
-    clean_patch = changed_editorial_patch(
-        target_type=target_type,
-        target=target,
-        patch=patch,
-    )
-    if not clean_patch:
-        return None
-    current_revision = (
-        CanonicalObjectRevision.objects.filter(
-            object_type=target_type,
-            object_id=target.id,
-        )
-        .values_list("current_revision", flat=True)
-        .first()
-        or 0
-    )
-    return create_editorial_revision(
-        target_type=target_type,
-        target_id=target.id,
-        patch=clean_patch,
-        actor=request.user,
-        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
-        or editorial_idempotency_key(
-            target_type=target_type,
-            target_id=target.id,
-            base_revision=current_revision,
-            patch=clean_patch,
-        ),
-        change_note=change_note,
+    from catalog.services.editorial_drafts import save_object_editorial_patch
+    return save_object_editorial_patch(
+        target_type, target.pk, patch, actor=request.user, change_note=change_note,
+        request_key=str(request.headers.get("Idempotency-Key") or "").strip(),
     )
 
 
@@ -1924,11 +1892,16 @@ class TopicDetailView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
+        return Response(self.public_payload(instance, request))
+
+    def public_payload(self, instance, request):
+        """Shared public/controlled-preview read; no persistence or dispatch."""
         data = self.get_serializer(instance).data
         works = public_works().filter(
             topic_relations__topic=instance,
             topic_relations__review_status=RelationReviewStatus.APPROVED,
         ).distinct()
+        data["work_count"] = works.count()
         data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
         scholars = public_scholar_queryset().filter(
             Q(
@@ -2030,7 +2003,7 @@ class TopicDetailView(generics.RetrieveAPIView):
             }
             for passage in passages
         ]
-        return Response(data)
+        return data
 
 
 class ScholarListView(generics.ListAPIView):

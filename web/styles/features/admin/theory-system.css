@@ -5,14 +5,14 @@
 .admin-outline-button { display: inline-flex !important; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-weight: 700; }
 .theory-node-admin-grid { display: grid; min-width: 0; grid-template-columns: minmax(700px, 1.35fr) minmax(430px, .65fr); gap: 15px; align-items: start; }
 .theory-node-admin-grid > * { min-width: 0; }
-.theory-node-table-panel { padding: 0; overflow: hidden; }
-.theory-node-tabs, .theory-review-tabs { display: flex; min-height: 52px; overflow-x: auto; border-bottom: 1px solid var(--line); }
-.theory-node-tabs button, .theory-review-tabs button { position: relative; display: flex; flex: none; align-items: center; gap: 7px; min-width: 112px; padding: 0 18px; border: 0; background: transparent; font-weight: 680; }
+.theory-node-table-panel { padding: 0; }
+.theory-node-tabs, .theory-review-tabs { display: flex; flex-wrap: wrap; min-height: 52px; border-bottom: 1px solid var(--line); }
+.theory-node-tabs button, .theory-review-tabs button { position: relative; display: flex; flex: none; align-items: center; gap: 7px; min-width: 112px; min-height: 44px; padding: 0 18px; border: 0; background: transparent; font-weight: 680; }
 .theory-node-tabs button.active::after { position: absolute; right: 18px; bottom: -1px; left: 18px; height: 2px; background: var(--ink); content: ""; }
 .theory-review-tabs button.active { background: var(--ink); color: var(--paper); }
 .theory-review-tabs button span { display: grid; place-items: center; min-width: 22px; height: 22px; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; }
 .theory-admin-filters { display: grid; grid-template-columns: minmax(110px, .8fr) minmax(100px, .7fr) minmax(150px, 1.2fr) auto; gap: 9px; align-items: end; padding: 13px; border-bottom: 1px solid var(--line); }
-.theory-admin-filters.timeline { grid-template-columns: 145px 170px 140px minmax(220px, 1fr); }
+.theory-admin-filters.timeline { grid-template-columns: minmax(200px, 1fr) repeat(2, minmax(120px, .65fr)) minmax(180px, 1fr) auto; }
 .theory-admin-filters label, .theory-node-editor label, .theory-review-editor label, .timeline-event-editor label, .reading-path-editor label, .theory-relation-editor-section form label { display: grid; gap: 6px; min-width: 0; }
 .theory-admin-filters label > span, .theory-node-editor label > span, .theory-review-editor label > span, .timeline-event-editor label > span, .reading-path-editor label > span, .theory-relation-editor-section form label > span { font-size: 11px; font-weight: 720; }
 .theory-admin-filters select, .theory-admin-filters input, .theory-node-editor input, .theory-node-editor textarea, .theory-node-editor select, .theory-review-editor input, .theory-review-editor textarea, .theory-review-editor select, .timeline-event-editor input, .timeline-event-editor textarea, .timeline-event-editor select, .reading-path-editor input, .reading-path-editor textarea, .reading-path-editor select, .theory-relation-editor-section input, .theory-relation-editor-section textarea, .theory-relation-editor-section select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
@@ -22,14 +22,28 @@
 .theory-admin-search svg { position: absolute; top: 50%; left: 11px; transform: translateY(-50%); }
 .theory-admin-search input { padding-left: 34px; }
 .theory-admin-filters > .button { min-height: var(--admin-control); white-space: nowrap; }
-.theory-admin-table-wrap { overflow: auto; }
+.theory-admin-table-wrap { container-type: inline-size; }
 .theory-admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .theory-admin-table th { height: 42px; padding: 0 10px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 700; text-align: left; white-space: nowrap; }
-.theory-admin-table td { min-height: 52px; padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.theory-admin-table td { min-height: 52px; padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
 .theory-admin-table tbody tr { cursor: pointer; }
 .theory-admin-table tbody tr:hover, .theory-admin-table tbody tr.selected { background: var(--wash); }
 .theory-admin-table td strong, .theory-admin-table td small { display: block; }
-.theory-admin-table td small { max-width: 280px; margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.theory-admin-table td small { max-width: 280px; margin-top: 3px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.theory-admin-table td > button { width: 100%; min-width: 0; min-height: 44px; padding: 0; text-align: left; overflow-wrap: anywhere; }
+.theory-editor-group { min-width: 0; padding: 12px; border: 1px solid var(--line); }
+.theory-editor-group > summary { cursor: pointer; font-weight: 700; }
+.theory-editor-group[open] { display: grid; gap: 13px; }
+.theory-editor-group[open] > summary { margin-bottom: 10px; }
+@container (max-width: 800px) {
+  .theory-admin-table, .theory-admin-table tbody { display: block; width: 100%; min-width: 0; }
+  .theory-admin-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+  .theory-admin-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; gap: 8px 16px; border-bottom: 1px solid var(--line); }
+  .theory-admin-table td { display: block; min-width: 0; min-height: 0; padding: 0; border: 0; }
+  .theory-admin-table td:first-child { grid-column: 1 / -1; }
+  .theory-admin-table td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 10px; margin-bottom: 4px; }
+  .theory-admin-table td small { max-width: none; }
+}
 .theory-admin-count { padding: 13px; color: var(--muted); font-size: 11px; }
 .theory-status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 12px; font-size: 9px; white-space: nowrap; }
 .theory-status-badge::before { width: 6px; height: 6px; border-radius: 50%; background: #8c8c86; content: ""; }
@@ -42,6 +56,17 @@
 .theory-admin-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border-bottom: 1px solid #a97878; background: #f6eded; color: #6d2424; font-size: 11px; }
 .theory-admin-error button { border-bottom: 1px solid currentColor; }
 .theory-node-editor, .theory-review-editor, .timeline-event-editor, .reading-path-editor { display: grid; gap: 13px; }
+.dedicated-editor-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 13px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.dedicated-editor-fields > header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.dedicated-editor-fields > header h2 { margin: 0 0 5px; font-size: 18px; }
+.dedicated-editor-fields > header p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.theory-admin-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+.theory-admin-pagination nav { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.theory-admin-pagination a { display: inline-flex; align-items: center; min-height: 40px; text-decoration: underline; }
+.theory-admin-pagination [aria-disabled] { color: var(--muted); }
+.theory-relation-list-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); }
+.theory-relation-list-filters label { flex: 1 1 160px; min-width: 0; }
+.theory-relation-list-filters button { min-height: 42px; }
 .theory-node-editor { position: sticky; top: 18px; max-height: calc(100vh - 55px); overflow-x: hidden; overflow-y: auto; }
 .theory-node-editor > header, .theory-review-editor > header, .timeline-event-editor > header, .reading-path-editor > header, .theory-relation-editor-section > header, .reading-path-list > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .theory-node-editor > header h2, .theory-review-editor > header h2, .timeline-event-editor > header h2, .reading-path-editor > header h2, .theory-relation-editor-section > header h2 { margin: 0 0 4px; font-size: 18px; }
@@ -67,6 +92,8 @@
 .theory-editor-footer .button { width: 100%; }
 
 .theory-review-layout { display: grid; grid-template-columns: minmax(720px, 1fr) 390px; gap: 15px; align-items: start; }
+.theory-suggestion-section > summary { padding: 14px; cursor: pointer; border: 1px solid var(--line); font-weight: 700; }
+.theory-suggestion-section[open] > summary { margin-bottom: 14px; }
 .theory-review-list { padding: 0; overflow: hidden; }
 .theory-review-filter { display: grid; grid-template-columns: auto 1fr auto; align-items: center; min-height: 48px; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .theory-review-filter input { height: 46px; border: 0; outline: 0; background: transparent; }
@@ -81,7 +108,7 @@
 .theory-evidence-card { border: 1px solid var(--line); }
 .theory-evidence-card header, .theory-evidence-card footer { display: flex; justify-content: space-between; padding: 9px 11px; background: var(--wash); font-size: 10px; }
 .theory-evidence-card blockquote { margin: 0; padding: 14px 15px; border-block: 1px solid var(--line); font-family: var(--font-serif); font-size: 14px; line-height: 1.75; }
-.theory-relation-editor-section { margin-top: 15px; }
+.theory-relation-editor-section { margin-top: 15px; padding: 18px; }
 .theory-relation-bottom-grid { display: grid; grid-template-columns: minmax(420px, .75fr) minmax(500px, 1.25fr); gap: 22px; margin-top: 14px; }
 .theory-relation-bottom-grid form { display: grid; gap: 11px; align-content: start; }
 .theory-existing-relations { max-height: 520px; overflow: auto; border: 1px solid var(--line); }
@@ -97,14 +124,14 @@
 .normalized-timeline-list { padding: 0; overflow: hidden; }
 .timeline-list-actions { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--line); }
 .timeline-list-actions button { display: flex; align-items: center; gap: 6px; }
-.timeline-event-editor { position: static; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.timeline-event-editor > header,
-.timeline-event-editor > .button,
-.timeline-event-editor > .form-message { grid-column: 1 / -1; }
-.timeline-event-editor > label,
-.timeline-event-editor > .inline-fields,
-.timeline-event-editor > fieldset,
-.timeline-event-editor > .timeline-draft-preview { grid-column: span 2; }
+.timeline-event-editor { position: static; grid-template-columns: minmax(0, 1fr); padding: 18px; }
+.timeline-evidence-fields { display: grid; min-width: 0; gap: 12px; padding-block: 16px; border-block: 1px solid var(--line); }
+.timeline-evidence-fields h3, .timeline-evidence-fields p { margin: 0; }
+.timeline-evidence-fields h3 { font-size: 15px; }
+.timeline-evidence-fields p, .timeline-evidence-fields > a { font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.timeline-source-pages { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; }
+.timeline-source-pages button { min-height: 36px; padding: 4px 8px; white-space: nowrap; }
+.timeline-source-file { overflow-wrap: anywhere; }
 .timeline-event-editor .timeline-node-picker,
 .timeline-event-editor .timeline-discipline-picker { align-content: start; max-height: 230px; overflow: auto; background: var(--surface); }
 .timeline-event-editor .theory-checkbox-field label { min-width: 180px; flex: 1 1 210px; }
@@ -160,13 +187,8 @@
   .theory-node-tabs button, .theory-review-tabs button { min-width: 100px; padding: 0 12px; }
   .theory-admin-filters, .theory-admin-filters.timeline { grid-template-columns: 1fr; }
   .theory-admin-search { grid-column: auto; }
-  .theory-admin-table { min-width: 920px; }
   .theory-node-editor, .theory-review-editor, .timeline-event-editor, .reading-path-editor { padding: 14px; }
-  .timeline-event-editor { grid-template-columns: 1fr; }
-  .timeline-event-editor > label,
-  .timeline-event-editor > .inline-fields,
-  .timeline-event-editor > fieldset,
-  .timeline-event-editor > .timeline-draft-preview { grid-column: 1; }
+  .theory-relation-editor-section { padding: 14px; }
   .inline-fields, .inline-fields.three { grid-template-columns: 1fr; }
   .theory-merge-box > div { grid-template-columns: 1fr; }
   .theory-review-editor { min-height: 420px; }

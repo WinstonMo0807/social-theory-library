@@ -26,6 +26,7 @@ from common.permissions import (
 from ingestion.models import AuditEvent
 
 from .editorial_read import AdminEditorialDraftReadMixin
+from .relation_editorial_views import StagedRelationEditorMixin
 
 from .models import (
     Asset,
@@ -63,6 +64,7 @@ from .services.scoped_search import SearchContext, SearchService
 from .services.semantic_search import viewer_access_statuses
 from .theory_serializers import (
     AdminKnowledgeNodeSerializer,
+    AdminReadingPathSerializer,
     AdminKnowledgeRelationSerializer,
     AdminWorkNodeRelationSerializer,
     DisciplineCompactSerializer,
@@ -398,8 +400,8 @@ class KnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListAPIView):
     def get_queryset(self):
         queryset = _node_filter(_published_node_queryset(), self.request.query_params)
         if self.request.query_params.get("q", "").strip():
-            return queryset.order_by("_search_rank", "sort_order", "canonical_name_zh")
-        return queryset.order_by("sort_order", "canonical_name_zh")
+            return queryset.order_by("_search_rank", "sort_order", "canonical_name_zh", "pk")
+        return queryset.order_by("sort_order", "canonical_name_zh", "pk")
 
 
 class KnowledgeNodeDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
@@ -962,7 +964,8 @@ class AdminKnowledgeNodeMergeRollbackView(TheorySystemFeatureMixin, APIView):
         return Response(KnowledgeNodeMergeRecordSerializer(record).data)
 
 
-class AdminKnowledgeRelationListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminKnowledgeRelationListView(StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+    editorial_target_type = "knowledge_relation"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
 
@@ -976,13 +979,23 @@ class AdminKnowledgeRelationListView(TheorySystemFeatureMixin, generics.ListCrea
         node = params.get("node", "").strip()
         if node:
             queryset = queryset.filter(Q(source_node_id=node) | Q(target_node_id=node))
-        return queryset.order_by("-updated_at")
+        query = params.get("q", "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(source_node__canonical_name_zh__icontains=query)
+                | Q(target_node__canonical_name_zh__icontains=query)
+                | Q(description__icontains=query)
+                | Q(evidence_source__icontains=query)
+            )
+        return queryset.order_by("-updated_at", "pk")
 
 
 class AdminKnowledgeRelationDetailView(
+    StagedRelationEditorMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
+    editorial_target_type = "knowledge_relation"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
     queryset = KnowledgeRelation.objects.select_related("source_node", "target_node")
@@ -992,7 +1005,7 @@ class AdminKnowledgeRelationDetailView(
         if relation.status == "published":
             return Response(
                 {
-                    "detail": "已发布知识关系不能硬删除，请先把状态改为 archived。",
+                    "detail": "已公开的关系不能删除。请选择下线，保存后再确认发布。",
                     "code": "published_relation_requires_withdrawal",
                 },
                 status=status.HTTP_409_CONFLICT,
@@ -1144,7 +1157,7 @@ class AdminTheoryReviewTaskListView(TheorySystemFeatureMixin, generics.ListCreat
                 | Q(suggested_node_name__icontains=query)
                 | Q(evidence_text__icontains=query)
             )
-        return queryset.order_by("-created_at")
+        return queryset.order_by("-created_at", "pk")
 
 
 class AdminTheoryReviewTaskDetailView(
@@ -1444,7 +1457,7 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
 class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     editorial_target_type = "reading_path"
     permission_classes = [IsKnowledgeEditor]
-    serializer_class = ReadingPathSerializer
+    serializer_class = AdminReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
@@ -1460,7 +1473,7 @@ class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeature
             queryset = queryset.filter(primary_discipline__slug=discipline)
         if query:
             queryset = queryset.filter(Q(title__icontains=query) | Q(introduction__icontains=query))
-        return queryset.order_by("sort_order", "title")
+        return queryset.order_by("sort_order", "title", "pk")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -1475,7 +1488,7 @@ class AdminReadingPathDetailView(
 ):
     editorial_target_type = "reading_path"
     permission_classes = [IsKnowledgeEditor]
-    serializer_class = ReadingPathSerializer
+    serializer_class = AdminReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = ReadingPath.objects.select_related("primary_discipline").prefetch_related(
         "stages", "items__stage", "items__node", "items__work"

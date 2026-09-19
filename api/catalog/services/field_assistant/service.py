@@ -41,6 +41,7 @@ from catalog.services.field_decisions import (
     record_edition_field_decision,
 )
 from catalog.services.editorial_revision import (
+    EditorialRevisionConflict,
     editorial_target_snapshot,
     save_workflow_editorial_revision,
     serialize_editorial_revision,
@@ -52,6 +53,7 @@ from ingestion.models import (
     AuditEvent,
     DecisionLog,
     EntityResolutionCandidate,
+    FieldLock,
     MetadataCandidate,
     ReviewTask,
     UploadItem,
@@ -82,6 +84,13 @@ class FieldAssistantError(ValueError):
 
 def _canonical_field(policy: AssistantFieldPolicy) -> str:
     return DECISION_FIELDS.get(policy.key, policy.key)
+
+
+def _field_lock_scope(edition, field):
+    from catalog.contracts.fields import FIELD_CONTRACTS
+
+    contract = FIELD_CONTRACTS.get(field)
+    return {"edition__work_id": edition.work_id} if contract and contract.domain_object == "work" else {"edition_id": edition.pk}
 
 
 def _actor_id(actor):
@@ -293,7 +302,7 @@ def _raw_candidate(
     }
 
 
-def _research_candidate_is_current(properties, edition, policy, checked=None):
+def _research_candidate_is_current(properties, edition, policy, checked=None, form_context=None):
     properties = dict(properties or {})
     if properties.get("is_current_context") is False:
         return False
@@ -306,7 +315,7 @@ def _research_candidate_is_current(properties, edition, policy, checked=None):
     key = str(run_id)
     if key not in checked:
         run = ResearchRun.objects.filter(pk=run_id, edition=edition).first()
-        checked[key] = research_context_is_current(run, edition, policy)
+        checked[key] = research_context_is_current(run, edition, policy, form_context)
     return checked[key]
 
 
@@ -314,6 +323,7 @@ def _prepared_candidates(
     policy: AssistantFieldPolicy,
     edition,
     item: UploadItem | None,
+    form_context=None,
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     checked_runs = {}
@@ -334,7 +344,7 @@ def _prepared_candidates(
         status=EntityResolutionCandidate.Status.PROPOSED,
     )
     for candidate in entity_rows:
-        if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, checked_runs):
+        if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, checked_runs, form_context):
             continue
         if not {"link_existing", "create_draft"}.intersection(available_resolution_actions(candidate)):
             continue
@@ -362,7 +372,7 @@ def _prepared_candidates(
         status=EnrichmentCandidate.Status.PENDING,
     ).prefetch_related("evidence_records")
     for candidate in enrichment:
-        if not _research_candidate_is_current(candidate.request_context, edition, policy, checked_runs):
+        if not _research_candidate_is_current(candidate.request_context, edition, policy, checked_runs, form_context):
             continue
         if not candidate.evidence_records.filter(is_current=True).exclude(supporting_text="").exists():
             continue
@@ -447,7 +457,12 @@ def _local_candidates(
                     value={"entity_id": str(person.pk), "label": person.preferred_name},
                     source_type="local_person",
                     source_id=person.pk,
-                    evidence=[_evidence("馆内已有记录", "馆内已有学者，可直接关联")],
+                    evidence=[_evidence("馆内已有记录", "；".join(filter(None, (
+                        person.original_name,
+                        f"生于{person.birth_year}年" if person.birth_year else "",
+                        f"卒于{person.death_year}年" if person.death_year else "",
+                        person.biography[:240],
+                    ))) or "馆内人物尚无简介，请核对具体身份；关联书目不创建或发布学者主页。")],
                     entity_type="person",
                     entity_id=person.pk,
                     formal=person.authority_status == Person.AuthorityStatus.VERIFIED,
@@ -594,7 +609,8 @@ def _aggregate_candidates(rows: list[dict], *, default_limit: int) -> tuple[tupl
         # proposed when its accepted authority has an identical local match.
         action_source = next((row for row in members
                               if row["ref"]["source_type"] == "entity_resolution"
-                              and row["entity_id"] and row["entity_id"] == primary["entity_id"]), primary)
+                              and row["entity_id"] and row["entity_id"] == primary["entity_id"]),
+                             next((row for row in members if row["ref"]["source_type"] == "metadata"), primary))
         conflicts = [item for row in members for item in row["conflicts"]]
         if _normalized(primary["label"]) in ambiguous_labels:
             conflicts.append("馆内存在同名对象，请确认具体身份。")
@@ -822,7 +838,7 @@ def _stage_entity(edition, policy, entity, *, actor):
     else:
         raise FieldAssistantError("当前候选不是可关联的馆内对象。")
     return save_workflow_editorial_revision(
-        work_id=edition.work_id, section_patch=patch, actor=actor,
+        work_id=edition.work_id, edition_id=edition.pk, section_patch=patch, actor=actor,
         change_note=f"在{policy.label}字段确认关联",
     )
 
@@ -884,6 +900,9 @@ def _link_entity(edition, policy: AssistantFieldPolicy, entity, *, actor, source
         )
         if not relation.approved:
             raise FieldAssistantError("作者或译者关系未能写入正式草稿。")
+        # A form opened before this inline change must not replace the new
+        # contribution with its previous selection (including an empty list).
+        edition.save(update_fields=["updated_at"])
         return
     if policy.key == "publisher":
         if not isinstance(entity, PublisherAuthority):
@@ -980,6 +999,7 @@ def _apply_scalar(edition, policy: AssistantFieldPolicy, value: Any, *, actor) -
             patch = {field_name: converted}
         save_workflow_editorial_revision(
             work_id=edition.work_id,
+            edition_id=edition.pk,
             section_patch=patch,
             actor=actor,
             change_note=f"在{policy.label}字段采用建议",
@@ -1129,7 +1149,7 @@ def _adopt_resolution_in_revision(service, candidate, *, edition, policy, actor,
     return entity
 
 
-def _adopt_enrichment_value(candidate, *, edition, policy, actor, reason):
+def _adopt_enrichment_value(candidate, *, edition, policy, actor, reason, selected_entity_id=None):
     """Reuse evidence rules while making the write destination explicit."""
     from catalog.services.field_enrichment.mutations import (
         _research_context_stale_reason, _validate_evidence,
@@ -1165,13 +1185,19 @@ def _adopt_enrichment_value(candidate, *, edition, policy, actor, reason):
     current = current_field_value(candidate.target_type, target, candidate.field_name)
     if stable_json(current) != stable_json(candidate.current_value):
         raise FieldAssistantError("字段已在建议产生后变化，请重新核对。")
-    if policy.value_kind in {"value", "entity_or_value"}:
+    if policy.key == "publisher" and selected_entity_id:
+        names = _value_rows(value)
+        entity = _metadata_entity(policy, names[0][0]) if len(names) == 1 else None
+        _check_selected_entity(entity, selected_entity_id)
+        _link_entity(edition, policy, entity, actor=actor, source="field_assistant")
+    elif policy.value_kind in {"value", "entity_or_value"}:
         _apply_scalar(edition, policy, value, actor=actor)
     else:
         names = _value_rows(value)
         entity = _metadata_entity(policy, names[0][0]) if len(names) == 1 else None
         if entity is None:
             raise FieldAssistantError("请先搜索并确认馆内对象，或创建后关联。")
+        _check_selected_entity(entity, selected_entity_id)
         _link_entity(edition, policy, entity, actor=actor, source="field_assistant")
     revision = _latest_editorial_revision(edition) if _requires_editorial_revision(edition) else None
     candidate.proposed_value = value
@@ -1222,6 +1248,11 @@ def _metadata_entity(policy: AssistantFieldPolicy, label: str):
     if len(rows) > 1:
         raise FieldAssistantError("馆内存在多个同名对象，请先确认具体身份。")
     return rows[0] if rows else None
+
+
+def _check_selected_entity(entity, selected_entity_id):
+    if selected_entity_id and (entity is None or str(entity.pk) != str(selected_entity_id)):
+        raise FieldAssistantError("建议对应的馆内对象已变化，请重新核对后填入。不会改换为另一个同名对象。")
 
 
 def _bundle_created_entity(bundle, entity, *, label: str, confirmed_aliases=None, actor=None) -> None:
@@ -1320,14 +1351,17 @@ class FieldAssistantService:
         policy = get_field_policy(request.field_name)
         edition = _edition_for_request(request)
         item = _upload_item(edition, request.upload_item_id)
-        prepared = _prepared_candidates(policy, edition, item)
+        prepared = _prepared_candidates(policy, edition, item, request.confirmed_context)
         local = _local_candidates(policy, _search_terms(request, prepared), edition=edition)
         local = _without_rejected_matches(local, edition, policy)
         prepared = _without_rejected_matches(prepared, edition, policy)
         fingerprint = _context_fingerprint(request, edition)
+        lock_scope = _field_lock_scope(edition, _canonical_field(policy))
+        field_lock = FieldLock.objects.filter(**lock_scope, field_name=_canonical_field(policy)).first()
+        lock_signature = [str(field_lock.pk), field_lock.updated_at.isoformat(), field_lock.reason] if field_lock else None
         # Candidate/evidence content participates in the key, so accept/reject,
         # publication and a changed draft cannot reuse a prior aggregation.
-        signature = json.dumps([fingerprint, request.default_limit, local, prepared], sort_keys=True, ensure_ascii=False, default=str)
+        signature = json.dumps([fingerprint, request.default_limit, local, prepared, lock_signature], sort_keys=True, ensure_ascii=False, default=str)
         cache_key = "field-assistant:v304:" + hashlib.sha256(signature.encode("utf-8")).hexdigest()
         try:
             cached = cache.get(cache_key)
@@ -1348,6 +1382,8 @@ class FieldAssistantService:
                 "adopt_label": policy.action_label,
                 "create_label": f"创建{policy.create_label}" if policy.create_label else "",
                 "strategy": list(policy.strategy_labels),
+                "locked": field_lock is not None,
+                "lock_reason": field_lock.reason if field_lock else "",
             },
             context_fingerprint=fingerprint,
             results=results,
@@ -1485,6 +1521,8 @@ class FieldAssistantService:
         actor,
         selected_value: str = "",
         reason: str = "",
+        selected_entity_id=None,
+        lookup_context=None,
     ) -> dict[str, Any]:
         from catalog.models import Edition
 
@@ -1498,6 +1536,18 @@ class FieldAssistantService:
         edition = Edition.objects.select_for_update().select_related("work").get(pk=edition_id)
         edition.work = Work.objects.select_for_update().get(pk=edition.work_id)
 
+        pending = _latest_editorial_revision(edition)
+        if pending and any(key in {"bibliography", "contributors", "reader"} and isinstance(value, dict)
+                           and value.get("edition_id") and str(value["edition_id"]) != str(edition.pk)
+                           for key, value in (pending.patch or {}).items()):
+            raise EditorialRevisionConflict("另一出版版本还有待发布修改，请先切回那个版本处理。原草稿已保留。")
+
+        field = _canonical_field(policy)
+        lock_scope = _field_lock_scope(edition, field)
+        field_lock = FieldLock.objects.select_for_update(of=("self",)).filter(**lock_scope, field_name=field).first()
+        if field_lock:
+            raise FieldAssistantError("该字段已有人工锁。建议不会覆盖它，请先核对并手工修改。" + (f" 锁定说明：{field_lock.reason}" if field_lock.reason else ""))
+
         if source_type == "entity_resolution":
             candidate = (
                 EntityResolutionCandidate.objects.select_related("upload_item")
@@ -1506,7 +1556,7 @@ class FieldAssistantService:
             )
             if candidate.catalog_edition_id != edition.pk:
                 raise FieldAssistantError("实体建议不属于当前版本。")
-            if not _research_candidate_is_current(candidate.supporting_properties, edition, policy):
+            if not _research_candidate_is_current(candidate.supporting_properties, edition, policy, form_context=lookup_context):
                 raise FieldAssistantError("当前编目信息已变化，请重新查找后再采用。")
             if candidate.target_type not in policy.entity_target_types:
                 raise FieldAssistantError("实体建议不适用于当前字段。")
@@ -1517,6 +1567,8 @@ class FieldAssistantService:
                 )
                 if role != policy.contribution_role:
                     raise FieldAssistantError("贡献角色与当前字段不一致。")
+            if selected_entity_id and str(candidate.candidate_entity_id) != str(selected_entity_id):
+                raise FieldAssistantError("建议对应的馆内对象已变化，请重新核对具体身份。")
             evidence = _entity_evidence(candidate)
             action = (
                 "create_draft"
@@ -1549,6 +1601,7 @@ class FieldAssistantService:
                 _bundle_created_entity(bundle, entity, label=str(entity))
         elif source_type.startswith("local_"):
             entity = _local_entity(source_type, source_id)
+            _check_selected_entity(entity, selected_entity_id)
             state = entity.authority_status if isinstance(entity, Person) else getattr(entity, "editorial_status", getattr(entity, "status", "draft"))
             if state not in {"verified", "published"}:
                 if state not in {"draft", "pending", "needs_review"} or not PublicationBundleItem.objects.filter(
@@ -1574,6 +1627,7 @@ class FieldAssistantService:
                 entity = _metadata_entity(policy, chosen)
             else:
                 entity = None
+            _check_selected_entity(entity, selected_entity_id)
             if entity is not None:
                 _link_entity(edition, policy, entity, actor=actor, source="field_assistant")
             elif policy.value_kind == "entity":
@@ -1588,7 +1642,7 @@ class FieldAssistantService:
             candidate = EnrichmentCandidate.objects.select_for_update().prefetch_related(
                 "evidence_records"
             ).get(pk=source_id)
-            if not _research_candidate_is_current(candidate.request_context, edition, policy):
+            if not _research_candidate_is_current(candidate.request_context, edition, policy, form_context=lookup_context):
                 raise FieldAssistantError("当前编目信息已变化，请重新查找后再采用。")
             if not (
                 candidate.field_name in policy.enrichment_fields
@@ -1601,7 +1655,7 @@ class FieldAssistantService:
             ):
                 raise FieldAssistantError("补充建议不属于当前字段或版本。")
             evidence = _enrichment_evidence(candidate)
-            _adopt_enrichment_value(candidate, edition=edition, policy=policy, actor=actor, reason=reason)
+            _adopt_enrichment_value(candidate, edition=edition, policy=policy, actor=actor, reason=reason, selected_entity_id=selected_entity_id)
         else:
             raise FieldAssistantError("未知的字段建议来源。")
 
@@ -1674,7 +1728,7 @@ class FieldAssistantService:
             candidate = MetadataCandidate.objects.select_related("upload_item").get(pk=source_id)
             if candidate.catalog_edition_id != edition_id or candidate.field_name not in policy.metadata_fields:
                 raise FieldAssistantError("字段建议不属于当前版本。")
-            candidate = set_candidate_decision(candidate, action="reject", actor=actor)
+            candidate = set_candidate_decision(candidate, action="reject", actor=actor, reason=reason)
             status = candidate.lifecycle
         elif source_type == "enrichment":
             candidate = EnrichmentCandidate.objects.get(pk=source_id)

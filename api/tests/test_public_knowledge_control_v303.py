@@ -42,6 +42,8 @@ from reading.library_serializers import LibraryMessageSourceSerializer
 from reading.models import LibraryConversation, LibraryMessage
 from tests.v304_helpers import activate_catalog_revision
 
+from .editorial_fixtures import editorial_request
+
 
 pytestmark = pytest.mark.django_db
 
@@ -151,7 +153,11 @@ def test_public_page_contracts_cover_real_routes_and_report_legacy_dependencies(
     assert coverage["status"] == "ok"
     assert coverage["errors"] == []
     assert coverage["page_counts"] == {"scholar": 9, "theory": 7, "topic": 8}
-    assert coverage["page_contract_count"] == 24
+    assert coverage["page_contract_count"] == 32
+    assert {row["object_type"] for row in coverage["public_surfaces"]} == {
+        "scholar", "theory", "topic", "work", "reading_path", "discipline", "subdiscipline",
+        "site", "recommendation", "media", "reader",
+    }
     assert all(row["percent"] == 100 for row in coverage["route_coverage"].values())
     assert all(row["percent"] == 100 for row in coverage["admin_field_coverage"].values())
     assert len(coverage["legacy_public_dependency_matrix"]) == len(
@@ -310,7 +316,7 @@ def test_direct_scholar_publication_verifies_reviewable_person_and_exposes_publi
     )
     api_client.force_authenticate(admin_user)
 
-    published = api_client.patch(
+    published = editorial_request(api_client, "patch",
         f"/api/catalog/admin/scholars/{profile.id}/",
         {"editorial_status": "published"},
         format="json",
@@ -384,7 +390,7 @@ def test_scholar_publication_does_not_revive_rejected_authority(
     )
     api_client.force_authenticate(admin_user)
 
-    rejected = api_client.patch(
+    rejected = editorial_request(api_client, "patch",
         f"/api/catalog/admin/scholars/{profile.id}/",
         {"editorial_status": "published"},
         format="json",

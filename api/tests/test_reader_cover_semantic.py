@@ -59,6 +59,7 @@ def create_public_asset(title, sha256, *, document_type=DocumentType.BOOK):
         ),
         sha256=sha256,
         status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID,
         page_count=1,
     )
     asset = Asset.objects.create(
@@ -71,6 +72,7 @@ def create_public_asset(title, sha256, *, document_type=DocumentType.BOOK):
         ),
         sha256=sha256,
         status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID,
         page_count=1,
     )
     page = Page.objects.create(
@@ -433,7 +435,7 @@ def build_cover_pdf():
     return payload
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_cover_candidates_only_run_for_books_and_allow_manual_selection(
     api_client,
     tmp_path,
@@ -531,7 +533,7 @@ def test_cover_candidates_only_run_for_books_and_allow_manual_selection(
     assert not CoverCandidate.objects.filter(work=article).exists()
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_cover_candidate_preview_is_staff_only_and_missing_file_is_recoverable(
     api_client,
     admin_user,

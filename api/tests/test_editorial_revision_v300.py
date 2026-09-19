@@ -38,6 +38,8 @@ from catalog.services.knowledge_publication import (
     process_knowledge_event,
 )
 
+from .editorial_fixtures import editorial_request
+
 
 pytestmark = pytest.mark.django_db
 
@@ -491,7 +493,7 @@ def test_published_knowledge_node_patch_stays_draft_until_single_editor_confirm(
     )
     api_client.force_authenticate(editor)
 
-    draft = api_client.patch(
+    draft = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/nodes/{node.id}/",
         {"summary": "经过编辑确认前仍不公开的新摘要"},
         format="json",
@@ -547,7 +549,7 @@ def test_published_node_normalized_taxonomy_links_publish_through_revision(api_c
     )
     api_client.force_authenticate(editor)
 
-    draft = api_client.patch(
+    draft = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/nodes/{node.id}/",
         {
             "subdiscipline_links": [

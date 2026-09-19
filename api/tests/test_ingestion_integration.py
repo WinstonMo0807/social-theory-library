@@ -684,7 +684,8 @@ def test_single_pdf_links_catalog_search_reader_citation_and_withdrawal(
     assert queued.call_count == 1
     assert str(replace_response.data["replacement_of_asset"]) == str(old_asset.id)
     replacement_item = UploadItem.objects.get(pk=replace_response.data["id"])
-    assert replacement_item.batch.source == "replacement"
+    # The compatibility URL now uses the same Edition-scoped file service.
+    assert replacement_item.batch.source == "edition-replace"
 
     # Embeddings are not executed in this catalog/Reader integration fixture.
     # The initially configured target must remain intact through replacement.

@@ -103,8 +103,14 @@ export function KnowledgeNodePublicView({
         {node.evidence.length ? <section className="theory-node-evidence" data-module-id="theory-evidence">
           <TheorySectionHeading title="馆藏证据" />
           <div className="theory-evidence-table" role="table" aria-label="馆藏文献与理论关系证据">
-            <header role="row"><span>书名</span><span>关系类型</span><span>页码范围</span><span>原文证据</span><span>操作</span></header>
-            {node.evidence.map((evidence) => <div role="row" key={evidence.id}><strong>{evidence.work_title}</strong><span>{workRoleLabels[evidence.relation_role] || evidence.relation_role}</span><span>{evidence.printed_page_label || `PDF ${evidence.page_number}${evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页`}</span><p>{evidence.quote}</p><Link href={evidence.reader_href}>阅读原文<ExternalLink size={14} /></Link></div>)}
+            <header role="row"><span role="columnheader">书名</span><span role="columnheader">关系类型</span><span role="columnheader">页码范围</span><span role="columnheader">原文证据</span><span role="columnheader">操作</span></header>
+            {node.evidence.map((evidence) => <div role="row" key={evidence.id}>
+              <strong role="cell" data-label="书名">{evidence.work_title}</strong>
+              <span role="cell" data-label="关系类型">{workRoleLabels[evidence.relation_role] || evidence.relation_role}</span>
+              <span role="cell" data-label="页码范围">{evidence.printed_page_label || `PDF ${evidence.page_number}${evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页`}</span>
+              <p role="cell" data-label="原文证据">{evidence.quote}</p>
+              <div role="cell"><Link href={evidence.reader_href}>阅读原文<ExternalLink size={14} /></Link></div>
+            </div>)}
           </div>
         </section> : null}
 

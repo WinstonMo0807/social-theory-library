@@ -373,8 +373,8 @@ test("recommendation administration exposes explicit ordering and paged scholar 
   assert.match(source, /moveSelected\(index, -1\)/);
   assert.match(source, /moveSelected\(index, 1\)/);
   assert.match(source, /搜索公开学者/);
-  assert.match(source, /scholars\.data\?\.previous/);
-  assert.match(source, /scholars\.data\?\.next/);
+  assert.match(source, /candidateResource\.data\?\.previous/);
+  assert.match(source, /candidateResource\.data\?\.next/);
   assert.doesNotMatch(source, /admin\/scholars\/\?page_size=100/);
 });
 

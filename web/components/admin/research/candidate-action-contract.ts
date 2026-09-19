@@ -175,3 +175,14 @@ export function buildCandidateActionBody(
   if (editedValue !== undefined) body[descriptor.valueField] = editedValue;
   return body;
 }
+
+export const candidateRejectionReasons: Record<string, string> = {
+  person_mismatch: "人物不符", edition_mismatch: "版本不符", unreliable_source: "来源不可靠",
+  unsupported_content: "内容不支持", other: "其他",
+};
+
+export function candidateRejectionAction(descriptor: CandidateActionDescriptor, reason: string, detail = ""): CandidateActionDescriptor {
+  const label = candidateRejectionReasons[reason];
+  if (descriptor.action !== "reject" || !label || (reason === "other" && !detail.trim())) throw new Error("请填写具体的不采用理由。");
+  return { ...descriptor, payload: { ...descriptor.payload, reason: `${label}${detail.trim() ? `：${detail.trim()}` : ""}`.slice(0, 500) } };
+}

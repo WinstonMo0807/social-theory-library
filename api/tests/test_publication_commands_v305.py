@@ -38,6 +38,19 @@ def test_preparation_is_read_only_and_detects_title_diff(admin_user):
     assert Edition.objects.get(pk=edition.pk).active_catalog_revision_id == public.pk
 
 
+def test_preparation_displays_business_labels_without_changing_raw_values(admin_user):
+    edition = _manual_ready(admin_user)
+    edition.work.document_type = "report"
+    edition.work.language = "zh-CN"
+    edition.work.save()
+    rows = {row["field"]: row for row in prepare_revision(edition)["changes"]}
+    assert rows["document_type"]["after"] == "report"
+    assert rows["document_type"]["after_display"] == "研究报告"
+    assert rows["publication_mode"]["after"] == "bibliographic"
+    assert rows["publication_mode"]["after_display"] == "纯书目"
+    assert rows["language"]["after_display"] == "简体中文"
+
+
 def test_stale_preparation_cannot_publish(admin_user):
     edition = _manual_ready(admin_user)
     prepared = prepare_revision(edition)

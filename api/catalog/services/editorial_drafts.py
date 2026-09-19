@@ -4,9 +4,11 @@ from uuid import uuid4
 
 from django.db import transaction
 
-from catalog.models import CanonicalObjectRevision, EditorialRevision, KnowledgeNode, ReadingPath, ScholarProfile
+from catalog.models import CanonicalObjectRevision, Discipline, EditorialRevision, KnowledgeNode, KnowledgeRelation, ReadingPath, ScholarProfile, Subdiscipline, TheoryTimelineEvent, Topic
 
-MODELS = {"scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath}
+MODELS = {"scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath,
+          "topic": Topic, "discipline": Discipline, "subdiscipline": Subdiscipline,
+          "knowledge_relation": KnowledgeRelation, "timeline_event": TheoryTimelineEvent}
 
 
 @transaction.atomic

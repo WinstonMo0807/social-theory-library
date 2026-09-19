@@ -47,18 +47,20 @@
 }
 
 .admin-logo {
+  flex-shrink: 0;
   padding: 2px 15px var(--stl-space-6);
 }
 
 .admin-sidebar nav {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
 }
 
-.admin-nav-group { display: grid; gap: 2px; padding-bottom: var(--stl-space-2); }
-.admin-nav-group > p { margin: var(--stl-space-1) var(--stl-space-admin) 2px; color: var(--muted); font-size: 8px; font-weight: 750; letter-spacing: 0.12em; }
+.admin-nav-group { flex: none; padding-bottom: var(--stl-space-2); }
 
 .admin-sidebar nav a {
   display: grid;
@@ -118,6 +120,7 @@
 
 .admin-sidebar footer {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   padding: 10px;
   font-size: calc(7px + var(--font-bump));

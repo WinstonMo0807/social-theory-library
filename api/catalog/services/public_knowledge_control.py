@@ -51,6 +51,7 @@ class PublicModuleContract:
     curated_fields: tuple[str, ...] = ()
     computed_fields: tuple[str, ...] = ()
     legacy_sources: tuple[str, ...] = ()
+    control_note: str = ""
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,7 @@ def _module(
     computed: Iterable[str] = (),
     projections: Iterable[str] = ("public",),
     legacy: Iterable[str] = (),
+    note: str = "",
 ) -> PublicModuleContract:
     return PublicModuleContract(
         module_id=module_id,
@@ -133,6 +135,7 @@ def _module(
         curated_fields=tuple(curated),
         computed_fields=tuple(computed),
         legacy_sources=tuple(legacy),
+        control_note=note,
     )
 
 
@@ -228,8 +231,9 @@ THEORY_MODULES = {
     ),
     "development": _module(
         "theory-development", "形成时期与发展脉络", "KnowledgeNodeDevelopment", EDITORIAL,
-        ("start_year", "end_year", "period_label"), OPTIONAL, "development",
+        ("period_label", "timeline"), OPTIONAL, "development",
         canonical=("start_year", "end_year", "period_label"), projections=("public", "timeline"),
+        note="形成时期来自节点字段；发展事件来自独立时间线关系，在本理论的时间线中编辑。出处可选择具体版本的阅读文件和PDF页序，保存后正式发布才更新事件；阅读链接还需该文件具有有效公开修订及阅读权限，选择文件不会发布文件。",
     ),
     "disciplines": _module(
         "theory-disciplines", "学科与子学科", "KnowledgeNodeDisciplines", RELATION,
@@ -264,8 +268,9 @@ THEORY_MODULES = {
     ),
     "reading_paths": _module(
         "theory-reading-paths", "阅读路径中的理论位置", "KnowledgeNodeReadingPaths", COMPUTED,
-        ("reading_path_count",), OPTIONAL, "reading", computed=("ReadingPathItem",),
+        ("reading_paths",), OPTIONAL, "reading", computed=("ReadingPathItem",),
         projections=("public", "reading_path_support"),
+        note="实际页面从公开阅读路径及阶段关联生成，编辑独立阅读路径，不是填写一个数量。",
     ),
     "claims": _module(
         "theory-curated-claims", "核心观点、批评与回应", "CuratedClaimGroups", AI_OPTIONAL,
@@ -292,8 +297,9 @@ TOPIC_MODULES = {
     ),
     "works": _module(
         "topic-works", "馆藏作品", "TopicWorks", COMPUTED,
-        ("work_count",), RECOMMENDED, "works", computed=("WorkTopicRelation",),
+        ("works", "work_count"), RECOMMENDED, "works", computed=("WorkTopicRelation",),
         projections=("public", "recommendation"),
+        note="作品清单和数量共用公开详情的规范关系查询；人工推荐书目另列，不代替完整关联馆藏。",
     ),
     "evidence": _module(
         "topic-evidence", "主题相关原文", "TopicEvidence", COMPUTED,
@@ -307,9 +313,10 @@ TOPIC_MODULES = {
     ),
     "scholars": _module(
         "topic-scholars", "代表学者", "TopicScholars", RELATION,
-        ("curated.related_scholars",), RECOMMENDED, "knowledge-relations",
+        ("scholars",), RECOMMENDED, "knowledge-relations",
         relations=("PersonTopicRelation",), curated=("curation.related_scholar_ids",),
         projections=("public", "knowledge_graph"),
+        note="该页学者来自规范主题关系及馆藏署名，人工相关学者选择单独保留在策展数据，不会代替规范关系。",
     ),
     "theories": _module(
         "topic-theories", "理论传统", "TopicTheories", RELATION,
@@ -361,6 +368,14 @@ def _page(
             "/api/catalog/theory-system/nodes/{slug}/",
         ),
         "topic": ("TopicSerializer", "/api/catalog/topics/{slug}/"),
+        "work": ("WorkDetailSerializer", "/api/catalog/works/{slug}/"),
+        "reading_path": ("ReadingPathSerializer", "/api/catalog/theory-system/reading-paths/{slug}/"),
+        "discipline": ("DisciplineSerializer", "/api/catalog/disciplines/{slug}/"),
+        "subdiscipline": ("SubdisciplineSerializer", "/api/catalog/subdisciplines/{slug}/"),
+        "site": ("SiteConfigSerializer", "/api/catalog/site-config/"),
+        "recommendation": ("RecommendationPolicySerializer", "/api/catalog/recommendations/"),
+        "media": ("MediaAssetSerializer", "/api/catalog/admin/media/"),
+        "reader": ("ReaderManifestSerializer", "/api/catalog/assets/{id}/manifest/"),
     }
     default_serializer, default_api = serializers[object_type]
     return PublicPageContract(
@@ -390,7 +405,7 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
     _page("scholar", "frequently-read", "经常连着阅读", "/scholars/{slug}/frequently-read", "ScholarSectionPublicView", (SCHOLAR_MODULES["frequent"],), "/admin/scholars/{id}?section=frequently-read"),
     _page("theory", "overview", "理论概览", "/theories/nodes/{slug}", "KnowledgeNodePublicView", (THEORY_MODULES["identity"], THEORY_MODULES["definition"], THEORY_MODULES["questions"], THEORY_MODULES["propositions"], THEORY_MODULES["development"], THEORY_MODULES["disciplines"], THEORY_MODULES["topics"], THEORY_MODULES["scholars"], THEORY_MODULES["relations"], THEORY_MODULES["works"], THEORY_MODULES["evidence"], THEORY_MODULES["reading_paths"], THEORY_MODULES["claims"]), "/admin/theories/{id}"),
     _page("theory", "graph", "理论图谱中的本理论", "/theories/graph?center={slug}", "TheoryGraph", (THEORY_MODULES["relations"], THEORY_MODULES["scholars"]), "/admin/theories/{id}?section=relations", serializer="LocalTheoryGraphSerializer", api="/api/catalog/theory-system/graph/?center={slug}"),
-    _page("theory", "timeline", "时间线", "/theories/timeline?node={slug}", "TheoryTimeline", (THEORY_MODULES["development"],), "/admin/theories/{id}?section=timeline", serializer="TheoryTimelineEventSerializer", api="/api/catalog/theory-system/timeline/?node={slug}"),
+    _page("theory", "timeline", "时间线", "/theories/timeline?node={slug}", "TheoryTimeline", (THEORY_MODULES["development"],), "/admin/theories/{id}?section=timeline", serializer="NormalizedTimelineEventSerializer", api="/api/catalog/theory-system/timeline/?node={slug}"),
     _page("theory", "discipline-entry", "学科中的理论入口", "/theories/disciplines/{discipline_slug}", "DisciplineTheoryView", (THEORY_MODULES["disciplines"],), "/admin/theories/{id}?section=disciplines", serializer="TheoryDisciplinePageSerializer", api="/api/catalog/theory-system/disciplines/{discipline_slug}/", preview_support=False),
     _page("theory", "scholar-entry", "学者中的理论入口", "/scholars/{scholar_slug}/theories", "ScholarSectionPublicView", (THEORY_MODULES["scholars"],), "/admin/theories/{id}?section=scholars", serializer="ScholarProfileSerializer", api="/api/catalog/scholars/{scholar_slug}/", preview_support=False),
     _page("theory", "topic-entry", "主题中的理论入口", "/topics/{topic_slug}/theory-schools", "TopicSectionPublicView", (THEORY_MODULES["topics"],), "/admin/theories/{id}?section=topics", serializer="TopicSerializer", api="/api/catalog/topics/{topic_slug}/", preview_support=False),
@@ -403,6 +418,38 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
     _page("topic", "timeline", "发展时间线", "/topics/{slug}/timeline", "TopicSectionPublicView", (TOPIC_MODULES["timeline"],), "/admin/topics/{id}?section=timeline"),
     _page("topic", "reading-paths", "阅读路径", "/topics/{slug}/reading-paths", "TopicSectionPublicView", (TOPIC_MODULES["reading_paths"],), "/admin/topics/{id}?section=reading-paths"),
     _page("topic", "concepts", "核心概念", "/topics/{slug}/concepts", "TopicSectionPublicView", (TOPIC_MODULES["concepts"],), "/admin/topics/{id}?section=concepts"),
+    _page("work", "overview", "作品详情与版本", "/works/{slug}", "WorkDetailView", (
+        _module("work-bibliography", "书目信息与出版版本", "WorkDetailView", EDITORIAL, ("title", "edition"), REQUIRED, "work", canonical=("title", "subtitle", "document_type", "abstract", "editions"), note="作品和出版版本分别保存；已公开修改先入编辑草稿，合法活动公开修订激活后才生效。"),
+        _module("work-contributors", "署名及人物职责", "WorkDetailView", RELATION, ("edition.contributions",), RECOMMENDED, "contributors", relations=("Contribution",), note="修改贡献者关系，保留原始署名及作者、译者、编者职责，不是修改人物合并结果。"),
+        _module("work-knowledge", "分类与知识关联", "WorkDetailView", RELATION, ("theories", "topics", "disciplines", "subdisciplines"), OPTIONAL, "knowledge", relations=("WorkNodeRelation", "WorkTopicRelation"), note="修改规范关联；已撤回对象不会因历史快照重新公开。"),
+        _module("work-reading", "目录与阅读入口", "ReaderShell", COMPUTED, ("outline",), OPTIONAL, "reading", computed=("Asset", "Page", "DocumentRevision"), note="来自当前阅读文件及页记录。无PDF的纯书目不需要OCR；正文检索与PDF可读分别核验。"),
+        _module("work-media", "封面与推荐图片", "ResponsiveMediaImage", EDITORIAL, ("cover_media", "recommendation_media"), OPTIONAL, "work", canonical=("cover_selection", "recommendation_selection"), note="媒体选择进入当前版本草稿；发布前仍显示旧图，原件和历史引用保留。"),
+    ), "/admin/library/works/{id}"),
+    _page("reading_path", "overview", "完整阅读路径", "/theories/reading-paths/{slug}", "ReadingPathPublicView", (
+        _module("reading-path-identity", "路径介绍与学习目标", "ReadingPathPublicView", EDITORIAL, ("title", "introduction", "learning_goal", "audience", "difficulty"), REQUIRED, "identity", canonical=("title", "introduction", "learning_goal", "audience", "difficulty", "image_selection")),
+        _module("reading-path-stages", "阅读阶段与顺序", "ReadingPathPublicView", CURATED, ("items",), RECOMMENDED, "reading", curated=("ReadingPathStage", "ReadingPathItem"), note="人工编排阶段、作品或节点、必读与推荐理由；不是主题页面内嵌的阅读路径JSON。"),
+    ), "/admin/reading-paths?path={id}"),
+    _page("discipline", "overview", "学科目录", "/theories/disciplines/{slug}", "DisciplineTheoryView", (
+        _module("discipline-identity", "学科介绍", "DisciplineTheoryView", EDITORIAL, ("name", "description", "introduction", "hero_image"), REQUIRED, "identity", canonical=("name", "description", "introduction", "hero_rendition")),
+        _module("discipline-relations", "子学科、理论与馆藏", "DisciplineTheoryView", COMPUTED, ("work_count", "theory_count", "subdiscipline_count"), OPTIONAL, "relations", computed=("KnowledgeNodeDiscipline", "Subdiscipline", "WorkDisciplineRelation"), note="修改规范关联和公开资格，数量按真实关联计算，不可手工填写。"),
+    ), "/admin/disciplines?discipline={id}", api="/api/catalog/theory-system/disciplines/{slug}/"),
+    _page("subdiscipline", "overview", "子学科页面", "/subdisciplines/{slug}", "SubdisciplinePublicView", (
+        _module("subdiscipline-identity", "研究问题与方法", "SubdisciplinePublicView", EDITORIAL, ("name", "research_object", "core_questions", "methods", "hero_image"), REQUIRED, "identity", canonical=("name", "research_object", "core_questions", "methods", "hero_rendition")),
+        _module("subdiscipline-relations", "理论、主题与文献", "SubdisciplinePublicView", COMPUTED, ("theories", "topics", "works"), OPTIONAL, "relations", computed=("KnowledgeNodeSubdiscipline", "WorkSubdisciplineRelation", "TopicSubdisciplineRelation"), note="从已确认且公开的规范关联生成，编辑关系后核验实际目录。"),
+    ), "/admin/subdisciplines?subdiscipline={id}"),
+    _page("site", "home", "首页与全站文案", "/", "Home / SiteHeader / SiteFooter", (
+        _module("site-editorial", "首页、导航及关于文案", "Home / SiteHeader / SiteFooter", EDITORIAL, ("site_name", "home_title_left_lines", "intro_lines", "sections"), REQUIRED, "site", canonical=("SiteSetting.site_config", "AboutPageBlock"), note="管理员保存网站内容后立即影响后续读取；没有独立待发布草稿。首页装饰和硬编码布局不是可编目字段。"),
+        _module("site-statistics", "馆藏统计与热门检索", "Home", COMPUTED, ("counts",), OPTIONAL, "statistics", computed=("public Work/Scholar/Theory count", "SearchLog"), note="首页取公开列表count，热门检索无记录时用主题/理论标签；不能手工写数量。"),
+    ), "/admin/settings", preview_support=False),
+    _page("recommendation", "placements", "首页推荐位置", "/", "Home / RandomRecommendation", (
+        _module("recommendation-selection", "推荐选择与轮换", "Home / RandomRecommendation", CURATED, ("placements",), RECOMMENDED, "recommendations", curated=("RecommendationPolicy", "RecommendationOverride", "RecommendationSnapshot", "RecommendationItem"), note="人工选择与自动规则生成共享本期快照。策略保存不等于本期已换；明确刷新或到期生成新期，历史快照保留。无读者私人画像。"),
+    ), "/admin/recommendations", preview_support=False),
+    _page("media", "references", "媒体使用位置", "/works/{slug}", "ResponsiveMediaImage", (
+        _module("media-references", "当前、草稿和历史图片引用", "ResponsiveMediaImage", COMPUTED, ("references",), OPTIONAL, "media", computed=("MediaAsset", "MediaRendition", "EditorialRevisionMedia", "CatalogPublicationMedia"), note="媒体库本身不是公开画廊。选择进入对象草稿，公开文件只从获准对象引用提供；不得删除原件或历史。"),
+    ), "/admin/media", api="/api/catalog/works/{id}/cover-metadata/", serializer="PublicImageMetadata", preview_support=False),
+    _page("reader", "metadata", "阅读文件及目录", "/reader/{id}", "ReaderShell", (
+        _module("reader-metadata", "页码、目录与关联元数据", "ReaderShell", COMPUTED, ("outline", "page_count", "related_scholars", "related_topics"), OPTIONAL, "reading", computed=("Asset", "Page", "DocumentRevision", "CatalogPublicationRevision"), note="管理当前Edition的文件和页码，不重建Page身份；PDF访问与正文质量分开判断。私人笔记、进度、收藏不属于管理员公开字段。"),
+    ), "/admin/library", preview_support=False),
 )
 
 
@@ -440,6 +487,14 @@ SOURCE_AUTHORITY_MATRIX = (
     {"identity": "debate", "canonical_source": "KnowledgeNode(DEBATE)", "relation_sources": ("KnowledgeRelation", "WorkNodeRelation", "PersonNodeRelation")},
     {"identity": "scholar", "canonical_source": "Person + ScholarProfile", "relation_sources": ("PersonNodeRelation", "PersonTopicRelation", "Contribution")},
     {"identity": "topic", "canonical_source": "Topic", "relation_sources": ("KnowledgeNodeTopic", "WorkTopicRelation", "PersonTopicRelation", "TopicDisciplineRelation", "TopicSubdisciplineRelation")},
+    {"identity": "work", "canonical_source": "Work + Edition + active CatalogPublicationRevision", "relation_sources": ("Contribution", "WorkNodeRelation", "WorkTopicRelation")},
+    {"identity": "reading_path", "canonical_source": "ReadingPath", "relation_sources": ("ReadingPathStage", "ReadingPathItem")},
+    {"identity": "discipline", "canonical_source": "Discipline", "relation_sources": ("KnowledgeNodeDiscipline", "WorkDisciplineRelation")},
+    {"identity": "subdiscipline", "canonical_source": "Subdiscipline", "relation_sources": ("KnowledgeNodeSubdiscipline", "WorkSubdisciplineRelation", "TopicSubdisciplineRelation")},
+    {"identity": "site", "canonical_source": "SiteSetting.site_config + AboutPageBlock", "relation_sources": ()},
+    {"identity": "recommendation", "canonical_source": "RecommendationPolicy + current RecommendationSnapshot", "relation_sources": ("RecommendationOverride", "RecommendationItem")},
+    {"identity": "media", "canonical_source": "MediaAsset + MediaRendition", "relation_sources": ("CatalogPublicationMedia", "EditorialRevisionMedia")},
+    {"identity": "reader", "canonical_source": "Asset + Page + active DocumentRevision", "relation_sources": ("CatalogPublicationRevision",)},
 )
 
 
@@ -561,6 +616,13 @@ ADMIN_FIELD_USAGE = {
 
 
 def admin_field_usage(object_type: str) -> list[dict[str, Any]]:
+    if object_type not in ADMIN_FIELD_USAGE:
+        usage = {}
+        for page in page_contracts(object_type):
+            for module in page.modules:
+                for field in (*module.canonical_fields, *module.curated_fields, *module.relations, *module.computed_fields):
+                    usage.setdefault(field, set()).add(module.display_name)
+        return [{"field": field, "classification": "registered_public_source", "consumers": sorted(consumers)} for field, consumers in sorted(usage.items())]
     return [
         {
             "field": field,
@@ -634,7 +696,7 @@ def _module_state(
         "counts_as_manual_missing": bool(missing) and not computed_empty and not ai_empty,
         "empty_reason": (
             "馆内目前没有关联内容" if computed_empty else
-            "尚未策展；自动建议当前未启用" if ai_empty else
+            "尚无人工确认的策展内容；候选是否存在与服务是否可用需分别核对" if ai_empty else
             "管理员尚未填写" if not populated else ""
         ),
     }
@@ -735,6 +797,10 @@ def draft_published_diff(
 
 
 def _public_eligibility(object_type: str, target) -> dict[str, Any]:
+    if object_type == "work":
+        from catalog.services.publication_eligibility import public_edition_q
+        eligible = target.editions.filter(public_edition_q(), is_primary=True).exists()
+        return {"eligible": eligible, "reason": "" if eligible else "no_active_primary_publication"}
     if object_type == "scholar":
         profile_published = target.editorial_status == KnowledgePublicationStatus.PUBLISHED
         person_verified = target.person.authority_status == Person.AuthorityStatus.VERIFIED
@@ -751,10 +817,11 @@ def _public_eligibility(object_type: str, target) -> dict[str, Any]:
 
 
 def _appearances(object_type: str, target) -> list[dict[str, Any]]:
+    from catalog.services.publication_eligibility import public_edition_q
     rows: list[dict[str, Any]] = []
     if object_type == "scholar":
         work_count = target.person.contributions.filter(
-            approved=True, edition__state="published"
+            public_edition_q(prefix="edition"), approved=True,
         ).values("edition__work_id").distinct().count()
         theory_count = target.person.node_relations.filter(
             status="published", node__status="published"
@@ -776,13 +843,13 @@ def _appearances(object_type: str, target) -> list[dict[str, Any]]:
             {"page_id": "graph", "label": "知识图谱公开关系", "count": relation_count, "route": f"/theories/graph?center={target.slug}"},
             {"page_id": "scholar-entry", "label": "学者页面", "count": target.person_relations.filter(status="published", person__authority_status=Person.AuthorityStatus.VERIFIED, person__scholar_profile__editorial_status="published").values("person_id").distinct().count(), "route": f"/theories/nodes/{target.slug}?module=theory-scholars"},
             {"page_id": "topic-entry", "label": "主题页面", "count": target.topic_links.filter(status="published").values("topic_id").distinct().count(), "route": f"/theories/nodes/{target.slug}?module=theory-topics"},
-            {"page_id": "works", "label": "相关馆藏", "count": target.work_relations.filter(status="published", work__editions__state="published").values("work_id").distinct().count(), "route": f"/theories/nodes/{target.slug}?module=theory-works"},
+            {"page_id": "works", "label": "相关馆藏", "count": target.work_relations.filter(public_edition_q(prefix="work__editions"), status="published").values("work_id").distinct().count(), "route": f"/theories/nodes/{target.slug}?module=theory-works"},
             {"page_id": "reading-path", "label": "Reading Path", "count": target.reading_path_items.filter(reading_path__status="published").values("reading_path_id").distinct().count(), "route": f"/theories/nodes/{target.slug}?module=theory-works"},
         ))
     elif object_type == "topic":
         rows.extend((
             {"page_id": "overview", "label": "主题主要页面", "count": 1, "route": f"/topics/{target.slug}"},
-            {"page_id": "works", "label": "馆藏作品", "count": target.work_relations.filter(review_status=RelationReviewStatus.APPROVED, work__editions__state="published").values("work_id").distinct().count(), "route": f"/topics/{target.slug}/works"},
+            {"page_id": "works", "label": "馆藏作品", "count": target.work_relations.filter(public_edition_q(prefix="work__editions"), review_status=RelationReviewStatus.APPROVED).values("work_id").distinct().count(), "route": f"/topics/{target.slug}/works"},
             {"page_id": "scholars", "label": "代表学者", "count": target.person_relations.filter(review_status=RelationReviewStatus.APPROVED, person__authority_status=Person.AuthorityStatus.VERIFIED, person__scholar_profile__editorial_status="published").values("person_id").distinct().count(), "route": f"/topics/{target.slug}/scholars"},
             {"page_id": "theory-schools", "label": "规范理论关系", "count": target.knowledge_node_links.filter(status="published", node__status="published").values("node_id").distinct().count(), "route": f"/topics/{target.slug}/theory-schools"},
             {"page_id": "timeline", "label": "时间线事件", "count": len(target.timeline or []), "route": f"/topics/{target.slug}/timeline"},
@@ -856,6 +923,18 @@ def build_public_control(
         )
         route_values = _target_route_values(page, target)
         route = _page_route(page, target)
+        draft_route = f"/admin/preview/knowledge/{object_type}/{target.pk}?page={page.page_id}"
+        admin_route = page.admin_management_destination.format(id=target.pk)
+        if object_type == "work":
+            # Use the exact Edition returned by the existing public/preview
+            # serializer. Never substitute another version for missing context.
+            edition_data = active.get("edition") or {}
+            edition_id = edition_data.get("id")
+            slug = edition_data.get("public_slug") or ""
+            route_values["slug"] = slug
+            route = f"/works/{slug}" if slug else ""
+            draft_route = f"/admin/preview/works/{edition_id}" if edition_id else ""
+            admin_route += f"?edition={edition_id}" if edition_id else ""
         pages.append({
             "page_id": page.page_id,
             "display_name": page.display_name,
@@ -866,12 +945,12 @@ def build_public_control(
             "status": page_status,
             "modules": modules,
             "preview": {
-                "supported": page.preview_support,
+                "supported": page.preview_support and bool(draft_route),
                 "published_route": route,
-                "draft_route": f"/admin/preview/knowledge/{object_type}/{target.pk}?page={page.page_id}",
+                "draft_route": draft_route,
                 "protected": True,
             },
-            "admin_management_destination": page.admin_management_destination.format(id=target.pk),
+            "admin_management_destination": admin_route,
         })
     scored = [row for row in unique_modules.values() if row["content_source_type"] != COMPUTED]
     satisfied = [row for row in scored if row["status"] in {"complete", "partial", "draft"}]
@@ -915,7 +994,7 @@ def build_public_control(
             }
         )
     return {
-        "contract_version": "3.0.4",
+        "contract_version": "3.0.6",
         "object_type": object_type,
         "eligibility": _public_eligibility(object_type, target),
         "page_tree": pages,
@@ -934,8 +1013,8 @@ def build_public_control(
         "source_authority": [row for row in SOURCE_AUTHORITY_MATRIX if row["identity"] == object_type],
         "admin_field_usage": admin_field_usage(object_type),
         "ai_status": {
-            "enabled": False,
-            "workspace_message": "自动建议当前未启用",
+            "enabled": None,
+            "workspace_message": "当前读取已有候选和人工记录；打开页面不执行外部查找。服务能力与候选内容需分别核对。",
             "publication_blocking": False,
         },
     }
@@ -958,6 +1037,7 @@ def public_management_coverage() -> dict[str, Any]:
         for source in row["relation_sources"]
     }
     probe_values = {
+        "id": "00000000-0000-4000-8000-000000000001",
         "slug": "public-control-probe",
         "discipline_slug": "public-control-discipline",
         "scholar_slug": "public-control-scholar",
@@ -1054,4 +1134,5 @@ def public_management_coverage() -> dict[str, Any]:
         "legacy_routes": AUDITED_LEGACY_PUBLIC_ROUTES,
         "source_authority_matrix": SOURCE_AUTHORITY_MATRIX,
         "legacy_public_dependency_matrix": LEGACY_PUBLIC_DEPENDENCIES,
+        "public_surfaces": [asdict(row) for row in PUBLIC_PAGE_CONTRACTS],
     }

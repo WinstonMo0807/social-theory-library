@@ -65,6 +65,13 @@ export function normalizePublicResourceUrl(value: string) {
 
   try {
     const parsed = new URL(value);
+    // Edge may mark internal API requests as HTTPS while the same NAS is
+    // deliberately reached through an HTTP LAN port. Keep first-party API
+    // files on the browser's authenticated origin; never rewrite object-store
+    // or other external signed URLs.
+    if (parsed.hostname === window.location.hostname && parsed.pathname.startsWith("/api/")) {
+      return `${getApiBase()}${parsed.pathname.slice(4)}${parsed.search}${parsed.hash}`;
+    }
     const isLoopback = ["localhost", "127.0.0.1", "::1", "api"].includes(parsed.hostname);
     const apiIndex = parsed.pathname.indexOf("/api/");
     if (isLoopback && apiIndex >= 0 && !["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)) {

@@ -1,6 +1,28 @@
 # 部署说明
 
-更新日期为2026-09-13。当前摘要见CURRENT_STATE.md，后续部署仍需重新检查实时状态。
+更新日期为2026-09-20。当前摘要见CURRENT_STATE.md，后续部署仍需重新检查实时状态。
+
+## 3.0.6 main同步与运行源码对应
+
+本次Git同步在已部署后获用户明确授权，沿用原main正常提交/快进，不改写历史，不重复生产切换。下方“未提交”描述的是构建上线时点。Git包含完整3.0.6、独立Edge补丁、测试及最新架构说明；不能把新Git提交号写成已经构建过的镜像标签。
+
+2026-09-20再次只读核对：公网`/api/ready/`返回3.0.6/ready/database=true/pending_migrations=0；实际API/两Worker/Beat及Web的镜像ID与下表记录一致，五者RestartCount=0；12个Compose容器仍在，Cloudflared未重新部署。NAS实际Nginx模板SHA与下方387452…一致。本次最初误请求不存在的`/api/readyz`得到404，查当前urls.py后使用正确`/api/ready/`成功；不是系统路由故障或被掩盖的测试失败。
+
+重新核对冻结归档SHA及1196文件：当前应用运行内容与归档一致；内容差异仅说明文档、已独立上线的Edge模板和相应网关测试。宿主工作区37个文件仅CRLF/LF不同；暂存Git树另有6个blob相对归档仅行尾不同，统一LF后运行内容一致，不宣称所有字节相同。新增管理端说明和只读文档检查脚本不进入当前应用镜像。此检查没有执行管理员生产写入、外部OCR/模型或全套业务回归。
+
+精简当前架构见[实际架构](GPT_ARCHITECTURE_CONTEXT.md)，管理端详见[功能画像](ADMIN_ARCHITECTURE_PROFILE.md)。后续从main重建仍须按当前环境执行部署门槛，Git push本身不会更换NAS容器。
+
+## 3.0.6 本轮最终生产记录
+
+本轮已完成基础8项补漏与封面追加两次安全切换，当前API、Worker、ingestion-worker、Beat共用social-theory-library-api:3.0.6-59e73c4108（ID451332d717b4aefc7152d4b8c4ce605fdfe5aa86a10df3cca032f473b71c4e36），Web为social-theory-library-web:3.0.6-59e73c4108（ID26da357d57f435d066b039b8cabc1cedad75d8e5f4c884a639fe9354e2dd702b）。应用冻结树59e73c410842fe46f28cac6517450c6b1ee12ca9，1196文件，归档SHA256 b2ee98dfcbd2c1d88d71e44861c0e4abb9388be9e8f35dffaac892524c39b5c8；Git基线仍aa97727，使用隔离索引冻结未提交开发，并未假造新commit或推送。
+
+Web实际从daf743c276树的Linux离线npm ci构建，最终59e的全部Web输入逐文件相同；API运行源码逐文件相同，最终镜像含经PG复跑的流式响应测试事务修订。完整证据及源—镜像对应关系见V3.0.6_COMPLETION_RELEASE。
+
+Edge另有独立封面上传修复：deploy/nginx/default.conf.template SHA256为387452affa31a00779cb1b25c22ce81e617067a8a3a5215c8802cdab4a2c6424。该模板是应用59e归档之后的唯一运行配置增量，只对Edition cover路径允许13MB请求开销；API仍限制12MB图片。未扩大普通API限制、权限或公开字段。nginx候选/活动配置检查及公网3MB未认证请求的401/413边界通过。
+
+本次BackupJob 58e0ecf6-348b-48dd-bac6-5b056631e7b6，归档SHA256 39b1c88a4ac1e61453fe974666996fecd117641f0ae2a45e54068704e206f653，已恢复至隔离PG并核对新旧ORM。回退记录位于NAS /volume2/library/docker/social-theory-library/storage/backups/pre-v306-20260920-cover/deploy-record，保留数据库、旧环境、Compose、源码、镜像、模板及rollback.sh。原基础3.0.5→3.0.6备份及pre-v306-20260920-completion记录也保留。应用回退不还原数据库，不反向migration。
+
+0055/0056在基础更新完成；封面增量无schema变化。原件/Page/私人数据关系/暂停OCR/活动索引前后摘要一致。两Worker、容器HTTP和公网17项最小探针通过，Reader Range206、PDF头、544页manifest、非回退语义及匿名权限通过，真实公网Reader两宽度已查看。Cloudflared未重建，实际应用重启次数0。未对生产馆藏执行重新OCR/外部模型/管理员试写；不视为全A01—A32重验。原用户要求保留的系列部署SSH key继续保留。
 
 ## 3.0.5生产记录
 

@@ -69,8 +69,8 @@ test("non-superuser creates a real manual session, saves and reopens it", async 
   const url = page.url();
   await expect(page.getByRole("heading", { name: "E2E 无文件编目", exact: true, level: 1 })).toBeVisible();
   await page.getByLabel("副题名", { exact: true }).fill("保存后仍在");
-  await page.getByRole("button", { name: "保存草稿", exact: true }).first().click();
-  await expect(page.getByText("草稿已保存。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "保存书目修改", exact: true }).click();
+  await expect(page.getByText(/本页所有书目修改已保存，尚未发布/)).toBeVisible();
   await page.goto("/admin/library");
   await page.goto(url);
   await expect(page.getByLabel("副题名", { exact: true })).toHaveValue("保存后仍在");
@@ -108,6 +108,53 @@ test("a reader cannot open cataloging or submit a manual catalog", async ({ page
   expect(response.status()).toBe(403);
 });
 
+for (const failReload of [false, true]) {
+  test(`inline author save protects confirmation while reloading, failure=${failReload}`, async ({ page }) => {
+    await login(page, "curator");
+    await page.goto("/admin/cataloging/new");
+    await page.getByLabel("作品题名", { exact: true }).fill(`作者刷新保护 ${failReload}`);
+    await page.getByRole("button", { name: "创建草稿并开始编目", exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/cataloging\/[a-f0-9-]+#work/);
+    const sessionUrl = page.url().split("#")[0];
+    await page.goto(`${sessionUrl}#contributors`);
+    const section = page.locator("#workflow-section-contributors");
+    await section.getByRole("button", { name: "智能查找", exact: true }).first().click();
+    const author = `刷新保护作者 ${failReload}`;
+    await page.getByLabel("新学者名称", { exact: true }).fill(author);
+    let release!: () => void;
+    let requested!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const intercepted = new Promise<void>(resolve => { requested = resolve; });
+    let interceptNext = true;
+    await page.route("**/api/catalog/admin/library/works/*/?edition=*", async route => {
+      if (route.request().method() !== "GET" || !interceptNext) return route.continue();
+      interceptNext = false;
+      requested();
+      await gate;
+      if (failReload) await route.abort("failed"); else await route.continue();
+    });
+    await page.getByRole("button", { name: "创建学者并关联", exact: true }).click();
+    await intercepted;
+    const confirm = section.getByRole("button", { name: "确认本节内容", exact: true });
+    try {
+      await expect(confirm).toBeDisabled();
+      await expect(page.getByText("已新建馆内草稿对象并关联当前作品。", { exact: true })).toHaveCount(0);
+    } finally { release(); }
+    if (failReload) {
+      await expect(page.getByText("修改已保存，但当前页面未刷新。请点击顶部刷新后继续；不必重复新建或采用。", { exact: true })).toBeVisible();
+      await expect(confirm).toBeDisabled();
+      await page.getByRole("button", { name: "刷新", exact: true }).click();
+    }
+    await expect(section.getByRole("textbox", { name: "作者姓名", exact: true })).toHaveValue(author);
+    const saved = page.waitForResponse(response => response.url().endsWith("/edits/") && response.request().method() === "POST" && response.request().postDataJSON().confirm_sections.includes("contributors"));
+    await confirm.click();
+    const response = await saved;
+    expect(response.status(), await response.text()).toBe(200);
+    expect(response.request().postDataJSON().sections.contributors.items.map((row: { display_name: string }) => row.display_name)).toEqual([author]);
+    expect((await response.json()).data.contributors.items.map((row: { display_name: string }) => row.display_name)).toEqual([author]);
+  });
+}
+
 test("media upload keeps a private original and creates a responsive preview", async ({ page }) => {
   await login(page, "curator");
   await page.goto("/admin/media");
@@ -123,13 +170,13 @@ test("media upload keeps a private original and creates a responsive preview", a
   await page.getByLabel("图片文件", { exact: true }).setInputFiles({ name: "e2e-media.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
   await page.getByLabel("图片说明", { exact: true }).fill("E2E 媒体原图");
   await page.getByRole("button", { name: "上传图片", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "媒体资料与预览", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "图片信息与预览", exact: true })).toBeVisible();
   await page.getByLabel("许可", { exact: true }).fill("仅用于本地测试");
   await page.getByLabel("水平焦点", { exact: true }).press("Home");
   await page.getByLabel("水平焦点", { exact: true }).press("ArrowRight");
   await page.getByRole("combobox", { name: "预览用途", exact: true }).selectOption("hero");
   await page.getByRole("button", { name: "保存资料并生成预览", exact: true }).click();
-  await expect(page.getByText("媒体资料已保存。此操作不会直接更改公开书目。", { exact: true })).toBeVisible();
+  await expect(page.getByText("图片信息已保存。请回到使用这张图片的页面发布修改。", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "E2E 媒体原图", exact: true }).last()).toHaveJSProperty("naturalWidth", 640);
   const result = await page.request.get("http://127.0.0.1:8105/api/catalog/admin/media/");
   const rows = await result.json();

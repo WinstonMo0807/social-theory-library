@@ -330,6 +330,19 @@ test("Admin and Reader protected surfaces use the shared bootstrap", () => {
   assert.match(readerNotes, /useSessionBootstrap\(\)/);
 });
 
+test("API field validation retains the actionable reason and excludes diagnostics", async (t) => {
+  const browser = installBrowser(t);
+  browser.setFetch(async () => response(400, {
+    items: ["推荐对象不存在或尚未公开。"], code: "request.invalid", message: "请求未能完成。",
+    field: null, severity: "blocking", details: { internal_value: "not-for-the-interface" },
+  }));
+  await assert.rejects(apiRequest("/catalog/admin/recommendations/home_scholars/refresh/"), (error) => {
+    assert.equal(error.status, 400);
+    assert.equal(error.message, "推荐对象不存在或尚未公开。");
+    return true;
+  });
+});
+
 test("background session revalidation does not remount active workspaces", () => {
   const source = readFileSync(new URL("../lib/use-session-bootstrap.ts", import.meta.url), "utf8");
   assert.match(source, /scheduleValidation\(true\)/);

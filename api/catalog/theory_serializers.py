@@ -48,6 +48,8 @@ from catalog.services.relation_registry import (
 from catalog.services.evidence_envelope import public_curated_claim_groups
 from catalog.services.semantic_search import viewer_access_statuses
 from catalog.services.scholar_publication import scholar_public_eligibility
+from catalog.services.timeline_evidence import TimelineEvidenceListSerializer, timeline_reader_href
+from catalog.serializers import TaxonomyImageSerializerMixin
 
 
 def _media_url(request, field):
@@ -138,7 +140,7 @@ def compact_work(work, request=None, *, include_unpublished=False):
     }
 
 
-class DisciplineCompactSerializer(serializers.ModelSerializer):
+class DisciplineCompactSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Discipline
         fields = ("id", "code", "name", "foreign_name", "slug", "description", "hero_image")
@@ -664,6 +666,7 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
 
 class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
+    edit_version = serializers.CharField(read_only=True)
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)
     subdiscipline_links = KnowledgeNodeSubdisciplineSerializer(
@@ -681,6 +684,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         model = KnowledgeNode
         fields = (
             "id",
+            "edit_version",
             "node_type",
             "canonical_name_zh",
             "canonical_name_en",
@@ -1292,6 +1296,13 @@ class ReadingPathSerializer(serializers.ModelSerializer):
         return path
 
 
+class AdminReadingPathSerializer(ReadingPathSerializer):
+    edit_version = serializers.CharField(read_only=True)
+
+    class Meta(ReadingPathSerializer.Meta):
+        fields = (*ReadingPathSerializer.Meta.fields, "edit_version")
+
+
 class KnowledgeNodeVersionSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.display_name", read_only=True)
 
@@ -1348,6 +1359,7 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TheoryTimelineEvent
+        list_serializer_class = TimelineEvidenceListSerializer
         fields = (
             "id",
             "title",
@@ -1402,6 +1414,4 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
         return rows
 
     def get_reader_href(self, obj):
-        if obj.evidence_asset_id and obj.evidence_page:
-            return f"/reader/{obj.evidence_asset_id}?page={obj.evidence_page}"
-        return None
+        return timeline_reader_href(obj, self.context)

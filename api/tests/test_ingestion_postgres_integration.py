@@ -309,10 +309,12 @@ def test_postgres_historical_metadata_failure_retry_is_idempotent_and_reuses_cat
         run_pipeline(str(item.id))
 
     item.refresh_from_db()
+    assert item.status == UploadItem.Status.READY, item.error_message
     edition_id = item.edition_id
     work_id = item.edition.work_id
     asset_ids = set(item.edition.assets.values_list("id", flat=True))
     candidate_count = item.metadata_candidates.count()
+    candidate_ids = set(item.metadata_candidates.values_list("pk", flat=True))
     item.edition.work.title = "Administrator-confirmed title"
     item.edition.work.save(update_fields=["title", "updated_at"])
     FieldLock.objects.create(
@@ -353,7 +355,9 @@ def test_postgres_historical_metadata_failure_retry_is_idempotent_and_reuses_cat
     assert recovered.edition.work_id == work_id
     assert recovered.edition.work.title == "Administrator-confirmed title"
     assert set(recovered.edition.assets.values_list("id", flat=True)) == asset_ids
-    assert recovered.metadata_candidates.count() == candidate_count
+    assert recovered.metadata_candidates.count() == candidate_count, (
+        list(recovered.metadata_candidates.exclude(pk__in=candidate_ids).values("field_name", "source", "value"))
+    )
 
 
 def test_postgres_duplicate_upload_task_delivery_has_one_database_claim(

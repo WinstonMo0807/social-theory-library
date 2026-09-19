@@ -14,7 +14,8 @@ test("processing center leads with persisted functional health", async () => {
 
   assert.match(panel, /"\/catalog\/admin\/functional-health\/"/);
   assert.match(panel, /page_load_performs_live_probes: boolean/);
-  assert.match(panel, /页面读取最近一次探测结果，不会在打开时连接外部服务/);
+  assert.match(panel, /此页只读取已有检查记录/);
+  assert.match(panel, /不会在打开页面时调用外部服务/);
   assert.match(
     processing,
     /<FunctionalHealthPanel revision=\{revision\} surface=\{healthSurface\} \/>/,

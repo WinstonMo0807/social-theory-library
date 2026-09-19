@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from django.core.paginator import Paginator
-from django.db import transaction
-from django.db.models import Count, Q
-from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import DatabaseError, transaction
+from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,7 +14,9 @@ from common.permissions import (
     CanAccessBackOffice,
     CanEditMetadata,
     CanPublishWork,
+    CanWithdrawWork,
     IsKnowledgeEditor,
+    IsCatalogEditor,
 )
 from ingestion.models import EntityResolutionCandidate, MetadataCandidate, UploadItem
 from ingestion.services.publication import (
@@ -32,10 +34,8 @@ from catalog.models import (
     Work,
 )
 from catalog.services.admin_workspace import (
-    QUEUE_STATUSES,
     build_admin_workspace,
     serialize_work_library_row,
-    serialize_workflow_queue_item,
     work_library_queryset,
 )
 from catalog.services.work_editor import (
@@ -228,6 +228,74 @@ class WorkMaintenanceWorkspaceView(AdminPrivateResponseMixin, APIView):
         )
 
 
+class WorkspaceEditsSerializer(serializers.Serializer):
+    edition_id = serializers.UUIDField()
+    item_id = serializers.UUIDField(required=False, allow_null=True)
+    edit_version = serializers.CharField(max_length=64)
+    request_id = serializers.UUIDField()
+    sections = serializers.DictField(child=serializers.DictField(), allow_empty=False)
+    confirm_sections = serializers.ListField(child=serializers.ChoiceField(choices=list(SECTION_SERIALIZERS)), default=list)
+    suggestions = serializers.ListField(child=serializers.DictField(), default=list, max_length=40)
+
+
+class WorkWorkspaceEditsView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self, request, work_id):
+        from catalog.field_assistant_views import FieldAssistantDecisionSerializer
+        from catalog.services.field_assistant import FieldAssistantError
+        from catalog.services.workspace_edits import save_workspace_edits
+
+        serializer = WorkspaceEditsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        sections = {}
+        for step, values in data["sections"].items():
+            section_class = SECTION_SERIALIZERS.get(step)
+            if section_class is None:
+                raise serializers.ValidationError({"sections": "包含不能保存的内容。"})
+            if step in {"knowledge", "curation"} and not IsKnowledgeEditor().has_permission(request, self):
+                raise PermissionDenied(IsKnowledgeEditor.message)
+            section = section_class(data=_section_input(step, {"data": values}), partial=True)
+            section.is_valid(raise_exception=True)
+            sections[step] = section.validated_data
+        if set(data["confirm_sections"]) - set(sections):
+            raise serializers.ValidationError({"confirm_sections": "请同时提交需要确认的内容。"})
+        suggestions = []
+        for row in data["suggestions"]:
+            if not IsCatalogEditor().has_permission(request, self):
+                raise PermissionDenied(IsCatalogEditor.message)
+            suggestion = FieldAssistantDecisionSerializer(data={**row, "edition_id": data["edition_id"]})
+            suggestion.is_valid(raise_exception=True)
+            values = {key: value for key, value in suggestion.validated_data.items() if key != "edition_id"}
+            if row.get("selected_entity_id"):
+                values["selected_entity_id"] = serializers.UUIDField().run_validation(row["selected_entity_id"])
+            suggestions.append(values)
+        item = None
+        if data.get("item_id"):
+            item = UploadItem.objects.filter(pk=data["item_id"], edition_id=data["edition_id"]).first()
+            if item is None:
+                raise serializers.ValidationError({"item_id": "上传来源与当前版本不一致。"})
+        try:
+            edition, receipt, replayed = save_workspace_edits(
+                work_id=work_id, edition_id=data["edition_id"], expected_version=data["edit_version"],
+                request_id=str(data["request_id"]), sections=sections,
+                confirmations=set(data["confirm_sections"]), suggestions=suggestions, actor=request.user,
+            )
+        except WorkflowEditError as error:
+            return _edit_error(error)
+        except EditorialRevisionConflict as error:
+            return _edit_error(WorkflowEditConflict(str(error)))
+        except (EditorialRevisionError, FieldAssistantError, ObjectDoesNotExist) as error:
+            return Response({"detail": str(error), "code": "workspace_save_failed"}, status=400)
+        except DatabaseError:
+            return Response({"detail": "书目正在被其他操作更新，请稍后重试。", "code": "workspace_busy"}, status=409)
+        workspace = build_admin_workspace(edition, user=request.user, mode="intake" if item else "maintenance", item=item)
+        workspace["save_result"] = {"request_id": str(receipt.request_id), "saved_at": receipt.created_at,
+                                    "sections": receipt.after["sections"], "replayed": replayed}
+        return Response(workspace)
+
+
 class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
     def patch(self, request, work_id, step_key):
         try:
@@ -318,6 +386,8 @@ class WorkMaintenanceSectionView(WorkflowSectionPermissionMixin, APIView):
                         mode="maintenance",
                     )
                 )
+            except EditorialRevisionConflict as error:
+                return _edit_error(WorkflowEditConflict(str(error)))
             except EditorialRevisionError as error:
                 return Response(
                     {"detail": str(error), "code": "editorial_revision_error"},
@@ -348,16 +418,44 @@ class WorkLibraryListView(AdminPrivateResponseMixin, APIView):
     def get(self, request):
         query = str(request.query_params.get("q") or "").strip()
         view = str(request.query_params.get("view") or "").strip()
-        queryset = work_library_queryset(query=query, view=view)
+        ordering = str(request.query_params.get("ordering") or "title")
+        if ordering not in {"title", "-title", "updated_at", "-updated_at"}:
+            return Response({"detail": "未知馆藏排序。"}, status=400)
+        queryset = work_library_queryset(query=query, view=view, ordering=ordering)
         document_type = str(request.query_params.get("document_type") or "").strip()
         if document_type:
             queryset = queryset.filter(document_type=document_type)
+        work_id = str(request.query_params.get("work_id") or "").strip()
+        if work_id:
+            from uuid import UUID
+
+            try:
+                queryset = queryset.filter(pk=UUID(work_id))
+            except ValueError:
+                return Response({"detail": "作品编号格式不正确。"}, status=400)
+        edition_mode = view == "editions"
+        if edition_mode:
+            edition_order = {"title": "work__title", "-title": "-work__title"}.get(ordering, ordering)
+            queryset = Edition.objects.filter(work_id__in=queryset.values("id")).order_by(edition_order, "work_id", "-is_primary", "-publication_year", "id")
+            edition_id = str(request.query_params.get("edition_id") or "").strip()
+            if edition_id:
+                from uuid import UUID
+                try:
+                    queryset = queryset.filter(pk=UUID(edition_id))
+                except ValueError:
+                    return Response({"detail": "出版版本编号格式不正确。"}, status=400)
         try:
             page_number = max(1, int(request.query_params.get("page", 1)))
         except (TypeError, ValueError):
             page_number = 1
         paginator = Paginator(queryset, 40)
         page = paginator.get_page(page_number)
+        from catalog.services.admin_queue import attach_library_editions, load_admin_editions, serialize_edition_library_row
+
+        if edition_mode:
+            results = [serialize_edition_library_row(row, user=request.user) for row in load_admin_editions(page.object_list)]
+        else:
+            results = [serialize_work_library_row(row, user=request.user) for row in attach_library_editions(list(page.object_list))]
         params = request.query_params.copy()
 
         def page_url(number):
@@ -369,34 +467,43 @@ class WorkLibraryListView(AdminPrivateResponseMixin, APIView):
         return Response(
             {
                 "count": paginator.count,
+                "page": page.number, "page_size": paginator.per_page, "total_pages": paginator.num_pages,
+                "ordering": f"{ordering},work_id,-is_primary,-publication_year,id" if edition_mode else f"{ordering},id",
                 "next": page_url(page.next_page_number()) if page.has_next() else None,
                 "previous": page_url(page.previous_page_number()) if page.has_previous() else None,
-                "results": [serialize_work_library_row(work) for work in page.object_list],
+                "results": results,
             }
         )
 
 
-class WorkflowQueueView(APIView):
+class WorkflowQueueView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request):
-        items = list(
-            UploadItem.objects.filter(
-                status__in=QUEUE_STATUSES,
-                edition__isnull=False,
-            )
-            .select_related("edition__work")
-            .order_by("-priority", "-updated_at")[:30]
-        )
-        rows = [serialize_workflow_queue_item(item) for item in items]
-        continue_items = [row for row in rows if row["overall_status"] in {"working", "draft"}]
-        attention_items = [row for row in rows if row["overall_status"] == "attention"]
-        exception_items = [row for row in rows if row["blockers_count"]]
-        publication_ready = [
-            row
-            for row in rows
-            if row["current_step"] == "publication" and not row["blockers_count"]
-        ]
+        from catalog.services.admin_queue import CATEGORIES, workflow_rows
+
+        category = str(request.query_params.get("category") or "all")
+        if category not in CATEGORIES:
+            return Response({"detail": "未知待办分类。"}, status=400)
+        rows = workflow_rows(user=request.user, publication_scope=request.query_params.get("scope") == "publication")
+        source = str(request.query_params.get("source") or "").strip()
+        public_state = str(request.query_params.get("publication") or "").strip()
+        query = str(request.query_params.get("q") or "").strip().casefold()
+        if source:
+            rows = [row for row in rows if row["source_type"] == source]
+        if public_state:
+            rows = [row for row in rows if row["publication"]["public_state"] == public_state]
+        if query:
+            rows = [row for row in rows if query in f"{row['title']} {row['source_filename']}".casefold()]
+        groups = {key: [row for row in rows if key in row["categories"]] for key in CATEGORIES}
+        counts = {key: len(values) for key, values in groups.items()}
+        paginator = Paginator(groups[category], 30)
+        page = paginator.get_page(request.query_params.get("page", 1))
+        params = request.query_params.copy()
+
+        def page_url(number):
+            params["page"] = number
+            return f"{request.path}?{params.urlencode()}"
         candidate_count = MetadataCandidate.objects.filter(
             lifecycle=MetadataCandidate.Lifecycle.PROPOSED
         ).count()
@@ -411,10 +518,15 @@ class WorkflowQueueView(APIView):
         ).count()
         return Response(
             {
-                "continue_items": continue_items[:12],
-                "attention_items": attention_items[:12],
-                "exception_items": exception_items[:12],
-                "publication_ready": publication_ready[:12],
+                "count": paginator.count, "page": page.number, "page_size": paginator.per_page,
+                "total_pages": paginator.num_pages, "counts": counts, "ordering": "-priority,updated_at,id",
+                "next": page_url(page.next_page_number()) if page.has_next() else None,
+                "previous": page_url(page.previous_page_number()) if page.has_previous() else None,
+                "results": list(page.object_list),
+                "continue_items": groups["continue"][:12],
+                "attention_items": groups["attention"][:12],
+                "exception_items": groups["exception"][:12],
+                "publication_ready": groups["publication_ready"][:12],
                 "recent_items": rows[:12],
                 "candidate_review_count": candidate_count,
             }
@@ -423,6 +535,26 @@ class WorkflowQueueView(APIView):
 
 class WorkMaintenancePublicationView(APIView):
     permission_classes = [CanPublishWork]
+
+    def get_permissions(self):
+        if self.request.method == "POST" and str(self.request.data.get("action") or "").strip().casefold() == "withdraw":
+            return [CanWithdrawWork()]
+        return super().get_permissions()
+
+    def publication_response(self, request, work_id, edition, *, published_revision=None, receipt=None, replayed=False):
+        from catalog.services.publication_commands import catalog_publication_state
+
+        workspace = build_admin_workspace(edition, user=request.user, mode="maintenance")
+        visibility = catalog_publication_state(edition)
+        return Response({
+            **workspace, **visibility, "intelligence_status": edition.intelligence_status,
+            "published_editorial_revision": serialize_editorial_revision(published_revision) if published_revision else None,
+            "maintenance_url": f"/admin/library/works/{work_id}?edition={edition.pk}#publication",
+            "work_id": str(work_id), "context": workspace["context"],
+            "request_receipt": {"id": str(receipt.pk), "accepted": True, "replayed": replayed,
+                                "accepted_at": receipt.created_at} if receipt else None,
+            **({"detail": "此前发布请求已确认；已读取当前状态，没有再次发布或覆盖后续修改。"} if replayed else {}),
+        })
 
     def post(self, request, work_id):
         try:
@@ -454,17 +586,29 @@ class WorkMaintenancePublicationView(APIView):
             request.data.get("confirm_warnings") or ""
         ).casefold() in {"1", "true", "yes"}
         published_revision = None
+        receipt = None
         try:
             # One publication action owns the complete public mutation.  A
             # warning or blocker raised by Edition publication therefore also
             # rolls back a pending Work EditorialRevision and its projection
             # events instead of leaving a half-published canonical object.
             with transaction.atomic():
+                # The existing publication service can touch sibling Editions.
+                # Claim the Work first, then all its Editions without waiting:
+                # an older Edition-first worker must not form a lock cycle.
+                Work.objects.select_for_update().get(pk=edition.work_id)
+                editions = list(Edition.objects.filter(work_id=edition.work_id).order_by("id").select_for_update(of=("self",), nowait=True))
+                edition = next(row for row in editions if row.pk == edition.pk)
                 if request.data.get("prepared_fingerprint"):
                     from catalog.services.publication_commands import prepare_revision
+                    from ingestion.models import AuditEvent
 
-                    edition = Edition.objects.select_for_update().get(pk=edition.pk)
-                    Work.objects.select_for_update().get(pk=edition.work_id)
+                    receipt = AuditEvent.objects.filter(
+                        action="catalog.publication_requested", object_type="Edition", object_id=str(edition.pk), actor=request.user,
+                        after__prepared_fingerprint=request.data["prepared_fingerprint"],
+                    ).first()
+                    if receipt is not None:
+                        return self.publication_response(request, work_id, edition, receipt=receipt, replayed=True)
                     if prepare_revision(edition)["fingerprint"] != request.data["prepared_fingerprint"]:
                         raise PublicationBlocked(["内容已在准备发布后变化，请重新检查差异。"])
                 pending_revision = (
@@ -478,9 +622,15 @@ class WorkMaintenancePublicationView(APIView):
                     .first()
                 )
                 if pending_revision is not None:
+                    from catalog.services.publication_commands import pending_edition_supplement, editorial_draft_applies_to_edition
+
+                    if not editorial_draft_applies_to_edition(pending_revision, edition):
+                        raise PublicationBlocked(["待发布草稿属于此作品的另一个出版版本，请打开对应版本核对后发布。"])
+                    supplementary_reader = pending_edition_supplement(edition)
                     published_revision = publish_editorial_revision(
                         pending_revision.id,
                         actor=request.user,
+                        content_asset_id=supplementary_reader.pk if supplementary_reader else None,
                     )
                 edition = Edition.objects.select_related("work").get(pk=edition.pk)
                 edition = publish_edition(
@@ -500,6 +650,17 @@ class WorkMaintenancePublicationView(APIView):
                         else None
                     ),
                 )
+                if request.data.get("prepared_fingerprint"):
+                    receipt = AuditEvent.objects.create(
+                        action="catalog.publication_requested", object_type="Edition", object_id=str(edition.pk), actor=request.user,
+                        after={"prepared_fingerprint": request.data["prepared_fingerprint"],
+                               "editorial_revision_id": str(published_revision.pk) if published_revision else None,
+                               "publication_revision_id": str(edition.catalog_revisions.order_by("-revision").values_list("pk", flat=True).first() or "")},
+                    )
+        except DatabaseError as error:
+            if getattr(error.__cause__, "sqlstate", None) == "55P03":
+                return Response({"code": "publication.concurrent_edit", "detail": "此作品的出版版本正在被其他操作处理，请稍后刷新后重试。"}, status=409)
+            raise
         except PublicationBlocked as error:
             return Response(
                 {"detail": "还有信息需要处理，暂时无法发布。", "blockers": error.reasons},
@@ -530,29 +691,4 @@ class WorkMaintenancePublicationView(APIView):
                     else status.HTTP_400_BAD_REQUEST
                 ),
             )
-        workspace = build_admin_workspace(
-            edition,
-            user=request.user,
-            mode="maintenance",
-        )
-        from catalog.services.publication_commands import catalog_publication_state
-
-        visibility = catalog_publication_state(edition)
-        return Response(
-            {
-                **workspace,
-                **visibility,
-                "intelligence_status": edition.intelligence_status,
-                "published_editorial_revision": (
-                    serialize_editorial_revision(published_revision)
-                    if published_revision is not None
-                    else None
-                ),
-                "maintenance_url": (
-                    f"/admin/library/works/{work_id}"
-                    f"?edition={edition.id}#publication"
-                ),
-                "work_id": str(work_id),
-                "context": workspace["context"],
-            }
-        )
+        return self.publication_response(request, work_id, edition, published_revision=published_revision, receipt=receipt)

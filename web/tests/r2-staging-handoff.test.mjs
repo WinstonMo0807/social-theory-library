@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileProcessingStatusLabel } from "../components/admin/workflow/file-presentation.ts";
 
 import {
   r2BrowserUploadComplete,
@@ -44,7 +45,10 @@ test("upload cards and Focus Mode use the shared staging grammar", async () => {
   assert.match(upload, /retryStagingImport\(item\.id\)/);
   assert.match(upload, /重新导入<\/button>/);
   assert.doesNotMatch(upload, /const stagingStatusLabels/);
-  assert.match(workflow, /asRecord\(fileGroup\.item\)/);
-  assert.match(workflow, /draft\.retry_label/);
-  assert.match(workflow, /r2StagingStatusLabel/);
+  assert.match(workflow, /fileDraftFromWorkspace\(fileGroup\)/);
+  assert.match(workflow, /data\[\`\$\{action\}_url\`\]/);
+  assert.match(workflow, /fileProcessingStatusLabel/);
+  for (const status of ["uploading", "uploaded", "importing", "import_failed", "cleaned"]) {
+    assert.equal(fileProcessingStatusLabel(status), r2StagingStatusLabel(status));
+  }
 });

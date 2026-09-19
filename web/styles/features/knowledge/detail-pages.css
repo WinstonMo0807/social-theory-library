@@ -8,7 +8,25 @@
 }
 
 .scholar-intro {
+  min-width: 0;
   padding: 0 2px;
+}
+
+/* Object text must size inside its track, including long translated names and
+   concept links. A hero's decorative cropping is not a text-overflow policy. */
+:is(.scholar-hero, .topic-problem-hero) > *,
+.scholar-hero :is(.affiliation-concerns > div, .scholar-timeline > p > span) {
+  min-width: 0;
+}
+:is(.scholar-hero, .topic-problem-hero) :is(h1, h2, p, strong, small, span, a, cite) {
+  overflow-wrap: anywhere;
+}
+.scholar-detail .scholar-hero .tag-list a,
+.topic-problem-page .topic-problem-hero .tag-list a {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .scholar-intro h1 {
@@ -165,7 +183,7 @@
 
 .concept-row {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 28px minmax(0, 1fr);
   gap: 6px;
   padding: 6px 0;
 }
@@ -182,6 +200,8 @@
 
 .concept-row p {
   display: flex;
+  min-width: 0;
+  overflow-wrap: anywhere;
   flex-direction: column;
   margin: 0;
   font-size: calc(9px + var(--font-bump));
@@ -214,13 +234,16 @@
 
 .bourdieu-map {
   position: relative;
-  min-height: 220px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 12px;
+  align-content: start;
 }
 
 .bourdieu-map > span {
-  position: absolute;
+  position: relative;
   display: flex;
-  min-width: 105px;
+  min-width: 0;
   min-height: 42px;
   flex-direction: column;
   align-items: center;
@@ -229,6 +252,8 @@
   border: 1px solid var(--line-dark);
   background: var(--surface);
   font-size: calc(9px + var(--font-bump));
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .bourdieu-map small {
@@ -241,20 +266,13 @@
   content: "";
 }
 
-.map-center {
-  top: 42%;
-  left: 38%;
+.bourdieu-map > .map-center {
+  grid-column: 1 / -1;
   background: var(--ink) !important;
   color: white;
 }
 
-.map-top { top: 2%; left: 40%; }
-.map-left { top: 43%; left: 2%; }
-.map-right { top: 43%; right: 2%; }
-.map-bottom { bottom: 2%; left: 40%; }
-.map-top::after, .map-center::after, .map-bottom::after { top: 100%; left: 50%; width: 1px; height: 42px; }
-.map-left::after { top: 50%; left: 100%; width: 80px; height: 1px; }
-.map-right::after { top: 50%; right: 100%; width: 80px; height: 1px; }
+.bourdieu-map > span:not(.map-center)::after { bottom: 100%; left: 50%; width: 1px; height: 18px; }
 
 .network-connections {
   grid-column: span 1;

@@ -84,6 +84,18 @@ test("reader file URLs accidentally pointing at localhost are repaired", () => {
   }
 });
 
+test("same NAS file URLs preserve the browser LAN port and protocol without rewriting signed external storage", () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: lanLocation };
+  try {
+    assert.equal(normalizePublicResourceUrl("https://192.168.5.6/api/distribution/assets/exact-id/file/?download=1"), "/api/distribution/assets/exact-id/file/?download=1");
+    assert.equal(normalizePublicResourceUrl("https://objects.example.org/api/signed.pdf?signature=example"), "https://objects.example.org/api/signed.pdf?signature=example");
+    assert.equal(normalizePublicResourceUrl("https://192.168.5.6/storage/file.pdf?signature=example"), "https://192.168.5.6/storage/file.pdf?signature=example");
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow;
+  }
+});
+
 test("legacy theory admin routes redirect with relative locations and preserve the request target", async () => {
   const listResponse = redirectTheorySchools(new Request(
     "http://127.0.0.1:13100/admin/theory-schools?page=3&search=%E7%8E%B0%E4%BB%A3%E6%80%A7",

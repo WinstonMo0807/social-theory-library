@@ -35,7 +35,7 @@ from catalog.services.query_lexicon import mutations
 from catalog.services.query_lexicon import sync as sync_service
 from catalog.services.query_lexicon.normalization import normalize_term
 from catalog.services.query_lexicon.registry import EntityKey
-from catalog.services.query_lexicon.resolver import PUBLIC_ACTIVE, resolve_term
+from catalog.services.query_lexicon.resolver import ADMIN_RESOLVABLE, PUBLIC_ACTIVE, resolve_term
 
 
 pytestmark = [
@@ -592,6 +592,14 @@ def test_postgres_legacy_0013_audit_stays_low_trust_and_not_displayable():
         alias_type=KnowledgeNodeAlias.AliasType.TRANSLATION,
     )
 
+    unreviewed = sync_service.dry_run_reconciliation()
+    assert unreviewed["audit"]["unpublished_alias_suppressed"] >= 1
+    assert unreviewed["audit"]["suspected_0013_seed_count"] == 0
+    # Registry v2 requires a reviewed source even for private resolution. A
+    # reviewed legacy seed still must not be promoted to a public translation.
+    alias.is_verified = True
+    alias.source_kind = KnowledgeNodeAlias.SourceKind.LEGACY_REVIEW
+    alias.save(update_fields=["is_verified", "source_kind", "updated_at"])
     dry_run = sync_service.dry_run_reconciliation()
     assert dry_run["audit"]["suspected_0013_seed_count"] >= 1
     assert dry_run["audit"]["legacy_mixed_count"] >= 1
@@ -609,18 +617,31 @@ def test_postgres_legacy_0013_audit_stays_low_trust_and_not_displayable():
     assert entry.source_kind == QueryLexiconEntry.SourceKind.LEGACY_MIXED_ALIAS
     assert entry.trust_level == QueryLexiconEntry.TrustLevel.LEGACY
     assert entry.displayable is False
-    public_match = resolve_term(alias.alias, scope=PUBLIC_ACTIVE)["matches"][0]
-    assert public_match["term_type"] == QueryLexiconEntry.TermType.SEARCH_VARIANT
-    assert public_match["source_kind"] == QueryLexiconEntry.SourceKind.LEGACY_MIXED_ALIAS
-    assert public_match["trust_level"] == QueryLexiconEntry.TrustLevel.LEGACY
-    assert public_match["displayable"] is False
+    assert resolve_term(alias.alias, scope=PUBLIC_ACTIVE)["matches"] == []
+    private_match = resolve_term(alias.alias, scope=ADMIN_RESOLVABLE)["matches"][0]
+    assert private_match["term_type"] == QueryLexiconEntry.TermType.SEARCH_VARIANT
+    assert private_match["source_kind"] == QueryLexiconEntry.SourceKind.LEGACY_MIXED_ALIAS
+    assert private_match["trust_level"] == QueryLexiconEntry.TrustLevel.LEGACY
+    assert private_match["displayable"] is False
+
+
+@pytest.fixture
+def traced_rebuild_memory():
+    already_tracing = tracemalloc.is_tracing()
+    if not already_tracing:
+        tracemalloc.start()
+    try:
+        yield
+    finally:
+        if not already_tracing:
+            tracemalloc.stop()
 
 
 @pytest.mark.skipif(
     os.getenv("RUN_QUERY_LEXICON_LARGE_TEST") != "1",
     reason="set RUN_QUERY_LEXICON_LARGE_TEST=1 for the bounded large-data rehearsal",
 )
-def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch):
+def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch, traced_rebuild_memory):
     entity_count = int(os.getenv("QUERY_LEXICON_LARGE_TEST_ENTITIES", "1000"))
     people = [
         Person(
@@ -630,7 +651,6 @@ def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch):
         )
         for index in range(entity_count)
     ]
-    tracemalloc.start()
     started = monotonic()
     Person.objects.bulk_create(people, batch_size=250)
     bulk_seconds = monotonic() - started
@@ -671,12 +691,17 @@ def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch):
             _thread_connection,
             sync_service.rebuild_query_lexicon,
         )
-        assert staging_ready.wait(30)
-        assert QueryLexiconState.objects.get(key="default").active_generation_id == baseline_generation_id
-        assert resolve_term(people[0].preferred_name, scope=PUBLIC_ACTIVE)["matches"]
-        assert not resolve_term(newcomer.preferred_name, scope=PUBLIC_ACTIVE)["matches"]
-        cutover_started = monotonic()
-        release_staging.set()
+        try:
+            # Full traced builds on the bounded NAS test CPU are not a 30s SLA.
+            # Keep an explicit upper bound; measure actual work below. The
+            # active-generation isolation assertion remains unchanged.
+            assert staging_ready.wait(240)
+            assert QueryLexiconState.objects.get(key="default").active_generation_id == baseline_generation_id
+            assert resolve_term(people[0].preferred_name, scope=PUBLIC_ACTIVE)["matches"]
+            assert not resolve_term(newcomer.preferred_name, scope=PUBLIC_ACTIVE)["matches"]
+            cutover_started = monotonic()
+        finally:
+            release_staging.set()
         second = rebuild.result(timeout=60)
         cutover_seconds = monotonic() - cutover_started
 
@@ -696,7 +721,7 @@ def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch):
         scoped.setattr(
             sync_service,
             "_collect_builds",
-            lambda _keys: (_ for _ in ()).throw(RuntimeError("large build failure")),
+            lambda _keys, **_options: (_ for _ in ()).throw(RuntimeError("large build failure")),
         )
         with pytest.raises(RuntimeError, match="large build failure"):
             sync_service.rebuild_query_lexicon()
@@ -713,7 +738,6 @@ def test_postgres_large_dataset_rebuild_cutover_smoke(monkeypatch):
     retry_seconds = monotonic() - retry_started
     repeated = sync_service.rebuild_query_lexicon()
     _current, peak_bytes = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
     final_state = QueryLexiconState.objects.get(key="default")
     assert retry["changed"] is False
     assert repeated["changed"] is False

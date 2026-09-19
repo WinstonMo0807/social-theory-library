@@ -203,3 +203,26 @@ def http_service_health(url: str, path: str = "", *, timeout: int = 4, expected_
             "reachable": False,
             "detail": safe_service_error(exc),
         }
+
+
+def stored_queue_health():
+    """Read the shared scheduled/explicit probe records; GET never runs probes."""
+    from catalog.services.system_health import HEALTH_CHECKS
+    from catalog.models import HealthCheckRun
+
+    now = timezone.now()
+    values = {}
+    for key in ("cache", "worker", "ocr", "semantic"):
+        row = HealthCheckRun.objects.filter(probe_key=key).order_by("-started_at", "-pk").first()
+        lifetime = 2 * HEALTH_CHECKS.get(key).interval_seconds
+        fresh = row is not None and 0 <= (now - row.started_at).total_seconds() <= lifetime
+        values[key] = {
+            "configured": row.configured if fresh else None,
+            "reachable": row.reachable if fresh else None,
+            "functional": row.functional if fresh else None,
+            "detail": row.summary if fresh else "检查结果已过期，请重新检测。" if row else "尚无检查结果。",
+            "checked_at": row.started_at.isoformat() if row else None,
+            "stale": bool(row and not fresh), "fresh": fresh,
+            "details": row.details if fresh else {},
+        }
+    return values

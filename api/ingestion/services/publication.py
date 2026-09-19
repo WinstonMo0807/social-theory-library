@@ -172,10 +172,12 @@ def publication_preflight(edition: Edition) -> dict[str, Any]:
     requires_document = document_required(edition)
     if requires_document and not _asset_storage_readable(original):
         blockers.append("原始 PDF 不存在或当前无法读取")
+    elif original is not None and original.validation_status != Asset.ValidationStatus.VALID:
+        blockers.append("原始 PDF 等待验证" if original.validation_status == Asset.ValidationStatus.PENDING else "原始 PDF 验证失败")
     if requires_document and not _asset_storage_readable(normalized):
         blockers.append("公开阅读锚点文件不存在或当前无法读取")
-    elif normalized is not None and normalized.validation_status == Asset.ValidationStatus.INVALID:
-        blockers.append("公开阅读锚点文件验证失败")
+    elif normalized is not None and normalized.validation_status != Asset.ValidationStatus.VALID:
+        blockers.append("公开阅读锚点文件等待验证" if normalized.validation_status == Asset.ValidationStatus.PENDING else "公开阅读锚点文件验证失败")
     elif requires_document and settings.REQUIRE_CLOUD_FOR_PUBLICATION and not normalized.cloud_objects.filter(
         status=CloudObject.Status.READY,
     ).exists():

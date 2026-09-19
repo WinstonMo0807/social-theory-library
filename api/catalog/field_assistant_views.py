@@ -13,6 +13,7 @@ from catalog.services.field_assistant import (
     FieldAssistantService,
 )
 from common.permissions import CanRunEnrichment, IsCatalogEditor
+from catalog.services.editorial_revision import EditorialRevisionConflict
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,12 @@ class FieldAssistantLookupSerializer(serializers.Serializer):
     allow_external = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
+        import json
+
+        for name in ("confirmed_context", "form_context"):
+            context = attrs.get(name, {})
+            if not isinstance(context, dict) or len(json.dumps(context, ensure_ascii=False).encode()) > 20 * 1024:
+                raise serializers.ValidationError({name: "填写上下文须为不超过20KiB的对象。"})
         if attrs.get("scope") == "catalog" and attrs["object_type"] in {"work", "edition"} and not attrs.get("object_id"):
             raise serializers.ValidationError({"object_id": "请先保存当前馆藏。"})
         return attrs
@@ -71,6 +78,8 @@ class _FieldAssistantView(APIView):
     @staticmethod
     def _error(exc: Exception) -> Response:
         code = status.HTTP_404_NOT_FOUND if isinstance(exc, ObjectDoesNotExist) else status.HTTP_400_BAD_REQUEST
+        if isinstance(exc, EditorialRevisionConflict):
+            code = status.HTTP_409_CONFLICT
         return Response({"detail": str(exc)}, status=code)
 
 
@@ -83,13 +92,19 @@ class AdminFieldAssistantLookupView(_FieldAssistantView):
             if data.get("scope") == "curation" or data["object_type"] not in {"work", "edition"}:
                 from catalog.services.field_assistant.curation import lookup_curation_field
 
-                return Response(lookup_curation_field(
+                can_lookup = CanRunEnrichment().has_permission(request, self)
+                result = lookup_curation_field(
                     object_type=data["object_type"], object_id=data.get("object_id"),
                     field_name=data["field_name"], query=data.get("query", ""),
                     authority_type=data.get("authority_type", ""),
                     current_value=data.get("current_value"), form_context=data.get("form_context", {}),
                     actor=request.user,
-                ))
+                    allow_external=bool(data["refresh"] and data["allow_external"] and can_lookup),
+                )
+                result["can_lookup_external"] = can_lookup
+                if data["refresh"] and data["allow_external"] and not can_lookup:
+                    result = {**result, "message": "当前账户没有外部查找权限。已保留馆内记录和已有建议，仍可手工填写。", "state": "permission_denied"}
+                return Response(result)
             field_request = FieldAssistantRequest(
                     object_type=data["object_type"],
                     object_id=data["object_id"],
@@ -100,9 +115,13 @@ class AdminFieldAssistantLookupView(_FieldAssistantView):
                     allow_external=data["allow_external"],
             )
             refresh = None
+            if not data["refresh"]:
+                from catalog.services.field_assistant.refresh import current_field_refresh
+
+                refresh = current_field_refresh(field_request)
             if data["refresh"]:
                 if not CanRunEnrichment().has_permission(request, self):
-                    refresh = {"state": "local", "message": "已查找馆内记录和已有依据。当前账户没有外部查找权限，仍可手工填写。"}
+                    refresh = {"state": "permission_denied", "message": "已查找馆内记录和已有依据。当前账户没有外部查找权限，仍可手工填写。"}
                 else:
                     from catalog.services.field_assistant.refresh import request_field_refresh
 
@@ -112,7 +131,7 @@ class AdminFieldAssistantLookupView(_FieldAssistantView):
                         logger.warning("Field research could not be prepared", exc_info=True)
                         refresh = {"state": "unavailable", "message": "新的建议暂时无法准备，仍可使用馆内记录、已有依据或手工填写。"}
             result = self.service.lookup(field_request)
-        except (FieldAssistantError, ValueError, ObjectDoesNotExist) as exc:
+        except (FieldAssistantError, ValueError, ObjectDoesNotExist, EditorialRevisionConflict) as exc:
             return self._error(exc)
         payload = result.as_dict()
         if refresh is not None:
@@ -127,7 +146,7 @@ class AdminFieldAssistantAdoptView(_FieldAssistantView):
         data = serializer.validated_data
         try:
             result = self.service.adopt(actor=request.user, **data)
-        except (FieldAssistantError, ValueError, ObjectDoesNotExist) as exc:
+        except (FieldAssistantError, ValueError, ObjectDoesNotExist, EditorialRevisionConflict) as exc:
             return self._error(exc)
         return Response(result)
 
@@ -140,7 +159,7 @@ class AdminFieldAssistantRejectView(_FieldAssistantView):
         data.pop("selected_value", None)
         try:
             result = self.service.reject(actor=request.user, **data)
-        except (FieldAssistantError, ValueError, ObjectDoesNotExist) as exc:
+        except (FieldAssistantError, ValueError, ObjectDoesNotExist, EditorialRevisionConflict) as exc:
             return self._error(exc)
         return Response(result)
 
@@ -154,7 +173,7 @@ class AdminFieldAssistantCreateView(_FieldAssistantView):
                 actor=request.user,
                 **serializer.validated_data,
             )
-        except (FieldAssistantError, ValueError, ObjectDoesNotExist) as exc:
+        except (FieldAssistantError, ValueError, ObjectDoesNotExist, EditorialRevisionConflict) as exc:
             return self._error(exc)
         return Response(result, status=status.HTTP_201_CREATED)
 

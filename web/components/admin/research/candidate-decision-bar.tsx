@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { ActionButton } from "@/components/action-feedback";
 import {
   candidateEditableValue,
+  candidateRejectionAction,
+  candidateRejectionReasons,
   parseCandidateEditableValue,
   resolveCandidateActionDescriptors,
   type CandidateActionDescriptor,
@@ -68,6 +70,8 @@ export function CandidateDecisionBar({
 
   const editingDescriptor = descriptors.find((row) => row.action === editingAction);
   const original = candidate.proposed_value ?? candidate.value ?? candidate.label;
+  const [rejection, setRejection] = useState({ candidateIdentity, action: "", reason: "unsupported_content", detail: "" });
+  const rejecting = rejection.candidateIdentity === candidateIdentity ? descriptors.find((row) => row.action === rejection.action) : undefined;
 
   async function invoke(descriptor: CandidateActionDescriptor, editedValue?: unknown) {
     if (descriptor.action === "inspect") {
@@ -89,7 +93,9 @@ export function CandidateDecisionBar({
             title={descriptor.disabledReason || undefined}
             type="button"
             key={descriptor.action}
-            onClick={() => descriptor.editable
+            onClick={() => descriptor.action === "reject"
+              ? setRejection({ candidateIdentity, action: "reject", reason: "unsupported_content", detail: "" })
+              : descriptor.editable
               ? setEditor((current) => ({
                   candidateIdentity,
                   action: current.candidateIdentity === candidateIdentity && current.action === descriptor.action ? "" : descriptor.action,
@@ -101,6 +107,7 @@ export function CandidateDecisionBar({
           </ActionButton>
         ))}
       </div>
+      {rejecting ? <section className="candidate-decision-editor" aria-label="不采用理由"><label><span>不采用理由</span><select value={rejection.reason} onChange={(event) => setRejection({ ...rejection, reason: event.target.value })}>{Object.entries(candidateRejectionReasons).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>{rejection.reason === "other" ? "具体理由（必填）" : "补充说明（可选）"}</span><textarea rows={2} value={rejection.detail} onChange={(event) => setRejection({ ...rejection, detail: event.target.value })} /></label><footer><ActionButton className="danger" type="button" disabled={disabled || Boolean(busyAction) || (rejection.reason === "other" && !rejection.detail.trim())} onClick={() => void invoke(candidateRejectionAction(rejecting, rejection.reason, rejection.detail))}>确认不采用并记录理由</ActionButton><ActionButton className="secondary" type="button" disabled={Boolean(busyAction)} onClick={() => setRejection({ ...rejection, action: "" })}>取消</ActionButton></footer></section> : null}
       {editingDescriptor ? (
         <section className="candidate-decision-editor" aria-label={`${editingDescriptor.label}编辑器`}>
           <label><span>修改后的候选值</span><textarea rows={4} value={editedText} onChange={(event) => setEditor({ candidateIdentity, action: editingAction, text: event.target.value })} /></label>

@@ -32,6 +32,8 @@ from catalog.models import (
     WorkSubdisciplineRelation,
 )
 
+from .editorial_fixtures import editorial_request
+
 
 pytestmark = pytest.mark.django_db
 
@@ -323,6 +325,8 @@ def _integrated_studio_fixture():
         state="published",
         public_slug="organizations-and-institutions-studio-v301",
     )
+    from .v304_helpers import activate_catalog_revision
+    activate_catalog_revision(edition, fulltext_ready=False)
     WorkSubdisciplineRelation.objects.create(
         work=work,
         subdiscipline=subdiscipline,
@@ -439,7 +443,7 @@ def test_published_reading_path_explicit_semantics_publish_through_revision(
     item = reading_path.items.get()
     api_client.force_authenticate(user=admin_user)
 
-    drafted = api_client.patch(
+    drafted = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/reading-paths/{reading_path.id}/",
         {
             "learning_goal": "比较组织制度理论的不同解释。",
@@ -528,7 +532,7 @@ def test_published_subdiscipline_edit_and_lifecycle_archive_use_editorial_revisi
     assert invalid_revision.status_code == 400
     assert "同一学科" in invalid_revision.data["detail"]
 
-    drafted = api_client.patch(
+    drafted = editorial_request(api_client, "patch",
         f"/api/catalog/admin/subdisciplines/{subdiscipline.id}/",
         {"description": "新的前台说明"},
         format="json",

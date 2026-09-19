@@ -19,6 +19,8 @@ from catalog.models import (
 from config.throttling import is_trusted_internal_request
 from ingestion.models import AuditEvent, UploadBatch, UploadItem
 
+from .editorial_fixtures import editorial_request
+
 
 @override_settings(INTERNAL_API_TOKEN="a" * 40)
 def test_internal_api_token_requires_an_exact_long_server_secret():
@@ -226,7 +228,7 @@ def test_published_discipline_update_stays_in_revision_until_confirmed(
     )
     api_client.force_authenticate(admin_user)
 
-    drafted = api_client.patch(
+    drafted = editorial_request(api_client, "patch",
         f"/api/catalog/admin/disciplines/{discipline.id}/",
         {"description": "待发布的学科说明"},
         format="json",
@@ -258,14 +260,14 @@ def test_only_owner_can_hard_delete_archived_taxonomy(
         editorial_status="archived",
     )
     api_client.force_authenticate(admin_user)
-    denied = api_client.delete(
+    denied = editorial_request(api_client, "delete",
         f"/api/catalog/admin/disciplines/{discipline.id}/"
     )
     assert denied.status_code == 403
     assert Discipline.objects.filter(pk=discipline.id).exists()
 
     api_client.force_authenticate(superadmin_user)
-    deleted = api_client.delete(
+    deleted = editorial_request(api_client, "delete",
         f"/api/catalog/admin/disciplines/{discipline.id}/"
     )
     assert deleted.status_code == 204
@@ -420,6 +422,10 @@ def test_timeline_event_can_publish_with_theory_but_without_work(
     assert response.status_code == 201
     assert response.data["work"] is None
     assert response.data["review_status"] == "approved"
+    assert response.data["public_status"] == "suggested"
+    assert not DomainChangeEvent.objects.filter(object_type="timeline_event", object_id=response.data["id"], change_kind="publish").exists()
+    published = api_client.post(f"/api{response.data['editorial_revision']['publish_url']}", {}, format="json")
+    assert published.status_code == 200, published.data
     assert DomainChangeEvent.objects.filter(
         object_type="timeline_event",
         object_id=response.data["id"],
@@ -488,12 +494,20 @@ def test_existing_theory_relation_can_be_edited_and_archived(
     )
     assert created.status_code == 201
 
+    published = api_client.post(f"/api{created.data['editorial_revision']['publish_url']}", {}, format="json")
+    assert published.status_code == 200, published.data
+    detail_url = f"/api/catalog/admin/theory-system/relations/{created.data['id']}/"
     updated = api_client.patch(
-        f"/api/catalog/admin/theory-system/relations/{created.data['id']}/",
+        detail_url,
         {"description": "修改后的说明", "status": "archived"},
         format="json",
+        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"],
     )
 
-    assert updated.status_code == 200
+    assert updated.status_code == 202
     assert updated.data["description"] == "修改后的说明"
     assert updated.data["status"] == "archived"
+    assert updated.data["public_status"] == "published"
+    withdrawn = api_client.post(f"/api{updated.data['editorial_revision']['publish_url']}", {}, format="json")
+    assert withdrawn.status_code == 200, withdrawn.data
+    assert api_client.get(detail_url).data["public_status"] == "archived"

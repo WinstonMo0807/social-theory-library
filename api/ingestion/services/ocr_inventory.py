@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 
-from catalog.models import Asset, DocumentRevision, Page
+from catalog.models import Asset, DocumentRevision, Edition, Page
 from ingestion.models import AuditEvent, ProcessingJob
 
 
@@ -74,6 +74,21 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
         raise ValueError("Only paused OCR jobs can be classified by this inventory.")
 
     asset = job.asset
+    if (job.stats or {}).get("requested_mode") == "all_pages":
+        from .catalog_ocr import ensure_source_current
+        from .processing import _remaining_ocr_page_indexes
+
+        if asset is None:
+            return PausedOCRInventoryRow(str(job.pk), "", "obsolete", ("asset_missing",), (), ())
+        _count, target_count, remaining = _remaining_ocr_page_indexes(asset, job)
+        targets = tuple(range(1, target_count + 1))
+        try:
+            ensure_source_current(job)
+        except ValueError:
+            return PausedOCRInventoryRow(str(job.pk), str(asset.pk), "superseded", ("source_changed",), targets, tuple(remaining))
+        if job.attempt >= job.max_attempts or job.error_kind in {"manual_intervention", "permanent"}:
+            return PausedOCRInventoryRow(str(job.pk), str(asset.pk), "genuinely_failed", ("attempts_exhausted_or_permanent",), targets, tuple(remaining))
+        return PausedOCRInventoryRow(str(job.pk), str(asset.pk), "recoverable", ("manual_full_rerun_remaining" if remaining else "finish_remaining_processing",), targets, tuple(remaining))
     if asset is None:
         return PausedOCRInventoryRow(
             job_id=str(job.id),
@@ -210,6 +225,10 @@ def paused_ocr_inventory(
     queryset: QuerySet[ProcessingJob] | None = None,
     *,
     limit: int = 500,
+    page: int | None = None,
+    page_size: int = 10,
+    query: str = "",
+    actor=None,
 ) -> dict:
     """Return a bounded, read-only inventory of paused OCR jobs."""
 
@@ -217,19 +236,52 @@ def paused_ocr_inventory(
     paused = source.filter(
         job_type=ProcessingJob.JobType.OCR,
         status=ProcessingJob.Status.PAUSED,
-    ).select_related("asset__edition")
+    ).select_related("asset__edition__work", "edition__work", "upload_item__edition__work")
+    if query:
+        from .processing_identity import draft_title_work_ids
+        changed_titles = draft_title_work_ids(query)
+        paused = paused.filter(
+            Q(asset__edition__work__title__icontains=query) | Q(edition__work__title__icontains=query)
+            | Q(upload_item__source_filename__icontains=query) | Q(asset__original_filename__icontains=query)
+            | Q(edition__work_id__in=changed_titles) | Q(asset__edition__work_id__in=changed_titles)
+        )
+    paused = paused.order_by("-created_at", "-id")
     total = paused.count()
     bounded_limit = max(1, min(int(limit), 5000))
-    rows = [classify_paused_ocr_job(job) for job in paused[:bounded_limit]]
+    size = max(1, min(page_size, 100)) if page is not None else bounded_limit
+    pages = max(1, (total + size - 1) // size)
+    current_page = min(max(1, page or 1), pages)
+    offset = (current_page - 1) * size
+    jobs = list(paused[offset:offset + size])
+    rows = [classify_paused_ocr_job(job) for job in jobs]
     counts = {category: 0 for category in OCR_INVENTORY_CATEGORIES}
     for row in rows:
         counts[row.category] += 1
+    from common.capabilities import Capability, has_capability
+    from .processing_identity import processing_identity, task_titles
+    titles = task_titles(jobs)
+    can_manage = actor is not None and has_capability(actor, Capability.RETRY_JOBS)
+    items = []
+    for job, row in zip(jobs, rows):
+        items.append({
+            **row.as_dict(), **processing_identity(job, titles),
+            "target_pages": len(row.target_page_indexes),
+            "remaining_pages": len(row.remaining_page_indexes),
+            "completed_pages": len(row.target_page_indexes) - len(row.remaining_page_indexes),
+            "created_at": job.created_at, "updated_at": job.updated_at,
+            "can_manage": can_manage,
+            "permission_reason": "" if can_manage else "只有管理员或系统所有者可以操作识别任务。",
+        })
     return {
         "total": total,
         "returned": len(rows),
-        "truncated": total > len(rows),
+        "truncated": page is None and total > len(rows),
+        "page": current_page, "pages": pages,
+        "next_page": current_page + 1 if current_page < pages else None,
+        "previous_page": current_page - 1 if current_page > 1 else None,
+        "counts_scope": "returned_items",
         "counts": counts,
-        "items": [row.as_dict() for row in rows],
+        "items": items,
         "read_only": True,
     }
 
@@ -244,20 +296,24 @@ def decide_paused_ocr_job(
 ) -> tuple[ProcessingJob, PausedOCRInventoryRow]:
     """Resolve exactly one inventoried paused OCR job with an audit trail."""
 
+    if job.edition_id:
+        Edition.objects.select_for_update().get(pk=job.edition_id)
     locked = (
-        ProcessingJob.objects.select_for_update()
+        ProcessingJob.objects.select_for_update(of=("self",))
         .select_related("asset__edition")
         .get(pk=job.pk)
     )
     if locked.job_type != ProcessingJob.JobType.OCR:
         raise PausedOCRDecisionError("只有 OCR 任务可以使用该处理入口。")
-    if locked.status != ProcessingJob.Status.PAUSED:
-        raise PausedOCRDecisionError("该 OCR 任务已不再处于暂停状态，请刷新后重试。")
-
     normalized_decision = str(decision or "").strip().casefold()
     normalized_reason = " ".join(str(reason or "").split()).strip()
     if not normalized_reason:
         raise PausedOCRDecisionError("请填写本次处理理由。")
+    if locked.status != ProcessingJob.Status.PAUSED:
+        latest = (locked.stats or {}).get("latest_ocr_inventory_decision") or {}
+        if latest.get("decision") == normalized_decision and latest.get("reason") == normalized_reason and latest.get("actor_id") == str(getattr(actor, "pk", "") or ""):
+            return locked, PausedOCRInventoryRow(str(locked.pk), str(locked.asset_id or ""), latest["category"], tuple(latest.get("classification_reasons", [])), (), ())
+        raise PausedOCRDecisionError("该 OCR 任务状态已改变，请刷新后查看当前结果。")
     classification = classify_paused_ocr_job(locked)
     before = {
         "status": locked.status,
@@ -268,7 +324,13 @@ def decide_paused_ocr_job(
     }
     now = timezone.now()
 
-    if normalized_decision == "close":
+    if normalized_decision == "cancel":
+        locked.status = ProcessingJob.Status.CANCELED
+        locked.task_id = ""
+        locked.pause_requested_at = None
+        locked.finished_at = now
+        action = "paused_ocr_canceled"
+    elif normalized_decision == "close":
         if classification.category not in {
             "obsolete",
             "superseded",
@@ -298,7 +360,7 @@ def decide_paused_ocr_job(
         locked.error_message = locked.error_message or normalized_reason
         action = "paused_ocr_failure_acknowledged"
     else:
-        raise PausedOCRDecisionError("请选择关闭、恢复或确认失败。")
+        raise PausedOCRDecisionError("请选择继续识别、取消本次识别、结束旧任务或记录失败。")
 
     decision_row = {
         "decision": normalized_decision,

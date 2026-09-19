@@ -815,16 +815,35 @@ def functional_health_snapshot() -> dict[str, Any]:
     latest = _latest_runs()
     layers = []
     now = timezone.now()
+    # All surfaces use the same observation lifetime. A freshly generated
+    # response must not make a stale successful probe look current again.
+    observations = {}
+    for probe in HEALTH_CHECKS.all():
+        run = latest.get(probe.key)
+        fresh = run is not None and 0 <= (now - run.started_at).total_seconds() <= 2 * probe.interval_seconds
+        observations[probe.key] = {
+            "probe_key": probe.key, "label": probe.label,
+            "status": run.status if fresh else HealthCheckRun.Status.UNKNOWN,
+            **{field: getattr(run, field) if fresh else None for field in ("configured", "reachable", "functional", "productive")},
+            "summary": run.summary if fresh else "探测结果已过期，请重新检测。" if run else "尚未运行后台探测。",
+            "last_checked_at": run.started_at if run else None,
+            "latency_ms": run.latency_ms if fresh else None,
+            "error_code": run.error_code if fresh else "stale_probe" if run else "not_probed",
+            "details": run.details if fresh else {},
+            "observation_id": str(run.pk) if run else None,
+            "fresh": fresh, "stale": bool(run and not fresh),
+            "valid_for_seconds": 2 * probe.interval_seconds,
+        }
     for layer, label in (("infrastructure", "基础设施"), ("application", "应用功能"), ("external", "公网入口")):
         rows = []
         for probe in HEALTH_CHECKS.all():
             if probe.layer != layer:
                 continue
-            run = latest.get(probe.key)
-            fresh = run is not None and (now - run.started_at).total_seconds() <= 2 * probe.interval_seconds
+            observation = observations[probe.key]
             rows.append({"key": probe.key, "label": probe.label,
-                         "status": run.status if fresh else HealthCheckRun.Status.UNKNOWN,
-                         "summary": run.summary if fresh else "尚无新鲜探测结果。", "critical": probe.critical})
+                         "status": observation["status"], "last_checked_at": observation["last_checked_at"],
+                         "stale": observation["stale"],
+                         "summary": observation["summary"], "critical": probe.critical})
         required = [row["status"] for row in rows if row["critical"]]
         status = max(required or [row["status"] for row in rows], key=lambda value: STATUS_RANK.get(value, 0), default=HealthCheckRun.Status.UNKNOWN)
         if status == HealthCheckRun.Status.HEALTHY and any(row["status"] in {HealthCheckRun.Status.FAILED, HealthCheckRun.Status.DEGRADED} for row in rows):
@@ -839,35 +858,20 @@ def functional_health_snapshot() -> dict[str, Any]:
         grouped[probe.capability].append((probe, latest.get(probe.key)))
     capabilities = []
     for key, dependencies in grouped.items():
-        statuses = [row.status for _probe, row in dependencies if row is not None]
+        observation_rows = [observations[probe.key] for probe, _run in dependencies]
+        statuses = [row["status"] for row in observation_rows]
         status_value = max(statuses, key=lambda value: STATUS_RANK.get(value, 0)) if statuses else HealthCheckRun.Status.UNKNOWN
         dimensions: dict[str, bool | None] = {}
         for field_name in ("configured", "reachable", "functional", "productive"):
-            values = [getattr(row, field_name) for _probe, row in dependencies if row is not None and getattr(row, field_name) is not None]
-            dimensions[field_name] = all(values) if values else None
+            values = [row[field_name] for row in observation_rows]
+            dimensions[field_name] = False if False in values else None if not values or None in values else True
         capabilities.append({
             "key": key,
             "label": CAPABILITY_LABELS.get(key, key),
             "status": status_value,
             **dimensions,
             "last_checked_at": max((row.started_at for _probe, row in dependencies if row is not None), default=None),
-            "dependencies": [
-                {
-                    "probe_key": probe.key,
-                    "label": probe.label,
-                    "status": row.status if row else HealthCheckRun.Status.UNKNOWN,
-                    "configured": row.configured if row else None,
-                    "reachable": row.reachable if row else None,
-                    "functional": row.functional if row else None,
-                    "productive": row.productive if row else None,
-                    "summary": row.summary if row else "尚未运行后台探测。",
-                    "last_checked_at": row.started_at if row else None,
-                    "latency_ms": row.latency_ms if row else None,
-                    "error_code": row.error_code if row else "not_probed",
-                    "details": row.details if row else {},
-                }
-                for probe, row in dependencies
-            ],
+            "dependencies": observation_rows,
             "incident_count": len(incidents_by_capability.get(key, [])),
         })
     capabilities.sort(key=lambda row: (-STATUS_RANK.get(row["status"], 0), row["label"]))

@@ -20,7 +20,7 @@ VERIFIED_NAMES = {
     "catalog-field-contracts",
     "publication-prepare", "publication-rollback",
     "publication-history",
-    "media-list", "media-detail", "media-rendition",
+    "media-list", "media-detail", "media-rendition", "media-collection",
     "work-cover-media-selection",
     "public-cover-metadata",
     "work-recommendation-media-selection", "public-recommendation-metadata",

@@ -100,7 +100,8 @@ def _page_metrics(page, page_index: int, work: Work, author_names: list[str], ma
     content_penalty = min(len(penalty_hits) * 0.2, 0.55)
     position_score = max(0.0, 1.0 - (page_index - 1) / max(max_pages - 1, 1))
 
-    pixmap = page.get_pixmap(matrix=fitz.Matrix(0.55, 0.55), alpha=False)
+    zoom = min(0.8, 640 / max(page.rect.width, page.rect.height, 1))
+    pixmap = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False, annots=False)
     image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
     small_gray = image.resize((64, 64)).convert("L")
     gray_variance = min(float(ImageStat.Stat(small_gray).var[0]) / 2800, 1.0)
@@ -155,11 +156,7 @@ def _page_metrics(page, page_index: int, work: Work, author_names: list[str], ma
 
 @transaction.atomic
 def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False, actor=None, edition_id=None):
-    candidate = (
-        CoverCandidate.objects.select_for_update()
-        .select_related("work", "asset")
-        .get(pk=candidate.pk)
-    )
+    candidate = CoverCandidate.objects.select_related("asset").get(pk=candidate.pk)
     edition = Edition.objects.select_for_update().get(pk=candidate.asset.edition_id)
     if edition_id and str(edition.pk) != str(edition_id):
         raise CoverCandidateUnavailable("该封面不属于当前版本，请查找本版本封面。")
@@ -167,9 +164,15 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
         raise CoverCandidateUnavailable("该封面对应的作品已变化，请重新查找。")
     work = Work.objects.select_for_update().get(pk=edition.work_id)
     edition.work = work
+    candidate = CoverCandidate.objects.select_for_update(of=("self",)).select_related("asset").get(pk=candidate.pk)
+    if candidate.asset.edition_id != edition.pk or candidate.work_id != work.pk:
+        raise CoverCandidateUnavailable("封面对应的版本已变化，请重新进入当前作品。")
     requires_revision = work.editions.filter(state=PublicationState.PUBLISHED).exists()
+    from ingestion.models import FieldLock
+    if automatic and FieldLock.objects.filter(edition__work=work, field_name="cover").exists():
+        return {"candidate": candidate, "automatic": True, "saved": False}
     if automatic and CatalogFieldDecision.objects.filter(
-        edition=edition, field_name="cover",
+        edition__work=work, field_name="cover",
         status__in={CatalogFieldDecision.Status.CONFIRMED, CatalogFieldDecision.Status.NOT_APPLICABLE},
     ).exists():
         return {"candidate": candidate, "automatic": True, "saved": False}
@@ -195,7 +198,7 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
         raise CoverCandidateUnavailable(
             "封面候选文件暂时不可用，请点击“重新分析”后再选择。"
         ) from exc
-    CoverCandidate.objects.filter(asset__edition=edition).exclude(pk=candidate.pk).update(
+    CoverCandidate.objects.filter(work=work).exclude(pk=candidate.pk).update(
         selected=False
     )
     candidate.selected = True
@@ -207,7 +210,7 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
         name = f"public/covers/editorial/{work.pk}/{uuid4().hex}.jpg"
         stored_name = work.cover.storage.save(name, ContentFile(content))
         revision = save_workflow_editorial_revision(
-            work_id=work.pk, section_patch={"cover": stored_name}, actor=actor,
+            work_id=work.pk, edition_id=edition.pk, section_patch={"cover": stored_name, "cover_rendition": None}, actor=actor,
             change_note="确认本版本封面，等待发布编辑草稿",
         )
         value = stored_name
@@ -238,10 +241,10 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
     }
 
 
-def generate_cover_candidates(asset: Asset, *, force: bool = False):
+def generate_cover_candidates(asset: Asset, *, force: bool = False, auto_select: bool = True, include_non_book: bool = False):
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
-    if work.document_type not in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
+    if not include_non_book and work.document_type not in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
         return []
     existing = list(asset.cover_candidates.order_by("-score", "page_index"))
     if existing and not force:
@@ -273,16 +276,12 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False):
                     max_pages,
                 )
                 ranked.append((page_index, metrics))
+                metrics["metrics"]["pdf_page_count"] = document.page_count
         finally:
             document.close()
     ranked.sort(key=lambda item: (-item[1]["score"], item[0]))
-    retained_pages = {page_index for page_index, _metrics in ranked[:4]}
-
-    for candidate in existing:
-        if candidate.page_index not in retained_pages:
-            candidate.thumbnail.delete(save=False)
-            candidate.delete()
-
+    # Keep manually chosen pages and prior evidence. A refresh only replaces
+    # the current ranking; it must not delete an administrator's selection.
     candidates = []
     for page_index, metrics in ranked[:4]:
         candidate, _created = CoverCandidate.objects.update_or_create(
@@ -293,16 +292,14 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False):
                 "score": metrics["score"],
                 "reasons": metrics["reasons"],
                 "metrics": metrics["metrics"],
-                "selected": False,
             },
         )
-        if candidate.thumbnail:
-            candidate.thumbnail.delete(save=False)
         candidate.thumbnail.save(
             f"page-{page_index}.jpg",
             ContentFile(metrics["thumbnail"]),
-            save=True,
+            save=False,
         )
+        candidate.save(update_fields=["thumbnail", "updated_at"])
         candidates.append(candidate)
 
     preferred = next(
@@ -313,11 +310,30 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False):
         ),
         None,
     )
-    if preferred is not None and not work.cover:
+    if auto_select and preferred is not None and not work.cover:
         select_cover_candidate(preferred, automatic=True)
-    elif not work.cover and candidates and candidates[0].score >= settings.COVER_AUTO_SELECT_THRESHOLD:
+    elif auto_select and not work.cover and candidates and candidates[0].score >= settings.COVER_AUTO_SELECT_THRESHOLD:
         select_cover_candidate(candidates[0], automatic=True)
     return list(asset.cover_candidates.order_by("-score", "page_index"))
+
+
+def prepare_cover_page(asset: Asset, page_index: int):
+    """Render one explicitly requested PDF page; never write Page or the PDF."""
+    with _local_asset_path(asset) as path, fitz.open(str(path)) as document:
+        if page_index < 1 or page_index > document.page_count:
+            raise CoverCandidateUnavailable(f"页码须在 1—{document.page_count} 之间，按PDF实际页序填写。")
+        page = document[page_index - 1]
+        scale = min(2, 1400 / max(page.rect.width, page.rect.height, 1))
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False, annots=False)
+        candidate, _ = CoverCandidate.objects.get_or_create(
+            asset=asset, page_index=page_index,
+            defaults={"work_id": asset.edition.work_id, "reasons": ["管理员按PDF实际页序选择"], "metrics": {"manual_page": True, "pdf_page_count": document.page_count}},
+        )
+        if candidate.work_id != asset.edition.work_id:
+            raise CoverCandidateUnavailable("这份PDF对应的作品已变化，请重新进入当前作品。")
+        candidate.thumbnail.save(f"page-{page_index}-{uuid4().hex}.jpg", ContentFile(pixmap.tobytes("jpeg", jpg_quality=90)), save=False)
+        candidate.save(update_fields=["thumbnail", "updated_at"])
+        return candidate
 
 
 def generate_recommendation_image(asset: Asset, *, force: bool = False, actor=None, automatic: bool = True, expected_work_id=None):

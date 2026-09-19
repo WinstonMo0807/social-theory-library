@@ -1,10 +1,13 @@
 from django.urls import path
+from .cover_views import EditionCoverView
+from .edition_file_views import EditionFileView
+from .primary_edition_views import PrimaryEditionView
 from .person_resolution_views import (
     AdminPersonSearchView, AdminPersonMergeHistoryView,
     AdminPersonDuplicateView, AdminPersonMergePreviewView, AdminPersonMergeView,
     AdminPersonMergeRecordView, AdminPersonMergeRollbackView,
 )
-from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView
+from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView, MediaCollectionView
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
 from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeImageView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
@@ -26,6 +29,7 @@ from .knowledge_views import (
     AdminRecommendationOverrideListView,
     AdminRecommendationPolicyView,
     AdminRecommendationRefreshView,
+    AdminRecommendationPreviewView,
     AdminSubdisciplineDetailView,
     AdminSubdisciplineListView,
     AdminTheoryTimelineDetailView,
@@ -89,6 +93,7 @@ from .workflow_views import (
     WorkLibraryListView,
     WorkMaintenancePublicationView,
     WorkMaintenanceSectionView,
+    WorkWorkspaceEditsView,
     WorkMaintenanceWorkspaceView,
 )
 from .workflow_suggestion_views import (
@@ -194,6 +199,8 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
+    path("admin/editions/<uuid:edition_id>/files/", EditionFileView.as_view(), name="edition-file-submit"),
     path("admin/knowledge-media/<str:object_type>/<uuid:object_id>/", KnowledgeImageSelectionView.as_view(), name="knowledge-image-selection"),
     path("knowledge-media/<str:object_type>/<uuid:object_id>/file/", PublicKnowledgeImageView.as_view(), name="public-knowledge-image"),
     path("admin/people/", AdminPersonSearchView.as_view(), name="person-search"),
@@ -211,11 +218,13 @@ urlpatterns = [
     path("works/<uuid:work_id>/recommendation-image-metadata/", PublicRecommendationMetadataView.as_view(), name="public-recommendation-metadata"),
     path("admin/works/<uuid:work_id>/recommendation-image/metadata/", RecommendationImageMetadataView.as_view(), name="recommendation-image-metadata"),
     path("admin/media/", MediaListView.as_view(), name="media-list"),
+    path("admin/media/collection/", MediaCollectionView.as_view(), name="media-collection"),
     path("admin/media/<uuid:media_id>/", MediaDetailView.as_view(), name="media-detail"),
     path("admin/media/<uuid:media_id>/renditions/", MediaRenditionView.as_view(), name="media-rendition"),
     path("admin/media/renditions/<uuid:rendition_id>/file/", MediaRenditionFileView.as_view(), name="media-rendition-file"),
     path("admin/editions/<uuid:edition_id>/publication/history/", PublicationHistoryView.as_view(), name="publication-history"),
     path("admin/editions/<uuid:edition_id>/publication/prepare/", PublicationPrepareView.as_view(), name="publication-prepare"),
+    path("admin/editions/<uuid:edition_id>/primary/", PrimaryEditionView.as_view(), name="edition-primary"),
     path("admin/editions/<uuid:edition_id>/publication/rollback/", PublicationRollbackView.as_view(), name="publication-rollback"),
     path("admin/catalog-field-contracts/", CatalogFieldContractView.as_view(), name="catalog-field-contracts"),
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/import/", CatalogingMetadataImportView.as_view(), name="cataloging-metadata-import"),
@@ -281,6 +290,11 @@ urlpatterns = [
         "admin/library/works/<uuid:work_id>/",
         WorkMaintenanceWorkspaceView.as_view(),
         name="admin-work-maintenance-workspace",
+    ),
+    path(
+        "admin/library/works/<uuid:work_id>/edits/",
+        WorkWorkspaceEditsView.as_view(),
+        name="admin-work-workspace-edits",
     ),
     path(
         "admin/library/works/<uuid:work_id>/sections/<str:step_key>/",
@@ -533,6 +547,7 @@ urlpatterns = [
     path("admin/recommendations/", AdminRecommendationListView.as_view(), name="admin-recommendation-list"),
     path("admin/recommendations/<str:placement>/", AdminRecommendationPolicyView.as_view(), name="admin-recommendation-policy"),
     path("admin/recommendations/<str:placement>/refresh/", AdminRecommendationRefreshView.as_view(), name="admin-recommendation-refresh"),
+    path("admin/recommendations/<str:placement>/preview/", AdminRecommendationPreviewView.as_view(), name="admin-recommendation-preview"),
     path("admin/recommendation-overrides/", AdminRecommendationOverrideListView.as_view(), name="admin-recommendation-override-list"),
     path("admin/recommendation-overrides/<uuid:pk>/", AdminRecommendationOverrideDetailView.as_view(), name="admin-recommendation-override-detail"),
     path("admin/about-blocks/", AdminAboutPageBlockListView.as_view(), name="admin-about-page-block-list"),

@@ -1,5 +1,8 @@
 from pathlib import Path
+from contextlib import ExitStack
+from io import BytesIO
 
+import fitz
 import httpx
 from django.conf import settings
 
@@ -56,9 +59,24 @@ def _request_document_gateway(
     }
     if model:
         data["model"] = model
-    if page_numbers:
-        data["page_numbers"] = ",".join(str(value) for value in sorted(set(page_numbers)))
-    with Path(path).open("rb") as handle:
+    page_map = {}
+    with ExitStack() as stack:
+        if page_numbers:
+            # A page-level progress update must not upload a whole large PDF
+            # for every page. The temporary request contains only this batch;
+            # response indexes are mapped back to the immutable source file.
+            selected = sorted(set(page_numbers))
+            source = stack.enter_context(fitz.open(str(path)))
+            subset = stack.enter_context(fitz.open())
+            for index in selected:
+                if index < 1 or index > source.page_count:
+                    raise ValueError("OCR 请求包含无效 PDF 页序。")
+                subset.insert_pdf(source, from_page=index - 1, to_page=index - 1)
+            page_map = {index + 1: original for index, original in enumerate(selected)}
+            data["page_numbers"] = ",".join(str(index) for index in page_map)
+            handle = stack.enter_context(BytesIO(subset.tobytes(garbage=3, deflate=True)))
+        else:
+            handle = stack.enter_context(Path(path).open("rb"))
         response = httpx.post(
             _parse_endpoint(base_url),
             files={"file": (Path(path).name, handle, "application/pdf")},
@@ -70,6 +88,17 @@ def _request_document_gateway(
     payload = response.json()
     if not isinstance(payload, dict) or not isinstance(payload.get("pages"), list):
         raise ValueError("OCR 服务返回了无法识别的数据格式。")
+    if page_map:
+        mapped = []
+        for page in payload["pages"]:
+            try:
+                index = int(page["index"])
+            except (TypeError, ValueError, KeyError):
+                raise ValueError("OCR 服务返回了无法识别的页序。")
+            if index not in page_map:
+                raise ValueError("OCR 服务返回的页序不属于本次请求。")
+            mapped.append({**page, "index": page_map[index]})
+        payload = {**payload, "pages": mapped}
     return payload
 
 

@@ -18,6 +18,7 @@ def test_postgres_migration_0027_preserves_authority_source_rows():
         pytest.skip("requires PostgreSQL")
 
     executor = MigrationExecutor(connection)
+    latest_targets = executor.loader.graph.leaf_nodes()
     old_target = [("catalog", "0026_semantic_feedback_deduplication")]
     new_target = [("catalog", "0027_query_lexicon_core")]
     executor.migrate(old_target)
@@ -83,4 +84,5 @@ def test_postgres_migration_0027_preserves_authority_source_rows():
         assert ChangeEvent.objects.count() == 0
     finally:
         executor = MigrationExecutor(connection)
-        executor.migrate(new_target)
+        # Leave the isolated database at its original schema for subsequent tests.
+        executor.migrate(latest_targets)

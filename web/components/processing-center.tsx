@@ -27,6 +27,7 @@ import {
   type ActionState,
 } from "./action-feedback";
 import { ConfirmDialog } from "./confirm-dialog";
+import { CatalogOcrPicker, OcrProgressDisplay, ocrPageRanges as pageRanges, type OcrProgress } from "./admin/workflow/edition-ocr-control";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 
 type Attempt = {
@@ -58,29 +59,37 @@ type ProcessingItem = {
   dispatch_error: string;
 };
 
-type Paginated<T> = { count: number; results: T[] };
+type Paginated<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
 type QueueHealth = {
   mode: "inline" | "worker";
   worker_required: boolean;
   stalled_count: number;
   pending_dispatches: number;
-  healthy: boolean;
-  broker_reachable: boolean;
-  worker_online: boolean;
-  ocr: { configured: boolean; reachable: boolean; detail: string };
-  search: { configured: boolean; reachable: boolean; detail: string };
+  healthy: boolean | null;
+  checked_at?: string | null;
+  stale?: boolean;
+  broker_reachable: boolean | null;
+  worker_online: boolean | null;
+  ocr: { configured: boolean | null; reachable: boolean | null; detail: string };
+  search: { configured: boolean | null; reachable: boolean | null; detail: string };
   message: string;
 };
 
 type ProcessingJob = {
+  workbench_url?: string;
+  edition_id?: string | null;
+  work_id?: string | null;
   id: string;
   source: "processing_job" | "semantic_index_job";
   job_type: string;
   item_id: string | null;
   asset_id: string | null;
   title: string;
+  edition_label?: string;
+  title_has_unpublished_changes?: boolean;
   status: "pending" | "running" | "paused" | "succeeded" | "failed" | "canceled";
   progress: number;
+  ocr_progress?: OcrProgress | null;
   engine: string;
   attempt: number;
   max_attempts: number;
@@ -95,12 +104,32 @@ type ProcessingJob = {
 };
 
 type ProcessingJobsPayload = {
+  count: number;
+  page: number;
+  pages: number;
+  next_page: number | null;
+  previous_page: number | null;
+  total: number;
+  total_counts: Record<string, number>;
+  type_counts: Record<string, number>;
+  can_manage: boolean;
   results: ProcessingJob[];
   counts: Record<string, number>;
   workloads: Record<string, { paused: boolean }>;
   paused_ocr_inventory?: PausedOCRInventory;
 };
 type PausedOCRInventoryItem = {
+  title_has_unpublished_changes?: boolean;
+  title: string;
+  edition_label: string;
+  workbench_url: string;
+  target_pages: number;
+  completed_pages: number;
+  remaining_pages: number;
+  updated_at: string;
+  created_at: string;
+  can_manage: boolean;
+  permission_reason: string;
   job_id: string;
   asset_id: string;
   category: "obsolete" | "superseded" | "completed_by_newer_revision" | "recoverable" | "genuinely_failed";
@@ -111,6 +140,10 @@ type PausedOCRInventoryItem = {
   newer_revision_id: string;
 };
 type PausedOCRInventory = {
+  page: number;
+  pages: number;
+  next_page: number | null;
+  previous_page: number | null;
   total: number;
   returned: number;
   truncated: boolean;
@@ -134,6 +167,10 @@ type ReviewTask = {
   source_filename: string;
 };
 type ReviewTasksPayload = {
+  page: number;
+  pages: number;
+  next_page: number | null;
+  previous_page: number | null;
   count: number;
   counts: Record<string, number>;
   can_manage: boolean;
@@ -161,13 +198,17 @@ type ProcessingFeedback = {
 const EMPTY_PROCESSING_FEEDBACK: ProcessingFeedback = { state: "idle", message: "", actionKey: "" };
 
 const jobLabels: Record<string, string> = {
-  ocr: "OCR",
+  ocr: "文字识别（OCR）",
   external_enrichment: "联网补充",
   text_extraction: "文本提取",
   page_labels: "页码识别",
   semantic_index: "语义索引",
   thumbnail: "缩略图",
   cache_refresh: "缓存刷新",
+  projection_refresh: "公开内容更新",
+  query_lexicon_candidates: "检索词建议",
+  query_lexicon_reconcile: "检索词更新",
+  r2_staging: "上传中转",
 };
 
 const statusLabels: Record<string, string> = {
@@ -180,25 +221,29 @@ const statusLabels: Record<string, string> = {
 };
 
 const ocrCategoryLabels: Record<PausedOCRInventoryItem["category"], string> = {
-  obsolete: "已失去执行条件",
-  superseded: "已被较新任务或文件取代",
-  completed_by_newer_revision: "已由较新识别结果完成",
-  recoverable: "仍可安全恢复",
-  genuinely_failed: "确认不可恢复",
+  obsolete: "旧任务已不适用",
+  superseded: "已有更新的任务或文件",
+  completed_by_newer_revision: "已有更新的识别结果",
+  recoverable: "可继续识别",
+  genuinely_failed: "需要人工处理",
 };
 
 const ocrReasonLabels: Record<string, string> = {
-  asset_missing: "资产已不存在",
+  asset_missing: "原任务关联的文件已不存在",
   asset_is_not_normalized: "任务目标不是可识别的阅读版本",
   document_has_no_pages: "文档没有可处理页面",
   no_ocr_targets: "没有待识别页面",
   normalized_asset_superseded: "阅读版本已被替换",
   newer_ocr_job_present: "已有更新的 OCR 任务",
   all_target_pages_completed: "目标页面均已完成",
-  newer_ocr_result_present: "已有更新的 OCR 修订",
+  newer_ocr_result_present: "已有更新的文字识别结果",
   current_asset_has_unprocessed_targets: "当前阅读版本仍有未处理页面",
   non_retryable_error: "错误不可重试",
   attempts_exhausted: "已达到最大尝试次数",
+  source_changed: "阅读文件已经更换，这个旧任务不能继续覆盖新文件",
+  attempts_exhausted_or_permanent: "已达到重试上限或需要人工处理错误",
+  manual_full_rerun_remaining: "本次重新识别尚未结束，已完成的页面会保留",
+  finish_remaining_processing: "文字已识别完，还需整理结果",
 };
 
 const reviewStatusLabels: Record<string, string> = {
@@ -209,8 +254,8 @@ const reviewStatusLabels: Record<string, string> = {
 };
 
 const reviewTypeLabels: Record<string, string> = {
-  entity_resolution: "实体消歧",
-  metadata_conflict: "元数据冲突",
+  entity_resolution: "核对对象身份",
+  metadata_conflict: "书目信息不一致",
   duplicate_person: "同名人物",
   page_labels: "页码校对",
   publication: "发布检查",
@@ -218,11 +263,11 @@ const reviewTypeLabels: Record<string, string> = {
 
 const PROCESSING_SURFACES = [
   { key: "overview", label: "总览" },
-  { key: "research-sources", label: "Research Sources" },
+  { key: "research-sources", label: "资料来源" },
   { key: "ai-models", label: "AI 与模型" },
   { key: "documents", label: "OCR 与文档" },
-  { key: "workers", label: "任务与 Worker" },
-  { key: "projections", label: "Projection 一致性" },
+  { key: "workers", label: "后台任务" },
+  { key: "projections", label: "公开内容更新" },
   { key: "faults", label: "故障与恢复" },
 ] as const;
 
@@ -237,7 +282,7 @@ const stageLabels: Record<string, string> = {
   validating: "校验 PDF",
   extracting: "提取逐页文本",
   ocr: "PaddleOCR",
-  metadata: "识别元数据",
+  metadata: "识别书目信息",
   linking: "建立知识关联",
   indexing: "建立全文索引",
   syncing_cloud: "同步在线副本",
@@ -257,6 +302,14 @@ function timeLabel(value: string | null) {
   return value ? new Date(value).toLocaleString("zh-CN", { hour12: false }) : "—";
 }
 
+function TaskPagination({ page, pages, count, busy, onChange, label }: { page: number; pages: number; count: number; busy: boolean; onChange: (page: number) => void; label: string }) {
+  return <nav className="processing-pagination" aria-label={label}>
+    <span>共 {count} 项 · 第 {page} / {Math.max(1, pages)} 页</span>
+    <button type="button" disabled={busy || page <= 1} onClick={() => onChange(page - 1)}>上一页</button>
+    <button type="button" disabled={busy || page >= pages} onClick={() => onChange(page + 1)}>下一页</button>
+  </nav>;
+}
+
 export function ProcessingCenter() {
   const [items, setItems] = useState<ProcessingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,6 +318,17 @@ export function ProcessingCenter() {
   const [queueHealth, setQueueHealth] = useState<QueueHealth | null>(null);
   const [semanticHealth, setSemanticHealth] = useState<SemanticHealthPayload | null>(null);
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
+  const [taskMeta, setTaskMeta] = useState<ProcessingJobsPayload | null>(null);
+  const [jobPage, setJobPage] = useState(1);
+  const [jobQuery, setJobQuery] = useState("");
+  const [jobQueryInput, setJobQueryInput] = useState("");
+  const [ocrPage, setOcrPage] = useState(1);
+  const [ocrQuery, setOcrQuery] = useState("");
+  const [ocrQueryInput, setOcrQueryInput] = useState("");
+  const [itemPage, setItemPage] = useState(1);
+  const [itemMeta, setItemMeta] = useState<Paginated<ProcessingItem> | null>(null);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewMeta, setReviewMeta] = useState<ReviewTasksPayload | null>(null);
   const [workloads, setWorkloads] = useState<Record<string, { paused: boolean }>>({});
   const [pausedOCRInventory, setPausedOCRInventory] = useState<PausedOCRInventory | null>(null);
   const [ocrDecisionReasons, setOCRDecisionReasons] = useState<Record<string, string>>({});
@@ -281,13 +345,21 @@ export function ProcessingCenter() {
   const [actionPending, setActionPending] = useState(false);
   const [pendingOperation, setPendingOperation] = useState("");
   const operationInFlightRef = useRef("");
-  const loadRequestRef = useRef<Promise<boolean> | null>(null);
+  const loadRequestRef = useRef<{ key: string; controller: AbortController; promise: Promise<boolean> } | null>(null);
 
   const load = useCallback((): Promise<boolean> => {
-    if (loadRequestRef.current) return loadRequestRef.current;
+    const key = JSON.stringify([reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+    if (loadRequestRef.current?.key === key) return loadRequestRef.current.promise;
+    loadRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 20000);
+    const current = () => !controller.signal.aborted;
     const request = (async () => {
       const token = getServerSessionCredential();
       if (!token) {
+        window.clearTimeout(timeout);
         setLoading(false);
         setError("登录状态尚未就绪，请重新登录后再试。");
         return false;
@@ -295,51 +367,70 @@ export function ProcessingCenter() {
       try {
       const [itemsResult, healthResult, jobsResult, semanticResult, reviewResult] = await Promise.allSettled([
         apiRequest<Paginated<ProcessingItem>>(
-          "/ingestion/items/?scope=processing&ordering=-updated_at&page_size=100",
-          {},
+          `/ingestion/items/?scope=processing&ordering=-updated_at,-id&page=${itemPage}`,
+          options,
           token,
         ),
-        apiRequest<QueueHealth>("/ingestion/queue-health/", {}, token),
-        apiRequest<ProcessingJobsPayload>("/ingestion/processing-center/", {}, token),
-        apiRequest<SemanticHealthPayload>("/catalog/admin/semantic-index/", {}, token),
+        apiRequest<QueueHealth>("/ingestion/queue-health/", options, token),
+        apiRequest<ProcessingJobsPayload>(`/ingestion/processing-center/?${new URLSearchParams({ job_type: jobType, status: jobStatus, page: String(jobPage), q: jobQuery, ocr_inventory_page: String(ocrPage), ocr_query: ocrQuery })}`, options, token).then((result) => {
+          // Job feedback must not wait for slow provider/worker health checks.
+          if (!current()) return result;
+          setJobs(result.results);
+          setTaskMeta(result);
+          setJobPage(result.page);
+          if (result.paused_ocr_inventory) setOcrPage(result.paused_ocr_inventory.page);
+          setWorkloads(result.workloads ?? {});
+          setPausedOCRInventory(result.paused_ocr_inventory ?? null);
+          return result;
+        }),
+        apiRequest<SemanticHealthPayload>("/catalog/admin/semantic-index/", options, token),
         apiRequest<ReviewTasksPayload>(
-          `/ingestion/review-tasks/?page_size=100${reviewStatus ? `&status=${encodeURIComponent(reviewStatus)}` : ""}`,
-          {},
+          `/ingestion/review-tasks/?page_size=30&page=${reviewPage}${reviewStatus ? `&status=${encodeURIComponent(reviewStatus)}` : ""}`,
+          options,
           token,
         ),
       ]);
+      if (!current()) {
+        if (timedOut && loadRequestRef.current?.controller === controller) setError("部分状态读取超时，已保留最近结果；可点击刷新重试。不会重新启动识别。");
+        return false;
+      }
+      const failures: string[] = [];
       if (itemsResult.status === "fulfilled") {
         setItems(itemsResult.value.results);
-        setError("");
+        setItemMeta(itemsResult.value);
       } else {
-        throw itemsResult.reason;
+        failures.push("上传记录暂时读取失败，保留上次结果。");
       }
       setQueueHealth(healthResult.status === "fulfilled" ? healthResult.value : null);
       setSemanticHealth(semanticResult.status === "fulfilled" ? semanticResult.value : null);
-      setJobs(jobsResult.status === "fulfilled" ? jobsResult.value.results : []);
-      setWorkloads(jobsResult.status === "fulfilled" ? (jobsResult.value.workloads ?? {}) : {});
-      setPausedOCRInventory(jobsResult.status === "fulfilled" ? (jobsResult.value.paused_ocr_inventory ?? null) : null);
+      if (jobsResult.status === "rejected") failures.push("任务进度暂时读取失败，保留上次结果。");
+      if (healthResult.status === "rejected" || semanticResult.status === "rejected") failures.push("部分服务状态未能读取，不能据此判断正常。");
       if (reviewResult.status === "fulfilled") {
         setReviewTasks(reviewResult.value.results);
+        setReviewMeta(reviewResult.value);
+        setReviewPage(reviewResult.value.page);
         setReviewCounts(reviewResult.value.counts);
         setCanManageReviewTasks(reviewResult.value.can_manage);
       } else {
-        setReviewTasks([]);
+        failures.push("人工待办暂时读取失败，保留上次结果。");
       }
-        return true;
+        setError(failures.length ? `${failures.join(" ")}可点击刷新重试，不会重新启动任务。` : "");
+        return failures.length === 0;
       } catch (reason) {
+        if (!current()) return false;
         setError(reason instanceof Error ? reason.message : "处理中心加载失败。");
         return false;
       } finally {
-        setLoading(false);
+        window.clearTimeout(timeout);
+        if (loadRequestRef.current?.controller === controller) setLoading(false);
       }
     })();
-    loadRequestRef.current = request;
+    loadRequestRef.current = { key, controller, promise: request };
     void request.finally(() => {
-      if (loadRequestRef.current === request) loadRequestRef.current = null;
+      if (loadRequestRef.current?.promise === request) loadRequestRef.current = null;
     });
     return request;
-  }, [reviewStatus]);
+  }, [reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
 
   function beginOperation(actionKey: string, pendingMessage: string) {
     if (operationInFlightRef.current) return false;
@@ -364,6 +455,10 @@ export function ProcessingCenter() {
       const parameters = new URLSearchParams(window.location.search);
       setJobType(parameters.get("type") ?? "");
       setJobStatus(parameters.get("status") ?? "");
+      const readPage = (name: string) => { const value = Number(parameters.get(name)); return Number.isSafeInteger(value) && value > 0 ? value : 1; };
+      setJobPage(readPage("page")); setOcrPage(readPage("ocr_page")); setItemPage(readPage("upload_page")); setReviewPage(readPage("review_page"));
+      setJobQuery(parameters.get("q") ?? ""); setJobQueryInput(parameters.get("q") ?? "");
+      setOcrQuery(parameters.get("ocr_q") ?? ""); setOcrQueryInput(parameters.get("ocr_q") ?? "");
       setReviewStatus(parameters.get("review_status") ?? "pending");
       const requestedSurface = parameters.get("surface");
       if (isProcessingSurface(requestedSurface)) setActiveSurface(requestedSurface);
@@ -379,17 +474,27 @@ export function ProcessingCenter() {
     if (jobStatus) url.searchParams.set("status", jobStatus); else url.searchParams.delete("status");
     if (reviewStatus) url.searchParams.set("review_status", reviewStatus); else url.searchParams.delete("review_status");
     if (activeSurface === "overview") url.searchParams.delete("surface"); else url.searchParams.set("surface", activeSurface);
+    for (const [name, value] of Object.entries({ page: jobPage, ocr_page: ocrPage, upload_page: itemPage, review_page: reviewPage })) {
+      if (value > 1) url.searchParams.set(name, String(value)); else url.searchParams.delete(name);
+    }
+    for (const [name, value] of Object.entries({ q: jobQuery, ocr_q: ocrQuery })) {
+      if (value) url.searchParams.set(name, value); else url.searchParams.delete(name);
+    }
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }, [activeSurface, filtersReady, jobStatus, jobType, reviewStatus]);
+  }, [activeSurface, filtersReady, jobStatus, jobType, reviewStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
 
   useEffect(() => {
+    if (!filtersReady) return;
+    setLoading(true);
     const initialTimer = window.setTimeout(() => void load(), 0);
     const timer = window.setInterval(load, 10000);
     return () => {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
+      loadRequestRef.current?.controller.abort();
+      loadRequestRef.current = null;
     };
-  }, [load, revision]);
+  }, [load, revision, filtersReady]);
 
   async function refreshNow() {
     const actionKey = "refresh";
@@ -512,7 +617,7 @@ export function ProcessingCenter() {
     }
   }
 
-  async function resolvePausedOCR(item: PausedOCRInventoryItem, decision: "close" | "resume" | "acknowledge_failure") {
+  async function resolvePausedOCR(item: PausedOCRInventoryItem, decision: "close" | "resume" | "acknowledge_failure" | "cancel") {
     const token = getServerSessionCredential();
     const actionKey = `ocr-inventory:${decision}:${item.job_id}`;
     const reason = (ocrDecisionReasons[item.job_id] ?? "").trim();
@@ -524,6 +629,7 @@ export function ProcessingCenter() {
       setFeedback({ state: "error", message: "请先填写本次处理理由。", actionKey });
       return;
     }
+    if (decision === "cancel" && !window.confirm(`取消《${item.title}》这一次文字识别？已保存文字、PDF 和阅读记录都会保留。`)) return;
     if (!beginOperation(actionKey, "正在记录 OCR 任务决定。")) return;
     try {
       await apiRequest("/ingestion/processing-center/", {
@@ -536,7 +642,7 @@ export function ProcessingCenter() {
           reason,
         }),
       }, token);
-      setFeedback({ state: "success", message: decision === "resume" ? "OCR 任务已按当前运行配置恢复。" : decision === "close" ? "历史 OCR 任务已安全关闭。" : "OCR 失败已确认并留下审计记录。", actionKey });
+      setFeedback({ state: "success", message: decision === "resume" ? "已提交继续识别，实际运行进度请查看本馆藏。" : decision === "cancel" ? "本次识别已取消；原文件和已保存结果仍保留。" : decision === "close" ? "旧识别任务已结束，历史记录保留。" : "失败原因已记录，没有更改已保存文字。", actionKey });
       setRevision((value) => value + 1);
     } catch (reasonValue) {
       setFeedback({ state: "error", message: reasonValue instanceof Error ? reasonValue.message : "OCR 任务处理失败。", actionKey });
@@ -567,35 +673,28 @@ export function ProcessingCenter() {
     }
   }
 
-  const statusCounts = useMemo(() => Object.fromEntries(
-    ["pending", "running", "paused", "succeeded", "failed", "canceled"].map((status) => [
-      status,
-      jobs.filter((job) => job.status === status).length,
-    ]),
-  ), [jobs]);
-  const typeCounts = useMemo(() => Object.fromEntries(
-    Object.keys(jobLabels).map((type) => [type, jobs.filter((job) => job.job_type === type).length]),
-  ), [jobs]);
-  const filteredJobs = useMemo(() => jobs.filter((job) => (
-    (!jobType || job.job_type === jobType) && (!jobStatus || job.status === jobStatus)
-  )), [jobStatus, jobType, jobs]);
+  const statusCounts = taskMeta?.counts ?? {};
+  const typeCounts = taskMeta?.type_counts ?? {};
+  const totalCounts = taskMeta?.total_counts ?? {};
+  const filteredJobs = jobs;
+  const canManageTasks = taskMeta?.can_manage === true;
   const historicalNetworkFailures = useMemo(() => jobs.filter((job) => (
     job.job_type === "semantic_index"
     && job.status === "failed"
     && /huggingface|dns|name or service|network unreachable|resolve/i.test(`${job.error_code} ${job.last_error}`)
   )).length, [jobs]);
-  const summary = useMemo(() => ({
-    active: statusCounts.pending + statusCounts.running,
-    review: items.filter((item) => item.status === "needs_review").length,
-    failed: statusCounts.failed,
-    succeeded: statusCounts.succeeded,
-  }), [items, statusCounts]);
+  const summary = {
+    active: (totalCounts.pending ?? 0) + (totalCounts.running ?? 0),
+    review: (reviewCounts.pending ?? 0) + (reviewCounts.in_progress ?? 0),
+    failed: totalCounts.failed ?? 0,
+    succeeded: totalCounts.succeeded ?? 0,
+  };
   const healthSurface: FunctionalHealthSurface | null = activeSurface === "documents" ? null : activeSurface;
 
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><p>Processing Center</p><h1>处理中心</h1><span>先看用户功能影响，再按任务类型检查 Research、AI、OCR、Worker 与 Projection，并保留每次失败的完整记录。</span></div>
+        <div><h1>处理中心</h1><span>查看哪些功能受到影响，找到未完成的任务，并按提示重试。失败记录会保留。</span></div>
         <div className="admin-action-row">
           <ActionLink className="button secondary" href="/admin/publication">前往发布台 <ChevronRight size={15} /></ActionLink>
           <ActionButton
@@ -608,7 +707,7 @@ export function ProcessingCenter() {
           ><RefreshCw size={15} />刷新</ActionButton>
         </div>
       </header>
-      <nav className="processing-type-tabs processing-center-surfaces" aria-label="Processing Center 工作面" role="tablist">
+      <nav className="processing-type-tabs processing-center-surfaces" aria-label="处理中心分类" role="tablist">
         {PROCESSING_SURFACES.map((surface) => (
           <button
             type="button"
@@ -642,8 +741,8 @@ export function ProcessingCenter() {
       <div className={`processing-health-grid ${activeSurface === "overview" ? "" : "single"}`}>
         {(activeSurface === "overview" || activeSurface === "workers" || activeSurface === "documents") && queueHealth ? (
           <section className={`processing-health ${!queueHealth.healthy || queueHealth.stalled_count ? "warning" : ""}`} role="status">
-            <Cpu size={18} /><div><strong>{queueHealth.mode === "inline" ? "本地同步处理" : "后台工作者"}</strong><span>{queueHealth.message}</span></div>
-            <dl><div><dt>worker</dt><dd>{queueHealth.worker_online ? "在线" : "未确认"}</dd></div><div><dt>OCR</dt><dd>{queueHealth.ocr.reachable ? "可用" : queueHealth.ocr.detail}</dd></div></dl>
+            <Cpu size={18} /><div><strong>{queueHealth.mode === "inline" ? "本地同步处理" : "后台处理服务"}</strong><span>{queueHealth.message}</span><small>检查时间：{queueHealth.checked_at ? new Date(queueHealth.checked_at).toLocaleString("zh-CN") : "尚无记录"}{queueHealth.stale ? " · 结果已过期" : ""}。刷新任务进度不会重新检测服务。</small></div>
+            <dl><div><dt>任务服务</dt><dd>{queueHealth.worker_online ? "在线" : "未确认"}</dd></div><div><dt>OCR</dt><dd>{queueHealth.ocr.reachable ? "可用" : queueHealth.ocr.detail}</dd></div></dl>
           </section>
         ) : null}
         {activeSurface === "overview" || activeSurface === "ai-models" ? <section className={`processing-semantic-health ${semanticHealth?.model_health.available === false ? "warning" : ""}`}>
@@ -656,11 +755,12 @@ export function ProcessingCenter() {
         </section> : null}
       </div>
       ) : null}
+      {activeSurface === "documents" ? <CatalogOcrPicker /> : null}
       {activeSurface === "documents" || activeSurface === "research-sources" ? <section className="processing-list admin-panel" aria-labelledby="workload-controls-title">
         <header className="processing-job-toolbar">
           <div>
-            <h2 id="workload-controls-title">{activeSurface === "documents" ? "OCR 负载控制" : "联网研究负载"}</h2>
-            <p>{activeSurface === "documents" ? "暂停不会强制终止 worker。OCR 会先保存当前页批次。" : "联网补充会在下一个来源请求前停下，不会丢失已取得的 Evidence。"}</p>
+            <h2 id="workload-controls-title">{activeSurface === "documents" ? "全库文字识别开关" : "全库联网查找开关"}</h2>
+            <p>{activeSurface === "documents" ? "此开关影响全库，不只当前馆藏。暂停时先保存正在识别的页面；重新允许运行不会自动恢复下方旧任务。只想管理一本馆藏，请使用它的识别操作。" : "此开关影响全库。暂停会在下一次查找前生效，已取得的资料保留。"}</p>
           </div>
         </header>
         <div className="admin-action-row">
@@ -675,7 +775,7 @@ export function ProcessingCenter() {
                 pendingLabel={paused ? `正在允许${jobLabels[type]}` : `正在暂停${jobLabels[type]}`}
                 successLabel="操作已提交"
                 errorLabel="重试操作"
-                disabled={Boolean(pendingOperation)}
+                disabled={Boolean(pendingOperation) || !canManageTasks}
                 onClick={() => void workloadAction(type, !paused)}
               >
                 {paused ? <Play size={15} /> : <PauseCircle size={15} />}
@@ -684,44 +784,56 @@ export function ProcessingCenter() {
             );
           })}
         </div>
+        {!canManageTasks ? <p>当前账户可查看记录；只有管理员或系统所有者可以启停任务。</p> : null}
       </section> : null}
       {activeSurface === "documents" ? <section className="processing-list admin-panel processing-ocr-inventory" aria-labelledby="paused-ocr-inventory-title">
         <header className="processing-job-toolbar">
-          <div><h2 id="paused-ocr-inventory-title">历史暂停 OCR</h2><p>系统按当前文件、页面和 DocumentRevision 事实逐条分类。每项决定都需要理由并写入审计记录。</p></div>
+          <div><h2 id="paused-ocr-inventory-title">暂停的文字识别</h2><p>按馆藏找到尚未结束的识别。可继续剩余页面，或取消这一次识别；两者都保留 PDF、已保存文字和阅读记录。名称随馆藏资料更新。</p></div>
           <span>{pausedOCRInventory?.total ?? 0} 项</span>
         </header>
+        <form className="processing-search" onSubmit={(event) => { event.preventDefault(); setOcrPage(1); setOcrQuery(ocrQueryInput.trim()); }}>
+          <label>查找馆藏<input value={ocrQueryInput} onChange={(event) => setOcrQueryInput(event.target.value)} placeholder="输入馆藏名称或来源文件名" /></label>
+          <button type="submit">查找</button>
+        </form>
         <div className="processing-job-cards">
           {(pausedOCRInventory?.items ?? []).map((item) => {
             const decision = item.category === "recoverable" ? "resume" : item.category === "genuinely_failed" ? "acknowledge_failure" : "close";
-            const actionLabel = decision === "resume" ? "按当前配置恢复" : decision === "close" ? "安全关闭" : "确认失败";
+            const actionLabel = decision === "resume" ? "继续剩余识别" : decision === "close" ? "结束这个旧任务" : "记录为处理失败";
+            const percent = item.target_pages > 0 ? Math.round(item.completed_pages * 100 / item.target_pages) : null;
             return (
               <article className={`processing-job-card paused ocr-inventory-${item.category}`} key={item.job_id}>
-                <header><span>OCR · {item.job_id.slice(0, 8)}</span><b>{ocrCategoryLabels[item.category]}</b></header>
+                <header><div><h3>{item.workbench_url ? <Link href={item.workbench_url}>{item.title}</Link> : item.title}</h3><p>{item.edition_label}</p>{item.title_has_unpublished_changes ? <small>显示已保存的新名称，尚未发布；仍是同一馆藏和文件。</small> : null}</div><b>{ocrCategoryLabels[item.category]}</b></header>
                 <p>{item.reasons.map((reason) => ocrReasonLabels[reason] ?? (reason.startsWith("error:") ? `错误代码 ${reason.slice(6)}` : reason)).join("；")}</p>
-                <dl>
-                  <div><dt>目标页</dt><dd>{item.target_page_indexes.join("、") || "无"}</dd></div>
-                  <div><dt>待处理页</dt><dd>{item.remaining_page_indexes.join("、") || "无"}</dd></div>
-                  <div><dt>较新任务</dt><dd>{item.newer_job_id ? item.newer_job_id.slice(0, 8) : "无"}</dd></div>
-                  <div><dt>较新修订</dt><dd>{item.newer_revision_id ? item.newer_revision_id.slice(0, 8) : "无"}</dd></div>
-                </dl>
-                <label><span>处理理由</span><input value={ocrDecisionReasons[item.job_id] ?? ""} onChange={(event) => setOCRDecisionReasons((current) => ({ ...current, [item.job_id]: event.target.value }))} placeholder="说明依据，保存到审计记录" /></label>
-                <footer><ActionButton state={operationState(`ocr-inventory:${decision}:${item.job_id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim()} onClick={() => void resolvePausedOCR(item, decision)}>{decision === "resume" ? <Play size={14} /> : decision === "close" ? <XCircle size={14} /> : <AlertCircle size={14} />}{actionLabel}</ActionButton></footer>
+                <p className="ocr-page-summary"><strong>已完成 {item.completed_pages} / {item.target_pages} 页</strong><span>剩余 {item.remaining_pages} 页</span></p>
+                {percent !== null ? <progress value={item.completed_pages} max={item.target_pages} aria-label={`${item.title}已保存的识别页数`}>{percent}%</progress> : <p>暂无可识别页数，请先打开馆藏处理文件问题。</p>}
+                <small>任务更新于 {timeLabel(item.updated_at)}。页数完成不等于后续公开更新已完成。</small>
+                {decision === "resume" && workloads.ocr?.paused ? <p>全库识别当前暂停。先允许运行，再继续这一本馆藏。</p> : null}
+                <details className="ocr-task-details"><summary>查看页码范围和任务记录</summary>
+                  <dl><div><dt>本次识别范围</dt><dd>{pageRanges(item.target_page_indexes)}</dd></div><div><dt>剩余页码范围</dt><dd>{pageRanges(item.remaining_page_indexes)}</dd></div><div><dt>创建时间</dt><dd>{timeLabel(item.created_at)}</dd></div><div><dt>任务编号</dt><dd>{item.job_id}</dd></div>{item.newer_job_id ? <div><dt>替代任务编号</dt><dd>{item.newer_job_id}</dd></div> : null}{item.newer_revision_id ? <div><dt>后续文字记录编号</dt><dd>{item.newer_revision_id}</dd></div> : null}</dl>
+                </details>
+                {item.can_manage ? <details className="ocr-task-actions"><summary>处理这一次识别</summary>
+                  <label><span>操作说明（留在处理记录中）</span><input value={ocrDecisionReasons[item.job_id] ?? ""} onChange={(event) => setOCRDecisionReasons((current) => ({ ...current, [item.job_id]: event.target.value }))} placeholder="例如：继续补齐可检索文字，或暂时不需要识别" /></label>
+                  <footer><ActionButton state={operationState(`ocr-inventory:${decision}:${item.job_id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim() || (decision === "resume" && Boolean(workloads.ocr?.paused))} onClick={() => void resolvePausedOCR(item, decision)}>{decision === "resume" ? <Play size={14} /> : decision === "close" ? <XCircle size={14} /> : <AlertCircle size={14} />}{actionLabel}</ActionButton>
+                  {decision === "resume" ? <ActionButton state={operationState(`ocr-inventory:cancel:${item.job_id}`)} pendingLabel="正在取消" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim()} onClick={() => void resolvePausedOCR(item, "cancel")}>取消本次识别</ActionButton> : null}</footer>
+                </details> : <p>{item.permission_reason}</p>}
+                {item.workbench_url ? <Link href={item.workbench_url}>打开馆藏，查看当前 PDF 和完整进度</Link> : <p>这条记录尚未关联馆藏，不会自动选用其他馆藏。</p>}
               </article>
             );
           })}
-          {!loading && !(pausedOCRInventory?.items.length) ? <p className="admin-list-state">当前没有来源不明的历史暂停 OCR 任务。</p> : null}
+          {!loading && !(pausedOCRInventory?.items.length) ? <p className="admin-list-state">当前范围内没有暂停的识别任务。</p> : null}
         </div>
+        <TaskPagination label="暂停识别翻页" page={pausedOCRInventory?.page ?? ocrPage} pages={pausedOCRInventory?.pages ?? 1} count={pausedOCRInventory?.total ?? 0} busy={loading} onChange={setOcrPage} />
       </section> : null}
       {loading && !items.length && !jobs.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
       <AsyncStatus state="error" message={error} assertive />
       {activeSurface === "workers" ? <section className="processing-list admin-panel processing-review-queue" aria-labelledby="processing-review-title">
         <header className="processing-job-toolbar">
           <div><h2 id="processing-review-title">人工审核队列</h2><p>元数据冲突、同名人物、实体消歧和页码问题集中在这里处理。</p></div>
-          <span>{reviewTasks.length} 项</span>
+          <span>共 {reviewMeta?.count ?? 0} 项</span>
         </header>
         <nav className="processing-status-tabs" aria-label="审核任务状态筛选">
           {Object.entries(reviewStatusLabels).map(([value, label]) => (
-            <button type="button" className={reviewStatus === value ? `active ${value}` : value} aria-pressed={reviewStatus === value} onClick={() => setReviewStatus(value)} key={value}>
+            <button type="button" className={reviewStatus === value ? `active ${value}` : value} aria-pressed={reviewStatus === value} onClick={() => { setReviewPage(1); setReviewStatus(value); }} key={value}>
               {label} <strong>{reviewCounts[value] ?? 0}</strong>
             </button>
           ))}
@@ -748,26 +860,29 @@ export function ProcessingCenter() {
           ))}
           {!loading && !reviewTasks.length ? <p className="admin-list-state">当前状态下没有人工审核任务。</p> : null}
         </div>
+        <TaskPagination label="人工待办翻页" page={reviewMeta?.page ?? reviewPage} pages={reviewMeta?.pages ?? 1} count={reviewMeta?.count ?? 0} busy={loading} onChange={setReviewPage} />
       </section> : null}
       {activeSurface === "workers" ? <section className="processing-list admin-panel processing-job-list" id="processing-task-list">
-        <header className="processing-job-toolbar"><div><h2>后台任务</h2><p>先选择类型，再按运行状态缩小范围。</p></div><span>{filteredJobs.length} / {jobs.length} 项</span></header>
+        <header className="processing-job-toolbar"><div><h2>后台任务</h2><p>从全部任务中筛选，按创建时间由新到旧排列。计数来自完整查询，不只本页。</p></div><span>符合条件 {taskMeta?.count ?? 0} 项</span></header>
+        <form className="processing-search" onSubmit={(event) => { event.preventDefault(); setJobPage(1); setJobQuery(jobQueryInput.trim()); }}><label>查找馆藏<input value={jobQueryInput} onChange={(event) => setJobQueryInput(event.target.value)} placeholder="馆藏名称或来源文件名" /></label><button type="submit">查找</button></form>
         <nav className="processing-type-tabs" aria-label="任务类型筛选">
-          <button type="button" className={!jobType ? "active" : ""} aria-pressed={!jobType} onClick={() => setJobType("")}>全部 <strong>{jobs.length}</strong></button>
-          {Object.entries(jobLabels).map(([value, label]) => <button type="button" className={jobType === value ? "active" : ""} aria-pressed={jobType === value} onClick={() => setJobType(value)} key={value}>{label} <strong>{typeCounts[value] ?? 0}</strong></button>)}
+          <button type="button" className={!jobType ? "active" : ""} aria-pressed={!jobType} onClick={() => { setJobPage(1); setJobType(""); }}>全部 <strong>{Object.values(typeCounts).reduce((sum, count) => sum + count, 0)}</strong></button>
+          {Object.entries(jobLabels).map(([value, label]) => <button type="button" className={jobType === value ? "active" : ""} aria-pressed={jobType === value} onClick={() => { setJobPage(1); setJobType(value); }} key={value}>{label} <strong>{typeCounts[value] ?? 0}</strong></button>)}
         </nav>
         <nav className="processing-status-tabs" aria-label="任务状态筛选">
-          <button type="button" className={!jobStatus ? "active" : ""} aria-pressed={!jobStatus} onClick={() => setJobStatus("")}>全部状态</button>
-          {Object.entries(statusLabels).map(([value, label]) => <button type="button" className={jobStatus === value ? `active ${value}` : value} aria-pressed={jobStatus === value} onClick={() => setJobStatus(value)} key={value}>{label} <strong>{statusCounts[value] ?? 0}</strong></button>)}
+          <button type="button" className={!jobStatus ? "active" : ""} aria-pressed={!jobStatus} onClick={() => { setJobPage(1); setJobStatus(""); }}>全部状态</button>
+          {Object.entries(statusLabels).map(([value, label]) => <button type="button" className={jobStatus === value ? `active ${value}` : value} aria-pressed={jobStatus === value} onClick={() => { setJobPage(1); setJobStatus(value); }} key={value}>{label} <strong>{statusCounts[value] ?? 0}</strong></button>)}
         </nav>
         <div className="processing-job-cards">
           {filteredJobs.map((job) => (
             <article className={`processing-job-card ${job.status}`} key={`${job.source}-${job.id}`}>
               <header><span>{jobLabels[job.job_type] ?? job.job_type}</span><b>{statusLabels[job.status] ?? job.status}</b></header>
-              <div className="processing-job-title"><div><strong>{job.title || "全库任务"}</strong><small>{job.item_id ? <Link href={`/admin/intake/${job.item_id}#file`}>打开馆藏</Link> : job.asset_id ? "资产级任务" : "系统任务"}</small></div><strong>{job.progress}%</strong></div>
-              <div className="processing-job-progress" aria-label={`进度 ${job.progress}%`}><i style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }} /></div>
-              <dl><div><dt>引擎</dt><dd>{job.engine || "未记录"}</dd></div><div><dt>配置</dt><dd>{job.settings_version || "环境默认"}</dd></div><div><dt>尝试</dt><dd>{job.attempt}/{job.max_attempts}</dd></div><div><dt>耗时</dt><dd>{durationLabel(job.duration_seconds)}</dd></div><div><dt>开始</dt><dd>{timeLabel(job.started_at || job.created_at)}</dd></div><div><dt>结束</dt><dd>{timeLabel(job.finished_at)}</dd></div></dl>
+              <div className="processing-job-title"><div><strong>{job.title || "全库任务"}</strong><p>{job.edition_label}</p>{job.title_has_unpublished_changes ? <small>显示已保存的新名称，尚未发布。</small> : null}<small>{job.workbench_url ? <Link href={job.workbench_url}>查看当前版本与文件影响</Link> : job.item_id ? <Link href={`/admin/intake/${job.item_id}#file`}>打开来源记录</Link> : job.asset_id ? "文件归属尚未明确" : "系统任务"}</small></div>{!job.ocr_progress ? <strong>{job.progress}%</strong> : null}</div>
+              {job.ocr_progress ? <OcrProgressDisplay job={job.ocr_progress} /> : <div className="processing-job-progress" role="progressbar" aria-label="处理进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress}><i style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }} /></div>}
+              <p>已用时 {durationLabel(job.duration_seconds)} · {job.finished_at ? `结束于 ${timeLabel(job.finished_at)}` : `创建于 ${timeLabel(job.created_at)}`}</p>
+              <details className="ocr-task-details"><summary>查看任务记录与技术信息</summary><dl><div><dt>处理服务</dt><dd>{job.engine || "未记录"}</dd></div><div><dt>配置版本</dt><dd>{job.settings_version || "环境默认"}</dd></div><div><dt>尝试次数</dt><dd>{job.attempt}/{job.max_attempts}</dd></div><div><dt>开始时间</dt><dd>{timeLabel(job.started_at)}</dd></div><div><dt>任务编号</dt><dd>{job.id}</dd></div></dl></details>
               {job.last_error ? <details className="processing-job-error" open={job.status === "failed"}><summary>{job.error_code || "查看错误"}</summary><p>{job.last_error}</p></details> : null}
-              {(job.status === "failed" || job.status === "pending" || job.status === "running" || job.status === "paused") ? (
+              {canManageTasks && (job.status === "failed" || job.status === "pending" || job.status === "running" || job.status === "paused") ? (
                 <footer>
                   {job.status === "failed" ? <ActionButton state={operationState(`job:retry:${job.source}:${job.id}`)} pendingLabel="正在重试" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "retry")}><RotateCcw size={14} />重试</ActionButton> : null}
                   {(job.status === "pending" || job.status === "running") && (job.job_type === "ocr" || job.job_type === "external_enrichment") ? <ActionButton state={operationState(`job:pause:${job.source}:${job.id}`)} pendingLabel="正在暂停" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "pause")}><PauseCircle size={14} />安全暂停</ActionButton> : null}
@@ -779,6 +894,8 @@ export function ProcessingCenter() {
           ))}
           {!loading && !filteredJobs.length ? <p className="admin-list-state">当前筛选条件下没有任务。</p> : null}
         </div>
+        <TaskPagination label="后台任务翻页" page={taskMeta?.page ?? jobPage} pages={taskMeta?.pages ?? 1} count={taskMeta?.count ?? 0} busy={loading} onChange={setJobPage} />
+        {!canManageTasks ? <p>当前账户只读。任务启停与恢复需要管理员或系统所有者权限。</p> : null}
       </section> : null}
       {activeSurface === "documents" ? <section className="processing-list admin-panel processing-upload-list">
         <header><div><h2>上传流程记录</h2><p>这里保留文件入库、复核和发布入口，处理任务在上方查看。</p></div></header>
@@ -793,6 +910,7 @@ export function ProcessingCenter() {
           );
         })}
         {!loading && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
+        <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil((itemMeta?.count ?? 0) / 24))} count={itemMeta?.count ?? 0} busy={loading} onChange={setItemPage} />
       </section> : null}
       </div>
       <ToastHost

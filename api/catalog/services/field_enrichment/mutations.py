@@ -951,7 +951,7 @@ def _accept_locked_enrichment_candidate(
 ) -> MutationResult:
     if candidate.status == EnrichmentCandidate.Status.ACCEPTED:
         if not candidate.accepted_authority_model or not candidate.accepted_authority_id:
-            raise ValueError("已接受候选缺少 authority 审计引用。")
+            raise ValueError("这项建议已有采用记录，但无法找到对应的保存结果。请从操作记录核对，不要重复新建。")
         return MutationResult(
             candidate.accepted_authority_model,
             candidate.accepted_authority_id,
@@ -960,12 +960,12 @@ def _accept_locked_enrichment_candidate(
             True,
         )
     if candidate.status != EnrichmentCandidate.Status.PENDING:
-        raise ValueError("只有待审核 enrichment candidate 可以接受。")
+        raise ValueError("这项建议已处理，不能再次采用。请重新读取当前结果。")
     policy = FIELD_POLICIES.get(candidate.target_type, candidate.field_name)
     if candidate.candidate_kind != policy.candidate_kind:
-        raise ValueError("候选类型与当前 FieldPolicy 不一致。")
+        raise ValueError("建议类型与当前字段不符，请重新查找。")
     if candidate.policy_version != policy.policy_version:
-        raise ValueError("FieldPolicy 已更新，请重新生成候选后再审核。")
+        raise ValueError("这项字段的核对规则已更新，请重新查找后再采用。")
     if candidate.refresh_after and candidate.refresh_after < timezone.now():
         raise ValueError("候选来源已超过当前字段的刷新期限。")
     if candidate.identity_status not in {
@@ -981,7 +981,7 @@ def _accept_locked_enrichment_candidate(
         raise ValueError("该对象已经下线或拒绝，不能继续采用建议。")
     current = current_field_value(candidate.target_type, target, candidate.field_name)
     if stable_json(current) != stable_json(candidate.current_value):
-        raise ValueError("authority 字段已在候选生成后变化，请重新核对。")
+        raise ValueError("这项资料在建议生成后已经改变。你的修改已保留，请按当前填写重新查找。")
     result = _create_revision_for_published_target(
         candidate=candidate,
         target=target,
@@ -1048,7 +1048,7 @@ def reject_enrichment_candidate(candidate: EnrichmentCandidate, *, actor, reason
     if candidate.status == EnrichmentCandidate.Status.REJECTED:
         return candidate, True
     if candidate.status != EnrichmentCandidate.Status.PENDING:
-        raise ValueError("只有待审核 enrichment candidate 可以拒绝。")
+        raise ValueError("这项建议已处理，不能再次拒绝。请重新读取当前结果。")
     candidate.status = EnrichmentCandidate.Status.REJECTED
     candidate.reviewed_by = actor
     candidate.reviewed_at = timezone.now()

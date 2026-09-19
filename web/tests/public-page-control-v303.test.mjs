@@ -44,8 +44,10 @@ test("Scholar Theory and Topic public routes remain registered and previewable",
   assert.doesNotMatch(preview, /timeline=\{\[\]\} allPaths=\{\[\]\}/);
   assert.match(preview, /data-module-id/);
   assert.match(pageTree, /page\.preview\.supported/);
-  assert.match(pageTree, /后台字段用于哪些公开位置/);
-  assert.match(pageTree, /Legacy fallback 正在使用/);
+  assert.match(pageTree, /选择页面/);
+  assert.match(pageTree, /control\.legacy_fallbacks/);
+  assert.match(pageTree, /技术详情/);
+  assert.doesNotMatch(pageTree, /内容覆盖<|Legacy fallback 正在使用/);
 });
 
 test("public evidence entry points preserve a Reader highlight locator", async () => {

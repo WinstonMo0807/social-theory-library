@@ -96,12 +96,14 @@ def _objects():
         title="Studio 重要作品",
         is_featured=True,
     )
-    Edition.objects.create(
+    public_edition = Edition.objects.create(
         work=work,
         state="published",
         public_slug="studio-important-work-v302",
         is_primary=True,
     )
+    from .v304_helpers import activate_catalog_revision
+    activate_catalog_revision(public_edition, fulltext_ready=False)
     return {
         "theory": theory,
         "concept": concept,

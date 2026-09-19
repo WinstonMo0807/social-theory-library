@@ -21,6 +21,8 @@ from ingestion.models import AuditEvent, UploadBatch, UploadItem
 from distribution.services import cloud_budget_allows_new_publication, signed_read_url
 from reading.models import ReadingHistory
 
+from .editorial_fixtures import editorial_request
+
 
 def test_signed_download_url_uses_attachment_filename(monkeypatch):
     captured = {}
@@ -546,7 +548,7 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
         authority_status=Person.AuthorityStatus.VERIFIED,
     )
 
-    scholar_curation = api_client.patch(
+    scholar_curation = editorial_request(api_client, "patch",
         f"/api/catalog/admin/scholars/{scholar.data['id']}/",
         {
             "curation": {
@@ -590,7 +592,7 @@ def test_admin_can_manage_taxonomy_and_scholar_profiles(api_client, admin_user):
     )
     assert scholar_revision.status_code == 200
 
-    topic_curation = api_client.patch(
+    topic_curation = editorial_request(api_client, "patch",
         f"/api/catalog/admin/topics/{topic.data['id']}/",
         {
             "curation": {

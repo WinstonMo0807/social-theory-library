@@ -28,6 +28,10 @@ def main():
         # This suite creates more login sessions per minute than a human run.
         # Throttle enforcement is tested separately; permission checks stay on.
         "AUTH_LOGIN_RATE": "60/min",
+        # The layout suite loads a 1001-page PDF across five browser contexts
+        # and many admin routes within a minute. Keep production throttles
+        # unchanged; rate-limit behavior has independent failure-injection tests.
+        "API_ANON_RATE": "2000/min", "API_USER_RATE": "4000/min",
         "DJANGO_ALLOWED_HOSTS": "127.0.0.1,localhost,testserver",
         "CORS_ALLOWED_ORIGINS": "http://127.0.0.1:3105",
         "DJANGO_CSRF_TRUSTED_ORIGINS": "http://127.0.0.1:3105",
@@ -79,6 +83,12 @@ def main():
     KnowledgeNode.objects.create(id="30500000-0000-4000-8000-000000000101", canonical_name_zh="E2E理论配图", node_type="theory_tradition", slug="e2e-node-image", status="published")
     image_path = ReadingPath.objects.create(id="30500000-0000-4000-8000-000000000102", title="E2E路径配图", slug="e2e-path-image", status="published")
     ReadingPathStage.objects.create(id="30500000-0000-4000-8000-000000000103", reading_path=image_path, name="保留原阅读阶段", position=0)
+    from v306_e2e_fixtures import seed_v306
+    seed_v306(User.objects.get(email="owner-v305@example.test"))
+    from reader_v306_e2e_fixtures import seed_reader_v306
+    seed_reader_v306()
+    from v306_assistance_e2e_fixtures import seed_assistance
+    seed_assistance(User.objects.get(email="owner-v305@example.test"))
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
     call_command("runserver", "127.0.0.1:8105", use_reloader=False)
 

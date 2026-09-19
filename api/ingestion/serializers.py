@@ -257,6 +257,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
     publication_preflight = serializers.SerializerMethodField()
     can_publish = serializers.SerializerMethodField()
     can_manage_publication = serializers.SerializerMethodField()
+    can_withdraw = serializers.SerializerMethodField()
     is_stalled = serializers.SerializerMethodField()
     stalled_seconds = serializers.SerializerMethodField()
     suggested_action = serializers.SerializerMethodField()
@@ -298,6 +299,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
             "publication_preflight",
             "can_publish",
             "can_manage_publication",
+            "can_withdraw",
             "is_stalled",
             "stalled_seconds",
             "suggested_action",
@@ -315,6 +317,9 @@ class UploadItemSerializer(serializers.ModelSerializer):
             return None
         edition = obj.edition
         work = edition.work
+        from catalog.services.publication_commands import catalog_publication_state
+
+        publication = catalog_publication_state(edition)
         normalized = edition.assets.filter(kind="normalized", is_current=True).first()
         first_page = normalized.pages.order_by("index").first() if normalized else None
         contributions = list(
@@ -354,7 +359,9 @@ class UploadItemSerializer(serializers.ModelSerializer):
             "document_type": work.document_type,
             "language": work.language,
             "abstract": work.abstract,
-            "publication_state": edition.state,
+            "publication_state": publication["public_state"],
+            "editorial_state": edition.state,
+            "publication": publication,
             "ocr_status": edition.ocr_status,
             "semantic_index_status": edition.semantic_index_status,
             "page_label_status": edition.page_label_status,
@@ -588,6 +595,12 @@ class UploadItemSerializer(serializers.ModelSerializer):
             and request.user.is_authenticated
             and has_capability(request.user, Capability.PUBLISH_WORK)
         )
+
+    def get_can_withdraw(self, obj):
+        from common.capabilities import Capability, has_capability
+
+        request = self.context.get("request")
+        return bool(request and has_capability(request.user, Capability.WITHDRAW_WORK))
 
     def _stalled_seconds(self, obj):
         active_statuses = {

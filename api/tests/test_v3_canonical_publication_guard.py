@@ -131,6 +131,9 @@ def test_published_knowledge_relation_propagates_and_cannot_be_hard_deleted(
     )
 
     assert created.status_code == 201
+    assert created.data["public_status"] == "draft"
+    published = api_client.post(f"/api{created.data['editorial_revision']['publish_url']}", {}, format="json")
+    assert published.status_code == 200, published.data
     relation = KnowledgeRelation.objects.get(pk=created.data["id"])
     event = DomainChangeEvent.objects.get(
         object_type="knowledge_relation",
@@ -139,7 +142,8 @@ def test_published_knowledge_relation_propagates_and_cannot_be_hard_deleted(
     assert event.change_kind == "publish"
 
     deleted = api_client.delete(
-        f"/api/catalog/admin/theory-system/relations/{relation.id}/"
+        f"/api/catalog/admin/theory-system/relations/{relation.id}/",
+        HTTP_IF_MATCH=api_client.get(f"/api/catalog/admin/theory-system/relations/{relation.id}/").data["edit_version"],
     )
     assert deleted.status_code == 409
     assert deleted.data["code"] == "published_relation_requires_withdrawal"

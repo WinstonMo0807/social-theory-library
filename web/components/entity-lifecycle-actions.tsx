@@ -97,7 +97,7 @@ export function EntityLifecycleActions({
       if (isRevisionResponse(payload)) {
         setSnapshot(payload.impact);
         setConfirmation(null);
-        setMessage(`已建立 Revision ${payload.editorial_revision.revision} 下线草稿。正式页面尚未改变，请到 Knowledge Studio 预览并确认发布。`);
+        setMessage("下线草稿已保存，读者页面尚未改变。请在内容管理中预览，再确认发布。");
         return;
       }
       setSnapshot(payload);
@@ -147,7 +147,7 @@ export function EntityLifecycleActions({
     <section className="entity-lifecycle-box" aria-label="下线与删除">
       <header>
         <div><strong>发布与数据安全</strong><span>公开内容先下线。永久删除前会展示关联数据和保护规则。</span></div>
-        {previewHref ? <Link href={previewHref} target="_blank">预览前台 <ExternalLink size={14} /></Link> : null}
+        {previewHref ? <Link href={previewHref} target="_blank">打开读者页面 <ExternalLink size={14} /></Link> : null}
       </header>
       <div className="entity-lifecycle-actions">
         <button type="button" disabled={working} onClick={() => void loadImpact()}><RefreshCw size={14} />查看影响范围</button>
@@ -164,7 +164,7 @@ export function EntityLifecycleActions({
       <ConfirmDialog
         open={confirmation === "archive" || confirmation === "restore"}
         title={confirmation === "archive" ? `下线“${name}”` : `恢复“${name}”为草稿`}
-        description={confirmation === "archive" ? "确认后普通读者将不再看到此内容，关联数据仍会保留。" : "确认后内容回到草稿状态，可以继续编辑再发布。"}
+        description={confirmation === "archive" ? "已公开内容会先保存下线草稿，正式发布后读者才不再看到。关联数据仍会保留。" : "确认后内容回到草稿状态，可以继续编辑再发布。"}
         confirmLabel={confirmation === "archive" ? "确认下线" : "恢复为草稿"}
         tone={confirmation === "archive" ? "danger" : "default"}
         pending={working}

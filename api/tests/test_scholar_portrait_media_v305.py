@@ -13,6 +13,8 @@ from catalog.services.media import build_rendition, ingest_image, update_media_m
 from catalog.services.scholar_media import portrait_media, portrait_selection, save_scholar_editorial_patch, select_scholar_portrait
 from .test_media_v305 import picture
 
+from .editorial_fixtures import editorial_request
+
 pytestmark = pytest.mark.django_db
 
 
@@ -141,7 +143,7 @@ def test_portrait_selection_api_and_legacy_upload_protect_permissions_and_public
     assert editor.status_code == 200
     assert editor.data["portrait"] == result.data["preview_url"]
     assert editor.data["portrait_media"]["alt_text"] == "原肖像说明"
-    uploaded = client.patch(f"/api/catalog/admin/scholars/{profile.pk}/", {"portrait": picture()}, format="multipart")
+    uploaded = editorial_request(client, "patch", f"/api/catalog/admin/scholars/{profile.pk}/", {"portrait": picture()}, format="multipart")
     assert uploaded.status_code == 202
     profile.person.refresh_from_db()
     assert profile.person.portrait_rendition_id is None
@@ -171,7 +173,7 @@ def test_legacy_invalid_upload_and_stale_portrait_preview_remain_visible_errors(
     actor, profile, media = portrait_fixture
     client = APIClient()
     client.force_authenticate(actor)
-    response = client.patch(f"/api/catalog/admin/scholars/{profile.pk}/", {"portrait": picture(name="bad.jpg", content_type="image/jpeg")}, format="multipart")
+    response = editorial_request(client, "patch", f"/api/catalog/admin/scholars/{profile.pk}/", {"portrait": picture(name="bad.jpg", content_type="image/jpeg")}, format="multipart")
     assert response.status_code == 409
     revision = select(profile, media, actor)
     other = Person.objects.create(preferred_name="另一身份", authority_status="verified")

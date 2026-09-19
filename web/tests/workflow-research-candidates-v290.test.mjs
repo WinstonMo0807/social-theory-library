@@ -60,7 +60,8 @@ test("front matter authors and translators stay role-aware and require an indivi
   assert.match(editor, /field === "authors" \? "author" : "translator"/);
   assert.match(editor, /fieldName="author"/);
   assert.match(editor, /fieldName="translator"/);
-  assert.match(editor, /beforeAction=\{beforeFieldAction\}/);
+  assert.match(editor, /beforeAction=\{props.beforeFieldAction\}/);
+  assert.match(editor, /onFill=\{fieldName in FILL_FIELD_LABELS \? props.fillSuggestion : undefined\}/);
 });
 
 test("candidate inspector separates evidence and match basis from system diagnostics", async () => {

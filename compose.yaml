@@ -54,7 +54,7 @@ services:
       retries: 10
 
   api:
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.5}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.6}
     build:
       context: ./api
     restart: unless-stopped
@@ -105,7 +105,7 @@ services:
       start_period: 60s
 
   worker:
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.5}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.6}
     build:
       context: ./api
     restart: unless-stopped
@@ -147,7 +147,7 @@ services:
       start_period: 60s
 
   ingestion-worker:
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.5}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.6}
     build:
       context: ./api
     restart: unless-stopped
@@ -189,7 +189,7 @@ services:
       start_period: 60s
 
   beat:
-    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.5}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.6}
     build:
       context: ./api
     restart: unless-stopped
@@ -255,7 +255,7 @@ services:
           memory: 3G
 
   web:
-    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:3.0.5}
+    image: ${LIBRARY_WEB_IMAGE:-social-theory-library-web:3.0.6}
     build:
       context: ./web
     restart: unless-stopped

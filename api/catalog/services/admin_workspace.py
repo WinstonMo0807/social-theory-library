@@ -52,13 +52,6 @@ from ingestion.services.entity_resolution_decisions import (
 from ingestion.services.catalog_reconciliation import effective_catalog_reconciliation
 
 
-QUEUE_STATUSES = (
-    UploadItem.Status.NEEDS_REVIEW,
-    UploadItem.Status.READY,
-    UploadItem.Status.FAILED,
-)
-
-
 def _step_status(workflow: dict[str, Any], step_key: str) -> str:
     return next(
         (row["status"] for row in workflow["steps"] if row["key"] == step_key),
@@ -292,17 +285,57 @@ def _theory_candidates(work: Work) -> list[dict[str, Any]]:
 
 
 def _file_data(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
-    original = edition.assets.filter(kind=Asset.Kind.ORIGINAL, is_current=True).order_by("-version").first()
-    normalized = edition.assets.filter(kind=Asset.Kind.NORMALIZED, is_current=True).order_by("-version").first()
+    # Maintenance has an Edition, not necessarily an original upload. A new
+    # real file task remains traceable without changing a manual session source.
+    item = item or UploadItem.objects.filter(edition=edition).exclude(status="deleted").select_related("batch").order_by("-created_at", "-id").first()
+    assets = list(edition.assets.order_by("-version", "kind", "id"))
+    if item:
+        # Describe the selected upload, including an unprocessed replacement,
+        # not the old public PDF that happens to remain current during work.
+        original = next((asset for asset in assets if asset.kind == Asset.Kind.ORIGINAL and (
+            asset.pk == item.asset_id or bool(item.sha256 and asset.sha256 == item.sha256)
+        )), None)
+        normalized = next((asset for asset in assets if asset.kind == Asset.Kind.NORMALIZED and (
+            asset.pk == item.asset_id
+            or bool(original and asset.source_asset_id == original.pk)
+            or bool(item.sha256 and asset.sha256 == item.sha256)
+        )), None)
+    else:
+        original = next((asset for asset in assets if asset.kind == Asset.Kind.ORIGINAL and asset.is_current), None)
+        normalized = next((asset for asset in assets if asset.kind == Asset.Kind.NORMALIZED and asset.is_current), None)
     anchor = normalized or original
     summary = item.preflight_summary if item else {}
     reconciliation = effective_catalog_reconciliation(item, edition=edition) if item else {}
+    revision = edition.active_catalog_revision
+    current_reader = revision.reader_asset if (
+        revision and revision.edition_id == edition.pk and revision.status == "active"
+        and revision.metadata_ready and edition.state == "published"
+    ) else None
     return {
+        "edition_id": str(edition.pk),
+        "expected_updated_at": edition.updated_at,
+        "file_submit_url": f"/catalog/admin/editions/{edition.pk}/files/",
+        "upload_item_id": str(item.pk) if item else None,
+        "retry_url": f"/ingestion/items/{item.pk}/retry/" if item else "",
+        "resume_url": f"/ingestion/items/{item.pk}/resume/" if item else "",
+        "current_reader_asset_id": str(current_reader.pk) if current_reader else None,
+        "can_supplement": not assets and item is None,
+        "processing": bool(item and (
+            item.status in {"received", "validating", "deduplicating", "extracting", "ocr", "metadata", "linking", "indexing", "preparing_public_asset", "syncing_cloud"}
+            or (item.replacement_of_asset_id and item.status == "published" and normalized and normalized != current_reader)
+        )),
+        "file_history": [{
+            "id": str(asset.pk), "kind": asset.kind, "version": asset.version,
+            "filename": asset.original_filename, "validation": asset.validation_status,
+            "status": asset.status, "page_count": asset.page_count, "sha256": asset.sha256,
+            "is_current": asset.is_current, "is_public_reader": bool(current_reader and asset.pk == current_reader.pk),
+            "created_at": asset.created_at, "source_asset_id": str(asset.source_asset_id) if asset.source_asset_id else None,
+        } for asset in assets],
         "filename": item.source_filename if item else (anchor.original_filename if anchor else ""),
         "status": item.status if item else (anchor.status if anchor else "pending"),
         "workflow_state": item.workflow_state if item else "maintenance",
         "validation": anchor.validation_status if anchor else "pending",
-        "is_valid_pdf": bool(anchor and anchor.validation_status != Asset.ValidationStatus.INVALID),
+        "is_valid_pdf": bool(anchor and anchor.validation_status == Asset.ValidationStatus.VALID),
         "page_count": anchor.page_count if anchor else 0,
         "mime_type": anchor.mime_type if anchor else "",
         "sha256": anchor.sha256 if anchor else "",
@@ -314,7 +347,7 @@ def _file_data(item: UploadItem | None, edition: Edition) -> dict[str, Any]:
         "error_message": item.error_message if item else "",
         "can_retry": bool(item and item.status == UploadItem.Status.FAILED),
         "can_resume": bool(item and item.status in {UploadItem.Status.FAILED, UploadItem.Status.NEEDS_REVIEW}),
-        "can_replace": bool(item and edition.state == PublicationState.PUBLISHED),
+        "can_replace": bool(current_reader and current_reader.kind == Asset.Kind.NORMALIZED and current_reader.status == Asset.Status.READY),
         "original_asset_id": str(original.id) if original else None,
         "normalized_asset_id": str(normalized.id) if normalized else None,
     }
@@ -526,23 +559,28 @@ def _knowledge_data(workflow: dict[str, Any], edition: Edition) -> dict[str, Any
     }
 
 
-def _reader_data(edition: Edition) -> dict[str, Any]:
+def _reader_data(edition: Edition, *, availability=None) -> dict[str, Any]:
+    from catalog.services.catalog_availability import catalog_availability
+    availability = availability if availability is not None else catalog_availability(edition)
+    capabilities = {row["key"]: row for row in availability["capabilities"]}
     assets = list(
         edition.assets.filter(is_current=True).order_by("kind", "-version").values(
             "id", "kind", "status", "validation_status", "page_count", "mime_type"
         )
     )
-    normalized = next((row for row in assets if row["kind"] == Asset.Kind.NORMALIZED), None)
     original = next((row for row in assets if row["kind"] == Asset.Kind.ORIGINAL), None)
     return {
-        "readable": bool(normalized and normalized["status"] == Asset.Status.READY),
+        "readable": capabilities["pdf"]["status"] == "ready",
         "original_asset_status": original["status"] if original else "pending",
         "reader_rendition_policy": edition.reader_rendition_policy,
-        "text_layer_status": edition.ocr_status,
+        "text_layer_status": capabilities["text"]["status"],
         "ocr_status": edition.ocr_status,
         "page_label_status": edition.page_label_status,
-        "semantic_index_status": edition.semantic_index_status,
-        "full_text_index_status": "ready" if edition.search_indexed_at else "pending",
+        "semantic_index_status": capabilities["semantic"]["status"],
+        "viewpoint_status": capabilities["viewpoint"]["status"],
+        "qa_status": capabilities["qa"]["status"],
+        "full_text_index_status": capabilities["fulltext"]["status"],
+        "availability": availability,
         "assets": assets,
         "expected_updated_at": edition.updated_at,
         "expected_work_updated_at": edition.work.updated_at,
@@ -814,8 +852,9 @@ def _publication_data(workflow: dict[str, Any], edition: Edition) -> dict[str, A
             kind=Asset.Kind.NORMALIZED,
             is_current=True,
             status=Asset.Status.READY,
+            validation_status=Asset.ValidationStatus.VALID,
         ).exists()
-        else "pending",
+        else "not_applicable" if edition.publication_mode == "bibliographic" and not edition.assets.exists() else "pending",
         "curation_summary": (
             "已加入阅读路径"
             if ReadingPathItem.objects.filter(work=edition.work).exists()
@@ -826,16 +865,20 @@ def _publication_data(workflow: dict[str, Any], edition: Edition) -> dict[str, A
     }
 
 
-def _queue_for(item: UploadItem | None) -> dict[str, Any]:
-    queryset = UploadItem.objects.filter(status__in=QUEUE_STATUSES, edition__isnull=False)
-    if item:
-        queryset = queryset.exclude(pk=item.pk)
-    next_item = queryset.order_by("-priority", "updated_at", "created_at").first()
+def _queue_for(item: UploadItem | None, *, edition=None, user=None) -> dict[str, Any]:
+    from catalog.services.admin_queue import workflow_rows
+
+    current_edition = str(edition.pk) if edition else str(item.edition_id) if item and item.edition_id else None
+    rows = [row for row in workflow_rows(user=user)
+            if (not current_edition or row["edition_id"] != current_edition)
+            and (not item or row["item_id"] != str(item.pk))]
+    following = rows[0] if rows else {}
     return {
-        "next_item_id": str(next_item.id) if next_item else None,
-        "next_work_id": str(next_item.edition.work_id) if next_item and next_item.edition_id else None,
+        "next_item_id": following.get("item_id"), "next_work_id": following.get("work_id"),
+        "next_edition_id": following.get("edition_id"), "next_session_id": following.get("session_id"),
+        "next_workbench_url": following.get("workbench_url", ""),
         "return_href": "/admin/review",
-        "remaining_count": queryset.count(),
+        "remaining_count": len(rows), "ordering": "-priority,updated_at,id",
     }
 
 
@@ -846,7 +889,8 @@ def _permissions(user) -> dict[str, Any]:
         "can_confirm": has_capability(user, Capability.EDIT_METADATA),
         "can_manage_publication": has_capability(user, Capability.PUBLISH_WORK),
         "can_publish": has_capability(user, Capability.PUBLISH_WORK),
-        "can_withdraw": has_capability(user, Capability.PUBLISH_WORK),
+        "can_withdraw": has_capability(user, Capability.WITHDRAW_WORK),
+        "withdraw_denied_reason": "" if has_capability(user, Capability.WITHDRAW_WORK) else "仅 Administrator 或 System Owner 可以撤回馆藏。",
         "can_manage_curation": has_capability(user, Capability.EDIT_DRAFT_AUTHORITY),
         "can_review_candidate": has_capability(user, Capability.REVIEW_CANDIDATE),
         "capabilities": list(snapshot.capabilities),
@@ -860,7 +904,9 @@ def build_admin_workspace(
     mode: str,
     item: UploadItem | None = None,
 ) -> dict[str, Any]:
-    edition = Edition.objects.select_related("work", "publisher_authority").get(pk=edition.pk)
+    edition = Edition.objects.select_related("work", "publisher_authority", "active_catalog_revision", "active_catalog_revision__reader_asset").get(pk=edition.pk)
+    from catalog.services.catalog_availability import catalog_availability
+    availability = catalog_availability(edition)
     work = edition.work
     workflow = build_intake_workflow(item) if item else build_edition_workflow(edition)
     normalized = edition.assets.filter(
@@ -886,7 +932,7 @@ def build_admin_workspace(
         "contributors": _contributors_data(edition),
         "classification": _classification_data(workflow, edition),
         "knowledge": _knowledge_data(workflow, edition),
-        "reader": _reader_data(edition),
+        "reader": _reader_data(edition, availability=availability),
         "curation": _curation_data(workflow, work),
         "publication": _publication_data(workflow, edition),
     }
@@ -921,6 +967,7 @@ def build_admin_workspace(
             "knowledge_update_suggestions", []
         )
     pending_revision = None
+    other_edition_revision = None
     edition_revision = None
     if mode == "maintenance":
         pending_revision = EditorialRevision.objects.filter(
@@ -928,6 +975,11 @@ def build_admin_workspace(
             target_id=work.id,
             status=EditorialRevision.Status.DRAFT,
         ).order_by("-revision").first()
+        from catalog.services.publication_commands import editorial_draft_applies_to_edition
+
+        if pending_revision is not None and not editorial_draft_applies_to_edition(pending_revision, edition):
+            other_edition_revision = pending_revision
+            pending_revision = None
         if pending_revision is not None:
             _apply_work_revision_preview(
                 data,
@@ -963,12 +1015,31 @@ def build_admin_workspace(
     from catalog.models import CatalogingSession
     from catalog.services.cataloging_sessions import OPEN_STATUSES, session_payload
     session = CatalogingSession.objects.filter(edition=edition, status__in=OPEN_STATUSES).order_by("-created_at").first()
+    health = catalog_health(edition)
+    from catalog.services.workspace_edits import workspace_edit_version
     return {
         "mode": mode,
         "cataloging_session": session_payload(session) if session else None,
-        "health": catalog_health(edition),
+        "health": health,
+        "availability": availability,
+        "publication": visibility,
+        "editing": {
+            "edit_version": workspace_edit_version(edition),
+            "has_unpublished_changes": health["publication"] == "changes_pending",
+            "draft_revision_id": str(pending_revision.pk) if pending_revision else None,
+            "base_public_revision_id": str(session.base_public_revision_id) if session and session.base_public_revision_id else None,
+            "conflict": health["editorial"] == "conflict",
+            "saved_at": pending_revision.updated_at if pending_revision else max(edition.updated_at, work.updated_at),
+        },
         "context": {
             "cataloging_session_id": str(session.pk) if session else None,
+            "session_id": str(session.pk) if session else None,
+            "source_type": session.source_type if session else "upload" if item else "existing",
+            "version_label": edition.version_label,
+            "updated_at": edition.updated_at, "work_updated_at": work.updated_at,
+            "available_editions": [{"id": str(row.pk), "version_label": row.version_label,
+                                    "publication_year": row.publication_year, "is_primary": row.is_primary}
+                                   for row in work.editions.order_by("-is_primary", "-publication_year", "id")],
             "item_id": str(item.id) if item else None,
             "work_id": str(work.id),
             "edition_id": str(edition.id),
@@ -976,6 +1047,8 @@ def build_admin_workspace(
             "filename": item.source_filename if item else (normalized.original_filename if normalized else ""),
             "document_type": data["work"].get("document_type") or work.document_type,
             "publication_state": edition.state,
+            "publication": visibility,
+            "is_primary": edition.is_primary,
             "publication_mode": edition.publication_mode,
             "pdf_preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
                 f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
@@ -988,13 +1061,14 @@ def build_admin_workspace(
         "data": data,
         "candidates": candidates,
         "permissions": _permissions(user),
-        "queue": _queue_for(item),
+        "queue": _queue_for(item, edition=edition, user=user),
         "editorial_revision": serialized_revision,
+        "other_edition_draft": {"revision_id": str(other_edition_revision.pk), "detail": "此作品另有其他出版版本的草稿，不属于当前版本。"} if other_edition_revision else None,
         "edition_editorial_revision": serialize_editorial_revision(edition_revision) if edition_revision is not None else None,
     }
 
 
-def work_library_queryset(*, query: str = "", view: str = ""):
+def work_library_queryset(*, query: str = "", view: str = "", ordering: str = "title"):
     queryset = Work.objects.all().annotate(
         edition_count_value=Count("editions", distinct=True)
     ).prefetch_related(
@@ -1017,21 +1091,28 @@ def work_library_queryset(*, query: str = "", view: str = ""):
             | Q(editions__contributions__person__preferred_name__icontains=query)
         ).distinct()
     if view == "published":
-        queryset = queryset.filter(editions__state=PublicationState.PUBLISHED).distinct()
+        from catalog.services.publication_eligibility import public_edition_q
+
+        queryset = queryset.filter(public_edition_q(prefix="editions"), editions__is_primary=True).distinct()
     elif view == "withdrawn":
-        queryset = queryset.filter(editions__state=PublicationState.WITHDRAWN).distinct()
+        queryset = queryset.filter(editions__state=PublicationState.WITHDRAWN, editions__is_primary=True).distinct()
     elif view == "draft":
-        queryset = queryset.filter(editions__state__in=[PublicationState.DRAFT, PublicationState.READY]).distinct()
+        queryset = queryset.filter(editions__state__in=[PublicationState.DRAFT, PublicationState.READY], editions__is_primary=True).distinct()
     elif view in {"attention", "quality"}:
         queryset = queryset.filter(
             Q(editions__review_status__in=["not_started", "in_progress"])
             | Q(editions__assets__status=Asset.Status.FAILED)
         ).distinct()
-    return queryset.order_by("title", "id")
+    return queryset.order_by(ordering if ordering in {"title", "-title", "updated_at", "-updated_at"} else "title", "id")
 
 
-def serialize_work_library_row(work: Work) -> dict[str, Any]:
-    editions = list(work.editions.all())
+def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
+    from catalog.services.admin_queue import edition_summary, load_admin_editions
+
+    editions = work._admin_editions if hasattr(work, "_admin_editions") else load_admin_editions(work.editions.all())
+    edition_count = getattr(work, "edition_count_value", len(editions))
+    if editions:
+        work = editions[0].work
     primary = max(
         editions,
         key=lambda edition: (
@@ -1043,12 +1124,12 @@ def serialize_work_library_row(work: Work) -> dict[str, Any]:
         default=None,
     )
     if primary is None:
-        publication_state = "draft"
+        publication_state = "unpublished"
         asset_state = "pending"
         contributors: list[str] = []
         primary_label = "尚无版本"
     else:
-        publication_state = primary.state
+        publication_state = edition_summary(primary, user=user)["publication"]["public_state"]
         assets = [row for row in primary.assets.all() if row.is_current]
         normalized_assets = [row for row in assets if row.kind == Asset.Kind.NORMALIZED]
         asset = max(normalized_assets or assets, key=lambda row: row.version, default=None)
@@ -1075,7 +1156,7 @@ def serialize_work_library_row(work: Work) -> dict[str, Any]:
         for row in legacy_relations
         if row.concept_id
     }
-    mapped_nodes = {
+    mapped_nodes = work._admin_legacy_mapping if hasattr(work, "_admin_legacy_mapping") else {
         (row.legacy_model, row.legacy_id): row.node_id
         for row in LegacyKnowledgeMapping.objects.filter(
             legacy_id__in=legacy_ids,
@@ -1119,44 +1200,28 @@ def serialize_work_library_row(work: Work) -> dict[str, Any]:
         row.active and row.policy.placement in WORK_RECOMMENDATION_PLACEMENTS
         for row in work.recommendationoverride_set.all()
     )
+    summary = edition_summary(primary, user=user) if primary else None
     return {
+        "row_type": "work", "work_id": str(work.id),
         "id": str(work.id),
         "title": work.title,
         "document_type": work.document_type,
         "language": work.language,
         "contributors": contributors,
-        "edition_count": getattr(work, "edition_count_value", len(editions)),
+        "edition_count": edition_count,
         "primary_edition": {
             "id": str(primary.id) if primary else None,
             "label": primary_label,
             "version_label": primary.version_label if primary else "",
         },
         "publication_state": publication_state,
-        "asset_state": asset_state,
+        "publication": summary["publication"] if summary else {"public_state": "unpublished", "publicly_visible": False,
+                                                               "listed_publicly": False, "catalog_revision_active": False, "public_url": "", "detail": "尚无出版版本。"},
+        "health": summary["health"] if summary else {"editorial": "draft", "processing": "idle", "publication": "unpublished"},
+        "workbench_url": f"/admin/library/works/{work.id}?edition={primary.pk}" if primary else "",
+        "edition_id": str(primary.pk) if primary else None,
+        "asset_state": "not_applicable" if primary and primary.publication_mode == "bibliographic" and not list(primary.assets.all()) else asset_state,
         "knowledge_status": knowledge_status,
         "curation_status": "complete" if curated else "attention",
         "updated_at": work.updated_at,
-    }
-
-
-def serialize_workflow_queue_item(item: UploadItem) -> dict[str, Any]:
-    workflow = build_intake_workflow(item)
-    current = next(
-        (row for row in workflow["steps"] if row["key"] == workflow["current_step"]),
-        {"label": workflow["current_step"]},
-    )
-    work = item.edition.work if item.edition_id else None
-    return {
-        "item_id": str(item.id),
-        "work_id": str(work.id) if work else None,
-        "title": work.title if work else item.source_filename,
-        "source_filename": item.source_filename,
-        "document_type": work.document_type if work else item.document_type_hint,
-        "current_step": workflow["current_step"],
-        "current_step_label": current["label"],
-        "overall_status": workflow["overall_status"],
-        "unresolved_count": workflow["unresolved_count"],
-        "warnings_count": workflow["warnings_count"],
-        "blockers_count": workflow["blockers_count"],
-        "updated_at": item.updated_at,
     }

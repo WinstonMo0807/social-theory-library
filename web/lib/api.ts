@@ -243,8 +243,15 @@ export async function apiRequest<T>(
     const nested = payload?.error?.detail;
     const reasons = payload?.reasons ?? nested?.reasons;
     const detail = nested?.detail ?? payload?.detail ?? nested;
-    const pieces = [errorText(detail), errorText(reasons)].filter(Boolean);
-    throw new ApiRequestError(pieces.join("；") || `请求失败（${response.status}）`, response.status);
+    // DRF field validation sits next to the common error envelope. Display
+    // these user-facing messages, not diagnostic details or technical keys.
+    const reserved = new Set(["code", "message", "field", "severity", "details", "error", "detail", "reasons", "diagnostics", "traceback"]);
+    const fieldErrors = payload && typeof payload === "object" ? Object.entries(payload)
+      .filter(([key, value]) => !reserved.has(key) && Array.isArray(value) && value.every(item => typeof item === "string"))
+      .map(([, value]) => errorText(value)) : [];
+    const pieces = [...new Set([errorText(detail), errorText(reasons), ...fieldErrors].filter(Boolean))];
+    const message = typeof payload?.message === "string" ? payload.message : "";
+    throw new ApiRequestError(pieces.join("；") || message || `请求失败（${response.status}）`, response.status);
   }
   if (response.status === 204) {
     return undefined as T;

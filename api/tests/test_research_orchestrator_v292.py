@@ -2124,7 +2124,8 @@ def test_preview_urls_and_public_visibility_follow_publication_state(
     )
     assert admin_preview.status_code == 200
     assert admin_preview.data["preview_mode"] is True
-    assert admin_preview.data["publication_state"] == state
+    assert admin_preview.data["publication"]["editorial_state"] == state
+    assert admin_preview.data["publication_state"] == ("unpublished" if state in {PublicationState.DRAFT, PublicationState.READY} else state)
     assert admin_preview.data["public_url"] == expected_public_url
     assert admin_preview.data["pdf_preview_url"] == ""
 

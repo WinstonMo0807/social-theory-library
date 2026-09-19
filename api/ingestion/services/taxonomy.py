@@ -1,4 +1,3 @@
-import json
 import re
 
 from catalog.models import (
@@ -170,43 +169,13 @@ def controlled_vocabulary_candidates_for_asset(asset, *, max_chars: int = 250_00
 def persist_controlled_vocabulary_candidates(upload_item, candidates) -> dict[str, int]:
     """Upsert review-only candidates while preserving all manual metadata."""
 
-    from ingestion.models import MetadataCandidate
+    from .candidate_store import persist_metadata_candidates
 
-    existing = {
-        (
-            row.field_name,
-            json.dumps(row.value, ensure_ascii=False, sort_keys=True, default=str),
-        ): row
-        for row in upload_item.metadata_candidates.filter(
-            source=CONTROLLED_VOCABULARY_SOURCE,
-        )
-    }
-    created = 0
-    updated = 0
-    for candidate in candidates:
-        key = (
-            candidate.field_name,
-            json.dumps(candidate.value, ensure_ascii=False, sort_keys=True, default=str),
-        )
-        row = existing.get(key)
-        if row is None:
-            MetadataCandidate.objects.create(
-                upload_item=upload_item,
-                field_name=candidate.field_name,
-                value=candidate.value,
-                source=candidate.source,
-                evidence=candidate.evidence,
-                confidence=candidate.confidence,
-                selected=False,
-            )
-            created += 1
-            continue
-        row.evidence = candidate.evidence
-        row.confidence = candidate.confidence
-        row.selected = False
-        row.save(update_fields=["evidence", "confidence", "selected", "updated_at"])
-        updated += 1
-    return {"created": created, "updated": updated, "total": len(candidates)}
+    # Both controlled vocabulary and unmapped keyword suggestions use this
+    # path. Match their actual source and serialize on the existing parent;
+    # never reset a human decision or supersede another partial field batch.
+    result = persist_metadata_candidates(upload_item, candidates, supersede_sources=set())
+    return {"created": result["added"], "updated": result["updated"], "total": len(candidates)}
 
 
 def _matches(text: str, tokens: tuple[str, ...]) -> int:

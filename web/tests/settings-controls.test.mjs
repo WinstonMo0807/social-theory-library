@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { readStyleSource } from "../scripts/style-source.mjs";
+import { selectedQueueItem } from "../lib/api/admin-collections.ts";
+import { buildCandidateActionBody, resolveCandidateActionDescriptors } from "../components/admin/research/candidate-action-contract.ts";
+import { normalizeEvidenceEnvelope } from "../components/admin/research/evidence-envelope.ts";
 
 test("user administration exposes only Reader Editor and Administrator roles", async () => {
   const [sections, shell] = await Promise.all([
@@ -17,14 +20,14 @@ test("user administration exposes only Reader Editor and Administrator roles", a
   assert.match(sections, /只有 System Owner 可以授予或撤销 Administrator/);
 });
 
-test("admin footer uses the shared 3.0.5 cataloging version", async () => {
+test("admin footer uses the shared 3.0.6 cataloging version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "3\.0\.5"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.5 统一编目与知识发布"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.6"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.6 馆藏管理与公开发布"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
@@ -123,20 +126,31 @@ test("admin navigation uses the approved groups and only real routes", async () 
   const navigationSource = source.slice(navigationStart, navigationEnd);
 
   const expectedGroups = [
-    ["工作", ["/admin", "/admin/uploads", "/admin/review", "/admin/publication"]],
+    ["待办与上架", ["/admin", "/admin/uploads", "/admin/cataloging/new", "/admin/review", "/admin/publication"]],
     ["馆藏", ["/admin/library", "/admin/media", "/admin/library?view=editions", "/admin/library?view=quality"]],
-    ["知识", [
+    ["知识与关联", [
       "/admin/knowledge",
       "/admin/scholars",
       "/admin/people",
       "/admin/disciplines",
+      "/admin/subdisciplines",
       "/admin/theories",
       "/admin/topics",
+      "/admin/theory-relations",
     ]],
-    ["策展", ["/admin/reading-paths", "/admin/recommendations"]],
-    ["系统", [
+    ["公开展示", ["/admin/knowledge#studio-public-pages", "/admin/reading-paths", "/admin/recommendations", "/admin/about", "/admin/settings#public-display"]],
+    ["处理与服务", [
       "/admin/processing",
+      "/admin/processing?surface=research-sources",
+      "/admin/processing?surface=ai-models",
+      "/admin/query-lexicon",
+      "/admin/semantic-index",
+      "/admin/status",
+      "/admin/system-health",
+    ]],
+    ["系统管理", [
       "/admin/distribution",
+      "/admin/settings#backups",
       "/admin/analytics",
       "/admin/users",
       "/admin/settings",
@@ -154,7 +168,8 @@ test("admin navigation uses the approved groups and only real routes", async () 
     "admin groups follow the approved order",
   );
 
-  const allRoutes = [];
+  // Timeline belongs under theory management, but its old URL stays usable.
+  const allRoutes = ["/admin/theory-timeline"];
   expectedGroups.forEach(([group, expectedRoutes], index) => {
     const groupStart = groupPositions[index];
     const groupEnd = groupPositions[index + 1] ?? navigationSource.length;
@@ -167,13 +182,13 @@ test("admin navigation uses the approved groups and only real routes", async () 
 
   assert.equal(new Set(allRoutes).size, allRoutes.length, "navigation routes are unique");
   assert.doesNotMatch(navigationSource, /"系统高级"/);
-  assert.doesNotMatch(navigationSource, /"\/admin\/status"/);
-  assert.doesNotMatch(navigationSource, /"\/admin\/query-lexicon"/);
-  assert.doesNotMatch(navigationSource, /"\/admin\/semantic-index"/);
-  assert.match(navigationSource, /\["\/admin\/uploads", Upload, "上传与上架"\]/);
+  assert.match(navigationSource, /"\/admin\/status"/);
+  assert.match(navigationSource, /"\/admin\/query-lexicon"/);
+  assert.match(navigationSource, /"\/admin\/semantic-index"/);
+  assert.match(navigationSource, /\["\/admin\/uploads", Upload, "上传与批次"\]/);
   assert.match(navigationSource, /\["\/admin\/theories", CircleDot, "理论传统"\]/);
   await Promise.all(allRoutes.map((href) => {
-    const pathname = href.split("?")[0];
+    const pathname = href.split(/[?#]/)[0];
     return access(new URL(
     pathname === "/admin" ? "../app/admin/page.tsx" : `../app${pathname}/page.tsx`,
     import.meta.url,
@@ -230,8 +245,10 @@ test("publication filters keep the detail pane on a visible item", async () => {
     new URL("../components/publication-desk.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /const active = filtered\.find\(\(item\) => item\.id === selectedId\) \?\? filtered\[0\] \?\? null/);
-  assert.match(source, /className=\{item\.id === active\?\.id \? "active" : ""\}/);
+  assert.match(source, /selectedQueueItem/);
+  assert.equal(selectedQueueItem([{ id: "edition:1" }, { id: "edition:2" }], "edition:2").id, "edition:2");
+  assert.equal(selectedQueueItem([{ id: "edition:1" }], "edition:2"), null);
+  assert.equal(selectedQueueItem([{ id: "edition:1" }], ""), null);
 });
 
 test("admin-only navigation permissions remain explicit after regrouping", async () => {
@@ -256,7 +273,7 @@ test("admin-only navigation permissions remain explicit after regrouping", async
     "/admin/distribution",
     "/admin/settings",
   ]);
-  assert.match(source, /user\.role === "admin" \|\| !administratorOnlyRoutes\.has\(href\)/);
+  assert.match(source, /user\.role === "admin" \|\| !administratorOnlyRoutes\.has\(href\.split/);
   assert.match(source, /"\/admin\/processing": \["can_view_system_status"\]/);
   assert.match(source, /"\/admin\/query-lexicon": \["can_view_query_lexicon"\]/);
   assert.match(source, /"\/admin\/semantic-index": \["can_view_semantic_index"\]/);
@@ -392,45 +409,29 @@ test("admin primitives are integrated without fixed-width dashboard overflow", a
   assert.match(styles, /@media \(max-width: 1280px\) \{[\s\S]*?\.metric-grid \{[\s\S]*?repeat\(3, 1fr\)/);
 });
 
-test("metadata review exposes auditable candidate lifecycle and real decisions", async () => {
-  const source = await readFile(
-    new URL("../components/metadata-review.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(source, /type CandidateLifecycle = "proposed" \| "accepted" \| "rejected" \| "superseded"/);
-  assert.match(source, /score_factors: Record<string, unknown>/);
-  assert.match(source, /evidence_records: CandidateEvidence\[\]/);
-  assert.match(source, /<MetadataCandidateScoreFactors factors=\{candidate\.score_factors \?\? \{\}\} \/>/);
-  assert.match(source, /<MetadataCandidateEvidenceList candidate=\{candidate\}/);
-  assert.match(source, /pageLabel=\{pageLabel\}/);
-  assert.match(source, /candidateLifecycleLabels\[lifecycle\]/);
-  assert.match(source, /\/ingestion\/items\/\$\{itemId\}\/metadata-candidates\/\$\{candidate\.id\}\/decision\//);
-  assert.match(source, /body: JSON\.stringify\(\{ action \}\)/);
-  assert.match(source, />填入表单<\/button>/);
-  assert.match(source, /"reject"/);
-  assert.match(source, /恢复待审/);
-  assert.match(source, /填入表单不等于最终接受/);
-  assert.doesNotMatch(source, /采用此值/);
+test("shared review contract keeps lifecycle records separate from explicit decisions and evidence", () => {
+  for (const lifecycle of ["proposed", "accepted", "rejected", "superseded"]) {
+    const candidate = { status: lifecycle, action_descriptors: [{ action: "reject", url: "/catalog/admin/research/candidates/one/decision/", payload: { candidate_id: "one" } }] };
+    const [descriptor] = resolveCandidateActionDescriptors(candidate);
+    assert.deepEqual(buildCandidateActionBody(descriptor), { candidate_id: "one", action: "reject" });
+    assert.equal(candidate.status, lifecycle);
+  }
+  const evidence = normalizeEvidenceEnvelope({ supporting_text: "完整的候选依据", source: { work_title: "准确作品", asset_id: "original" }, locator: { page: 9, printed_page_label: "7" }, quality: { score: 0.5, body_fetched: true } });
+  assert.equal(evidence.text, "完整的候选依据");
+  assert.equal(evidence.printedPageLabel, "7");
+  assert.equal(evidence.readerUrl, "/reader/original?page=9");
+  assert.equal(evidence.qualityScore, 0.5);
 });
 
-test("metadata review uses confirmed entity decisions and review-only bibliographic imports", async () => {
-  const source = await readFile(
-    new URL("../components/metadata-review.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(source, /entity_resolution_candidates: EntityResolutionCandidate\[\]/);
-  assert.match(source, /同名不会自动合并/);
-  assert.match(source, /同名不(?:会)?自动合并/);
-  assert.match(source, /保存复核内容时建立草稿档案，发布前仍需核对/);
-  assert.match(source, /现阶段只用于核对/);
-  assert.match(source, /entity-resolution-candidates\/\$\{candidate\.id\}\/decision\//);
-  assert.match(source, /confirm_identity: action === "link_existing" && candidate\.target_type === "person"/);
-  assert.match(source, /系统不会把草稿或未解析名称直接公开/);
-  assert.match(source, /\/ingestion\/items\/\$\{itemId\}\/metadata-import\//);
-  assert.match(source, /支持单条 RIS、BibTeX、CSL-JSON、sidecar JSON 与安全 YAML/);
-  assert.match(source, /导入内容只形成待审候选，不会直接覆盖馆藏/);
+test("shared identity decisions require server descriptors and preserve confirmation and candidate-only import", async () => {
+  const [link] = resolveCandidateActionDescriptors({ entity_type: "person", action_descriptors: [{ action: "link_existing", payload: { person_id: "selected-person", confirm_identity: true } }] });
+  assert.deepEqual(buildCandidateActionBody(link), { person_id: "selected-person", confirm_identity: true, action: "link_existing" });
+  assert.deepEqual(resolveCandidateActionDescriptors({ proposed_value: "同名人物" }), []);
+  const uploads = await readFile(new URL("../components/admin-upload.tsx", import.meta.url), "utf8");
+  assert.match(uploads, /metadata-import/);
+  const editor = await readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8");
+  assert.match(editor, /buildCandidateActionBody/);
+  assert.match(editor, /confirm_identity/);
 });
 
 test("candidate evidence and action layouts wrap inside the review sidebar", async () => {

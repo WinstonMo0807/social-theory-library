@@ -241,7 +241,7 @@ def select_work_image(edition_id, media_id, *, slot, actor, automatic=False, exp
 @transaction.atomic
 def _select_prepared_work_image(edition_id, primary, *, slot, actor, automatic, expected_work_id):
     from catalog.contracts.fields import FIELD_LABELS
-    from catalog.models import CatalogFieldDecision, Edition, Work
+    from catalog.models import CatalogFieldDecision, CoverCandidate, Edition, Work
     from catalog.services.editorial_revision import save_workflow_editorial_revision
     from catalog.services.field_decisions import record_edition_field_decision
 
@@ -260,14 +260,16 @@ def _select_prepared_work_image(edition_id, primary, *, slot, actor, automatic, 
     name = primary.file.name if primary else ""
     revision = None
     if published:
-        revision = save_workflow_editorial_revision(
-            work_id=work.pk, section_patch={relation: str(primary.pk) if primary else None, field: name}, actor=actor,
+            revision = save_workflow_editorial_revision(
+                work_id=work.pk, edition_id=edition.pk, section_patch={relation: str(primary.pk) if primary else None, field: name}, actor=actor,
             change_note=f"更新{FIELD_LABELS[field]}选择，等待正式发布",
         )
     else:
         setattr(work, relation, primary)
         setattr(work, field, name)
         work.save(update_fields=[relation, field, "updated_at"])
+    if slot == "cover":
+        CoverCandidate.objects.filter(work=work, selected=True).update(selected=False)
     record_edition_field_decision(edition, field, value=name, status="suggested" if automatic else "confirmed" if primary else "not_applicable", actor=actor,
                                   provenance={"source": "media_library", "media_id": str(media_id) if media_id else None,
                                               "canonical_write_deferred": revision is not None,
@@ -280,3 +282,59 @@ def _select_prepared_work_image(edition_id, primary, *, slot, actor, automatic, 
 
 def select_work_cover(edition_id, media_id, *, actor):
     return select_work_image(edition_id, media_id, slot="cover", actor=actor)
+
+
+def media_reference_inventory(media_id):
+    """Read persisted current/draft/history references without opening files."""
+    from django.db.models import Q
+    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline
+    from catalog.services.publication_commands import catalog_publication_state
+
+    references = []
+    for row in CatalogPublicationMedia.objects.filter(rendition__media_id=media_id).select_related(
+        "catalog_revision__edition__work", "catalog_revision__edition__active_catalog_revision",
+    ).prefetch_related("catalog_revision__edition__catalog_revisions").order_by("-created_at", "pk"):
+        revision, edition = row.catalog_revision, row.catalog_revision.edition
+        publication = catalog_publication_state(edition)
+        current = str(edition.active_catalog_revision_id) == str(revision.pk) and publication["catalog_revision_active"]
+        references.append({"id": str(row.pk), "kind": "current_public" if current else "history", "label": edition.work.title,
+                           "detail": f"公开修订 {revision.revision} · {revision.get_status_display()}",
+                           "editor_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
+                           "public_url": publication["public_url"] if current else ""})
+    drafts = list(EditorialRevisionMedia.objects.filter(rendition__media_id=media_id).select_related("editorial_revision").order_by("-created_at", "pk"))
+    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline}
+    labels = {}
+    for kind, model in target_models.items():
+        ids = [row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == kind]
+        queryset = model.objects.filter(pk__in=ids)
+        if kind == "scholar_profile":
+            queryset = queryset.select_related("person")
+        for target in queryset:
+            labels[(kind, str(target.pk))] = target.person.preferred_name if kind == "scholar_profile" else getattr(target, "name", getattr(target, "title", getattr(target, "canonical_name_zh", "")))
+    for row in drafts:
+        revision = row.editorial_revision
+        kind, target_id = revision.target_type, str(revision.target_id)
+        route = {"work": f"/admin/library/works/{target_id}", "scholar_profile": f"/admin/scholars/{target_id}", "knowledge_node": f"/admin/theories/{target_id}", "reading_path": f"/admin/reading-paths?path={target_id}", "discipline": f"/admin/disciplines?discipline={target_id}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target_id}"}.get(kind, "")
+        references.append({"id": str(row.pk), "kind": "draft" if revision.status == "draft" else "history",
+                           "label": labels.get((kind, target_id), "原对象或其历史记录"),
+                           "detail": f"编辑修订 {revision.revision} · {revision.status}", "editor_url": route, "public_url": ""})
+    # Canonical choices are not labelled public: Work public snapshots can
+    # deliberately still refer to the previous image while a change is pending.
+    for work in Work.objects.filter(Q(cover_rendition__media_id=media_id) | Q(recommendation_rendition__media_id=media_id)).order_by("pk"):
+        references.append({"id": f"work:{work.pk}", "kind": "canonical", "label": work.title,
+                           "detail": "当前作品选图，实际公开使用以活动修订为准", "editor_url": f"/admin/library/works/{work.pk}", "public_url": ""})
+    for profile in ScholarProfile.objects.filter(person__portrait_rendition__media_id=media_id).select_related("person").order_by("pk"):
+        public = profile.editorial_status == "published" and profile.person.authority_status == "verified"
+        references.append({"id": f"scholar:{profile.pk}", "kind": "current_public" if public else "canonical", "label": profile.person.preferred_name,
+                           "detail": "学者肖像", "editor_url": f"/admin/scholars/{profile.pk}", "public_url": f"/scholars/{profile.slug}" if public else ""})
+    for kind, model, public_prefix, admin_prefix in (("knowledge_node", KnowledgeNode, "/theories/nodes/", "/admin/theories/"), ("reading_path", ReadingPath, "/theories/reading-paths/", "/admin/reading-paths?path=")):
+        for target in model.objects.filter(cover_rendition__media_id=media_id).order_by("pk"):
+            public = target.status == "published"
+            references.append({"id": f"{kind}:{target.pk}", "kind": "current_public" if public else "canonical", "label": getattr(target, "title", getattr(target, "canonical_name_zh", "")),
+                               "detail": "理论页面图片" if kind == "knowledge_node" else "阅读路径图片", "editor_url": f"{admin_prefix}{target.pk}", "public_url": f"{public_prefix}{target.slug}" if public else ""})
+    for kind, model, public_prefix in (("discipline", Discipline, "/theories/disciplines/"), ("subdiscipline", Subdiscipline, "/subdisciplines/")):
+        for target in model.objects.filter(hero_rendition__media_id=media_id).order_by("pk"):
+            public = target.editorial_status == "published"
+            references.append({"id": f"{kind}:{target.pk}", "kind": "current_public" if public else "canonical", "label": target.name,
+                               "detail": "学科页面图片", "editor_url": f"/admin/{kind}s?{kind}={target.pk}", "public_url": f"{public_prefix}{target.slug}" if public else ""})
+    return {"count": len(references), "results": references, "scope": "持久媒体选择、编辑修订与公开修订引用；旧未迁入媒体库的文件不在此范围", "reader_private_data": "not_read"}

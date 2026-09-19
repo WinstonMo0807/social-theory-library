@@ -114,6 +114,23 @@ server {
         proxy_read_timeout 60s;
     }
 
+    # Edition-scoped cover uploads allow a 12 MiB image plus multipart fields.
+    # Keep the default 2 MiB ceiling for unrelated admin and public requests.
+    location ~ ^/api/catalog/admin/editions/[0-9a-fA-F-]+/cover/$ {
+        client_max_body_size 13m;
+        limit_req zone=general_api burst=12 nodelay;
+        limit_conn per_ip 8;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $library_forwarded_proto;
+        proxy_set_header X-Library-LAN $library_lan_http;
+        proxy_set_header X-Library-LAN-Token ${LAN_PROXY_TOKEN};
+        proxy_set_header X-Use-X-Accel 1;
+        proxy_read_timeout 120s;
+    }
+
     location ^~ /api/distribution/assets/ {
         limit_conn per_ip 12;
         proxy_pass http://api:8000;

@@ -63,8 +63,10 @@ test("owner merges, reloads the saved operation and rolls back through the real 
   page.on("response", (response) => { if (response.status() >= 500) serverErrors.push(`${response.status()} ${response.url()}`); });
   await login(page);
   await review(page, 1);
-  await page.getByText("查看作品与版本", { exact: true }).click();
-  await expect(page.getByText("E2E完整操作作品", { exact: true })).toBeVisible();
+  const business = page.getByRole("region", { name: "作品职责与公开位置", exact: true });
+  await expect(business.getByText("E2E完整操作作品", { exact: true })).toBeVisible();
+  await expect(business).toContainText("作者");
+  await expect(business.getByRole("link", { name: "核对当前版本与署名", exact: true })).toHaveAttribute("href", /edition=[a-f0-9-]+#contributors/);
   const preview = page.getByRole("region", { name: "合并影响预览", exact: true });
   await preview.getByText("规范名称变体", { exact: false }).click();
   await expect(preview.getByText("E2E完整操作旧译名", { exact: true })).toBeVisible();

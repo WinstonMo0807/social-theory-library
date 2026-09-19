@@ -21,6 +21,7 @@ from catalog.models import (
     KnowledgeNodeDiscipline,
     KnowledgeNodeSubdiscipline,
     KnowledgeNodeTopic,
+    KnowledgeRelation,
     KnowledgePublicationStatus,
     Person,
     PersonNameVariant,
@@ -31,6 +32,7 @@ from catalog.models import (
     ScholarProfile,
     Subdiscipline,
     TheorySchool,
+    TheoryTimelineEvent,
     Topic,
     TopicDisciplineRelation,
     TopicSubdisciplineRelation,
@@ -54,6 +56,12 @@ class EditorialTargetPolicy:
 
 
 TARGET_POLICIES = {
+    EditorialRevision.TargetType.KNOWLEDGE_RELATION: EditorialTargetPolicy(
+        KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "confidence", "status"}),
+    ),
+    EditorialRevision.TargetType.TIMELINE_EVENT: EditorialTargetPolicy(
+        TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "timeline_relations"}),
+    ),
     EditorialRevision.TargetType.WORK: EditorialTargetPolicy(
         Work,
         frozenset(
@@ -173,6 +181,7 @@ TARGET_POLICIES = {
                 "search_aliases",
                 "description",
                 "introduction",
+                "image_selection",
                 "sort_order",
                 "curation_level",
                 "editorial_status",
@@ -196,6 +205,7 @@ TARGET_POLICIES = {
                 "research_directions",
                 "methods",
                 "representative_issues",
+                "image_selection",
                 "curation_level",
                 "editorial_status",
             }
@@ -262,6 +272,7 @@ TARGET_POLICIES = {
 
 SPECIAL_FIELDS = frozenset(
     {
+        "timeline_relations",
         "image_selection",
         "aliases",
         "discipline_links",
@@ -423,6 +434,9 @@ def topic_relation_snapshot(topic: Topic) -> dict[str, Any]:
 
 
 def _special_snapshot(target) -> dict[str, Any]:
+    if isinstance(target, TheoryTimelineEvent):
+        from catalog.services.relation_editorial import timeline_relations_snapshot
+        return {"timeline_relations": timeline_relations_snapshot(target)}
     if isinstance(target, Work):
         return {
             "classification": _work_classification_snapshot(target),
@@ -830,7 +844,10 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
-    if isinstance(target, (KnowledgeNode, ReadingPath)) and "image_selection" in patch:
+    if isinstance(target, (KnowledgeRelation, TheoryTimelineEvent)):
+        from catalog.services.relation_editorial import validate_relation_patch
+        validate_relation_patch(target, patch)
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)) and "image_selection" in patch:
         from catalog.services.knowledge_media import validate_image_selection
         patch["image_selection"] = validate_image_selection(target, patch["image_selection"])
     if isinstance(target, Work):
@@ -936,7 +953,7 @@ def _target_snapshot(target, policy: EditorialTargetPolicy) -> dict[str, Any]:
         for key, value in model_to_dict(target, fields=scalar_fields).items()
     }
     snapshot.update(_special_snapshot(target))
-    if isinstance(target, (KnowledgeNode, ReadingPath)):
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)):
         from catalog.services.knowledge_media import image_selection
         snapshot["image_selection"] = image_selection(target)
     return snapshot
@@ -1316,7 +1333,10 @@ def _apply_topic_relations(target: Topic, patch: dict[str, Any], actor) -> None:
 
 
 def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
-    if isinstance(target, (KnowledgeNode, ReadingPath)) and "image_selection" in patch:
+    if isinstance(target, TheoryTimelineEvent) and "timeline_relations" in patch:
+        from catalog.services.relation_editorial import apply_timeline_relations
+        apply_timeline_relations(target, patch["timeline_relations"])
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)) and "image_selection" in patch:
         from catalog.services.knowledge_media import apply_image_selection
         apply_image_selection(target, patch["image_selection"], actor=actor)
     if isinstance(target, Work):
@@ -1494,7 +1514,7 @@ def create_editorial_revision(
     if isinstance(target, ScholarProfile):
         from catalog.services.scholar_media import protect_portrait_references
         protect_portrait_references(revision, target)
-    if isinstance(target, (KnowledgeNode, ReadingPath)):
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)):
         from catalog.services.knowledge_media import protect_image_references
         protect_image_references(revision, target)
     return revision
@@ -1508,6 +1528,7 @@ def save_workflow_editorial_revision(
     actor,
     idempotency_key: str = "",
     change_note: str = "",
+    edition_id=None,
 ) -> EditorialRevision | None:
     """Merge one Workbench section into the single current Work draft.
 
@@ -1538,6 +1559,15 @@ def save_workflow_editorial_revision(
     if latest is not None and latest.base_revision != canonical.current_revision:
         raise EditorialRevisionConflict("正式内容已变化，请基于最新内容重新建立草稿。")
     combined = dict(latest.patch or {}) if latest is not None else {}
+    scoped_sections = {"bibliography", "contributors", "reader"}
+    existing_editions = {str(value["edition_id"]) for key, value in combined.items()
+                         if key in scoped_sections and isinstance(value, dict) and value.get("edition_id")}
+    incoming_editions = {str(value["edition_id"]) for key, value in (section_patch or {}).items()
+                         if key in scoped_sections and isinstance(value, dict) and value.get("edition_id")}
+    if edition_id:
+        incoming_editions.add(str(edition_id))
+    if existing_editions and incoming_editions and len(existing_editions | incoming_editions) > 1:
+        raise EditorialRevisionConflict("另一出版版本还有待发布修改。请先切回那个版本处理，再保存当前版本；原草稿已保留。")
     combined.update(dict(section_patch or {}))
     clean_patch = changed_editorial_patch(
         target_type=EditorialRevision.TargetType.WORK,
@@ -1590,7 +1620,7 @@ def save_workflow_editorial_revision(
 
 
 @transaction.atomic
-def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
+def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=False, content_asset_id=None) -> EditorialRevision:
     if actor is None or not getattr(actor, "is_authenticated", False):
         raise EditorialRevisionError("发布必须记录实际操作人。")
     revision = EditorialRevision.objects.select_for_update().filter(pk=revision_id).first()
@@ -1625,10 +1655,28 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         if isinstance(target, Edition) and target.state == PublicationState.PUBLISHED
         else None
     )
+    preserved_snapshot = None
+    if content_asset_id:
+        from catalog.services.publication_commands import pending_edition_supplement
+
+        pending_file = pending_edition_supplement(catalog_edition) if catalog_edition is not None else None
+        if preserve_catalog_snapshot or pending_file is None or str(pending_file.pk) != str(content_asset_id):
+            raise EditorialRevisionError("补充阅读文件与本次明确发布的出版版本不一致，请重新预览。")
+    if preserve_catalog_snapshot:
+        # Primary selection changes which already-public Edition represents
+        # the Work. It must not publish unrelated live metadata alongside it.
+        from catalog.services.publication_commands import catalog_publication_state, validate_revision
+
+        if not isinstance(target, Edition) or set(patch) != {"is_primary"} or not catalog_publication_state(target)["catalog_revision_active"]:
+            raise EditorialRevisionError("只有合法已公开版本的主版本切换可以保留既有快照。")
+        preserved_snapshot = target.active_catalog_revision
+        errors = validate_revision(preserved_snapshot, edition=target, for_rollback=True)
+        if errors:
+            raise EditorialRevisionError(" ".join(errors))
     relation_fields = SPECIAL_FIELDS
     if isinstance(target, KnowledgeNode):
         _validate_knowledge_node_relations(target, patch)
-    previous_status = getattr(target, "status", getattr(target, "editorial_status", None))
+    previous_status = getattr(target, "status", getattr(target, "editorial_status", getattr(target, "review_status", None)))
     for field_name, value in patch.items():
         if field_name in relation_fields:
             continue
@@ -1644,7 +1692,9 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         else:
             setattr(target, field_name, clean_value)
 
-    next_status = getattr(target, "status", getattr(target, "editorial_status", None))
+    next_status = getattr(target, "status", getattr(target, "editorial_status", getattr(target, "review_status", None)))
+    if isinstance(target, TheoryTimelineEvent) and next_status == "approved":
+        target.reviewed_by, target.reviewed_at = actor, timezone.now()
     if hasattr(target, "published_at") and next_status is not None:
         if next_status == "published" and previous_status != "published":
             target.published_at = timezone.now()
@@ -1676,6 +1726,9 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
         from catalog.services.knowledge_nodes import record_node_version
 
         record_node_version(target, actor, revision.change_note or "发布编辑草稿")
+    if isinstance(target, KnowledgeRelation):
+        from catalog.services.knowledge_nodes import record_relation_version
+        record_relation_version(target, actor, revision.change_note or "发布关系修改")
 
     revision.status = EditorialRevision.Status.PUBLISHED
     revision.published_by = actor
@@ -1692,7 +1745,7 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
 
     change_kind = (
         "withdraw"
-        if previous_status == "published" and next_status in {"archived", "withdrawn"}
+        if (previous_status == "published" and next_status != "published") or (previous_status == "approved" and next_status != "approved")
         else "publish"
     )
     if catalog_edition is not None:
@@ -1727,7 +1780,7 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
             knowledge_event = create_catalog_publication_event(
                 catalog_edition,
                 event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
-                changed_fields=revision.changed_fields,
+                changed_fields=sorted(set(revision.changed_fields) | ({"asset", "document_revision", "fulltext_ready"} if content_asset_id else set())),
                 actor=actor,
                 idempotency_key=f"editorial-catalog:{revision.pk}",
                 source_object_type=revision.target_type,
@@ -1737,7 +1790,10 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
                 provenance={
                     "editorial_revision_id": str(revision.pk),
                     "editorial_revision_number": revision.revision,
+                    **({"source": "primary_edition_selection", "rollback_source_revision_id": str(preserved_snapshot.pk)} if preserved_snapshot else {}),
                 },
+                restore_from_revision=preserved_snapshot,
+                content_asset_id=content_asset_id,
             )
             if isinstance(target, Work):
                 # Work metadata and knowledge relations are shared by every
@@ -1805,6 +1861,14 @@ def publish_editorial_revision(revision_id, *, actor) -> EditorialRevision:
                 provenance={"editorial_revision_id": str(revision.pk), "withdrawal": change_kind == "withdraw"},
             )
             event = entity_event.domain_event
+        elif isinstance(target, TheoryTimelineEvent) and (next_status == "approved" or change_kind == "withdraw"):
+            # Timeline already has dependency consumers, not a second entity
+            # snapshot system. Keep its established invalidation path.
+            event = record_canonical_change(
+                object_type=revision.target_type, object_id=revision.target_id,
+                change_kind=change_kind, changed_fields=revision.changed_fields,
+                actor=actor, idempotency_key=f"editorial-publish:{revision.pk}",
+            )
         else:
             # Applying an editorial draft without an explicit public state
             # only advances concurrency bookkeeping, with no shared consumers.

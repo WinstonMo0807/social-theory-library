@@ -5,20 +5,18 @@ import test from "node:test";
 
 test("field enrichment is explicitly triggered and renders auditable evidence", async () => {
   const source = await readFile(
-    new URL("../components/field-enrichment-control.tsx", import.meta.url),
+    new URL("../components/admin/curation/curation-field-assistant.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /核对结构化来源/);
-  assert.match(source, /联网核对本页/);
-  assert.match(source, /requested_mode: mode/);
-  assert.match(source, /visibility: "admin"/);
-  assert.match(source, /candidate\.evidence_records\.filter/);
-  assert.match(source, /evidence\.supporting_text/);
-  assert.match(source, /evidence\.canonical_url/);
-  assert.match(source, /部分来源未完成/);
-  assert.match(source, /当前值/);
-  assert.match(source, /候选值/);
+  assert.match(source, /onClick=\{\(\) => void lookup\(\)\}/);
+  assert.match(source, /field-assistant\/lookup/);
+  assert.match(source, /candidate\.evidence\.map/);
+  assert.match(source, /evidence\.summary/);
+  assert.match(source, /evidence\.url/);
+  assert.match(source, /CandidateDecisionBar/);
+  assert.match(source, /action\.payload\.reason/);
+  assert.doesNotMatch(source, /在\$\{label\}字段确认不采用/);
   assert.doesNotMatch(source, /setTimeout|650/);
   assert.doesNotMatch(source, /推荐.*grade|自动接受/);
 });

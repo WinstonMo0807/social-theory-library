@@ -4,6 +4,8 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
 import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
+import type { CatalogPublication } from "@/lib/api/admin-collections";
+import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
 import {
   formatUploadBytes,
   formatUploadEta,
@@ -126,6 +128,7 @@ type IngestionItem = {
     publisher: string;
     publication_place: string;
     publication_state: string;
+    publication?: CatalogPublication;
     review_progress: number;
     ocr_status: string;
     semantic_index_status: string;
@@ -169,7 +172,7 @@ const ingestionStatusLabels: Record<string, string> = {
   needs_review: "候选已就绪，等待复核",
   ready: "复核已保存，可进入发布台",
   failed: "处理失败，需要检查",
-  published: "已经发布",
+  published: "发布决定已保存",
   withdrawn: "已经下架",
 };
 
@@ -1260,6 +1263,7 @@ export function AdminUpload() {
                     </div>
                   )}
                   <dl>
+                    <UploadPublicationResult editionId={item.edition} publication={item.review_data?.publication} />
                     <div><dt>文献类型</dt><dd>{displayMetadataValue(item.review_data?.document_type ?? metadata.document_type)}</dd></div>
                     <div><dt>作者</dt><dd>{displayMetadataValue(item.review_data?.authors ?? metadata.authors)}</dd></div>
                     <div><dt>出版信息</dt><dd>{[

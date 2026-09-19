@@ -7,6 +7,8 @@ import { WorkDetailView } from "@/components/work-detail-view";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import type { Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
+import { useSearchParams } from "next/navigation";
+import { safeAdminHref } from "@/lib/admin-route-context";
 
 type PreviewPayload = {
   preview_mode: true;
@@ -61,6 +63,7 @@ export function AdminWorkPagePreview({
   editionId: string;
   footer: ReactNode;
 }) {
+  const routeParams = useSearchParams();
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -118,7 +121,7 @@ export function AdminWorkPagePreview({
       preview={{
         publicationState: payload.publication_state,
         pdfPreviewUrl: normalizePublicResourceUrl(payload.pdf_preview_url),
-        returnHref: payload.return_url,
+        returnHref: safeAdminHref(routeParams.get("return_to"), payload.return_url),
         draftRevision: payload.editorial_revision
           ? {
               revision: payload.editorial_revision.revision,

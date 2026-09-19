@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from hashlib import sha256
+
 import pytest
+from django.utils import timezone
 
 from accounts.models import User
 from catalog.models import (
+    CatalogPublicationRevision,
     DocumentType,
     Edition,
     KnowledgeNode,
@@ -18,6 +22,8 @@ from catalog.models import (
 from catalog.services.recommendations import generate_snapshot
 from ingestion.models import AuditEvent
 
+from .editorial_fixtures import editorial_request
+
 
 def make_work(
     title: str,
@@ -31,7 +37,7 @@ def make_work(
         language="zh-CN",
     )
     if published:
-        Edition.objects.create(
+        edition = Edition.objects.create(
             work=work,
             state=PublicationState.PUBLISHED,
             public_slug=f"curation-{work.id}",
@@ -39,6 +45,14 @@ def make_work(
             journal_title="社会理论测试期刊" if document_type == DocumentType.JOURNAL_ARTICLE else "",
             publisher="测试出版社" if document_type == DocumentType.BOOK else "",
         )
+        # A flag alone does not make a work eligible for public recommendations.
+        revision = CatalogPublicationRevision.objects.create(
+            edition=edition, revision=1, status=CatalogPublicationRevision.Status.ACTIVE,
+            metadata_ready=True, snapshot={"work": {"id": str(work.pk), "title": title}},
+            content_fingerprint=sha256(title.encode()).hexdigest(), activated_at=timezone.now(),
+        )
+        edition.active_catalog_revision = revision
+        edition.save(update_fields=["active_catalog_revision", "updated_at"])
     return work
 
 
@@ -201,7 +215,7 @@ def test_contextual_placement_enforces_work_identity_and_path_permissions(
         work=work,
     ).exists()
     public_path.refresh_from_db()
-    advanced_allowed = api_client.patch(
+    advanced_allowed = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/reading-paths/{public_path.id}/",
         {
             "expected_updated_at": public_path.updated_at.isoformat(),
@@ -382,7 +396,7 @@ def test_advanced_reading_path_editor_saves_stages_and_multiple_items_with_confl
     api_client.force_authenticate(admin_user)
     expected = path.updated_at.isoformat()
 
-    saved = api_client.patch(
+    saved = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/reading-paths/{path.id}/",
         {
             "expected_updated_at": expected,
@@ -418,7 +432,7 @@ def test_advanced_reading_path_editor_saves_stages_and_multiple_items_with_confl
     ]
     assert [row["position"] for row in saved.data["items"]] == [0, 1, 0]
 
-    stale = api_client.patch(
+    stale = editorial_request(api_client, "patch",
         f"/api/catalog/admin/theory-system/reading-paths/{path.id}/",
         {
             "expected_updated_at": expected,

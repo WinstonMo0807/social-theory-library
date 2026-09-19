@@ -14,8 +14,6 @@ import {
   List,
   Minus,
   Moon,
-  PanelLeftClose,
-  PanelRightClose,
   Plus,
   Search,
   StickyNote,
@@ -26,6 +24,9 @@ import {
 } from "lucide-react";
 import {
   useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -36,6 +37,7 @@ import { PdfContinuousViewer } from "./pdf-continuous-viewer";
 import { BookCover } from "./ui";
 import { UsageTracker } from "./usage-tracker";
 import { AskLibraryLink } from "./ask-library-link";
+import { Dialog } from "./ui/dialog";
 import type { CitationStyle, SidebarTab } from "./reader/types";
 import { useReaderNavigation } from "./reader/use-reader-navigation";
 import { useReaderSelection } from "./reader/use-reader-selection";
@@ -86,17 +88,32 @@ export function ReaderShell({
   const [rightOpen, setRightOpen] = useState(true);
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [compactRightOpen, setCompactRightOpen] = useState(false);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+  const toolbarSummary = useRef<HTMLButtonElement | null>(null);
+  const selectionMenu = useRef<HTMLDivElement | null>(null);
+  const [selectionPosition, setSelectionPosition] = useState<{left:number;top:number} | null>(null);
   const isMobile = useMediaQuery("(max-width: 760px)");
   const isCompact = useMediaQuery("(max-width: 1050px)");
   const effectiveLeftOpen = isMobile ? mobileLeftOpen : leftOpen;
   const effectiveRightOpen = isCompact ? compactRightOpen : rightOpen;
-  const { access, accessError, pagePayloads, requestPagePayload, trackDownload } = useReaderDocument({
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (toolbarOpen) { setToolbarOpen(false); toolbarSummary.current?.focus(); }
+      else if (isMobile && mobileLeftOpen) setMobileLeftOpen(false);
+      else if (isCompact && compactRightOpen) setCompactRightOpen(false);
+    };
+    window.addEventListener("keydown",close);
+    return () => window.removeEventListener("keydown",close);
+  },[toolbarOpen,isMobile,mobileLeftOpen,isCompact,compactRightOpen]);
+  const { access, accessError, pagePayloads, requestPagePayload, trackDownload, retryAccess } = useReaderDocument({
     assetId: work.id, workId: work.workId,
   });
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
   const [gate, setGate] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [copyStatusState, setCopyStatusState] = useState<ActionState>("idle");
+  const [pageInput, setPageInput] = useState<string | null>(null);
   const {
     page, setPage, zoom, totalPages, progress, thumbnailPages, scrollRequest,
     jumpToPage, changeZoom, onDocumentLoad, onVisiblePageChange,
@@ -127,6 +144,19 @@ export function ReaderShell({
 
   useReaderPageRequest({ page, ocrStatus: access?.ocr_status, requestPagePayload });
 
+  useLayoutEffect(() => {
+    if (!selectionTools) return;
+    const place = () => {
+      const box = selectionMenu.current?.getBoundingClientRect();
+      if (!box) return;
+      const next = {left:Math.max(8, Math.min(selectionTools.x, window.innerWidth-box.width-8)),top:Math.max(8, Math.min(selectionTools.y, window.innerHeight-box.height-8))};
+      setSelectionPosition(current => current?.left===next.left && current.top===next.top ? current : next);
+    };
+    place();
+    window.addEventListener("resize",place);
+    return () => window.removeEventListener("resize",place);
+  },[selectionTools]);
+
   const {
     query, setQuery, searchMatches, setSearchMatches, activeSearchMatch,
     searchCandidatesOpen, setSearchCandidatesOpen, passageFocus,
@@ -156,7 +186,7 @@ export function ReaderShell({
   return (
     <div className={`reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}>
       <UsageTracker eventType="reader_open" assetId={work.id} workId={work.workId} source="reader" />
-      <header className="reader-toolbar">
+      <header className="reader-toolbar" aria-label="阅读工具栏">
         <Link className="reader-logo" href="/" aria-label="返回书库"><span>SOCIAL</span><span>THEORY</span><span>LIBRARY</span></Link>
         <div className="toolbar-group page-control">
           <span>PDF 页</span>
@@ -166,17 +196,20 @@ export function ReaderShell({
             name="reader-page"
             inputMode="numeric"
             autoComplete="off"
-            value={page}
-            onChange={(event) => setPage(Math.min(totalPages, Math.max(1, Number(event.target.value) || 1)))}
-            onBlur={() => jumpToPage(page)}
+            value={pageInput ?? String(page)}
+            onChange={(event) => setPageInput(event.target.value)}
+            onBlur={() => { if(pageInput !== null){jumpToPage(Number(pageInput),"auto");setPageInput(null);} }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") jumpToPage(page);
+              if (event.key === "Enter") { jumpToPage(Number(pageInput ?? page),"auto"); setPageInput(null); }
             }}
           />
           <span>/ {totalPages}</span>
           {currentPagePayload?.printed_label && currentPagePayload.printed_label !== String(page) ? <b className="reader-printed-page">书页 {currentPagePayload.printed_label}</b> : null}
           <button type="button" aria-label="下一页" onClick={() => jumpToPage(page + 1)}><ChevronRight size={17} /></button>
         </div>
+        <div className="reader-toolbar-tools">
+        <button className="reader-tools-toggle" type="button" ref={toolbarSummary} aria-expanded={toolbarOpen} aria-controls="reader-tool-groups" onClick={() => setToolbarOpen(value => !value)} aria-label="展开阅读工具">工具</button>
+        <div className="reader-tool-groups" id="reader-tool-groups" data-open={toolbarOpen}>
         <div className="toolbar-group zoom-control">
           <span>缩放</span>
           <button type="button" aria-label="缩小" onClick={() => changeZoom(-10)}><Minus size={16} /></button>
@@ -188,6 +221,7 @@ export function ReaderShell({
           <div className="reader-search-field">
             <Search size={16} />
             <input
+              aria-label="文档内搜索"
               value={query}
               name="reader-document-search"
               autoComplete="off"
@@ -246,6 +280,8 @@ export function ReaderShell({
           <button className={!dark ? "active" : ""} type="button" aria-label="使用浅色主题" onClick={() => setDark(false)}><Sun size={17} /></button>
           <button className={dark ? "active" : ""} type="button" aria-label="使用深色主题" onClick={() => setDark(true)}><Moon size={17} /></button>
         </div>
+        </div>
+        </div>
         <div className="reader-actions">
           <AskLibraryLink
             context="works"
@@ -255,13 +291,13 @@ export function ReaderShell({
             className="reader-ask-library"
           />
           {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={trackDownload}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
-          <button type="button" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
-          <ActionButton className={bookmarkedPage ? "active" : ""} type="button" state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} pressed={bookmarkedPage} onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></ActionButton>
+          <button type="button" aria-label="添加批注" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
+          <ActionButton className={bookmarkedPage ? "active" : ""} type="button" aria-label={bookmarkedPage ? "取消当前页书签" : "收藏当前页书签"} state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} pressed={bookmarkedPage} onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></ActionButton>
         </div>
         <div className="reader-progress-top"><span>阅读进度</span><div><i style={{ width: `${progress}%` }} /></div><b>{progress}%</b></div>
       </header>
 
-      <aside className="reader-left">
+      <aside className="reader-left" inert={!effectiveLeftOpen} aria-hidden={!effectiveLeftOpen}>
         <button className="panel-close" type="button" aria-label="关闭目录侧栏" onClick={() => setLeftPanel(false)}><X size={18} /></button>
         <div className="current-book">
           <BookCover work={work} size="small" />
@@ -342,10 +378,10 @@ export function ReaderShell({
           </div>
         ) : null}
       </aside>
-      {!effectiveLeftOpen ? <button className="open-panel left" type="button" aria-label="打开目录侧栏" onClick={() => setLeftPanel(true)}><PanelLeftClose size={18} /></button> : null}
 
       <section
         className="reader-document continuous-scroll-mode"
+        inert={(isMobile && effectiveLeftOpen) || (isCompact && effectiveRightOpen)}
         data-view-mode="continuous"
         ref={readerDocumentRef}
         onMouseUp={showSelectionTools}
@@ -354,8 +390,8 @@ export function ReaderShell({
       >
         {access && access.ocr_status !== "not_required" ? (
           <div className={`reader-processing-status status-${access.ocr_status}`} role="status">
-            <strong>{access.ocr_status === "succeeded" ? "OCR 文字层已就绪" : access.ocr_status === "failed" ? "OCR 暂不可用" : access.ocr_status === "disabled" ? "OCR 已停用" : "OCR 正在处理"}</strong>
-            <span>{access.ocr_status === "succeeded" ? "页面仍由原始 PDF 渲染，复制与检索使用 OCR 文字层。" : "原始 PDF 可继续阅读；文字复制会在 OCR 成功后自动恢复。"}</span>
+            <strong>{access.ocr_status === "succeeded" ? "OCR 文字层已就绪" : access.ocr_status === "failed" ? "OCR 暂不可用" : access.ocr_status === "disabled" ? "OCR 已停用" : access.ocr_status === "running" ? "OCR 正在处理" : "等待 OCR 文字层"}</strong>
+            <span>{access.ocr_status === "succeeded" ? "页面仍由原始 PDF 渲染，复制与检索使用获准文字层。" : "可继续阅读原 PDF；等待状态不表示任务当前正在运行，可用文字以页面实际内容为准。"}</span>
             {access.ocr_status === "succeeded" && access.download_rendition === "ocr_pdf" && access.original_download_url ? <a href={access.original_download_url} download={access.download_filename}>需要时下载原始扫描版</a> : null}
           </div>
         ) : null}
@@ -378,12 +414,14 @@ export function ReaderShell({
               setLeftPanel(true);
             }}
             onNoteDelete={(annotationId) => void deleteAnnotation(annotationId)}
+            onRetry={retryAccess}
           />
         ) : (
           <div className="reader-unavailable" role="status">
             <BookOpen size={30} />
-            <strong>公开阅读副本尚未就绪</strong>
+            <strong>{accessError ? "暂时未能加载阅读文件" : "正在连接阅读文件"}</strong>
             <p>{accessError || "正在请求 PDF 的签名阅读地址……"}</p>
+            {accessError ? <button type="button" className="button secondary" onClick={retryAccess}>重新获取阅读文件</button> : null}
             <Link href={`/works/${work.slug}`}>返回文献详情</Link>
           </div>
         )}
@@ -392,10 +430,11 @@ export function ReaderShell({
 
       {selectionTools ? (
         <div
+          ref={selectionMenu}
           className="reader-selection-menu"
           role="toolbar"
           aria-label="所选文字操作"
-          style={{ left: selectionTools.x, top: selectionTools.y }}
+          style={selectionPosition ?? { left: selectionTools.x, top: selectionTools.y }}
           onMouseDown={(event) => event.preventDefault()}
         >
           <button type="button" onClick={() => void cleanCopy(selectionTools.quote)}><Copy size={15} />复制</button>
@@ -407,7 +446,7 @@ export function ReaderShell({
         </div>
       ) : null}
 
-      <aside className="reader-right">
+      <aside className="reader-right" inert={!effectiveRightOpen} aria-hidden={!effectiveRightOpen}>
         <button className="panel-close" type="button" aria-label="关闭信息侧栏" onClick={() => setRightPanel(false)}><X size={18} /></button>
         <section>
           <h2>当前阅读</h2>
@@ -457,14 +496,13 @@ export function ReaderShell({
           {!relatedTopics.length ? <p className="reader-empty-list">尚无已确认主题。</p> : null}
         </section>
       </aside>
-      {!effectiveRightOpen ? <button className="open-panel right" type="button" aria-label="打开信息侧栏" onClick={() => setRightPanel(true)}><PanelRightClose size={18} /></button> : null}
 
       <footer className="reader-bottom">
         <button type="button" onClick={() => jumpToPage(page - 1)}><ChevronLeft size={16} /> 上一页</button>
         <span>{Math.max(1, page - 1)}</span>
         <div>
-          <button type="button" aria-label="打开目录导航" onClick={() => showSidebarTab("outline")}><BookOpen size={16} /></button>
-          <button type="button" aria-label="打开阅读信息" onClick={() => setRightPanel(true)}><List size={16} /></button>
+          <button type="button" aria-label={effectiveLeftOpen ? "关闭目录侧栏" : "打开目录侧栏"} aria-pressed={effectiveLeftOpen} onClick={() => effectiveLeftOpen ? setLeftPanel(false) : showSidebarTab("outline")}><BookOpen size={16} /></button>
+          <button type="button" aria-label={effectiveRightOpen ? "关闭信息侧栏" : "打开信息侧栏"} aria-pressed={effectiveRightOpen} onClick={() => setRightPanel(!effectiveRightOpen)}><List size={16} /></button>
           <span className="continuous-mode-indicator"><ChevronsUpDown size={16} />连续阅读</span>
         </div>
         <b>{page}</b>
@@ -502,7 +540,7 @@ export function ReaderShell({
       ) : null}
 
       {gate ? (
-        <div className="login-gate" role="dialog" aria-modal="true" aria-labelledby="login-gate-title">
+        <Dialog open className="login-gate" onRequestClose={() => setGate(null)} aria-labelledby="login-gate-title">
           <div>
             <button className="panel-close" type="button" aria-label="关闭登录提示" onClick={() => setGate(null)}><X size={18} /></button>
             <p className="eyebrow">保存个人阅读资料</p>
@@ -511,7 +549,7 @@ export function ReaderShell({
             <Link className="button" href={`/login?next=/reader/${work.id}`}>登录 <ArrowRight size={16} /></Link>
             <Link className="button secondary" href="/register">注册读者</Link>
           </div>
-        </div>
+        </Dialog>
       ) : null}
     </div>
   );

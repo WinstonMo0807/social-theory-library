@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { normalizeEditorialRevision } from "../components/admin/workflow/workflow-types.ts";
+import { preservingAdminRedirect } from "../lib/admin-route-context.ts";
 
 import {
   bibliographyFields,
@@ -144,8 +145,8 @@ test("contributor editor keeps unresolved candidates outside canonical rows", as
   assert.match(editor, /label="作者" values=\{authorItems\} emptyValue=\{blank\("author"\)\}/);
   assert.match(editor, /label="译者" values=\{translatorItems\} create=\{\(\) => blank\("translator"\)\}/);
   assert.doesNotMatch(editor, /translatorItems\.length \? translatorItems : \[blank\("translator"\)\]/);
-  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="author"/);
-  assert.match(editor, /FieldAssistantControl[^\n]*fieldName="translator"/);
+  assert.match(editor, /WorkflowFieldAssistant[^\n]*fieldName="author"/);
+  assert.match(editor, /WorkflowFieldAssistant[^\n]*fieldName="translator"/);
   assert.match(editor, /person_id: person\?\.id \?\? null/);
   assert.match(fields, /showsEmptyValue/);
 });
@@ -181,6 +182,9 @@ test("focus mode, contextual curation and publication choices use canonical rout
   assert.match(curation, /reading_path_id: selectedPath/);
   assert.match(curation, /stage_id: selectedStage/);
   assert.match(curation, /action: "pin"/);
-  assert.match(reviewRoute, /#bibliography/);
-  assert.match(publicationRoute, /#publication/);
+  assert.match(reviewRoute, /preservingAdminRedirect/);
+  assert.match(publicationRoute, /preservingAdminRedirect/);
+  const context = { edition: "edition-2", return_to: "/admin/review?page=2" };
+  assert.equal(new URL(preservingAdminRedirect("/admin/intake/item-1", context, "bibliography"), "https://test.invalid").hash, "#bibliography");
+  assert.equal(new URL(preservingAdminRedirect("/admin/intake/item-1", context, "publication"), "https://test.invalid").hash, "#publication");
 });

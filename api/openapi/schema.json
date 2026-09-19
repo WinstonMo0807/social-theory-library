@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Social Theory Library API",
-        "version": "3.0.5",
+        "version": "3.0.6",
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
@@ -927,7 +927,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/MediaAsset"
+                                    "$ref": "#/components/schemas/MediaDetail"
                                 }
                             }
                         },
@@ -1042,6 +1042,34 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/MediaRendition"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/media/collection/": {
+            "get": {
+                "operationId": "catalog_admin_media_collection_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MediaCollection"
                                 }
                             }
                         },
@@ -2605,6 +2633,147 @@
                     "width"
                 ]
             },
+            "MediaCollection": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaAsset"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "pages",
+                    "results"
+                ]
+            },
+            "MediaDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "media_type": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "source_type": {
+                        "$ref": "#/components/schemas/MediaSourceTypeEnum"
+                    },
+                    "source_url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "source_label": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "rights": {
+                        "type": "string"
+                    },
+                    "license": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "credit": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "alt_text": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "width": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "height": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "checksum": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "byte_size": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "focal_x": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "focal_y": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "renditions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaRendition"
+                        },
+                        "readOnly": true
+                    },
+                    "references": {
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "byte_size",
+                    "checksum",
+                    "created_at",
+                    "height",
+                    "id",
+                    "media_type",
+                    "references",
+                    "renditions",
+                    "updated_at",
+                    "width"
+                ]
+            },
             "MediaRendition": {
                 "type": "object",
                 "properties": {
@@ -2789,10 +2958,12 @@
             "ObjectTypeEnum": {
                 "enum": [
                     "knowledge_node",
-                    "reading_path"
+                    "reading_path",
+                    "discipline",
+                    "subdiscipline"
                 ],
                 "type": "string",
-                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path"
+                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline"
             },
             "PaginatedWorkCardList": {
                 "type": "object",
@@ -3098,6 +3269,7 @@
             "PersonMergePreviewResponse": {
                 "type": "object",
                 "properties": {
+                    "business_impact": {},
                     "version": {
                         "type": "string"
                     },
@@ -3201,6 +3373,13 @@
             "PersonMergeRecord": {
                 "type": "object",
                 "properties": {
+                    "business_impact": {},
+                    "source_name": {
+                        "type": "string"
+                    },
+                    "target_name": {
+                        "type": "string"
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid"
