@@ -287,7 +287,7 @@ def select_work_cover(edition_id, media_id, *, actor):
 def media_reference_inventory(media_id):
     """Read persisted current/draft/history references without opening files."""
     from django.db.models import Q
-    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline
+    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, RecommendationIssue
     from catalog.services.publication_commands import catalog_publication_state
 
     references = []
@@ -302,7 +302,7 @@ def media_reference_inventory(media_id):
                            "editor_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
                            "public_url": publication["public_url"] if current else ""})
     drafts = list(EditorialRevisionMedia.objects.filter(rendition__media_id=media_id).select_related("editorial_revision").order_by("-created_at", "pk"))
-    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline}
+    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue}
     labels = {}
     for kind, model in target_models.items():
         ids = [row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == kind]
@@ -315,6 +315,11 @@ def media_reference_inventory(media_id):
         revision = row.editorial_revision
         kind, target_id = revision.target_type, str(revision.target_id)
         route = {"work": f"/admin/library/works/{target_id}", "scholar_profile": f"/admin/scholars/{target_id}", "knowledge_node": f"/admin/theories/{target_id}", "reading_path": f"/admin/reading-paths?path={target_id}", "discipline": f"/admin/disciplines?discipline={target_id}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target_id}"}.get(kind, "")
+        if kind == "recommendation_issue":
+            route = f"/admin/recommendations/issues/{target_id}"
+        elif kind == "site_content":
+            route = "/admin/about"
+            labels[(kind, target_id)] = "网站与关于书库"
         references.append({"id": str(row.pk), "kind": "draft" if revision.status == "draft" else "history",
                            "label": labels.get((kind, target_id), "原对象或其历史记录"),
                            "detail": f"编辑修订 {revision.revision} · {revision.status}", "editor_url": route, "public_url": ""})

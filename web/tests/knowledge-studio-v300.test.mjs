@@ -24,7 +24,7 @@ const publicPageUrls = [
 ].map((path) => new URL(path, import.meta.url));
 const stylesUrl = new URL("../app/editorial-workspaces.css", import.meta.url);
 
-test("Knowledge Studio is the primary knowledge entry and reuses specialist editors", async () => {
+test("retired Knowledge Studio preserves specialist object editing destinations", async () => {
   const [studio, shell, nodeEditor, taxonomyEditor, readingPathEditor] = await Promise.all([
     readFile(editorialStudioUrl, "utf8"),
     readFile(shellUrl, "utf8"),
@@ -33,14 +33,18 @@ test("Knowledge Studio is the primary knowledge entry and reuses specialist edit
     readFile(readingPathEditorUrl, "utf8"),
   ]);
 
-  assert.match(shell, /\["\/admin\/knowledge", Sparkles,/);
+  assert.doesNotMatch(shell, /\["\/admin\/knowledge",/);
+  const legacy = await readFile(new URL("../components/admin/knowledge/knowledge-legacy-redirect.tsx", import.meta.url), "utf8");
+  assert.match(legacy,/object_type/);
+  assert.match(legacy,/object_id/);
+  assert.match(legacy,/window\.location\.hash/);
   assert.match(studio, /href="\/admin\/theories"/);
   assert.match(studio, /href="\/admin\/scholars"/);
   assert.match(studio, /href="\/admin\/topics"/);
   assert.match(studio, /完整编辑/);
   assert.match(studio, /\/admin\/system-health\/knowledge/);
   assert.match(nodeEditor, /search\.get\("node"\)/);
-  assert.match(nodeEditor, /已从 Knowledge Studio 打开这个规范节点/);
+  assert.match(nodeEditor, /已从 知识管理 打开这个理论或概念资料/);
   assert.match(taxonomyEditor, /searchParams\.get\("subdiscipline"\)/);
   assert.match(taxonomyEditor, /已打开所选子学科/);
   assert.match(readingPathEditor, /searchParams\.get\("path"\)/);
@@ -136,8 +140,8 @@ test("published subdiscipline edits remain revision drafts until explicit public
   ]);
 
   assert.match(taxonomyEditor, /saved\.editorial_revision/);
-  assert.match(taxonomyEditor, /读者页面尚未改变/);
-  assert.match(taxonomyEditor, /editing\?\.editorial_status === "published"/);
+  assert.match(taxonomyEditor, /读者页面未改变/);
+  assert.match(taxonomyEditor, /editorial_status: draftOnly \? \(editing\?\.editorial_status \?\? "draft"\)/);
   assert.match(lifecycle, /LifecycleRevisionResponse/);
   assert.match(lifecycle, /下线草稿已保存/);
   assert.match(lifecycle, /内容管理中预览，再确认发布/);

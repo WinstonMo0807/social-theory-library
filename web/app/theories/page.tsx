@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import {
   DisciplineCard,
+  KnowledgeNodeCard,
   ReadingPathCard,
   TheoryBanner,
   TheoryEmpty,
@@ -14,7 +15,7 @@ import {
   nodeTypeLabels,
 } from "@/components/theory-system-ui";
 import { loadScopedSearch } from "@/lib/api/search.server";
-import { loadTheorySystemOverview } from "@/lib/api/knowledge.server";
+import { loadTheorySystemOverview, loadTheorySystemNodes } from "@/lib/api/knowledge.server";
 import { searchPage } from "@/lib/search-context";
 
 export const metadata: Metadata = {
@@ -25,22 +26,24 @@ export const metadata: Metadata = {
 export default async function TheoriesPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; context?: string }> }) {
   const { q = "", page: rawPage } = await searchParams;
   const page = searchPage(rawPage);
-  const [overview, searchEnvelope] = await Promise.all([
+  const [overview, searchEnvelope, theoryNodes] = await Promise.all([
     loadTheorySystemOverview(),
     q.trim() ? loadScopedSearch("theories", q, { page }) : Promise.resolve(null),
+    loadTheorySystemNodes({ type: "theory_tradition" }),
   ]);
   const theoryGroup = searchEnvelope?.groups[0];
   const searchResults = theoryGroup?.results ?? [];
+  const featured = overview?.featured_nodes?.length ? overview.featured_nodes : theoryNodes;
   const browseCounts = overview ? Object.values(overview.browse) : [];
   const hasBrowseEntries = browseCounts.some((count) => (count ?? 0) > 0);
 
   return (
     <>
-      <main className="page-shell theory-system-page theory-system-home">
+      <main className="page-shell theory-system-page theory-system-home v307-knowledge theory-home-v307">
         <section className="theory-system-home-hero">
           <div>
             <p className="eyebrow">探索理论流派</p>
-            <h1>从三大学科进入理论世界</h1>
+            <h1>理论流派</h1>
             <p>使用本馆已审核的学术条目与馆藏证据，探索社会理论的思想脉络和学科传播。</p>
             <TheorySearchForm defaultValue={q} />
           </div>
@@ -73,7 +76,9 @@ export default async function TheoriesPage({ searchParams }: { searchParams: Pro
           </section>
         ) : <TheoryEmpty title="学科资料尚未发布" detail="管理员完成学科和理论条目审核后，这里会自动形成学科入口。" />}
 
-        {overview ? (
+        {featured.length ? <section className="knowledge-section"><TheorySectionHeading title={overview?.featured_nodes?.length ? "精选理论流派" : "馆藏理论流派"} href="/theories/directory?type=theory_tradition"/><div className="knowledge-theory-featured">{featured.slice(0, 5).map(node => <KnowledgeNodeCard node={node} key={node.id}/>)}</div></section> : null}
+
+        {q.trim() && overview ? (
           <section className="theory-browse-section">
             <TheorySectionHeading title="浏览馆藏理论" />
             {hasBrowseEntries ? (
@@ -88,14 +93,14 @@ export default async function TheoriesPage({ searchParams }: { searchParams: Pro
           </section>
         ) : null}
 
-        {overview?.reading_paths.length ? (
+        {q.trim() && overview?.reading_paths.length ? (
           <section className="theory-path-section">
             <TheorySectionHeading title="精选阅读路径" />
             <div className="theory-reading-path-grid">{overview.reading_paths.map((path) => <ReadingPathCard key={path.id} path={path} />)}</div>
           </section>
         ) : null}
 
-        {overview && (overview.recent.nodes.length || overview.recent.timeline_events.length || overview.recent.work_relations.length) ? (
+        {q.trim() && overview && (overview.recent.nodes.length || overview.recent.timeline_events.length || overview.recent.work_relations.length) ? (
           <section className="theory-recent-section">
             <TheorySectionHeading title="最近整理" />
             <div className="theory-recent-grid">

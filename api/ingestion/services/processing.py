@@ -537,6 +537,18 @@ def run_external_enrichment_job(
     if _pause_requested(job):
         return _mark_job_paused(job)
 
+    # The former batch-wide resolver can include sources beyond the explicit
+    # free bibliography allowlist. Preserve old records without resuming that
+    # network path after the editor redesign. New lookups use the candidate
+    # endpoint and the same SourceRecord/provider gateway directly.
+    if candidate_loader is None:
+        job.status = ProcessingJob.Status.FAILED
+        job.error_code = "explicit_free_lookup_required"
+        job.error_message = "自动外部书目补充已退役。请在馆藏工作页点击查找免费来源，原候选和手工值保留。"
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "error_code", "error_message", "finished_at", "updated_at"])
+        return job
+
     job, claimed = _claim_processing_job(job_id, task_id=task_id, progress_floor=5)
     if not claimed:
         return job
@@ -1206,12 +1218,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     actor=job.created_by,
                     schedule_ocr=False,
                 )
-                if job.upload_item.batch.external_enrichment_enabled:
-                    external_job = queue_external_enrichment_job(
-                        job.upload_item,
-                        actor=job.created_by,
-                    )
-                    stats["external_corroboration_job_id"] = str(external_job.id)
+                stats["external_corroboration"] = "explicit_free_lookup_required"
             except Exception as exc:
                 # Front-matter candidates are derived and remain optional for
                 # reading and publication.  The OCR result itself stays valid.

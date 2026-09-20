@@ -153,10 +153,10 @@ def test_public_page_contracts_cover_real_routes_and_report_legacy_dependencies(
     assert coverage["status"] == "ok"
     assert coverage["errors"] == []
     assert coverage["page_counts"] == {"scholar": 9, "theory": 7, "topic": 8}
-    assert coverage["page_contract_count"] == 32
+    assert coverage["page_contract_count"] == 37
     assert {row["object_type"] for row in coverage["public_surfaces"]} == {
         "scholar", "theory", "topic", "work", "reading_path", "discipline", "subdiscipline",
-        "site", "recommendation", "media", "reader",
+        "site", "recommendation", "recommendation_issue", "media", "reader", "evidence_curation", "scholar_relation",
     }
     assert all(row["percent"] == 100 for row in coverage["route_coverage"].values())
     assert all(row["percent"] == 100 for row in coverage["admin_field_coverage"].values())

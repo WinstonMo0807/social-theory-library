@@ -1,8 +1,3 @@
-import type { Metadata } from "next";
-import { AdminSystemHealth } from "@/components/admin-system-health";
-
-export const metadata: Metadata = { title: "系统健康检查" };
-
-export default function SystemHealthPage() {
-  return <AdminSystemHealth />;
-}
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
+export default async function Page({ searchParams }: { searchParams: Promise<AdminSearchParams> }) { redirect(preservingAdminRedirect("/admin/processing/health", await searchParams)); }

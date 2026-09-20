@@ -3,6 +3,7 @@ import { BookOpen, CalendarDays, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { TheoryEmpty } from "@/components/theory-system-ui";
 import type { NormalizedTimelineEvent } from "@/lib/api/knowledge.types";
+import { CollectionLink } from "@/components/collection-link";
 
 export const theoryTimelineEventTypeLabels: Record<string, string> = {
   publication: "重要著作出版",
@@ -22,21 +23,23 @@ export const theoryTimelineEventTypeLabels: Record<string, string> = {
 export function TheoryTimelinePublicList({
   events,
   pagination = null,
+  detailLinks = true,
 }: {
   events: NormalizedTimelineEvent[];
   pagination?: ReactNode;
+  detailLinks?: boolean;
 }) {
   return (
     <section className="theory-timeline-list" data-module-id="theory-development">
       {events.length ? events.map((event) => {
         const nodeNames = event.relations.filter((item) => item.type === "node").map((item) => item.name);
         const hasWork = event.relations.some((item) => item.type === "work");
-        return <article key={event.id}>
+        return <article id={`timeline-event-${event.id}`} key={event.id}>
           <time>{event.start_year ? `${Math.floor(event.start_year / 10) * 10}s` : event.date_label}</time>
           <span className="event-icon">{hasWork ? <BookOpen size={21} /> : <CalendarDays size={21} />}</span>
-          <div className="event-main"><small>{event.date_label || event.start_year}</small><h2>{event.title}</h2><p>{event.description}</p></div>
+          <div className="event-main"><small>{event.date_label || event.start_year}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>
           <dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}{event.source ? <><dt>信息来源</dt><dd>{event.source}</dd></> : null}</dl>
-          {event.reader_href ? <Link href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></Link> : null}
+          {event.reader_href ? <CollectionLink href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></CollectionLink> : null}
         </article>;
       }) : <TheoryEmpty title="没有符合条件的公开事件" detail="调整筛选条件，或等待管理员审核并发布新的时间轴事件。" />}
       {pagination}

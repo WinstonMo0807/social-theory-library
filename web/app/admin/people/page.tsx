@@ -1,7 +1,2 @@
-import { PersonResolutionWorkspace } from "@/components/admin/knowledge/person-resolution-workspace";
-
-export const metadata = { title: "人物查重与整理" };
-
-export default function PeoplePage() {
-  return <PersonResolutionWorkspace />;
-}
+import { KnowledgeLegacyRedirect } from "@/components/admin/knowledge/knowledge-legacy-redirect";
+export default function Page() { return <KnowledgeLegacyRedirect destination="/admin/scholars/people" />; }

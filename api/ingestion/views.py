@@ -713,7 +713,7 @@ class BatchItemUploadView(APIView):
                     "idempotent": True,
                 }
             )
-        if batch.items.count() >= batch.expected_count:
+        if batch.items.count() >= min(batch.expected_count, 5):
             return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
         uploaded = request.FILES.get("file")
         if uploaded is None:
@@ -975,7 +975,7 @@ class BatchItemChunkUploadView(APIView):
             )
             existing = locked_batch.items.filter(processing_token=client_token).first()
             if existing is None:
-                if locked_batch.items.count() >= locked_batch.expected_count:
+                if locked_batch.items.count() >= min(locked_batch.expected_count, 5):
                     return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
                 item = UploadItem(
                     batch=locked_batch,
@@ -1056,7 +1056,7 @@ class BatchItemFailureView(APIView):
         item = batch.items.filter(processing_token=client_token).first()
         created = False
         if item is None:
-            if batch.items.count() >= batch.expected_count:
+            if batch.items.count() >= min(batch.expected_count, 5):
                 return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
             item = UploadItem.objects.create(
                 batch=batch,
@@ -1086,8 +1086,8 @@ class BatchUploadView(APIView):
         files = request.FILES.getlist("files")
         if not files:
             return Response({"files": ["请选择至少一个 PDF。"]}, status=400)
-        if len(files) > 100:
-            return Response({"files": ["单个批次最多接收 100 个 PDF。"]}, status=400)
+        if len(files) > 5:
+            return Response({"files": ["单个批次最多接收 5 个 PDF。"]}, status=400)
 
         policy_serializer = UploadBatchCreateSerializer(
             data={**request.data.dict(), "expected_count": len(files)}
@@ -1160,6 +1160,14 @@ class UploadItemDetailView(generics.RetrieveAPIView):
     serializer_class = UploadItemSerializer
     queryset = UploadItem.objects.prefetch_related("attempts", "metadata_candidates").select_related("edition__work")
 
+    def get_queryset(self):
+        from .services.document_stages import with_document_stage_ids
+        return with_document_stage_ids(super().get_queryset())
+
+    def get_object(self):
+        from .services.document_stages import attach_document_stages
+        return attach_document_stages([super().get_object()])[0]
+
 
 class UploadItemListView(generics.ListAPIView):
     permission_classes = [IsLibraryStaff]
@@ -1177,6 +1185,7 @@ class UploadItemListView(generics.ListAPIView):
     )
 
     def get_queryset(self):
+        from .services.document_stages import with_document_stage_ids
         queryset = super().get_queryset()
         include_deleted = self.request.query_params.get("include_deleted", "").strip().lower() in {
             "1",
@@ -1206,7 +1215,15 @@ class UploadItemListView(generics.ListAPIView):
             queryset = queryset.filter(edition__isnull=False).exclude(
                 status=UploadItem.Status.DELETED,
             )
-        return queryset
+        return with_document_stage_ids(queryset)
+
+    def list(self, request, *args, **kwargs):
+        from .services.document_stages import attach_document_stages
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        rows = attach_document_stages(page if page is not None else queryset)
+        payload = self.get_serializer(rows, many=True).data
+        return self.get_paginated_response(payload) if page is not None else Response(payload)
 
 
 class UploadItemPreviewView(APIView):

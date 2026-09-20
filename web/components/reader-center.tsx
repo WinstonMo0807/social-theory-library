@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import {
   ArrowRight,
   Bookmark,
@@ -556,9 +557,9 @@ export function ReaderCenter() {
                           <i aria-label={`阅读进度 ${ratio}%`}><b style={{ width: `${ratio}%` }} /></i>
                           <strong>{ratio}%</strong>
                         </div>
-                        <Link className="button" href={`/reader/${progress.asset}?page=${progress.current_page}`}>
+                        <CollectionLink className="button" href={`/reader/${progress.asset}?page=${progress.current_page}`}>
                           继续阅读 <ArrowRight size={16} />
-                        </Link>
+                        </CollectionLink>
                       </article>
                     );
                   })}
@@ -588,9 +589,9 @@ export function ReaderCenter() {
                   <BookCard work={work} dense />
                   <span className="reader-saved-actions">
                     {progress ? (
-                      <Link href={`/reader/${progress.asset}?page=${progress.current_page}`}>
+                      <CollectionLink href={`/reader/${progress.asset}?page=${progress.current_page}`}>
                         第 {progress.current_page} 页继续 <ArrowRight size={14} />
-                      </Link>
+                      </CollectionLink>
                     ) : null}
                     <ActionButton type="button" state={pendingAction === `delete-record:saved:${saved.id}` ? "pending" : "idle"} pendingLabel="移除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:saved:${saved.id}`} onClick={() => void deleteRecord("saved", saved.id)}>移除收藏</ActionButton>
                   </span>
@@ -617,7 +618,7 @@ export function ReaderCenter() {
               <article className="reader-data-row" key={item.id}>
                 <Bookmark size={17} />
                 <div><strong>{adaptWork(item.work).title}</strong><p>{item.label || "页面书签"}</p></div>
-                <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.page_index}`}>打开 <ArrowRight size={14} /></Link><ActionButton type="button" state={pendingAction === `delete-record:bookmarks:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:bookmarks:${item.id}`} onClick={() => void deleteRecord("bookmarks", item.id)}>删除</ActionButton></span>
+                <span className="reader-data-actions"><CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>打开 <ArrowRight size={14} /></CollectionLink><ActionButton type="button" state={pendingAction === `delete-record:bookmarks:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:bookmarks:${item.id}`} onClick={() => void deleteRecord("bookmarks", item.id)}>删除</ActionButton></span>
               </article>
             ))}
             {!readerData.bookmarks.length ? <p className="empty-state">你还没有保存书签。</p> : null}
@@ -632,7 +633,7 @@ export function ReaderCenter() {
                 <article className="reader-data-row" key={item.id}>
                   <Highlighter size={17} />
                   <div><strong>{adaptWork(item.work).title}</strong><blockquote>{item.quote || "未保存引文"}</blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
-                  <span className="reader-data-actions"><Link href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></Link><ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton></span>
+                  <span className="reader-data-actions"><CollectionLink href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></CollectionLink><ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton></span>
                 </article>
               ))}
           </DataPanel>
@@ -660,7 +661,7 @@ export function ReaderCenter() {
                         <blockquote>{item.quote || "未保存所选原文"}</blockquote>
                         <p>{item.body_text || "这条笔记没有补充文字。"}</p>
                         <span className="reader-data-actions">
-                          <Link href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开原页 <ArrowRight size={13} /></Link>
+                          <CollectionLink href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开原页 <ArrowRight size={13} /></CollectionLink>
                           <ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton>
                         </span>
                       </article>
@@ -695,7 +696,7 @@ export function ReaderCenter() {
               <article className="reader-data-row" key={item.id}>
                 <Clock3 size={17} />
                 <div><strong>{adaptWork(item.work).title}</strong><p>读到第 {item.page_index} 页</p><small>{new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small></div>
-                <Link href={`/reader/${item.asset}?page=${item.page_index}`}>继续 <ArrowRight size={14} /></Link>
+                <CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>继续 <ArrowRight size={14} /></CollectionLink>
               </article>
             ))}
             {!readerData.history.length ? <p className="empty-state">暂无阅读历史。</p> : null}

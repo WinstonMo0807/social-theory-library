@@ -77,12 +77,13 @@ test("functional health uses shared feedback for refresh, probes and recovery", 
 test("processing center shares feedback and prevents duplicate operations", async () => {
   const source = await readFile(processingUrl, "utf8");
 
-  assert.match(source, /<ActionLink className="button secondary" href="\/admin\/publication"/);
+  assert.match(source, /<ActionLink className="button secondary" href="\/admin\/review\?category=publication_ready"/);
   assert.match(source, /<ActionButton[\s\S]*pendingLabel="正在刷新"/);
   assert.match(source, /pressed=\{paused\}/);
   assert.match(source, /<ToastHost/);
   assert.match(source, /if \(operationInFlightRef\.current\) return false/);
-  assert.match(source, /if \(loadRequestRef\.current\) return loadRequestRef\.current/);
+  assert.match(source, /if \(loadRequestRef\.current\?\.key === key\) return loadRequestRef\.current\.promise/);
+  assert.match(source, /loadRequestRef\.current\?\.controller\.abort\(\)/);
   assert.match(source, /aria-busy=\{loading \|\| Boolean\(pendingOperation\)\}/);
 });
 

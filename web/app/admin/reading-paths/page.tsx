@@ -1,8 +1,2 @@
-import type { Metadata } from "next";
-import { ReadingPathWorkbench } from "@/components/admin/curation/reading-path-workbench";
-
-export const metadata: Metadata = { title: "阅读路径管理" };
-
-export default function Page() {
-  return <ReadingPathWorkbench />;
-}
+import { KnowledgeLegacyRedirect } from "@/components/admin/knowledge/knowledge-legacy-redirect";
+export default function Page() { return <KnowledgeLegacyRedirect destination="/admin/theories/reading-paths" />; }

@@ -35,7 +35,7 @@ type PreviewPerspective = {
   reason?: string;
 };
 
-type KnowledgePreviewPayload = {
+export type KnowledgePreviewPayload = {
   preview_mode: true;
   protected: true;
   object_type: string;
@@ -91,7 +91,7 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
-function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload; pageId: string }) {
+export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload; pageId: string }) {
   const data = payload.perspective.data;
   if (!data || typeof data !== "object") {
     return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
@@ -168,7 +168,7 @@ function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload;
           ? <ReadingPathPublicView path={path} footer={footer} />
           : <main className="page-shell secondary-detail-page"><header><p className="eyebrow">Reading Path</p><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
       }
-      if (payload.object_type === "theory" && pageId !== "overview") {
+      if (payload.object_type === "theory" && pageId !== "overview" && !["concepts", "works", "evidence", "relations", "propositions"].includes(pageId)) {
         return <main className="page-shell secondary-detail-page"><header><p className="eyebrow">公开关系入口</p><h1>{node.canonical_name_zh}</h1></header><p className="empty-state">该位置由学科、学者或主题页面消费。请从对应对象的受保护预览核对具体页面。</p></main>;
       }
       return <KnowledgeNodePublicView
@@ -178,6 +178,7 @@ function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload;
         slug={node.slug}
         footer={footer}
         publicationStatusLabel={payload.active_perspective === "draft" ? "草稿预览" : "已审核并公开"}
+        section={pageId}
       />;
     }
     default:

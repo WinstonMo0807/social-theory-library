@@ -271,7 +271,7 @@ def test_A16_unsaved_context_never_silently_saves_or_schedules_old_context(api_c
         "confirmed_context": {"title": "尚未保存的新题名"},
     }, format="json")
     assert response.status_code == 200, response.data
-    assert response.data["refresh"]["state"] == "unsaved_context"
+    assert response.data["refresh"]["state"] == "not_enabled"
     assert api_client.get(f"{base}?edition={edition.pk}").data["data"]["work"]["title"] == "完整保存测试"
 
 

@@ -1,5 +1,3 @@
-import { SemanticIndexAdmin } from "@/components/semantic-index-admin";
-
-export default function SemanticIndexPage() {
-  return <SemanticIndexAdmin />;
-}
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
+export default async function Page({ searchParams }: { searchParams: Promise<AdminSearchParams> }) { redirect(preservingAdminRedirect("/admin/processing/semantic-index", await searchParams)); }

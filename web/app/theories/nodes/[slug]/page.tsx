@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { KnowledgeNodePublicView } from "@/components/public/knowledge-node-public-view";
 import { SiteFooter } from "@/components/site-footer";
-import { loadKnowledgeNode, loadNormalizedReadingPaths, loadNormalizedTheoryTimeline } from "@/lib/api/knowledge.server";
+import { loadKnowledgeNode } from "@/lib/api/knowledge.server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -12,12 +12,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function KnowledgeNodePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [node, timeline, allPaths] = await Promise.all([
-    loadKnowledgeNode(slug),
-    loadNormalizedTheoryTimeline({ node: slug }),
-    loadNormalizedReadingPaths(),
-  ]);
+  const node = await loadKnowledgeNode(slug);
   if (!node) notFound();
 
-  return <KnowledgeNodePublicView node={node} timeline={timeline} allPaths={allPaths} slug={slug} footer={<SiteFooter />} />;
+  return <KnowledgeNodePublicView node={node} timeline={[]} allPaths={[]} slug={slug} footer={<SiteFooter />} />;
 }

@@ -30,7 +30,7 @@ def test_ingestion_foundation_defaults_are_compatible_with_existing_uploads(admi
     assert batch.access_policy == UploadBatch.AccessPolicy.PUBLIC
     assert batch.ocr_strategy == UploadBatch.OcrStrategy.AUTO
     assert batch.duplicate_policy == UploadBatch.DuplicatePolicy.REVIEW
-    assert batch.external_enrichment_enabled is True
+    assert batch.external_enrichment_enabled is False
     assert batch.ai_suggestions_enabled is False
     assert item.workflow_state == UploadItem.WorkflowState.UPLOADED
     assert item.priority == 0

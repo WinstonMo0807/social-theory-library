@@ -1,8 +1,2 @@
-import type { Metadata } from "next";
-import { TheoryNodesAdmin } from "@/components/theory-system-admin";
-
-export const metadata: Metadata = { title: "理论节点管理" };
-
-export default function Page() {
-  return <TheoryNodesAdmin />;
-}
+import { KnowledgeLegacyRedirect } from "@/components/admin/knowledge/knowledge-legacy-redirect";
+export default function Page() { return <KnowledgeLegacyRedirect destination="/admin/theories" />; }

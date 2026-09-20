@@ -632,6 +632,7 @@ def run_front_matter_intelligence(
     upload_item: UploadItem | None = None,
     actor=None,
     schedule_ocr: bool = False,
+    allow_synthesis: bool = False,
 ) -> dict[str, Any]:
     if asset.kind != Asset.Kind.NORMALIZED:
         raise ValueError("FrontMatterIntelligence 只读取规范阅读 Asset，不修改 ORIGINAL PDF。")
@@ -721,7 +722,7 @@ def run_front_matter_intelligence(
             field_name="abstract",
             actor=actor,
         )
-        if synthesis_pack is not None and upload_item is not None:
+        if allow_synthesis and synthesis_pack is not None and upload_item is not None:
             synthesis = schedule_library_synthesis(
                 synthesis_pack,
                 upload_item=upload_item,
@@ -741,7 +742,7 @@ def run_front_matter_intelligence(
             abstract_status = {
                 "kind": "no_reliable_candidate",
                 "reason": (
-                    "library_synthesis_requires_upload_context"
+                    "explicit_free_generation_required"
                     if synthesis_pack is not None
                     else "insufficient_collection_evidence_for_library_synthesis"
                 ),

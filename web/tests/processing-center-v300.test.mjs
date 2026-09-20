@@ -73,7 +73,7 @@ test("Processing Center 3.0.1 exposes product-oriented work surfaces", async () 
   assert.match(diagnostics, /当前用户功能影响/);
   assert.match(diagnostics, /Backlog 可领取/);
   assert.match(diagnostics, /配置模型/);
-  assert.match(processingCenter, /历史暂停 OCR/);
+  assert.match(processingCenter, /暂停的文字识别/);
   assert.match(processingCenter, /resolve_paused_ocr/);
   assert.match(processingCenter, /处理理由/);
   assert.doesNotMatch(processingCenter, /job\.status === "paused" \? <ActionButton[\s\S]*?>继续<\/ActionButton>/);

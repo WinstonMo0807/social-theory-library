@@ -334,10 +334,15 @@ def test_abstract_library_synthesis_waits_for_capability_and_persists_evidence_c
         ]
     )
 
+    default_result = run_front_matter_intelligence(normalized, upload_item=item, actor=user)
+    assert default_result["abstract"]["reason"] == "explicit_free_generation_required"
+    assert not CapabilityDemand.objects.filter(capability="llm_large").exists()
+
     result = run_front_matter_intelligence(
         normalized,
         upload_item=item,
         actor=user,
+        allow_synthesis=True,
     )
 
     assert result["abstract"]["kind"] == "library_synthesis"

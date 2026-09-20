@@ -119,6 +119,7 @@ export type NormalizedKnowledgeRelation = {
 };
 
 export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
+  evidenceCuration?: import("./evidence-curation.types").PublishedEvidenceCuration;
   aliases: { id: string; alias: string; language: string; alias_type: string; normalized_alias: string }[];
   discipline_links: {
     id: string;
@@ -237,6 +238,7 @@ export type NormalizedReadingPath = {
 };
 
 export type TheorySystemOverview = {
+  featured_nodes?: KnowledgeNodeListItem[];
   disciplines: (TheoryDisciplineCompact & {
     counts: Partial<Record<"theory_traditions" | "subdisciplines" | "works", number>>;
   })[];

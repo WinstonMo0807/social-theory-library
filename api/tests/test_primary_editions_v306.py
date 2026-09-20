@@ -67,7 +67,7 @@ def test_primary_selection_preserves_public_snapshots_urls_and_separates_async_r
     api_client.force_authenticate(admin_user)
     planned = prepare(api_client, target)
     assert planned["can_select"]
-    assert not EditorialRevision.objects.exists() and not KnowledgePublicationEvent.objects.exists()
+    assert not EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).exists() and not KnowledgePublicationEvent.objects.exists()
     assert planned["current_primary_edition_ids"] == [str(old.pk)]
     result = select(api_client, target, planned)
     assert result.status_code == 200
@@ -88,7 +88,7 @@ def test_primary_selection_preserves_public_snapshots_urls_and_separates_async_r
         assert public.data["title"] == originals[target.pk]["work"]["title"]
         assert "未发布且不得泄漏" not in str(public.data)
     assert select(api_client, target, planned).data["audit_id"] == result.data["audit_id"]
-    assert EditorialRevision.objects.count() == 2
+    assert EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).count() == 2
     assert KnowledgePublicationEvent.objects.count() == 2
     assert AuditEvent.objects.filter(action="catalog.primary_selected").count() == 1
 
@@ -114,7 +114,7 @@ def test_primary_selection_failure_rolls_back_both_editions_and_all_new_records(
     old.refresh_from_db()
     target.refresh_from_db()
     assert old.is_primary and not target.is_primary
-    assert not EditorialRevision.objects.exists() and not KnowledgePublicationEvent.objects.exists()
+    assert not EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).exists() and not KnowledgePublicationEvent.objects.exists()
     assert not AuditEvent.objects.filter(action="catalog.primary_selected").exists()
     assert CatalogPublicationRevision.objects.count() == 2
 
@@ -131,7 +131,7 @@ def test_primary_selection_rejects_stale_preview_and_unpublished_target(api_clie
     fresh = prepare(api_client, target)
     assert not fresh["can_select"]
     assert select(api_client, target, fresh).status_code == 409
-    assert not EditorialRevision.objects.exists()
+    assert not EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).exists()
 
 
 def test_primary_selection_refuses_pending_draft_and_requires_explicit_confirmation(api_client, admin_user):
@@ -188,7 +188,7 @@ def test_primary_selection_cannot_supersede_already_approved_pending_content(api
     assert not planned["can_select"]
     assert any("尚未生效" in row for row in planned["blocking"])
     assert select(api_client, target, planned).status_code == 409
-    assert not EditorialRevision.objects.exists()
+    assert not EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).exists()
     pending.refresh_from_db(); old.refresh_from_db(); target.refresh_from_db()
     assert pending.status == "preparing" and old.is_primary and not target.is_primary
 
@@ -211,7 +211,7 @@ def test_primary_nowait_lock_conflict_has_recoverable_error(api_client, admin_us
     result = select(api_client, target, planned)
     assert result.status_code == 409
     assert "其他操作" in result.data["detail"]
-    assert not EditorialRevision.objects.exists()
+    assert not EditorialRevision.objects.filter(target_id__in=[old.work_id, old.pk, target.pk]).exists()
     old.refresh_from_db(); target.refresh_from_db()
     assert old.is_primary and not target.is_primary
 

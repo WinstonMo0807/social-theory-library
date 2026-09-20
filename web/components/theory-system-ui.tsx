@@ -14,6 +14,7 @@ import type { KnowledgeNodeListItem, NormalizedReadingPath, TheoryDisciplineComp
 import { ArchitecturalImage } from "./ui";
 import { ResponsiveMediaImage } from "./responsive-media-image";
 import type { components } from "@/lib/api/generated/schema";
+import { CollectionLink } from "@/components/collection-link";
 
 export const nodeTypeLabels: Record<string, string> = {
   theory_tradition: "理论传统",
@@ -42,11 +43,12 @@ export function TheoryBanner({ image, media }: { image?: string; media?: compone
   );
 }
 
-export function TheorySearchForm({ defaultValue = "", action = "/theories" }: { defaultValue?: string; action?: string }) {
+export function TheorySearchForm({ defaultValue = "", action = "/theories", discipline }: { defaultValue?: string; action?: string; discipline?: string }) {
   return (
     <form action={action} className="theory-system-search">
       <Search size={20} strokeWidth={1.6} />
       <input type="hidden" name="context" value="theories" />
+      {discipline ? <input type="hidden" name="discipline" value={discipline} /> : null}
       <input name="q" defaultValue={defaultValue} placeholder="搜索理论名称、别名或外文名" aria-label="搜索理论知识系统" />
       <button type="submit">搜索</button>
     </form>
@@ -89,6 +91,7 @@ export function KnowledgeNodeCard({ node }: { node: KnowledgeNodeListItem }) {
   const neighbors = node.related_disciplines?.map((item) => item.name).join("、");
   return (
     <Link className="theory-node-card" href={`/theories/nodes/${node.slug}`}>
+      <TheoryBanner image={node.cover_url} media={node.cover_media} />
       <header>
         <span className="theory-node-symbol"><CircleDot size={21} /></span>
         <div>
@@ -125,7 +128,7 @@ export function ReadingPathCard({ path }: { path: NormalizedReadingPath }) {
 export function WorkCompactCard({ work, role }: { work: TheoryWorkCompact; role?: string }) {
   const href = work.detail_href || work.reader_href || "/explore";
   return (
-    <Link className="theory-work-compact" href={href}>
+    <CollectionLink className="theory-work-compact" href={href}>
       <span className={work.cover_url ? "work-cover has-image" : "work-cover"} style={work.cover_url ? { backgroundImage: `url("${work.cover_url}")` } : undefined}>
         {!work.cover_url ? <FileText size={24} /> : null}
       </span>
@@ -135,7 +138,7 @@ export function WorkCompactCard({ work, role }: { work: TheoryWorkCompact; role?
         <em>{[work.author, work.year].filter(Boolean).join(" · ")}</em>
       </span>
       <ArrowRight size={17} />
-    </Link>
+    </CollectionLink>
   );
 }
 

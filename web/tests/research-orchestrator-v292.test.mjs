@@ -188,7 +188,7 @@ test("reading-path workbench uses the shared picker for formal Discipline, Work 
   const fields = await readFile(new URL("../components/admin/forms/workflow-fields.tsx", import.meta.url), "utf8");
   assert.match(workbench, /<EntityPicker label="馆藏作品"/);
   assert.match(workbench, /endpoint="\/catalog\/admin\/library\/works\/"[\s\S]*queryParam="q"[\s\S]*nameField="title"/);
-  assert.match(workbench, /<EntityPicker label="知识节点"/);
+  assert.match(workbench, /<EntityPicker label="理论或概念"/);
   assert.match(workbench, /endpoint="\/catalog\/admin\/theory-system\/nodes\/"[\s\S]*queryParam="q"[\s\S]*nameField="canonical_name_zh"/);
   assert.match(workbench, /node_name: asString\(nodeData\.canonical_name_zh/);
   assert.match(workbench, /work_name: asString\(workData\.title/);

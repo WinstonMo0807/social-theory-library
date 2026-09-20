@@ -47,7 +47,7 @@ test("scoped search API failures reject instead of becoming empty results", asyn
 
 test("major public pages declare their real search context", async () => {
   const [home, explore, scholars, topics, subdisciplines, theories, legacyTheories] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/public/home-public-view.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/explore/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/scholars/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8"),

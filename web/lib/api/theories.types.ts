@@ -3,6 +3,7 @@ import type { ApiScholar } from "./people.types";
 import type { ApiWork } from "./public-catalog";
 
 export type ApiTheorySchool = {
+  canonical_node_url?: string;
   id: string;
   slug: string;
   name: string;

@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { KnowledgeWorkspaceDiagnostics } from "@/components/knowledge-workspace-diagnostics";
-
-export const metadata: Metadata = { title: "知识处理诊断" };
-
-export default function KnowledgeDiagnosticsPage() {
-  return <KnowledgeWorkspaceDiagnostics />;
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
+export default async function Page({searchParams}:{searchParams:Promise<AdminSearchParams>}) {
+  redirect(preservingAdminRedirect("/admin/processing/health/knowledge", await searchParams));
 }

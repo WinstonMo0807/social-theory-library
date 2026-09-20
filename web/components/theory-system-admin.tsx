@@ -9,7 +9,6 @@ import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 
 import {
-  ArrowRight,
   BookOpen,
   Check,
   Clock3,
@@ -26,6 +25,9 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
+import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
+import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminListHref, adminPageNumber } from "@/lib/admin-route-context";
 import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
@@ -703,7 +705,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       eyebrow="内容管理"
       title="理论与概念"
       description="选择条目后修改名称、简介和相关资料。保存后可预览，确认发布后读者才会看到修改。"
-      actions={<><Link className="admin-outline-button" href="/admin/theory-timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
+      actions={<><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
     >
       <div className="theory-node-admin-grid knowledge-object-host-layout">
         <section className="admin-panel theory-node-table-panel">
@@ -735,9 +737,9 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           <EditorListPages data={nodes.data} page={nodePage} pageKey="page" label="理论与概念分页" ordering="按排序值、名称及编号稳定排序" busy={nodes.loading} href={(updates) => theoryLocation.href({ node_type: nodeType, status: statusFilter, discipline: disciplineFilter, q: query, ...updates })} />
         </section>
 
-        <div className="knowledge-object-editor-workspace">
+        <KnowledgeVisualEditor objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
         {openingNode ? <div role="status"><p>正在读取指定理论或概念，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
-        <form className="admin-panel theory-node-editor" onSubmit={saveNode} inert={openingNode} aria-busy={openingNode}>
+        <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
           <p>保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>
           <EditorialPrefillNotice state={prefills} />
           <fieldset disabled={openingNode} style={{ display: "contents" }}>
@@ -823,14 +825,14 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
           <div className="inline-fields three"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>
           </details>
-          <div className="inline-fields"><label><span>审核状态</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="rejected">拒绝</option><option value="archived">下线</option></select></label><label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
+          <div className="inline-fields"><label><span>审核状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="rejected">拒绝</option><option value="archived">下线</option></select></label><label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
           <p>页面图片在媒体面板中选择。请先保存其他未保存内容。</p>
           {editing ? <div className="theory-node-secondary-actions"><ActionButton type="button" state={pendingAction === "load-node-versions" ? "pending" : "idle"} pendingLabel="读取中" disabled={Boolean(pendingAction) && pendingAction !== "load-node-versions"} onClick={() => void loadVersions()}><History size={14} />历史版本</ActionButton></div> : null}
           {versions ? <section className="theory-version-list"><header><strong>历史版本</strong><button type="button" aria-label="关闭历史版本" onClick={() => setVersions(null)}><X size={14} /></button></header>{versions.map((version) => <article key={version.id}><strong>第 {version.version_number} 版</strong><span>{version.change_note || "内容更新"}</span><small>{version.created_by_name || "系统"} · {asDate(version.created_at)}</small></article>)}</section> : null}
           {pendingRevision?.status === "draft" ? <section className="theory-editorial-revision"><div><strong>待发布编辑草稿</strong><p>第 {pendingRevision.revision} 版修改 {pendingRevision.changed_fields.join("、")}。当前公开页仍使用正式内容。</p></div><ActionButton className="button" type="button" state={pendingAction === "publish-node-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(pendingAction) || pendingRevision.has_conflict} onClick={() => void publishRevision()}><Check size={14} />单人确认并发布</ActionButton></section> : null}
           {editing ? <section className="theory-merge-box"><strong><GitMerge size={15} />合并重复理论或概念</strong><p>合并前会计算文献、关系、学者、时间轴和阅读路径的影响。</p><div><ResearchEntityPicker label="选择保留的保留的理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="merge_target" values={onePickerValue(mergeTarget, nodeName(mergeTarget))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing.id || selected?.status === "archived") return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setMergeTarget(selected?.id ?? ""); }} /><ActionButton type="button" state={pendingAction === "merge-theory-node" ? "pending" : "idle"} pendingLabel="正在计算影响" disabled={!mergeTarget || (Boolean(pendingAction) && pendingAction !== "merge-theory-node")} onClick={() => void mergeNode()}>预览并合并</ActionButton></div></section> : null}
           {editing ? <EntityLifecycleActions kind="knowledge-node" id={editing.id} name={editing.canonical_name_zh} status={draft.status} previewHref={`/theories/nodes/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, status: snapshot.status })); setEditing((current) => current ? { ...current, status: snapshot.status } : current); nodes.refresh(); allNodes.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" }); nodes.refresh(); allNodes.refresh(); }} /> : null}
-          <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存本页资料" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{editing?.status !== "published" && draft.status === "published" ? "保存并公开本页资料" : "保存本页资料（暂不发布）"}</ActionButton></div>
+          <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存本页资料" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{"保存本页草稿"}</ActionButton></div>
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
           <EditorialConflictHelp visible={editConflict} href={`/admin/theories?node=${editing?.id}`} />
           </fieldset>
@@ -845,7 +847,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
             onChanged={() => { nodes.refresh(); allNodes.refresh(); requestedNode.refresh(); setImageRevision((value) => value + 1); }}
           />
         </div>
-        </div>
+        </KnowledgeVisualEditor>
       </div>
     </AdminFrame>
   );
@@ -897,43 +899,10 @@ function relationToDraft(row: KnowledgeRelation) {
   return { source_node: row.source_node, target_node: row.target_node, relation_type: row.relation_type, direction: row.direction, description: row.description, evidence_source: row.evidence_source, confidence: row.confidence, status: row.status };
 }
 
-function RelationGraphPreview({
-  relations,
-  centerId,
-}: {
-  relations: KnowledgeRelation[];
-  centerId?: string;
-}) {
-  const effectiveCenter = centerId;
-  const visible = relations
-    .filter((relation) => !effectiveCenter || relation.source_node === effectiveCenter || relation.target_node === effectiveCenter)
-    .slice(0, 8);
-  if (!effectiveCenter || !visible.length) {
-    return <div className="admin-relation-preview empty"><span>当前列表中没有与所选理论相关的关系。可搜索理论名称查看。</span></div>;
-  }
-  const centerName = visible.find((relation) => relation.source_node === effectiveCenter)?.source_name
-    || visible.find((relation) => relation.target_node === effectiveCenter)?.target_name
-    || visible[0].source_name;
-  return (
-    <section className="admin-relation-preview" aria-label="理论关系预览">
-      <header><strong>相关理论</strong><span>显示本页与所选理论相关的前 8 条关系；完整记录见下方列表。修改须确认发布后才对读者生效。</span></header>
-      <div className="admin-relation-preview-body">
-        <strong className="relation-center-node">{centerName}</strong>
-        <div className="relation-preview-spokes">
-          {visible.map((relation) => {
-            const outward = relation.source_node === effectiveCenter;
-            const adjacentName = outward ? relation.target_name : relation.source_name;
-            return <div key={relation.id}>
-              <span>{outward ? relation.relation_label : `${relation.relation_label}的来源`}</span>
-              <ArrowRight size={14} aria-hidden="true" />
-              <strong>{adjacentName}</strong>
-              <StatusBadge value={relation.editorial_revision ? "draft" : (relation.public_status ?? relation.status)} />
-            </div>;
-          })}
-        </div>
-      </div>
-    </section>
-  );
+function RelationGraphPreview({relations,centerId,onSelect}:{relations:KnowledgeRelation[];centerId?:string;onSelect:(row:KnowledgeRelation)=>void}) {
+ const visible=relations.filter(row=>!centerId || row.source_node===centerId || row.target_node===centerId);
+ const nodes=[...new Map(visible.flatMap(row=>[{id:row.source_node,name:row.source_name,kind:"knowledge_node" as const,node_type:"theory_tradition",summary:row.description},{id:row.target_node,name:row.target_name,kind:"knowledge_node" as const,node_type:"theory_tradition",summary:row.description}]).map(row=>[row.id,row])).values()];
+ return <TheoryGraphExplorer graph={{center:centerId || null,nodes,edges:visible.map(row=>({id:row.id,source:row.source_node,target:row.target_node,relation_type:row.relation_type,relation_label:row.relation_label,direction:row.direction,description:row.description})),depth:1,limit:visible.length,truncated:false}} onSelectRelation={id=>{const row=relations.find(item=>item.id===id);if(row)onSelect(row);}}/>;
 }
 
 const workRelationOptions = [
@@ -976,8 +945,8 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const relationStatus = location.search.get("relation_status") || "";
   const [taskQuery, setTaskQuery] = useState(taskFilter);
   const [relationQuery, setRelationQuery] = useState(relationFilter);
-  useEffect(() => { setTaskQuery(taskFilter); }, [taskFilter]);
-  useEffect(() => { setRelationQuery(relationFilter); }, [relationFilter]);
+  useEffect(() => { const timer=window.setTimeout(()=>setTaskQuery(taskFilter),0);return()=>window.clearTimeout(timer); }, [taskFilter]);
+  useEffect(() => { const timer=window.setTimeout(()=>setRelationQuery(relationFilter),0);return()=>window.clearTimeout(timer); }, [relationFilter]);
   const [selected, setSelected] = useState<ReviewTask | null>(null);
   const [candidateNode, setCandidateNode] = useState("");
   const [relationRole, setRelationRole] = useState("general_mention");
@@ -1009,8 +978,9 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const requested = useAdminData<KnowledgeRelation>(requestedId ? `/catalog/admin/theory-system/relations/${requestedId}/` : null);
   useEffect(() => {
     if (!requested.data) return;
-    setEditingRelation(requested.data);
-    setRelationDraft(relationToDraft(requested.data));
+    const selected=requested.data;
+    const timer=window.setTimeout(()=>{setEditingRelation(selected);setRelationDraft(relationToDraft(selected));},0);
+    return()=>window.clearTimeout(timer);
   }, [requested.data]);
 
   function chooseTask(task: ReviewTask) {
@@ -1264,7 +1234,7 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
               <button type="submit">搜索关系</button>
             </form>
             <ErrorNotice message={relations.error} retry={relations.refresh} />
-            <RelationGraphPreview relations={relations.data?.results ?? []} centerId={relationDraft.source_node} />
+            <RelationGraphPreview relations={[...(relations.data?.results ?? []).filter(row=>row.id!==editingRelation?.id), ...(relationDraft.source_node && relationDraft.target_node ? [{...relationDraft,id:editingRelation?.id || "local-draft",source_name:relationNodeName(relationDraft.source_node),target_name:relationNodeName(relationDraft.target_node),relation_label:knowledgeRelationOptions.find(([value])=>value===relationDraft.relation_type)?.[1] || relationDraft.relation_type,updated_at:editingRelation?.updated_at || ""}] : [])]} centerId={relationDraft.source_node} onSelect={row=>{if(row.id!=="local-draft" && row.id!==editingRelation?.id)editRelation(row);}} />
             <h3>现有关系</h3>{relations.data?.results.map((relation) => <article className={editingRelation?.id === relation.id ? "selected" : ""} key={relation.id}><div><strong>{relation.source_name}</strong><span>{relation.relation_label}</span><strong>{relation.target_name}</strong></div><p>{relation.description || relation.evidence_source || "尚未填写说明"}</p>{relation.editorial_revision ? <p>有已保存的修改，尚未公开</p> : null}<footer><StatusBadge value={relation.public_status ?? relation.status} /><span><button type="button" onClick={() => editRelation(relation)}><Pencil size={13} />编辑</button><ActionButton type="button" state={pendingAction === `delete-relation:${relation.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-relation:${relation.id}`} onClick={() => void removeRelation(relation)}><Trash2 size={13} />删除</ActionButton></span></footer></article>)}{!relations.data?.results.length ? <p>尚未建立规范理论关系。</p> : null}
           </div>
         </div>
@@ -1491,7 +1461,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const statusFilter = location.search.get("review_status") || "";
   const appliedQuery = location.search.get("q") || "";
   const [query, setQuery] = useState(appliedQuery);
-  useEffect(() => { setQuery(appliedQuery); }, [appliedQuery]);
+  useEffect(() => { const timer=window.setTimeout(()=>setQuery(appliedQuery),0);return()=>window.clearTimeout(timer); }, [appliedQuery]);
   const setDisciplineFilter = (value: string) => location.update({ discipline: value, page: 1 });
   const setTypeFilter = (value: string) => location.update({ event_type: value, page: 1 });
   const setStatusFilter = (value: string) => location.update({ review_status: value, page: 1 });
@@ -1520,8 +1490,9 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const wrongNode = Boolean(nodeId && requested.data && !requested.data.relations.some((row) => row.node === nodeId));
   useEffect(() => {
     if (!requested.data || wrongNode) return;
-    setEditing(requested.data);
-    setDraft(timelineToDraft(requested.data));
+    const selected=requested.data;
+    const timer=window.setTimeout(()=>{setEditing(selected);setDraft(timelineToDraft(selected));},0);
+    return()=>window.clearTimeout(timer);
   }, [requested.data, wrongNode]);
 
   function start(event?: TimelineEvent) {
@@ -1640,7 +1611,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
 
   return (
     <AdminFrame eyebrow="理论管理 / 时间线" title={nodeId ? `${selectedNode.data?.canonical_name_zh || "所选理论"}的时间线` : "全部理论事件"} description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
-      <nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theory-timeline">查看全部理论事件</Link></> : null}</nav>
+      <nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>
       <ErrorNotice message={selectedNode.error} retry={selectedNode.refresh} />
       {nodeId && !selectedNode.data ? <p>尚未读取到所选理论。不会改为另一个理论，也不能在此新建事件。</p> : null}
       {wrongNode ? <p role="alert">这个事件不属于当前理论。请返回事件所属理论，或从全部理论事件中查看。</p> : null}
@@ -1666,7 +1637,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <EditorListPages data={events.data} page={page} pageKey="page" label="事件列表分页" ordering="按发生年份从早到晚，同年按排序与标题排列" busy={events.loading} href={location.href} />
         </section>
 
-        <form className="admin-panel timeline-event-editor" onSubmit={saveEvent}>
+        <div className="timeline-focused-editor"><form className="admin-panel timeline-event-editor" onSubmit={saveEvent}>
           <ErrorNotice message={requested.error} retry={requested.refresh} />
           {requestedId && !requested.data ? <p>正在读取所选事件。</p> : null}
           <fieldset className="dedicated-editor-fields" disabled={Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
@@ -1682,17 +1653,12 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <TimelineEvidenceFields draft={draft} saved={editing} workName={entityLabels[draft.source_work] || editing?.evidence_file?.work_title || "已选择出处馆藏"} onLabels={(values) => setEntityLabels((current) => ({ ...current, ...pickerLabels(values) }))} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
           <label><span>证据原文或来源说明</span><textarea rows={4} value={draft.evidence_text} onChange={(event) => setDraft({ ...draft, evidence_text: event.target.value })} /></label>
           <div className="inline-fields"><label><span>保存后的安排</span><select value={draft.review_status} onChange={(event) => setDraft({ ...draft, review_status: event.target.value })}><option value="suggested">留待核对</option><option value="approved" disabled={!canPublish && editing?.review_status !== "approved"}>准备公开</option><option value="rejected">不采用或准备下线</option></select></label><label><span>排序</span><input type="number" value={draft.display_order} onChange={(event) => setDraft({ ...draft, display_order: Number(event.target.value) })} /></label></div>
-          <section className="timeline-draft-preview" aria-live="polite">
-            <header><strong>事件内容预览</strong><span>{timelineDirty ? "尚未保存的输入" : editing?.editorial_revision ? "已保存，待确认发布" : "当前内容"}</span></header>
-            <div><time>{draft.date_label || draft.start_year || "时期待定"}</time><i /><article><strong>{draft.title || "事件标题将在这里显示"}</strong><span>{timelineTypes.find(([value]) => value === draft.event_type)?.[1] || draft.event_type}</span><p>{draft.description || "填写说明后，前台会以紧凑事件卡显示。"}</p></article></div>
-            <footer>{draft.nodes.length ? `关联 ${draft.nodes.map(timelineNodeName).filter(Boolean).join("、")}` : "可独立关联学科、理论、学者或馆藏，不强制绑定馆藏。"}</footer>
-          </section>
           <ActionButton className="button" type="submit" state={pendingAction?.startsWith("save-timeline-event:") || pendingAction === "create-timeline-event" ? "pending" : "idle"} pendingLabel="正在保存事件" disabled={Boolean(pendingAction)}><Save size={15} />保存事件</ActionButton>
           </fieldset>
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
           <EditorialConflictHelp visible={editConflict} href={location.href({ event: editing?.id ?? null })} />
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
-        </form>
+        </form><aside className="timeline-current-preview"><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:Number(draft.start_year)||null,end_year:Number(draft.end_year)||null,date_label:draft.date_label,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/></aside></div>
       </div>
     </AdminFrame>
   );

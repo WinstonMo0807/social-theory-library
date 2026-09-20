@@ -288,7 +288,10 @@ class WorkWorkspaceEditsView(AdminPrivateResponseMixin, APIView):
             return _edit_error(WorkflowEditConflict(str(error)))
         except (EditorialRevisionError, FieldAssistantError, ObjectDoesNotExist) as error:
             return Response({"detail": str(error), "code": "workspace_save_failed"}, status=400)
-        except DatabaseError:
+        except DatabaseError as error:
+            sqlstate = getattr(error.__cause__, "sqlstate", "")
+            if sqlstate not in {"55P03", "40P01", "40001"}:
+                raise
             return Response({"detail": "书目正在被其他操作更新，请稍后重试。", "code": "workspace_busy"}, status=409)
         workspace = build_admin_workspace(edition, user=request.user, mode="intake" if item else "maintenance", item=item)
         workspace["save_result"] = {"request_id": str(receipt.request_id), "saved_at": receipt.created_at,
@@ -480,25 +483,24 @@ class WorkflowQueueView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request):
-        from catalog.services.admin_queue import CATEGORIES, workflow_rows
+        from catalog.services.admin_queue import CATEGORIES
+        from catalog.services.admin_queue_query import QUEUE_ORDERING, queue_page
 
         category = str(request.query_params.get("category") or "all")
         if category not in CATEGORIES:
             return Response({"detail": "未知待办分类。"}, status=400)
-        rows = workflow_rows(user=request.user, publication_scope=request.query_params.get("scope") == "publication")
+        ordering = str(request.query_params.get("ordering") or "priority")
+        if ordering not in QUEUE_ORDERING:
+            return Response({"detail": "未知待办排序方式。"}, status=400)
         source = str(request.query_params.get("source") or "").strip()
         public_state = str(request.query_params.get("publication") or "").strip()
         query = str(request.query_params.get("q") or "").strip().casefold()
-        if source:
-            rows = [row for row in rows if row["source_type"] == source]
-        if public_state:
-            rows = [row for row in rows if row["publication"]["public_state"] == public_state]
-        if query:
-            rows = [row for row in rows if query in f"{row['title']} {row['source_filename']}".casefold()]
-        groups = {key: [row for row in rows if key in row["categories"]] for key in CATEGORIES}
-        counts = {key: len(values) for key, values in groups.items()}
-        paginator = Paginator(groups[category], 30)
-        page = paginator.get_page(request.query_params.get("page", 1))
+        page, counts, rows, groups = queue_page(
+            user=request.user, category=category, page=request.query_params.get("page", 1),
+            source=source, publication=public_state, query=query, ordering=ordering,
+            publication_scope=request.query_params.get("scope") == "publication",
+        )
+        paginator = page.paginator
         params = request.query_params.copy()
 
         def page_url(number):
@@ -519,10 +521,10 @@ class WorkflowQueueView(AdminPrivateResponseMixin, APIView):
         return Response(
             {
                 "count": paginator.count, "page": page.number, "page_size": paginator.per_page,
-                "total_pages": paginator.num_pages, "counts": counts, "ordering": "-priority,updated_at,id",
+                "total_pages": paginator.num_pages, "counts": counts, "ordering": "-priority,updated_at,id" if ordering == "priority" else f"{ordering},id",
                 "next": page_url(page.next_page_number()) if page.has_next() else None,
                 "previous": page_url(page.previous_page_number()) if page.has_previous() else None,
-                "results": list(page.object_list),
+                "results": rows,
                 "continue_items": groups["continue"][:12],
                 "attention_items": groups["attention"][:12],
                 "exception_items": groups["exception"][:12],

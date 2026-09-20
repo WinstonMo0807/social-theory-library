@@ -1,7 +1,6 @@
-import { ManualCatalogForm } from "@/components/admin/workflow/cataloging-session";
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
 
-export const metadata = { title: "新建书目" };
-
-export default function NewCatalogingPage() {
-  return <ManualCatalogForm />;
+export default async function NewCatalogingPage({searchParams}:{searchParams:Promise<AdminSearchParams>}) {
+  redirect(preservingAdminRedirect("/admin/recommendations", await searchParams));
 }

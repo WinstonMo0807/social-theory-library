@@ -22,9 +22,9 @@ test("public work and authenticated preview reuse one presentational component",
   assert.equal(safeAdminHref("https://external.invalid", "/admin/library/works/work?edition=edition"), "/admin/library/works/work?edition=edition");
 });
 
-test("full draft preview removes the normal admin navigation shell", async () => {
+test("draft preview preserves the approved admin navigation shell", async () => {
   const shell = await readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /preview\\\/works\\\/\[\^\/\]\+/);
+  assert.match(shell, /const focusMode = false/);
   assert.match(shell, /\{!focusMode \? <aside/);
   assert.match(shell, /\{!focusMode \? <header/);
 });

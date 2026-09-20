@@ -1,2 +1,2 @@
-import { SettingsAdmin } from "@/components/admin-sections";
-export default function Page() { return <SettingsAdmin />; }
+import { LegacySettingsRoute } from "@/components/admin/legacy-settings-route";
+export default function Page() { return <LegacySettingsRoute />; }

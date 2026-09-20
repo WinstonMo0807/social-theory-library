@@ -16,6 +16,7 @@ type ApiPerson = {
 };
 
 export type ApiScholar = {
+  id?: string;
   slug: string;
   person: ApiPerson & { id: string };
   short_description: string;

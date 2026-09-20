@@ -866,19 +866,16 @@ def _publication_data(workflow: dict[str, Any], edition: Edition) -> dict[str, A
 
 
 def _queue_for(item: UploadItem | None, *, edition=None, user=None) -> dict[str, Any]:
-    from catalog.services.admin_queue import workflow_rows
+    from catalog.services.admin_queue_query import next_queue_item
 
     current_edition = str(edition.pk) if edition else str(item.edition_id) if item and item.edition_id else None
-    rows = [row for row in workflow_rows(user=user)
-            if (not current_edition or row["edition_id"] != current_edition)
-            and (not item or row["item_id"] != str(item.pk))]
-    following = rows[0] if rows else {}
+    following, remaining = next_queue_item(user=user, exclude_edition=current_edition, exclude_item=item.pk if item else None)
     return {
         "next_item_id": following.get("item_id"), "next_work_id": following.get("work_id"),
         "next_edition_id": following.get("edition_id"), "next_session_id": following.get("session_id"),
         "next_workbench_url": following.get("workbench_url", ""),
         "return_href": "/admin/review",
-        "remaining_count": len(rows), "ordering": "-priority,updated_at,id",
+        "remaining_count": remaining, "ordering": "-priority,updated_at,id",
     }
 
 

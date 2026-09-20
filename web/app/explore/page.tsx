@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import {
   ArrowLeft,
   ArrowRight,
@@ -655,7 +656,7 @@ function SemanticExplorePage({
                           {item.authors.length ? <small>{item.authors.join("、")}{item.publication_year ? ` · ${item.publication_year}` : ""}</small> : null}
                           <blockquote className="semantic-comparison-excerpt"><span>{item.snippet}</span></blockquote>
                           <small>PDF 第 {item.page_index} 页{item.printed_label ? ` · 书页 ${item.printed_label}` : ""}</small>
-                          <Link href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>回到原文 <ArrowRight size={14} /></Link>
+                          <CollectionLink href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>回到原文 <ArrowRight size={14} /></CollectionLink>
                         </div>
                       </article>
                     ))}
@@ -808,9 +809,9 @@ function SemanticPassageBlock({
       ) : null}
       <footer>
         <SemanticResultActions query={query} chunkId={item.id} rank={rank} />
-        <Link className="button secondary" href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>
+        <CollectionLink className="button secondary" href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>
           回到原文 <ArrowRight size={16} />
-        </Link>
+        </CollectionLink>
       </footer>
     </section>
   );
@@ -1058,11 +1059,11 @@ function PassageResultGroup({
                 <summary>查看上下文</summary>
                 <p>{passage.snippet}</p>
               </details>
-              <Link
+              <CollectionLink
                 href={`/reader/${passage.asset_id}?page=${passage.page_index}&q=${encodeURIComponent(query)}&passage=${encodeURIComponent(passage.id)}`}
               >
                 跳到 PDF <ArrowRight size={14} />
-              </Link>
+              </CollectionLink>
             </div>
           </article>
         ))}

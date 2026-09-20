@@ -80,7 +80,7 @@ test("task scope keeps publication, service health and sensitive recovery distin
   assert.equal(adminTaskScope("/admin/review").title, "待办与上架");
   assert.equal(adminTaskScope("/admin/library").title, "馆藏");
   assert.equal(adminTaskScope("/admin/scholars/person").title, "知识与关联");
-  assert.equal(adminTaskScope("/admin/recommendations").title, "公开展示");
+  assert.equal(adminTaskScope("/admin/recommendations").title, "推荐与策展");
   assert.equal(adminTaskScope("/admin/processing").title, "处理与服务");
   assert.equal(adminTaskScope("/admin/settings").title, "系统管理");
 });

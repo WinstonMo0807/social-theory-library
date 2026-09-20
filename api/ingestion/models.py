@@ -60,7 +60,7 @@ class UploadBatch(UUIDTimeStampedModel):
         choices=DuplicatePolicy.choices,
         default=DuplicatePolicy.REVIEW,
     )
-    external_enrichment_enabled = models.BooleanField(default=True)
+    external_enrichment_enabled = models.BooleanField(default=False)
     ai_suggestions_enabled = models.BooleanField(default=False)
 
 

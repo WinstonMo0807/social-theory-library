@@ -54,6 +54,7 @@ export type ApiTopic = {
 };
 
 export type LibraryTopic = {
+  evidenceCuration?: import("./evidence-curation.types").PublishedEvidenceCuration;
   id: string;
   slug: string;
   name: string;

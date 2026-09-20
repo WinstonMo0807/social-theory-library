@@ -137,6 +137,7 @@ def test_private_media_endpoints_do_not_expose_unpublished_uploads(api_client, a
     assert api_client.get(preview_url).status_code == 403
 
 
+@pytest.mark.django_db(transaction=True)
 def test_cover_enters_public_snapshot_only_after_human_publication(api_client, admin_user, settings, tmp_path):
     from catalog.models import KnowledgePublicationEvent, ProjectionState
     from catalog.services.knowledge_publication import process_knowledge_event

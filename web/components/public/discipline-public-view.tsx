@@ -7,7 +7,7 @@ import {
   TheoryBanner,
   TheoryEmpty,
   TheorySectionHeading,
-  TheoryStat,
+  TheorySearchForm,
 } from "@/components/theory-system-ui";
 import type { loadTheoryDisciplinePage } from "@/lib/api/knowledge.server";
 
@@ -28,26 +28,20 @@ export function DisciplinePublicView({
 
   return (
     <>
-      <main className="page-shell theory-system-page theory-discipline-page">
+      <main className="page-shell theory-system-page theory-discipline-page v307-knowledge discipline-v307">
         <div className="theory-breadcrumb"><Link href="/theories">理论流派</Link><span>/</span><strong>{discipline.name}</strong></div>
-        <section className="theory-discipline-hero">
+        <section className="theory-discipline-hero" data-edit-section="identity">
           <div>
             <p className="eyebrow">学科详情</p>
             <h1>{discipline.name}</h1>
             {discipline.foreign_name ? <h2>{discipline.foreign_name}</h2> : null}
             {discipline.description ? <p>{discipline.description}</p> : null}
+            <TheorySearchForm action="/theories/directory" discipline={slug} />
           </div>
           <TheoryBanner image={discipline.hero_image} />
         </section>
 
-        {Object.keys(counts).length ? <section className="theory-discipline-stats">
-          <TheoryStat value={counts.theory_traditions} label="理论传统" kind="network" />
-          <TheoryStat value={counts.subdisciplines} label="子学科" kind="layers" />
-          <TheoryStat value={counts.scholars} label="学者" kind="people" />
-          <TheoryStat value={counts.works} label="馆藏文献" kind="works" />
-        </section> : null}
-
-        <section className="theory-discipline-directory panel">
+        <section className="theory-discipline-directory panel" data-edit-section="content">
           <nav className="theory-tab-list" aria-label="学科内容分类">
             <Link className={activeType === "theory_tradition" ? "active" : ""} href={`/theories/disciplines/${slug}?type=theory_tradition`}><Network size={17} />理论传统{counts.theory_traditions ? <b>{counts.theory_traditions}</b> : null}</Link>
             <Link className={activeType === "subdiscipline" ? "active" : ""} href={`/theories/disciplines/${slug}?type=subdiscipline`}><Layers3 size={17} />子学科{counts.subdisciplines ? <b>{counts.subdisciplines}</b> : null}</Link>
@@ -60,7 +54,7 @@ export function DisciplinePublicView({
         {payload.lineage.length ? <section className="theory-lineage-section">
           <TheorySectionHeading title="本学科脉络" href={`/theories/timeline?discipline=${encodeURIComponent(slug)}`} action="查看完整时间轴" />
           <div className="theory-lineage-track">
-            {payload.lineage.slice(0, 8).map((event) => <Link href={`/theories/timeline?q=${encodeURIComponent(event.title)}`} key={event.id}><i /><time>{event.date_label || event.start_year}</time><strong>{event.title}</strong><small>{event.description}</small></Link>)}
+            {payload.lineage.slice(0, 8).map((event) => <Link href={`/theories/events/${event.id}`} key={event.id}><i /><time>{event.date_label || event.start_year}</time><strong>{event.title}</strong><small>{event.description}</small></Link>)}
           </div>
         </section> : null}
 
@@ -72,7 +66,7 @@ export function DisciplinePublicView({
         <nav className="theory-discipline-shortcuts" aria-label="理论系统快捷入口">
           <Link href={`/theories/timeline?discipline=${encodeURIComponent(slug)}`}><CircleDot />历史时间轴<ArrowRight /></Link>
           <Link href={`/theories/graph?discipline=${encodeURIComponent(slug)}`}><Network />局部理论图谱<ArrowRight /></Link>
-          {counts.scholars ? <Link href={`/scholars?discipline=${encodeURIComponent(slug)}`}><UsersRound />相关学者<ArrowRight /></Link> : null}
+          {counts.scholars ? <Link href="/scholars?view=directory"><UsersRound />浏览学者<ArrowRight /></Link> : null}
         </nav>
       </main>
       {footer}

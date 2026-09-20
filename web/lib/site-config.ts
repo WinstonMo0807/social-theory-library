@@ -1,5 +1,8 @@
 export type SiteConfig = {
   site_name: string;
+  home_hero_image?: string;
+  home_hero_alt?: string;
+  home_hero_rendition_id?: string | null;
   wordmark_lines: string[];
   home_title_left_lines: string[];
   home_title_right_lines: string[];

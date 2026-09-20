@@ -4,6 +4,7 @@ import { ScholarPublicView } from "@/components/public/scholar-public-view";
 import { SiteFooter } from "@/components/site-footer";
 import { loadScholar } from "@/lib/api/people.server";
 import { loadTheorySchools } from "@/lib/api/theories.server";
+import { loadScholarRelations } from "@/lib/api/scholar-relations.server";
 
 export async function generateMetadata({
   params,
@@ -26,6 +27,7 @@ export default async function ScholarDetailPage({
     loadTheorySchools(),
   ]);
   if (!data) notFound();
+  const relations = data.profileId ? (await loadScholarRelations(data.profileId)).results : [];
 
   return (
     <ScholarPublicView
@@ -33,6 +35,7 @@ export default async function ScholarDetailPage({
       footer={<SiteFooter />}
       slug={slug}
       theorySchools={theorySchools}
+      relations={relations}
     />
   );
 }

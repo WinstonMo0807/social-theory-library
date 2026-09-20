@@ -15,10 +15,10 @@ test("Topic and Scholar pages prefer normalized Knowledge Core relations", async
 
   assert.match(serverApi, /knowledge_nodes\?: PublicKnowledgeNodeLink\[\]/);
   assert.match(topic, /topic\.knowledgeNodes/);
-  assert.match(topic, /href: `\/theories\/nodes\/\$\{node\.slug\}`/);
+  assert.match(topic, /href=\{`\/theories\/nodes\/\$\{row\.slug\}`\}/);
   assert.match(topicSection, /normalizedTheories\.length/);
   assert.match(scholar, /knowledgeNodes\.filter/);
-  assert.match(scholar, /normalizedDebates/);
+  assert.match(scholar, /"concept", "debate", "research_problem"/);
   assert.match(scholarSection, /normalizedConcepts/);
   assert.doesNotMatch(serverApi, /derived_claims/);
 });
@@ -32,6 +32,7 @@ test("Reading Path renders canonical learning goals and prerequisites with compa
   assert.match(serverApi, /learning_goal\?: string/);
   assert.match(serverApi, /prerequisite\?: string/);
   assert.match(page, /path\.learning_goal \|\| path\.introduction/);
-  assert.match(page, /item\.prerequisite \|\| item\.editorial_note/);
+  assert.match(page, /item\.prerequisite/);
+  assert.doesNotMatch(page, /item\.editorial_note/, "private editorial notes must not render publicly");
   assert.match(page, /先修条件/);
 });

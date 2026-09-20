@@ -263,6 +263,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
     suggested_action = serializers.SerializerMethodField()
     queue_mode = serializers.SerializerMethodField()
     staging = serializers.SerializerMethodField()
+    document_stages = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadItem
@@ -305,12 +306,16 @@ class UploadItemSerializer(serializers.ModelSerializer):
             "suggested_action",
             "queue_mode",
             "staging",
+            "document_stages",
             "attempts",
             "metadata_candidates",
             "entity_resolution_candidates",
             "created_at",
             "updated_at",
         )
+
+    def get_document_stages(self, obj) -> dict:
+        return getattr(obj, "document_stages", {"file": None, "ocr": None, "index": None})
 
     def get_review_data(self, obj):
         if not obj.edition_id:
@@ -712,7 +717,7 @@ class UploadBatchSerializer(serializers.ModelSerializer):
 class UploadBatchCreateSerializer(serializers.Serializer):
     """Validate the intake policy once, before any file enters the batch."""
 
-    expected_count = serializers.IntegerField(min_value=1, max_value=100)
+    expected_count = serializers.IntegerField(min_value=1, max_value=5)
     label = serializers.CharField(max_length=240, required=False, allow_blank=True, default="")
     notes = serializers.CharField(max_length=4000, required=False, allow_blank=True, default="")
     access_policy = serializers.ChoiceField(
@@ -730,8 +735,13 @@ class UploadBatchCreateSerializer(serializers.Serializer):
         required=False,
         default=UploadBatch.DuplicatePolicy.REVIEW,
     )
-    external_enrichment_enabled = serializers.BooleanField(required=False, default=True)
+    external_enrichment_enabled = serializers.BooleanField(required=False, default=False)
     ai_suggestions_enabled = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, values):
+        if values.get("external_enrichment_enabled") or values.get("ai_suggestions_enabled"):
+            raise serializers.ValidationError("上传只自动处理本地资料。需要外部书目时，请在工作页明确点击查找免费来源。")
+        return values
 
 
 class R2StagingInitSerializer(serializers.Serializer):

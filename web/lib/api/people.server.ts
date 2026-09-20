@@ -4,7 +4,8 @@ import { adaptApiScholar, adaptApiScholarDetail } from "../public-data-adapters"
 import type { PublicCuratedClaimGroups, PublicKnowledgeNodeLink } from "./curation.types";
 import { type DirectoryPage, type Paginated, directoryPage } from "./pagination";
 import type { ApiScholar } from "./people.types";
-import { serverRequest, allowDemoFallback } from "./server-request";
+import { serverRequest, allowDemoFallback, ServerApiError } from "./server-request";
+import type { PublishedEvidenceCuration } from "./evidence-curation.types";
 
 const adaptScholar = adaptApiScholar;
 
@@ -28,6 +29,8 @@ export async function loadScholars(query = ""): Promise<Scholar[]> {
 }
 
 export async function loadScholar(slug: string): Promise<{
+  evidenceCuration?: PublishedEvidenceCuration;
+  profileId?: string;
   scholar: Scholar;
   shortDescription: string;
   works: Work[];
@@ -70,8 +73,10 @@ export async function loadScholar(slug: string): Promise<{
     const payload = await serverRequest<ApiScholar>(
       `/catalog/scholars/${encodeURIComponent(slug)}/`,
     );
-    return adaptApiScholarDetail(payload);
+    const evidenceCuration = await serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/scholar/${payload.id}/`);
+    return { ...adaptApiScholarDetail(payload), evidenceCuration };
   } catch (error) {
+    if (error instanceof ServerApiError && error.status === 404 && error.path === `/catalog/scholars/${encodeURIComponent(slug)}/`) return null;
     if (!allowDemoFallback) throw error;
     const scholar = demoScholars.find((item) => item.slug === slug);
     return scholar

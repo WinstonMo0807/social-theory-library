@@ -8,22 +8,22 @@
 
 [data-ui-scope="editorial-v2"],
 [data-ui-scope="explore-frozen"] {
-  --stl2-paper: #f4f0e9;
-  --stl2-paper-strong: #faf8f3;
-  --stl2-paper-deep: #e9e2d8;
-  --stl2-surface: #faf8f3;
-  --stl2-surface-soft: rgba(250, 248, 243, 0.72);
-  --stl2-ink: #181714;
+  --stl2-paper: var(--stl-surface-paper);
+  --stl2-paper-strong: var(--stl-surface-default);
+  --stl2-paper-deep: var(--stl-surface-wash);
+  --stl2-surface: var(--stl-surface-default);
+  --stl2-surface-soft: var(--stl-surface-default);
+  --stl2-ink: var(--stl-ink-primary);
   --stl2-ink-soft: #55514a;
-  --stl2-muted: #7b756c;
-  --stl2-line: rgba(34, 31, 27, 0.16);
-  --stl2-line-strong: rgba(34, 31, 27, 0.28);
+  --stl2-muted: var(--stl-ink-muted);
+  --stl2-line: var(--stl-border-default);
+  --stl2-line-strong: var(--stl-border-strong);
   --stl2-shadow: 0 18px 50px rgba(49, 43, 35, 0.07);
   --stl2-shadow-sm: 0 10px 28px rgba(49, 43, 35, 0.06);
   --stl2-shadow-md: var(--stl2-shadow);
   --stl2-accent: #766654;
-  --stl2-danger: #8a3f34;
-  --stl2-success: #4f6654;
+  --stl2-danger: var(--stl-accent-danger);
+  --stl2-success: var(--stl-accent-success);
   --stl2-serif: var(--serif);
   --stl2-sans: var(--sans);
   --stl2-radius-sm: 6px;
@@ -55,9 +55,7 @@
 
 [data-ui-scope="editorial-v2"].route-content-transition,
 [data-ui-scope="explore-frozen"].route-content-transition {
-  background:
-    radial-gradient(circle at 82% 3%, rgba(165, 149, 128, 0.09), transparent 27rem),
-    var(--stl2-paper);
+  background: var(--stl2-paper);
 }
 
 /* The shared route scope also covers opinion, question and passage detail pages. */

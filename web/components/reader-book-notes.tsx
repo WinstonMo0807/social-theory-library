@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import { ArrowLeft, ArrowRight, BookOpen, RefreshCw, StickyNote, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -164,7 +165,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
               <p>{note.body_text || "这条笔记没有补充文字。"}</p>
             </div>
             <span className="reader-data-actions">
-              <Link href={`/reader/${note.asset}?page=${note.selector.page_index ?? 1}&focus=${note.id}`}>打开原页 <ArrowRight size={14} /></Link>
+              <CollectionLink href={`/reader/${note.asset}?page=${note.selector.page_index ?? 1}&focus=${note.id}`}>打开原页 <ArrowRight size={14} /></CollectionLink>
               <ActionButton
                 type="button"
                 state={pendingAction === `delete-note:${note.id}` ? "pending" : "idle"}

@@ -35,14 +35,14 @@ test("style extraction stays parseable and unrelated cascade semantics remain un
   const source = readStyleSource(globalStylesPath, { exclude: [overlaysPath] });
   // The 3.0.5 monolith-equivalence hash described a formatting-only split.
   // 3.0.6 intentionally fixes these actual reader, detail and admin layouts. All other extracted
-  // files must still match their pre-repair semantics, not a refreshed hash.
+  // files must still match the verified 3.0.7 starting checkout (bb81c73), preserving prior 3.0.6 repairs.
   // Admin sidebar scrolling is verified with all groups expanded and every
   // control keyboard-focused in admin-usability-v306.spec.ts at five widths.
   const repaired=new Set(["layout/admin-shell.css","features/admin/theory-system.css","features/knowledge/detail-pages.css","features/knowledge/theory-system.css","features/reader/chrome.css","features/reader/document.css","features/reader/responsive.css","features/reader/selection-and-records.css"]);
   const whole=styleSemanticSnapshot(source,{resolveTokens:true});
   assert.ok(whole.rules>0 && whole.declarations>0);
   for(const {file} of baseline.sections){
-    const before=execFileSync("git",["show",`aa97727:web/styles/${file}`],{cwd:webRoot,encoding:"utf8"});
+    const before=execFileSync("git",["show",`bb81c73:web/styles/${file}`],{cwd:webRoot,encoding:"utf8"});
     const after=readFileSync(resolve(webRoot,"styles",file),"utf8");
     if(file === "features/admin/relation-preview-and-publication.css") {
       // A31 real-browser long-content geometry now covers the timeline preview.

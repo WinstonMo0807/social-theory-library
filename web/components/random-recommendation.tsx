@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Work } from "@/lib/data";
@@ -37,9 +37,9 @@ export function RandomRecommendation({ works, title = "为你推荐" }: { works:
         </button>
       </header>
       {work ? (
-        <Link className="random-image" href={`/works/${work.slug}`} aria-label={`查看《${work.title}》详情`}>
+        <CollectionLink className="random-image" href={`/works/${work.slug}`} aria-label={`查看《${work.title}》详情`}>
           {work.coverImage ? <BookCover work={work} size="large" /> : <ArchitecturalImage compact />}
-        </Link>
+        </CollectionLink>
       ) : (
         <div className="random-image" aria-hidden="true"><ArchitecturalImage compact /></div>
       )}
@@ -49,9 +49,9 @@ export function RandomRecommendation({ works, title = "为你推荐" }: { works:
           <h3>{work.title}</h3>
           <p className="book-author">{work.author}</p>
           <p className="muted-row">{work.year} · {work.kind}</p>
-          <Link className="button secondary" href={`/reader/${work.id}`}>
-            立即阅读 <ArrowRight size={16} />
-          </Link>
+          <CollectionLink className="button secondary" href={work.readerHref || `/works/${work.slug}`}>
+            {work.readerHref ? "立即阅读" : "查看馆藏"} <ArrowRight size={16} />
+          </CollectionLink>
         </div>
       ) : <p className="empty-state">馆藏发布后会在这里生成推荐。</p>}
     </section>

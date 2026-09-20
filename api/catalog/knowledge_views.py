@@ -868,6 +868,9 @@ class AdminAboutPageBlockListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(updated_by=self.request.user)
 
+    def post(self, request, *args, **kwargs):
+        return Response({"code": "site_editorial_required", "detail": "请在网站与关于书库中保存草稿并发布。", "replacement": "/api/catalog/admin/site-content/"}, status=409)
+
 
 class AdminAboutPageBlockDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsLibraryStaff]
@@ -876,6 +879,12 @@ class AdminAboutPageBlockDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        return Response({"code": "site_editorial_required", "detail": "请在网站与关于书库中保存草稿并发布。", "replacement": "/api/catalog/admin/site-content/"}, status=409)
+
+    def destroy(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
 
 RELATION_RESOURCES = {

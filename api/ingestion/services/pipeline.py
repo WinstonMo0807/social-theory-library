@@ -882,15 +882,8 @@ def run_pipeline(item_id: str) -> UploadItem:
         ) as attempt:
             if attempt.should_run:
                 candidates, first_text = extract_local_candidates(source_path)
-                if item.batch.external_enrichment_enabled:
-                    provider_warnings = [
-                        "外部书目验证已延后到馆内原文与必要 OCR 证据形成之后。"
-                    ]
-                else:
-                    provider_warnings = ["该批次已关闭外部元数据补充。"]
+                provider_warnings = ["自动处理仅使用本地资料；外部书目须在工作页明确查找免费来源。"]
                 ai_summary = {"status": "disabled"}
-                if item.batch.ai_suggestions_enabled:
-                    ai_summary = {"status": "deferred_for_cover"}
                 candidates.extend(controlled_vocabulary_candidates(first_text))
                 selected = select_best(candidates)
                 _persist_candidates(item, candidates, selected)
@@ -1158,27 +1151,7 @@ def run_pipeline(item_id: str) -> UploadItem:
                     source="ocr_first_pages" if method == "paddleocr" else "canonical_first_pages",
                 )
                 candidates = [*candidates, *refined]
-                if item.batch.external_enrichment_enabled:
-                    provider_warnings = [
-                        "外部书目验证将在馆内原文与必要 OCR 完成后作为后台任务运行。"
-                    ]
-                else:
-                    provider_warnings = ["该批次已关闭外部元数据补充。"]
-                if item.batch.ai_suggestions_enabled:
-                    existing_ai_keys = {
-                        (candidate.field_name, repr(candidate.value))
-                        for candidate in candidates
-                        if candidate.source == "ai_metadata_candidate"
-                    }
-                    ai_candidates, ai_summary = metadata_candidates_from_ai(
-                        canonical_first_text,
-                        upload_item=item,
-                    )
-                    candidates.extend(
-                        candidate
-                        for candidate in ai_candidates
-                        if (candidate.field_name, repr(candidate.value)) not in existing_ai_keys
-                    )
+                provider_warnings = ["自动处理仅使用本地资料；外部书目须在工作页明确查找免费来源。"]
                 candidates = [
                     candidate
                     for candidate in candidates
@@ -1288,11 +1261,8 @@ def run_pipeline(item_id: str) -> UploadItem:
                 upload_item=item,
                 actor=item.batch.created_by,
             )
-            if item.batch.external_enrichment_enabled:
-                queue_external_enrichment_job(
-                    item,
-                    actor=item.batch.created_by,
-                )
+            # External bibliography is an explicit free-source action. Old
+            # batch flags do not authorize an automatic network request.
         if item.replacement_of_asset_id:
             with processing_attempt(item, "replacement_activation", reuse_completed=False) as attempt:
                 result = _finalize_item_publication(item, normalized)

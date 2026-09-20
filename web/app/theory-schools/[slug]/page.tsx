@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { CollectionLink } from "@/components/collection-link";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
-  Bookmark,
   CalendarDays,
   CircleDot,
   Layers3,
@@ -42,14 +42,19 @@ const relationLabels: Record<string, string> = {
 
 export default async function TheorySchoolDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const [entity, legacy] = await Promise.all([
-    loadTheoryEntity(slug),
-    loadTheorySchool(slug),
-  ]);
+  const entity = await loadTheoryEntity(slug);
+  if (entity?.canonical_node_url?.startsWith("/theories/nodes/")) {
+    const query = new URLSearchParams();
+    Object.entries(await searchParams).forEach(([key, value]) => { for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, item); });
+    redirect(`${entity.canonical_node_url}${query.size ? `?${query}` : ""}`);
+  }
+  const legacy = await loadTheorySchool(slug);
   if (!entity || !legacy) notFound();
 
   const { works, scholars, curated } = legacy;
@@ -68,6 +73,7 @@ export default async function TheorySchoolDetailPage({
   return (
     <>
       <main className="page-shell theory-profile-page">
+        <p className="private-preview-label">此历史条目尚待确认与规范理论的关联。已公开资料仍保留在此。<Link href="/theories">浏览理论流派</Link></p>
         <p className="breadcrumbs">
           <Link href="/theory-schools">理论流派</Link>
           {disciplines[0] ? <> / {disciplines[0]}</> : null}
@@ -95,7 +101,6 @@ export default async function TheorySchoolDetailPage({
           <div><CalendarDays size={24} /><span>形成时期</span><strong>{entity.formation_period || "待确认"}</strong></div>
           <div><Users size={24} /><span>代表学者</span><strong>{scholars.slice(0, 3).map((item) => item.name).join("、") || "待确认"}</strong></div>
           <div><BookOpen size={24} /><span>收录文献</span><strong>{entity.work_count.toLocaleString("zh-CN")} 部</strong></div>
-          <Link aria-label={`收藏${entity.name}`} href="/login?next=/account"><Bookmark size={23} /></Link>
         </section>
 
         <div className="theory-profile-layout">
@@ -177,7 +182,7 @@ export default async function TheorySchoolDetailPage({
               <ol className="theory-reading-list">
                 {introductoryWorks.slice(0, 6).map((work) => (
                   <li key={work.workId}>
-                    <Link href={`/works/${work.slug}`}><strong>{work.title}</strong><small>{work.author} · {work.year}</small></Link>
+                    <CollectionLink href={`/works/${work.slug}`}><strong>{work.title}</strong><small>{work.author} · {work.year}</small></CollectionLink>
                   </li>
                 ))}
               </ol>

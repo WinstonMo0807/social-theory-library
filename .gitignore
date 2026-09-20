@@ -134,6 +134,10 @@ celerybeat-schedule*
 *.whl
 
 # Local design references and terminal transcripts
+/1新的图片视效/
+/屏幕截图*.png
+!web/app/admin/backups/
+!web/app/admin/backups/page.tsx
 /ChatGPT Image*.png
 /*Windows PowerShell*.txt
 /8.666txt.txt

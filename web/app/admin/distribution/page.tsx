@@ -1,2 +1,3 @@
-import { DistributionAdmin } from "@/components/admin-sections";
-export default function Page() { return <DistributionAdmin />; }
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
+export default async function Page({ searchParams }: { searchParams: Promise<AdminSearchParams> }) { redirect(preservingAdminRedirect("/admin/storage", await searchParams)); }

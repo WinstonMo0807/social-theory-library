@@ -6,6 +6,9 @@ import {
 } from "@/components/public/scholar-section-public-view";
 import { loadScholar } from "@/lib/api/people.server";
 import { loadTheorySchools } from "@/lib/api/theories.server";
+import { loadScholarRelations } from "@/lib/api/scholar-relations.server";
+import { ScopedSearchPagination } from "@/components/scoped-search";
+import { searchPage } from "@/lib/search-context";
 
 export async function generateMetadata({
   params,
@@ -19,12 +22,17 @@ export async function generateMetadata({
 
 export default async function ScholarSectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; section: string }>;
+  searchParams: Promise<{page?: string;relation?:string}>;
 }) {
   const { slug, section } = await params;
   if (!scholarSectionTitles[section]) notFound();
   const [data, schools] = await Promise.all([loadScholar(slug), loadTheorySchools()]);
   if (!data) notFound();
-  return <ScholarSectionPublicView data={data} schools={schools} section={section} slug={slug} />;
+  const query = await searchParams;
+  const page = searchPage(query.page);
+  const relationPage = section === "network" && data.profileId ? await loadScholarRelations(data.profileId,page) : null;
+  return <ScholarSectionPublicView data={data} schools={schools} section={section} slug={slug} relations={relationPage?.results} selectedRelationId={query.relation} relationPagination={relationPage ? <ScopedSearchPagination path={`/scholars/${slug}/network`} context="scholars" page={page} totalPages={relationPage.totalPages}/> : null} />;
 }

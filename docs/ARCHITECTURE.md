@@ -1,5 +1,14 @@
 # Social Theory Library 架构
 
+## 2026-09-21 3.0.7 实现增量（未上线）
+
+推荐期/计划项独立于馆藏发布，正文与网站设置复用EditorialRevision。计划项连接CatalogingSession，明确确认准确Edition后动态开放旧期馆藏链接，保留期文。网站旧直接写入口转入草稿发布；公共读取继续正式数据。队列由admin_queue_query进行SQL筛选、计数、稳定分页，admin_queue仅加载有界页关系；未完成工作与后台技术任务仍各用原模型。前端固定模块共用公共组件预览，导航收敛13项，内部旧路由保留查询/对象/返回位置。无新检索引擎、无栈变更、无原文件和索引重建。详细范围与验收状态见[V3.0.7_COMPLETION_RELEASE](V3.0.7_COMPLETION_RELEASE.md)。
+
+EvidenceCuration按学者、主题或KnowledgeNode管理原文引用，EvidenceCurationReference通过受保护外键指向既有EvidenceSpan/Passage及DocumentRevision。策展修订仅存来源身份、分组、关联理由和顺序，不接收可编辑原文或定位；公开读取再次校验准确版本、文件及有效文档修订。ScholarRelation两端共用一个身份、方向、说明和来源，草稿复用EditorialRevision，只有正式修订供两个公开页面读取。新原文/关系草稿进入同一策展待办SQL分页，不另建任务系统。
+
+catalog 0057—0059及ingestion 0017均为兼容迁移。即时预览在独立iframe视口内渲染同一个React公共组件，跟随表单输入；完整私有预览读取已保存草稿。构建、接口与隔离数据库检查和实际浏览器检查分别记录，不以SSR检查替代交互或视觉证据。
+
+
 当前3.0.6的精简阅读入口是[实际运行架构](GPT_ARCHITECTURE_CONTEXT.md)、[管理端功能画像](ADMIN_ARCHITECTURE_PROFILE.md)和[上架发布流程](INGESTION_AND_PUBLICATION.md)。本文件保留按阶段追加的实现记录；下方“未测试/未部署/尚未实现”等只对当时时点成立，不是当前缺口清单。2026-09-20最终运行与证据边界见[当前状态](CURRENT_STATE.md)及[最终交付](V3.0.6_COMPLETION_RELEASE.md)。
 
 3.0.6封面补充复用CoverCandidate、媒体、CatalogFieldDecision、EditorialRevision和AuditEvent，不新增表或第二套处理服务。入库在原件/阅读副本准备后优先渲染少量前部PDF候选，再进入AI书目和全文/OCR；封面不依赖OCR就绪。Edition级接口只在明确操作时渲染任意指定页或上传图片，按角色、Work/Edition、当前文件指纹及同请求回执校验。普通GET只读取候选，自动任务不选择封面、不覆盖人工决定；公开读取继续沿用有效修订，原PDF/Page不改变。

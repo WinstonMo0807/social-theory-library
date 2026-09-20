@@ -1,5 +1,21 @@
 /** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
+    "/api/catalog/admin/bibliographic-candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_bibliographic_candidates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/catalog-field-contracts/": {
         parameters: {
             query?: never;
@@ -112,6 +128,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/curation-drafts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_curation_drafts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/media/cover/": {
         parameters: {
             query?: never;
@@ -186,6 +218,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_editions_publication_rollback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/evidence-curation/{object_type}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_evidence_curation_retrieve"];
+        put: operations["catalog_admin_evidence_curation_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/evidence-curation/{object_type}/{object_id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_evidence_curation_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/evidence-curation/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_evidence_curation_sources_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -384,6 +464,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_list"];
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_retrieve"];
+        put: operations["catalog_admin_recommendation_issues_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/items/{item_id}/link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_items_link_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholar-relations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholar_relations_list"];
+        put?: never;
+        post: operations["catalog_admin_scholar_relations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholar-relations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholar_relations_retrieve"];
+        put: operations["catalog_admin_scholar_relations_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholar-relations/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_scholar_relations_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholar-relations/{id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_scholar_relations_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
         parameters: {
             query?: never;
@@ -394,6 +602,38 @@ export interface paths {
         get: operations["catalog_admin_scholars_portrait_retrieve"];
         put?: never;
         post: operations["catalog_admin_scholars_portrait_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/site-content/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_site_content_retrieve"];
+        put: operations["catalog_admin_site_content_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/site-content/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_site_content_publish_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -440,6 +680,86 @@ export interface paths {
             cookie?: never;
         };
         get: operations["catalog_assets_pages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/evidence-curation/{object_type}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_evidence_curation_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/recommendation-issues/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_recommendation_issues_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/recommendation-issues/{slug}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_recommendation_issues_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/recommendation-issues/{slug}/save-list/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_recommendation_issues_save_list_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/scholar-relations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_scholar_relations_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -532,6 +852,38 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AboutPageBlock: {
+            /** Format: uuid */
+            readonly id: string;
+            key: string;
+            block_type: components["schemas"]["BlockTypeEnum"];
+            title?: string;
+            body?: string;
+            icon?: string;
+            action_label?: string;
+            action_href?: string;
+            /** Format: int64 */
+            sort_order?: number;
+            visible?: boolean;
+            configuration?: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        AboutPageBlockRequest: {
+            key: string;
+            block_type: components["schemas"]["BlockTypeEnum"];
+            title?: string;
+            body?: string;
+            icon?: string;
+            action_label?: string;
+            action_href?: string;
+            /** Format: int64 */
+            sort_order?: number;
+            visible?: boolean;
+            configuration?: unknown;
+        };
         /**
          * @description * `inherit` - 继承版本权限
          *     * `private` - 仅后台可用
@@ -541,6 +893,21 @@ export interface components {
          * @enum {string}
          */
         AccessStatusEnum: "inherit" | "private" | "registered" | "restricted" | "public";
+        AdminIssueSummary: {
+            total: number;
+            published: number;
+            drafts: number;
+            scheduled: number;
+        };
+        AdminRecommendationIssueCollection: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            current: components["schemas"]["RecommendationIssue"] | null;
+            results: components["schemas"]["RecommendationIssue"][];
+            summary: components["schemas"]["AdminIssueSummary"];
+            upcoming: components["schemas"]["RecommendationIssue"][];
+        };
         ApiError: {
             code: string;
             message: string;
@@ -573,6 +940,29 @@ export interface components {
          * @enum {string}
          */
         AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
+        BibliographicLookupRequest: {
+            /** Format: uuid */
+            edition_id: string;
+            /** @default  */
+            query: string;
+            /** @default false */
+            allow_external: boolean;
+            form_context?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * @description * `intro` - 简介
+         *     * `stat` - 数据
+         *     * `feature` - 功能
+         *     * `process` - 入库步骤
+         *     * `principle` - 开放原则
+         *     * `notice` - 提示
+         *     * `action` - 操作入口
+         *     * `footer` - 页脚信息
+         * @enum {string}
+         */
+        BlockTypeEnum: "intro" | "stat" | "feature" | "process" | "principle" | "notice" | "action" | "footer";
         /**
          * @description * `link_existing` - link_existing
          *     * `create_draft` - create_draft
@@ -667,6 +1057,114 @@ export interface components {
             workbench_url: string;
             canonical_write_deferred: boolean;
         };
+        CurationDraft: {
+            id: string;
+            /** Format: uuid */
+            object_id: string;
+            object_type: string;
+            title: string;
+            label: string;
+            /** Format: date-time */
+            updated_at: string;
+            edit_url: string;
+            state: components["schemas"]["StateEnum"];
+            can_edit: boolean;
+        };
+        CurationDraftPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["CurationDraft"][];
+        };
+        CurationItem: {
+            /** Format: uuid */
+            id?: string;
+            source_type: components["schemas"]["CurationItemSourceTypeEnum"];
+            /** Format: uuid */
+            source_id: string;
+            group_title?: string;
+            reason?: string;
+            order?: number;
+            readonly source: components["schemas"]["CurationSource"];
+        };
+        CurationItemRequest: {
+            /** Format: uuid */
+            id?: string;
+            source_type: components["schemas"]["CurationItemSourceTypeEnum"];
+            /** Format: uuid */
+            source_id: string;
+            group_title?: string;
+            reason?: string;
+            order?: number;
+        };
+        /**
+         * @description * `span` - span
+         *     * `passage` - passage
+         * @enum {string}
+         */
+        CurationItemSourceTypeEnum: "span" | "passage";
+        CurationSource: {
+            /** Format: uuid */
+            id: string;
+            source_type: string;
+            text: string;
+            context_before: string;
+            context_after: string;
+            /** Format: uuid */
+            work_id: string;
+            work_title: string;
+            /** Format: uuid */
+            edition_id: string;
+            edition_label: string;
+            /** Format: uuid */
+            asset_id: string;
+            page_start: number;
+            page_end: number;
+            printed_label: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            reader_url: string;
+            public_eligible: boolean;
+        };
+        CurationSourceRequest: {
+            /** Format: uuid */
+            id: string;
+            source_type: string;
+            text: string;
+            context_before: string;
+            context_after: string;
+            /** Format: uuid */
+            work_id: string;
+            work_title: string;
+            /** Format: uuid */
+            edition_id: string;
+            edition_label: string;
+            /** Format: uuid */
+            asset_id: string;
+            page_start: number;
+            page_end: number;
+            printed_label: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            reader_url: string;
+            public_eligible: boolean;
+        };
+        CurationSourcesPage: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["CurationSource"][];
+        };
+        /**
+         * @description * `directed` - directed
+         *     * `bidirectional` - bidirectional
+         *     * `undirected` - undirected
+         * @enum {string}
+         */
+        DirectionEnum: "directed" | "bidirectional" | "undirected";
         /**
          * @description * `book` - 图书
          *     * `journal_article` - 期刊论文
@@ -710,6 +1208,92 @@ export interface components {
             responsibility_statement?: string;
             readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
             readonly readable_asset: components["schemas"]["AssetCompact"] | null;
+        };
+        EditorialPublishRequest: {
+            edit_version: string;
+        };
+        EvidenceCuration: {
+            /** Format: uuid */
+            readonly id: string | null;
+            readonly configured: boolean;
+            readonly object_type: string;
+            /** Format: uuid */
+            readonly object_id: string;
+            readonly title: string;
+            edit_version?: string;
+            readonly has_unpublished_changes: boolean;
+            items: components["schemas"]["CurationItem"][];
+        };
+        EvidenceCurationRequest: {
+            edit_version?: string;
+            items: components["schemas"]["CurationItemRequest"][];
+        };
+        IssueBodyBlock: {
+            type: components["schemas"]["TypeEnum"];
+            text: string;
+            source?: string;
+            url?: string;
+        };
+        IssueBodyBlockRequest: {
+            type: components["schemas"]["TypeEnum"];
+            text: string;
+            source?: string;
+            url?: string;
+        };
+        IssueItem: {
+            /** Format: uuid */
+            id?: string;
+            kind: components["schemas"]["IssueItemKindEnum"];
+            /** Format: uuid */
+            work_id?: string | null;
+            /** Format: uuid */
+            edition_id?: string | null;
+            title?: string;
+            authors?: string;
+            version_note?: string;
+            isbn?: string;
+            doi?: string;
+            note?: string;
+            position?: number;
+            document_type?: string;
+            readonly status: string;
+            readonly work_url: string;
+            readonly reader_url: string;
+            readonly cover_url: string;
+            readonly file_status: string;
+            /** Format: uuid */
+            readonly cataloging_session_id: string | null;
+            /** Format: uuid */
+            readonly available_work_id: string | null;
+            /** Format: uuid */
+            readonly available_edition_id: string | null;
+            readonly workbench_url: string;
+            readonly match_candidates: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * @description * `catalog` - catalog
+         *     * `planned` - planned
+         * @enum {string}
+         */
+        IssueItemKindEnum: "catalog" | "planned";
+        IssueItemRequest: {
+            /** Format: uuid */
+            id?: string;
+            kind: components["schemas"]["IssueItemKindEnum"];
+            /** Format: uuid */
+            work_id?: string | null;
+            /** Format: uuid */
+            edition_id?: string | null;
+            title?: string;
+            authors?: string;
+            version_note?: string;
+            isbn?: string;
+            doi?: string;
+            note?: string;
+            position?: number;
+            document_type?: string;
         };
         KnowledgeImageRequestRequest: {
             /** Format: uuid */
@@ -1025,6 +1609,14 @@ export interface components {
             results: components["schemas"]["PersonResolutionSummary"][];
             has_more: boolean;
         };
+        PlannedItemLinkRequest: {
+            edit_version: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            confirm_version: boolean;
+        };
         PublicClassificationLink: {
             /** Format: uuid */
             id: string | null;
@@ -1268,6 +1860,67 @@ export interface components {
             media_library_url: string;
             detail: string;
         };
+        RecommendationIssue: {
+            /** Format: uuid */
+            readonly id: string;
+            slug?: string;
+            title: string;
+            issue_label?: string;
+            introduction?: string;
+            public_byline?: string;
+            body_blocks?: components["schemas"]["IssueBodyBlock"][];
+            cover_url?: string;
+            /** Format: uuid */
+            cover_rendition_id?: string | null;
+            /** Format: date-time */
+            display_from?: string | null;
+            /** Format: date-time */
+            readonly published_at: string | null;
+            items?: components["schemas"]["IssueItem"][];
+            edit_version?: string;
+            /** Format: uuid */
+            readonly draft_revision_id: string | null;
+            readonly has_unpublished_changes: boolean;
+        };
+        RecommendationIssueCollection: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            current: components["schemas"]["RecommendationIssue"] | null;
+            results: components["schemas"]["RecommendationIssue"][];
+        };
+        RecommendationIssueRequest: {
+            slug?: string;
+            title: string;
+            issue_label?: string;
+            introduction?: string;
+            public_byline?: string;
+            body_blocks?: components["schemas"]["IssueBodyBlockRequest"][];
+            cover_url?: string;
+            /** Format: uuid */
+            cover_rendition_id?: string | null;
+            /** Format: date-time */
+            display_from?: string | null;
+            items?: components["schemas"]["IssueItemRequest"][];
+            edit_version?: string;
+        };
+        /**
+         * @description * `teaching` - teaching
+         *     * `cooperation` - cooperation
+         *     * `influence` - influence
+         *     * `criticism` - criticism
+         *     * `comparative_reading` - comparative_reading
+         *     * `other` - other
+         * @enum {string}
+         */
+        RelationTypeEnum: "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+        SavedIssueList: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            item_count: number;
+            planned_count: number;
+        };
         ScholarPortraitRequestRequest: {
             /** Format: uuid */
             media_id: string | null;
@@ -1289,6 +1942,42 @@ export interface components {
             editor_url: string;
             fingerprint: string;
         };
+        ScholarRelation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source_scholar: string;
+            /** Format: uuid */
+            target_scholar: string;
+            readonly source_name: string;
+            readonly target_name: string;
+            readonly source_slug: string;
+            readonly target_slug: string;
+            relation_type: components["schemas"]["RelationTypeEnum"];
+            direction: components["schemas"]["DirectionEnum"];
+            summary: string;
+            source: string;
+            readonly status: string;
+            edit_version?: string;
+            readonly has_unpublished_changes: boolean;
+        };
+        ScholarRelationPage: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["ScholarRelation"][];
+        };
+        ScholarRelationRequest: {
+            /** Format: uuid */
+            source_scholar: string;
+            /** Format: uuid */
+            target_scholar: string;
+            relation_type: components["schemas"]["RelationTypeEnum"];
+            direction: components["schemas"]["DirectionEnum"];
+            summary: string;
+            source: string;
+            edit_version?: string;
+        };
         /**
          * @description * `blocking` - blocking
          *     * `warning` - warning
@@ -1296,6 +1985,105 @@ export interface components {
          * @enum {string}
          */
         SeverityEnum: "blocking" | "warning" | "info";
+        SiteConfig: {
+            /** @default  */
+            home_hero_image: string;
+            /** @default  */
+            home_hero_alt: string;
+            /** Format: uuid */
+            home_hero_rendition_id?: string | null;
+            site_name: string;
+            wordmark_lines: string[];
+            home_title_left_lines: string[];
+            home_title_right_lines: string[];
+            intro_lines: string[];
+            about_label: string;
+            about_title: string;
+            about_body: string;
+            about_why_title: string;
+            about_why_body: string;
+            about_feature_search_title: string;
+            about_feature_search_body: string;
+            about_feature_read_title: string;
+            about_feature_read_body: string;
+            about_feature_knowledge_title: string;
+            about_feature_knowledge_body: string;
+            about_ingestion_title: string;
+            about_ingestion_body: string;
+            about_access_title: string;
+            about_access_body: string;
+            about_rights_title: string;
+            about_rights_body: string;
+            about_privacy_title: string;
+            about_privacy_body: string;
+            about_warning_title: string;
+            about_warning_body: string;
+            copyright_text: string;
+            navigation: {
+                [key: string]: string;
+            };
+            sections: {
+                [key: string]: string;
+            };
+        };
+        SiteConfigRequest: {
+            /** @default  */
+            home_hero_image: string;
+            /** @default  */
+            home_hero_alt: string;
+            /** Format: uuid */
+            home_hero_rendition_id?: string | null;
+            site_name: string;
+            wordmark_lines: string[];
+            home_title_left_lines: string[];
+            home_title_right_lines: string[];
+            intro_lines: string[];
+            about_label: string;
+            about_title: string;
+            about_body: string;
+            about_why_title: string;
+            about_why_body: string;
+            about_feature_search_title: string;
+            about_feature_search_body: string;
+            about_feature_read_title: string;
+            about_feature_read_body: string;
+            about_feature_knowledge_title: string;
+            about_feature_knowledge_body: string;
+            about_ingestion_title: string;
+            about_ingestion_body: string;
+            about_access_title: string;
+            about_access_body: string;
+            about_rights_title: string;
+            about_rights_body: string;
+            about_privacy_title: string;
+            about_privacy_body: string;
+            about_warning_title: string;
+            about_warning_body: string;
+            copyright_text: string;
+            navigation: {
+                [key: string]: string;
+            };
+            sections: {
+                [key: string]: string;
+            };
+        };
+        SiteContent: {
+            config: components["schemas"]["SiteConfig"];
+            about_blocks: components["schemas"]["AboutPageBlock"][];
+            edit_version: string;
+            readonly has_unpublished_changes: boolean;
+        };
+        SiteContentRequest: {
+            config: components["schemas"]["SiteConfigRequest"];
+            about_blocks: components["schemas"]["AboutPageBlockRequest"][];
+            edit_version: string;
+        };
+        /**
+         * @description * `draft` - draft
+         *     * `changes_pending` - changes_pending
+         * @enum {string}
+         */
+        StateEnum: "draft" | "changes_pending";
         /**
          * @description * `drafting` - 编目中
          *     * `reviewing` - 核对中
@@ -1314,6 +2102,14 @@ export interface components {
          * @enum {string}
          */
         TextSourceEnum: "none" | "embedded" | "ocr" | "hybrid";
+        /**
+         * @description * `paragraph` - paragraph
+         *     * `heading` - heading
+         *     * `quote` - quote
+         *     * `link` - link
+         * @enum {string}
+         */
+        TypeEnum: "paragraph" | "heading" | "quote" | "link";
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -1387,6 +2183,33 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    catalog_admin_bibliographic_candidates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BibliographicLookupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BibliographicLookupRequest"];
+                "multipart/form-data": components["schemas"]["BibliographicLookupRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     catalog_admin_catalog_field_contracts_retrieve: {
         parameters: {
             query?: never;
@@ -1623,6 +2446,25 @@ export interface operations {
             };
         };
     };
+    catalog_admin_curation_drafts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationDraftPage"];
+                };
+            };
+        };
+    };
     catalog_admin_editions_media_cover_create: {
         parameters: {
             query?: never;
@@ -1750,6 +2592,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    catalog_admin_evidence_curation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceCuration"];
+                };
+            };
+        };
+    };
+    catalog_admin_evidence_curation_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceCurationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvidenceCurationRequest"];
+                "multipart/form-data": components["schemas"]["EvidenceCurationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceCuration"];
+                };
+            };
+        };
+    };
+    catalog_admin_evidence_curation_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialPublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
+                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceCuration"];
+                };
+            };
+        };
+    };
+    catalog_admin_evidence_curation_sources_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationSourcesPage"];
                 };
             };
         };
@@ -2113,6 +3052,299 @@ export interface operations {
             };
         };
     };
+    catalog_admin_recommendation_issues_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRecommendationIssueCollection"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationIssueRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecommendationIssueRequest"];
+                "multipart/form-data": components["schemas"]["RecommendationIssueRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationIssueRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecommendationIssueRequest"];
+                "multipart/form-data": components["schemas"]["RecommendationIssueRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_items_link_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlannedItemLinkRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PlannedItemLinkRequest"];
+                "multipart/form-data": components["schemas"]["PlannedItemLinkRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialPublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
+                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScholarRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ScholarRelationRequest"];
+                "multipart/form-data": components["schemas"]["ScholarRelationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScholarRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ScholarRelationRequest"];
+                "multipart/form-data": components["schemas"]["ScholarRelationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialPublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
+                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialPublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
+                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
     catalog_admin_scholars_portrait_retrieve: {
         parameters: {
             query?: never;
@@ -2157,6 +3389,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarPortraitState"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteContent"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteContentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SiteContentRequest"];
+                "multipart/form-data": components["schemas"]["SiteContentRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteContent"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialPublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
+                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteContent"];
                 };
             };
         };
@@ -2223,6 +3524,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReaderPageContent"];
+                };
+            };
+        };
+    };
+    catalog_evidence_curation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceCuration"];
+                };
+            };
+        };
+    };
+    catalog_recommendation_issues_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssueCollection"];
+                };
+            };
+        };
+    };
+    catalog_recommendation_issues_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_recommendation_issues_save_list_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedIssueList"];
+                };
+            };
+        };
+    };
+    catalog_scholar_relations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationPage"];
                 };
             };
         };

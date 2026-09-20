@@ -14,11 +14,11 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
-  Trash2,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import {
   ActionButton,
   ActionLink,
@@ -29,6 +29,7 @@ import {
 import { ConfirmDialog } from "./confirm-dialog";
 import { CatalogOcrPicker, OcrProgressDisplay, ocrPageRanges as pageRanges, type OcrProgress } from "./admin/workflow/edition-ocr-control";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
+import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
 
 type Attempt = {
   id: string;
@@ -38,6 +39,8 @@ type Attempt = {
   finished_at: string | null;
   error_message: string;
 };
+
+type DocumentStage = { status: string; job_id: string | null; progress: number | null; updated_at: string | null; error: string; kind: string; source: string };
 
 type ProcessingItem = {
   id: string;
@@ -57,6 +60,7 @@ type ProcessingItem = {
   dispatch_status: "pending" | "queued" | "running" | "completed" | "failed";
   dispatch_attempts: number;
   dispatch_error: string;
+  document_stages?: { file: DocumentStage | null; ocr: DocumentStage | null; index: DocumentStage | null };
 };
 
 type Paginated<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
@@ -212,6 +216,9 @@ const jobLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
+  completed: "完成",
+  queued: "已排队",
+  skipped: "已跳过",
   pending: "等待",
   running: "运行中",
   paused: "已暂停",
@@ -311,6 +318,8 @@ function TaskPagination({ page, pages, count, busy, onChange, label }: { page: n
 }
 
 export function ProcessingCenter() {
+  const user = useAdminSession();
+  const canRemoveRecords = hasAdminCapability(user, "can_run_destructive_maintenance");
   const [items, setItems] = useState<ProcessingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -339,9 +348,11 @@ export function ProcessingCenter() {
   const [jobType, setJobType] = useState("");
   const [jobStatus, setJobStatus] = useState("");
   const [filtersReady, setFiltersReady] = useState(false);
-  const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("overview");
+  const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("documents");
   const [revision, setRevision] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<ProcessingItem | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const selectedDocument = items.find(item => item.id === selectedDocumentId) ?? null;
   const [actionPending, setActionPending] = useState(false);
   const [pendingOperation, setPendingOperation] = useState("");
   const operationInFlightRef = useRef("");
@@ -485,9 +496,8 @@ export function ProcessingCenter() {
 
   useEffect(() => {
     if (!filtersReady) return;
-    setLoading(true);
-    const initialTimer = window.setTimeout(() => void load(), 0);
-    const timer = window.setInterval(load, 10000);
+    const initialTimer = window.setTimeout(() => { setLoading(true); void load(); }, 0);
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 15000);
     return () => {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
@@ -534,7 +544,7 @@ export function ProcessingCenter() {
 
   async function removeConfirmed() {
     const token = getServerSessionCredential();
-    if (!removeTarget) return;
+    if (!removeTarget || !canRemoveRecords) return;
     const actionKey = `remove:${removeTarget.id}`;
     if (!token) {
       setFeedback({ state: "error", message: "登录状态尚未就绪，无法移除处理记录。", actionKey });
@@ -684,19 +694,19 @@ export function ProcessingCenter() {
     && /huggingface|dns|name or service|network unreachable|resolve/i.test(`${job.error_code} ${job.last_error}`)
   )).length, [jobs]);
   const summary = {
-    active: (totalCounts.pending ?? 0) + (totalCounts.running ?? 0),
-    review: (reviewCounts.pending ?? 0) + (reviewCounts.in_progress ?? 0),
-    failed: totalCounts.failed ?? 0,
-    succeeded: totalCounts.succeeded ?? 0,
+    active: taskMeta ? (totalCounts.pending ?? 0) + (totalCounts.running ?? 0) : null,
+    review: reviewMeta ? (reviewCounts.pending ?? 0) + (reviewCounts.in_progress ?? 0) : null,
+    failed: taskMeta ? totalCounts.failed ?? 0 : null,
+    succeeded: taskMeta ? totalCounts.succeeded ?? 0 : null,
   };
   const healthSurface: FunctionalHealthSurface | null = activeSurface === "documents" ? null : activeSurface;
 
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><h1>处理中心</h1><span>查看哪些功能受到影响，找到未完成的任务，并按提示重试。失败记录会保留。</span></div>
+        <div><p>管理后台 / 文档与任务</p><h1>Processing Center</h1><span>管理文档处理，查看真实任务进度和需要处理的问题。</span></div>
         <div className="admin-action-row">
-          <ActionLink className="button secondary" href="/admin/publication">前往发布台 <ChevronRight size={15} /></ActionLink>
+          <ActionLink className="button secondary" href="/admin/review?category=publication_ready">待发布馆藏 <ChevronRight size={15} /></ActionLink>
           <ActionButton
             className="button secondary"
             state={pendingOperation === "refresh" || (loading && !items.length) ? "pending" : error ? "error" : "idle"}
@@ -723,6 +733,7 @@ export function ProcessingCenter() {
           </button>
         ))}
       </nav>
+      <section className="processing-v307-maintenance" aria-label="高级维护与配置"><strong>高级维护与配置</strong><nav><Link href="/admin/processing/settings">处理服务设置</Link><Link href="/admin/processing/query-lexicon">检索词典</Link><Link href="/admin/processing/semantic-index">语义索引</Link><Link href="/admin/processing/status">运行状态</Link><Link href="/admin/processing/health">专业自检</Link></nav></section>
       <div
         className="processing-center-surface"
         id={`processing-surface-${activeSurface}`}
@@ -731,11 +742,20 @@ export function ProcessingCenter() {
         tabIndex={0}
       >
       {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
-      {activeSurface === "overview" ? <section className="processing-summary">
-        <article><Clock3 size={18} /><strong>{summary.active}</strong><span>等待或运行</span></article>
-        <article><FileText size={18} /><strong>{summary.review}</strong><span>待复核</span></article>
-        <article><AlertCircle size={18} /><strong>{summary.failed}</strong><span>失败</span></article>
-        <article><CheckCircle2 size={18} /><strong>{summary.succeeded}</strong><span>成功</span></article>
+      {activeSurface === "overview" || activeSurface === "documents" ? <section className="processing-summary">
+        <article><Clock3 size={18} /><strong>{summary.active ?? "—"}</strong><span>等待或运行</span></article>
+        <article><FileText size={18} /><strong>{summary.review ?? "—"}</strong><span>待复核</span></article>
+        <article><AlertCircle size={18} /><strong>{summary.failed ?? "—"}</strong><span>失败</span></article>
+        <article><CheckCircle2 size={18} /><strong>{summary.succeeded ?? "—"}</strong><span>成功</span></article>
+      </section> : null}
+      {activeSurface === "documents" ? <section className="processing-list admin-panel processing-v307-documents">
+        <header><div><h2>文档处理</h2><p>每一步来自实际上传与后台任务记录；未记录的阶段不会标记成功。</p></div><span>{itemMeta?.count ?? "—"} 个文档</span></header>
+        <div className="admin-v307-table-scroll"><table><thead><tr><th>文档</th><th>文件与识别</th><th>OCR</th><th>索引</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
+          const stageCell = (stage: DocumentStage | null | undefined) => stage ? <><span className={`processing-v307-state state-${stage.status}`}>{statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status}</span>{stage.progress !== null ? <progress value={stage.progress} max={100} aria-label={`${stage.kind}任务进度`} /> : null}{stage.error ? <small className="processing-v307-stage-error">{stage.error}</small> : null}</> : <span className="muted">尚无任务记录</span>;
+          return <tr key={item.id}><td><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></td><td>{stageCell(item.document_stages?.file)}</td><td>{stageCell(item.document_stages?.ocr)}</td><td>{stageCell(item.document_stages?.index)}</td><td>{timeLabel(item.updated_at)}</td><td><button type="button" className="button secondary" onClick={() => setSelectedDocumentId(item.id)}>查看详情</button></td></tr>;        })}</tbody></table></div>
+        {!loading && itemMeta && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
+        {itemMeta ? <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil(itemMeta.count / 24))} count={itemMeta.count} busy={loading} onChange={setItemPage} /> : null}
+        {selectedDocument ? <section className="processing-v307-document-detail" aria-label="文档处理详情"><header><div><small>文档详情</small><h3>{selectedDocument.review_data?.title || selectedDocument.source_filename}</h3></div><button type="button" className="button secondary" onClick={() => setSelectedDocumentId("")}>返回文档列表</button></header><div className="processing-v307-document-columns"><div><h4>处理进度</h4><p>{stageLabels[selectedDocument.status] ?? selectedDocument.status} · {selectedDocument.stage_progress}%</p><progress value={selectedDocument.stage_progress} max={100} aria-label="文档处理进度" /><dl><div><dt>原始文件</dt><dd>{selectedDocument.source_filename}</dd></div><div><dt>最近更新</dt><dd>{timeLabel(selectedDocument.updated_at)}</dd></div><div><dt>调度状态</dt><dd>{selectedDocument.dispatch_status}</dd></div></dl>{selectedDocument.error_message || selectedDocument.dispatch_error ? <p role="alert">{selectedDocument.error_message || selectedDocument.dispatch_error}</p> : null}<h4>各阶段最新任务</h4><dl>{(["file", "ocr", "index"] as const).map(stageKey => { const stage = selectedDocument.document_stages?.[stageKey]; return <div key={stageKey}><dt>{{file:"文件与文本",ocr:"OCR 识别",index:"检索索引"}[stageKey]}</dt><dd>{stage ? <><strong>{statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status}</strong>{stage.progress !== null ? <span> · {stage.progress}%</span> : null}<small>{stage.updated_at ? `更新于 ${timeLabel(stage.updated_at)}` : ""}</small>{stage.error ? <p role="status">{stage.error}</p> : null}</> : "尚无任务记录"}</dd></div>; })}</dl><h4>处理历史</h4>{selectedDocument.attempts.length ? <ol>{selectedDocument.attempts.map(attempt => <li key={attempt.id}><strong>{stageLabels[attempt.stage] ?? jobLabels[attempt.stage] ?? attempt.stage}</strong><span>{statusLabels[attempt.status] ?? attempt.status} · {timeLabel(attempt.started_at)}</span>{attempt.error_message ? <p>{attempt.error_message}</p> : null}</li>)}</ol> : <p>尚无处理历史。</p>}<div className="admin-action-row"><Link className="button" href={`/admin/intake/${selectedDocument.id}#file`}>打开馆藏工作页</Link>{selectedDocument.suggested_action === "retry" || selectedDocument.suggested_action === "resume" ? <ActionButton state={operationState(`item-retry:${selectedDocument.id}`)} disabled={Boolean(pendingOperation)} onClick={() => void retry(selectedDocument)}>重试失败处理</ActionButton> : null}{canRemoveRecords ? <button className="danger-link" type="button" disabled={Boolean(pendingOperation)} onClick={() => setRemoveTarget(selectedDocument)}>移除流程记录</button> : null}</div></div><WorkflowInspector selection={{kind:"pdf",title:"PDF 文件预览",pdfUrl:`/ingestion/items/${selectedDocument.id}/preview/`}} token={getServerSessionCredential()} onClose={() => setSelectedDocumentId("")} /></div></section> : null}
       </section> : null}
       {activeSurface === "overview" || activeSurface === "workers" || activeSurface === "ai-models" || activeSurface === "documents" ? (
       <div className={`processing-health-grid ${activeSurface === "overview" ? "" : "single"}`}>
@@ -751,7 +771,7 @@ export function ProcessingCenter() {
           {semanticHealth ? <dl><div><dt>模型</dt><dd>{semanticHealth.runtime.model_repo_id || semanticHealth.runtime.model}</dd></div><div><dt>混合检索权重</dt><dd>{Math.round(semanticHealth.runtime.semantic_ratio * 100)}%</dd></div><div><dt>运行方式</dt><dd>{semanticHealth.runtime.offline_mode ? "NAS 离线模型" : "允许联网"}</dd></div></dl> : null}
           {semanticHealth ? <p>混合检索权重只表示关键词与语义结果的融合参数，不是检索质量分数。</p> : null}
           {semanticHealth?.model_health.available === true && historicalNetworkFailures ? <p>下方仍有 {historicalNetworkFailures} 条旧的 Hugging Face 网络错误。它们是历史任务记录，不代表当前离线模型失效。</p> : null}
-          <Link href="/admin/semantic-index">打开语义索引诊断 <ChevronRight size={14} /></Link>
+          <Link href="/admin/processing/semantic-index">打开语义索引诊断 <ChevronRight size={14} /></Link>
         </section> : null}
       </div>
       ) : null}
@@ -853,7 +873,7 @@ export function ProcessingCenter() {
               <footer>
                 {task.upload_item ? <Link href={`/admin/intake/${task.upload_item}#bibliography`}>进入工作流</Link> : null}
                 {canManageReviewTasks && task.status === "pending" ? <ActionButton state={operationState(`review:assign_self:${task.id}`)} pendingLabel="正在领取" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "assign_self")}>领取任务</ActionButton> : null}
-                {canManageReviewTasks && task.status === "in_progress" && task.task_type !== "entity_resolution" ? <ActionButton state={operationState(`review:complete:${task.id}`)} pendingLabel="正在完成" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "complete")}>标记完成</ActionButton> : null}
+                {canManageReviewTasks && task.status === "in_progress" && task.upload_item ? <Link href={`/admin/intake/${task.upload_item}#bibliography`}>打开问题并核对</Link> : null}
                 {canManageReviewTasks && (task.status === "completed" || task.status === "cancelled") ? <ActionButton state={operationState(`review:reopen:${task.id}`)} pendingLabel="正在恢复" disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(task, "reopen")}>恢复待办</ActionButton> : null}
               </footer>
             </article>
@@ -896,21 +916,6 @@ export function ProcessingCenter() {
         </div>
         <TaskPagination label="后台任务翻页" page={taskMeta?.page ?? jobPage} pages={taskMeta?.pages ?? 1} count={taskMeta?.count ?? 0} busy={loading} onChange={setJobPage} />
         {!canManageTasks ? <p>当前账户只读。任务启停与恢复需要管理员或系统所有者权限。</p> : null}
-      </section> : null}
-      {activeSurface === "documents" ? <section className="processing-list admin-panel processing-upload-list">
-        <header><div><h2>上传流程记录</h2><p>这里保留文件入库、复核和发布入口，处理任务在上方查看。</p></div></header>
-        {items.map((item) => {
-          const latest = item.attempts[0];
-          return (
-            <article key={item.id}>
-              <div className="processing-item-heading"><FileText size={17} /><p><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></p><b>{stageLabels[item.status] ?? item.status}</b><span>{item.stage_progress}%</span></div>
-              <div className="processing-bar"><i style={{ width: `${item.stage_progress}%` }} /></div>
-              <div className="processing-item-detail"><span>{item.is_stalled ? `已停滞 ${Math.max(1, Math.floor(item.stalled_seconds / 60))} 分钟` : latest ? `${latest.stage} · ${latest.status}` : "尚无处理日志"}</span><span>{item.error_message || item.dispatch_error || latest?.error_message || new Date(item.updated_at).toLocaleString("zh-CN")}</span><span><Link href={`/admin/intake/${item.id}#file`}>查看详情</Link>{item.edition ? <Link href={`/admin/intake/${item.id}#publication`}>发布检查</Link> : null}{item.suggested_action === "retry" || item.suggested_action === "resume" ? <ActionButton state={operationState(`item-retry:${item.id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation)} onClick={() => void retry(item)}><RotateCcw size={13} />重新处理</ActionButton> : null}<button className="danger-link" type="button" onClick={() => setRemoveTarget(item)}><Trash2 size={13} />移除</button></span></div>
-            </article>
-          );
-        })}
-        {!loading && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
-        <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil((itemMeta?.count ?? 0) / 24))} count={itemMeta?.count ?? 0} busy={loading} onChange={setItemPage} />
       </section> : null}
       </div>
       <ToastHost

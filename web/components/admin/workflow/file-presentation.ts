@@ -10,9 +10,9 @@ export function fileDraftFromWorkspace(value: Record<string, unknown>) {
 }
 
 export const WORKFLOW_GROUPS = [
-  { label:"书目信息", steps:["work","bibliography"] },
-  { label:"文件与阅读", steps:["file","reader"] },
-  { label:"人物及知识关联", steps:["contributors","classification","curation"] },
+  { label:"文件与识别", steps:["file","reader"] },
+  { label:"书目与封面", steps:["work","bibliography"] },
+  { label:"作者与分类", steps:["contributors","classification","curation"] },
   { label:"预览与发布", steps:["publication"] },
 ] as const;
 

@@ -3464,6 +3464,10 @@ class EditorialRevision(UUIDTimeStampedModel):
         READING_PATH = "reading_path", "阅读路径"
         KNOWLEDGE_RELATION = "knowledge_relation", "理论关系"
         TIMELINE_EVENT = "timeline_event", "时间线事件"
+        RECOMMENDATION_ISSUE = "recommendation_issue", "书库推荐期"
+        SITE_CONTENT = "site_content", "网站与关于书库"
+        EVIDENCE_CURATION = "evidence_curation", "原文策展"
+        SCHOLAR_RELATION = "scholar_relation", "学者关系"
 
     class Status(models.TextChoices):
         DRAFT = "draft", "草稿"
@@ -6120,6 +6124,67 @@ class RecommendationOverride(UUIDTimeStampedModel, RecommendationTargetMixin):
 
     class Meta:
         ordering = ["policy", "position", "created_at"]
+
+
+class EvidenceCuration(UUIDTimeStampedModel):
+    object_type = models.CharField(max_length=16, choices=[("topic", "主题"), ("scholar", "学者"), ("node", "理论与概念")])
+    object_id = models.UUIDField()
+    active_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="active_evidence_curations")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["object_type", "object_id"], name="unique_evidence_curation_target")]
+
+
+class EvidenceCurationReference(UUIDTimeStampedModel):
+    curation = models.ForeignKey(EvidenceCuration, on_delete=models.PROTECT, related_name="references")
+    span = models.ForeignKey(EvidenceSpan, null=True, blank=True, on_delete=models.PROTECT, related_name="curation_references")
+    passage = models.ForeignKey(Passage, null=True, blank=True, on_delete=models.PROTECT, related_name="curation_references")
+    document_revision = models.ForeignKey(DocumentRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="curation_references")
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=(models.Q(span__isnull=False, passage__isnull=True) | models.Q(span__isnull=True, passage__isnull=False)), name="curation_reference_one_source")]
+
+
+class ScholarRelation(UUIDTimeStampedModel):
+    source_scholar = models.ForeignKey(ScholarProfile, on_delete=models.PROTECT, related_name="outgoing_shared_relations")
+    target_scholar = models.ForeignKey(ScholarProfile, on_delete=models.PROTECT, related_name="incoming_shared_relations")
+    relation_type = models.CharField(max_length=32)
+    direction = models.CharField(max_length=20, default="directed")
+    summary = models.TextField(blank=True)
+    source = models.TextField(blank=True)
+    status = models.CharField(max_length=20, default="draft", db_index=True)
+    active_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="active_scholar_relations")
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=~models.Q(source_scholar=models.F("target_scholar")), name="scholar_relation_distinct_ends")]
+
+
+class RecommendationIssue(UUIDTimeStampedModel):
+    """An issue's public text is the immutable active EditorialRevision."""
+
+    slug = models.SlugField(max_length=180, unique=True)
+    title = models.CharField(max_length=600)
+    active_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="active_recommendation_issues")
+    scheduled_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="scheduled_recommendation_issues")
+    scheduled_for = models.DateTimeField(null=True, blank=True, db_index=True)
+    display_from = models.DateTimeField(null=True, blank=True, db_index=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_recommendation_issues")
+
+    class Meta:
+        ordering = ["-display_from", "-created_at"]
+
+
+class RecommendationIssueItem(UUIDTimeStampedModel):
+    """Stable follow-up identity; wording remains in the issue revision."""
+
+    issue = models.ForeignKey(RecommendationIssue, on_delete=models.PROTECT, related_name="items")
+    cataloging_session = models.ForeignKey(CatalogingSession, null=True, blank=True, on_delete=models.PROTECT, related_name="recommendation_items")
+    planned_work = models.ForeignKey(Work, null=True, blank=True, on_delete=models.PROTECT, related_name="planned_recommendation_items")
+    linked_work = models.ForeignKey(Work, null=True, blank=True, on_delete=models.PROTECT, related_name="linked_recommendation_items")
+    linked_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.PROTECT, related_name="recommendation_issue_items")
+    linked_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="linked_recommendation_items")
+    linked_at = models.DateTimeField(null=True, blank=True)
 
 
 class AboutPageBlock(UUIDTimeStampedModel):

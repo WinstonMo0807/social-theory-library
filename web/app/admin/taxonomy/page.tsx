@@ -1,2 +1,2 @@
-import { TaxonomyAdmin } from "@/components/admin-sections";
-export default function Page() { return <TaxonomyAdmin />; }
+import { KnowledgeLegacyRedirect } from "@/components/admin/knowledge/knowledge-legacy-redirect";
+export default function Page() { return <KnowledgeLegacyRedirect taxonomy />; }

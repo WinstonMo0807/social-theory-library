@@ -20,14 +20,14 @@ test("user administration exposes only Reader Editor and Administrator roles", a
   assert.match(sections, /只有 System Owner 可以授予或撤销 Administrator/);
 });
 
-test("admin footer uses the shared 3.0.6 cataloging version", async () => {
+test("admin footer uses the shared 3.0.7 cataloging version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "3\.0\.6"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.6 馆藏管理与公开发布"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.7"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.7 馆藏管理与公开发布"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
   assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
@@ -115,85 +115,14 @@ test("semantic admin distinguishes loading, unverified model state and server-co
   assert.match(settingsSource, /if \(!token \|\| !semanticRuntimeReady\)/);
 });
 
-test("admin navigation uses the approved groups and only real routes", async () => {
-  const source = await readFile(
-    new URL("../components/admin-shell.tsx", import.meta.url),
-    "utf8",
-  );
-  const navigationStart = source.indexOf("const navigation = [");
-  const navigationEnd = source.indexOf("const routeCapabilities", navigationStart);
-  assert.ok(navigationStart >= 0 && navigationEnd > navigationStart);
-  const navigationSource = source.slice(navigationStart, navigationEnd);
-
-  const expectedGroups = [
-    ["待办与上架", ["/admin", "/admin/uploads", "/admin/cataloging/new", "/admin/review", "/admin/publication"]],
-    ["馆藏", ["/admin/library", "/admin/media", "/admin/library?view=editions", "/admin/library?view=quality"]],
-    ["知识与关联", [
-      "/admin/knowledge",
-      "/admin/scholars",
-      "/admin/people",
-      "/admin/disciplines",
-      "/admin/subdisciplines",
-      "/admin/theories",
-      "/admin/topics",
-      "/admin/theory-relations",
-    ]],
-    ["公开展示", ["/admin/knowledge#studio-public-pages", "/admin/reading-paths", "/admin/recommendations", "/admin/about", "/admin/settings#public-display"]],
-    ["处理与服务", [
-      "/admin/processing",
-      "/admin/processing?surface=research-sources",
-      "/admin/processing?surface=ai-models",
-      "/admin/query-lexicon",
-      "/admin/semantic-index",
-      "/admin/status",
-      "/admin/system-health",
-    ]],
-    ["系统管理", [
-      "/admin/distribution",
-      "/admin/settings#backups",
-      "/admin/analytics",
-      "/admin/users",
-      "/admin/settings",
-    ]],
-  ];
-
-  const groupPositions = expectedGroups.map(([group]) => {
-    const position = navigationSource.indexOf(`["${group}", [`);
-    assert.ok(position >= 0, `${group} group exists`);
-    return position;
-  });
-  assert.deepEqual(
-    groupPositions,
-    [...groupPositions].sort((left, right) => left - right),
-    "admin groups follow the approved order",
-  );
-
-  // Timeline belongs under theory management, but its old URL stays usable.
-  const allRoutes = ["/admin/theory-timeline"];
-  expectedGroups.forEach(([group, expectedRoutes], index) => {
-    const groupStart = groupPositions[index];
-    const groupEnd = groupPositions[index + 1] ?? navigationSource.length;
-    const groupSource = navigationSource.slice(groupStart, groupEnd);
-    const actualRoutes = [...groupSource.matchAll(/\["(\/admin[^"]*)",\s*[A-Za-z]+,/g)]
-      .map((match) => match[1]);
-    assert.deepEqual(actualRoutes, expectedRoutes, `${group} contains only its approved entries`);
-    allRoutes.push(...actualRoutes);
-  });
-
-  assert.equal(new Set(allRoutes).size, allRoutes.length, "navigation routes are unique");
-  assert.doesNotMatch(navigationSource, /"系统高级"/);
-  assert.match(navigationSource, /"\/admin\/status"/);
-  assert.match(navigationSource, /"\/admin\/query-lexicon"/);
-  assert.match(navigationSource, /"\/admin\/semantic-index"/);
-  assert.match(navigationSource, /\["\/admin\/uploads", Upload, "上传与批次"\]/);
-  assert.match(navigationSource, /\["\/admin\/theories", CircleDot, "理论传统"\]/);
-  await Promise.all(allRoutes.map((href) => {
-    const pathname = href.split(/[?#]/)[0];
-    return access(new URL(
-    pathname === "/admin" ? "../app/admin/page.tsx" : `../app${pathname}/page.tsx`,
-    import.meta.url,
-  ));
-  }));
+test("admin navigation uses the thirteen approved entries and only real routes", async () => {
+  const source=await readFile(new URL("../components/admin-shell.tsx",import.meta.url),"utf8");
+  const navigation=source.slice(source.indexOf("const navigation = ["),source.indexOf("const routeCapabilities"));
+  const routes=[...navigation.matchAll(/\["(\/admin[^"]*)",\s*[A-Za-z]+,/g)].map(match=>match[1]);
+  assert.deepEqual(routes,["/admin","/admin/uploads","/admin/review","/admin/theories","/admin/scholars","/admin/topics","/admin/recommendations","/admin/about","/admin/processing","/admin/storage","/admin/backups","/admin/analytics","/admin/users"]);
+  assert.equal(new Set(routes).size,13);
+  assert.doesNotMatch(navigation,/\/admin\/(?:knowledge|theory-timeline|people|settings|media)"/);
+  await Promise.all(routes.map(route=>access(new URL(route === "/admin" ? "../app/admin/page.tsx" : `../app${route}/page.tsx`,import.meta.url))));
 });
 
 test("AI settings expose every 3.0 capability and immutable Prompt revisions", async () => {
@@ -227,7 +156,7 @@ test("AI settings expose every 3.0 capability and immutable Prompt revisions", a
 
 test("admin navigation does not prefetch every management page at once", async () => {
   const source = await readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8");
-  assert.match(source, /visibleLinks\.map[\s\S]*prefetch=\{false\}/);
+  assert.match(source, /navigation\.filter[\s\S]*\.map[\s\S]*prefetch=\{false\}/);
   assert.match(source, /admin-processing-link[\s\S]*prefetch=\{false\}/);
 });
 
@@ -271,6 +200,8 @@ test("admin-only navigation permissions remain explicit after regrouping", async
     "/admin/analytics",
     "/admin/users",
     "/admin/distribution",
+    "/admin/storage",
+    "/admin/backups",
     "/admin/settings",
   ]);
   assert.match(source, /user\.role === "admin" \|\| !administratorOnlyRoutes\.has\(href\.split/);
@@ -370,7 +301,8 @@ test("authority identity suggestions require an explicit request and never fill 
   assert.match(theory, /authorityType=\{draft\.node_type === "theory_tradition"/);
   const assistant = await readFile(new URL("../components/admin/curation/curation-field-assistant.tsx", import.meta.url), "utf8");
   assert.match(assistant, /async function adopt[\s\S]*onApply\?\./);
-  assert.match(assistant, /onClick=\{\(\) => void adopt/);
+  assert.match(assistant, /onClick=\{\(\) => choose\(candidate\)/);
+  assert.match(assistant, /void adopt\(review,/);
   assert.doesNotMatch(shared, /editorial_status|publication_status|published_at/);
 });
 
@@ -383,8 +315,9 @@ test("scholar summary and full biography remain distinct on the public profile",
 
   assert.match(adapter, /shortDescription: payload\.short_description \|\| payload\.person\.biography/);
   assert.match(page, /<ScholarPublicView/);
-  assert.match(view, /<p className="biography">\{shortDescription\}<\/p>/);
-  assert.match(view, /<p>\{scholar\.biography\}<\/p>/);
+  assert.match(view, /<p>\{data\.shortDescription\}<\/p>/);
+  assert.match(view, /scholar\.biography\.slice\(0,240\)/);
+  assert.match(view,/href\("biography"\)/);
 });
 
 test("admin primitives are integrated without fixed-width dashboard overflow", async () => {
@@ -393,10 +326,10 @@ test("admin primitives are integrated without fixed-width dashboard overflow", a
     readStyleSource(),
   ]);
 
-  assert.match(dashboard, /import \{ EmptyState, PageHeader, StatusBadge, type StatusTone \} from "\.\/admin-ui"/);
+  assert.match(dashboard, /import \{ PageHeader, StatusBadge \} from "\.\/admin-ui"/);
   assert.match(dashboard, /<PageHeader/);
   assert.match(dashboard, /<StatusBadge/);
-  assert.match(dashboard, /<EmptyState compact title="尚无上传记录"/);
+  assert.match(dashboard, /尚无上传记录/);
   assert.doesNotMatch(dashboard, /<CheckCircle2/);
 
   assert.match(styles, /--admin-control-height: var\(--stl-control-height\)/);

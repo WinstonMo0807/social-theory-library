@@ -38,6 +38,7 @@ const sampleWork = {
 };
 
 const sampleScholar = {
+  id: "scholar-profile-fixture",
   slug: "pierre-bourdieu",
   person: {
     id: "scholar-fixture",
@@ -67,6 +68,7 @@ const sampleScholar = {
 
 const recommendedScholar = {
   ...sampleScholar,
+  id: "recommended-scholar-profile-fixture",
   slug: "recommended-outside-first-page",
   person: {
     ...sampleScholar.person,
@@ -147,22 +149,36 @@ function paginated(results) {
   return { count: results.length, next: null, previous: null, results };
 }
 
-function fixturePayload(pathname) {
+function fixturePayload(pathname, query = new URLSearchParams()) {
   if (pathname === "/api/catalog/site-config/") return defaultSiteConfig;
+  if (pathname === "/api/catalog/recommendation-issues/") return {count:0,next:null,previous:null,results:[],current:null};
   if (pathname === "/api/catalog/site-stats/") return { documents: 1, scholars: 1, knowledge_objects: 2, last_updated: null, last_updated_label: "测试", version: "2.8.1" };
   if (pathname === "/api/catalog/hot-searches/") return { period_days: 30, results: [] };
   if (pathname === "/api/catalog/works/") return paginated([sampleWork]);
   if (pathname === "/api/catalog/scholars/") return paginated([sampleScholar]);
   if (pathname === "/api/catalog/scholars/pierre-bourdieu/") return sampleScholar;
   if (pathname === "/api/catalog/scholars/recommended-outside-first-page/") return recommendedScholar;
+  if (pathname === "/api/catalog/scholar-relations/") return paginated([{id:"shared-scholar-relation",source_scholar:sampleScholar.id,target_scholar:recommendedScholar.id,source_name:sampleScholar.person.preferred_name,target_name:recommendedScholar.person.preferred_name,source_slug:sampleScholar.slug,target_slug:recommendedScholar.slug,relation_type:"comparative_reading",direction:"undirected",summary:"测试馆藏的比较阅读关系",source:"隔离测试文献第 3 页",status:"published"}]);
   if (pathname === "/api/catalog/theory-schools/") return paginated([sampleTheory]);
   if (pathname === "/api/catalog/theory-schools/practice-theory/") return sampleTheory;
+  if (pathname === "/api/catalog/theory-schools/mapped-practice/") return {...sampleTheory,slug:"mapped-practice",canonical_node_url:"/theories/nodes/canonical-practice"};
+  if (pathname === "/api/catalog/theory-system/nodes/" && query.get("q") === "directory-fixture") return {count:49,next:"?page=3",previous:"?page=1",results:[{id:"directory-node",slug:"directory-concept",node_type:"concept",canonical_name_zh:"目录分页测试概念",summary:"由测试 API 返回的第二页条目。",related_disciplines:[],representative_scholars:[],work_count:1}]};
   if (pathname === "/api/catalog/topics/") return paginated([sampleTopic]);
   if (pathname === "/api/catalog/topics/surveillance-and-society/") return sampleTopic;
+  if (pathname === "/api/catalog/topics/recommended-topic-outside-first-page/") return { ...sampleTopic, id: "recommended-topic-fixture", slug: "recommended-topic-outside-first-page", name: "目录页外精选主题" };
+  if (pathname === "/api/catalog/topics/cleared-evidence/") return { ...sampleTopic, id: "topic-cleared", slug: "cleared-evidence", passages: [{ id: "retired-passage", title: "旧摘录不应复活", text: "旧摘录不应复活", snippet: "旧摘录不应复活", page_index: 1, asset_id: "asset-old" }] };
+  const curationMatch = pathname.match(/^\/api\/catalog\/evidence-curation\/(scholar|topic|node)\/([^/]+)\/$/);
+  if (curationMatch) {
+    const [, object_type, object_id] = curationMatch;
+    const configured = object_id === "scholar-profile-fixture" || object_id === "topic-cleared";
+    return { configured, object_type, object_id, title: "原文策展测试", items: object_id === "scholar-profile-fixture" ? [{ id: "reference-fixture", source_type: "span", source_id: "span-fixture", group_title: "从原文理解实践", reason: "管理员明确填写的关联理由", order: 0, source: { id: "span-fixture", source_type: "span", text: "策展接口发布的真实测试原文。", work_id: sampleWork.id, work_title: sampleWork.title, edition_id: "edition-fixture", edition_label: "测试出版社 2026 精确版本", asset_id: "asset-discipline", page_start: 34, page_end: 34, printed_label: "21", reader_url: "/reader/asset-discipline?page=34", public_eligible: true } }] : [] };
+  }
   if (pathname === "/api/catalog/recommendations/") return {
     shared_for_all_readers: true,
     rotation_days: 3,
     placements: {
+      home_topics: { id: "home-topics-policy", placement: "home_topics", title: "精选主题", item_count: 5, enabled: true,
+        current: { id: "home-topics-snapshot", items: [{ id: "home-topics-item", position: 0, reason: "明确策展", image_override: "", target_type: "topic", target: { id: "recommended-topic-fixture", slug: "recommended-topic-outside-first-page", name: "目录页外精选主题" } }] } },
       home_scholars: {
         id: "home-scholars-policy",
         placement: "home_scholars",
@@ -240,6 +256,15 @@ function fixturePayload(pathname) {
     page_label_status: "ready", reader_rendition_policy: "auto", work: sampleWork,
     outline: [], related_scholars: [], related_theories: [], related_topics: [],
   };
+  if (pathname === "/api/catalog/theory-system/nodes/secondary-page-fixture/") return {
+    id:"secondary-page-node",slug:"secondary-page-fixture",node_type:"theory_tradition",canonical_name_zh:"次级分页测试理论",canonical_name_en:"",summary:"测试次级页面的真实分页。",definition:"",core_questions:[],basic_propositions:["命题一","命题二","命题三","命题四","命题五","第六条命题必须保留"],theoretical_boundary:"",primary_discipline:null,related_disciplines:[],subdiscipline_links:[],topic_links:[],representative_scholars:[],period_label:"",work_count:0,work_groups:{},direct_relations:[],evidence:[],curated_claims:{core_viewpoint:[],major_criticism:[],major_response:[]},cover_url:"",updated_at:null,
+  };
+  if (pathname === "/api/catalog/theory-system/reading-paths/" && query.get("node") === "secondary-page-fixture") return {
+    count:25,next:null,previous:"?page=1",results:[{id:"path-second-page",slug:"path-second-page",title:"第二页关联阅读路径",introduction:"先筛选该理论再分页。",items:[{id:"path-item",reading_order:1,stage_name:"开始阅读",stage_description:"",node_data:{id:"secondary-page-node",canonical_name_zh:"次级分页测试理论"},work_data:null}]}],
+  };
+  if (pathname === "/api/catalog/theory-system/timeline/" && query.get("node") === "secondary-page-fixture") return {
+    count:25,next:null,previous:"?page=1",results:[{id:"event-second-page",date_label:"1990",start_year:1990,title:"第二页关联理论事件",description:"保留真实事件入口。"}],
+  };
   if (pathname === "/api/catalog/theory-system/overview/") return {
     disciplines: [], browse: {}, reading_paths: [],
     recent: { nodes: [], timeline_events: [], work_relations: [] },
@@ -255,11 +280,15 @@ function fixturePayload(pathname) {
   return null;
 }
 
+const requestedFixtureRoutes = [];
 const fixtureServer = createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
-  const payload = fixturePayload(url.pathname);
+  requestedFixtureRoutes.push(`${url.pathname}${url.search}`);
+  const payload = fixturePayload(url.pathname, url.searchParams);
   response.statusCode = payload === null ? 404 : 200;
   response.setHeader("content-type", "application/json; charset=utf-8");
+  // Each SSR request may race metadata and layout fetches; avoid sharing a short-lived fixture socket.
+  response.setHeader("connection", "close");
   response.end(JSON.stringify(payload ?? { detail: `Unhandled fixture route: ${url.pathname}` }));
 });
 await new Promise((resolve) => fixtureServer.listen(0, "127.0.0.1", resolve));
@@ -268,6 +297,9 @@ process.env.INTERNAL_API_URL = `http://127.0.0.1:${fixtureAddress.port}/api`;
 after(() => new Promise((resolve, reject) => fixtureServer.close((error) => error ? reject(error) : resolve())));
 
 let workerPromise;
+const renderErrors = [];
+globalThis.__VINEXT_onRequestErrorHandler__ = error => { renderErrors.push(error.message); };
+after(() => { delete globalThis.__VINEXT_onRequestErrorHandler__; });
 
 async function getWorker() {
   if (!workerPromise) {
@@ -303,9 +335,12 @@ test("server-renders the Chinese public home without starter artifacts", async (
   assert.match(html, /<html[^>]*lang="zh-CN"/i);
   assert.match(html, /社会理论如何被感知/);
   assert.match(html, /阅读就是方法/);
-  assert.match(html, /精选馆藏/);
+  assert.match(html, /<h2>本期书库推荐<\/h2>/);
+  assert.doesNotMatch(html, /<h2[^>]*>精选馆藏/);
   assert.match(html, /理论流派/);
   assert.match(html, /推荐页外学者/);
+  assert.match(html, /目录页外精选主题/);
+  assert.match(html, /href="\/topics\/recommended-topic-outside-first-page"/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
   assert.match(html, /name="robots"[^>]*noindex/i);
 });
@@ -345,7 +380,7 @@ test("scholar profile renders the concise introduction and full biography from s
 });
 
 test("scholar directory keeps recommendations separate and resolves scholars outside the first list page", async () => {
-  const response = await render("/scholars?q=布迪厄");
+  const response = await render("/scholars");
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /学者推荐/);
@@ -357,11 +392,14 @@ test("scholar directory keeps recommendations separate and resolves scholars out
     new URL("../app/scholars/page.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /recommendedScholars\[0\]/);
-  assert.match(source, /recommendedScholars\.slice\(1, 3\)/);
-  assert.match(source, /primaryRecommendation \? \(/);
-  assert.match(source, /supportingRecommendations\.length \? \(/);
-  assert.match(source, /本轮暂无重点推荐/);
+  assert.match(source, /<ScholarDirectoryRecommendations/);
+  assert.match(source, /loadRecommendedScholars\(bundle, 4\)/);
+  const directory=await render("/scholars?q=布迪厄&view=directory");
+  assert.equal(directory.status,200);
+  const directoryHtml=await directory.text();
+  assert.match(directoryHtml,/皮埃尔·布迪厄/);
+  assert.doesNotMatch(directoryHtml,/学者推荐/);
+
 });
 
 test("recommendation administration exposes explicit ordering and paged scholar search controls", async () => {
@@ -378,16 +416,16 @@ test("recommendation administration exposes explicit ordering and paged scholar 
   assert.doesNotMatch(source, /admin\/scholars\/\?page_size=100/);
 });
 
-test("homepage and scholar directory consume only valid scholars from the shared snapshot", async () => {
+test("homepage and scholar directory combine confirmed recommendations with actual public scholar records", async () => {
   const [homeSource, scholarSource, apiSource] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/api/home.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/scholars/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/api/recommendations.server.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(homeSource, /const shownScholars = recommendedScholars/);
-  assert.doesNotMatch(homeSource, /loadScholars/);
-  assert.doesNotMatch(homeSource, /\[\.\.\.scholars, \.\.\.recommendedScholars\]/);
-  assert.match(scholarSource, /loadRecommendedScholars\(bundle, 3\)/);
+  assert.match(homeSource, /loadRecommendedScholars\(bundle, 6\)/);
+  assert.match(homeSource, /loadScholars\(\)/);
+  assert.match(homeSource, /selectedScholars\.some/);
+  assert.match(scholarSource, /loadRecommendedScholars\(bundle, 4\)/);
 
   const helperStart = apiSource.indexOf("export async function loadRecommendedScholars");
   assert.ok(helperStart >= 0);
@@ -419,7 +457,7 @@ test("renders the three search modes and the editable about page", async () => {
 
 test("server-renders the normalized theory system and keeps the legacy route", async () => {
   const expectations = [
-    ["/theories", /从三大学科进入理论世界/],
+    ["/theories", /<h1>理论流派<\/h1>/],
     ["/theories/disciplines/sociology", /理论传统|该分类尚无公开条目/],
     ["/theories/timeline", /社会理论历史时间轴/],
     ["/theories/graph", /社会理论图谱/],
@@ -429,6 +467,7 @@ test("server-renders the normalized theory system and keeps the legacy route", a
     const response = await render(path);
     assert.equal(response.status, 200, path);
     const html = await response.text();
+    assert.ok(!html.includes("这部分内容没有正常载入"), `${path}: ${renderErrors.join("; ")}; fixture calls ${requestedFixtureRoutes.join(", ")}`);
     assert.match(html, marker, path);
     assert.doesNotMatch(html, />\s*(?:undefined|NaN 部|NaN 个)\s*</i, path);
   }
@@ -451,16 +490,71 @@ test("server-renders every normalized theory administration entry", async () => 
 test("server-renders the repaired processing, health, analytics and settings entries", async () => {
   const expectations = [
     ["/admin/processing", /正在验证管理权限|处理中心/],
-    ["/admin/system-health", /正在验证管理权限|System Health/],
+    ["/admin/processing/health", /正在验证管理权限|System Health/],
     ["/admin/analytics", /正在验证管理权限|阅读与搜索统计/],
-    ["/admin/semantic-index", /正在验证管理权限|语义索引/],
-    ["/admin/settings", /正在验证管理权限|系统设置/],
+    ["/admin/processing/semantic-index", /正在验证管理权限|语义索引/],
+    ["/admin/processing/settings", /正在验证管理权限|处理设置/],
   ];
   for (const [path, marker] of expectations) {
     const response = await render(path);
     assert.equal(response.status, 200, path);
     assert.match(await response.text(), marker, path);
   }
+  for (const [legacy, destination] of [["/admin/system-health", "/admin/processing/health"], ["/admin/semantic-index", "/admin/processing/semantic-index"]]) {
+    const response = await render(`${legacy}?return_to=%2Fadmin`);
+    assert.equal(response.status, 307, legacy);
+    const location = new URL(response.headers.get("location"), "http://localhost");
+    assert.equal(`${location.pathname}${location.search}`, `${destination}?return_to=%2Fadmin`, legacy);
+  }
+});
+
+test("published evidence uses the shared curation endpoint and explicit clearing does not revive legacy passages", async () => {
+  const response = await render("/scholars/pierre-bourdieu/evidence");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /策展接口发布的真实测试原文/);
+  assert.match(html, /管理员明确填写的关联理由/);
+  assert.match(html, /测试出版社 2026 精确版本/);
+  assert.match(html, /reader\/asset-discipline\?page=34/);
+  assert.ok(requestedFixtureRoutes.some(route => route === "/api/catalog/evidence-curation/scholar/scholar-profile-fixture/"));
+  const cleared = await render("/topics/cleared-evidence/passages");
+  assert.equal(cleared.status, 200);
+  const clearedHtml = await cleared.text();
+  assert.match(clearedHtml, /尚未策展原文/);
+  // Serialized RSC data may still retain the legacy object; only rendered copy must be absent.
+  const visibleHtml = clearedHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  assert.doesNotMatch(visibleHtml, /旧摘录不应复活/);
+});
+
+test("normalized directory preserves filters and ordering across API pagination", async () => {
+  const response = await render("/theories/directory?type=concept&discipline=sociology&q=directory-fixture&sort=updated&page=2");
+  assert.equal(response.status,200);
+  const html = await response.text();
+  assert.match(html,/目录分页测试概念/);
+  assert.match(html,/最近更新/);
+  const links = Array.from(html.matchAll(/href="([^"]*theories\/directory\?[^"]*)"/g), match => new URL(match[1].replaceAll("&amp;","&"),"http://localhost"));
+  for (const page of ["1","3"]) assert.ok(links.some(link => link.searchParams.get("page") === page && link.searchParams.get("type") === "concept" && link.searchParams.get("discipline") === "sociology" && link.searchParams.get("q") === "directory-fixture" && link.searchParams.get("sort") === "updated"));
+  assert.ok(requestedFixtureRoutes.some(route => { const url = new URL(route,"http://localhost"); return url.pathname === "/api/catalog/theory-system/nodes/" && url.searchParams.get("page") === "2" && url.searchParams.get("sort") === "updated"; }));
+});
+
+test("legacy theory details follow only explicit canonical mappings and retain section context", async () => {
+  for (const [path,destination] of [["/theory-schools/mapped-practice?from=topic","/theories/nodes/canonical-practice?from=topic"],["/theory-schools/mapped-practice/reading-list?from=topic","/theories/nodes/canonical-practice/works?from=topic"],["/theory-schools/mapped-practice/scholars","/theories/nodes/canonical-practice#scholars"]]) {
+    const response = await render(path);
+    assert.equal(response.status,307,path);
+    const location = new URL(response.headers.get("location"),"http://localhost");
+    assert.equal(`${location.pathname}${location.search}${location.hash}`,destination);
+  }
+  const unmapped = await render("/theory-schools/practice-theory");
+  assert.equal(unmapped.status,200);
+  assert.match(await unmapped.text(),/此历史条目尚待确认与规范理论的关联/);
+});
+
+test("timeline rejects reversed years before requesting an event page", async () => {
+  const start = requestedFixtureRoutes.length;
+  const response = await render("/theories/timeline?year_from=2000&year_to=1900");
+  assert.equal(response.status,200);
+  assert.match(await response.text(),/起始年不能晚于结束年/);
+  assert.ok(!requestedFixtureRoutes.slice(start).some(route => route.startsWith("/api/catalog/theory-system/timeline/")));
 });
 
 test("reader selection menu puts clean copy first without removing reading tools", async () => {
@@ -521,6 +615,21 @@ test("reader serializes independent progress and history writes", async () => {
   assert.match(persistenceSource, /await apiRequest/);
   assert.doesNotMatch(persistenceSource, /Promise\.all/);
   assert.equal((persistenceSource.match(/\.catch\(\(\) => undefined\)/g) ?? []).length, 2);
+});
+
+test("theory secondary pages preserve associated paths and events beyond the first API page", async () => {
+  for (const [section,label,endpoint] of [["works","第二页关联阅读路径","reading-paths"],["timeline","第二页关联理论事件","timeline"]]) {
+    const response=await render(`/theories/nodes/secondary-page-fixture/${section}?page=2`);
+    assert.equal(response.status,200);
+    const html=await response.text();
+    assert.match(html,new RegExp(label));
+    const links=Array.from(html.matchAll(/href="([^"]+)"/g),match=>new URL(match[1].replaceAll("&amp;","&"),"http://localhost"));
+    assert.ok(links.some(link=>link.pathname===`/theories/nodes/secondary-page-fixture/${section}`&&link.searchParams.get("page")==="1"));
+    assert.ok(requestedFixtureRoutes.some(value=>{const url=new URL(value,"http://localhost");return url.pathname===`/api/catalog/theory-system/${endpoint}/`&&url.searchParams.get("node")==="secondary-page-fixture"&&url.searchParams.get("page")==="2";}));
+  }
+  const response=await render("/theories/nodes/secondary-page-fixture/propositions");
+  assert.equal(response.status,200);
+  assert.match(await response.text(),/第六条命题必须保留/);
 });
 
 test("reader center renders five recent positions and saved-item progress", async () => {

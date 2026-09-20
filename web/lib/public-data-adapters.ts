@@ -12,6 +12,7 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     id: value.edition?.readable_asset?.id ?? value.id,
     workId: value.id,
     editionId: value.edition?.id,
+    readerHref: value.edition?.readable_asset?.id ? `/reader/${value.edition.readable_asset.id}` : undefined,
     slug: value.edition?.public_slug ?? value.id,
     title: value.title,
     originalTitle: value.subtitle || undefined,
@@ -70,6 +71,8 @@ export function adaptApiScholar(value: ApiScholar): Scholar {
 }
 
 export type ScholarDetailData = {
+  evidenceCuration?: import("./api/evidence-curation.types").PublishedEvidenceCuration;
+  profileId?: string;
   scholar: Scholar;
   shortDescription: string;
   works: Work[];
@@ -107,6 +110,7 @@ export type ScholarDetailData = {
 
 export function adaptApiScholarDetail(payload: ApiScholar): ScholarDetailData {
   return {
+    profileId: payload.id,
     scholar: adaptApiScholar(payload),
     shortDescription: payload.short_description || payload.person.biography || "本馆已建立该学者与馆藏作品的关系。",
     works: (payload.works ?? []).map(adaptApiWork),

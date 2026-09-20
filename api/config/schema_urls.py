@@ -9,6 +9,9 @@ from distribution.urls import urlpatterns as distribution_patterns
 
 
 VERIFIED_NAMES = {
+    "admin-curation-sources", "admin-evidence-curation", "admin-evidence-curation-publish", "public-evidence-curation",
+    "admin-scholar-relation-list", "admin-scholar-relation-detail", "admin-scholar-relation-publish", "admin-scholar-relation-archive", "public-scholar-relation-list",
+    "admin-curation-drafts",
     "work-list", "work-detail", "asset-manifest", "asset-page-content",
     "knowledge-image-selection",
     "scholar-portrait-selection",
@@ -25,6 +28,9 @@ VERIFIED_NAMES = {
     "public-cover-metadata",
     "work-recommendation-media-selection", "public-recommendation-metadata",
     "recommendation-image-metadata",
+    "recommendation-issue-list", "recommendation-issue-detail", "recommendation-issue-save-list",
+    "admin-recommendation-issue-list", "admin-recommendation-issue-detail", "admin-recommendation-issue-publish",
+    "admin-recommendation-issue-link", "admin-site-content", "admin-site-content-publish", "admin-bibliographic-candidates",
 }
 urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),

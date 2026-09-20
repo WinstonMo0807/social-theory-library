@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import { ArrowRight, BookOpen, CircleDot, Layers3, Network, Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
@@ -118,11 +119,11 @@ export default async function TheorySchoolsPage({
           <SectionHeading title="本期馆藏推荐" href="/explore" action="查看全部馆藏" />
           <div className="theory-weekly-grid">
             {weeklyWorks.map((work) => (
-              <Link href={`/works/${work.slug}`} key={work.id}>
+              <CollectionLink href={`/works/${work.slug}`} key={work.id}>
                 <BookCover work={work} size="small" />
                 <span><strong>{work.title}</strong><small>{work.author}</small><time>{work.year}</time></span>
                 <ArrowRight size={18} />
-              </Link>
+              </CollectionLink>
             ))}
             {!weeklyWorks.length ? <p className="empty-state">馆藏发布后，系统每三天生成一组全站一致的推荐。</p> : null}
           </div>

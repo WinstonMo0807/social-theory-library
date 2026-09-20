@@ -178,6 +178,7 @@ type StructuredRowsEditorProps = {
   description?: string;
   addLabel?: string;
   rowLabel?: string;
+  focused?: boolean;
 };
 
 export function StructuredRowsEditor({
@@ -189,15 +190,25 @@ export function StructuredRowsEditor({
   description,
   addLabel = "添加记录",
   rowLabel = "记录",
+  focused = false,
 }: StructuredRowsEditorProps) {
   const rows = value.length ? value : [createRow()];
+  const [selected, setSelected] = useState(0);
+  const active = Math.min(selected, rows.length - 1);
+  useEffect(() => {
+    if (!focused) return;
+    const select = (event: Event) => setSelected(Number((event as CustomEvent<number>).detail) || 0);
+    window.addEventListener("knowledge-row-select", select);
+    return () => window.removeEventListener("knowledge-row-select", select);
+  }, [focused]);
   return (
-    <fieldset className="structured-editor structured-rows-editor">
+    <fieldset className={`structured-editor structured-rows-editor ${focused ? "is-focused" : ""}`}>
       <legend>{label}</legend>
       {description ? <p className="structured-editor-description">{description}</p> : null}
+      {focused ? <nav className="structured-row-index" aria-label={`${label}条目`}>{rows.map((row,index) => <button type="button" key={index} aria-current={index === active ? "true" : undefined} onClick={() => setSelected(index)}><small>{index + 1}</small><span>{row.title || row.event || row.name || row.source || Object.values(row).find(Boolean) || `新${rowLabel}`}</span></button>)}</nav> : null}
       <div className="structured-editor-rows">
         {rows.map((row, index) => (
-          <article className="structured-editor-card" key={index}>
+          <article className="structured-editor-card" key={index} hidden={focused && index !== active}>
             <header>
               <strong>{rowLabel} {index + 1}</strong>
               <button
@@ -244,7 +255,7 @@ export function StructuredRowsEditor({
           </article>
         ))}
       </div>
-      <button className="structured-editor-add" type="button" onClick={() => onChange([...rows, createRow()])}>
+      <button className="structured-editor-add" type="button" onClick={() => { setSelected(rows.length); onChange([...rows, createRow()]); }}>
         <Plus size={15} />{addLabel}
       </button>
     </fieldset>

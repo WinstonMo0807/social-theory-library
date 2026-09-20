@@ -1,116 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CircleHelp, Search, Shapes } from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
-import { ArchitecturalImage, SearchField, SectionHeading, TagList } from "@/components/ui";
-import { loadDisciplines } from "@/lib/api/taxonomy.server";
-import { loadRecommendations } from "@/lib/api/recommendations.server";
-import { loadTopicPage } from "@/lib/api/topics.server";
-import { scopedSearchHref, searchPage } from "@/lib/search-context";
-
-export const metadata: Metadata = { title: "从研究主题进入社会理论" };
-
-export default async function TopicsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; discipline?: string; sort?: "name" | "works"; page?: string; context?: string }>;
-}) {
-  const parameters = await searchParams;
-  const query = parameters.q?.trim() ?? "";
-  const discipline = parameters.discipline?.trim() ?? "";
-  const sort = parameters.sort === "name" ? "name" : "works";
-  const page = searchPage(parameters.page);
-  const [topicPage, disciplines, recommendations] = await Promise.all([
-    loadTopicPage(query, { discipline, sort }, page),
-    loadDisciplines(),
-    loadRecommendations(),
-  ]);
-  const topics = topicPage.results;
-  const recommendedIds = new Set(
-    (recommendations.placements.home_topics?.current?.items ?? [])
-      .filter((item) => item.target_type === "topic")
-      .map((item) => item.target.id),
-  );
-  const recommended = topics.filter((topic) => recommendedIds.has(topic.id));
-  const visibleTopics = query || discipline ? topics : (recommended.length ? recommended : topics.slice(0, 6));
-  const popularConcepts = Array.from(new Set(topics.flatMap((item) => item.concepts))).slice(0, 9);
-
-  return (
-    <>
-      <main className="page-shell topic-hub-page">
-        <section className="topic-hub-hero">
-          <div>
-            <p className="eyebrow">研究主题与理论资源</p>
-            <h1>从研究主题进入社会理论</h1>
-            <p>主题连接原始文献、理论传统、子学科、学者与核心概念。主题内部的研究问题和知识关系经管理员确认后进入公开结构。</p>
-          </div>
-          <ArchitecturalImage compact />
-        </section>
-
-        <form className="topic-hub-search" action="/topics">
-          <input type="hidden" name="context" value="topics" />
-          <SearchField defaultValue={query} placeholder="搜索研究主题、研究领域或核心概念……" />
-          {discipline ? <input type="hidden" name="discipline" value={discipline} /> : null}
-          <button type="submit"><Search size={18} />搜索主题</button>
-        </form>
-
-        <nav className="topic-discipline-filter" aria-label="按学科筛选主题">
-          <strong>按学科</strong>
-          <Link className={!discipline ? "active" : ""} href={scopedSearchHref("/topics", "topics", { q: query, sort })}>全部</Link>
-          {disciplines.map((item) => (
-            <Link className={discipline === item.slug ? "active" : ""} href={scopedSearchHref("/topics", "topics", { q: query, discipline: item.slug, sort })} key={item.id}>{item.name}</Link>
-          ))}
-        </nav>
-
-        {!query && !discipline ? (
-          <section className="topic-entry-guide">
-            <article><CircleHelp size={28} /><h2>从研究主题进入</h2><p>从国家、现代性、阶层、权力等研究主题出发，寻找相关理论资源。</p></article>
-            <article><Shapes size={28} /><h2>沿知识关系展开</h2><p>查看主题与理论、子学科、学者和文献的已确认关系。</p></article>
-            <article><BookOpen size={28} /><h2>回到原始文本</h2><p>从相关段落进入 PDF 具体页面，继续阅读和引用。</p></article>
-          </section>
-        ) : null}
-
-        <section className="panel topic-hub-directory">
-          <SectionHeading
-            title={query ? `“${query}”的主题结果` : discipline ? "该学科的研究主题" : "本期推荐主题"}
-            action={query || discipline ? `${topicPage.count} 个结果` : "全站读者每三天同步更新"}
-          />
-          <div className="topic-directory-grid topic-hub-grid">
-            {visibleTopics.map((item, index) => (
-              <Link href={`/topics/${item.slug}`} key={item.slug}>
-                <div className="topic-number">{String(index + 1).padStart(2, "0")}</div>
-                <div
-                  className={`topic-card-image${item.heroImage ? " has-image" : ""}`}
-                  style={item.heroImage ? { backgroundImage: `url("${item.heroImage}")` } : undefined}
-                >
-                  {!item.heroImage ? <ArchitecturalImage compact /> : null}
-                </div>
-                <h2>{item.name}</h2>
-                <p>{item.description || item.problemStatement || "主题说明尚待管理员编辑。"}</p>
-                <div className="topic-card-tags">
-                  {item.disciplines.slice(0, 2).map((row) => <span key={row.id}>{row.name}</span>)}
-                  {item.concepts.slice(0, 2).map((concept) => <span key={concept}>{concept}</span>)}
-                </div>
-                <footer><span>{item.workCount} 部关联文献</span><ArrowRight size={17} /></footer>
-              </Link>
-            ))}
-            {!visibleTopics.length ? <p className="empty-state">没有找到匹配的公开主题。主题也可以不归入任何学科。</p> : null}
-          </div>
-          <ScopedSearchPagination path="/topics" context="topics" page={page} totalPages={topicPage.totalPages} params={{ q: query, discipline, sort }} />
-          {!query && !discipline && topics.length > visibleTopics.length ? (
-            <Link className="topic-view-all" href="/topics?sort=name">查看全部主题 <ArrowRight size={16} /></Link>
-          ) : null}
-        </section>
-
-        {popularConcepts.length ? (
-          <section className="panel topic-concept-entry">
-            <SectionHeading title="从核心概念继续" />
-            <TagList items={popularConcepts} hrefFor={(item) => scopedSearchHref("/topics", "topics", { q: item })} />
-          </section>
-        ) : null}
-      </main>
-      <SiteFooter />
-    </>
-  );
+import { ArchitecturalImage, SearchField, SectionHeading } from "@/components/ui";
+import { loadRecommendations, recommendationSlugs } from "@/lib/api/recommendations.server";
+import { loadTopic, loadTopicPage } from "@/lib/api/topics.server";
+import { searchPage } from "@/lib/search-context";
+export const metadata: Metadata = {title: "主题"};
+export default async function TopicsPage({searchParams}: {searchParams: Promise<{q?: string; discipline?: string; sort?: "name" | "works"; page?: string}>}) {
+  const params = await searchParams;
+  const q = params.q?.trim() || "";
+  const page = searchPage(params.page);
+  const sort = params.sort === "works" ? "works" : "name";
+  const [result, recommendations] = await Promise.all([loadTopicPage(q, {discipline: params.discipline || "", sort}, page), loadRecommendations()]);
+  const featured = (await Promise.all(recommendationSlugs(recommendations, "home_topics", "topic").slice(0,4).map(slug => loadTopic(slug)))).filter(row => row !== null);
+  return <><main className="page-shell v307-knowledge topics-hub-v307">
+    <section className="knowledge-hero"><div><p className="eyebrow">思想连接世界</p><h1>主题</h1><h2>从不同的主题，进入社会理论的多重视角。</h2><p>围绕具体的社会议题，阅读经典观点、核心概念与相关原文。</p><form action="/topics" className="knowledge-search"><input type="hidden" name="context" value="topics"/><SearchField defaultValue={q} placeholder="搜索主题、关键词或相关内容…"/><button type="submit">搜索</button></form></div><div className="knowledge-hero-image"><ArchitecturalImage compact/></div></section>
+    {!q && page === 1 && featured.length ? <section className="knowledge-section panel"><SectionHeading title="精选主题" href="/topics?sort=name"/><div className="knowledge-topic-featured">{featured.map(row => <Link href={`/topics/${row.slug}`} key={row.id}><div className="knowledge-card-image" style={row.heroImage ? {backgroundImage: `url("${row.heroImage}")`} : undefined}>{!row.heroImage ? <ArchitecturalImage compact/> : null}</div><h2>{row.name}</h2><p>{row.description || row.problemStatement}</p><ArrowRight size={16}/></Link>)}</div></section> : null}
+    <section className="knowledge-section panel"><SectionHeading title={q ? "主题搜索结果" : "全部主题"} action={`${result.count} 个主题`}/><form className="knowledge-sort" action="/topics"><input type="hidden" name="q" value={q}/>{params.discipline ? <input type="hidden" name="discipline" value={params.discipline}/> : null}<label>排序 <select name="sort" defaultValue={sort}><option value="name">按名称</option><option value="works">按关联馆藏数</option></select></label><button type="submit">应用</button></form><div className="knowledge-topic-directory">{result.results.map(row => <Link href={`/topics/${row.slug}`} key={row.id}><Compass size={34}/><span><h2>{row.name}</h2><p>{row.description || row.problemStatement}</p></span><ArrowRight size={16}/></Link>)}</div>{!result.results.length ? <p className="empty-state">没有找到匹配的公开主题。</p> : null}<ScopedSearchPagination path="/topics" context="topics" page={page} totalPages={result.totalPages} params={{q, sort, discipline: params.discipline || ""}}/></section>
+  </main><SiteFooter/></>;
 }

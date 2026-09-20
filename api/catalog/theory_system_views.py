@@ -6,11 +6,12 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError as APIValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -355,9 +356,27 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
             .select_related("work", "node")
             .order_by("-reviewed_at", "-updated_at")[:6]
         )
+        from .models import RecommendationPolicy
+        from .services.canonical_identity import CanonicalIdentityError, mapped_node_for_legacy
+        from .services.recommendations import current_snapshot
+        policy = RecommendationPolicy.objects.filter(placement="home_theories", enabled=True).first()
+        snapshot = current_snapshot(policy) if policy else None
+        featured_ids = []
+        for item in snapshot.items.filter(theory_school__editorial_status="published").order_by("position", "created_at") if snapshot else []:
+            if not item.theory_school_id:
+                continue
+            try:
+                node = mapped_node_for_legacy("TheorySchool", item.theory_school_id)
+            except CanonicalIdentityError:
+                continue
+            if node.status == "published" and node.pk not in featured_ids:
+                featured_ids.append(node.pk)
+        by_id = {node.pk: node for node in _published_node_queryset().filter(pk__in=featured_ids)}
+        featured_nodes = [by_id[identifier] for identifier in featured_ids if identifier in by_id]
         return Response(
             {
                 "disciplines": discipline_rows,
+                "featured_nodes": KnowledgeNodeListSerializer(featured_nodes, many=True, context={"request": request}).data,
                 "browse": {
                     "theory_traditions": _published_node_queryset()
                     .filter(node_type="theory_tradition")
@@ -399,6 +418,13 @@ class KnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListAPIView):
 
     def get_queryset(self):
         queryset = _node_filter(_published_node_queryset(), self.request.query_params)
+        sort = self.request.query_params.get("sort", "")
+        if sort and sort not in {"name", "updated"}:
+            raise APIValidationError({"sort": "未知理论目录排序方式。"})
+        if sort == "updated":
+            return queryset.order_by("-updated_at", "pk")
+        if sort == "name":
+            return queryset.order_by("canonical_name_zh", "pk")
         if self.request.query_params.get("q", "").strip():
             return queryset.order_by("_search_rank", "sort_order", "canonical_name_zh", "pk")
         return queryset.order_by("sort_order", "canonical_name_zh", "pk")
@@ -518,6 +544,24 @@ class NormalizedTimelineListView(TheorySystemFeatureMixin, generics.ListAPIView)
         event_type = params.get("event_type", "").strip()
         has_collection = params.get("has_collection", "").strip().lower()
         query = params.get("q", "").strip()
+        years = {}
+        for key in ("year_from", "year_to"):
+            value = params.get(key, "").strip()
+            if value:
+                try:
+                    years[key] = int(value)
+                except ValueError:
+                    raise APIValidationError({key: "年份须为整数。"})
+                if not -32768 <= years[key] <= 32767:
+                    raise APIValidationError({key: "年份超出支持范围。"})
+        if "year_from" in years and "year_to" in years and years["year_from"] > years["year_to"]:
+            raise APIValidationError({"year_to": "结束年份不能早于开始年份。"})
+        if years:
+            queryset = queryset.annotate(range_start=Coalesce("start_year", "end_year"), range_end=Coalesce("end_year", "start_year"))
+            if "year_from" in years:
+                queryset = queryset.filter(range_end__gte=years["year_from"])
+            if "year_to" in years:
+                queryset = queryset.filter(range_start__lte=years["year_to"])
         if discipline:
             queryset = queryset.filter(
                 Q(discipline__slug=discipline)
@@ -540,7 +584,14 @@ class NormalizedTimelineListView(TheorySystemFeatureMixin, generics.ListAPIView)
                 | Q(source__icontains=query)
                 | Q(normalized_relations__node__canonical_name_zh__icontains=query)
             )
-        return queryset.distinct().order_by("start_year", "display_order", "title")
+        return queryset.distinct().order_by("start_year", "display_order", "title", "pk")
+
+
+class NormalizedTimelineDetailView(NormalizedTimelineListView):
+    """Stable event links reuse the public timeline's visibility and serializer."""
+    def get(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        return Response(self.get_serializer(get_object_or_404(self.get_queryset(), pk=pk)).data)
 
 
 class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
@@ -720,6 +771,9 @@ class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
         discipline = self.request.query_params.get("discipline", "").strip()
         if discipline:
             queryset = queryset.filter(primary_discipline__slug=discipline)
+        node = self.request.query_params.get("node", "").strip()
+        if node:
+            queryset = queryset.filter(items__node__slug=node, items__node__status="published").distinct()
         query = (
             self.request.query_params.get("q", "").strip()
             or self.request.query_params.get("search", "").strip()

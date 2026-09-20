@@ -1,4 +1,3 @@
-import { PublicationDesk } from "@/components/publication-desk";
 import { redirect } from "next/navigation";
 import { preservingAdminRedirect } from "@/lib/admin-route-context";
 
@@ -13,5 +12,5 @@ export default async function AdminPublicationPage({
   if (itemId) {
     redirect(preservingAdminRedirect(`/admin/intake/${encodeURIComponent(itemId)}`, params, "publication", ["item"]));
   }
-  return <PublicationDesk />;
+  redirect(preservingAdminRedirect("/admin/review?category=publication_ready", params));
 }

@@ -292,7 +292,7 @@ def create_r2_upload(
         ).count()
         if active_count >= settings.R2_MAX_ACTIVE_UPLOADS_PER_USER:
             raise R2StagingError("当前账户同时进行的 PDF 上传已达到上限。")
-        if batch.items.count() >= batch.expected_count:
+        if batch.items.count() >= min(batch.expected_count, 5):
             raise R2StagingError("该批次已达到预定文件数量。")
         item_id = uuid.uuid4()
         part_size = settings.R2_UPLOAD_PART_SIZE

@@ -5,6 +5,7 @@ import type { Scholar, Work } from "@/lib/data";
 import { SaveWorkButton } from "./save-work-button";
 import { ResponsivePortraitImage } from "./responsive-portrait-image";
 import { SearchInput } from "./ui/controls";
+import { CollectionLink } from "./collection-link";
 
 export function ArchitecturalImage({ compact = false }: { compact?: boolean }) {
   return (
@@ -76,17 +77,17 @@ export function BookCard({
   return (
     <article className={`book-card ${dense ? "dense" : ""} ${exploreActions ? "explore-result-card" : ""}`}>
       <div className="book-card-main">
-        <Link
+        <CollectionLink
           className="book-cover-link"
           href={`/works/${work.slug}`}
           aria-label={`查看《${work.title}》详情`}
         >
           <BookCover work={work} size={dense ? "small" : "normal"} />
-        </Link>
+        </CollectionLink>
         <div className="book-meta">
           <p className="eyebrow">{work.school}</p>
           <h3>
-            <Link href={`/works/${work.slug}`}>{work.title}</Link>
+            <CollectionLink href={`/works/${work.slug}`}>{work.title}</CollectionLink>
           </h3>
           <p className="book-author">{work.author}</p>
           <p className="muted-row">
@@ -99,15 +100,15 @@ export function BookCard({
         <div className="book-actions">
           {exploreActions ? (
             <>
-              <Link href={`/works/${work.slug}`}>预览</Link>
-              <Link href={`/reader/${work.id}`}><Eye size={15} />阅读 PDF</Link>
-              <Link href={`/works/${work.slug}#citation`}>论文引用</Link>
+              <CollectionLink href={`/works/${work.slug}`}>预览</CollectionLink>
+              {work.readerHref ? <CollectionLink href={work.readerHref}><Eye size={15} />阅读 PDF</CollectionLink> : <span>仅书目信息</span>}
+              <CollectionLink href={`/works/${work.slug}#citation`}>论文引用</CollectionLink>
             </>
           ) : (
-            <Link href={`/reader/${work.id}`}>
+            <CollectionLink href={`/works/${work.slug}`}>
               <Eye size={15} />
-              阅读
-            </Link>
+              查看馆藏
+            </CollectionLink>
           )}
           <SaveWorkButton workId={work.workId} />
         </div>

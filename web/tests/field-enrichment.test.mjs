@@ -9,7 +9,9 @@ test("field enrichment is explicitly triggered and renders auditable evidence", 
     "utf8",
   );
 
-  assert.match(source, /onClick=\{\(\) => void lookup\(\)\}/);
+  assert.match(source, /onClick=\{\(\) => void lookup\(true\)\}/);
+  assert.match(source, /lookupRef\.current\(false\)/);
+  assert.match(source, /allow_external: external/);
   assert.match(source, /field-assistant\/lookup/);
   assert.match(source, /candidate\.evidence\.map/);
   assert.match(source, /evidence\.summary/);
@@ -17,7 +19,7 @@ test("field enrichment is explicitly triggered and renders auditable evidence", 
   assert.match(source, /CandidateDecisionBar/);
   assert.match(source, /action\.payload\.reason/);
   assert.doesNotMatch(source, /在\$\{label\}字段确认不采用/);
-  assert.doesNotMatch(source, /setTimeout|650/);
+  assert.doesNotMatch(source, /lookupRef\.current\(true\)/);
   assert.doesNotMatch(source, /推荐.*grade|自动接受/);
 });
 

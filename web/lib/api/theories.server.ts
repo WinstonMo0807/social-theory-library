@@ -2,7 +2,7 @@
 import { type TheorySchool, theorySchools as demoTheorySchools, type Work, type Scholar, works as demoWorks, scholars as demoScholars } from "../data";
 import { adaptApiWork as adaptWork, adaptApiScholar as adaptScholar } from "../public-data-adapters";
 import { type Paginated, type DirectoryPage, directoryPage } from "./pagination";
-import { serverRequest, allowDemoFallback } from "./server-request";
+import { serverRequest, allowDemoFallback, ServerApiError } from "./server-request";
 import type { TheoryTimelineEvent, TheoryGraph, TheoryDirectoryFilters, ApiTheorySchool } from "./theories.types";
 
 export async function loadTheoryTimeline(discipline = ""): Promise<TheoryTimelineEvent[]> {
@@ -70,6 +70,7 @@ export async function loadTheoryEntity(slug: string): Promise<ApiTheorySchool | 
       `/catalog/theory-schools/${encodeURIComponent(slug)}/`,
     );
   } catch (error) {
+    if (error instanceof ServerApiError && error.status === 404) return null;
     if (!allowDemoFallback) throw error;
     return null;
   }

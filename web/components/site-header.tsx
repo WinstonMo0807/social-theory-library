@@ -33,7 +33,7 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
   );
 }
 
-export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig }) {
+export function SiteHeader({ config = defaultSiteConfig, preview = false }: { config?: SiteConfig; preview?: boolean }) {
   const pathname = usePathname();
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
@@ -75,12 +75,13 @@ export function SiteHeader({ config = defaultSiteConfig }: { config?: SiteConfig
     }
   }
 
-  if (pathname.startsWith("/reader/") || pathname.startsWith("/admin") || authRoute) {
+  if (!preview && (pathname.startsWith("/reader/") || pathname.startsWith("/admin") || authRoute)) {
     return null;
   }
 
   return (
     <header
+      data-edit-section={preview ? "brand" : undefined}
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
     >

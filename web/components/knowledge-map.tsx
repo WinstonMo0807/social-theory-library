@@ -1,60 +1,17 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, Minus, Plus, RotateCcw } from "lucide-react";
 
-export type KnowledgeMapEntry = {
-  source?: string;
-  target?: string;
-  relation?: string;
-  description?: string;
-  label?: string;
-} | string;
-
-function entryParts(entry: KnowledgeMapEntry, index: number) {
-  if (typeof entry === "string") {
-    return {
-      source: entry,
-      target: "",
-      relation: "相关概念",
-      description: "",
-    };
-  }
-  return {
-    source: entry.source || entry.label || `概念 ${index + 1}`,
-    target: entry.target || "",
-    relation: entry.relation || (entry.target ? "相关" : "概念节点"),
-    description: entry.description || "",
-  };
-}
-
-export function KnowledgeMap({
-  entries,
-  emptyText = "概念关系尚待管理员编辑。",
-}: {
-  entries: KnowledgeMapEntry[];
-  emptyText?: string;
-}) {
-  if (!entries.length) return <p className="empty-state">{emptyText}</p>;
-
-  return (
-    <div className="knowledge-map" aria-label="概念关系图">
-      {entries.map((entry, index) => {
-        const { source, target, relation, description } = entryParts(entry, index);
-        return (
-          <article className="knowledge-map-row" key={`${source}-${target}-${index}`}>
-            <Link href={`/explore?q=${encodeURIComponent(source)}`}>{source}</Link>
-            <span className="knowledge-map-edge">
-              <small>{relation}</small>
-              <ArrowRight aria-hidden="true" size={16} />
-            </span>
-            {target ? (
-              <Link href={`/explore?q=${encodeURIComponent(target)}`}>{target}</Link>
-            ) : (
-              <span className="knowledge-map-open-node">待连接</span>
-            )}
-            {description ? <p>{description}</p> : null}
-          </article>
-        );
-      })}
-    </div>
-  );
+export type KnowledgeMapEntry = {source?: string; target?: string; relation?: string; description?: string; label?: string} | string;
+export function KnowledgeMap({entries,emptyText = "概念关系尚待管理员编辑。"}:{entries:KnowledgeMapEntry[];emptyText?:string}) {
+  const [selected,setSelected] = useState<number|null>(null);
+  const [zoom,setZoom] = useState(1);
+  const edges = useMemo(() => entries.map((entry,index) => typeof entry === "string" ? {source:entry,target:"",relation:"概念",description:"",index} : {source:entry.source || entry.label || "",target:entry.target || "",relation:entry.relation || "相关",description:entry.description || "",index}).filter(row => row.source),[entries]);
+  const nodes = [...new Set(edges.flatMap(edge => [edge.source,edge.target]).filter(Boolean))];
+  const positions = nodes.map((name,index) => ({name,x:420 + Math.cos(index / Math.max(nodes.length,1) * Math.PI * 2 - Math.PI / 2) * Math.min(300,90 + nodes.length * 22),y:250 + Math.sin(index / Math.max(nodes.length,1) * Math.PI * 2 - Math.PI / 2) * Math.min(185,55 + nodes.length * 16)}));
+  const active = selected === null ? null : edges[selected];
+  if (!edges.length) return <p className="empty-state">{emptyText}</p>;
+  return <div className="knowledge-map-canvas"><div className="knowledge-map-toolbar"><span>{nodes.length} 个概念 · {edges.filter(row => row.target).length} 条关系</span><button type="button" aria-label="缩小概念图" onClick={() => setZoom(Math.max(.6,zoom-.15))}><Minus size={15}/></button><button type="button" aria-label="放大概念图" onClick={() => setZoom(Math.min(2,zoom+.15))}><Plus size={15}/></button><button type="button" aria-label="恢复概念图" onClick={() => {setZoom(1);setSelected(null);}}><RotateCcw size={15}/></button></div><div className="knowledge-map-stage"><svg viewBox="0 0 840 500" role="img" aria-label="概念关系图"><defs><marker id="concept-edge-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g transform={`translate(420 250) scale(${zoom}) translate(-420 -250)`}>{edges.filter(edge => edge.target).map(edge => {const a=positions.find(row=>row.name===edge.source)!; const b=positions.find(row=>row.name===edge.target)!;return <g key={edge.index} className={selected===edge.index?"is-selected":""} data-edit-row={edge.index} role="button" tabIndex={0} aria-label={`${edge.source} ${edge.relation} ${edge.target}`} onClick={()=>setSelected(edge.index)} onKeyDown={event=>{if(event.key==="Enter" || event.key===" "){event.preventDefault();setSelected(edge.index);}}}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} markerEnd="url(#concept-edge-arrow)"/><text x={(a.x+b.x)/2} y={(a.y+b.y)/2-8} textAnchor="middle">{edge.relation}</text></g>;})}{positions.map(node=><g key={node.name} className="knowledge-map-node" data-edit-row={edges.findIndex(row=>row.source===node.name || row.target===node.name)} role="button" tabIndex={0} aria-label={node.name} onClick={()=>setSelected(edges.findIndex(row=>row.source===node.name || row.target===node.name))} onKeyDown={event=>{if(event.key==="Enter" || event.key===" "){event.preventDefault();setSelected(edges.findIndex(row=>row.source===node.name || row.target===node.name));}}}><rect x={node.x-65} y={node.y-24} width={130} height={48} rx={5}/><text x={node.x} y={node.y+5} textAnchor="middle">{node.name.length>10?node.name.slice(0,10)+"…":node.name}</text></g>)}</g></svg></div>{active?<aside className="knowledge-map-detail" data-edit-row={active.index}><strong>{active.source}{active.target?` → ${active.target}`:""}</strong><span>{active.relation}</span>{active.description?<p>{active.description}</p>:null}<Link href={`/explore?q=${encodeURIComponent(active.source)}`}>查看相关馆藏 <ArrowRight size={14}/></Link></aside>:<p className="knowledge-map-hint">选择概念或连线，查看关系与说明。</p>}<details className="knowledge-map-text"><summary>阅读全部关系</summary>{edges.map(edge=><p key={edge.index}><button type="button" data-edit-row={edge.index} onClick={()=>setSelected(edge.index)}>{edge.source} → {edge.target || "待连接"} · {edge.relation}</button>{edge.description}</p>)}</details></div>;
 }

@@ -35,7 +35,7 @@ def main():
         "DJANGO_ALLOWED_HOSTS": "127.0.0.1,localhost,testserver",
         "CORS_ALLOWED_ORIGINS": "http://127.0.0.1:3105",
         "DJANGO_CSRF_TRUSTED_ORIGINS": "http://127.0.0.1:3105",
-        "CELERY_BROKER_URL": "memory://", "CELERY_TASK_ALWAYS_EAGER": "false",
+        "CELERY_BROKER_URL": "memory://", "CELERY_TASK_ALWAYS_EAGER": "true" if os.environ.get("STL_E2E_V307") == "1" else "false",
         "PROCESS_INGESTION_INLINE": "false", "PYTHONIOENCODING": "utf-8",
         "THEORY_SYSTEM_ENABLED": "true",
     })
@@ -89,6 +89,9 @@ def main():
     seed_reader_v306()
     from v306_assistance_e2e_fixtures import seed_assistance
     seed_assistance(User.objects.get(email="owner-v305@example.test"))
+    if os.environ.get("STL_E2E_V307") == "1":
+        from v307_e2e_fixtures import seed_v307
+        seed_v307(User.objects.get(email="owner-v305@example.test"))
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
     call_command("runserver", "127.0.0.1:8105", use_reloader=False)
 

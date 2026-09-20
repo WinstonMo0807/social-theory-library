@@ -2068,6 +2068,7 @@ class RecommendationSnapshotSerializer(serializers.ModelSerializer):
                     "name": item.scholar.person.preferred_name,
                     "slug": item.scholar.slug,
                     "description": item.scholar.short_description,
+                    "portrait": PersonCompactSerializer(item.scholar.person, context=self.context).data.get("portrait", ""),
                 }
             else:
                 continue
@@ -2590,6 +2591,9 @@ class AdminWorkTheoryRelationSerializer(ReviewedRelationSerializer):
 
 
 class SiteConfigSerializer(serializers.Serializer):
+    home_hero_image = serializers.CharField(max_length=1500, required=False, allow_blank=True, default="")
+    home_hero_alt = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    home_hero_rendition_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     site_name = serializers.CharField(max_length=120)
     wordmark_lines = serializers.ListField(
         child=serializers.CharField(max_length=80),

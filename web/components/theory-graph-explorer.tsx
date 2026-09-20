@@ -8,11 +8,12 @@ import { nodeTypeLabels } from "./theory-system-ui";
 
 type Point = { x: number; y: number };
 
-export function TheoryGraphExplorer({ graph }: { graph: LocalTheoryGraph }) {
+export function TheoryGraphExplorer({ graph, onSelectRelation }: { graph: LocalTheoryGraph; onSelectRelation?: (id:string) => void }) {
   const [selectedId, setSelectedId] = useState(graph.center || graph.nodes[0]?.id || "");
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [query, setQuery] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   const dragRef = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
   const positions = useMemo(() => graphLayout(graph), [graph]);
   const selected = graph.nodes.find((item) => item.id === selectedId) || graph.nodes[0];
@@ -45,9 +46,15 @@ export function TheoryGraphExplorer({ graph }: { graph: LocalTheoryGraph }) {
 
   async function shareView() {
     const url = new URL(window.location.href);
-    if (selected?.slug) url.searchParams.set("center", selected.slug);
+    if (selected?.kind === "knowledge_node" && selected.slug) url.searchParams.set("center", selected.slug);
     url.searchParams.set("depth", String(graph.depth));
-    await navigator.clipboard?.writeText(url.toString());
+    try {
+      if (!navigator.clipboard) throw new Error("clipboard-unavailable");
+      await navigator.clipboard.writeText(url.toString());
+      setShareMessage("当前图谱链接已复制。");
+    } catch {
+      setShareMessage(`无法自动复制，请复制此链接：${url.toString()}`);
+    }
   }
 
   if (!graph.nodes.length) {
@@ -63,17 +70,18 @@ export function TheoryGraphExplorer({ graph }: { graph: LocalTheoryGraph }) {
           <button type="button" onClick={resetView} aria-label="回到中心"><LocateFixed size={18} /></button>
           <button type="button" onClick={shareView} aria-label="分享当前视图"><Share2 size={18} /></button>
         </div>
+        {shareMessage ? <p className="graph-share-message" role="status">{shareMessage}</p> : null}
         <div className="graph-node-search">
           <Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索当前节点" />
           {visibleMatches.length ? <div>{visibleMatches.slice(0, 8).map((item) => <button type="button" key={item.id} onClick={() => { setSelectedId(item.id); setQuery(""); }}>{item.name}</button>)}</div> : null}
         </div>
         <div className="graph-transform" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
-          <svg viewBox="0 0 1000 650" aria-hidden="true">
+          <svg viewBox="0 0 1000 650" aria-hidden={onSelectRelation ? undefined : true}>
             {graph.edges.map((edge) => {
               const source = positions.get(edge.source);
               const target = positions.get(edge.target);
               if (!source || !target) return null;
-              return <g key={edge.id}><line className={`relation-${edge.relation_type}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} /><text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 7}>{edge.relation_label}</text></g>;
+              return <g key={edge.id} role={onSelectRelation ? "button" : undefined} tabIndex={onSelectRelation ? 0 : undefined} onClick={() => onSelectRelation?.(edge.id)} onKeyDown={event => {if(event.key === "Enter") onSelectRelation?.(edge.id);}}><line className={`relation-${edge.relation_type}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} /><text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 7}>{edge.relation_label}</text></g>;
             })}
           </svg>
           {graph.nodes.map((node) => {
@@ -105,7 +113,7 @@ export function TheoryGraphExplorer({ graph }: { graph: LocalTheoryGraph }) {
           <header><span>{selected.kind === "knowledge_node" ? nodeTypeLabels[selected.node_type || ""] : selected.kind === "scholar" ? "学者" : "馆藏文献"}</span><h2>{selected.name}</h2>{selected.foreign_name ? <p>{selected.foreign_name}</p> : null}</header>
           {selected.period_label ? <dl><dt>形成时期</dt><dd>{selected.period_label}</dd></dl> : null}
           {selected.summary ? <section><h3>条目摘要</h3><p>{selected.summary}</p></section> : null}
-          <section><h3>直接关系</h3>{graph.edges.filter((edge) => edge.source === selected.id || edge.target === selected.id).slice(0, 8).map((edge) => { const otherId = edge.source === selected.id ? edge.target : edge.source; const other = graph.nodes.find((node) => node.id === otherId); return <button type="button" key={edge.id} onClick={() => other && setSelectedId(other.id)}><span>{edge.relation_label}</span><strong>{other?.name}</strong><ArrowRight size={15} /></button>; })}</section>
+          <section><h3>直接关系</h3>{graph.edges.filter((edge) => edge.source === selected.id || edge.target === selected.id).slice(0, 8).map((edge) => { const otherId = edge.source === selected.id ? edge.target : edge.source; const other = graph.nodes.find((node) => node.id === otherId); return <button type="button" key={edge.id} onClick={() => {if(onSelectRelation)onSelectRelation(edge.id);else if(other)setSelectedId(other.id);}}><span>{edge.relation_label}</span><strong>{other?.name}</strong><ArrowRight size={15} /></button>; })}</section>
           {selected.kind === "knowledge_node" && selected.slug ? <>
             <Link className="graph-primary-link" href={`/theories/nodes/${selected.slug}`}>查看完整条目<ArrowRight size={17} /></Link>
             <Link className="graph-secondary-link" href={`/theories/graph?center=${encodeURIComponent(selected.slug)}&depth=${graph.depth === 1 ? 2 : 1}`}>{graph.depth === 1 ? "展开两层关系" : "收回一层关系"}<RotateCcw size={16} /></Link>

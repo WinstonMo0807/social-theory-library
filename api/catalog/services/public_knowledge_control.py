@@ -374,6 +374,9 @@ def _page(
         "subdiscipline": ("SubdisciplineSerializer", "/api/catalog/subdisciplines/{slug}/"),
         "site": ("SiteConfigSerializer", "/api/catalog/site-config/"),
         "recommendation": ("RecommendationPolicySerializer", "/api/catalog/recommendations/"),
+        "recommendation_issue": ("RecommendationIssue", "/api/catalog/recommendation-issues/{slug}/"),
+        "evidence_curation": ("EvidenceCurationSerializer", "/api/catalog/evidence-curation/topic/{id}/"),
+        "scholar_relation": ("ScholarRelationSerializer", "/api/catalog/scholar-relations/?scholar={id}"),
         "media": ("MediaAssetSerializer", "/api/catalog/admin/media/"),
         "reader": ("ReaderManifestSerializer", "/api/catalog/assets/{id}/manifest/"),
     }
@@ -394,6 +397,19 @@ def _page(
 
 
 PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
+    *tuple(_page("evidence_curation", kind, "共享原文策展", route, "EvidenceCurationView", (
+        _module(f"shared-evidence-{kind}", "原文引用、分组、说明与顺序", "EvidenceCurationView", CURATED,
+                ("configured", "items"), OPTIONAL, "passages", curated=("EvidenceCuration", "EvidenceCurationReference", "EditorialRevision"),
+                note="只保存来源引用及策展元数据；来源正文、准确版本和页码实时读取，草稿不会提前公开，文档修订变化后旧选择不得静默跟随。"),
+    ), admin, api=f"/api/catalog/evidence-curation/{kind}/{{id}}/") for kind, route, admin in (
+        ("topic", "/topics/{slug}/passages", "/admin/topics/{id}?section=passages"),
+        ("scholar", "/scholars/{slug}/passages", "/admin/scholars/{id}?section=passages"),
+        ("node", "/theories/nodes/{slug}/passages", "/admin/theories/{id}?section=passages"))),
+    _page("scholar_relation", "network", "共享学者关系", "/scholars/{slug}/network", "ScholarRelationNetwork", (
+        _module("shared-scholar-relations", "规范关系两端、类型、方向、说明与来源", "ScholarRelationNetwork", CURATED,
+                ("source_scholar", "target_scholar", "relation_type", "direction", "summary", "source"), OPTIONAL, "network",
+                curated=("ScholarRelation", "EditorialRevision"), note="两端共用同一关系身份；只有显式发布快照且两位学者仍公开时提供，旧network JSON保留为历史策展。"),
+    ), "/admin/scholars/{id}/relations"),
     _page("scholar", "overview", "概览", "/scholars/{slug}", "ScholarPublicView", (SCHOLAR_MODULES["identity"], SCHOLAR_MODULES["position"], SCHOLAR_MODULES["quote"], SCHOLAR_MODULES["representative_works"], SCHOLAR_MODULES["claims"]), "/admin/scholars/{id}"),
     _page("scholar", "biography", "完整传记", "/scholars/{slug}/biography", "ScholarSectionPublicView", (SCHOLAR_MODULES["biography"],), "/admin/scholars/{id}?section=biography"),
     _page("scholar", "timeline", "生平时间线", "/scholars/{slug}/timeline", "ScholarSectionPublicView", (SCHOLAR_MODULES["timeline"],), "/admin/scholars/{id}?section=timeline"),
@@ -438,9 +454,12 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
         _module("subdiscipline-relations", "理论、主题与文献", "SubdisciplinePublicView", COMPUTED, ("theories", "topics", "works"), OPTIONAL, "relations", computed=("KnowledgeNodeSubdiscipline", "WorkSubdisciplineRelation", "TopicSubdisciplineRelation"), note="从已确认且公开的规范关联生成，编辑关系后核验实际目录。"),
     ), "/admin/subdisciplines?subdiscipline={id}"),
     _page("site", "home", "首页与全站文案", "/", "Home / SiteHeader / SiteFooter", (
-        _module("site-editorial", "首页、导航及关于文案", "Home / SiteHeader / SiteFooter", EDITORIAL, ("site_name", "home_title_left_lines", "intro_lines", "sections"), REQUIRED, "site", canonical=("SiteSetting.site_config", "AboutPageBlock"), note="管理员保存网站内容后立即影响后续读取；没有独立待发布草稿。首页装饰和硬编码布局不是可编目字段。"),
+        _module("site-editorial", "首页、导航及关于文案", "Home / SiteHeader / SiteFooter", EDITORIAL, ("site_name", "home_title_left_lines", "intro_lines", "sections", "home_hero_image", "home_hero_alt"), REQUIRED, "site", canonical=("SiteSetting.site_config", "AboutPageBlock", "EditorialRevision"), note="保存网站草稿仅更新授权预览；明确发布后才更新公开内容。固定版式由代码控制。"),
         _module("site-statistics", "馆藏统计与热门检索", "Home", COMPUTED, ("counts",), OPTIONAL, "statistics", computed=("public Work/Scholar/Theory count", "SearchLog"), note="首页取公开列表count，热门检索无记录时用主题/理论标签；不能手工写数量。"),
-    ), "/admin/settings", preview_support=False),
+    ), "/admin/about", preview_support=True),
+    _page("recommendation_issue", "article", "本期书库推荐", "/recommendations/{slug}", "RecommendationIssueView", (
+        _module("recommendation-article", "导语、正文、署名与推荐阅读物", "RecommendationIssueView", EDITORIAL, ("title", "introduction", "public_byline", "body_blocks", "items", "cover_url"), REQUIRED, "issue", canonical=("RecommendationIssue", "RecommendationIssueItem", "EditorialRevision"), note="计划阅读物有真实无文件编目会话；公开端只读已发布快照，私人书单按本人权限保存。"),
+    ), "/admin/recommendations/issues/{id}", preview_support=True),
     _page("recommendation", "placements", "首页推荐位置", "/", "Home / RandomRecommendation", (
         _module("recommendation-selection", "推荐选择与轮换", "Home / RandomRecommendation", CURATED, ("placements",), RECOMMENDED, "recommendations", curated=("RecommendationPolicy", "RecommendationOverride", "RecommendationSnapshot", "RecommendationItem"), note="人工选择与自动规则生成共享本期快照。策略保存不等于本期已换；明确刷新或到期生成新期，历史快照保留。无读者私人画像。"),
     ), "/admin/recommendations", preview_support=False),

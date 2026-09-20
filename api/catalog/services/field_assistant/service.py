@@ -1418,6 +1418,7 @@ class FieldAssistantService:
         actor,
         details: dict[str, Any] | None = None,
         allow_possible_duplicate: bool = False,
+        defer_link: bool = False,
     ) -> dict[str, Any]:
         """Create one draft authority inside the current cataloguing context.
 
@@ -1476,6 +1477,21 @@ class FieldAssistantService:
             )
         else:
             raise FieldAssistantError("当前字段暂不支持在编目中创建对象。")
+
+        if defer_link:
+            if policy.entity_type == "person":
+                edit_url = f"/admin/scholars/{entity.scholar_profile.pk}"
+            elif policy.entity_type == "topic":
+                edit_url = f"/admin/topics/{entity.pk}"
+            elif policy.entity_type == "theory":
+                edit_url = f"/admin/theories/{entity.pk}"
+            else:
+                edit_url = "/admin/review"
+            from ingestion.models import AuditEvent
+            AuditEvent.objects.create(actor=actor, action="authority.inline_draft", object_type=policy.entity_type,
+                                      object_id=str(entity.pk), after={"edition_id": str(edition.pk), "linked": False})
+            return {"saved": True, "linked": False, "entity": {"type": policy.entity_type, "id": str(entity.pk),
+                    "name": clean_label, "label": clean_label, "status": "draft", "edit_url": edit_url}, "edit_url": edit_url}
 
         _link_entity(edition, policy, entity, actor=actor, source="field_assistant_inline")
         bundle = ensure_publication_bundle(edition, actor=actor)
@@ -1611,7 +1627,7 @@ class FieldAssistantService:
             evidence = [_evidence("馆内已有记录", "管理员从馆内对象中确认并关联")]
             _link_entity(edition, policy, entity, actor=actor, source="field_assistant")
         elif source_type == "metadata":
-            candidate = MetadataCandidate.objects.select_for_update().select_related(
+            candidate = MetadataCandidate.objects.select_for_update(of=("self",)).select_related(
                 "upload_item"
             ).prefetch_related("evidence_records").get(pk=source_id)
             if candidate.catalog_edition_id != edition.pk:

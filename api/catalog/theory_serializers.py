@@ -1091,6 +1091,12 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             include_unpublished=bool(self.context.get("include_unpublished_items")),
         ) if obj.work_id else None
 
+    def to_representation(self, instance):
+        payload = super().to_representation(instance)
+        if not self.context.get("include_unpublished_items"):
+            payload.pop("editorial_note", None)
+        return payload
+
 
 class ReadingPathSerializer(serializers.ModelSerializer):
     primary_discipline_data = DisciplineCompactSerializer(source="primary_discipline", read_only=True)

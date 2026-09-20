@@ -4,6 +4,8 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
 import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
+import { useApiResource } from "@/lib/api/use-api-resource";
+import { useActionGuard } from "@/lib/use-action-guard";
 import type { CatalogPublication } from "@/lib/api/admin-collections";
 import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
 import {
@@ -31,6 +33,7 @@ type UploadResponse = {
   rejected: { filename: string; reason: string }[];
   batch: { id: string; status: string };
 };
+type RecentBatch = {id:string;label:string;status:string;expected_count:number;completed_count:number;failed_count:number;created_at:string;items:{id:string;source_filename:string;edition:string|null}[]};
 
 type QueuedFile = {
   file: File;
@@ -288,7 +291,7 @@ function buildMetadataPairings(pdfFiles: QueuedFile[], metadataFiles: File[]) {
     const candidates = metadataByStem.get(stem) || [];
     let pairing: MetadataPairing;
     if (!candidates.length) {
-      pairing = { status: "missing", message: "未提供配套元数据，将使用 PDF 识别和外部候选" };
+      pairing = { status: "missing", message: "未提供配套元数据，将使用 PDF 中的本地识别结果" };
     } else if (candidates.length > 1 || (pdfCounts.get(stem) || 0) > 1) {
       pairing = {
         status: "ambiguous",
@@ -306,20 +309,31 @@ function buildMetadataPairings(pdfFiles: QueuedFile[], metadataFiles: File[]) {
 }
 
 export function AdminUpload() {
+  const { startAction, finishAction } = useActionGuard();
   const input = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<QueuedFile[]>([]);
+  const [previewToken, setPreviewToken] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const previewFile = files.find(item => item.token === previewToken) ?? files[0];
+  const previewPdf = previewFile?.file;
+  useEffect(() => {
+    const url = previewPdf ? URL.createObjectURL(previewPdf) : "";
+    const timer = window.setTimeout(() => setPreviewUrl(url), 0);
+    return () => { window.clearTimeout(timer); if (url) URL.revokeObjectURL(url); };
+  }, [previewPdf]);
   const [metadataFiles, setMetadataFiles] = useState<File[]>([]);
   const [metadataImportStates, setMetadataImportStates] = useState<Record<string, MetadataImportState>>({});
   const [batchLabel, setBatchLabel] = useState("");
   const [accessPolicy, setAccessPolicy] = useState<AccessPolicy>("public");
   const [ocrStrategy, setOcrStrategy] = useState<OcrStrategy>("auto");
   const [duplicatePolicy, setDuplicatePolicy] = useState<DuplicatePolicy>("review");
-  const [externalEnrichmentEnabled, setExternalEnrichmentEnabled] = useState(true);
-  const [aiSuggestionsEnabled, setAiSuggestionsEnabled] = useState(false);
+  const externalEnrichmentEnabled = false;
+  const aiSuggestionsEnabled = false;
   const [pending, setPending] = useState(false);
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const [result, setResult] = useState<UploadResponse | null>(null);
+  const recentBatches = useApiResource<{results:RecentBatch[]}>("/ingestion/batches/?page_size=5", getServerSessionCredential(), result?.batch.id || "");
   const [error, setError] = useState("");
   const [ingestionItems, setIngestionItems] = useState<IngestionItem[]>([]);
   const [ingestionError, setIngestionError] = useState("");
@@ -383,7 +397,7 @@ export function AdminUpload() {
 
   useEffect(() => {
     const initial = setTimeout(() => void refreshStagingSessions(), 0);
-    const timer = setInterval(() => void refreshStagingSessions(), 3_000);
+    const timer = setInterval(() => { if (!document.hidden) void refreshStagingSessions(); }, 10_000);
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
@@ -399,6 +413,7 @@ export function AdminUpload() {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function refresh() {
+      if (document.hidden) { timer = setTimeout(refresh, 10_000); return; }
       try {
         const snapshots = await Promise.all(
           accepted.map((itemId) => apiRequest<IngestionItem>(
@@ -440,6 +455,12 @@ export function AdminUpload() {
       });
     }
     const pdfCount = incoming.filter((file) => file.name.toLocaleLowerCase().endsWith(".pdf")).length;
+    const known = new Set(files.map(item => fileFingerprint(item.file)));
+    const additions = incoming.filter(file => file.name.toLocaleLowerCase().endsWith(".pdf") && !known.has(fileFingerprint(file)));
+    if (files.length + additions.length > 5) {
+      setError("每批最多选择 5 个 PDF。已保留当前文件，请减少本次选择后重试。");
+      return;
+    }
     if (!pdfCount && !incomingMetadata.length) {
       setError("拖入的文件中没有可识别的 PDF 或配套元数据文件。");
       return;
@@ -473,7 +494,7 @@ export function AdminUpload() {
             chunkSize: CHUNK_SIZE,
           };
         }),
-      ).slice(0, 100);
+      ).slice(0, 5);
     });
   }
 
@@ -485,7 +506,8 @@ export function AdminUpload() {
 
   async function retryIngestionItem(itemId: string) {
     const token = getServerSessionCredential();
-    if (!token) return;
+    const actionKey = `retry-ingestion:${itemId}`;
+    if (!token || !startAction(actionKey)) return;
     setRetryingItem(itemId);
     setIngestionError("");
     try {
@@ -504,10 +526,13 @@ export function AdminUpload() {
       setIngestionError(reason instanceof Error ? reason.message : "重新处理失败。");
     } finally {
       setRetryingItem("");
+      finishAction(actionKey);
     }
   }
 
   async function abortStagingSession(sessionId: string) {
+    const actionKey = `abort-staging:${sessionId}`;
+    if (!startAction(actionKey)) return;
     setStagingAction(sessionId);
     setStagingError("");
     try {
@@ -517,10 +542,13 @@ export function AdminUpload() {
       setStagingError(reason instanceof Error ? reason.message : "取消上传失败。");
     } finally {
       setStagingAction("");
+      finishAction(actionKey);
     }
   }
 
   async function retryStagingImport(sessionId: string) {
+    const actionKey = `retry-staging:${sessionId}`;
+    if (!startAction(actionKey)) return;
     setStagingAction(sessionId);
     setStagingError("");
     try {
@@ -530,21 +558,20 @@ export function AdminUpload() {
       setStagingError(reason instanceof Error ? reason.message : "重新入库失败。");
     } finally {
       setStagingAction("");
+      finishAction(actionKey);
     }
   }
 
-  async function upload() {
+  async function upload(onlyToken?: string) {
     const token = getServerSessionCredential();
     if (!token) {
       setError("请先用管理员账户登录。");
       return;
     }
-    const waiting = files.filter((item) => item.status === "waiting");
-    if (!waiting.length) return;
+    const waiting = files.filter((item) => onlyToken ? item.token === onlyToken && item.status === "failed" : item.status === "waiting");
+    if (!waiting.length || !startAction("upload")) return;
     setPending(true);
     setError("");
-    setResult(null);
-    setIngestionItems([]);
     setIngestionError("");
     try {
       const shouldUseChunkUpload = (item: QueuedFile) => item.file.size >= PUBLIC_CHUNK_THRESHOLD
@@ -575,7 +602,7 @@ export function AdminUpload() {
         id: resumedSession?.batch_id || "existing-r2-session",
         status: "resuming",
       };
-      const accepted: string[] = [];
+      const accepted: string[] = [...(result?.accepted ?? [])];
       const rejected: { filename: string; reason: string }[] = [];
       let cursor = 0;
       const uploadMetadataPairings = buildMetadataPairings(files, metadataFiles);
@@ -961,16 +988,17 @@ export function AdminUpload() {
       setError(reason instanceof Error ? reason.message : "上传失败。");
     } finally {
       setPending(false);
+      finishAction("upload");
     }
   }
 
   return (
     <div className="admin-page upload-page">
-      <header className="admin-page-title"><div><p>入库管理</p><h1>批量上传 PDF</h1><span>每个 PDF 独立校验、识别、重试和发布。</span></div></header>
-      <section className="upload-policy-panel admin-panel" aria-labelledby="upload-policy-title">
+      <header className="admin-page-title"><div><p>管理后台 / 上传</p><h1>上传</h1><span>一次选择最多 5 个 PDF，每个文件独立校验、重试，再进入馆藏工作页。</span></div></header>
+      <details className="upload-policy-panel admin-panel" aria-labelledby="upload-policy-title">
+        <summary id="upload-policy-title">本批处理方式与访问权限</summary>
         <header>
           <div>
-            <h2 id="upload-policy-title">本批处理方式</h2>
             <p>这些选项只作用于本次新建批次，之后仍可在审校和发布阶段调整馆藏内容。</p>
           </div>
         </header>
@@ -1026,31 +1054,14 @@ export function AdminUpload() {
             </select>
             <small>推荐人工确认，以区分完全重复文件和同一作品的不同版本。</small>
           </label>
-          <label className="upload-policy-toggle">
-            <input
-              type="checkbox"
-              checked={externalEnrichmentEnabled}
-              disabled={pending}
-              onChange={(event) => setExternalEnrichmentEnabled(event.target.checked)}
-            />
-            <span><strong>外部元数据补充</strong><small>查询已配置的书目来源并生成带出处的候选。服务不可用时仍可继续本地识别。</small></span>
-          </label>
-          <label className="upload-policy-toggle">
-            <input
-              type="checkbox"
-              checked={aiSuggestionsEnabled}
-              disabled={pending}
-              onChange={(event) => setAiSuggestionsEnabled(event.target.checked)}
-            />
-            <span><strong>AI 候选建议</strong><small>仅在模型服务已配置时产生候选。候选不会自动采用，仍需管理员复核。</small></span>
-          </label>
+          <p className="upload-local-only">上传只解析本地文件与馆内资料。需要外部书目时，在馆藏工作页明确点击“查找免费来源”。</p>
         </div>
         {files.some((item) => item.sessionId) ? (
           <p className="upload-resume-policy-note" role="status">
             已发现服务端 R2 上传会话。重新选择同一 PDF 后只上传未完成 part；原批次策略不会被改写。
           </p>
         ) : null}
-      </section>
+      </details>
       <section
         className={`upload-dropzone${dragging ? " is-dragging" : ""}`}
         tabIndex={0}
@@ -1087,9 +1098,10 @@ export function AdminUpload() {
         aria-label="拖入 PDF 和配套元数据"
       >
         <Upload size={31} />
-        <h2>拖入 PDF 和配套元数据</h2>
-        <p>支持 PDF，以及同名的 RIS、BibTeX、CSL-JSON、sidecar JSON 或 YAML。配套文件只生成待审候选，不会直接覆盖馆藏。</p>
-        <button className="button secondary" type="button" onClick={() => input.current?.click()}>选择文件</button>
+        <h2>拖拽 PDF 文件到此处</h2>
+        <p>每批最多 5 个 PDF；也可附上同名 RIS、BibTeX 或 JSON 等元数据。</p>
+        <small>配套文件只生成待审候选，不会直接覆盖馆藏。</small>
+        <button className="button" type="button" onClick={() => input.current?.click()}>选择 PDF 文件</button>
         <input
           ref={input}
           type="file"
@@ -1102,6 +1114,8 @@ export function AdminUpload() {
           }}
         />
       </section>
+
+      <aside className="upload-v307-preview admin-panel" aria-label="当前上传预览"><header><h2>上传预览</h2></header>{previewFile ? <><div className="upload-v307-file-preview">{previewUrl ? <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} title={`${previewFile.file.name} 本地 PDF 预览`} /> : <FileText size={48} />}</div><strong>{previewFile.file.name}</strong><dl><div><dt>文件类型</dt><dd>PDF</dd></div><div><dt>文件大小</dt><dd>{formatUploadBytes(previewFile.file.size)}</dd></div><div><dt>上传状态</dt><dd>{previewFile.message || "等待上传"}</dd></div></dl><p>文件上传并校验后，进入馆藏工作页完善书目、关联作者和发布。</p></> : <p className="admin-list-state">选择 PDF 后，可以在这里核对本地文件。</p>}</aside>
 
       {stagingSessions.length || uploadSnapshots.length ? (
         <section className="upload-staging-sessions admin-panel" aria-live="polite">
@@ -1148,7 +1162,7 @@ export function AdminUpload() {
       ) : null}
 
       <section className="upload-queue admin-panel">
-        <header><h2>待上传文件</h2><span>{files.length} 个 PDF · {metadataFiles.length} 个元数据文件</span></header>
+        <header><h2>上传队列（{files.length}/5）</h2><button className="button secondary" type="button" disabled={pending || files.length >= 5} onClick={() => input.current?.click()}>选择更多文件</button></header>
         {metadataFiles.length ? (
           <div className="upload-metadata-pairing" aria-live="polite">
             <div>
@@ -1180,7 +1194,7 @@ export function AdminUpload() {
           <div key={item.token}>
             <FileText size={18} />
             <p>
-              <strong>{item.file.name}</strong>
+              <button type="button" className="upload-preview-select" onClick={() => setPreviewToken(item.token)}>{item.file.name}</button>
               <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
               <span className={`metadata-pair-status ${metadataPairings[item.token]?.status || "missing"}`}>
                 {metadataImportStates[item.token]?.message || metadataPairings[item.token]?.message}
@@ -1207,12 +1221,13 @@ export function AdminUpload() {
                 <i style={{ width: `${item.progress}%` }} />
               </span>
             ) : null}
+            {item.status === "failed" ? <button type="button" className="button secondary" disabled={pending} onClick={() => void upload(item.token)}><RefreshCw size={14} />重试此文件</button> : null}
             <button type="button" aria-label={`移除待上传文件 ${item.file.name}`} disabled={pending} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={16} /></button>
           </div>
         )) : <p className="empty-row">尚未选择文件。</p>}
         <footer>
           <p className="admin-help">上传只建立馆藏和后台处理任务。公开发布由具备权限的 Editor 或 Administrator 在馆藏详情中确认。</p>
-          <button className="button" type="button" disabled={!files.some((item) => item.status === "waiting") || pending} onClick={upload}>
+          <button className="button" type="button" disabled={!files.some((item) => item.status === "waiting") || pending} onClick={() => void upload()}>
             {pending ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
             开始上传
           </button>
@@ -1303,10 +1318,11 @@ export function AdminUpload() {
 
       <section className="pipeline-explainer admin-panel">
         <header><h2>处理步骤</h2></header>
-        {["校验与哈希查重", "原生文本检测", "按需排队 PaddleOCR", "元数据候选与网页校验", "作者、理论和主题关系", "全文索引与页码坐标", "规范文件名与云端副本", "管理员发布"].map((step, index) => (
+        {["上传与文件校验", "填写书目与选择封面", "关联作者与分类", "预览并明确发布"].map((step, index) => (
           <div key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>
         ))}
       </section>
+      <section className="upload-recent-batches admin-panel"><header><div><h2>最近上传批次</h2><p>历史文件继续保留在原馆藏工作页。</p></div><button type="button" className="button secondary" onClick={recentBatches.retry}>刷新批次</button></header>{recentBatches.error ? <p role="alert">{recentBatches.error}</p> : null}<div className="admin-v307-table-scroll"><table><thead><tr><th>批次</th><th>上传时间</th><th>文件数量</th><th>处理结果</th><th>操作</th></tr></thead><tbody>{recentBatches.data?.results.slice(0,5).map(batch=><tr key={batch.id}><td><strong>{batch.label || `上传批次 ${batch.id.slice(0,8)}`}</strong></td><td>{new Date(batch.created_at).toLocaleString("zh-CN")}</td><td>{batch.items.length} / {batch.expected_count}</td><td>{batch.completed_count} 项完成 · {batch.failed_count} 项失败</td><td><details><summary>查看批次文件</summary><ul>{batch.items.map(item=><li key={item.id}><Link href={`/admin/intake/${item.id}#file`}>{item.source_filename || "打开文件工作页"}</Link></li>)}</ul>{!batch.items.length ? <p>批次尚未收到文件。</p> : null}</details></td></tr>)}</tbody></table></div>{recentBatches.loading ? <p role="status">正在读取最近批次…</p> : recentBatches.data && !recentBatches.data.results.length ? <p className="admin-list-state">尚无上传批次。</p> : null}</section>
     </div>
   );
 }

@@ -93,8 +93,8 @@ test("new upload batches submit explicit intake policies without rewriting resum
   assert.match(source, /useState<AccessPolicy>\("public"\)/);
   assert.match(source, /useState<OcrStrategy>\("auto"\)/);
   assert.match(source, /useState<DuplicatePolicy>\("review"\)/);
-  assert.match(source, /useState\(true\).*externalEnrichmentEnabled|\[externalEnrichmentEnabled, setExternalEnrichmentEnabled\] = useState\(true\)/s);
-  assert.match(source, /useState\(false\).*aiSuggestionsEnabled|\[aiSuggestionsEnabled, setAiSuggestionsEnabled\] = useState\(false\)/s);
+  assert.match(source, /const externalEnrichmentEnabled = false/);
+  assert.match(source, /const aiSuggestionsEnabled = false/);
   assert.match(source, /label: batchLabel\.trim\(\)/);
   assert.match(source, /access_policy: accessPolicy/);
   assert.match(source, /ocr_strategy: ocrStrategy/);
@@ -102,7 +102,7 @@ test("new upload batches submit explicit intake policies without rewriting resum
   assert.match(source, /external_enrichment_enabled: externalEnrichmentEnabled/);
   assert.match(source, /ai_suggestions_enabled: aiSuggestionsEnabled/);
   assert.match(source, /自动检测（推荐）/);
-  assert.match(source, /仅在模型服务已配置时产生候选。候选不会自动采用/);
+  assert.match(source, /上传只解析本地文件与馆内资料/);
   assert.match(source, /原批次策略不会被改写/);
   assert.match(source, /freshItems = waiting\.filter\(\(item\) => !item\.sessionId\)/);
 });

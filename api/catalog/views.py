@@ -818,28 +818,8 @@ class SiteConfigView(APIView):
         return Response(current_site_config())
 
     def put(self, request):
-        serializer = SiteConfigSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        before = current_site_config()
-        setting, _ = SiteSetting.objects.update_or_create(
-            key="site_config",
-            defaults={
-                "value": serializer.validated_data,
-                "public": True,
-                "updated_by": request.user,
-            },
-        )
-        from ingestion.models import AuditEvent
-
-        AuditEvent.objects.create(
-            actor=request.user,
-            action="site_config_update",
-            object_type="SiteSetting",
-            object_id=str(setting.id),
-            before=before,
-            after=serializer.validated_data,
-        )
-        return Response(serializer.validated_data)
+        return Response({"code": "site_editorial_required", "detail": "网站内容现需先保存草稿，再明确发布。请使用网站与关于书库编辑器。",
+                         "replacement": "/api/catalog/admin/site-content/"}, status=409)
 
 
 class SiteStatsView(APIView):
@@ -1745,6 +1725,14 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         data = self.get_serializer(instance).data
+        from catalog.services.canonical_identity import CanonicalIdentityError, mapped_node_for_legacy
+        data["canonical_node_url"] = ""
+        try:
+            canonical_node = mapped_node_for_legacy("TheorySchool", instance.pk)
+        except CanonicalIdentityError:
+            canonical_node = None
+        if canonical_node and canonical_node.status == KnowledgePublicationStatus.PUBLISHED and canonical_node.slug:
+            data["canonical_node_url"] = f"/theories/nodes/{canonical_node.slug}"
         mapping = LegacyKnowledgeMapping.objects.filter(
             legacy_model="TheorySchool",
             legacy_id=str(instance.id),

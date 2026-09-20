@@ -1,8 +1,8 @@
 """Request-scoped catalog read model, shared by queues and library lists.
 
 No process, snapshot, file or external service is mutated by this module.
-Classification runs over the complete source set before pagination. Relations
-are batch-loaded so the result does not build a heavy workspace per row.
+The queue inventory is filtered and paginated in admin_queue_query. Relations
+for a bounded page are batch-loaded without building a heavy workspace per row.
 """
 from collections import defaultdict
 
@@ -117,7 +117,12 @@ def edition_summary(edition, *, user=None):
     warnings = [*checks["warnings"], *edition._admin_candidate_conflicts]
     failures = [row for row in pending_uploads if row.status == "failed"]
     jobs = sorted(edition.processing_jobs.all(), key=lambda row: (row.updated_at, str(row.pk)), reverse=True)
-    failed_jobs = [row for row in jobs if row.status == "failed"]
+    current_asset_ids = {row.pk for row in assets if row.is_current}
+    latest_jobs = {}
+    for job in sorted(jobs, key=lambda row: (row.created_at, str(row.pk)), reverse=True):
+        if job.asset_id is None or job.asset_id in current_asset_ids:
+            latest_jobs.setdefault((job.job_type, job.asset_id), job)
+    failed_jobs = [row for row in latest_jobs.values() if row.status == "failed"]
     serving_number = edition.active_catalog_revision.revision if publication["catalog_revision_active"] else 0
     pending_revisions = [row for row in edition.catalog_revisions.all()
                          if row.status in {"preparing", "failed"} and row.revision > serving_number]
@@ -190,16 +195,6 @@ def unbound_upload_row(item):
             "blockers_count": int(failed), "warnings_count": 0, "unresolved_count": int(failed),
             "categories": ["all", "continue", *(["attention", "exception"] if failed else [])],
             "actionable": True, "updated_at": item.updated_at, "priority": item.priority, "preflight_required": True}
-
-
-def workflow_rows(*, user=None, publication_scope=False):
-    rows = [edition_summary(edition, user=user) for edition in load_admin_editions(Edition.objects.all())]
-    if not publication_scope:
-        rows = [row for row in rows if row["actionable"]]
-    rows.extend(unbound_upload_row(item) for item in UploadItem.objects.filter(edition__isnull=True).exclude(status__in=UPLOAD_TERMINAL))
-    # Oldest work first within explicit priority; stable identity is the final
-    # tie-breaker, so older failures never disappear behind recent arrivals.
-    return sorted(rows, key=lambda row: (-row["priority"], row["updated_at"], row["id"]))
 
 
 def attach_library_editions(works):

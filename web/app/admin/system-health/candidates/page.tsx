@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { CandidateReview } from "@/components/candidate-review";
-
-export const metadata: Metadata = { title: "建议数据诊断" };
-
-export default function CandidateDiagnosticsPage() {
-  return <CandidateReview />;
+import { redirect } from "next/navigation";
+import { preservingAdminRedirect, type AdminSearchParams } from "@/lib/admin-route-context";
+export default async function Page({searchParams}:{searchParams:Promise<AdminSearchParams>}) {
+  redirect(preservingAdminRedirect("/admin/processing/health/candidates", await searchParams));
 }

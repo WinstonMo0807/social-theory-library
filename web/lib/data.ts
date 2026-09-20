@@ -48,6 +48,7 @@ export type Work = {
   id: string;
   workId?: string;
   editionId?: string;
+  readerHref?: string;
   slug: string;
   title: string;
   originalTitle?: string;

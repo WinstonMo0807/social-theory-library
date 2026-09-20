@@ -24,6 +24,7 @@ import { ResearchEntityPicker } from "@/components/admin/research/research-entit
 import type { EntityValue } from "@/components/admin/forms/workflow-fields";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { StringListEditor } from "@/components/structured-editors";
+import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import { KnowledgeImagePanel } from "@/components/admin/media/knowledge-image-panel";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -156,6 +157,7 @@ export function DisciplinesAdmin() {
   const requestedId = useSearchParams().get("discipline")?.trim() ?? "";
   const requested = useResource<DisciplineRow>(requestedId ? `/catalog/admin/disciplines/${encodeURIComponent(requestedId)}/` : null);
   const opened = useRef("");
+  const [openedId, setOpenedId] = useState("");
   const [editConflict, setEditConflict] = useState(false);
   const { pendingAction, startAction, finishAction } = useActionGuard();
   const resource = useResource<Page<DisciplineRow>>(`/catalog/admin/disciplines/?page=${paging.page}`);
@@ -193,7 +195,7 @@ export function DisciplinesAdmin() {
     const selected = requested.data;
     const timer = window.setTimeout(() => {
       if (dirty) { setMessage("已保留尚未保存的学科填写。请先保存或从列表明确切换。"); return; }
-      opened.current = requestedId;
+      opened.current = requestedId; setOpenedId(requestedId);
       setEditing(selected);
       setDraft(disciplineToDraft(selected));
       setSavedDraft(disciplineToDraft(selected));
@@ -274,10 +276,10 @@ export function DisciplinesAdmin() {
           ))}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} />
         </section>
-        <div className="knowledge-object-editor-workspace">
-        <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={save}>
+        <KnowledgeVisualEditor objectType="discipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={draft} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
+        <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={(event) => void save(event, true)}>
           <Notice>{requested.error}</Notice>
-          <fieldset disabled={Boolean(pendingAction) || Boolean(requestedId && opened.current !== requestedId)} style={{ display: "contents" }}>
+          <fieldset disabled={Boolean(pendingAction) || Boolean(requestedId && openedId !== requestedId)} style={{ display: "contents" }}>
           <header><div><h2>{editing ? `编辑 ${editing.name}` : "新增学科"}</h2><p>保存本页名称、介绍和展示设置，不跳转。已有公开内容的修改会先保存，确认发布后才更新读者页面。</p></div></header>
           <EditorialPrefillNotice state={prefills} />
           <fieldset>
@@ -310,10 +312,10 @@ export function DisciplinesAdmin() {
             <StringListEditor label="检索别名" itemLabel="别名" value={editorLineValues(draft.search_aliases)} onChange={(value) => setDraft({ ...draft, search_aliases: value.join("\n") })} addLabel="添加别名" />
           </fieldset>
           <fieldset><legend>前台内容</legend><div className="knowledge-form-grid two"><label><span>卡片说明</span><textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label><span>学科介绍</span><textarea rows={5} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label></div></fieldset>
-          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{image?.name || (editing?.hero_image ? "替换现有主视觉" : "上传学科主视觉")}</span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>排序</span><input type="number" value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label><label><span>状态</span><select value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
+          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{image?.name || (editing?.hero_image ? "替换现有主视觉" : "上传学科主视觉")}</span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>排序</span><input type="number" value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label><label><span>状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
           {editing ? <EntityLifecycleActions kind="discipline" id={editing.id} name={editing.name} status={draft.editorial_status} previewHref={`/theories/disciplines/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, editorial_status: snapshot.status })); setEditing((current) => current ? { ...current, editorial_status: snapshot.status } : current); resource.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyDiscipline }); resource.refresh(); }} /> : null}
-          <footer className="knowledge-editor-actions"><button className="button" type="submit"><Save size={15} />{draft.editorial_status === "published" && editing?.editorial_status !== "published" ? "保存并公开学科" : "保存本页学科资料"}</button><Notice>{message}</Notice></footer>
-          <EditorialConflictHelp visible={editConflict} href={`/admin/disciplines?discipline=${editing?.id}`} />
+          <footer className="knowledge-editor-actions"><button className="button" type="submit"><Save size={15} />{"保存学科草稿"}</button><Notice>{message}</Notice></footer>
+          <EditorialConflictHelp visible={editConflict} href={`/admin/theories/disciplines?discipline=${editing?.id}`} />
           </fieldset>
         </form>
         <div className="knowledge-object-editor-rail">
@@ -326,7 +328,7 @@ export function DisciplinesAdmin() {
             onChanged={resource.refresh}
           />
         </div>
-        </div>
+        </KnowledgeVisualEditor>
       </div>
     </Frame>
   );
@@ -405,6 +407,7 @@ export function SubdisciplinesAdmin() {
   const paging = useAdminListPage();
   const [editConflict, setEditConflict] = useState(false);
   const opened = useRef("");
+  const [openedId, setOpenedId] = useState("");
   const { pendingAction, startAction, finishAction } = useActionGuard();
   const searchParams = useSearchParams();
   const requestedSubdiscipline = searchParams.get("subdiscipline")?.trim() ?? "";
@@ -451,7 +454,7 @@ export function SubdisciplinesAdmin() {
     const selected = requested.data;
     const timer = window.setTimeout(() => {
       if (dirty) { setMessage("已保留尚未保存的子学科填写。请先保存或从列表明确切换。"); return; }
-      opened.current = requestedSubdiscipline;
+      opened.current = requestedSubdiscipline; setOpenedId(requestedSubdiscipline);
       setEditing(selected);
       setDraft(subdisciplineToDraft(selected));
       setSavedDraft(subdisciplineToDraft(selected));
@@ -527,12 +530,12 @@ export function SubdisciplinesAdmin() {
     <Frame eyebrow="知识管理" title="子学科" description="子学科属于学科，但不作为理论传统的上下级。理论与子学科通过经过审核的关系表连接。">
       <div className="knowledge-admin-layout knowledge-admin-workspace">
         <section className="admin-panel knowledge-admin-list"><header><h2>子学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增子学科</button></header><Notice>{rows.error}</Notice>{rows.data?.results.map((row) => <article key={row.id}><div className="knowledge-admin-thumb">{row.name.slice(0, 2)}</div><div><strong>{row.name}</strong><small>{disciplineName(row.discipline)}</small><p>{row.research_object || row.description || "研究对象待编辑"}</p></div><button type="button" onClick={() => start(row)}><Pencil size={14} />编辑</button></article>)}<AdminListPages data={rows.data} paging={paging} loading={rows.loading} /></section>
-        <div className="knowledge-object-editor-workspace">
-        <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={save}>
+        <KnowledgeVisualEditor objectType="subdiscipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels}}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
+        <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={(event) => void save(event, true)}>
           <header><div><h2>{editing ? `编辑 ${editing.name}` : "新增子学科"}</h2><p>保存本页名称、说明和所属学科，不跳转。与理论的关联在关系管理中维护。已有公开内容的修改需另行发布。</p></div></header>
           <EditorialPrefillNotice state={prefills} />
           <Notice>{requested.error}</Notice>
-          <fieldset disabled={Boolean(pendingAction) || Boolean(requestedSubdiscipline && opened.current !== requestedSubdiscipline)} style={{ display: "contents" }}>
+          <fieldset disabled={Boolean(pendingAction) || Boolean(requestedSubdiscipline && openedId !== requestedSubdiscipline)} style={{ display: "contents" }}>
           <fieldset>
             <legend>基本信息</legend>
             <div className="knowledge-form-grid three">
@@ -577,17 +580,17 @@ export function SubdisciplinesAdmin() {
               <StringListEditor label="代表性议题" itemLabel="议题" value={editorLineValues(draft.representative_issues)} onChange={(value) => setDraft({ ...draft, representative_issues: value.join("\n") })} addLabel="添加议题" />
             </div>
           </fieldset>
-          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{image?.name || (editing?.hero_image ? "选择替换图片，发布后生效" : "上传子学科主视觉")}</span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>人工整理等级</span><input type="number" min={0} value={draft.curation_level} onChange={(event) => setDraft({ ...draft, curation_level: Number(event.target.value) })} /></label><label><span>状态</span><select value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
+          <fieldset><legend>展示与发布</legend><div className="knowledge-form-grid three"><label className="knowledge-image-upload"><ImagePlus size={19} /><span>{image?.name || (editing?.hero_image ? "选择替换图片，发布后生效" : "上传子学科主视觉")}</span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] ?? null)} /></label><label><span>人工整理等级</span><input type="number" min={0} value={draft.curation_level} onChange={(event) => setDraft({ ...draft, curation_level: Number(event.target.value) })} /></label><label><span>状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">下线</option></select></label></div></fieldset>
           {editing ? <EntityLifecycleActions kind="subdiscipline" id={editing.id} name={editing.name} status={draft.editorial_status} previewHref={`/subdisciplines/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, editorial_status: snapshot.status })); setEditing((current) => current ? { ...current, editorial_status: snapshot.status } : current); rows.refresh(); }} onDeleted={() => { setEditing(null); setDraft(emptySubdiscipline(disciplines.data?.results[0]?.id ?? "")); rows.refresh(); }} /> : null}
-          <footer className="knowledge-editor-actions"><button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{draft.editorial_status === "published" && editing?.editorial_status !== "published" ? "保存并公开子学科" : "保存本页子学科资料"}</button><Notice>{message}</Notice></footer>
-          <EditorialConflictHelp visible={editConflict} href={`/admin/subdisciplines?subdiscipline=${editing?.id}`} />
+          <footer className="knowledge-editor-actions"><button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{"保存子学科草稿"}</button><Notice>{message}</Notice></footer>
+          <EditorialConflictHelp visible={editConflict} href={`/admin/theories/subdisciplines?subdiscipline=${editing?.id}`} />
           </fieldset>
         </form>
         <div className="knowledge-object-editor-rail">
           {editing ? <KnowledgeImagePanel objectType="subdiscipline" objectId={editing.id} refreshKey={message} onChanged={() => void refreshImage()} /> : null}
           <KnowledgeObjectContextPanel hasUnsavedChanges={dirty} objectType="subdiscipline" objectId={editing?.id} refreshKey={message} onChanged={() => { rows.refresh(); setEditConflict(true); setMessage("公开内容已更新。继续编辑前，请重新打开本子学科；本页输入仍保留。"); }} />
         </div>
-        </div>
+        </KnowledgeVisualEditor>
       </div>
     </Frame>
   );
@@ -598,7 +601,7 @@ type RecommendationPreview = { placement: string; source: string; preview_token:
 type RecommendationPolicy = { id: string; placement: string; title: string; item_count: number; rotation_days: number; enabled: boolean; updated_at: string; last_generated_at: string | null; next_refresh_at: string | null; current: null | { id: string; source: string; starts_at: string; expires_at: string; items: { id: string; reason: string; target: { id: string; title?: string; name?: string }; target_type: string }[] } };
 const targetByPlacement: Record<string, "work" | "theory_school" | "topic" | "scholar"> = { home_featured: "work", home_random: "work", theory_weekly: "work", home_theories: "theory_school", home_topics: "topic", home_scholars: "scholar" };
 
-export function RecommendationsAdmin() {
+export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlacement?: string } = {}) {
   const [preview, setPreview] = useState<RecommendationPreview | null>(null);
   const publishingRequest=useRef(false);
   const retryRequest = useRef<{ signature: string; body: Record<string, unknown> } | null>(null);
@@ -612,7 +615,7 @@ export function RecommendationsAdmin() {
     page: String(scholarPage),
   });
   if (scholarSearch) scholarQuery.set("search", scholarSearch);
-  const [selectedPolicy, setSelectedPolicy] = useState<string>("");
+  const [selectedPolicy, setSelectedPolicy] = useState<string>(initialPlacement);
   const [manualSelections, setManualSelections] = useState<Record<string, string[]>>({});
   const [selectionLabels, setSelectionLabels] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");

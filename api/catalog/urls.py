@@ -1,4 +1,13 @@
 from django.urls import path
+from .curation_queue_views import CurationDraftQueueView
+from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
+    PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
+    PublishScholarRelationView, PublicScholarRelationListView, ArchiveScholarRelationView)
+from .bibliographic_candidate_views import BibliographicCandidatesView
+from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, SaveIssueReadingListView,
+    AdminIssueListView, AdminIssueDetailView, AdminIssuePublishView, AdminIssueLinkView,
+    AdminSiteContentView, AdminSitePublishView, AdminIssuePreviewView, AdminSitePreviewView,
+    PublicEditorialMediaView, IssueItemCoverView, AdminIssueItemCoverView)
 from .cover_views import EditionCoverView
 from .edition_file_views import EditionFileView
 from .primary_edition_views import PrimaryEditionView
@@ -191,6 +200,7 @@ from .theory_system_views import (
     KnowledgeNodeListView,
     LocalTheoryGraphView,
     NormalizedTimelineListView,
+    NormalizedTimelineDetailView,
     PublicEvidenceFocusView,
     ReadingPathDetailView,
     ReadingPathListView,
@@ -199,6 +209,31 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
+    path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/", AdminEvidenceCurationView.as_view(), name="admin-evidence-curation"),
+    path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),
+    path("evidence-curation/<str:object_type>/<uuid:object_id>/", PublicEvidenceCurationView.as_view(), name="public-evidence-curation"),
+    path("admin/scholar-relations/", AdminScholarRelationListView.as_view(), name="admin-scholar-relation-list"),
+    path("admin/scholar-relations/<uuid:pk>/", AdminScholarRelationDetailView.as_view(), name="admin-scholar-relation-detail"),
+    path("admin/scholar-relations/<uuid:pk>/publish/", PublishScholarRelationView.as_view(), name="admin-scholar-relation-publish"),
+    path("admin/scholar-relations/<uuid:pk>/archive/", ArchiveScholarRelationView.as_view(), name="admin-scholar-relation-archive"),
+    path("scholar-relations/", PublicScholarRelationListView.as_view(), name="public-scholar-relation-list"),
+    path("admin/curation-drafts/", CurationDraftQueueView.as_view(), name="admin-curation-drafts"),
+    path("admin/bibliographic-candidates/", BibliographicCandidatesView.as_view(), name="admin-bibliographic-candidates"),
+    path("recommendation-issues/", PublicIssueListView.as_view(), name="recommendation-issue-list"),
+    path("recommendation-issues/<slug:slug>/", PublicIssueDetailView.as_view(), name="recommendation-issue-detail"),
+    path("recommendation-issues/<slug:slug>/save-list/", SaveIssueReadingListView.as_view(), name="recommendation-issue-save-list"),
+    path("recommendation-issues/<slug:slug>/items/<uuid:item_id>/cover/", IssueItemCoverView.as_view(), name="recommendation-issue-item-cover"),
+    path("admin/recommendation-issues/", AdminIssueListView.as_view(), name="admin-recommendation-issue-list"),
+    path("admin/recommendation-issues/<uuid:issue_id>/", AdminIssueDetailView.as_view(), name="admin-recommendation-issue-detail"),
+    path("admin/recommendation-issues/<uuid:issue_id>/preview/", AdminIssuePreviewView.as_view(), name="admin-recommendation-issue-preview"),
+    path("admin/recommendation-issues/<uuid:issue_id>/publish/", AdminIssuePublishView.as_view(), name="admin-recommendation-issue-publish"),
+    path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/link/", AdminIssueLinkView.as_view(), name="admin-recommendation-issue-link"),
+    path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/cover/", AdminIssueItemCoverView.as_view(), name="admin-recommendation-issue-item-cover"),
+    path("admin/site-content/", AdminSiteContentView.as_view(), name="admin-site-content"),
+    path("admin/site-content/preview/", AdminSitePreviewView.as_view(), name="admin-site-content-preview"),
+    path("admin/site-content/publish/", AdminSitePublishView.as_view(), name="admin-site-content-publish"),
+    path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),
     path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
     path("admin/editions/<uuid:edition_id>/files/", EditionFileView.as_view(), name="edition-file-submit"),
     path("admin/knowledge-media/<str:object_type>/<uuid:object_id>/", KnowledgeImageSelectionView.as_view(), name="knowledge-image-selection"),
@@ -514,6 +549,7 @@ urlpatterns = [
         name="theory-system-discipline-detail",
     ),
     path("theory-system/timeline/", NormalizedTimelineListView.as_view(), name="normalized-theory-timeline"),
+    path("theory-system/timeline/<uuid:pk>/", NormalizedTimelineDetailView.as_view(), name="normalized-theory-timeline-detail"),
     path("theory-system/graph/", LocalTheoryGraphView.as_view(), name="local-theory-graph"),
     path(
         "theory-system/evidence/<uuid:pk>/focus/",

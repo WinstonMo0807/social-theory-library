@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronUp, LoaderCircle, Plus, Search, X } from "lu
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useContextState } from "@/lib/use-context-state";
+import { useActionGuard } from "@/lib/use-action-guard";
 import { assistantCacheKey, invalidateAssistantCache, lookupFieldSuggestions } from "./field-assistant-cache";
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
 import { Dialog } from "@/components/ui/dialog";
@@ -66,6 +67,7 @@ export function FieldAssistantControl({
   onFill,
   formContext,
   onInspect,
+  onCreateDraft,
 }: {
   editionId: string;
   fieldName: AssistantFieldName;
@@ -78,6 +80,7 @@ export function FieldAssistantControl({
   onFill?: (selection: AssistedFieldFill) => void;
   formContext?: Record<string, unknown>;
   onInspect?: () => void;
+  onCreateDraft?: (entity: { id: string; name: string; type: string; edit_url?: string }) => void;
 }) {
   const popoverId = useId();
   const lookupKey = assistantCacheKey(editionId, fieldName, query, contextKey);
@@ -85,10 +88,12 @@ export function FieldAssistantControl({
   const [lookupAttempt, setLookupAttempt] = useState(0);
   const [loading, setLoading] = useContextState(lookupKey, false);
   const [busy, setBusy] = useState("");
+  const { startAction, finishAction } = useActionGuard();
   const [data, setData] = useContextState<LookupResult | null>(lookupKey, null);
   const [message, setMessage] = useContextState(lookupKey, "");
   const [newLabel, setNewLabel] = useState("");
   const [showMore, setShowMore] = useState(false);
+  const [createdEditUrl, setCreatedEditUrl] = useState("");
   const [duplicates, setDuplicates] = useContextState<Duplicate[] | null>(lookupKey, null);
   const [duplicateName, setDuplicateName] = useState("");
   const [identityReview, setIdentityReview] = useContextState(lookupKey, "");
@@ -111,7 +116,7 @@ export function FieldAssistantControl({
   };
 
   const lookup = () => {
-    externalLookup.current = lookupKey;
+    externalLookup.current = "";
     setOpen(true);
     setShowMore(false);
     setLookupAttempt((value) => value + 1);
@@ -153,6 +158,16 @@ export function FieldAssistantControl({
   }, [editionId, lookupKey, lookupAttempt, open, token]);
 
   const adopt = async (suggestion: Suggestion) => {
+    if (!onFill && onCreateDraft && suggestion.entity?.id) {
+      if (suggestion.conflicts.length && identityReview !== suggestion.id) {
+        setIdentityReview(suggestion.id);
+        setMessage("这项关联存在冲突。请核对依据与具体对象，再决定是否填入当前表单。");
+        return;
+      }
+      onCreateDraft({ id: suggestion.entity.id, name: suggestion.label, type: suggestion.entity.type });
+      setMessage("已填入当前关联，尚未保存；原表单输入保持不变。");
+      return;
+    }
     if (onFill && fieldName in FILL_FIELD_LABELS) {
       if ((fieldName === "author" || fieldName === "translator") && !suggestion.entity?.id) {
         setNewLabel(suggestion.label);
@@ -172,6 +187,7 @@ export function FieldAssistantControl({
       setOpen(false);
       return;
     }
+    if (!startAction(suggestion.id)) return;
     setBusy(suggestion.id);
     setMessage("");
     try {
@@ -194,10 +210,13 @@ export function FieldAssistantControl({
       setMessage(reason instanceof Error ? reason.message : "未保存成功，请重试。");
     } finally {
       setBusy("");
+      finishAction(suggestion.id);
     }
   };
 
   const reject = async (suggestion: Suggestion, reason: string) => {
+    const actionKey = `reject-${suggestion.id}`;
+    if (!startAction(actionKey)) return;
     setBusy(`reject-${suggestion.id}`);
     setMessage("");
     try {
@@ -212,15 +231,16 @@ export function FieldAssistantControl({
       setMessage(reason instanceof Error ? reason.message : "未能保存这次决定，请重试。");
     } finally {
       setBusy("");
+      finishAction(actionKey);
     }
   };
 
   const create = async (allowPossibleDuplicate = false) => {
-    if (!newLabel.trim()) return;
+    if (!newLabel.trim() || !startAction("create")) return;
     setBusy("create");
     setMessage("");
     try {
-      await prepare();
+      if (!onCreateDraft) await prepare();
       if (!allowPossibleDuplicate || duplicateName !== newLabel.trim()) {
         const found = await apiRequest<{ matches: Duplicate[] }>("/catalog/admin/field-assistant/duplicates/", { method: "POST", body: JSON.stringify({ field_name: fieldName, label: newLabel.trim() }) }, token);
         setDuplicates(found.matches);
@@ -230,19 +250,24 @@ export function FieldAssistantControl({
           return;
         }
       }
-      await apiRequest("/catalog/admin/field-assistant/create/", {
+      const created = await apiRequest<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("/catalog/admin/field-assistant/create/", {
         method: "POST",
-        body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), allow_possible_duplicate: allowPossibleDuplicate && duplicateName === newLabel.trim() }),
+        body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), defer_link: Boolean(onCreateDraft), allow_possible_duplicate: allowPossibleDuplicate && duplicateName === newLabel.trim() }),
       }, token);
       invalidateAssistantCache(editionId);
-      setOpen(false);
+      if (onCreateDraft) {
+        onCreateDraft(created.entity);
+        setCreatedEditUrl(created.edit_url || created.entity.edit_url || "");
+        setMessage("已建立最小草稿并填入本页关联。当前表单未自动保存；可在新标签页补充完整内容。");
+      } else setOpen(false);
       setNewLabel("");
-      await onSaved("已新建馆内草稿对象并关联当前作品。");
+      if (!onCreateDraft) await onSaved("已新建馆内草稿对象并关联当前作品。");
     } catch (reason) {
       setOpen(true);
       setMessage(reason instanceof Error ? reason.message : "未保存成功，请重试。");
     } finally {
       setBusy("");
+      finishAction("create");
     }
   };
 
@@ -264,8 +289,8 @@ export function FieldAssistantControl({
     }}>
       <header><strong>{copy.label}建议</strong><button type="button" disabled={Boolean(busy)} aria-label={`关闭${copy.label}建议`} onClick={() => setOpen(false)}><X size={14} /></button></header>
       <p>{onFill ? "按本页填写核对建议。只有你选择填入的字段会改变；填写后仍需保存书目。" : "按本页填写核对建议。采用关联建议前请核对对象，现有公开内容保持不变。"}</p>
-      <button type="button" className="button secondary" disabled={disabled || loading || Boolean(busy)} onClick={lookup}>查找新的{copy.label}建议</button>
-      <small>新的查找会使用已配置的外部来源，可能产生费用；不会自动保存或覆盖字段。</small>
+      <button type="button" className="button secondary" disabled={disabled || loading || Boolean(busy)} onClick={lookup}>刷新馆内{copy.label}候选</button>
+      <small>这里仅查看馆内记录与已有候选。外部书目查询请使用整条书目中的免费来源按钮。</small>
       <p className="field-assistant-current">当前填写：{currentLabel || "尚未填写，可核对后填入建议。"}</p>
       {data?.field.locked ? <p role="status">此字段有人工锁：{data.field.lock_reason || "须由管理员核对后手工修改"}。建议可查看，不能直接填入。</p> : null}
       {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和已有依据</p> : null}
@@ -278,8 +303,9 @@ export function FieldAssistantControl({
       </article>)}
       {!loading && data && !data.results.length && !message ? <p>当前没有可显示的已有建议，可以继续手工填写。</p> : null}
       {!loading && moreCount ? <button type="button" className="field-assistant-more" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>{showMore ? <ChevronUp size={13} /> : <ChevronDown size={13} />}{showMore ? "收起更多结果" : `查看另外 ${moreCount} 项结果`}</button> : null}
-      {copy.create ? <footer><input ref={newLabelRef} aria-label={`新${copy.create}名称`} value={newLabel} disabled={Boolean(busy) || disabled} onChange={(event) => { setNewLabel(event.target.value); setDuplicates(null); }} placeholder={`输入${copy.create}名称`} /><button type="button" disabled={!newLabel.trim() || Boolean(busy) || disabled} onClick={() => create()}>{busy === "create" ? <LoaderCircle className="spin" size={13} /> : <Plus size={13} />}{data?.field.create_label || `创建${copy.create}`}并关联</button>{onFill ? <p>新建并关联会先保存本页修改，再建立当前书目的馆内草稿记录；不会发布学者主页。</p> : null}{duplicates?.length ? <div><p>可能已有记录</p><ul>{duplicates.map((item) => <li key={item.id}>{item.label || item.name || "馆内已有对象"}</li>)}</ul><button type="button" disabled={Boolean(busy) || disabled} onClick={() => create(true)}>确认是不同对象，新建并关联</button></div> : null}</footer> : null}
+      {copy.create ? <footer><input ref={newLabelRef} aria-label={`新${copy.create}名称`} value={newLabel} disabled={Boolean(busy) || disabled} onChange={(event) => { setNewLabel(event.target.value); setDuplicates(null); }} placeholder={`输入${copy.create}名称`} /><button type="button" disabled={!newLabel.trim() || Boolean(busy) || disabled} onClick={() => create()}>{busy === "create" ? <LoaderCircle className="spin" size={13} /> : <Plus size={13} />}{data?.field.create_label || `创建${copy.create}`}并关联</button>{onFill ? <p>新建只保存最小身份草稿；当前书目的关联仍需点击页面保存，完整资料可稍后补充。</p> : null}{duplicates?.length ? <div><p>可能已有记录</p><ul>{duplicates.map((item) => <li key={item.id}>{item.label || item.name || "馆内已有对象"}</li>)}</ul><button type="button" disabled={Boolean(busy) || disabled} onClick={() => create(true)}>确认是不同对象，新建并关联</button></div> : null}</footer> : null}
       {message ? <p role="alert" aria-live="polite" className="field-assistant-message">{message}</p> : null}
+      {createdEditUrl && /^\/admin\//.test(createdEditUrl) ? <a className="button secondary" href={createdEditUrl} target="_blank" rel="noreferrer">在新标签页完善此草稿 ↗</a> : null}
       {onFill ? <p>填入后可以继续修改，点击页面顶部“保存书目修改”才会保存。不会自动发布。</p> : null}
       {onInspect ? <button type="button" disabled={Boolean(busy)} onClick={() => { setOpen(false); onInspect(); }}>查看全部候选、原文与处理记录</button> : null}
     </Dialog> : null}

@@ -2,8 +2,9 @@
 import { topic as demoTopic, works as demoWorks, scholars as demoScholars, theorySchools as demoTheorySchools } from "../data";
 import { adaptApiTopic } from "../public-data-adapters";
 import { type DirectoryPage, type Paginated, directoryPage } from "./pagination";
-import { serverRequest, allowDemoFallback } from "./server-request";
+import { serverRequest, allowDemoFallback, ServerApiError } from "./server-request";
 import type { LibraryTopic, ApiTopic } from "./topics.types";
+import type { PublishedEvidenceCuration } from "./evidence-curation.types";
 
 const adaptTopic = adaptApiTopic;
 
@@ -76,10 +77,11 @@ export async function loadTopicPage(
 
 export async function loadTopic(slug: string): Promise<LibraryTopic | null> {
   try {
-    return adaptTopic(
-      await serverRequest<ApiTopic>(`/catalog/topics/${encodeURIComponent(slug)}/`),
-    );
+    const payload = await serverRequest<ApiTopic>(`/catalog/topics/${encodeURIComponent(slug)}/`);
+    const evidenceCuration = await serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/topic/${payload.id}/`);
+    return { ...adaptTopic(payload), evidenceCuration };
   } catch (error) {
+    if (error instanceof ServerApiError && error.status === 404 && error.path === `/catalog/topics/${encodeURIComponent(slug)}/`) return null;
     if (!allowDemoFallback) throw error;
     return slug === demoTopic.slug
       ? {

@@ -1,226 +1,32 @@
 import Link from "next/link";
-import { ArrowRight, Quote } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
-import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { KnowledgeMap } from "@/components/knowledge-map";
-import { BookCover, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
+import { BookCard, ScholarPortrait, SectionHeading, TagList } from "@/components/ui";
 import type { TheorySchool } from "@/lib/data";
 import type { ScholarDetailData } from "@/lib/public-data-adapters";
+import { relationArrow, scholarRelationLabels, type ScholarRelation } from "@/lib/api/scholar-relations.types";
 
-export function ScholarPublicView({
-  data,
-  footer,
-  theorySchools,
-  slug,
-}: {
-  data: ScholarDetailData;
-  footer?: ReactNode;
-  theorySchools: TheorySchool[];
-  slug: string;
-}) {
-  const {
-    scholar,
-    shortDescription,
-    works: scholarWorks,
-    affiliations,
-    timeline,
-    featuredQuote,
-    quoteSource,
-    curatedClaims,
-    knowledgeNodes,
-    curated,
-  } = data;
-  const essentialWorks = curated.essentialWorks.length ? curated.essentialWorks : scholarWorks;
-  const normalizedConcepts = knowledgeNodes.filter((node) => node.node_type === "concept");
-  const normalizedTheories = knowledgeNodes.filter((node) => node.node_type === "theory_tradition");
-  const normalizedDebates = knowledgeNodes.filter((node) => node.node_type === "debate");
-  const keyConcepts = curated.keyConcepts.length
-    ? curated.keyConcepts
-    : normalizedConcepts.length
-      ? normalizedConcepts.map((node) => ({ name: node.name, description: node.summary, source: node.relation_label }))
-      : scholar.concerns;
-  const relatedSchools = normalizedTheories.length
-    ? normalizedTheories.map((node) => ({
-        ...node,
-        href: `/theories/nodes/${node.slug}`,
-        symbol: node.name.slice(0, 2),
-        description: node.summary || node.relation_label || "已确认的知识关系",
-      }))
-    : curated.relatedTheories.length
-    ? curated.relatedTheories.map((school) => ({
-        ...school,
-        href: `/theory-schools/${school.slug}`,
-        symbol: school.symbol || school.name.slice(0, 2),
-        books: 0,
-        scholars: 0,
-        description: school.description || "管理员确认的相关理论流派",
-      }))
-    : theorySchools
-        .filter((school) => scholarWorks.some((work) => work.theories?.some((item) => item.slug === school.slug)))
-        .map((school) => ({ ...school, href: `/theory-schools/${school.slug}` }));
-
-  return (
-    <>
-      <div className="page-shell scholar-detail">
-        <section className="scholar-hero" data-module-id="scholar-identity">
-          <ScholarPortrait scholar={scholar} large />
-          <div className="scholar-intro" data-module-id="scholar-position">
-            <h1>{scholar.originalName}</h1>
-            <p className="scholar-years">{scholar.years}</p>
-            <p>{scholar.school}</p>
-            <p className="biography">{shortDescription}</p>
-            {scholar.id ? <AskLibraryLink context="scholars" ids={[scholar.id]} label={`询问关于${scholar.name}的馆藏`} /> : null}
-            <div className="affiliation-concerns">
-              <div>
-                <h2>主要任职</h2>
-                {affiliations.map((affiliation) => <p key={affiliation}>{affiliation}</p>)}
-                {!affiliations.length ? <p className="muted-row">任职信息待编辑。</p> : null}
-              </div>
-              <div>
-                <h2>核心关切</h2>
-                <TagList items={scholar.concerns} />
-              </div>
-            </div>
-          </div>
-          <div className="scholar-timeline" data-module-id="scholar-timeline">
-            <SectionHeading title="生平与主要著作" href={`/scholars/${slug}/timeline`} action="查看完整时间线" />
-            {timeline.map(([year, event]) => (
-              <p key={`${year}-${event}`}><time>{year}</time><span>{event}</span></p>
-            ))}
-            {!timeline.length ? <p className="muted-row">时间线尚未由编辑确认。</p> : null}
-          </div>
-          {featuredQuote ? (
-            <blockquote className="scholar-quote" data-module-id="scholar-quote">
-              <Quote size={28} fill="currentColor" />
-              {featuredQuote}
-              <cite>— {quoteSource || scholar.originalName}</cite>
-            </blockquote>
-          ) : <div className="scholar-quote empty-state" data-module-id="scholar-quote">尚无经过来源核对的公开引语。</div>}
-        </section>
-
-        <div data-module-id="scholar-curated-claims"><CuratedClaimSections groups={curatedClaims} /></div>
-
-        <div className="scholar-body-grid">
-          <section className="essential-texts panel" data-module-id="scholar-representative-works">
-            <SectionHeading title="重要文献" href={`/scholars/${slug}/works`} />
-            {essentialWorks.map((work) => (
-              <Link href={`/works/${work.slug}`} key={work.id}>
-                <BookCover work={work} size="small" />
-                <span><strong>{work.title}</strong><small>{work.year} · {work.kind}</small></span>
-              </Link>
-            ))}
-          </section>
-
-          <section className="about-scholar panel" data-module-id="scholar-biography">
-            <SectionHeading title={`关于${scholar.name}`} href={`/scholars/${slug}/biography`} action="查看完整传记" />
-            <p>{scholar.biography}</p>
-            <div className="scholar-key-grid">
-              <div data-module-id="scholar-concepts">
-                <SectionHeading title="关键概念" href={`/scholars/${slug}/concepts`} action="查看全部" />
-                {keyConcepts.map((concept, index) => {
-                  const name = typeof concept === "string" ? concept : concept.name || `概念 ${index + 1}`;
-                  const description = typeof concept === "string"
-                    ? "组织其研究问题与经验分析的重要概念。"
-                    : concept.description || "概念说明待编辑。";
-                  const source = typeof concept === "string" ? "" : concept.source || "";
-                  return <div className="concept-row" key={`${name}-${index}`}>
-                    <span>{index + 1}</span>
-                    <p>
-                      <strong>{name}</strong>
-                      <small>{description}</small>
-                      {source ? <small>依据：{source}</small> : null}
-                    </p>
-                  </div>;
-                })}
-              </div>
-              <div data-module-id="scholar-theories">
-                <SectionHeading title="相关理论流派" href={`/scholars/${slug}/theories`} action="查看全部" />
-                {relatedSchools.slice(0, 5).map((school) => (
-                  <Link className="school-link-row" href={school.href} key={school.slug}>
-                    <span className="theory-symbol">{school.symbol}</span>
-                    <strong>{school.name}</strong>
-                    <ArrowRight size={16} />
-                  </Link>
-                ))}
-                {!relatedSchools.length ? <p className="empty-state">相关流派尚待编辑确认。</p> : null}
-              </div>
-            </div>
-          </section>
-
-          <section className="concept-map panel" data-module-id="scholar-concept-map">
-            <SectionHeading title="概念图" href={`/scholars/${slug}/concept-map`} action="查看交互图" />
-            <div className="bourdieu-map">
-              <span className="map-center">{scholar.name}<small>馆藏学者</small></span>
-              {(curated.conceptMap.length ? curated.conceptMap : keyConcepts).slice(0, 4).map((concept, index) => {
-                const fields = typeof concept === "string" ? null : concept as {
-                  name?: string;
-                  source?: string;
-                  target?: string;
-                  label?: string;
-                  description?: string;
-                };
-                const label = typeof concept === "string"
-                  ? concept
-                  : fields?.name || fields?.source || fields?.target || fields?.label || fields?.description || `概念 ${index + 1}`;
-                return <span className={["map-top", "map-left", "map-right", "map-bottom"][index]} key={`${label}-${index}`}>
-                  {label}<small>核心关切</small>
-                </span>;
-              })}
-            </div>
-            {curated.conceptMap.length ? <KnowledgeMap entries={curated.conceptMap.slice(0, 2)} /> : null}
-          </section>
-
-          <section className="network-connections panel" data-module-id="scholar-network">
-            <SectionHeading title="学术关系" href={`/scholars/${slug}/network`} action="查看完整网络" />
-            {curated.network.map((connection) => (
-              <Link className="connection-row" href={`/scholars/${connection.scholar.slug}`} key={connection.scholar.id}>
-                <span className="tiny-portrait" />
-                <p><strong>{connection.scholar.name}</strong><small>{connection.relation || "相关学者"}</small></p>
-                <span>{connection.source || "管理员确认"}</span>
-              </Link>
-            ))}
-            {!curated.network.length ? <div className="connection-row empty-state">只有附有来源并经人工确认的学术关系才会公开。</div> : null}
-          </section>
-
-          {normalizedDebates.length ? <section className="network-connections panel">
-            <SectionHeading title="参与的争论" />
-            {normalizedDebates.map((debate) => (
-              <Link className="connection-row" href={`/theories/nodes/${debate.slug}`} key={debate.id}>
-                <span className="theory-symbol">争论</span>
-                <p><strong>{debate.name}</strong><small>{debate.relation_label || debate.summary}</small></p>
-                <ArrowRight size={16} />
-              </Link>
-            ))}
-          </section> : null}
-
-          <section className="curated-works panel" data-module-id="scholar-works">
-            <SectionHeading title="馆藏作品" href={`/explore?q=${scholar.name}`} action={`查看全部 ${scholarWorks.length} 部`} />
-            <div className="curated-cover-row">
-              {scholarWorks.map((work) => (
-                <Link href={`/works/${work.slug}`} key={work.id}>
-                  <BookCover work={work} size="small" />
-                  <span>{work.title}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          <section className="frequently-read panel" data-module-id="scholar-frequently-read">
-            <SectionHeading title="经常连着阅读" href={`/scholars/${slug}/frequently-read`} action="查看全部" />
-            <div className="frequent-scholar-row">
-              {curated.frequentlyReadScholars.map((profile) => (
-                <Link href={`/scholars/${profile.slug}`} key={profile.id}>
-                  <span className="tiny-portrait" />
-                  <strong>{profile.name}</strong>
-                </Link>
-              ))}
-            </div>
-            {!curated.frequentlyReadScholars.length ? <p className="empty-state">尚无人工确认的关联阅读学者。</p> : null}
-          </section>
-        </div>
-      </div>
-      {footer}
-    </>
-  );
+export function ScholarPublicView({ data, footer, theorySchools, slug, relations = [] }: { data: ScholarDetailData; footer?: ReactNode; theorySchools: TheorySchool[]; slug: string; relations?: ScholarRelation[] }) {
+  const { scholar, timeline, curated, knowledgeNodes } = data;
+  const works = curated.essentialWorks.length ? curated.essentialWorks : data.works;
+  const concepts = curated.keyConcepts.length ? curated.keyConcepts : knowledgeNodes.filter(row => ["concept", "debate", "research_problem"].includes(row.node_type)).map(row => ({name: row.name, description: row.summary, slug: row.slug}));
+  const theories = knowledgeNodes.filter(row => row.node_type === "theory_tradition").map(row => ({name: row.name, slug: row.slug, href: `/theories/nodes/${row.slug}`, description: row.summary}));
+  const related = theories.length ? theories : (curated.relatedTheories.length ? curated.relatedTheories : theorySchools.filter(row => data.works.some(work => work.theories?.some(theory => theory.slug === row.slug)))).map(row => ({...row, href: `/theory-schools/${row.slug}`}));
+  const href = (section: string) => `/scholars/${slug}/${section}`;
+  return <><main className="page-shell v307-knowledge scholar-v307"><p className="breadcrumbs"><Link href="/scholars">学者</Link><span>›</span>{scholar.name}</p>
+    <section className="scholar-profile-grid" data-module-id="scholar-identity" data-edit-section="identity"><ScholarPortrait scholar={scholar} large/><div className="scholar-profile-copy"><p className="eyebrow">{scholar.originalName !== scholar.name ? scholar.originalName : "SCHOLAR"}</p><h1>{scholar.name}</h1><p className="scholar-years">{scholar.years}</p><p>{data.shortDescription}</p>{scholar.id ? <AskLibraryLink context="scholars" ids={[scholar.id]} label="向图书馆提问"/> : null}<TagList items={scholar.concerns}/></div>{timeline.length ? <aside data-module-id="scholar-timeline" data-edit-section="timeline"><SectionHeading title="生平与主要著作"/>{timeline.slice(0, 5).map(([year, title], index) => <div className="scholar-mini-event" key={`${year}-${index}`}><time>{year}</time><p>{title}</p></div>)}<Link href={href("timeline")}>查看完整生平 <ArrowRight size={15}/></Link></aside> : null}</section>
+    {works.length ? <section className="knowledge-section" data-module-id="scholar-representative-works" data-edit-section="works"><SectionHeading title="重要文献" href={href("works")}/><div className="knowledge-books-grid">{works.slice(0, 5).map(work => <BookCard key={work.id} work={work}/>)}</div></section> : null}
+    <div className="knowledge-paired-grid">
+      {scholar.biography ? <section data-module-id="scholar-biography" data-edit-section="biography"><SectionHeading title={`关于${scholar.name}`} href={href("biography")}/><p>{scholar.biography.length > 240 ? `${scholar.biography.slice(0,240)}…` : scholar.biography}</p>{data.featuredQuote && data.quoteSource ? <blockquote data-module-id="scholar-quote">{data.featuredQuote}<cite>— {data.quoteSource}</cite></blockquote> : null}</section> : null}
+      {concepts.length ? <section data-module-id="scholar-concepts" data-edit-section="concepts"><SectionHeading title="关键概念" href={href("concepts")}/><div className="knowledge-chip-grid">{concepts.slice(0, 6).map((item, index) => <Link href={typeof item !== "string" && "slug" in item ? `/concepts/${item.slug}` : `${href("concepts")}#concept-${index + 1}`} key={index}><strong>{typeof item === "string" ? item : item.name}</strong>{typeof item !== "string" && item.description ? <small>{item.description}</small> : null}</Link>)}</div></section> : null}
+      {related.length ? <section data-module-id="scholar-theories" data-edit-section="relations"><SectionHeading title="相关理论流派" href={href("theories")}/><div className="knowledge-three-grid">{related.slice(0, 3).map(row => <Link className="knowledge-small-card" href={row.href} key={row.slug}><strong>{row.name}</strong><p>{row.description}</p><ArrowRight size={15}/></Link>)}</div></section> : null}
+      {curated.conceptMap.length ? <section data-module-id="scholar-concept-map" data-edit-section="concept-map"><SectionHeading title="概念图" href={href("concept-map")} action="查看大图"/><KnowledgeMap entries={curated.conceptMap.slice(0, 6)}/></section> : null}
+    </div>
+    {relations.length ? <section className="knowledge-section" data-module-id="scholar-network" data-edit-section="network"><SectionHeading title="学术关系" href={href("network")} action="查看关系图"/><div className="knowledge-network-strip">{relations.slice(0,6).map(row=><Link href={`${href("network")}?relation=${encodeURIComponent(row.id)}`} key={row.id} data-relation-id={row.id}><small>{scholarRelationLabels[row.relation_type]}</small><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><span>{row.summary}</span></Link>)}</div></section> : null}
+    {curated.network.length ? <section className="knowledge-section" data-module-id="scholar-network-legacy" data-edit-section="network"><SectionHeading title="历史关联阅读" href={href("network")}/><div className="knowledge-network-strip">{curated.network.slice(0, 6).map(row => <Link href={`/scholars/${row.scholar.slug}`} key={row.scholar.id}><small>{row.relation}</small><strong>{row.scholar.name}</strong><span>{row.source}</span></Link>)}</div></section> : null}
+    {curated.frequentlyReadScholars.length ? <section className="knowledge-section" data-module-id="scholar-frequently-read"><SectionHeading title="关联阅读" href={href("frequently-read")}/><div className="knowledge-network-strip">{curated.frequentlyReadScholars.map(row => <Link href={`/scholars/${row.slug}`} key={row.id}>{row.name}<ArrowRight size={14}/></Link>)}</div></section> : null}
+    {(data.evidenceCuration?.configured ? data.evidenceCuration.items.length > 0 : Object.values(data.curatedClaims).some(rows=>rows.length)) ? <nav className="knowledge-section-nav"><Link href={href("evidence")}>阅读相关原文 <ArrowRight size={15}/></Link></nav> : null}
+  </main>{footer}</>;
 }

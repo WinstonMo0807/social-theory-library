@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CollectionLink } from "@/components/collection-link";
 import { ArrowRight, BookOpen, CalendarDays, CircleDot, Layers3, MessagesSquare, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 import { ArchitecturalImage, BookCover, SectionHeading } from "@/components/ui";
@@ -9,9 +10,9 @@ type SubdisciplinePayload = NonNullable<Awaited<ReturnType<typeof loadSubdiscipl
 export function SubdisciplinePublicView({ item, footer }: { item: SubdisciplinePayload; footer: ReactNode }) {
   return (
     <>
-      <main className="page-shell subdiscipline-page">
+      <main className="page-shell subdiscipline-page v307-knowledge">
         <p className="breadcrumb">理论流派　/　{item.discipline.name}　/　子学科　/　{item.name}</p>
-        <section className="subdiscipline-hero">
+        <section className="subdiscipline-hero" data-edit-section="identity">
           <div><p className="eyebrow">{item.discipline.name}</p><h1>{item.name}</h1><p>{item.description || item.research_object}</p></div>
           <div className={item.hero_image ? "knowledge-hero-image has-image" : "knowledge-hero-image"} style={item.hero_image ? { backgroundImage: `url("${item.hero_image}")` } : undefined}>{!item.hero_image ? <ArchitecturalImage compact /> : null}</div>
         </section>
@@ -31,7 +32,7 @@ export function SubdisciplinePublicView({ item, footer }: { item: SubdisciplineP
         </div>
         <section className="panel subdiscipline-reading">
           <SectionHeading title="精选文献导读" href={`/explore?subdiscipline=${item.slug}`} action="查看全部" />
-          <div>{item.works.slice(0, 8).map((work) => <Link href={`/works/${work.slug}`} key={work.id}><BookCover work={work} size="small" /><span><strong>{work.title}</strong><small>{work.author}</small><time>{work.year}</time></span><ArrowRight /></Link>)}</div>
+          <div>{item.works.slice(0, 8).map((work) => <CollectionLink href={`/works/${work.slug}`} key={work.id}><BookCover work={work} size="small" /><span><strong>{work.title}</strong><small>{work.author}</small><time>{work.year}</time></span><ArrowRight /></CollectionLink>)}</div>
           {!item.works.length ? <p className="empty-state">审核 PDF 的知识归位后，相关馆藏会自动汇入这里。</p> : null}
         </section>
       </main>

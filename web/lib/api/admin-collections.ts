@@ -19,6 +19,7 @@ export type WorkflowQueueItem = {
   edition_id: string | null;
   session_id?: string | null;
   source_type: string;
+  recommendation_sources?: { id: string; title: string; url: string }[];
   title: string;
   source_filename?: string;
   document_type?: string;

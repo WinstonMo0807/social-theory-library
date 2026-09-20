@@ -151,7 +151,7 @@ test("contributor editor keeps unresolved candidates outside canonical rows", as
   assert.match(fields, /showsEmptyValue/);
 });
 
-test("focus mode, contextual curation and publication choices use canonical routes", async () => {
+test("persistent navigation, contextual curation and publication choices use canonical routes", async () => {
   const [shell, editor, curation, reviewRoute, publicationRoute] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/admin/workflow/workflow-editor.tsx", import.meta.url), "utf8"),
@@ -159,7 +159,7 @@ test("focus mode, contextual curation and publication choices use canonical rout
     readFile(new URL("../app/admin/review/[itemId]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/publication/[itemId]/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(shell, /focusMode = \/\^\\\/admin/);
+  assert.match(shell, /const focusMode = false/);
   assert.match(editor, /window\.history\.replaceState/);
   assert.match(editor, /发布并处理下一项/);
   assert.match(editor, /发布作品/);

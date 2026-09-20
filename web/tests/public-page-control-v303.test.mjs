@@ -52,13 +52,13 @@ test("Scholar Theory and Topic public routes remain registered and previewable",
 
 test("public evidence entry points preserve a Reader highlight locator", async () => {
   const [topic, viewpoint, explore, ask, modeSwitch] = await Promise.all([
-    read("../components/public/topic-public-view.tsx"),
+    read("../components/public/topic-section-public-view.tsx"),
     read("../app/explore/opinions/page.tsx"),
     read("../app/explore/page.tsx"),
     read("../components/explore-ask-client.tsx"),
     read("../components/search-mode-switch.tsx"),
   ]);
-  assert.match(topic, /passage=\$\{encodeURIComponent\(excerpt\.id\)\}/);
+  assert.match(topic, /passage=\$\{encodeURIComponent\(passage\.id\)\}/);
   assert.match(viewpoint, /阅读原文/);
   assert.match(explore, /passage=\$\{encodeURIComponent\(passage\.id\)\}/);
   assert.match(ask, /source\.reader_url/);

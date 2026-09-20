@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import { BookCard, ScholarCard } from "@/components/ui";
-import { loadTheorySchool } from "@/lib/api/theories.server";
+import { loadTheoryEntity, loadTheorySchool } from "@/lib/api/theories.server";
 
 const titles: Record<string, string> = {
   works: "奠基文献与策展书目",
@@ -27,11 +27,20 @@ export async function generateMetadata({
 
 export default async function TheorySectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; section: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug, section } = await params;
   if (!titles[section]) notFound();
+  const entity = await loadTheoryEntity(slug);
+  if (entity?.canonical_node_url?.startsWith("/theories/nodes/")) {
+    const suffix: Record<string, string> = {works:"/works", "reading-list":"/works", concepts:"/concepts", neighbors:"/relations", "concept-map":"/relations", scholars:""};
+    const query = new URLSearchParams();
+    Object.entries(await searchParams).forEach(([key, value]) => { for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, item); });
+    redirect(`${entity.canonical_node_url}${suffix[section]}${query.size ? `?${query}` : ""}${section === "scholars" ? "#scholars" : ""}`);
+  }
   const data = await loadTheorySchool(slug);
   if (!data) notFound();
   const works = section === "reading-list" && data.curated.curatedReadingWorks.length

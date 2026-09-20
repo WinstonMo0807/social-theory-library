@@ -1,5 +1,2 @@
-import type { Metadata } from "next";
-import { DisciplinesAdmin } from "@/components/knowledge-admin";
-
-export const metadata: Metadata = { title: "学科管理" };
-export default function Page() { return <DisciplinesAdmin />; }
+import { KnowledgeLegacyRedirect } from "@/components/admin/knowledge/knowledge-legacy-redirect";
+export default function Page() { return <KnowledgeLegacyRedirect destination="/admin/theories/disciplines" />; }
