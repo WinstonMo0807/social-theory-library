@@ -2,15 +2,32 @@
 
 更新日期为2026-09-21。当前摘要见CURRENT_STATE.md，后续部署仍需重新检查实时状态。
 
-## 3.0.7发布准备，尚未切换
+## 3.0.7正式生产记录
 
-用户最新明确豁免真实浏览器验收并要求直接部署，发布不再等待本地Web执行策略解除。其余源码一致性、自动检查、候选HTTP就绪、备份恢复及回退保护保留，实际完成记录将在本節更新，不将豁免写作浏览器检查通过。
+用户已明确豁免真实浏览器验收并要求部署，发布不再等待本地Web执行策略解除。其余源码一致性、自动检查、候选HTTP就绪、备份恢复及回退保护保留；豁免不表示浏览器检查通过。
 
-用户已授权最终检查修复通过后正常提交推送main并按现有NAS/Cloudflare方式切换。2026-09-21核实NAS当前仍为下方3.0.6镜像，ready正常、待迁移0。3.0.7未生产迁移、未构建候选镜像、未提交推送，也未执行公网切换。
+2026-09-21应用源码已正常提交并推送原main，API/Web镜像已实际构建。候选前向迁移、Django check、受保护摘要、新旧ORM兼容及API HTTP检查通过。NAS记录2026-09-21T07:42:20+08:00按现有NAS/Cloudflare方式正式切换成功，退出0，未回退；公网ready为3.0.7、database=true、pending_migrations=0。公网最小业务探针21/21通过，退出0，用时37.049秒。
 
-新鲜BackupJob为4d7f56c1-0994-4881-bcbe-2bcebe29ad56，归档SHA256为fd20038a9ed7c2b96b63e5c97f441ad4c751deb50188491d059057bd301a4fb1，实际恢复至隔离PostgreSQL成功。备份与旧源码、私密环境、Compose、镜像回退记录保留在NAS storage/backups/pre-v307-20260921-v307/deploy-record。新增schema兼容验证与最终检查状态见[3.0.7交付](V3.0.7_COMPLETION_RELEASE.md)。本地Web启动被策略拒绝，真实浏览器门槛仍未完成，不能把已有备份和接口检查称为发布成功。
+| 记录 | 标识 |
+| --- | --- |
+| 应用源码提交 | `677058c79251c756a38764d334819ccd52424687` |
+| 源码Git tree | `fae17d85df24335bc4736e9f8f1a434eb7084d43` |
+| 源码归档 | 1282文件，SHA256 `6a167c48fd04729c2e9906cd4106b35fc9db478de65d44bf23197e828f7dedba` |
+| API/两Worker/Beat镜像 | `social-theory-library-api:3.0.7-677058c792`；ID `sha256:297f05baa5e97130356dc4a75564b7c5723d93e48c8f31311a45b822e00d3aba` |
+| Web镜像 | `social-theory-library-web:3.0.7-677058c792`；ID `sha256:4840591481f7414cfe505c3393420fb5d86adac590da00e39130bfe00a078b7c` |
+| 部署结果 | NAS记录`2026-09-21T07:42:20+08:00`切换退出0，公网ready为3.0.7；21项最小业务探针通过 |
 
-06:51:21 +08:00隔离恢复副本前向迁移catalog0057—0059与ingestion0017成功，Django check及迁移检查退出0；新源码与旧3.0.6 ORM均读取相同受保护摘要。测试源manifest为2b3c3f76646bd0ea4e745b46f85625b3b140a054c2c15215ae845d211e1edf52，证据目录为上述deploy-record/source-rehearsal-0921-07。没有对生产应用这些migration。
+源码提交、镜像构建及部署结果独立记录。本次收尾文档不改变上述应用镜像的源码身份。
+
+生产catalog0057、0058、0059及ingestion0017迁移成功，受保护摘要前后逐字一致。切换前3类业务open计数为0，Worker active/reserved/scheduled为空，4个队列计数为0；Web容器内部HTTP200及两Worker ping通过。应用与Edge重启次数0，cloudflared容器ID、镜像和重启次数与切换前相同。隔离PG已退出，退出码0；数据库备份及回退记录继续保留。
+
+公网探针覆盖7个HTML页面200（包括about/login）、真实544页manifest、题名/原文搜索返回3项结果及准确passage/asset/第2页定位，5个匿名私人接口均为401。PDF请求返回206、1024字节、`Content-Range: bytes 0-1023/33287860`、`application/pdf`及`%PDF-`文件头。公开推荐与共享关系接口200、内容为合法空集。未执行真实浏览器、外部模型或OCR复验。
+
+本机探针记录时间为2026-09-21 07:41:09—07:41:46，NAS切换记录为07:42:20 +08:00，两端存在时钟差异；保留各自时间源，不据此倒推执行顺序。Beat恢复后的定时健康任务正常，业务open计数仍为0，队列瞬时4、unacked为1，不将切换前静默状态写成持续全空。
+
+新鲜BackupJob为4d7f56c1-0994-4881-bcbe-2bcebe29ad56，归档SHA256为fd20038a9ed7c2b96b63e5c97f441ad4c751deb50188491d059057bd301a4fb1，实际恢复至隔离PostgreSQL成功。备份与旧源码、私密环境、Compose、镜像回退记录保留在NAS storage/backups/pre-v307-20260921-v307/deploy-record。新增schema兼容验证与最终检查状态见[3.0.7交付](V3.0.7_COMPLETION_RELEASE.md)。应用回退明确绑定保留镜像并核对ID，恢复后验证API、Web、Worker与公网就绪；保留新增schema，不恢复数据库。宿主源码采用覆盖恢复，不宣称自动移除新增文件，实际运行以镜像为准。
+
+早期演练记录：06:51:21 +08:00隔离恢复副本前向迁移catalog0057—0059与ingestion0017成功，Django check及迁移检查退出0；新源码与旧3.0.6 ORM均读取相同受保护摘要。该轮测试源manifest为2b3c3f76646bd0ea4e745b46f85625b3b140a054c2c15215ae845d211e1edf52，证据目录为上述deploy-record/source-rehearsal-0921-07。该轮仅操作隔离副本；最终候选镜像与正式部署进展以上方当前记录为准。
 
 ## 3.0.6 main同步与运行源码对应
 

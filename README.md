@@ -2,7 +2,7 @@
 
 Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项目包含公开知识网站、原文与观点检索、PDF Reader、账户中心、批量入库、元数据复核、知识组织、书库问答和管理后台。
 
-当前工作区正在完成 **3.0.7**，包括参考图页面、十三项平铺管理入口、推荐期、固定版式编辑、原文策展及学者共享关系。2026-09-21核实的公网仍为 **3.0.6**，3.0.7尚未提交或切换；本地实现、检查与运行阻断见[3.0.7交付记录](docs/V3.0.7_COMPLETION_RELEASE.md)。真实源码、镜像和部署分别记录于[当前状态](docs/CURRENT_STATE.md)和[部署记录](docs/DEPLOYMENT.md)，不把工作区版本号当作上线证明。
+**3.0.7 已完成开发、提交推送并正式切换公网。** 应用提交为 `677058c79251c756a38764d334819ccd52424687`，包括参考图页面、十三项平铺管理入口、推荐期、固定版式编辑、原文策展及学者共享关系。2026-09-21切换退出0，公网ready为3.0.7、数据库正常、待迁移0，Web与Worker就绪，受保护数据摘要前后一致；21项公网最小探针全部通过，含真实PDF Range、原文定位与匿名私人接口拒绝。用户已明确豁免受本地运行策略阻断的真实浏览器验收，该项没有标记通过。详见[3.0.7交付记录](docs/V3.0.7_COMPLETION_RELEASE.md)、[当前状态](docs/CURRENT_STATE.md)和[部署记录](docs/DEPLOYMENT.md)，源码提交、实际镜像与上线结果分别记录。
 
 ## 给准备审计或重设计管理端的 AI
 
@@ -10,7 +10,7 @@ Social Theory Library 是面向社会科学研究者的 PDF 数字书库。项�
 
 上述架构画像是3.0.6历史基线；3.0.7的入口与数据增量见交付记录和最新源码，不再沿用六组折叠菜单作为当前界面要求。继续保留原有服务、权限和唯一数据来源，不更换技术栈、删除原件或建立第二套书库。
 
-阅读顺序为 `AGENTS.md`、以上说明、`CURRENT_STATE.md`，然后按[43入口能力清单](docs/V3.0.6_ADMIN_CAPABILITY_INVENTORY.md)及[编辑—公开读取对照](docs/V3.0.6_PUBLIC_CONTROL_MATRIX.md)进入源码。`CURRENT_PROGRESS.md`、`PROGRESS.md`和旧文档保留历史，旧“未上线/未实现”不等于当前状态。原[GPT-HANDOFF](docs/GPT-HANDOFF.md)为2.9.2快照。最后最小验证及未实测范围见[3.0.6交付](docs/V3.0.6_COMPLETION_RELEASE.md)，不把历史测试数累加成最终全量通过。
+阅读顺序为 `AGENTS.md`、以上说明、`CURRENT_STATE.md`，然后按[43入口历史能力清单](docs/V3.0.6_ADMIN_CAPABILITY_INVENTORY.md)及[编辑—公开读取历史对照](docs/V3.0.6_PUBLIC_CONTROL_MATRIX.md)进入源码。`CURRENT_PROGRESS.md`、`PROGRESS.md`和旧文档保留历史，旧“未上线/未实现”不等于当前状态。原[GPT-HANDOFF](docs/GPT-HANDOFF.md)为2.9.2快照。最新最小验证及未实测范围见[3.0.7交付](docs/V3.0.7_COMPLETION_RELEASE.md)，不把历史测试数累加成最终全量通过。
 
 ## 主要能力
 
