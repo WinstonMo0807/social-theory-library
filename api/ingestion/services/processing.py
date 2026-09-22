@@ -1048,7 +1048,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
 
         provider = str(stats.get("engine") or asset.extraction_method or "paddleocr_nas")
         if remaining:
-            batch_size = 1 if stats.get("requested_mode") == "all_pages" else settings.OCR_PAGE_BATCH_SIZE
+            batch_size = 1 if stats.get("requested_mode") == "all_pages" or stats.get("retry_page_batch_size") == 1 else settings.OCR_PAGE_BATCH_SIZE
             batch_indexes = remaining[:batch_size]
             local_path, cleanup = materialize_field_file(asset.file)
             _ocr_phase(job, stats, "recognizing", pages=batch_indexes)

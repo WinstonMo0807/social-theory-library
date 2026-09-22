@@ -20,7 +20,7 @@ test("viewpoint discovery retains original text, revision identity and honest re
   assert.match(client, /X-Discovery-Token/);
   assert.match(client, /cache: "no-store"/);
   assert.doesNotMatch(client, /params\.set\([^\n]*[Tt]oken/);
-  assert.match(view, /<blockquote>\{item\.excerpt\}<\/blockquote>/);
+  assert.match(view, /<blockquote><Quote[^>]+\/><p>\{item\.excerpt\}<\/p><\/blockquote>/);
   assert.match(view, /internalHref\(item\.reader_url\)/);
   assert.match(view, /href=\{reader\}/);
   assert.match(view, /阅读原文/);

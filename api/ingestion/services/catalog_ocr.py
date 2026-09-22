@@ -61,7 +61,7 @@ def ensure_source_current(job):
         raise ValueError("此版本正在发布另一份阅读文件，请先完成文件更新。")
 
 
-def progress_row(job, *, actor, event=None, edition=None):
+def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False):
     stats = job.stats or {}
     total = stats.get("target_pages")
     done = stats.get("processed_pages")
@@ -89,7 +89,14 @@ def progress_row(job, *, actor, event=None, edition=None):
             public = "文字识别已保存，但公开更新失败，稳定旧版仍保留；请到本版本发布区检查并恢复。"
         else:
             public = "文字识别已保存，公开更新仍在处理，不等于新文字已经公开。"
-    allowed = has_capability(actor, Capability.RETRY_JOBS) and stats.get("requested_mode") == "all_pages"
+    allowed = has_capability(actor, Capability.RETRY_JOBS) and (legacy_controls or stats.get("requested_mode") == "all_pages")
+    resume_reason = ""
+    can_resume = allowed and job.status in {"paused", "failed"}
+    if can_resume:
+        try:
+            check_resume_source(job)
+        except ValueError as exc:
+            can_resume, resume_reason = False, str(exc)
     phase_at = parse_datetime(str(stats.get("phase_started_at") or "")) or job.started_at or job.created_at
     if timezone.is_naive(phase_at):
         phase_at = timezone.make_aware(phase_at)
@@ -106,9 +113,49 @@ def progress_row(job, *, actor, event=None, edition=None):
         "result_asset_id": str(job.asset_id or ""), "public_result": public,
         "workbench_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication" if edition else "",
         "can_pause": allowed and job.status in {"pending", "running"},
-        "can_resume": allowed and job.status in {"paused", "failed"} and job.attempt < job.max_attempts,
-        "can_cancel": allowed and job.status in {"paused", "pending", "failed"},
+        "can_resume": can_resume, "resume_reason": resume_reason,
+        "can_cancel": allowed and stats.get("requested_mode") == "all_pages" and job.status in {"paused", "pending", "failed"},
     }
+
+
+def check_resume_source(job):
+    if job.attempt >= job.max_attempts or job.error_kind in {"manual_intervention", "permanent"}:
+        raise ValueError("已达到重试上限或需要人工处理，请查看任务详情。")
+    if job.stats.get("requested_mode") == "all_pages":
+        ensure_source_current(job)
+        return
+    from copy import copy
+    from .ocr_inventory import classify_paused_ocr_job
+
+    # Reuse the same source/revision protections without changing persisted state.
+    candidate = copy(job)
+    candidate.status = ProcessingJob.Status.PAUSED
+    classification = classify_paused_ocr_job(candidate)
+    if classification.category != "recoverable":
+        raise ValueError("这个旧任务的文件或识别结果已有变化，请在暂停任务区或馆藏版本页核对。")
+
+
+@transaction.atomic
+def retry_ocr_job(job, *, actor):
+    """Resume one failed OCR job, preserving its identity, pages and failure audit."""
+    edition_id = job.edition_id or (job.asset.edition_id if job.asset_id else None)
+    if edition_id:
+        edition_for(edition_id, lock=True)
+    job = ProcessingJob.objects.select_for_update(of=("self",)).select_related("asset__edition", "edition").get(pk=job.pk)
+    if job.job_type != "ocr":
+        raise ValueError("请选择文字识别任务。")
+    if job.status in {"pending", "running"}:
+        return job
+    if job.status != "failed":
+        raise ValueError("只有失败任务可以重试，请刷新任务状态。")
+    check_resume_source(job)
+    before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt, "processed_pages": job.stats.get("processed_pages")}
+    job.status = "paused"
+    job.stats = {**job.stats, "batch_session_started": False, "retry_page_batch_size": 1}
+    job.save(update_fields=["status", "stats", "updated_at"])
+    job = resume_processing_job(job, actor=actor)
+    AuditEvent.objects.create(actor=actor, action="ocr.retry_from_checkpoint", object_type="processing_job", object_id=str(job.pk), before=before, after={"status": job.status, "task_id": job.task_id})
+    return job
 
 
 def ocr_context(edition, actor, *, page=1):

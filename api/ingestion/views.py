@@ -2719,6 +2719,16 @@ class ProcessingCenterView(APIView):
             return response
         from .services.processing_center import page_number, processing_task_page
 
+        if request.query_params.get("ocr_monitor") == "1":
+            params = request.query_params.copy()
+            params["job_type"] = "ocr"
+            params["page_size"] = "6"
+            payload = processing_task_page(params, request.user)
+            payload.update({"paused": processing_workload_paused("ocr"), "checked_at": timezone.now()})
+            response = Response(payload)
+            response["Cache-Control"] = "no-store"
+            return response
+
         payload = processing_task_page(request.query_params, request.user)
         payload.update({
                 "workloads": {
@@ -2817,6 +2827,14 @@ class ProcessingCenterView(APIView):
             ProcessingJob.objects.select_related("asset", "upload_item"),
             pk=job_id,
         )
+        if job.job_type == "ocr" and action == "retry":
+            from .services.catalog_ocr import retry_ocr_job
+
+            try:
+                job = retry_ocr_job(job, actor=request.user)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response({"job_id": str(job.pk), "status": job.status}, status=202)
         if job.job_type == "ocr" and job.stats.get("requested_mode") == "all_pages" and action in {"pause", "resume", "retry", "cancel"}:
             from .services.catalog_ocr import catalog_ocr_action
 

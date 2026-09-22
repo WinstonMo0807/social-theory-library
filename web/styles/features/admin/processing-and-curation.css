@@ -658,6 +658,16 @@
 .catalog-ocr-control select, .catalog-ocr-picker > label select { width: 100%; min-width: 0; max-width: 100%; padding: 10px; font: inherit; }
 .catalog-ocr-progress { display: grid; gap: 8px; margin-block: 12px; }
 .catalog-ocr-progress progress { display: block; width: 100%; height: 16px; accent-color: #3a5546; }
+.ocr-task-monitor > header, .ocr-monitor-jobs article > header { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap; }
+.ocr-task-monitor > header > span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ocr-monitor-jobs { display: grid; gap: 14px; margin-block: 16px; }
+.ocr-monitor-jobs article { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 8px; }
+.ocr-monitor-jobs article[data-status="failed"] { border-left: 3px solid var(--ink); }
+.ocr-monitor-jobs h3 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.ocr-monitor-jobs p { margin: 4px 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.ocr-monitor-jobs a { font-size: 12px; text-underline-offset: 3px; }
+.ocr-monitor-jobs .catalog-ocr-progress progress { height: 18px; accent-color: var(--ink); }
+.ocr-monitor-jobs .catalog-ocr-actions .button { display: inline-flex; gap: 7px; align-items: center; }
 .catalog-ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .catalog-ocr-actions button, .catalog-ocr-control > button { min-height: 40px; white-space: normal; }
 .catalog-ocr-jobs { display: grid; gap: 12px; }

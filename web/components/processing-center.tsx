@@ -28,6 +28,7 @@ import {
 } from "./action-feedback";
 import { ConfirmDialog } from "./confirm-dialog";
 import { CatalogOcrPicker, OcrProgressDisplay, ocrPageRanges as pageRanges, type OcrProgress } from "./admin/workflow/edition-ocr-control";
+import { OcrTaskMonitor } from "./ocr-task-monitor";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
 import { DiscoveryIndexPanel } from "./discovery-index-panel";
@@ -777,7 +778,7 @@ export function ProcessingCenter() {
         </section> : null}
       </div>
       ) : null}
-      {activeSurface === "documents" ? <CatalogOcrPicker /> : null}
+      {activeSurface === "documents" ? <><OcrTaskMonitor /><details className="admin-panel"><summary>选择另一份馆藏 PDF，重新识别整本</summary><CatalogOcrPicker /></details></> : null}
       {activeSurface === "documents" || activeSurface === "research-sources" ? <section className="processing-list admin-panel" aria-labelledby="workload-controls-title">
         <header className="processing-job-toolbar">
           <div>

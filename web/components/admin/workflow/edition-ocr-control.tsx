@@ -14,7 +14,7 @@ export type OcrProgress = {
   total_pages: number | null; percent: number | null; active_pages: number[];
   updated_at: string; started_at: string | null; phase_elapsed_seconds: number; stale: boolean; error: string;
   source_asset_id: string; result_asset_id: string; public_result: string; workbench_url: string; warnings: string[];
-  can_pause: boolean; can_resume: boolean; can_cancel: boolean;
+  can_pause: boolean; can_resume: boolean; can_cancel: boolean; resume_reason?: string;
 };
 type OcrFile = { id: string; filename: string; version: number; page_count: number; source_version: string; can_run: boolean; reason: string };
 type OcrContext = { edition_id: string; work_id: string; title: string; title_has_unpublished_changes?: boolean; edition_label: string; can_run: boolean; denied_reason: string; paused: boolean; provider_label: string; files: OcrFile[]; jobs: OcrProgress[]; job_count: number; page: number; total_pages: number; active_job_id: string; checked_at: string };
@@ -32,18 +32,18 @@ export function ocrPageRanges(indexes: number[]) {
   return ranges.join("、") || "无";
 }
 
-export function OcrProgressDisplay({ job }: { job: OcrProgress }) {
+export function OcrProgressDisplay({ job, compact = false }: { job: OcrProgress; compact?: boolean }) {
   return <div className="catalog-ocr-progress" data-ocr-status={job.status}>
     <strong>{job.phase_label}</strong>
     <progress aria-label="已完成 OCR 页数" max={job.total_pages || 1} value={job.completed_pages === null ? undefined : job.completed_pages} />
     <p>{job.completed_pages === null || job.total_pages === null ? "尚无可靠页数，等待任务报告。" : `已识别 ${job.completed_pages} / ${job.total_pages} 页（${job.percent}%）`}{job.active_pages.length ? job.active_pages.length <= 5 ? `，当前处理第 ${ocrPageRanges(job.active_pages)} 页。` : `，正在处理 ${job.active_pages.length} 页。` : ""}</p>
     {job.active_pages.length > 5 ? <details><summary>查看当前处理的页码范围</summary><p>{ocrPageRanges(job.active_pages)}</p></details> : null}
-    <p>任务最近更新：<time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("zh-CN")}</time>。{job.stale ? "较长时间没有新的处理结果，请检查服务或安全暂停；不会虚增进度。" : "进度只在实际识别结果保存后增加。"}</p>
+    <p>任务最近更新：<time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("zh-CN")}</time>。{job.stale ? "当前页尚未返回新结果，页数暂未增加。" : "进度按实际保存页数更新。"}</p>
     {job.status === "running" || job.status === "pending" ? <p>本阶段已等待 {job.phase_elapsed_seconds} 秒。页面仍会自动查询，不需要重复点击开始。</p> : null}
-    {job.error ? <p role="alert">{job.error}</p> : null}
-    <p>{job.public_result}</p>
+    {job.error ? <details open={!compact}><summary>上次失败原因</summary><p>{job.error}</p><p>这是该次任务的错误记录，不代表 OCR 服务当前仍不可用。</p></details> : null}
+    {!compact ? <p>{job.public_result}</p> : null}
     {job.warnings?.length ? <details><summary>其他处理提醒</summary>{job.warnings.map((warning, index) => <p key={index}>{warning}</p>)}</details> : null}
-    {job.workbench_url ? <Link href={job.workbench_url}>查看这个版本的公开更新结果</Link> : null}
+    {!compact && job.workbench_url ? <Link href={job.workbench_url}>查看这个版本的公开更新结果</Link> : null}
   </div>;
 }
 

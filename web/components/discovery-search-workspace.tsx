@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, ChevronDown, FileSearch, LoaderCircle, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, FileSearch, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { actOnDiscoverySearch, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch } from "@/lib/api/discovery.client";
@@ -197,13 +197,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   }
   const retryHref = initialQuery ? `/explore/opinions?${retryParams}` : "/explore/opinions";
   const closeContext = () => { contextRevision.current += 1; contextItemRef.current = null; setContextItem(null); setContext(null); };
-  return <div className={`page-shell explore-page ${styles.page}`}>
-    <header className="explore-workbench-head exact-workbench-head viewpoint-workbench-head">
-      <div className="explore-workbench-title"><h1>观点检索</h1><p>从概念、问题或记忆中的表述，找到馆藏原文、知识入口与阅读推荐。</p></div>
-      <form className={styles.searchForm} action="/explore/opinions">
-        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input id="discovery-query" type="search" name="q" required minLength={2} maxLength={1200} defaultValue={initialQuery} placeholder="输入概念、研究问题或观点线索" /><button className="button" type="submit">开始检索 <ArrowRight size={15} /></button></div>
-        <details className={styles.filterDisclosure} onToggle={event => { if (event.currentTarget.open) void loadFacets(); }}>
-          <summary><SlidersHorizontal size={14} />限定检索范围{selectedCount ? ` · ${selectedCount} 项` : ""}</summary>
+  const filterFields = <>
           <div className={styles.filterGrid}>
             <label><span>文献类型</span><select name="document_type" value={first(filters.document_type)} onChange={e => setFilters(current => ({ ...current, document_type: e.target.value }))}><option value="">全部文献</option><option value="book">图书</option><option value="journal_article">期刊论文</option><option value="journal_issue">期刊整期</option><option value="thesis">学位论文</option><option value="report">研究报告</option></select></label>
             {([ ["author", "责任者", facets?.authors], ["theory", "理论", facets?.theories], ["topic", "主题", facets?.topics], ["concept", "概念", facets?.concepts], ["language", "文献语言", facets?.languages] ] as const).map(([name, label, options]) => <label key={name}><span>{label}</span><select name={name} value={first(filters[name])} onChange={e => setFilters(current => ({ ...current, [name]: e.target.value }))}><option value="">不限</option>{first(filters[name]) && !options?.some(row => row.value === first(filters[name])) ? <option value={first(filters[name])}>当前选择</option> : null}{options?.map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label>)}
@@ -215,8 +209,15 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
           {facetBusy ? <p role="status">正在读取馆内筛选项……</p> : null}
           {facetError ? <p role="alert">{facetError}<button type="button" className="text-link" onClick={() => void loadFacets()}>重试读取筛选项</button></p> : null}
           <div className={styles.actions}><button className="button secondary" type="submit">应用范围并检索</button>{selectedCount ? <Link href={initialQuery ? `/explore/opinions?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>清除全部筛选</Link> : null}</div>
-        </details>
-      </form>
+  </>;
+  return <div className={`page-shell explore-page ${styles.page}`}>
+    <header className="explore-workbench-head exact-workbench-head viewpoint-workbench-head">
+      <div className="explore-workbench-title"><h1>观点检索</h1><p>从概念、问题或记忆中的表述，找到馆藏原文、知识入口与阅读推荐。</p></div>
+      <div className="explore-query-column"><form className={styles.searchForm} action="/explore/opinions">
+        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input id="discovery-query" type="search" name="q" required minLength={2} maxLength={1200} defaultValue={initialQuery} placeholder="输入概念、研究问题或观点线索" /><button className="button" type="submit">开始检索 <ArrowRight size={15} /></button></div>
+        {Object.entries(filters).flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter(Boolean).map(entry => <input type="hidden" key={`${name}-${entry}`} name={name} value={entry} />))}
+
+      </form></div>
       <SearchModeSwitch mode="semantic" query={initialQuery} />
     </header>
 
@@ -225,8 +226,11 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     {result?.warnings?.length ? <div className={styles.notice} role="status">{result.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}</div> : null}
     {result?.source_changed ? <p className={styles.notice}>资料或访问范围已有变化，已重新核验当前结果。重新检索可使用最新馆藏与策展内容。</p> : null}
 
+    <details className={styles.mobileFilters} onToggle={event => { if (event.currentTarget.open) void loadFacets(); }}><summary><SlidersHorizontal size={14} />筛选馆藏原文{selectedCount ? ` · ${selectedCount} 项` : ""}</summary><form action="/explore/opinions"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></details>
+    <nav className={styles.channelIndex} aria-label="检索结果分类"><a href="#discovery-passages">馆藏原文 <strong>{result?.count ?? "—"}</strong></a><a href="#discovery-entities">相关知识 <strong>{result?.entities.length ?? "—"}</strong></a><a href="#discovery-curation">策展推荐 <strong>{result?.curation.length ?? "—"}</strong></a></nav>
     <div className={styles.resultLayout}>
-      <main className={styles.results} aria-label="原文检索结果">
+      <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/opinions"><div className={styles.filterTitle}><strong>筛选馆藏原文{selectedCount ? ` · ${selectedCount}` : ""}</strong></div><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
+      <main className={styles.results} id="discovery-passages" aria-label="原文检索结果">
         <header className={styles.resultsHeader}><div><p>馆藏原文</p><h2>原文材料</h2></div><span>{result ? `${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""} 段` : initialQuery ? "等待检索结果" : "等待输入"}</span></header>
         {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? "正在创建检索" : result?.expansion_count ? "正在扩大研究范围" : statusLabels[result?.status || "running"]}</strong><p>{result?.status_message || "后台正在查找并排序材料。你可以先阅读已找到的结果。"}</p>{result?.completed_channels?.length ? <small>已完成：{result.completed_channels.map(name => channelLabels[name] || name).join("、")}</small> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>取消检索</button> : null}</div> : null}
         {pollPaused && isRunning ? <div className={styles.notice}><p>自动更新已暂停，后台任务可能仍在继续。可重新读取进度或取消任务。</p><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>继续读取进度</button></div> : null}
@@ -236,8 +240,8 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? "正在读取" : "查看更多材料"}<ChevronDown size={15} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? "正在提交" : "扩大研究范围"}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />刷新本次结果</button> : null}</div><p>默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会增加后台检索预算，保留现有顺序。</p></footer> : null}
       </main>
       <aside className={styles.inspector} aria-label="相关知识与策展推荐">
-        <section><header><h2>相关知识</h2><span>{result?.entities.length || 0}</span></header><p className={styles.help}>馆内已有的学者、理论与主题入口。关联线索不代表观点最早归属。</p>{result?.entities.map(item => <DiscoveryEntityCard key={`${item.kind}-${item.id}`} item={item} />)}{!result?.entities.length ? <p className={styles.sideEmpty}>{isRunning ? "知识通道正在查找。" : initialQuery ? "本次暂无相关知识入口。" : "检索后在这里查看相关知识。"}</p> : null}</section>
-        <section><header><h2>策展推荐</h2><span>{result?.curation.length || 0}</span></header><p className={styles.help}>管理员已发布的导读和推荐理由，独立标明来源。</p>{result?.curation.map(item => <DiscoveryCurationCard key={item.id} item={item} />)}{!result?.curation.length ? <p className={styles.sideEmpty}>{isRunning ? "策展通道正在查找。" : initialQuery ? "本次暂无相关策展推荐。" : "检索后在这里查看阅读推荐。"}</p> : null}</section>
+        <section id="discovery-entities"><header><h2>相关知识</h2><span>{result?.entities.length || 0}</span></header><p className={styles.help}>馆内已有的学者、理论与主题入口。关联线索不代表观点最早归属。</p>{result?.entities.map(item => <DiscoveryEntityCard key={`${item.kind}-${item.id}`} item={item} />)}{!result?.entities.length ? <p className={styles.sideEmpty}>{isRunning ? "知识通道正在查找。" : initialQuery ? "本次暂无相关知识入口。" : "检索后在这里查看相关知识。"}</p> : null}</section>
+        <section id="discovery-curation"><header><h2>策展推荐</h2><span>{result?.curation.length || 0}</span></header><p className={styles.help}>管理员已发布的导读和推荐理由，独立标明来源。</p>{result?.curation.map(item => <DiscoveryCurationCard key={item.id} item={item} />)}{!result?.curation.length ? <p className={styles.sideEmpty}>{isRunning ? "策展通道正在查找。" : initialQuery ? "本次暂无相关策展推荐。" : "检索后在这里查看阅读推荐。"}</p> : null}</section>
         <DiscoveryCoverageDetails result={result} />
       </aside>
     </div>
@@ -250,7 +254,7 @@ export function DiscoveryPassageCard({ item, index, onContext }: { item: Discove
   const isOcr = /ocr/i.test(item.source_kind);
   return <article className={styles.evidenceCard} id={`material-${item.id}`}>
     <header><span className={styles.resultNumber}>{String(index + 1).padStart(2, "0")}</span><div><p>{item.authors?.length ? item.authors.join("、") : "责任者待核对"}</p><h3>{item.work.slug ? <CollectionLink href={`/works/${encodeURIComponent(item.work.slug)}`}>{item.work.title}</CollectionLink> : item.work.title}</h3></div><span className={styles.sourceTag}>{isOcr ? "OCR 原文" : "原文材料"}</span></header>
-    <blockquote>{item.excerpt}</blockquote>
+    <blockquote><Quote size={18} aria-hidden="true" /><p>{item.excerpt}</p></blockquote>
     <div className={styles.locator}><span>PDF 第 {item.pdf_page} 页</span>{item.printed_page && item.printed_page !== String(item.pdf_page) ? <span>印刷页 {item.printed_page}</span> : null}<span>{item.locator_precision === "exact" ? "原文定位" : "按页定位"}</span></div>
     {isOcr ? <p className={styles.help}>文字来自 OCR 识别，可回到扫描画面核对。</p> : null}
     {item.match_basis?.length ? <p className={styles.reason}>{item.match_basis.join(" · ")}</p> : null}

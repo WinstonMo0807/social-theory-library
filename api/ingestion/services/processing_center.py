@@ -101,7 +101,7 @@ def processing_task_page(params, actor):
                 "stats": job.stats, "ocr_progress": None,
             }
             if ordinary and job.job_type == "ocr":
-                row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job))
+                row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job), legacy_controls=True)
             rows[(source, str(job.pk))] = row
     return {
         "results": [rows[(row["source"], str(row["id"]))] for row in refs if (row["source"], str(row["id"])) in rows],
