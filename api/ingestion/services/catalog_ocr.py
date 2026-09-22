@@ -94,7 +94,7 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
     can_resume = allowed and job.status in {"paused", "failed"}
     if can_resume:
         try:
-            check_resume_source(job)
+            check_resume_source(job, manual_retry=job.status == "failed")
         except ValueError as exc:
             can_resume, resume_reason = False, str(exc)
     phase_at = parse_datetime(str(stats.get("phase_started_at") or "")) or job.started_at or job.created_at
@@ -118,8 +118,8 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
     }
 
 
-def check_resume_source(job):
-    if job.attempt >= job.max_attempts or job.error_kind in {"manual_intervention", "permanent"}:
+def check_resume_source(job, *, manual_retry=False):
+    if (job.attempt >= job.max_attempts and not manual_retry) or job.error_kind in {"manual_intervention", "permanent"}:
         raise ValueError("已达到重试上限或需要人工处理，请查看任务详情。")
     if job.stats.get("requested_mode") == "all_pages":
         ensure_source_current(job)
@@ -130,6 +130,8 @@ def check_resume_source(job):
     # Reuse the same source/revision protections without changing persisted state.
     candidate = copy(job)
     candidate.status = ProcessingJob.Status.PAUSED
+    if manual_retry:
+        candidate.attempt = 0
     classification = classify_paused_ocr_job(candidate)
     if classification.category != "recoverable":
         raise ValueError("这个旧任务的文件或识别结果已有变化，请在暂停任务区或馆藏版本页核对。")
@@ -148,11 +150,15 @@ def retry_ocr_job(job, *, actor):
         return job
     if job.status != "failed":
         raise ValueError("只有失败任务可以重试，请刷新任务状态。")
-    check_resume_source(job)
+    check_resume_source(job, manual_retry=True)
     before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt, "processed_pages": job.stats.get("processed_pages")}
     job.status = "paused"
-    job.stats = {**job.stats, "batch_session_started": False, "retry_page_batch_size": 1}
-    job.save(update_fields=["status", "stats", "updated_at"])
+    # A deliberate administrator retry starts a new bounded attempt cycle.
+    # Automatic retries still stop at max_attempts; the old cycle stays audited.
+    job.attempt = 0
+    job.stats = {**job.stats, "batch_session_started": False, "retry_page_batch_size": 1,
+                 "manual_retry_count": int(job.stats.get("manual_retry_count") or 0) + 1}
+    job.save(update_fields=["status", "attempt", "stats", "updated_at"])
     job = resume_processing_job(job, actor=actor)
     AuditEvent.objects.create(actor=actor, action="ocr.retry_from_checkpoint", object_type="processing_job", object_id=str(job.pk), before=before, after={"status": job.status, "task_id": job.task_id})
     return job
@@ -242,11 +248,7 @@ def catalog_ocr_action(data, actor):
         if job.status in {"pending", "running"}:
             return job
         if job.status == "failed":
-            if job.attempt >= job.max_attempts:
-                raise ValueError("已达到重试次数，请检查服务后取消旧任务，再明确发起新识别。")
-            job.status = "paused"
-            job.stats = {**job.stats, "batch_session_started": False}
-            job.save(update_fields=["status", "stats", "updated_at"])
+            return retry_ocr_job(job, actor=actor)
         job = resume_processing_job(job, actor=actor)
     elif action == "cancel_catalog_ocr":
         if job.status == "canceled":

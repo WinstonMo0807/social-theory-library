@@ -57,7 +57,7 @@ def test_retry_reuses_checkpoint_and_audits_failure_once(api_client, admin_user,
     assert ProcessingJob.objects.filter(job_type="ocr").count() == 1
 
 
-@pytest.mark.parametrize("block", ["historical", "newer", "permanent", "exhausted", "global_pause"])
+@pytest.mark.parametrize("block", ["historical", "newer", "permanent", "global_pause"])
 def test_retry_protects_replaced_sources_and_safety_gates(api_client, admin_user, failed_job, block):
     api_client.force_authenticate(admin_user)
     if block == "historical":
@@ -67,9 +67,6 @@ def test_retry_protects_replaced_sources_and_safety_gates(api_client, admin_user
         ProcessingJob.objects.create(edition=failed_job.edition, asset=failed_job.asset, job_type="ocr", status="succeeded")
     elif block == "permanent":
         failed_job.error_kind = "permanent"
-        failed_job.save()
-    elif block == "exhausted":
-        failed_job.attempt = failed_job.max_attempts
         failed_job.save()
     else:
         SiteSetting.objects.update_or_create(key="ocr_processing_paused", defaults={"value": True})
@@ -86,6 +83,21 @@ def test_reader_cannot_monitor_or_retry(api_client, reader_user, failed_job):
     api_client.force_authenticate(reader_user)
     assert api_client.get(URL, {"ocr_monitor": "1"}).status_code == 403
     assert api_client.post(URL, {"action": "retry", "job_id": str(failed_job.pk)}, format="json").status_code == 403
+
+
+def test_explicit_retry_starts_one_bounded_cycle_after_automatic_attempts_exhausted(api_client, admin_user, failed_job):
+    api_client.force_authenticate(admin_user)
+    failed_job.attempt = failed_job.max_attempts
+    failed_job.save()
+    progress = api_client.get(URL, {"ocr_monitor": "1"}).data["results"][0]["ocr_progress"]
+    assert progress["can_resume"] is True
+    response = api_client.post(URL, {"action": "retry", "job_id": str(failed_job.pk)}, format="json")
+    assert response.status_code == 202
+    failed_job.refresh_from_db()
+    assert failed_job.attempt == 0
+    assert failed_job.max_attempts == 3
+    assert failed_job.stats["manual_retry_count"] == 1
+    assert AuditEvent.objects.get(action="ocr.retry_from_checkpoint").before["attempt"] == 3
 
 
 def test_retried_legacy_job_saves_one_new_page_and_keeps_completed_page(api_client, admin_user, failed_job):
