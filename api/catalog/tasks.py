@@ -1,5 +1,8 @@
 import uuid
 
+from catalog.discovery_tasks import run_discovery_search, expire_discovery_sessions  # noqa: F401
+from catalog.discovery_index_tasks import process_discovery_index_job, reconcile_discovery_index  # noqa: F401
+
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery import shared_task
 from django.conf import settings

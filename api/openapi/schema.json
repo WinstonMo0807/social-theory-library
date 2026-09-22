@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Social Theory Library API",
-        "version": "3.0.7",
+        "version": "3.0.8",
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
@@ -504,6 +504,96 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CurationDraftPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/discovery-index/": {
+            "get": {
+                "operationId": "catalog_admin_discovery_index_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_discovery_index_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexActionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexActionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexActionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexActionResult"
                                 }
                             }
                         },
@@ -2644,6 +2734,269 @@
                 }
             }
         },
+        "/api/catalog/discovery-search/": {
+            "post": {
+                "operationId": "catalog_discovery_search_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/discovery-search/{session_id}/": {
+            "get": {
+                "operationId": "catalog_discovery_search_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Discovery-Token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Anonymous search capability returned once at creation; do not put in URLs."
+                    },
+                    {
+                        "in": "query",
+                        "name": "cursor",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/discovery-search/{session_id}/cancel/": {
+            "post": {
+                "operationId": "catalog_discovery_search_cancel_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Discovery-Token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Anonymous search capability returned once at creation; do not put in URLs."
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/discovery-search/{session_id}/context/": {
+            "get": {
+                "operationId": "catalog_discovery_search_context_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Discovery-Token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Anonymous search capability returned once at creation; do not put in URLs."
+                    },
+                    {
+                        "in": "query",
+                        "name": "result_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryContext"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/discovery-search/{session_id}/expand/": {
+            "post": {
+                "operationId": "catalog_discovery_search_expand_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Discovery-Token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Anonymous search capability returned once at creation; do not put in URLs."
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/evidence-curation/{object_type}/{object_id}/": {
             "get": {
                 "operationId": "catalog_evidence_curation_retrieve",
@@ -4041,6 +4394,423 @@
                 "type": "string",
                 "description": "* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
             },
+            "DiscoveryContext": {
+                "type": "object",
+                "properties": {
+                    "result_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "blocks": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "before": {
+                        "type": "string"
+                    },
+                    "after": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "locator_precision": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "after",
+                    "asset_id",
+                    "before",
+                    "blocks",
+                    "document_revision_id",
+                    "excerpt",
+                    "locator_precision",
+                    "notice",
+                    "reader_url",
+                    "result_id",
+                    "source_kind"
+                ]
+            },
+            "DiscoveryCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "q": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 1200
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "q"
+                ]
+            },
+            "DiscoveryCuration": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "source_title": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "recommendation_excerpt": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "linked_work_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "match_basis": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "match_basis",
+                    "recommendation_excerpt",
+                    "source_kind",
+                    "source_title",
+                    "title",
+                    "url"
+                ]
+            },
+            "DiscoveryEntity": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    },
+                    "match_basis": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "excerpt",
+                    "id",
+                    "kind",
+                    "match_basis",
+                    "title",
+                    "url"
+                ]
+            },
+            "DiscoveryPassage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "work": {
+                        "$ref": "#/components/schemas/DiscoveryWork"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "printed_page": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "source_revision": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "locator_precision": {
+                        "type": "string"
+                    },
+                    "context_reference": {
+                        "type": "string"
+                    },
+                    "match_basis": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "context_reference",
+                    "document_revision_id",
+                    "excerpt",
+                    "id",
+                    "locator_precision",
+                    "match_basis",
+                    "pdf_page",
+                    "reader_url",
+                    "source_kind",
+                    "source_revision",
+                    "work"
+                ]
+            },
+            "DiscoveryResponse": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "queued, running, partial, completed, failed or canceled"
+                    },
+                    "access_token": {
+                        "type": "string"
+                    },
+                    "passages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryPassage"
+                        }
+                    },
+                    "entities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryEntity"
+                        }
+                    },
+                    "curation": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryCuration"
+                        }
+                    },
+                    "next_cursor": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "can_expand": {
+                        "type": "boolean"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryWarning"
+                        }
+                    },
+                    "coverage_summary": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "completed_channels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "channels": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "source_changed": {
+                        "type": "boolean"
+                    },
+                    "expansion_count": {
+                        "type": "integer"
+                    },
+                    "generation": {
+                        "type": "integer"
+                    },
+                    "mode": {
+                        "type": "string"
+                    },
+                    "original_query": {
+                        "type": "string"
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "corpus_version": {
+                        "type": "string"
+                    },
+                    "knowledge_version": {
+                        "type": "string"
+                    },
+                    "pipeline_version": {
+                        "type": "string"
+                    },
+                    "poll_after_ms": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "status_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_expand",
+                    "channels",
+                    "completed_channels",
+                    "corpus_version",
+                    "count",
+                    "counts",
+                    "coverage_summary",
+                    "created_at",
+                    "curation",
+                    "entities",
+                    "expansion_count",
+                    "expires_at",
+                    "filters",
+                    "generation",
+                    "id",
+                    "knowledge_version",
+                    "mode",
+                    "next_cursor",
+                    "notice",
+                    "original_query",
+                    "passages",
+                    "pipeline_version",
+                    "poll_after_ms",
+                    "query",
+                    "source_changed",
+                    "status",
+                    "warnings"
+                ]
+            },
+            "DiscoveryWarning": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
+            },
+            "DiscoveryWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "title"
+                ]
+            },
             "DocumentTypeEnum": {
                 "enum": [
                     "book",
@@ -4286,6 +5056,93 @@
                 },
                 "required": [
                     "items"
+                ]
+            },
+            "IndexActionActionEnum": {
+                "enum": [
+                    "rebuild",
+                    "retry"
+                ],
+                "type": "string",
+                "description": "* `rebuild` - rebuild\n* `retry` - retry"
+            },
+            "IndexActionRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/IndexActionActionEnum"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "IndexActionResult": {
+                "type": "object",
+                "properties": {
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "job_id",
+                    "message",
+                    "status"
+                ]
+            },
+            "IndexStatus": {
+                "type": "object",
+                "properties": {
+                    "active_generation": {
+                        "nullable": true
+                    },
+                    "model": {},
+                    "summary": {},
+                    "capabilities": {},
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "jobs": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "active_generation",
+                    "capabilities",
+                    "count",
+                    "jobs",
+                    "model",
+                    "page",
+                    "page_size",
+                    "results",
+                    "summary",
+                    "warnings"
                 ]
             },
             "IssueBodyBlock": {

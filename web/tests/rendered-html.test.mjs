@@ -455,6 +455,42 @@ test("renders the three search modes and the editable about page", async () => {
   assert.match(aboutHtml, /当前版本/);
 });
 
+test("discovery server-renders three independent empty channels without fabricated evidence", async () => {
+  const start = requestedFixtureRoutes.length;
+  const response = await render("/explore/opinions");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /从你关心的问题开始/);
+  assert.match(html, /aria-label="原文检索结果"/);
+  assert.match(html, /aria-label="相关知识与策展推荐"/);
+  assert.match(html, />原文材料<\/h2>/);
+  assert.match(html, />相关知识<\/h2>/);
+  assert.match(html, />策展推荐<\/h2>/);
+  assert.match(html, /本次检索覆盖/);
+  assert.match(html, /id="discovery-query"/);
+  assert.match(html, /maxLength="1200"|maxlength="1200"/);
+  assert.doesNotMatch(html, /从一个可判断的命题开始|命题关系分组|示例文献 A/);
+  assert.ok(!requestedFixtureRoutes.slice(start).some(path => /viewpoint-search|discovery-search/.test(path)), "SSR must not block on a background query or create duplicate sessions");
+});
+
+test("discovery server-renders a pending question and preserves legacy source filters", async () => {
+  const start = requestedFixtureRoutes.length;
+  const workId = "31ed91d3-84ee-4634-8cc8-538a14a7c2ff";
+  const response = await render(`/explore/opinions?q=${encodeURIComponent("关系与位置")}&work=${workId}&relation=oppose&year_min=1900`);
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /value="关系与位置"/);
+  assert.match(html, /正在创建检索/);
+  assert.match(html, /name="work_id" value="31ed91d3-84ee-4634-8cc8-538a14a7c2ff"/);
+  assert.match(html, /name="year_min"[^>]*value="1900"/);
+  assert.match(html, /这个旧链接中的问题和文献筛选已保留/);
+  assert.match(html, /原文检索/);
+  assert.match(html, /观点检索/);
+  assert.match(html, /向书库提问/);
+  assert.doesNotMatch(html, /data-stance=|Semantic V2 基准排序|Claim Engine/);
+  assert.ok(!requestedFixtureRoutes.slice(start).some(path => /viewpoint-search|discovery-search/.test(path)), "query execution begins once in the hydrated client");
+});
+
 test("server-renders the normalized theory system and keeps the legacy route", async () => {
   const expectations = [
     ["/theories", /<h1>理论流派<\/h1>/],

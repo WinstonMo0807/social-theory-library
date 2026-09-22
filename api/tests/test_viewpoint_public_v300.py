@@ -1,4 +1,3 @@
-from contextlib import nullcontext
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -23,6 +22,7 @@ from catalog.models import (
 from catalog.services.viewpoint_search import _viewpoint_facets
 from catalog.services.claims.indexing import _search_filters as claim_index_filters
 from catalog.services.semantic_search import _meili_filters as semantic_index_filters
+from catalog.discovery_models import DiscoverySearchSession
 from .v304_helpers import activate_catalog_revision
 
 
@@ -133,10 +133,9 @@ def _search_payload():
 @pytest.mark.django_db
 def test_public_viewpoint_api_reuses_visibility_throttle_and_hides_shadow(api_client):
     work_id = str(uuid4())
-    payload = _search_payload()
     with (
-        patch("catalog.viewpoint_views.capacity_slot", return_value=nullcontext(True)),
-        patch("catalog.viewpoint_views.search_viewpoints_v3", return_value=payload) as search,
+        patch("catalog.services.discovery_sessions._enqueue"),
+        patch("catalog.viewpoint_views.search_viewpoints_v3") as retired_search,
     ):
         response = api_client.get(
             "/api/catalog/viewpoint-search/",
@@ -144,50 +143,58 @@ def test_public_viewpoint_api_reuses_visibility_throttle_and_hides_shadow(api_cl
                 "q": "制度信任促进合作",
                 "document_type": ["book"],
                 "language": ["zh-CN"],
-                "work_id": [work_id, "not-a-uuid"],
+                "work_id": [work_id],
                 "limit": "16",
                 "max_per_work": "2",
                 "sort": "newest",
             },
         )
 
-    assert response.status_code == 200
-    assert response.data["default_mode"] == "baseline"
-    assert response.data["metadata"]["default_ranking"] == "semantic_v2_baseline"
+    assert response.status_code == 202
+    assert response.data["status"] == "queued"
+    assert response.data["engine"] == "discovery_v308"
+    assert response.data["search_version"] == "3.0.8"
+    assert response.data["access_token"]
+    assert response.data["compatibility_notice"]
+    assert response["Location"] == response.data["status_url"]
+    assert response["Cache-Control"] == "private, no-store"
     assert "shadow" not in response.data
     assert "baseline" not in response.data
-    assert response.data["stance_counts"]["support"] == 1
-    assert response.data["results"][0]["evidence"]["text"].startswith("制度信任")
-    assert response.data["results"][0]["reader_url"].endswith("?page=12")
-    kwargs = search.call_args.kwargs
-    assert kwargs["limit"] == 16
-    assert kwargs["max_per_work"] == 2
-    assert kwargs["sort"] == "newest"
-    assert kwargs["filters"]["work_ids"] == [work_id]
-    assert kwargs["filters"]["_allowed_access_statuses"] == ["inherit", "public"]
+    assert response.data["stance_counts"] == {}
+    assert response.data["groups"] == {}
+    assert response.data["results"] == []
+    session = DiscoverySearchSession.objects.get(pk=response.data["id"])
+    assert session.filters["work_ids"] == [work_id]
+    assert session.filters["document_types"] == ["book"]
+    assert session.access_statuses == ["inherit", "public"]
+    retired_search.assert_not_called()
+    denied = api_client.get(response.data["status_url"])
+    assert denied.status_code == 404
+    status = api_client.get(response.data["status_url"], HTTP_X_DISCOVERY_TOKEN=response.data["access_token"])
+    assert status.status_code == 200 and status.data["status"] == "queued"
 
 
 @pytest.mark.django_db
-def test_staff_debug_can_inspect_claim_shadow_without_promoting_it(api_client, admin_user):
+def test_staff_debug_does_not_restore_retired_claim_shadow_in_public_endpoint(api_client, admin_user):
     admin_user.is_staff = True
     admin_user.save(update_fields=["is_staff"])
     api_client.force_authenticate(admin_user)
-    payload = _search_payload()
-
     with (
-        patch("catalog.viewpoint_views.capacity_slot", return_value=nullcontext(True)),
-        patch("catalog.viewpoint_views.search_viewpoints_v3", return_value=payload) as search,
+        patch("catalog.services.discovery_sessions._enqueue"),
+        patch("catalog.viewpoint_views.search_viewpoints_v3") as retired_search,
     ):
         response = api_client.get(
             "/api/catalog/viewpoint-search/",
             {"q": "制度信任促进合作", "debug": "1"},
         )
 
-    assert response.status_code == 200
-    assert "shadow" in response.data
-    assert response.data["metadata"]["benchmark_gate_passed"] is False
-    assert search.call_args.kwargs["debug"] is True
-    assert search.call_args.kwargs["filters"]["_allowed_access_statuses"] == [
+    assert response.status_code == 202
+    assert "shadow" not in response.data and "baseline" not in response.data
+    assert response.data["groups"] == {}
+    retired_search.assert_not_called()
+    session = DiscoverySearchSession.objects.get(pk=response.data["id"])
+    assert session.owner_id == admin_user.pk
+    assert session.access_statuses == [
         "inherit",
         "public",
         "registered",
@@ -198,11 +205,12 @@ def test_staff_debug_can_inspect_claim_shadow_without_promoting_it(api_client, a
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("query", ["", "单"])
-def test_public_viewpoint_api_rejects_queries_shorter_than_a_proposition(api_client, query):
+def test_public_viewpoint_api_rejects_queries_shorter_than_a_search(api_client, query):
     response = api_client.get("/api/catalog/viewpoint-search/", {"q": query})
 
     assert response.status_code == 400
-    assert response.data["q"] == ["观点检索至少需要两个字符。"]
+    assert response.data["error"]["status"] == 400
+    assert "2 至 1200" in str(response.data["error"]["detail"]["q"])
 
 
 @pytest.mark.django_db
@@ -232,11 +240,8 @@ def test_public_viewpoint_filters_resolve_canonical_ids_and_real_ranges(api_clie
     edition = Edition.objects.create(work=work, state="published", public_slug="formal-filter-work")
     _activate_search_edition(edition)
     scholar_id = str(uuid4())
-    payload = _search_payload()
-
     with (
-        patch("catalog.viewpoint_views.capacity_slot", return_value=nullcontext(True)),
-        patch("catalog.viewpoint_views.search_viewpoints_v3", return_value=payload) as search,
+        patch("catalog.services.discovery_sessions._enqueue"),
     ):
         response = api_client.get(
             "/api/catalog/viewpoint-search/",
@@ -248,15 +253,15 @@ def test_public_viewpoint_filters_resolve_canonical_ids_and_real_ranges(api_clie
                 "theory": str(theory.id),
                 "topic": str(topic.id),
                 "work": str(work.id),
-                "year_min": "2025",
-                "year_max": "1980",
+                "year_min": "1980",
+                "year_max": "2025",
                 "language": "zh-CN",
             },
         )
 
-    assert response.status_code == 200
-    filters = search.call_args.kwargs["filters"]
-    assert filters["relations"] == ["oppose"]
+    assert response.status_code == 202
+    filters = DiscoverySearchSession.objects.get(pk=response.data["id"]).filters
+    assert "relations" not in filters
     assert filters["document_types"] == ["thesis", "report"]
     assert filters["authors"] == [scholar_id]
     assert filters["theory_node_ids"] == [str(theory.id)]
@@ -265,6 +270,15 @@ def test_public_viewpoint_filters_resolve_canonical_ids_and_real_ranges(api_clie
     assert filters["year_min"] == 1980
     assert filters["year_max"] == 2025
     assert filters["languages"] == ["zh-CN"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("invalid", [{"work_id": "not-a-uuid"}, {"year_min": "2025", "year_max": "1980"},
+                                    {"_allowed_access_statuses": "private"}, {"document_type": "invented"}])
+def test_legacy_viewpoint_rejects_invalid_or_client_supplied_security_filters(api_client, invalid):
+    response = api_client.get("/api/catalog/viewpoint-search/", {"q": "制度与合作", **invalid})
+    assert response.status_code == 400
+    assert DiscoverySearchSession.objects.count() == 0
 
 
 @pytest.mark.django_db

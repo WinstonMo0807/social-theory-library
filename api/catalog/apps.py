@@ -8,3 +8,4 @@ class CatalogConfig(AppConfig):
 
     def ready(self):
         import config.schema  # noqa: F401 - register authentication schema extension
+        import catalog.discovery_signals  # noqa: F401 - after-commit projection updates

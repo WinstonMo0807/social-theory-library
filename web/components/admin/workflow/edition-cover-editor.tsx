@@ -12,21 +12,26 @@ type Cover = { id: string; page_index: number; thumbnail_url: string; selected: 
 type CoverState = { edition_id: string; work_id: string; fingerprint: string; asset_id: string | null; source_checksum: string | null; page_count: number; state: string; poll: boolean; is_default: boolean; has_unpublished_cover: boolean; image_url: string; results: Cover[]; detail?: string; preview_candidate?: Cover | null };
 
 function CoverImage({ url, alt, token }: { url: string; alt: string; token: string | null }) {
-  const [src, setSrc] = useState("");
-  const [failed, setFailed] = useState(false);
+  const [image, setImage] = useState<{ url: string; token: string | null; src: string; failed: boolean } | null>(null);
   useEffect(() => {
     let active = true, objectUrl = "";
-    setSrc(""); setFailed(false);
-    if (url) void apiBlob(url, token).then((blob) => { objectUrl = URL.createObjectURL(blob); if (active) setSrc(objectUrl); else URL.revokeObjectURL(objectUrl); }).catch(() => { if (active) setFailed(true); });
+    if (url) void apiBlob(url, token).then((blob) => { objectUrl = URL.createObjectURL(blob); if (active) setImage({ url, token, src: objectUrl, failed: false }); else URL.revokeObjectURL(objectUrl); }).catch(() => { if (active) setImage({ url, token, src: "", failed: true }); });
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [url, token]);
-  return src ? <Image className={styles.image} src={src} width={190} height={240} unoptimized alt={alt} /> : <div className={styles.placeholder}>{failed ? "图片暂时无法读取，请刷新后重试" : "正在读取图片…"}</div>;
+  const current = image?.url === url && image.token === token ? image : null;
+  return current?.src ? <Image className={styles.image} src={current.src} width={190} height={240} unoptimized alt={alt} /> : <div className={styles.placeholder}>{current?.failed ? "图片暂时无法读取，请刷新后重试" : "正在读取图片…"}</div>;
 }
 
-export function EditionCoverEditor({ editionId, workId, documentType, token, canEdit, beforeAction, onSaved }: {
+type EditionCoverEditorProps = {
   editionId: string; workId: string; documentType: string; token: string | null; canEdit: boolean;
   beforeAction: () => Promise<boolean>; onSaved: () => void | Promise<void>;
-}) {
+};
+
+export function EditionCoverEditor(props: EditionCoverEditorProps) {
+  return <EditionCoverEditorState key={`${props.workId}:${props.editionId}`} {...props} />;
+}
+
+function EditionCoverEditorState({ editionId, workId, documentType, token, canEdit, beforeAction, onSaved }: EditionCoverEditorProps) {
   const [data, setData] = useState<CoverState | null>(null);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -40,14 +45,14 @@ export function EditionCoverEditor({ editionId, workId, documentType, token, can
   const retry = useRef<{ signature: string; requestKey: string } | null>(null);
   const url = `/catalog/admin/editions/${editionId}/cover/`;
   useUnsavedForm(file ? [file.name, file.size, file.lastModified] : null, null);
-  const reload = useCallback(async (signal?: AbortSignal) => {
-    const value = await apiRequest<CoverState>(url, { signal }, token);
-    if (value.edition_id !== editionId || value.work_id !== workId) throw new Error("封面不属于当前作品或版本，请重新进入。");
-    if (!signal?.aborted) setData(value);
+  const reload = useCallback((signal?: AbortSignal) => {
+    return apiRequest<CoverState>(url, { signal }, token).then(value => {
+      if (value.edition_id !== editionId || value.work_id !== workId) throw new Error("封面不属于当前作品或版本，请重新进入。");
+      if (!signal?.aborted) setData(value);
+    });
   }, [url, token, editionId, workId]);
   useEffect(() => {
     const controller = new AbortController();
-    setData(null); setManual(null);
     void reload(controller.signal).catch((error) => { if (!controller.signal.aborted) { setFailed(true); setMessage(error instanceof Error ? error.message : "封面读取失败。可继续使用默认样式。"); } });
     return () => controller.abort();
   }, [reload]);

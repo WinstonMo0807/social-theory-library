@@ -170,7 +170,7 @@ for origin in LAN_HTTP_TRUSTED_ORIGINS:
 SPECTACULAR_SETTINGS = {
     "TITLE": "Social Theory Library API",
     "DESCRIPTION": "Canonical catalog, editorial processes and permission-scoped reading APIs.",
-    "VERSION": "3.0.7",
+    "VERSION": "3.0.8",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
@@ -297,7 +297,17 @@ CELERY_TASK_TIME_LIMIT = 60 * 60
 INGESTION_TASK_QUEUE = os.getenv("INGESTION_TASK_QUEUE", "ingestion").strip() or "ingestion"
 SEARCH_EVALUATION_TASK_QUEUE = os.getenv("SEARCH_EVALUATION_TASK_QUEUE", "celery").strip() or "celery"
 QUERY_LEXICON_TASK_QUEUE = os.getenv("QUERY_LEXICON_TASK_QUEUE", "celery").strip() or "celery"
+DISCOVERY_ENABLED = env_bool("DISCOVERY_ENABLED", False)
+DISCOVERY_QUERY_TASK_QUEUE = os.getenv("DISCOVERY_QUERY_TASK_QUEUE", "discovery_query").strip() or "discovery_query"
+DISCOVERY_INDEX_TASK_QUEUE = os.getenv("DISCOVERY_INDEX_TASK_QUEUE", "discovery_index").strip() or "discovery_index"
+DISCOVERY_MAX_QUEUED_QUERIES = max(2, min(24, int(os.getenv("DISCOVERY_MAX_QUEUED_QUERIES", "12"))))
+DISCOVERY_INFERENCE_URL = os.getenv("DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")
+DISCOVERY_INFERENCE_ALLOWED_HOSTS = os.getenv("DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")
+DISCOVERY_INFERENCE_TIMEOUT_SECONDS = int(os.getenv("DISCOVERY_INFERENCE_TIMEOUT_SECONDS", "130"))
 CELERY_TASK_ROUTES = {
+    "catalog.tasks.run_discovery_search": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
+    "catalog.tasks.process_discovery_index_job": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
+    "catalog.tasks.reconcile_discovery_index": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
     "ingestion.tasks.process_upload_item": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_reviewed_upload_item": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_query_lexicon_candidate_job": {
@@ -324,6 +334,13 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "expire-reader-discovery-sessions": {
+        "task": "catalog.tasks.expire_discovery_sessions", "schedule": 60 * 60,
+    },
+    "reconcile-discovery-index": {
+        "task": "catalog.tasks.reconcile_discovery_index", "schedule": 5 * 60,
+        "options": {"queue": DISCOVERY_INDEX_TASK_QUEUE, "expires": 240},
+    },
     "record-claim-executor-heartbeat": {
         "task": "catalog.tasks.heartbeat_claim_executor",
         "schedule": 30,

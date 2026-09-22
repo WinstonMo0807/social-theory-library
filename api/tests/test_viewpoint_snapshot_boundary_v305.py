@@ -1,4 +1,3 @@
-from contextlib import nullcontext
 from uuid import uuid4
 
 import pytest
@@ -9,6 +8,11 @@ from catalog.models import (
     KnowledgeNode, Page, Person, ScholarProfile, Topic, WorkNodeRelation, WorkTopicRelation,
 )
 from catalog.services.viewpoint_search import _matching_evidence_span, viewpoint_search
+from catalog.discovery_models import DiscoverySearchSession
+from catalog.discovery_index_models import DiscoveryDocument
+from catalog.models import SemanticIndexVersion
+from catalog.services.discovery_sessions import execute_session
+from catalog.services.discovery_sources import fingerprint, source_header, source_units
 from .test_claim_pipeline_viewpoint_v300 import _claim, _source
 from .v304_helpers import activate_catalog_revision
 
@@ -169,14 +173,42 @@ def test_viewpoint_facets_do_not_expose_pending_canonical_relationships():
 
 
 def stub_external_hits(monkeypatch, asset, span):
-    row = {"id": "external-hit", "asset_id": str(asset.pk), "page_index": 1, "snippet": span.original_text}
-    def retrieve(query, *, profile, filters, limit, max_per_work, sort, debug):
-        assert profile == "viewpoint"
-        return {"results": [row]}
+    """Use real projection permission/facet gates with bounded fake transport.
 
-    monkeypatch.setattr("catalog.services.viewpoint_search.unified_retrieve", retrieve)
-    monkeypatch.setattr("catalog.services.viewpoint_search.search_claim_index", lambda *args, **kwargs: {"hits": []})
-    monkeypatch.setattr("catalog.viewpoint_views.capacity_slot", lambda *args, **kwargs: nullcontext(True))
+    This fixture proves HTTP protocol and publication checks, not model quality.
+    Even this deliberately stale index hit has to pass current source hydration.
+    """
+    edition = asset.edition
+    edition.refresh_from_db()
+    header = source_header("edition", edition)
+    unit = next(row for row in source_units("edition", edition, header) if row["unit_id"] == str(span.pk))
+    generation = SemanticIndexVersion.discovery_objects.create(uid=f"legacy-http-{uuid4().hex}", index_family="discovery",
+        provider="userProvided", status="active", config_snapshot={"embedding_artifact": "fixture-embed", "reranker_artifact": "fixture-rerank"})
+    doc = DiscoveryDocument.objects.create(generation=generation, channel="passages", source_type="edition",
+        source_id=edition.pk, source_revision=header["source_revision"], scope_token=header["scope_token"],
+        edition=edition, document_revision=span.document_revision, access_status=asset.access_status,
+        text=span.original_text, normalized_text=span.original_text, input_hash=fingerprint(span.original_text),
+        start_offset=0, end_offset=len(span.original_text), token_count=12, keyword_ready=True, vector_ready=True,
+        payload={**header, **unit["metadata"], "unit_hash": fingerprint(span.original_text)})
+    monkeypatch.setattr("catalog.services.discovery_sessions._enqueue", lambda *args: None)
+    monkeypatch.setattr("catalog.services.discovery_projection.normalize_texts", lambda texts: {"texts": texts})
+    monkeypatch.setattr("catalog.services.discovery_projection.embed_texts", lambda *args, **kwargs: {"vectors": [[0.0] * 384]})
+    monkeypatch.setattr("catalog.services.discovery_inference.rerank", lambda query, docs, top_n=20, **kwargs:
+                        {"results": [{"index": i, "relevance_score": 1.0} for i in range(min(top_n, len(docs)))]})
+    monkeypatch.setattr("catalog.services.discovery_projection.meili", lambda *args, **kwargs:
+                        {"hits": [{"id": str(doc.pk), "source_revision": doc.source_revision}]})
+
+
+def completed_legacy_search(api_client, params):
+    created = api_client.get("/api/catalog/viewpoint-search/", params)
+    assert created.status_code == 202
+    assert created.data["compatibility_notice"] and created.data["access_token"]
+    session = DiscoverySearchSession.objects.get(pk=created.data["id"])
+    execute_session(session.pk, session.generation, session.task_id)
+    response = api_client.get(created.data["status_url"], HTTP_X_DISCOVERY_TOKEN=created.data["access_token"])
+    assert response.status_code == 200
+    assert response.data["status"] in {"completed", "partial"}
+    return response
 
 
 @pytest.mark.parametrize("access", ["registered", "private"])
@@ -188,15 +220,18 @@ def test_http_viewpoint_computes_access_from_session_not_query_parameters(
     asset.save(update_fields=["access_status", "updated_at"])
     activate_catalog_revision(edition, reader_asset=asset, document_revision=document)
     stub_external_hits(monkeypatch, asset, spans[0])
-    params = {"q": "贫困导致犯罪", "_allowed_access_statuses": access}
-    anonymous = api_client.get("/api/catalog/viewpoint-search/", params)
+    malicious = api_client.get("/api/catalog/viewpoint-search/", {"q": "贫困导致犯罪", "_allowed_access_statuses": access})
+    assert malicious.status_code == 400
+    assert DiscoverySearchSession.objects.count() == 0
+    params = {"q": "贫困导致犯罪"}
+    anonymous = completed_legacy_search(api_client, params)
     assert anonymous.status_code == 200 and anonymous.data["count"] == 0
     api_client.force_authenticate(reader_user)
-    reader = api_client.get("/api/catalog/viewpoint-search/", params)
+    reader = completed_legacy_search(api_client, params)
     assert reader.status_code == 200
     assert reader.data["count"] == (1 if access == "registered" else 0)
     api_client.force_authenticate(admin_user)
-    staff = api_client.get("/api/catalog/viewpoint-search/", params)
+    staff = completed_legacy_search(api_client, params)
     assert staff.status_code == 200 and staff.data["count"] == 1
 
 
@@ -220,9 +255,9 @@ def test_http_taxonomy_filter_uses_formal_relationships(api_client, monkeypatch,
     activate_catalog_revision(edition, reader_asset=asset, document_revision=document)
     pending = relate("尚未发布的分类")
     stub_external_hits(monkeypatch, asset, spans[0])
-    excluded = api_client.get("/api/catalog/viewpoint-search/", {"q": "贫困导致犯罪", kind: str(pending.pk)})
+    excluded = completed_legacy_search(api_client, {"q": "贫困导致犯罪", kind: str(pending.pk)})
     assert excluded.status_code == 200 and excluded.data["count"] == 0
-    included = api_client.get("/api/catalog/viewpoint-search/", {"q": "贫困导致犯罪", kind: str(formal.pk)})
+    included = completed_legacy_search(api_client, {"q": "贫困导致犯罪", kind: str(formal.pk)})
     assert included.status_code == 200 and included.data["count"] == 1
 
 
@@ -236,7 +271,7 @@ def test_http_stale_hits_cannot_bypass_formal_metadata_filters(api_client, monke
     edition.save(update_fields=["publication_year", "updated_at"])
     value = {"work_id": str(uuid4()), "author": str(person.pk), "year_min": 2030}[field]
     stub_external_hits(monkeypatch, asset, spans[0])
-    response = api_client.get("/api/catalog/viewpoint-search/", {"q": "贫困导致犯罪", field: value})
+    response = completed_legacy_search(api_client, {"q": "贫困导致犯罪", field: value})
     assert response.status_code == 200 and response.data["count"] == 0
 
 

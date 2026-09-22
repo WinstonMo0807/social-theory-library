@@ -1,6 +1,10 @@
 # Social Theory Library 架构
 
-## 2026-09-21 3.0.7 实现增量（未上线）
+## 2026-09-22 3.0.8 源码增量（未上线）
+
+增加内部ONNX推理服务和独立一并发查询/索引Celery队列，复用Django、PostgreSQL、Redis、Meilisearch、原生文本/OCR与现有Reader。查询会话仅保存来源引用和排序，当前权限/修订读时复检；DiscoveryDocument为可重建投影，SemanticIndexVersion按semantic/discovery分类保留旧版本。处理中心沿既有ProcessingJob展示并恢复任务。固定FP32模型只读挂载，运行不联网、不需GPU。模型和NAS兼容性尚待本轮集中验证。详见[3.0.8实现](V3.0.8_IMPLEMENTATION.md)。
+
+## 2026-09-21 3.0.7 实现增量（已上线）
 
 推荐期/计划项独立于馆藏发布，正文与网站设置复用EditorialRevision。计划项连接CatalogingSession，明确确认准确Edition后动态开放旧期馆藏链接，保留期文。网站旧直接写入口转入草稿发布；公共读取继续正式数据。队列由admin_queue_query进行SQL筛选、计数、稳定分页，admin_queue仅加载有界页关系；未完成工作与后台技术任务仍各用原模型。前端固定模块共用公共组件预览，导航收敛13项，内部旧路由保留查询/对象/返回位置。无新检索引擎、无栈变更、无原文件和索引重建。详细范围与验收状态见[V3.0.7_COMPLETION_RELEASE](V3.0.7_COMPLETION_RELEASE.md)。
 

@@ -1,4 +1,7 @@
 from django.urls import path
+from .discovery_index_views import DiscoveryIndexView
+from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
+    DiscoverySearchCancelView, DiscoverySearchContextView, LegacyDiscoverySearchView)
 from .curation_queue_views import CurationDraftQueueView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
@@ -209,6 +212,7 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/discovery-index/", DiscoveryIndexView.as_view(), name="admin-discovery-index"),
     path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/", AdminEvidenceCurationView.as_view(), name="admin-evidence-curation"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),
@@ -785,7 +789,12 @@ urlpatterns = [
     path("hot-searches/", HotSearchView.as_view(), name="hot-searches"),
     path("usage-events/", PublicUsageEventView.as_view(), name="usage-events"),
     path("semantic-search/", SemanticSearchView.as_view(), name="semantic-search"),
-    path("viewpoint-search/", ViewpointSearchView.as_view(), name="viewpoint-search"),
+    path("viewpoint-search/", LegacyDiscoverySearchView.as_view(), name="viewpoint-search"),
+    path("discovery-search/", DiscoverySearchView.as_view(), name="discovery-search"),
+    path("discovery-search/<uuid:session_id>/", DiscoverySearchDetailView.as_view(), name="discovery-search-detail"),
+    path("discovery-search/<uuid:session_id>/expand/", DiscoverySearchExpandView.as_view(), name="discovery-search-expand"),
+    path("discovery-search/<uuid:session_id>/cancel/", DiscoverySearchCancelView.as_view(), name="discovery-search-cancel"),
+    path("discovery-search/<uuid:session_id>/context/", DiscoverySearchContextView.as_view(), name="discovery-search-context"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),
     path("assets/<uuid:asset_id>/manifest/", PublicAssetManifestView.as_view(), name="asset-manifest"),

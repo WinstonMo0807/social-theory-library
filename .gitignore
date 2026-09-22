@@ -135,6 +135,7 @@ celerybeat-schedule*
 
 # Local design references and terminal transcripts
 /1新的图片视效/
+/docs/requests/STL-3.0.8/
 /屏幕截图*.png
 !web/app/admin/backups/
 !web/app/admin/backups/page.tsx

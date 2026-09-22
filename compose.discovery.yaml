@@ -1,0 +1,127 @@
+# Explicit overlay: compose.public.yaml + compose.cloudflare.yaml + this file.
+# No host port, credentials, Docker socket, GPU, paid API, or runtime download.
+x-discovery-client: &discovery-client
+  DISCOVERY_INFERENCE_URL: http://discovery-inference:8091
+  DISCOVERY_INFERENCE_ALLOWED_HOSTS: discovery-inference
+  DISCOVERY_INFERENCE_TIMEOUT_SECONDS: "130"
+  DISCOVERY_ENABLED: "true"
+  DISCOVERY_QUERY_TASK_QUEUE: discovery_query
+  DISCOVERY_INDEX_TASK_QUEUE: discovery_index
+
+x-discovery-worker: &discovery-worker
+  image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.8}
+  restart: unless-stopped
+  init: true
+  security_opt: [no-new-privileges:true]
+  env_file: [.env]
+  environment:
+    <<: *discovery-client
+    CELERY_RESULT_BACKEND: ""
+    CELERY_TASK_IGNORE_RESULT: "true"
+    CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED: "false"
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: "true"
+    PROCESS_INGESTION_INLINE: "false"
+    CACHE_URL: ${CACHE_URL:?请设置 CACHE_URL}
+    NAS_LIBRARY_ROOT: /data
+    NAS_ORIGINAL_ROOT: /data/archive
+    NAS_PUBLIC_ROOT: /data/public
+    NAS_BACKUP_ROOT: /data/backups
+  volumes:
+    - ${NAS_HOST_ROOT:-./data}/archive:/data/archive:ro
+    - ${NAS_HOST_ROOT:-./data}/public:/data/public:ro
+    - ${NAS_HOST_ROOT:-./data}/private:/data/private:ro
+  networks: [default, backend, discovery_internal]
+  mem_limit: 512m
+  memswap_limit: 640m
+  cpus: 1.0
+  pids_limit: 64
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    meilisearch:
+      condition: service_healthy
+
+services:
+  discovery-inference:
+    image: ${LIBRARY_INFERENCE_IMAGE:-social-theory-library-inference:3.0.8}
+    build:
+      context: ./inference_service
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      DISCOVERY_MODEL_ROOT: /models/discovery/v308-fp32-v1
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      INFERENCE_THREADS: ${DISCOVERY_INFERENCE_THREADS:-2}
+      INFERENCE_BATCH_SIZE: "1"
+      INFERENCE_REQUEST_SECONDS: "120"
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "1"
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+    volumes:
+      - ${NAS_HOST_ROOT:-./data}/models/discovery/v308-fp32-v1:/models/discovery/v308-fp32-v1:ro
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    expose: ["8091"]
+    networks: [discovery_internal]
+    mem_limit: 1600m
+    memswap_limit: 1800m
+    cpus: 2.0
+    pids_limit: 96
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; r=json.load(urllib.request.urlopen('http://127.0.0.1:8091/health',timeout=3)); assert r['manifest_ready']"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+  api:
+    environment: *discovery-client
+    networks: [default, backend, discovery_internal]
+  worker:
+    environment: *discovery-client
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=celery --hostname=worker@%h
+    networks: [default, backend, discovery_internal]
+  ingestion-worker:
+    environment: *discovery-client
+    networks: [default, backend, discovery_internal]
+  beat:
+    environment: *discovery-client
+    networks: [default, backend, discovery_internal]
+  discovery-query-worker:
+    <<: *discovery-worker
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=discovery_query --hostname=discovery-query@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination discovery-query@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  discovery-index-worker:
+    <<: *discovery-worker
+    command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=discovery_index --hostname=discovery-index@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination discovery-index@$$(hostname) --timeout 5 | grep -q pong"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  meilisearch:
+    environment:
+      MEILI_MAX_INDEXING_MEMORY: ${DISCOVERY_MEILI_INDEXING_MEMORY:-256Mb}
+      MEILI_MAX_INDEXING_THREADS: "1"
+
+networks:
+  # Public Compose uses backend; local Compose uses default. Preserve both
+  # application paths rather than replacing an implicit default attachment.
+  default: {}
+  backend: {}
+  discovery_internal:
+    internal: true

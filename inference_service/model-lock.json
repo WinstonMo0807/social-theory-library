@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "bundle": "v308-fp32-v1",
+  "pipeline": "stl-e5-mean-l2-fp32-v1",
+  "normalization": "stl-t2s-dehyphen-nfkc-v1",
+  "models": {
+    "embedding": {
+      "repo_id": "intfloat/multilingual-e5-small",
+      "files": [
+        {
+          "git_oid": "e56327af55e9742caf76bff9ba83b6904cd2003d",
+          "path": "README.md",
+          "bytes": 497538,
+          "sha256": null
+        },
+        {
+          "git_oid": "60a2a84020f1d74cc53ea9e8c4e91cf4af6c2b68",
+          "path": "config.json",
+          "bytes": 655,
+          "sha256": null
+        },
+        {
+          "git_oid": "",
+          "path": "onnx/model.onnx",
+          "bytes": 470268510,
+          "sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665"
+        },
+        {
+          "git_oid": "e0b1d18ecd0ae4ff1d47bd297d910c0cf83e504b",
+          "path": "special_tokens_map.json",
+          "bytes": 167,
+          "sha256": null
+        },
+        {
+          "git_oid": "",
+          "path": "tokenizer.json",
+          "bytes": 17082730,
+          "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39"
+        },
+        {
+          "git_oid": "059214673d9d6d2ee319411e2ffec8c024b816d5",
+          "path": "tokenizer_config.json",
+          "bytes": 443,
+          "sha256": null
+        }
+      ],
+      "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3"
+    },
+    "reranker": {
+      "repo_id": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "files": [
+        {
+          "git_oid": "c0f626ab888d9512bc57b224b13ff97ca93e3cb0",
+          "path": "README.md",
+          "bytes": 2278,
+          "sha256": null
+        },
+        {
+          "git_oid": "43ac97f1bef372d4f1d30a32f9a84baffcf6575d",
+          "path": "config.json",
+          "bytes": 891,
+          "sha256": null
+        },
+        {
+          "git_oid": "",
+          "path": "onnx/model.onnx",
+          "bytes": 470883696,
+          "sha256": "3e9a03ed1e966f7c5288dd4230e3d6a9bf5e3a170a06f1f4241c5bca12c6487c"
+        },
+        {
+          "git_oid": "2ea7ad0e45a9d1d1591782ba7e29a703d0758831",
+          "path": "special_tokens_map.json",
+          "bytes": 239,
+          "sha256": null
+        },
+        {
+          "git_oid": "",
+          "path": "tokenizer.json",
+          "bytes": 17082660,
+          "sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626"
+        },
+        {
+          "git_oid": "b59159d44c6bd4b1d9f7ae4f8da028da4238e06e",
+          "path": "tokenizer_config.json",
+          "bytes": 435,
+          "sha256": null
+        }
+      ],
+      "revision": "1427fd652930e4ba29e8149678df786c240d8825"
+    }
+  }
+}

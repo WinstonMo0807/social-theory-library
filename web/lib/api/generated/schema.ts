@@ -144,6 +144,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/discovery-index/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_discovery_index_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_discovery_index_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/media/cover/": {
         parameters: {
             query?: never;
@@ -688,6 +704,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/discovery-search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_discovery_search_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/discovery-search/{session_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_discovery_search_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/discovery-search/{session_id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_discovery_search_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/discovery-search/{session_id}/context/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_discovery_search_context_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/discovery-search/{session_id}/expand/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_discovery_search_expand_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/evidence-curation/{object_type}/{object_id}/": {
         parameters: {
             query?: never;
@@ -1165,6 +1261,126 @@ export interface components {
          * @enum {string}
          */
         DirectionEnum: "directed" | "bidirectional" | "undirected";
+        DiscoveryContext: {
+            /** Format: uuid */
+            result_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            excerpt: string;
+            blocks: {
+                [key: string]: unknown;
+            }[];
+            before: string;
+            after: string;
+            reader_url: string;
+            locator_precision: string;
+            source_kind: string;
+            notice: string;
+        };
+        DiscoveryCreateRequest: {
+            q: string;
+            filters?: {
+                [key: string]: unknown;
+            };
+        };
+        DiscoveryCuration: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            source_title: string;
+            source_kind: string;
+            recommendation_excerpt: string;
+            url: string;
+            linked_work_ids?: string[];
+            match_basis: string[];
+        };
+        DiscoveryEntity: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            url: string;
+            excerpt: string;
+            portrait_url?: string;
+            match_basis: string[];
+        };
+        DiscoveryPassage: {
+            /** Format: uuid */
+            id: string;
+            excerpt: string;
+            work: components["schemas"]["DiscoveryWork"];
+            authors: string[];
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id?: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            pdf_page: number;
+            printed_page?: string;
+            source_kind: string;
+            source_revision: string;
+            reader_url: string;
+            locator_precision: string;
+            context_reference: string;
+            match_basis: string[];
+        };
+        DiscoveryResponse: {
+            /** Format: uuid */
+            id: string;
+            query: string;
+            /** @description queued, running, partial, completed, failed or canceled */
+            status: string;
+            access_token?: string;
+            passages: components["schemas"]["DiscoveryPassage"][];
+            entities: components["schemas"]["DiscoveryEntity"][];
+            curation: components["schemas"]["DiscoveryCuration"][];
+            next_cursor: string | null;
+            can_expand: boolean;
+            warnings: components["schemas"]["DiscoveryWarning"][];
+            coverage_summary: {
+                [key: string]: unknown;
+            };
+            completed_channels: string[];
+            channels: {
+                [key: string]: unknown;
+            };
+            counts: {
+                [key: string]: unknown;
+            };
+            source_changed: boolean;
+            expansion_count: number;
+            generation: number;
+            mode: string;
+            original_query: string;
+            filters: {
+                [key: string]: unknown;
+            };
+            count: number;
+            corpus_version: string;
+            knowledge_version: string;
+            pipeline_version: string;
+            poll_after_ms: number | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            notice: string;
+            status_url?: string;
+        };
+        DiscoveryWarning: {
+            code: string;
+            message: string;
+            channel?: string;
+        };
+        DiscoveryWork: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug?: string;
+        };
         /**
          * @description * `book` - 图书
          *     * `journal_article` - 期刊论文
@@ -1227,6 +1443,35 @@ export interface components {
         EvidenceCurationRequest: {
             edit_version?: string;
             items: components["schemas"]["CurationItemRequest"][];
+        };
+        /**
+         * @description * `rebuild` - rebuild
+         *     * `retry` - retry
+         * @enum {string}
+         */
+        IndexActionActionEnum: "rebuild" | "retry";
+        IndexActionRequest: {
+            action: components["schemas"]["IndexActionActionEnum"];
+            /** Format: uuid */
+            job_id?: string;
+        };
+        IndexActionResult: {
+            /** Format: uuid */
+            job_id: string;
+            status: string;
+            message: string;
+        };
+        IndexStatus: {
+            active_generation: unknown;
+            model: unknown;
+            summary: unknown;
+            capabilities: unknown;
+            count: number;
+            page: number;
+            page_size: number;
+            results: unknown[];
+            jobs: unknown[];
+            warnings: unknown[];
         };
         IssueBodyBlock: {
             type: components["schemas"]["TypeEnum"];
@@ -2465,6 +2710,53 @@ export interface operations {
             };
         };
     };
+    catalog_admin_discovery_index_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexStatus"];
+                };
+            };
+        };
+    };
+    catalog_admin_discovery_index_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexActionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IndexActionRequest"];
+                "multipart/form-data": components["schemas"]["IndexActionRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexActionResult"];
+                };
+            };
+        };
+    };
     catalog_admin_editions_media_cover_create: {
         parameters: {
             query?: never;
@@ -3524,6 +3816,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReaderPageContent"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscoveryCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DiscoveryCreateRequest"];
+                "multipart/form-data": components["schemas"]["DiscoveryCreateRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryResponse"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_retrieve: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: {
+                /** @description Anonymous search capability returned once at creation; do not put in URLs. */
+                "X-Discovery-Token"?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryResponse"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Anonymous search capability returned once at creation; do not put in URLs. */
+                "X-Discovery-Token"?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryResponse"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_context_retrieve: {
+        parameters: {
+            query: {
+                result_id: string;
+            };
+            header?: {
+                /** @description Anonymous search capability returned once at creation; do not put in URLs. */
+                "X-Discovery-Token"?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryContext"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_expand_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Anonymous search capability returned once at creation; do not put in URLs. */
+                "X-Discovery-Token"?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryResponse"];
                 };
             };
         };

@@ -30,6 +30,7 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { CatalogOcrPicker, OcrProgressDisplay, ocrPageRanges as pageRanges, type OcrProgress } from "./admin/workflow/edition-ocr-control";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
+import { DiscoveryIndexPanel } from "./discovery-index-panel";
 
 type Attempt = {
   id: string;
@@ -742,6 +743,7 @@ export function ProcessingCenter() {
         tabIndex={0}
       >
       {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
+      {activeSurface === "documents" || activeSurface === "projections" ? <DiscoveryIndexPanel revision={revision} /> : null}
       {activeSurface === "overview" || activeSurface === "documents" ? <section className="processing-summary">
         <article><Clock3 size={18} /><strong>{summary.active ?? "—"}</strong><span>等待或运行</span></article>
         <article><FileText size={18} /><strong>{summary.review ?? "—"}</strong><span>待复核</span></article>

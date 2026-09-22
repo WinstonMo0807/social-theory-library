@@ -49,6 +49,10 @@ export function OcrProgressDisplay({ job }: { job: OcrProgress }) {
 
 /** Both entry points read the same persisted job; no health probes or external calls on polling. */
 export function EditionOcrControl({ editionId, workId = "" }: { editionId: string; workId?: string }) {
+  return <EditionOcrControlState key={`${workId}:${editionId}`} editionId={editionId} workId={workId} />;
+}
+
+function EditionOcrControlState({ editionId, workId }: { editionId: string; workId: string }) {
   const [data, setData] = useState<OcrContext | null>(null);
   const [fileId, setFileId] = useState("");
   const [error, setError] = useState("");
@@ -64,7 +68,6 @@ export function EditionOcrControl({ editionId, workId = "" }: { editionId: strin
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
     let controller: AbortController | null = null;
-    setData(null); setError("");
     async function poll() {
       controller = new AbortController();
       const timeout = setTimeout(() => controller?.abort(), 12_000);
@@ -81,7 +84,7 @@ export function EditionOcrControl({ editionId, workId = "" }: { editionId: strin
     if (editionId) void poll();
     return () => { disposed = true; clearTimeout(timer); controller?.abort(); };
   }, [editionId, workId, historyPage, refresh, token]);
-  const current = data?.edition_id === editionId ? data : null;
+  const current = data?.edition_id === editionId && data.page === historyPage ? data : null;
   const file = current?.files.find((row) => row.id === fileId);
   const jobs = current?.jobs ?? [];
   const active = current?.active_job_id || jobs.find((job) => ["pending", "running", "paused"].includes(job.status))?.id;
@@ -156,19 +159,18 @@ export function CatalogOcrPicker() {
   const work = works.at(-1)?.id ?? "";
   useEffect(() => {
     const controller = new AbortController();
-    setData(null); setError("");
     if (work) void apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?view=editions&work_id=${encodeURIComponent(work)}&page=${page}`, { signal: controller.signal }, getServerSessionCredential()).then((result) => { if (!controller.signal.aborted) setData(result); }).catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "版本读取失败"); });
     return () => controller.abort();
   }, [work, page, refresh]);
   return <section className="catalog-ocr-picker admin-panel" aria-label="按馆藏 PDF 识别文字">
     <h2>选择馆藏 PDF 进行文字识别</h2><p>已发布和未发布馆藏都可选择。无需寻找上传编号，选择作品和出版版本即可。</p>
-    <EntityPicker label="需要识别的馆藏" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); }} />
+    <EntityPicker label="需要识别的馆藏" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
     {error ? <p role="alert">{error}<button type="button" onClick={() => setRefresh((n) => n + 1)}>重试版本查询</button></p> : null}
     {work ? <><label><span>需要识别的出版版本</span><select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
       <option value="">请选择出版版本</option>
       {edition && !data?.results.some((row) => row.id === edition) ? <option value={edition}>已选版本（在其他分页）</option> : null}
       {data?.results.map((row) => <option key={row.id} value={row.id}>{row.label || "出版信息待补"}{row.is_primary ? "（主版本）" : ""}</option>)}
-    </select></label><nav className="catalog-ocr-actions" aria-label="OCR 出版版本分页"><span>{data ? `共 ${data.count} 个版本，第 ${page} 页` : "正在读取…"}</span><button type="button" disabled={!data?.previous} onClick={() => setPage((n) => n - 1)}>上一页版本</button><button type="button" disabled={!data?.next} onClick={() => setPage((n) => n + 1)}>下一页版本</button></nav></> : null}
+    </select></label><nav className="catalog-ocr-actions" aria-label="OCR 出版版本分页"><span>{data ? `共 ${data.count} 个版本，第 ${page} 页` : "正在读取…"}</span><button type="button" disabled={!data?.previous} onClick={() => { setData(null); setError(""); setPage((n) => n - 1); }}>上一页版本</button><button type="button" disabled={!data?.next} onClick={() => { setData(null); setError(""); setPage((n) => n + 1); }}>下一页版本</button></nav></> : null}
     {work && edition ? <EditionOcrControl key={edition} editionId={edition} workId={work} /> : null}
   </section>;
 }

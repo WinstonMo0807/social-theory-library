@@ -809,6 +809,14 @@ class SemanticIndexJob(UUIDTimeStampedModel):
 
 
 class SemanticIndexVersion(UUIDTimeStampedModel):
+    # The original manager keeps legacy semantic activation and rollback scoped.
+    # Discovery reuses the same version ledger without becoming its second active row.
+    from catalog.index_managers import SemanticVersionManager, DiscoveryVersionManager
+    objects = SemanticVersionManager()
+    discovery_objects = DiscoveryVersionManager()
+    all_objects = models.Manager()
+    index_family = models.CharField(max_length=16, default="semantic", db_default="semantic", db_index=True)
+
     class Status(models.TextChoices):
         BUILDING = "building", "正在建立"
         READY = "ready", "等待切换"
@@ -6221,3 +6229,8 @@ class AboutPageBlock(UUIDTimeStampedModel):
 
     def __str__(self):
         return self.title or self.key
+
+
+# Kept separate so short-lived reader queries do not expand editorial models.
+from .discovery_models import DiscoverySearchSession  # noqa: E402,F401
+from .discovery_index_models import DiscoveryDocument, DiscoverySourceState  # noqa: E402,F401

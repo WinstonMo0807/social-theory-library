@@ -3,67 +3,77 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const readSearch = () => Promise.all([
-  read("../lib/api/search.types.ts"),
-  read("../lib/api/search.server.ts"),
-]).then((sources) => sources.join("\n"));
 
-test("viewpoint search uses the dedicated EvidenceSpan-backed public contract", async () => {
-  const [serverApi, page] = await Promise.all([
-    readSearch(),
-    read("../app/explore/opinions/page.tsx"),
+// The old stance groups were intentionally retired by 3.0.8. Keep the source,
+// revision, reader and scope protections while checking the successor contract.
+test("viewpoint discovery retains original text, revision identity and honest reader locators", async () => {
+  const [types, client, page, view] = await Promise.all([
+    read("../lib/api/discovery.types.ts"), read("../lib/api/discovery.client.ts"),
+    read("../app/explore/opinions/page.tsx"), read("../components/discovery-search-workspace.tsx"),
   ]);
-
-  assert.match(serverApi, /export type ViewpointStance/);
-  assert.match(serverApi, /\/catalog\/viewpoint-search\//);
-  assert.match(serverApi, /evidence_span_validation_required: boolean/);
-  assert.match(serverApi, /default_ranking: "semantic_v2_baseline"/);
-  assert.match(page, /loadViewpointSearch\(query, filters\)/);
-  assert.match(page, /item\.evidence\.text/);
-  assert.match(page, /href=\{item\.reader_url\}/);
-  assert.match(page, /href=\{item\.pdf_url\}/);
-  assert.match(page, /阅读原文/);
-  assert.match(page, /打开 PDF/);
-  assert.doesNotMatch(page, /Math\.round\(item\.quality_score/);
+  assert.match(page, /DiscoverySearchWorkspace/);
+  assert.match(types, /document_revision_id: string/);
+  assert.match(types, /asset_id: string/);
+  assert.match(types, /pdf_page: number/);
+  assert.match(types, /locator_precision: string/);
+  assert.match(client, /\/catalog\/discovery-search\//);
+  assert.match(client, /X-Discovery-Token/);
+  assert.match(client, /cache: "no-store"/);
+  assert.doesNotMatch(client, /params\.set\([^\n]*[Tt]oken/);
+  assert.match(view, /<blockquote>\{item\.excerpt\}<\/blockquote>/);
+  assert.match(view, /internalHref\(item\.reader_url\)/);
+  assert.match(view, /href=\{reader\}/);
+  assert.match(view, /阅读原文/);
+  assert.match(view, /readDiscoveryContext\(current\.id, tokenRef\.current, item\.id\)/);
+  assert.match(view, /阅读原始 PDF/);
+  assert.match(view, /按页定位/);
+  assert.match(view, /OCR 识别/);
+  assert.doesNotMatch(view, /Math\.round\(item\.(quality_score|score)|dangerouslySetInnerHTML/);
 });
 
-test("viewpoint UI groups relations and keeps the benchmark-gated baseline visible", async () => {
-  const [page, styles] = await Promise.all([
-    read("../app/explore/opinions/page.tsx"),
+test("discovery separates its three channels, background expansion and stable more-results paging", async () => {
+  const [view, client, styles] = await Promise.all([
+    read("../components/discovery-search-workspace.tsx"), read("../lib/api/discovery.client.ts"),
     read("../app/explore/opinions/viewpoint-search.module.css"),
   ]);
-
-  for (const relation of ["direct", "support", "oppose", "qualify", "critique", "extend", "reframe"]) {
-    assert.match(page, new RegExp(`key: "${relation}"`));
+  assert.match(view, /shownRef = useRef\(3\)/);
+  assert.match(view, /result\?\.passages\.map/);
+  assert.match(view, /result\?\.entities\.map/);
+  assert.match(view, /result\?\.curation\.map/);
+  assert.match(view, /cursor: current\.next_cursor/);
+  assert.match(view, /limit: shownRef\.current/);
+  assert.match(view, /readDiscoverySearch\(current\.id, tokenRef\.current, \{ limit \}\)/);
+  assert.match(client, /action: "expand" \| "cancel"/);
+  assert.match(view, /actOnDiscoverySearch\(current\.id, tokenRef\.current, action\)/);
+  assert.match(view, /subscribeToSessionChanges/);
+  assert.match(view, /invalidSession\(reason\)/);
+  for (const state of ["queued", "running", "partial", "completed", "failed", "canceled"]) {
+    assert.match(view, new RegExp(`${state}:`));
   }
-  assert.match(page, /Semantic V2 基准排序/);
-  assert.match(page, /Claim Engine/);
-  assert.match(page, /影子评估中/);
-  assert.match(page, /语义相近不自动等于支持/);
-  assert.doesNotMatch(page, /聊天|发送消息|assistant-message/);
-  assert.match(styles, /\.evidenceCard\[data-stance="oppose"\]/);
+  assert.match(view, /portrait_url && !portraitFailed/);
+  assert.match(view, /来源：\{item\.source_title\}/);
+  assert.doesNotMatch(view, /stanceSections|query_claim|Claim Engine|data-stance|assistant-message/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(styles, /@media \(max-width: 560px\)/);
 });
 
-test("viewpoint filters round-trip canonical IDs and bounded public fields in the URL", async () => {
-  const [serverApi, page, styles] = await Promise.all([
-    readSearch(),
-    read("../app/explore/opinions/page.tsx"),
-    read("../app/explore/opinions/viewpoint-search.module.css"),
+test("discovery filters preserve existing source IDs, years and legacy route scope", async () => {
+  const [page, view, client] = await Promise.all([
+    read("../app/explore/opinions/page.tsx"), read("../components/discovery-search-workspace.tsx"),
+    read("../lib/api/discovery.client.ts"),
   ]);
-
-  for (const parameter of ["relation", "source_type", "scholar", "theory", "topic", "language", "year_min", "year_max", "work"]) {
-    assert.match(page, new RegExp(`name=["'{]${parameter}`));
+  for (const parameter of ["source_type", "scholar", "author", "theory", "topic", "concept", "language", "year_min", "year_max", "work_id"]) {
+    assert.match(page, new RegExp(`"${parameter}"`));
   }
-  assert.match(serverApi, /\["relation", filters\.relation\]/);
-  assert.match(serverApi, /\["source_type", filters\.sourceType\]/);
-  assert.match(serverApi, /\["scholar", filters\.scholar\]/);
-  assert.match(serverApi, /parameters\.set\("year_min"/);
-  assert.match(serverApi, /parameters\.set\("year_max"/);
-  assert.match(serverApi, /filters\.workId/);
-  assert.match(serverApi, /type ViewpointFacetOption/);
-  assert.match(serverApi, /scholars: ViewpointFacetOption\[\]/);
-  assert.match(serverApi, /theories: ViewpointFacetOption\[\]/);
-  assert.match(serverApi, /topics: ViewpointFacetOption\[\]/);
-  assert.match(styles, /\.filters/);
+  assert.match(page, /if \(!filters\.work_id && params\.work\) filters\.work_id = params\.work/);
+  assert.match(page, /legacyRelation=\{Boolean\(params\.relation\)\}/);
+  assert.match(view, /name="year_min" min="1" max="3000"/);
+  assert.match(view, /name="year_max" min="1" max="3000"/);
+  assert.match(view, /value="journal_article"/);
+  assert.match(view, /facets\?\.authors/);
+  assert.match(view, /facets\?\.theories/);
+  assert.match(view, /facets\?\.topics/);
+  assert.match(view, /name=\{name\} value=\{entry\}/);
+  assert.match(view, /retryParams\.append\(name, entry\)/);
+  assert.match(client, /JSON\.stringify\(\{ q, filters \}\)/);
 });
