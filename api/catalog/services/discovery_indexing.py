@@ -182,6 +182,8 @@ def _prepare_generation(job):
 
 def schedule_sources(generation, *, max_queued=8):
     """Scan fingerprints only; heavy per-source work stays bounded in its queue."""
+    if not SemanticIndexVersion.discovery_objects.filter(pk=generation.pk, status__in=["building", "ready", "active"]).exists():
+        return 0
     current = set()
     slots = max(0, max_queued - ProcessingJob.objects.filter(job_type=JOB_TYPE, status__in=OPEN,
                     stats__action="source").count())
@@ -207,9 +209,14 @@ def schedule_sources(generation, *, max_queued=8):
             if (job and job.status == "failed" and job.finished_at and
                     job.finished_at + timedelta(seconds=min(1800, 60 * (2 ** job.attempt))) > timezone.now()):
                 continue
-            if not slots or (job and (job.attempt >= job.max_attempts or job.status == "canceled")):
+            restored = bool(job and job.status == "canceled" and job.error_code == "superseded"
+                            and job.stats.get("action") == "source")
+            if not slots or (job and not restored and (job.attempt >= job.max_attempts or job.status == "canceled")):
                 continue
             with transaction.atomic():
+                if not SemanticIndexVersion.discovery_objects.select_for_update().filter(
+                        pk=generation.pk, status__in=["building", "ready", "active"]).exists():
+                    return pending
                 if job is None:
                     job, _ = ProcessingJob.objects.get_or_create(idempotency_key="discovery:" + key,
                         defaults={"job_type": JOB_TYPE, "edition_id": source.pk if kind == "edition" else None,
@@ -219,9 +226,24 @@ def schedule_sources(generation, *, max_queued=8):
                 job = ProcessingJob.objects.select_for_update().get(pk=job.pk)
                 if job.status in OPEN and job.task_id:
                     continue
-                if job.status == "succeeded":
-                    # A lost source-state completion is recoverable without new vectors.
+                restored = (job.status == "canceled" and job.error_code == "superseded"
+                            and job.stats.get("action") == "source")
+                if job.status == "canceled" and not restored:
+                    continue
+                if job.status == "succeeded" or restored:
+                    fresh = get_source(kind, source.pk)[1]
+                    if (not fresh or fresh["source_revision"] != header["source_revision"]
+                            or job.stats.get("generation_id") != str(generation.pk)
+                            or job.stats.get("source_type") != kind
+                            or job.stats.get("source_id") != str(source.pk)
+                            or job.stats.get("source_revision") != header["source_revision"]):
+                        continue
+                    # Withdrawal can delete derived rows while their old unit
+                    # checkpoint survives. Replay units, retaining existing ready
+                    # chunks via _write_chunk's idempotent completion check.
                     job.attempt = 0
+                    job.stats = {**job.stats, "completed_units": 0}
+                    job.save(update_fields=["attempt", "stats"])
                 _enqueue_job(job)
                 state.job = job
                 state.save(update_fields=["job", "updated_at"])

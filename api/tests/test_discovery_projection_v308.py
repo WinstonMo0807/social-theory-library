@@ -6,7 +6,7 @@ import pytest
 from django.utils import timezone
 
 from catalog.discovery_index_models import DiscoveryDocument, DiscoverySourceState
-from catalog.models import ReadingPath, ReadingPathItem, SemanticIndexVersion
+from catalog.models import ReadingPath, ReadingPathItem, SemanticIndexVersion, Topic
 from catalog.services import discovery_indexing as indexing
 from catalog.services import discovery_projection as projection
 from catalog.services import discovery_sources as sources
@@ -199,3 +199,141 @@ def test_ready_revision_refresh_keeps_single_visible_build_coordinator(monkeypat
     assert generation.status == "building"
     assert coordinator.status == "running" and coordinator.finished_at is None and coordinator.progress < 100
     assert indexing.request_rebuild().pk == coordinator.pk
+
+
+def _queued_topic(monkeypatch, generation_status="active"):
+    topic = Topic.objects.create(name="可恢复的公开主题", slug="restored-discovery-topic", editorial_status="published")
+    def current_topic(kind):
+        if kind == "topic":
+            row, header = sources.get_source(kind, topic.pk)
+            if row is not None:
+                yield row, header
+    # Data migrations also seed published knowledge. This risk fixture scans
+    # only its target while still using the real public-source adapter.
+    monkeypatch.setattr(indexing, "iter_source_headers", current_topic)
+    generation = SemanticIndexVersion.discovery_objects.create(index_family="discovery",
+        uid=f"restored-{uuid4().hex}", provider="local", status=generation_status)
+    header = sources.get_source("topic", topic.pk)[1]
+    assert indexing.schedule_sources(generation) == 1
+    job = ProcessingJob.objects.get(job_type="discovery_index", stats__source_id=str(topic.pk))
+    return topic, generation, header, job
+
+
+@pytest.mark.parametrize("generation_status", ["building", "ready", "active"])
+def test_withdrawn_topic_restored_unchanged_requeues_superseded_source(api_client, admin_user, monkeypatch, generation_status):
+    topic, generation, header, job = _queued_topic(monkeypatch, generation_status)
+    # A source may be withdrawn after chunks/checkpoints succeeded but before
+    # its source-state completion. Keep these derived rows on requeue.
+    document = DiscoveryDocument.objects.create(generation=generation, channel="entities", source_type="topic",
+        source_id=topic.pk, source_revision=header["source_revision"], scope_token=header["scope_token"],
+        input_hash=sources.fingerprint(header["text"]), text=header["text"], normalized_text=header["text"],
+        keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+    job.stats["completed_units"] = 1
+    job.attempt = job.max_attempts - 1
+    job.save(update_fields=["stats", "attempt"])
+    old_task = job.task_id
+    api_client.force_authenticate(admin_user)
+    archived = api_client.post(f"/api/catalog/admin/lifecycle/topic/{topic.pk}/", {"action": "archive"}, format="json")
+    assert archived.status_code == 202
+    published = api_client.post(f"/api{archived.data['editorial_revision']['publish_url']}", {}, format="json")
+    assert published.status_code == 200
+    assert sources.get_source("topic", topic.pk) == (None, None)
+    indexing.run_job(job.pk, old_task)
+    job.refresh_from_db()
+    assert job.status == "canceled" and job.error_code == "superseded"
+    assert job.attempt == job.max_attempts
+
+    restored = api_client.post(f"/api/catalog/admin/lifecycle/topic/{topic.pk}/", {"action": "restore"}, format="json")
+    assert restored.status_code == 200
+    detail_url = f"/api/catalog/admin/topics/{topic.pk}/"
+    republished = api_client.patch(detail_url, {"editorial_status": "published"}, format="json",
+        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"])
+    assert republished.status_code == 200
+    assert sources.get_source("topic", topic.pk)[1]["source_revision"] == header["source_revision"]
+    assert indexing.schedule_sources(generation) == 1
+    job.refresh_from_db()
+    assert job.status == "pending" and job.task_id != old_task
+    assert job.attempt == 0 and not job.error_code and job.finished_at is None
+    assert job.stats["completed_units"] == 0
+    assert ProcessingJob.objects.filter(job_type="discovery_index", stats__source_id=str(topic.pk)).count() == 1
+    document.refresh_from_db()
+    assert document.keyword_ready and document.vector_ready and document.indexed_at is not None
+    new_task = job.task_id
+    indexing.run_job(job.pk, old_task)
+    job.refresh_from_db()
+    assert job.status == "pending" and job.task_id == new_task
+
+
+@pytest.mark.parametrize("error_code", ["application_rollback", "canceled_by_admin", ""])
+def test_source_schedule_preserves_other_cancellations(monkeypatch, error_code):
+    _, generation, _, job = _queued_topic(monkeypatch)
+    ProcessingJob.objects.filter(pk=job.pk).update(status="canceled", error_code=error_code, attempt=1)
+    indexing.schedule_sources(generation)
+    job.refresh_from_db()
+    assert job.status == "canceled" and job.error_code == error_code and job.attempt == 1
+
+
+def test_source_schedule_does_not_revive_retired_generation_from_stale_instance(monkeypatch):
+    _, generation, _, job = _queued_topic(monkeypatch)
+    ProcessingJob.objects.filter(pk=job.pk).update(status="canceled", error_code="superseded", attempt=1)
+    SemanticIndexVersion.discovery_objects.filter(pk=generation.pk).update(status="retired")
+    indexing.schedule_sources(generation)
+    job.refresh_from_db()
+    assert job.status == "canceled" and job.attempt == 1
+
+
+@pytest.mark.parametrize("source_change", ["withdrawn", "changed"])
+def test_superseded_source_requeue_rechecks_current_public_header(monkeypatch, source_change):
+    topic, generation, header, job = _queued_topic(monkeypatch)
+    ProcessingJob.objects.filter(pk=job.pk).update(status="canceled", error_code="superseded", attempt=1)
+    # Simulate publication changing after the scheduler's source scan.
+    if source_change == "withdrawn":
+        Topic.objects.filter(pk=topic.pk).update(editorial_status="archived")
+    else:
+        Topic.objects.filter(pk=topic.pk).update(description="已经改变的公开内容")
+    monkeypatch.setattr(indexing, "iter_source_headers", lambda kind: [(topic, header)] if kind == "topic" else [])
+    indexing.schedule_sources(generation)
+    job.refresh_from_db()
+    assert job.status == "canceled" and job.attempt == 1
+
+
+def test_source_schedule_does_not_revive_canceled_coordinator(monkeypatch):
+    _, generation, _, job = _queued_topic(monkeypatch)
+    ProcessingJob.objects.filter(pk=job.pk).update(status="canceled", error_code="superseded",
+        stats={**job.stats, "action": "build"}, attempt=1)
+    indexing.schedule_sources(generation)
+    job.refresh_from_db()
+    assert job.status == "canceled" and job.attempt == 1
+
+
+def test_succeeded_source_restored_after_withdrawal_cleanup_replays_units(monkeypatch):
+    topic, generation, header, job = _queued_topic(monkeypatch)
+    document = DiscoveryDocument.objects.create(generation=generation, channel="entities", source_type="topic",
+        source_id=topic.pk, source_revision=header["source_revision"], scope_token=header["scope_token"],
+        input_hash=sources.fingerprint(header["text"]), text=header["text"], normalized_text=header["text"],
+        keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+    ProcessingJob.objects.filter(pk=job.pk).update(status="succeeded", attempt=1,
+        stats={**job.stats, "completed_units": 1}, finished_at=timezone.now())
+    DiscoverySourceState.objects.filter(job=job).update(source_revision=header["source_revision"],
+        expected_count=1, completed_count=1, indexed_at=timezone.now())
+    # Model the external deletion confirmation; run the actual withdrawal
+    # cleanup so the old checkpoint outlives its deleted documents/state.
+    def external_index(method, path, data=None):
+        if path.endswith("/search"):
+            return {"hits": [{"id": str(key)} for key in DiscoveryDocument.objects.filter(
+                generation=generation).values_list("pk", flat=True)]}
+        return {"taskUid": 1}
+    monkeypatch.setattr(indexing, "meili", external_index)
+    monkeypatch.setattr(indexing, "wait_index_task", lambda *args, **kwargs: {})
+    topic.editorial_status = "archived"
+    topic.save(update_fields=["editorial_status"])
+    assert indexing.schedule_sources(generation) == 0
+    assert not DiscoveryDocument.objects.filter(pk=document.pk).exists()
+    assert not DiscoverySourceState.objects.filter(generation=generation, source_id=topic.pk).exists()
+    topic.editorial_status = "published"
+    topic.save(update_fields=["editorial_status"])
+    assert sources.get_source("topic", topic.pk)[1]["source_revision"] == header["source_revision"]
+    assert indexing.schedule_sources(generation) == 1
+    job.refresh_from_db()
+    assert job.status == "pending" and job.attempt == 0
+    assert job.stats["completed_units"] == 0
