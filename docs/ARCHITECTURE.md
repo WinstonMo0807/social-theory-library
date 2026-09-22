@@ -1,8 +1,12 @@
 # Social Theory Library 架构
 
-## 2026-09-22 3.0.8 源码增量（未上线）
+2026-09-22追加：Processing Center的OCR控制复用ProcessingJob与原断点恢复服务，以ocr_monitor=1读取6项分页持久状态，不触发健康探针或旧暂停任务全量分类。显式手工重试记录旧错误和尝试次数，保留页/任务身份并开启新一轮有上限尝试，失败后逐页保存；自动重试上限、文件版本、永久错误与权限保护保留。没有第二套任务存储或schema变化。
 
-增加内部ONNX推理服务和独立一并发查询/索引Celery队列，复用Django、PostgreSQL、Redis、Meilisearch、原生文本/OCR与现有Reader。查询会话仅保存来源引用和排序，当前权限/修订读时复检；DiscoveryDocument为可重建投影，SemanticIndexVersion按semantic/discovery分类保留旧版本。处理中心沿既有ProcessingJob展示并恢复任务。固定FP32模型只读挂载，运行不联网、不需GPU。模型和NAS兼容性尚待本轮集中验证。详见[3.0.8实现](V3.0.8_IMPLEMENTATION.md)。
+## 2026-09-22 3.0.8与后续修复已上线
+
+增加内部ONNX推理服务和独立一并发查询/索引Celery队列，复用Django、PostgreSQL、Redis、Celery、Meilisearch、原生文本/OCR与现有Reader。查询会话只保存来源引用和排序，当前权限/修订读时复检；DiscoveryDocument是可重建投影，SemanticIndexVersion按semantic/discovery分类保留旧版本。来源变更提交后去抖派发，每300秒协调增量补漏。固定FP32模型只读挂载，运行不联网、不需GPU。初始15来源/4483文档全部active，真实公网查询通过；当前API/Web应用486af13，推理仍为e02。详见[实现](V3.0.8_IMPLEMENTATION.md)与[交付](V3.0.8_COMPLETION_RELEASE.md)。
+
+生产在原项目中合并`compose.public.yaml`、`compose.cloudflare.yaml`、`compose.discovery.yaml`。推理服务仅接`discovery_internal`，两个专用Worker分别消费`discovery_query`、`discovery_index`；普通Worker仍消费`celery`，上传/OCR沿既有`ingestion`。Beat每五分钟协调派生索引，每小时清理过期查询会话。只有模型清单就绪不能证明实际推理成功，应用readiness也不能证明全库投影完成；三种状态分别记录。运行命令和资源边界见[部署说明](DEPLOYMENT.md)。
 
 ## 2026-09-21 3.0.7 实现增量（已上线）
 
@@ -13,7 +17,7 @@ EvidenceCuration按学者、主题或KnowledgeNode管理原文引用，EvidenceC
 catalog 0057—0059及ingestion 0017均为兼容迁移。即时预览在独立iframe视口内渲染同一个React公共组件，跟随表单输入；完整私有预览读取已保存草稿。构建、接口与隔离数据库检查和实际浏览器检查分别记录，不以SSR检查替代交互或视觉证据。
 
 
-当前3.0.6的精简阅读入口是[实际运行架构](GPT_ARCHITECTURE_CONTEXT.md)、[管理端功能画像](ADMIN_ARCHITECTURE_PROFILE.md)和[上架发布流程](INGESTION_AND_PUBLICATION.md)。本文件保留按阶段追加的实现记录；下方“未测试/未部署/尚未实现”等只对当时时点成立，不是当前缺口清单。2026-09-20最终运行与证据边界见[当前状态](CURRENT_STATE.md)及[最终交付](V3.0.6_COMPLETION_RELEASE.md)。
+原3.0.6架构阅读入口是[实际运行架构](GPT_ARCHITECTURE_CONTEXT.md)、[管理端功能画像](ADMIN_ARCHITECTURE_PROFILE.md)和[上架发布流程](INGESTION_AND_PUBLICATION.md)。本文件保留按阶段追加的实现记录；下方“未测试/未部署/尚未实现”等只对当时时点成立，不是当前缺口清单。最新运行与验证边界以上方3.0.8记录、根目录CURRENT_PROGRESS.md和[部署说明](DEPLOYMENT.md)为准。
 
 3.0.6封面补充复用CoverCandidate、媒体、CatalogFieldDecision、EditorialRevision和AuditEvent，不新增表或第二套处理服务。入库在原件/阅读副本准备后优先渲染少量前部PDF候选，再进入AI书目和全文/OCR；封面不依赖OCR就绪。Edition级接口只在明确操作时渲染任意指定页或上传图片，按角色、Work/Edition、当前文件指纹及同请求回执校验。普通GET只读取候选，自动任务不选择封面、不覆盖人工决定；公开读取继续沿用有效修订，原PDF/Page不改变。
 
@@ -445,7 +449,7 @@ QueryLexicon 也存放在 PostgreSQL，但属于可重建派生数据。删除�
 
 ## 部署模式
 
-`compose.yaml` 用于本地或单机验证。`compose.public.yaml` 提供加固的完整服务。`compose.cloudflare.yaml` 在完整服务上增加 Cloudflare Tunnel 和局域网入口。`compose.nas.yaml` 是只在 NAS 运行 worker、ingestion worker 和 OCR 的拆分模式。
+`compose.yaml`用于本地或单机验证。`compose.public.yaml`提供加固的基础完整服务，`compose.cloudflare.yaml`增加Cloudflare Tunnel和局域网入口；3.0.8生产必须再叠加`compose.discovery.yaml`提供推理、专用Worker及相应网络/环境。新增服务继续共用原数据库、Redis、Meilisearch与NAS目录，不是第二套书库。`compose.nas.yaml`是历史的NAS worker、ingestion worker和OCR拆分模式，不代替当前三层生产栈。后续重建与更新使用[统一Compose命令](DEPLOYMENT.md#308日常运维的统一命令)。
 
 2026-08-17 的 Production Task 3 镜像记录属于历史快照。2.7 发布前必须重新检查真实 Compose project、环境文件、挂载路径、数据库迁移、活动索引、队列和备份；本轮 SSH 检查未能读取当前目标主机，因此不把该快照当作当前状态。
 

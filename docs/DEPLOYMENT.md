@@ -1,8 +1,43 @@
 # 部署说明
 
-更新日期为2026-09-21。当前摘要见CURRENT_STATE.md，后续部署仍需重新检查实时状态。
+更新日期为2026-09-22。当前动作见根目录CURRENT_PROGRESS.md；下方版本记录保留各自时点，后续部署仍需检查实时状态。
 
-## 3.0.7正式生产记录
+## 3.0.8追加修复已部署
+
+NAS记录`2026-09-22T22:31:39+08:00`，修复应用`486af131405cc1100f5093747f33cf807063c481`切换退出0，未触发应用回退。API/四Worker/Beat和Web均来自该准确提交，Inference保留e02b57013f镜像；切换后重启计数均0。没有新迁移，原件、人工确认、私人数据摘要及活动discovery索引前后相同，Cloudflare、PG、Redis、Meili和Inference容器身份未变。
+
+本批8项公网影响检查全部通过，脚本退出0：新三栏页面、OCR监控匿名拒绝、真实异步查询、活动索引保留、当前原文修订上下文、Reader定位及PDF Range206。查询返回197段候选、11知识、0策展，用时34.41秒（含公网轮询）；不与先前用户复现的后台18.0秒混为同一计时口径。证据为`output/verification/v308/production/recovery-public.json`。
+
+本轮回退只替换API/Web，保留已经完成的discovery活动代次。新BackupJob `273fac46-8240-446a-8006-2624cabb02fc`，归档SHA256 `88896007ab653723fe1ca97c081fb4600fd89af4e435d959601fa45dc01796d8`。受限记录目录为`storage/backups/recovery-20260922-ocr-layout-final/deploy-record`，包含原环境、源码、两镜像回退标签及`rollback.sh`。不调用整版退回3.0.7的退役脚本。
+
+| 服务 | 当前标签与镜像ID |
+| --- | --- |
+| API/四Worker/Beat | `social-theory-library-api:3.0.8-486af13140`；`sha256:b101b92fc3d41b829751785f340d8e615340822a505dda38bb2ee779aae6cfa4` |
+| Web | `social-theory-library-web:3.0.8-486af13140`；`sha256:b71a56adf53b782b24e54423d35c602721bf656242044a8e27d02f1be0cc3acc` |
+| Inference | `social-theory-library-inference:3.0.8-e02b57013f`；`sha256:e33888d74b1a441b5f54543dc32cc7e4a5b5bde815c0fa83028eab2d1315a65c` |
+
+后续首次部署新检索族时，先以兼容迁移与独立任务服务完成构建/激活和真实查询，之后才切换公开入口；不能再用API ready替代活动索引与非空原文验收。日常增量更新复用当前generation、来源修订检查及自动队列，不要求管理员每次人工建库。
+
+## 初次3.0.8应用切换（历史）
+
+NAS记录`2026-09-22T18:12:58+08:00`，本轮应用切换退出0、未触发回退。catalog0060、0061、0062及ingestion0018迁移成功，生产受保护摘要逐字一致；四个Worker就绪、Web内部HTTP200、公网ready为3.0.8且pending_migrations为0，切换后应用重启次数为0。Cloudflared身份和重启次数未变。
+
+| 记录 | 标识 |
+| --- | --- |
+| 已推送应用源码 | `e02b57013f53931519ae49831cc2bac6911d7925` |
+| 源码Git tree | `8af0dcc9058cad78acba1e949b9cdff3c721f6ec` |
+| 源码归档 | 1324文件，SHA256 `1e138aa1ffcdc8f494c4eee63238ad03117a184f39b8b21c0e67b8311b49118d` |
+| API/四Worker/Beat | `social-theory-library-api:3.0.8-e02b57013f`；ID `sha256:c378dc3675a772e6512ac1eeb80e9f5b8662875845b08f6262d292a9d6ec3e92` |
+| Web | `social-theory-library-web:3.0.8-e02b57013f`；ID `sha256:ed57828586932584d164d6d3c602fd41ba180cd1bae811e8e9dd6d13ff8f3b19` |
+| 本地推理 | `social-theory-library-inference:3.0.8-e02b57013f`；ID `sha256:e33888d74b1a441b5f54543dc32cc7e4a5b5bde815c0fa83028eab2d1315a65c` |
+
+三镜像的commit、tree和归档标签均已核对。正式API候选的隔离迁移、新旧ORM保护摘要和HTTP就绪通过；0062的持久数据库默认值还经过真实旧3.0.7 ORM事务INSERT及回滚验证。正式推理镜像的两次短实际调用通过，runtime/app与已实测r2源码字节一致，其他推理文本仅有CRLF差异。候选验收证据见忽略目录`output/verification/v308/final-candidate-result.json`。
+
+初始全库generation为`8e62c8bb-59a7-4104-8388-ae43f0e19a59`。本次交接时11/15来源完成，全文来源仍在处理；这是进度快照，不能据此认定全库覆盖或新检索最终验收通过。完整索引及公网业务验收结果另在[3.0.8交付记录](V3.0.8_COMPLETION_RELEASE.md)补齐。应用就绪、索引完成和公网查询可用分别记录。
+
+新鲜BackupJob为`9b028f78-ffcc-4032-9f64-397979c067a8`，归档SHA256为`0df9ffb29f91827017e1c795d7af4b50ed57ab68edd1078c078e9591e99deafd`，已实际隔离恢复。受限发布记录位于`/volume2/library/docker/social-theory-library/storage/backups/pre-v308-20260922-v308/deploy-record`，保留旧源码、环境、Compose、3.0.7镜像及回退脚本。恢复PG与临时验收服务已停止，恢复PG容器、所有卷、镜像和证据保留；已停止临时执行容器的授权清理另按精确名单记录。实际回退顺序见[回退方案](rollback.md)。真实浏览器检查按用户授权豁免，不记为通过。
+
+## 3.0.7正式生产记录（历史）
 
 用户已明确豁免真实浏览器验收并要求部署，发布不再等待本地Web执行策略解除。其余源码一致性、自动检查、候选HTTP就绪、备份恢复及回退保护保留；豁免不表示浏览器检查通过。
 
@@ -367,11 +402,34 @@ GitHub repository 的 Public visibility 是 owner 的当前决定，不得根据
 | `compose.yaml` | 本地或单机验证，包含数据库、队列、搜索、API、Worker、Web、Edge 和可选 OCR/GROBID |
 | `compose.public.yaml` | 加固的完整服务，包含 PostgreSQL、Redis、Meilisearch、API、两个 Worker、Beat、Web、Nginx 和可选 Caddy/OCR/GROBID |
 | `compose.cloudflare.yaml` | 在完整服务上增加 Cloudflare Tunnel，并绑定局域网管理入口 |
+| `compose.discovery.yaml` | 3.0.8必需叠加层：内部推理服务、专用查询/索引Worker、客户端网络和环境、Meilisearch索引资源预算 |
 | `compose.nas.yaml` | 拆分式部署中的 NAS Worker、Ingestion Worker 和 PaddleOCR |
 | `deploy/nginx/default.conf.template` | 同源 API、上传并发、限流、X-Accel 和 PDF Range |
 | `deploy/caddy/Caddyfile` | 可选的直接 HTTPS 入口 |
 
-已有交接记录称生产使用 `compose.public.yaml` 与 `compose.cloudflare.yaml`。该信息可能变化，部署前必须在目标主机重新确认，不得直接沿用历史容器、IP、任务状态或临时访问凭据。
+3.0.8生产使用同一`social-science-library`项目，按`compose.public.yaml`、`compose.cloudflare.yaml`、`compose.discovery.yaml`顺序合并。第三份不是可选profile；仅用前两份执行`up`或重新创建服务，会遗漏新增服务，并可能使API/Worker失去discovery网络或显式环境。NAS自动开机按现有容器的`restart: unless-stopped`恢复，不会重新读取Compose；后续Compose操作仍须使用完整三层。
+
+### 3.0.8日常运维的统一命令
+
+以下为NAS shell的命令前缀，定义本身不变更服务。`--env-file`始终指向受保护的现有生产环境，不执行输出展开凭据的`config`；只用`config --quiet`验证配置。
+
+```sh
+STL_APP=/volume2/library/docker/social-theory-library
+dc() {
+  docker compose --project-directory "$STL_APP" --env-file "$STL_APP/.env" \
+    -p social-science-library \
+    -f "$STL_APP/compose.public.yaml" \
+    -f "$STL_APP/compose.cloudflare.yaml" \
+    -f "$STL_APP/compose.discovery.yaml" "$@"
+}
+dc config --quiet
+dc ps
+dc exec -T api python manage.py discovery_index status
+```
+
+后续`logs`、`stop`、`restart`和经授权的`up`均复用这个前缀；不要另建项目名。镜像或环境更新后须用已验证镜像执行`up -d --no-build --pull never`并明确本轮影响的服务，单纯`restart`不会应用新的镜像、环境或网络配置。发布仍先备份恢复演练、迁移兼容及任务静默检查，再按该次保留的发布脚本切换；API/Web重新创建后须刷新Edge。应用回退到3.0.7时由回退脚本恢复当时的两层配置，不以日常三层命令代替回退流程。
+
+队列职责固定为普通Worker消费`celery`，Ingestion Worker消费既有`ingestion`，新增Worker分别消费`discovery_query`和`discovery_index`。QueryLexicon及搜索评估继续使用已核对的`celery`队列。不要只启动新推理服务而遗漏专用Worker；Beat每五分钟协调索引、每小时清理过期查询会话。
 
 ## 环境文件
 
@@ -389,6 +447,10 @@ GitHub repository 的 Public visibility 是 owner 的当前决定，不得根据
 - Cloudflare、S3、邮件、AI、OCR 或外部 Provider 所需凭据
 
 不得把真实值写入 Compose、源码、README、Issue、截图、终端记录或 Git 历史。不要在聊天中发送 GitHub Token、生产密码或 2FA code。
+
+3.0.8还须在私有环境中固定`LIBRARY_API_IMAGE`、`LIBRARY_WEB_IMAGE`和`LIBRARY_INFERENCE_IMAGE`为同次已验证发布的准确标签，并核对实际镜像ID；不能依赖`:local`或泛用`:3.0.8`默认值。`NAS_HOST_ROOT/models/discovery/v308-fp32-v1`仅只读挂载到推理容器。专用Worker沿用现有数据库、Redis和`CACHE_URL`，不建立第二套书库。
+
+本轮推理服务为2线程、batch 1、内存1600 MiB、内存与swap合计1800 MiB；两个新增Worker各一并发、内存512 MiB/合计640 MiB。Meilisearch通过叠加层配置`DISCOVERY_MEILI_INDEXING_MEMORY`，默认`256Mb`及单索引线程，只约束后台索引资源，不删除或替换数据volume。调整资源后按任务边界有序重建相应容器，不直接强杀正在提交的工作。
 
 ## 本地验证
 
@@ -416,6 +478,8 @@ docker compose --profile ocr up -d --build
 
 `offline/web-runtime-node-modules-2.5.0-linux-x64.tar.gz`、离线 wheel、模型缓存和历史发布包也不会提交。需要离线部署时，应从独立制品存储恢复，并使用发布清单校验。仅克隆 GitHub 仓库不能证明 OCR 或离线镜像可直接构建。
 
+3.0.8模型由`inference_service/model-lock.json`固定修订和文件身份，离线推理镜像使用`Dockerfile.offline`及经SHA256核对的Linux Python 3.12 wheel清单。Web构建复用已核实的离线npm缓存。源码归档、实际模型制品、离线依赖与最终镜像分开记录；不能从文件名推断已准备或已实测。准备路径和只读权限见[本地推理说明](DISCOVERY_LOCAL_INFERENCE.md)。
+
 ## 生产部署前检查
 
 1. 确认目标 NAS 型号、CPU、可用内存、真实挂载路径和剩余空间。
@@ -433,7 +497,7 @@ docker compose --profile ocr up -d --build
 
 ### BackupJob PostgreSQL runtime
 
-正式 BackupJob 由 `api/distribution/tasks.py` 执行。API 镜像明确安装 PostgreSQL 16 client，不能改回 Debian 未锁 major 的 `postgresql-client`，也不能使用 `postgres:latest` 作为正式工具来源。API、默认 Worker、Ingestion Worker 与 Beat 必须使用同一 API 镜像。当前没有独立的定时 BackupJob，管理员请求由默认 Worker 消费。
+正式 BackupJob 由 `api/distribution/tasks.py` 执行。API 镜像明确安装 PostgreSQL 16 client，不能改回 Debian 未锁 major 的 `postgresql-client`，也不能使用 `postgres:latest` 作为正式工具来源。API、默认Worker、Ingestion Worker、Discovery Query Worker、Discovery Index Worker与Beat必须使用同一API镜像。当前没有独立的定时BackupJob，管理员请求由默认Worker消费。
 
 任务开始导出前会读取 PostgreSQL server、pg_dump 与 pg_restore 版本。pg_dump 或 pg_restore 的 major 小于 server major 时，任务立即失败并写入明确的无凭据错误。数据库密码只通过子进程环境传入，不出现在 argv、manifest 或错误文本。
 
@@ -482,6 +546,8 @@ Set-Location api
 - 活动语义索引 UID、PostgreSQL ready 记录和 Meilisearch 文档计数
 - Cloudflare 或 Caddy 入口、Nginx 日志和浏览器控制台
 
+3.0.8另外检查三个新增服务、两个专用队列和四个Worker实际响应。推理`/health`的`manifest_ready`只证明文件清单，实际编码/重排及其artifact身份另验。`discovery_index build`返回ProcessingJob标识只表示任务已建立；用`status`、处理中心及来源完成记录核对generation、当前修订、失败/等待项和Meili写入完成，再验证公网202会话、三通道结果、能力令牌、权限变化及Reader上下文。没有公开策展时应返回真实空集，不复制隔离测试样本；不能以旧semantic活动UID或API ready代替discovery全库验收。
+
 测试结果应记录命令、时间、退出码和环境。历史验收、本地包检查或页面能渲染都不能代替当前生产检查。
 
 ## 回退
@@ -489,6 +555,8 @@ Set-Location api
 每次发布应保留旧源码、旧镜像标签、环境配置和数据库备份。无 migration 的应用回退可以恢复旧源码与镜像。包含 migration 的回退必须依据迁移影响单独决定，不能默认反向迁移安全。
 
 回退后仍要复核 readiness、队列、活动索引、Range、登录和公开页面。生产备份、馆藏、模型与索引不进入 GitHub，它们继续保存在服务器或授权制品存储。
+
+3.0.8回退必须先停止新增查询/索引Worker与推理服务，再使用保留的3.0.8 API退役building、ready、active的discovery代次并取消未完成派生任务，随后恢复3.0.7镜像和原环境/Compose。旧semantic活动索引、新增schema、模型、原件与已完成派生行保留；不恢复旧数据库或反向迁移。完整入口及精确镜像校验见[回退方案](rollback.md)。
 
 ### Production Task 3 回退记录
 
@@ -504,12 +572,12 @@ catalog 0027/0028 与 ingestion 0011 都是 additive schema。正式 artifact �
 
 上线顺序固定为备份、计划检查、暂停不兼容 worker、使用一次性 API 容器执行显式 migration、统一应用发布、QueryLexicon dry-run/reconciliation、必要的 clean semantic projection、健康检查和恢复处理队列。`compose.public.yaml` 的 API 启动命令只执行 collectstatic 和 Gunicorn，不会自行 migrate；生产迁移必须由发布操作者在核对 `migrate --plan` 后执行。不得自动发布 draft authority、自动 Accept Candidate、自动全库 web/AI enrichment 或切换公开 V2。若生产基础设施或备份门槛不能证明，状态必须保持 `DEPLOYMENT BLOCKED`。
 
-受控迁移示例（目标主机上执行，不把真实环境值写入命令记录）：
+本节保留2.7的历史发布门槛。下面命令示例已更新为3.0.8运维入口：先按上文定义三层`dc`前缀，再在已获授权的维护窗口执行；不要把真实环境值写入命令记录。
 
-```text
-docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py migrate --plan
-docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py check
-docker compose -f compose.public.yaml -f compose.cloudflare.yaml run --rm --no-deps api python manage.py migrate --noinput
+```sh
+dc run --rm -T --no-deps api python manage.py migrate --plan
+dc run --rm -T --no-deps api python manage.py check
+dc run --rm -T --no-deps api python manage.py migrate --noinput
 ```
 
 2026-08-19 本地 2.7 门槛已通过：后端全量回归、Django check、migration drift、compileall、前端 Node 回归、TypeScript、ESLint、Vinext build 和 diff check 均退出成功。早先 SSH 公钥拒绝已由用户修复，后续真实部署已完成。
