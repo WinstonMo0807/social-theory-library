@@ -495,7 +495,7 @@ def _append_catalog_state_issues(
             issues.append(
                 _issue(
                     "required_field_incomplete",
-                    f"{FIELD_LABELS.get(field_name, field_name)}尚未完成。",
+                    f"请填写并选择{FIELD_LABELS.get(field_name, field_name)}，完成后点击本节的确认按钮。",
                     step_key,
                     severity="blocker",
                     field=field_name,
@@ -507,7 +507,7 @@ def _append_catalog_state_issues(
             issues.append(
                 _issue(
                     "field_needs_review",
-                    f"{FIELD_LABELS.get(field_name, field_name)}需要确认。",
+                    ("请核对下方的公开内容，选择书目与全文或仅公开书目，再确认本节。" if field_name == "publication_mode" else f"请核对{FIELD_LABELS.get(field_name, field_name)}，内容无误后点击本节的确认按钮。"),
                     step_key,
                     field=field_name,
                 )
@@ -707,7 +707,7 @@ def _contributors_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[
     issues = []
     approved = edition.contributions.filter(approved=True).count()
     if not approved:
-        issues.append(_issue("contributors_empty", "尚未确认作者。", "contributors"))
+        issues.append(_issue("contributors_empty", "作者与译者还未确认。请核对下面的人物，完成后点击确认本节内容。", "contributors"))
     return _confirmed_step(
         "contributors",
         "作者与贡献者",

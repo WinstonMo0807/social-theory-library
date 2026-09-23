@@ -191,6 +191,12 @@ export function EntityPicker({
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
+    const refresh = () => setRetry(value => value + 1);
+    window.addEventListener("stl-people-updated", refresh);
+    return () => window.removeEventListener("stl-people-updated", refresh);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -206,7 +212,8 @@ export function EntityPicker({
           setOptions(rows.flatMap((row) => {
             const name = String(row[nameField] ?? row.preferred_name ?? row.canonical_name_zh ?? row.title ?? "").trim();
             const id = row[idField] ?? row.id;
-            return name && id ? [{ id: String(id), name, status: String(row.status ?? row.editorial_status ?? "") }] : [];
+            const hint = [row.original_name, row.birth_year ? `${row.birth_year}—${row.death_year || ""}` : ""].filter(Boolean).join(" · ");
+            return name && id && row.authority_status !== "merged" ? [{ id: String(id), name, hint, status: String(row.status ?? row.editorial_status ?? row.authority_status ?? "") }] : [];
           }));
           setActiveIndex(0);
         })
@@ -231,7 +238,7 @@ export function EntityPicker({
   );
 
   const select = (value: EntityValue) => {
-    if (!values.some((entry) => entry.id === value.id || entry.name.toLocaleLowerCase() === value.name.toLocaleLowerCase())) {
+    if (!values.some((entry) => entry.id && value.id ? entry.id === value.id : !entry.id && !value.id && entry.name.toLocaleLowerCase() === value.name.toLocaleLowerCase())) {
       onChange([...values, value]);
     }
     setQuery("");
@@ -279,7 +286,7 @@ export function EntityPicker({
         <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>
           {loading ? <small>正在搜索……</small> : null}
-          {!loading ? visibleOptions.map((option, index) => { const selected = values.some((value) => value.id === option.id); return <button id={`${listboxId}-option-${index}`} type="button" role="option" aria-selected={selected} tabIndex={index === activeIndex ? 0 : -1} key={option.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
+          {!loading ? visibleOptions.map((option, index) => { const selected = values.some((value) => value.id === option.id); return <button id={`${listboxId}-option-${index}`} type="button" role="option" aria-selected={selected} tabIndex={index === activeIndex ? 0 : -1} key={option.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{String(option.hint || "")} {statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
           {!loading && unresolvedOption ? <button id={`${listboxId}-option-${visibleOptions.length}`} type="button" role="option" aria-selected={false} tabIndex={visibleOptions.length === activeIndex ? 0 : -1} onMouseEnter={() => setActiveIndex(visibleOptions.length)} onClick={() => select(unresolvedOption)}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
           {!loading && error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>重试馆内搜索</button></div> : null}
           {!loading && !error && !visibleOptions.length && !allowUnresolved ? <small>没有找到匹配条目，请换个关键词。</small> : null}

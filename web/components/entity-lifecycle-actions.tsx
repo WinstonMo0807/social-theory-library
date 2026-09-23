@@ -1,9 +1,10 @@
 "use client";
 
-import { Archive, ExternalLink, RefreshCw, Trash2 } from "lucide-react";
+import { Archive, ExternalLink, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { RecycleControl } from "./admin/recycle-control";
 import { ConfirmDialog } from "./confirm-dialog";
 
 type Dependency = {
@@ -66,7 +67,7 @@ export function EntityLifecycleActions({
   const [snapshot, setSnapshot] = useState<LifecycleSnapshot | null>(null);
   const [message, setMessage] = useState("");
   const [working, setWorking] = useState(false);
-  const [confirmation, setConfirmation] = useState<"archive" | "restore" | "delete" | null>(null);
+  const [confirmation, setConfirmation] = useState<"archive" | "restore" | null>(null);
 
   async function loadImpact() {
     const token = getServerSessionCredential();
@@ -111,53 +112,24 @@ export function EntityLifecycleActions({
     }
   }
 
-  async function permanentlyDelete() {
-    if (!snapshot) {
-      await loadImpact();
-      setMessage("请先核对影响范围，再执行永久删除。");
-      return;
-    }
-    if (snapshot.is_public) {
-      setMessage("公开内容必须先下线。下线后可以保留旧链接和关系，也可以继续永久删除。");
-      return;
-    }
-    const token = getServerSessionCredential();
-    if (!token) return;
-    setWorking(true);
-    try {
-      await apiRequest<void>(
-        `/catalog/admin/lifecycle/${kind}/${id}/`,
-        { method: "POST", body: JSON.stringify({ action: "delete", confirmed: true }) },
-        token,
-      );
-      setMessage("内容已经永久删除。");
-      setConfirmation(null);
-      onDeleted?.();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "永久删除失败。");
-    } finally {
-      setWorking(false);
-    }
-  }
-
   const currentStatus = snapshot?.status ?? status;
   const archived = currentStatus === "archived";
 
   return (
-    <section className="entity-lifecycle-box" aria-label="下线与删除">
+    <section className="entity-lifecycle-box" aria-label="下架与删除">
       <header>
-        <div><strong>发布与数据安全</strong><span>公开内容先下线。永久删除前会展示关联数据和保护规则。</span></div>
+        <div><strong>发布与数据安全</strong><span>下架后仍可管理；删除后可从回收站恢复。</span></div>
         {previewHref ? <Link href={previewHref} target="_blank">打开读者页面 <ExternalLink size={14} /></Link> : null}
       </header>
       <div className="entity-lifecycle-actions">
         <button type="button" disabled={working} onClick={() => void loadImpact()}><RefreshCw size={14} />查看影响范围</button>
         <button type="button" disabled={working} onClick={() => setConfirmation(archived ? "restore" : "archive")}><Archive size={14} />{archived ? "恢复为草稿" : "下线"}</button>
-        <button className="danger" type="button" disabled={working} onClick={() => snapshot ? setConfirmation("delete") : void permanentlyDelete()}><Trash2 size={14} />永久删除</button>
+        <RecycleControl kind={kind} id={id} name={name} disabled={working} onDeleted={onDeleted} />
       </div>
       {snapshot ? (
         <div className="entity-impact-preview">
-          <p><strong>{snapshot.dependency_count}</strong> 条关联记录可能受影响。{snapshot.guidance}</p>
-          {snapshot.dependencies.length ? <ul>{snapshot.dependencies.map((item) => <li key={item.key}><span>{item.label}</span><b>{item.count}</b><small>{item.delete_rule === "CASCADE" ? "随实体删除" : "受保护或需先调整"}</small></li>)}</ul> : <p>没有发现关联记录。</p>}
+          <p><strong>{snapshot.dependency_count}</strong> 条关联记录会保留。{snapshot.guidance}</p>
+          {snapshot.dependencies.length ? <ul>{snapshot.dependencies.map((item) => <li key={item.key}><span>{item.label}</span><b>{item.count}</b><small>原记录保留</small></li>)}</ul> : <p>没有发现关联记录。</p>}
         </div>
       ) : null}
       {message ? <p className="form-message" role="status">{message}</p> : null}
@@ -171,17 +143,7 @@ export function EntityLifecycleActions({
         onCancel={() => setConfirmation(null)}
         onConfirm={() => void changeStatus(confirmation === "restore" ? "restore" : "archive")}
       />
-      <ConfirmDialog
-        open={confirmation === "delete"}
-        title={`永久删除“${snapshot?.name ?? name}”`}
-        description="该操作会删除可级联的关系记录，受保护的馆藏关系仍会阻止删除。无需输入名称。"
-        details={snapshot ? [`当前发现 ${snapshot.dependency_count} 条关联记录。`, snapshot.guidance] : []}
-        confirmLabel="确认永久删除"
-        tone="danger"
-        pending={working}
-        onCancel={() => setConfirmation(null)}
-        onConfirm={() => void permanentlyDelete()}
-      />
+
     </section>
   );
 }

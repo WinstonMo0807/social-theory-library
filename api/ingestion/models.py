@@ -360,6 +360,7 @@ class ProcessingJob(UUIDTimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="created_processing_jobs",
     )
+    heartbeat_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     pause_requested_at = models.DateTimeField(null=True, blank=True)

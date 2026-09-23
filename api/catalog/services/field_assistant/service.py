@@ -1293,7 +1293,7 @@ def _unique_named_slug(model, label: str) -> str:
     base = slugify(label, allow_unicode=True)[:160] or "catalog-entity"
     candidate = base
     counter = 1
-    while model.objects.filter(slug=candidate).exists():
+    while model.all_objects.filter(slug=candidate).exists():
         counter += 1
         candidate = f"{base}-{counter}"
     return candidate
@@ -1419,6 +1419,7 @@ class FieldAssistantService:
         details: dict[str, Any] | None = None,
         allow_possible_duplicate: bool = False,
         defer_link: bool = False,
+        request_id=None,
     ) -> dict[str, Any]:
         """Create one draft authority inside the current cataloguing context.
 
@@ -1434,6 +1435,25 @@ class FieldAssistantService:
             raise FieldAssistantError("名称不能为空。")
         edition = Edition.objects.select_for_update().select_related("work").get(pk=edition_id)
         edition.work = Work.objects.select_for_update().get(pk=edition.work_id)
+        # The edition lock serializes both creation and its durable receipt.
+        # Retry the same command even when the first HTTP response was lost.
+        from ingestion.models import AuditEvent
+        signature = {"field": field_name, "label": clean_label, "details": details or {},
+                     "allow_duplicate": allow_possible_duplicate, "defer_link": defer_link}
+        if request_id:
+            receipt = AuditEvent.objects.filter(action="authority.create_receipt", object_type="catalog.Edition",
+                                                object_id=str(edition.pk), request_id=str(request_id)).first()
+            if receipt:
+                if receipt.actor_id != actor.pk or receipt.before != signature:
+                    raise FieldAssistantError("这个请求编号已用于另一项创建，请刷新人物选择后重试。")
+                return {**receipt.after, "replayed": True}
+
+        def completed(result):
+            if request_id:
+                AuditEvent.objects.create(actor=actor, action="authority.create_receipt", object_type="catalog.Edition",
+                                          object_id=str(edition.pk), request_id=str(request_id), before=signature, after=result)
+            return result
+
         duplicates = _inline_duplicates(policy, clean_label)
         if duplicates and not allow_possible_duplicate:
             raise FieldAssistantError("馆内已有相近对象，请先确认是否为同一对象。")
@@ -1490,8 +1510,8 @@ class FieldAssistantService:
             from ingestion.models import AuditEvent
             AuditEvent.objects.create(actor=actor, action="authority.inline_draft", object_type=policy.entity_type,
                                       object_id=str(entity.pk), after={"edition_id": str(edition.pk), "linked": False})
-            return {"saved": True, "linked": False, "entity": {"type": policy.entity_type, "id": str(entity.pk),
-                    "name": clean_label, "label": clean_label, "status": "draft", "edit_url": edit_url}, "edit_url": edit_url}
+            return completed({"saved": True, "linked": False, "entity": {"type": policy.entity_type, "id": str(entity.pk),
+                    "name": clean_label, "label": clean_label, "status": "draft", "edit_url": edit_url}, "edit_url": edit_url})
 
         _link_entity(edition, policy, entity, actor=actor, source="field_assistant_inline")
         bundle = ensure_publication_bundle(edition, actor=actor)
@@ -1512,7 +1532,7 @@ class FieldAssistantService:
             [_canonical_field(policy)],
             actor=actor,
         )
-        return {
+        return completed({
             "saved": True,
             "entity": {
                 "type": policy.entity_type,
@@ -1524,7 +1544,7 @@ class FieldAssistantService:
             "bundle_id": str(bundle.pk),
             "invalidated_fields": invalidated,
             **_revision_response(edition),
-        }
+        })
 
     @transaction.atomic
     def adopt(

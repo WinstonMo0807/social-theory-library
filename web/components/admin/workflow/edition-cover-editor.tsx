@@ -31,7 +31,7 @@ export function EditionCoverEditor(props: EditionCoverEditorProps) {
   return <EditionCoverEditorState key={`${props.workId}:${props.editionId}`} {...props} />;
 }
 
-function EditionCoverEditorState({ editionId, workId, documentType, token, canEdit, beforeAction, onSaved }: EditionCoverEditorProps) {
+function EditionCoverEditorState({ editionId, workId, documentType, token, canEdit, onSaved }: EditionCoverEditorProps) {
   const [data, setData] = useState<CoverState | null>(null);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -65,7 +65,6 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
 
   async function command(action: string, candidate?: Cover) {
     if (!data || active.current || !canEdit) return;
-    if (["select", "upload", "default"].includes(action) && !await beforeAction()) { setFailed(true); setMessage("请先保存本页填写，再单独保存封面。当前填写不会自动提交。"); return; }
     if (active.current) return;
     if (action === "upload" && !file) return;
     active.current = true; setBusy(action); setFailed(false); setMessage("");

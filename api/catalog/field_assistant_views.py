@@ -54,6 +54,7 @@ class FieldAssistantDecisionSerializer(serializers.Serializer):
 
 
 class FieldAssistantCreateSerializer(serializers.Serializer):
+    request_id = serializers.UUIDField(required=False)
     edition_id = serializers.UUIDField()
     field_name = serializers.CharField(max_length=80)
     label = serializers.CharField(max_length=300)

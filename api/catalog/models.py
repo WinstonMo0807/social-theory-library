@@ -528,11 +528,25 @@ class TextBlock(UUIDTimeStampedModel):
         ]
 
 
+class RecycleEntry(UUIDTimeStampedModel):
+    model_label = models.CharField(max_length=100)
+    object_id = models.UUIDField()
+    kind = models.CharField(max_length=50)
+    name = models.CharField(max_length=600)
+    before = models.JSONField(default=dict)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="recycled_records")
+    restored_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["model_label", "object_id"], name="unique_recycle_object")]
+        indexes = [models.Index(fields=["model_label", "restored_at"], name="recycle_active_objects")]
+
+
 class Passage(UUIDTimeStampedModel):
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="passages")
     order = models.PositiveIntegerField()
     text = models.TextField()
-    normalized_text = models.TextField(blank=True, db_index=True)
+    normalized_text = models.TextField(blank=True)
     start_offset = models.PositiveIntegerField(default=0)
     end_offset = models.PositiveIntegerField(default=0)
     bbox_union = models.JSONField(default=list)
@@ -712,7 +726,7 @@ class SemanticChunk(UUIDTimeStampedModel):
     section_title = models.CharField(max_length=600, blank=True)
     paragraph_index = models.PositiveIntegerField(default=0)
     original_text = models.TextField()
-    normalized_text = models.TextField(db_index=True)
+    normalized_text = models.TextField()
     context_before = models.TextField(blank=True)
     context_after = models.TextField(blank=True)
     language = models.CharField(max_length=16, blank=True)
@@ -1534,7 +1548,8 @@ class QueryLexiconAuthorityQuerySet(models.QuerySet):
         )
 
 
-QueryLexiconAuthorityManager = models.Manager.from_queryset(QueryLexiconAuthorityQuerySet)
+from common.recycle import ActiveRecordManager
+QueryLexiconAuthorityManager = ActiveRecordManager.from_queryset(QueryLexiconAuthorityQuerySet)
 
 
 class QueryLexiconAuthorityMixin(models.Model):

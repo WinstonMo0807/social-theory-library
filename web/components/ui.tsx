@@ -93,9 +93,9 @@ export function BookCard({
           <p className="muted-row">
             {work.year} <span>·</span> {work.kind}
           </p>
-          {showSummary && work.summary ? <p className="book-summary">{work.summary}</p> : null}
         </div>
       </div>
+      {showSummary && work.summary ? <details className="book-summary-expand"><summary><span className="book-summary">{work.summary}</span><span className="book-summary-toggle">展开 / 收起简介</span></summary><p>{work.summary}</p></details> : null}
       {!dense ? (
         <div className="book-actions">
           {exploreActions ? (
@@ -142,6 +142,7 @@ export function ScholarCard({ scholar }: { scholar: Scholar }) {
         <h3>
           <Link href={`/scholars/${scholar.slug}`}>{scholar.name}</Link>
         </h3>
+        {scholar.originalName && scholar.originalName !== scholar.name ? <p className="scholar-original-name">{scholar.originalName}</p> : null}
         <p>{scholar.years}</p>
         <p>{scholar.biography}</p>
         <Link className="arrow-only" href={`/scholars/${scholar.slug}`} aria-label={`查看${scholar.name}`}>

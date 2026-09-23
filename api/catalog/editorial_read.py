@@ -80,7 +80,16 @@ class AdminEditorialDraftReadMixin(AdminPrivateResponseMixin):
         return self._guarded_edit(super().put, request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        return self._guarded_edit(super().delete, request, *args, **kwargs)
+        def command(request, *args, **kwargs):
+            from catalog.lifecycle_views import LIFECYCLE_MODELS, _name
+            from catalog.services.recycle import recycle_object
+            target = self.get_object()
+            for kind, config in LIFECYCLE_MODELS.items():
+                if isinstance(target, config.model):
+                    recycle_object(target, actor=request.user, kind=kind, name=_name(target, config.name_field))
+                    return Response(status=204)
+            return super(AdminEditorialDraftReadMixin, self).delete(request, *args, **kwargs)
+        return self._guarded_edit(command, request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)

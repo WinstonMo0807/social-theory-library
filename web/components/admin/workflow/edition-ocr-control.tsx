@@ -15,6 +15,7 @@ export type OcrProgress = {
   updated_at: string; started_at: string | null; phase_elapsed_seconds: number; stale: boolean; error: string;
   source_asset_id: string; result_asset_id: string; public_result: string; workbench_url: string; warnings: string[];
   can_pause: boolean; can_resume: boolean; can_cancel: boolean; resume_reason?: string;
+  heartbeat_at?: string | null; worker_alive?: boolean; service_activity?: string;
 };
 type OcrFile = { id: string; filename: string; version: number; page_count: number; source_version: string; can_run: boolean; reason: string };
 type OcrContext = { edition_id: string; work_id: string; title: string; title_has_unpublished_changes?: boolean; edition_label: string; can_run: boolean; denied_reason: string; paused: boolean; provider_label: string; files: OcrFile[]; jobs: OcrProgress[]; job_count: number; page: number; total_pages: number; active_job_id: string; checked_at: string };
@@ -38,7 +39,8 @@ export function OcrProgressDisplay({ job, compact = false }: { job: OcrProgress;
     <progress aria-label="已完成 OCR 页数" max={job.total_pages || 1} value={job.completed_pages === null ? undefined : job.completed_pages} />
     <p>{job.completed_pages === null || job.total_pages === null ? "尚无可靠页数，等待任务报告。" : `已识别 ${job.completed_pages} / ${job.total_pages} 页（${job.percent}%）`}{job.active_pages.length ? job.active_pages.length <= 5 ? `，当前处理第 ${ocrPageRanges(job.active_pages)} 页。` : `，正在处理 ${job.active_pages.length} 页。` : ""}</p>
     {job.active_pages.length > 5 ? <details><summary>查看当前处理的页码范围</summary><p>{ocrPageRanges(job.active_pages)}</p></details> : null}
-    <p>任务最近更新：<time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("zh-CN")}</time>。{job.stale ? "当前页尚未返回新结果，页数暂未增加。" : "进度按实际保存页数更新。"}</p>
+    <p>结果最近保存：<time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("zh-CN")}</time>。进度按实际保存页数更新。</p>
+    {job.status === "running" ? <p role="status">{job.worker_alive ? "后台执行进程在线。" : job.stale ? "暂未收到后台心跳，可能已中断，正在检查。" : "正在等待后台心跳。"}{job.service_activity === "running" ? "OCR 服务正在识别当前页。" : job.service_activity === "queued" ? "当前页正在 OCR 服务内排队。" : job.service_activity === "unavailable" ? "尚未取得 OCR 服务内部状态，不能据此认定识别已停止。" : ""}{job.heartbeat_at ? ` 最近心跳 ${new Date(job.heartbeat_at).toLocaleTimeString("zh-CN")}` : ""}</p> : null}
     {job.status === "running" || job.status === "pending" ? <p>本阶段已等待 {job.phase_elapsed_seconds} 秒。页面仍会自动查询，不需要重复点击开始。</p> : null}
     {job.error ? <details open={!compact}><summary>上次失败原因</summary><p>{job.error}</p><p>这是该次任务的错误记录，不代表 OCR 服务当前仍不可用。</p></details> : null}
     {!compact ? <p>{job.public_result}</p> : null}

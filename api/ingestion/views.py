@@ -1192,7 +1192,9 @@ class UploadItemListView(generics.ListAPIView):
             "true",
             "yes",
         }
-        if not include_deleted:
+        if include_deleted:
+            queryset = UploadItem.all_objects.select_related("batch__created_by", "edition__work").prefetch_related("attempts", "metadata_candidates").order_by("-created_at")
+        else:
             queryset = queryset.exclude(status=UploadItem.Status.DELETED)
         scope = self.request.query_params.get("scope", "").strip()
         if scope == "review":
@@ -2961,72 +2963,17 @@ class SystemHealthView(APIView):
 
 
 class DeleteUploadItemView(APIView):
-    """Soft-delete an intake record while preserving NAS files and the audit trail."""
-
-    permission_classes = [CanRunDestructiveMaintenance]
+    """Compatibility endpoint for recoverable intake removal."""
+    permission_classes = [IsLibraryStaff]
 
     def post(self, request, item_id):
-        item = get_object_or_404(
-            UploadItem.objects.select_related("edition__work", "batch"),
-            pk=item_id,
-        )
-        duplicate_intake = item.error_code == "duplicate_document"
-        if (
-            item.edition_id
-            and item.edition.state == PublicationState.PUBLISHED
-            and not duplicate_intake
-        ):
-            return Response({"detail": "公开文献必须先下架，再删除处理记录。"}, status=409)
-        expected = item.edition.work.title if item.edition_id else item.source_filename
-        legacy_confirmation = str(request.data.get("confirmation", "")).strip()
-        confirmed = request.data.get("confirmed") is True or legacy_confirmation == expected
-        if not confirmed:
-            return Response(
-                {"confirmed": ["请在确认框中确认移除处理记录。"]},
-                status=400,
-            )
-        before = {
-            "status": item.status,
-            "source_filename": item.source_filename,
-            "edition_id": str(item.edition_id or ""),
-        }
-        item.status = UploadItem.Status.DELETED
-        item.stage_progress = 0
-        item.error_code = ""
-        item.error_message = "管理员已从处理队列移除。NAS 原始文件和审计记录仍保留。"
-        item.processing_token = ""
-        transition_upload_item(
-            item,
-            UploadItem.WorkflowState.ARCHIVED,
-            actor=request.user,
-            reason="管理员移除处理记录",
-            force=True,
-        )
-        item.save(
-            update_fields=[
-                "status",
-                "stage_progress",
-                "error_code",
-                "error_message",
-                "processing_token",
-                "updated_at",
-            ]
-        )
+        item = get_object_or_404(UploadItem.objects.all(), pk=item_id)
+        if request.data.get("confirmed") is not True:
+            return Response({"detail": "请确认将上传移入回收站。"}, status=400)
+        from catalog.services.recycle import recycle_object
+        entry = recycle_object(item, actor=request.user, kind="upload", name=item.source_filename)
         refresh_batch(item.batch)
-        AuditEvent.objects.create(
-            actor=request.user,
-            action="upload_item_delete",
-            object_type="UploadItem",
-            object_id=str(item.id),
-            before=before,
-            after={
-                "status": UploadItem.Status.DELETED,
-                "files_preserved": True,
-                "linked_publication_preserved": duplicate_intake,
-            },
-            request_ip=_request_ip(request),
-        )
-        return Response({"detail": "记录已从待处理和复核列表移除，NAS 文件仍保留。"})
+        return Response({"detail": "上传已移入回收站，可恢复。原文件与馆藏保留。", "recycle_id": str(entry.pk)})
 
 
 class DashboardView(APIView):

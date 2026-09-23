@@ -17,6 +17,12 @@ def timeline_relations_snapshot(target):
 
 def validate_relation_patch(target, patch):
     from catalog.services.editorial_revision import EditorialRevisionError, _json_value
+    # Withdrawing an existing record must remain possible even when legacy
+    # content cannot pass today's publication requirements. No content changes.
+    if isinstance(target, TheoryTimelineEvent) and patch == {"review_status": "rejected"}:
+        return
+    if isinstance(target, KnowledgeRelation) and patch == {"status": "archived"}:
+        return
     if isinstance(target, KnowledgeRelation):
         from catalog.theory_serializers import KnowledgeRelationSerializer
         serializer = KnowledgeRelationSerializer(target, data=patch, partial=True)

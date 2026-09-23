@@ -11,6 +11,9 @@ import os
 import tempfile
 import threading
 import time
+import hashlib
+import re
+from collections import OrderedDict
 
 import fitz
 import numpy as np
@@ -19,7 +22,7 @@ from fastapi.responses import JSONResponse
 from paddleocr import PaddleOCR, PPStructureV3
 
 
-app = FastAPI(title="Social Theory Library OCR", version="2.8.0")
+app = FastAPI(title="Social Theory Library OCR", version="3.0.8.1")
 PRIMARY_LANGUAGE = os.getenv("OCR_PRIMARY_LANGUAGE", "ch")
 FALLBACK_LANGUAGE = os.getenv("OCR_FALLBACK_LANGUAGE", "chinese_cht")
 RENDER_DPI = int(os.getenv("OCR_RENDER_DPI", "180"))
@@ -30,6 +33,9 @@ REQUIRE_STRUCTURE = os.getenv("OCR_REQUIRE_STRUCTURE", "false").lower() in {"1",
 MODEL_LOCK = threading.Lock()
 PROCESS_POOL_LOCK = threading.Lock()
 OCR_PROCESS_POOL = None
+REQUESTS = OrderedDict()
+REQUEST_GATE = asyncio.Lock()
+MAX_REQUESTS = 32
 MODEL_STATUS = {
     "engines": {},
     "structure": {
@@ -533,11 +539,10 @@ async def readiness(
     include_structure = include_structure or REQUIRE_STRUCTURE
     probe = None
     if deep:
-        probe = await run_in_ocr_process(
-            probe_models,
-            include_fallback=include_fallback,
-            include_structure=include_structure,
-        )
+        if REQUEST_GATE.locked():
+            return JSONResponse({"available": False, "status": "busy", "detail": "OCR is processing a document; no extra probe was queued."}, status_code=409)
+        async with REQUEST_GATE:
+            probe = await run_in_ocr_process(probe_models, include_fallback=include_fallback, include_structure=include_structure)
     manifest_probe = (inventory_probe := cache_inventory()).get("manifest") or {}
     manifest_components = (manifest_probe.get("probe") or {}).get("components") or {}
 
@@ -585,26 +590,76 @@ async def parse_pdf(
     languages: str = Form("ch,en,chinese_cht"),
     layout: bool = Form(True),
     page_numbers: str = Form(""),
+    request_id: str = Form(""),
 ):
+    request_id = request_id if isinstance(request_id, str) else ""
+    if request_id and not re.fullmatch(r"[a-zA-Z0-9-]{16,80}", request_id):
+        raise HTTPException(status_code=400, detail="Invalid request identity.")
     header = await file.read(5)
     if header != b"%PDF-":
         raise HTTPException(status_code=415, detail="Only PDF files are accepted.")
     await file.seek(0)
     requested = [item.strip() for item in languages.split(",") if item.strip()]
-    primary = PRIMARY_LANGUAGE if PRIMARY_LANGUAGE in requested else requested[0]
+    primary = PRIMARY_LANGUAGE if PRIMARY_LANGUAGE in requested or not requested else requested[0]
     fallback = FALLBACK_LANGUAGE if FALLBACK_LANGUAGE in requested else None
     with tempfile.NamedTemporaryFile(suffix=".pdf", dir="/tmp/ocr", delete=False) as handle:
+        fingerprint = hashlib.sha256(f"{languages}:{layout}:{page_numbers}".encode())
         while chunk := await file.read(1024 * 1024):
             handle.write(chunk)
+            fingerprint.update(chunk)
         temp_path = Path(handle.name)
+    owns_temp = True
+    key = request_id or temp_path.name
     try:
-        return await run_in_ocr_process(
-            _parse_pdf_path,
-            temp_path,
-            primary=primary,
-            fallback=fallback,
-            layout=layout,
-            page_numbers=page_numbers,
-        )
+        existing = REQUESTS.get(request_id) if request_id else None
+        if existing:
+            if existing["fingerprint"] != fingerprint.hexdigest():
+                raise HTTPException(status_code=409, detail="Request identity was already used for different input.")
+            return await asyncio.shield(existing["task"])
+        if sum(row["state"] in {"queued", "running"} for row in REQUESTS.values()) >= 2:
+            raise HTTPException(status_code=429, detail="OCR is busy. Retry this same request later.", headers={"Retry-After": "30"})
+        # Keep only a bounded set of recent receipts. No document bytes remain
+        # after computation; duplicate HTTP requests await the original work.
+        for old_key in list(REQUESTS):
+            if len(REQUESTS) < MAX_REQUESTS:
+                break
+            if REQUESTS[old_key]["state"] not in {"queued", "running"}:
+                del REQUESTS[old_key]
+        receipt = {"fingerprint": fingerprint.hexdigest(), "state": "queued", "received_at": utc_now()}
+        async def execute():
+            try:
+                async with REQUEST_GATE:
+                    receipt.update(state="running", started_at=utc_now())
+                    result = await run_in_ocr_process(_parse_pdf_path, temp_path, primary=primary,
+                        fallback=fallback, layout=layout, page_numbers=page_numbers)
+                    receipt.update(state="completed", finished_at=utc_now())
+                    # Single-page resumable jobs keep small receipts. Legacy
+                    # whole-file/anonymous calls must not retain large OCR text.
+                    if not request_id or len(json.dumps(result, ensure_ascii=False).encode()) > 512 * 1024:
+                        REQUESTS.pop(key, None)
+                    return result
+            except BaseException:
+                receipt.update(state="failed", finished_at=utc_now())
+                # An explicit retry may execute again after a failed receipt.
+                REQUESTS.pop(key, None)
+                raise
+            finally:
+                temp_path.unlink(missing_ok=True)
+        task = asyncio.create_task(execute())
+        owns_temp = False
+        receipt["task"] = task
+        # Consume background exceptions if a disconnected caller cannot do so.
+        task.add_done_callback(lambda completed: completed.exception() if not completed.cancelled() else None)
+        REQUESTS[key] = receipt
+        return await asyncio.shield(task)
     finally:
-        temp_path.unlink(missing_ok=True)
+        if owns_temp:
+            temp_path.unlink(missing_ok=True)
+
+
+@app.get("/v1/requests/{request_id}")
+async def request_status(request_id: str):
+    row = REQUESTS.get(request_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Request not present in this service instance.")
+    return {key: row[key] for key in ("state", "received_at", "started_at", "finished_at") if key in row}

@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, ChevronUp, LoaderCircle, Plus, Search, X } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createRequestKey } from "@/lib/request-key";
 import { apiRequest } from "@/lib/api";
 import { useContextState } from "@/lib/use-context-state";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -31,8 +32,8 @@ type LookupResult = {
 };
 
 const FIELD_COPY = {
-  author: { label: "作者", lookup: "智能查找", create: "学者" },
-  translator: { label: "译者", lookup: "智能查找", create: "学者" },
+  author: { label: "作者", lookup: "智能查找", create: "人物" },
+  translator: { label: "译者", lookup: "智能查找", create: "人物" },
   publisher: { label: "出版社", lookup: "重新查找", create: "出版社" },
   topic: { label: "主题", lookup: "获取分类建议", create: "主题" },
   theory: { label: "理论传统", lookup: "获取分类建议", create: "理论传统" },
@@ -94,6 +95,7 @@ export function FieldAssistantControl({
   const [newLabel, setNewLabel] = useState("");
   const [showMore, setShowMore] = useState(false);
   const [createdEditUrl, setCreatedEditUrl] = useState("");
+  const creationReceipt = useRef<{ key: string; id: string; allow: boolean; sent: boolean } | null>(null);
   const [duplicates, setDuplicates] = useContextState<Duplicate[] | null>(lookupKey, null);
   const [duplicateName, setDuplicateName] = useState("");
   const [identityReview, setIdentityReview] = useContextState(lookupKey, "");
@@ -241,7 +243,9 @@ export function FieldAssistantControl({
     setMessage("");
     try {
       if (!onCreateDraft) await prepare();
-      if (!allowPossibleDuplicate || duplicateName !== newLabel.trim()) {
+      const key = JSON.stringify([editionId, fieldName, newLabel.trim(), Boolean(onCreateDraft)]);
+      if (!creationReceipt.current || creationReceipt.current.key !== key) creationReceipt.current = { key, id: createRequestKey(), allow: allowPossibleDuplicate && duplicateName === newLabel.trim(), sent: false };
+      if (!creationReceipt.current.sent && (!allowPossibleDuplicate || duplicateName !== newLabel.trim())) {
         const found = await apiRequest<{ matches: Duplicate[] }>("/catalog/admin/field-assistant/duplicates/", { method: "POST", body: JSON.stringify({ field_name: fieldName, label: newLabel.trim() }) }, token);
         setDuplicates(found.matches);
         setDuplicateName(newLabel.trim());
@@ -250,11 +254,14 @@ export function FieldAssistantControl({
           return;
         }
       }
+      if (!creationReceipt.current.sent) creationReceipt.current.allow = allowPossibleDuplicate && duplicateName === newLabel.trim();
+      creationReceipt.current.sent = true;
       const created = await apiRequest<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("/catalog/admin/field-assistant/create/", {
         method: "POST",
-        body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), defer_link: Boolean(onCreateDraft), allow_possible_duplicate: allowPossibleDuplicate && duplicateName === newLabel.trim() }),
+        body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), defer_link: Boolean(onCreateDraft), allow_possible_duplicate: creationReceipt.current.allow, request_id: creationReceipt.current.id }),
       }, token);
       invalidateAssistantCache(editionId);
+      window.dispatchEvent(new Event("stl-people-updated"));
       if (onCreateDraft) {
         onCreateDraft(created.entity);
         setCreatedEditUrl(created.edit_url || created.entity.edit_url || "");

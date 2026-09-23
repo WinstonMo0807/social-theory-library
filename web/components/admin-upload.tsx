@@ -8,6 +8,8 @@ import { useApiResource } from "@/lib/api/use-api-resource";
 import { useActionGuard } from "@/lib/use-action-guard";
 import type { CatalogPublication } from "@/lib/api/admin-collections";
 import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
+import { RecycleControl } from "@/components/admin/recycle-control";
+import { ProcessingError } from "@/components/admin/processing-error";
 import {
   formatUploadBytes,
   formatUploadEta,
@@ -1301,9 +1303,10 @@ export function AdminUpload() {
                       <span className={candidateCounts[field] ? "available" : ""} key={field}>{label}<b>{candidateCounts[field] || 0}</b></span>
                     ))}
                   </div>
-                  {visibleErrorMessage ? <p className="ingestion-item-error"><AlertCircle size={14} /><span><strong>{visibleErrorCode || "处理错误"}</strong>{visibleErrorMessage}</span></p> : null}
+                  {visibleErrorMessage ? <ProcessingError code={visibleErrorCode || ""} message={visibleErrorMessage} /> : null}
                   {!item.edition && !visibleErrorMessage && !stagingOwnsStatus ? <p className="ingestion-item-note">文件已安全保存。书目记录建立后，可直接进入候选复核；等待期间无需重复点击。</p> : null}
                   <footer>
+                    <RecycleControl kind="upload" id={item.id} name={item.source_filename} onDeleted={() => { setIngestionItems((current) => current.filter((row) => row.id !== item.id)); setResult((current) => current ? { ...current, accepted: current.accepted.filter((id) => id !== item.id) } : current); recentBatches.retry(); }} />
                     {canRetryImport ? <button className="button secondary" type="button" disabled={stagingAction === item.id} onClick={() => void retryStagingImport(item.id)}>{stagingAction === item.id ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}重新导入</button> : null}
                     {canRetry ? <button className="button secondary" type="button" disabled={retryingItem === item.id} onClick={() => void retryIngestionItem(item.id)}>{retryingItem === item.id ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}重新处理</button> : null}
                     {item.edition ? <Link className="button secondary" href={`/admin/intake/${item.id}#bibliography`}>继续馆藏工作 <ArrowRight size={14} /></Link> : <span className="ingestion-waiting-action">{r2StagingWaitingAction(stagingStatus)}</span>}

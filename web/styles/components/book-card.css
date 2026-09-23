@@ -15,6 +15,19 @@
   gap: var(--stl-space-3);
 }
 
+.book-summary-expand { margin: 16px 0 0; font-size: 14px; line-height: 1.65; }
+.book-summary-expand summary { cursor: pointer; list-style: none; }
+.book-summary-expand summary::-webkit-details-marker { display: none; }
+.book-summary-expand .book-summary { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font-size: inherit; line-height: inherit; }
+.book-summary-toggle { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; text-decoration: underline; }
+.book-summary-expand[open] summary .book-summary { display: none; }
+.book-summary-expand > p { margin: 10px 0 0; overflow-wrap: anywhere; }
+.scholar-original-name { overflow-wrap: anywhere; }
+.workflow-field-attention { outline: 2px solid #a0442f; outline-offset: 5px; background: #fff7ef; scroll-margin: 100px; }
+.contributor-create { margin: 10px 0; }
+.contributor-create p { font-size: 13px; }
+.contributor-matches { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+
 .book-cover-link {
   display: block;
   flex: 0 0 auto;
@@ -217,3 +230,5 @@
   padding-top: var(--stl-space-3);
   border-top: var(--stl-border-hairline) solid var(--line);
 }
+
+.recycle-entry{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;margin-block:1rem}.recycle-entry h2{font-size:1.1rem;overflow-wrap:anywhere}.recycle-control{display:inline-flex;align-items:center;gap:.4rem}.recycle-control>button{display:inline-flex;align-items:center;gap:.35rem}

@@ -299,7 +299,7 @@ def _diverse_prefix(rows: list[dict]) -> list[dict]:
     # Limit repetition only within the first six ranks, allowing two highly
     # ranked passages per work. Deferred hits remain available in later pages.
     counts, prefix, deferred = Counter(), [], []
-    for row in rows:
+    for row in rows[:6]:
         work = row.get("work") or (row.get("metadata") or {}).get("work") or {}
         work_id = str(work.get("id") or row.get("work_id") or _identity(row))
         if len(prefix) < 6 and counts[work_id] < 2:
@@ -307,7 +307,7 @@ def _diverse_prefix(rows: list[dict]) -> list[dict]:
             counts[work_id] += 1
         else:
             deferred.append(row)
-    return prefix + deferred
+    return prefix + deferred + rows[6:]
 
 
 def _rerank(query: str, rows: list[dict], limit: int, expected_artifact: str) -> tuple[list[dict], list[dict]]:

@@ -222,6 +222,8 @@ def process_reviewed_upload_item(self, item_id):
 @shared_task(
     bind=True,
     autoretry_for=(OCRServiceUnavailable, OSError, ConnectionError, TimeoutError),
+    soft_time_limit=settings.OCR_REQUEST_TIMEOUT_SECONDS + 120,
+    time_limit=settings.OCR_REQUEST_TIMEOUT_SECONDS + 180,
     retry_backoff=True,
     retry_jitter=True,
     max_retries=2,

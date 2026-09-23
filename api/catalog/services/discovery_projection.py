@@ -246,7 +246,20 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         base["filter"].append(f"language IN {json.dumps(_language_filter_values(filters['languages']))}")
     try:
         sparse = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": normalized})
-        empty["sparse"] = validate_discovery_results(channel, sparse.get("hits", []), access_statuses)
+        empty["sparse"] = sparse.get("hits", [])
+        from .discovery_query import keyword_question
+        keywords = keyword_question(normalized)
+        if channel == "passages" and keywords != normalized:
+            extra = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": keywords, "attributesToSearchOn": ["normalized_text"]})
+            # Fuse before hydration so each source/text slice is loaded once.
+            scores, refs = {}, {}
+            for hits, weight in ((empty["sparse"], 1.0), (extra.get("hits", []), 0.85)):
+                for rank, row in enumerate(hits, 1):
+                    key = row.get("id")
+                    if key:
+                        scores[key] = scores.get(key, 0) + weight / (60 + rank)
+                        refs[key] = row
+            empty["sparse"] = [refs[key] for key in sorted(scores, key=lambda key: (-scores[key], key))][:limit]
     except DiscoveryIndexError:
         warnings.append({"code": "keyword_unavailable", "message": "关键词索引暂不可用。"})
     try:
@@ -257,7 +270,10 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         vector = vector_cache[vector_key]
         dense = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": "", "vector": vector,
             "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})
-        empty["dense"] = validate_discovery_results(channel, dense.get("hits", []), access_statuses)
+        empty["dense"] = dense.get("hits", [])
     except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
         warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
+    hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"]], access_statuses)}
+    for branch in ("sparse", "dense"):
+        empty[branch] = [hydrated[row["id"]] for row in empty[branch] if row.get("id") in hydrated]
     return empty

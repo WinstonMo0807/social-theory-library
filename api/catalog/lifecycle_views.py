@@ -22,7 +22,10 @@ from .models import (
     Subdiscipline,
     TheorySchool,
     Topic,
+    Work, Edition, Person, PublisherAuthority, TheoryTimelineEvent, KnowledgeRelation,
+    EvidenceCuration, ScholarRelation, RecommendationIssue, RecommendationIssueItem, AboutPageBlock,
 )
+from ingestion.models import UploadItem
 from .services.canonical_mutations import record_admin_canonical_change
 from .services.editorial_revision import (
     EditorialRevisionError,
@@ -51,6 +54,18 @@ LIFECYCLE_MODELS = {
     "scholar": LifecycleConfig(ScholarProfile, "person__preferred_name", "editorial_status"),
     "knowledge-node": LifecycleConfig(KnowledgeNode, "canonical_name_zh", "status"),
     "reading-path": LifecycleConfig(ReadingPath, "title", "status"),
+    "work": LifecycleConfig(Work, "title", ""),
+    "edition": LifecycleConfig(Edition, "work__title", ""),
+    "upload": LifecycleConfig(UploadItem, "source_filename", ""),
+    "person": LifecycleConfig(Person, "preferred_name", ""),
+    "publisher": LifecycleConfig(PublisherAuthority, "canonical_name", ""),
+    "timeline-event": LifecycleConfig(TheoryTimelineEvent, "title", "review_status", published_value="approved", archived_value="rejected", draft_value="suggested"),
+    "knowledge-relation": LifecycleConfig(KnowledgeRelation, "id", "status"),
+    "evidence-curation": LifecycleConfig(EvidenceCuration, "id", ""),
+    "scholar-relation": LifecycleConfig(ScholarRelation, "id", ""),
+    "recommendation-issue": LifecycleConfig(RecommendationIssue, "title", ""),
+    "recommendation-item": LifecycleConfig(RecommendationIssueItem, "id", ""),
+    "about-block": LifecycleConfig(AboutPageBlock, "title", ""),
 }
 
 CANONICAL_OBJECT_TYPES = {
@@ -61,6 +76,8 @@ CANONICAL_OBJECT_TYPES = {
     "scholar": "scholar_profile",
     "knowledge-node": "knowledge_node",
     "reading-path": "reading_path",
+    "timeline-event": "timeline_event",
+    "knowledge-relation": "knowledge_relation",
 }
 
 EDITORIAL_LIFECYCLE_TARGETS = {
@@ -70,6 +87,8 @@ EDITORIAL_LIFECYCLE_TARGETS = {
     "scholar": EditorialRevision.TargetType.SCHOLAR_PROFILE,
     "knowledge-node": EditorialRevision.TargetType.KNOWLEDGE_NODE,
     "reading-path": EditorialRevision.TargetType.READING_PATH,
+    "timeline-event": "timeline_event",
+    "knowledge-relation": "knowledge_relation",
 }
 
 
@@ -122,7 +141,7 @@ def _dependency_rows(obj) -> list[dict]:
 
 
 def lifecycle_snapshot(kind: str, obj, config: LifecycleConfig) -> dict:
-    status_value = getattr(obj, config.status_field)
+    status_value = getattr(obj, config.status_field, "")
     dependencies = _dependency_rows(obj)
     merged_topic = isinstance(obj, Topic) and bool((obj.curation or {}).get("topic_merge"))
     return {
@@ -134,12 +153,12 @@ def lifecycle_snapshot(kind: str, obj, config: LifecycleConfig) -> dict:
         "dependencies": dependencies,
         "dependency_count": sum(row["count"] for row in dependencies),
         "actions": {
-            "archive": status_value != config.archived_value,
-            "restore": status_value == config.archived_value and not merged_topic,
-            "delete": status_value != config.published_value and not merged_topic,
+            "archive": bool(config.status_field) and status_value != config.archived_value,
+            "restore": bool(config.status_field) and status_value == config.archived_value and not merged_topic,
+            "delete": not merged_topic,
         },
         "guidance": (
-            "公开内容应先下线。永久删除会同时删除可级联的关系记录，受保护的馆藏关系会阻止删除。"
+            "删除后移入回收站，保留原文件、历史和关联记录；恢复后需重新检查并发布。下架仅撤下公开展示，条目仍留在管理列表。"
         ),
     }
 
@@ -203,7 +222,7 @@ class AdminEntityLifecycleView(APIView):
         if isinstance(obj, Topic) and (obj.curation or {}).get("topic_merge"):
             return Response({"detail": "该主题已合并，保留原记录供审计。请编辑合并后的主题。", "code": "merged_topic_read_only", "impact": snapshot}, status=409)
 
-        if kind == "theory-school" and action in {"restore", "delete"}:
+        if kind == "theory-school" and action == "restore":
             return Response(
                 {
                     "detail": (
@@ -217,6 +236,8 @@ class AdminEntityLifecycleView(APIView):
             )
 
         if action in {"archive", "restore"}:
+            if not config.status_field:
+                return Response({"detail": "请通过此内容的发布控制进行下架。"}, status=400)
             if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以下线或恢复公开实体。"}, status=403)
             if (
@@ -278,50 +299,15 @@ class AdminEntityLifecycleView(APIView):
             return Response(lifecycle_snapshot(kind, obj, config))
 
         if action == "delete":
-            if not has_capability(
-                request.user,
-                Capability.DESTRUCTIVE_MAINTENANCE,
-            ):
-                return Response(
-                    {"detail": "只有 System Owner 可以永久删除实体。"},
-                    status=403,
-                )
-            if snapshot["is_public"]:
-                return Response({"detail": "公开实体必须先下线，再执行永久删除。", "impact": snapshot}, status=409)
             legacy_confirmation = str(request.data.get("confirmation", "")).strip()
             confirmed = request.data.get("confirmed") is True or legacy_confirmation == snapshot["name"]
             if not confirmed:
                 return Response(
-                    {"confirmed": ["请在影响范围确认框中确认永久删除。"], "impact": snapshot},
+                    {"confirmed": ["请确认移入回收站。"], "impact": snapshot},
                     status=400,
                 )
-            object_id = str(obj.pk)
-            model_label = obj._meta.label
-            try:
-                obj.delete()
-            except (ProtectedError, RestrictedError) as exc:
-                blocked_objects = getattr(
-                    exc,
-                    "protected_objects",
-                    getattr(exc, "restricted_objects", []),
-                )
-                protected = sorted({item._meta.verbose_name for item in blocked_objects})
-                return Response(
-                    {
-                        "detail": "该实体仍被受保护的数据引用，不能永久删除。请先调整这些关系，或保留下线状态。",
-                        "protected": protected,
-                        "impact": snapshot,
-                    },
-                    status=409,
-                )
-            AuditEvent.objects.create(
-                actor=request.user,
-                action="entity_delete",
-                object_type=model_label,
-                object_id=object_id,
-                before={**before, "impact": snapshot["dependencies"]},
-                after={"deleted": True},
-            )
-            return Response(status=204)
+            from .services.recycle import recycle_object
+            entry = recycle_object(obj, actor=request.user, kind=kind, name=snapshot["name"])
+            return Response({"deleted": True, "recoverable": True, "recycle_id": str(entry.pk)})
 
         return Response({"action": ["请选择 archive、restore 或 delete。"]}, status=400)

@@ -1,5 +1,6 @@
 "use client";
 
+import { RecycleControl } from "@/components/admin/recycle-control";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -79,7 +80,7 @@ function SourceWorkspace({ sourceId, targetId, allowed, credential }: { sourceId
   return <>
     <Link prefetch={false} href={personPage()}>重新选择来源人物</Link>
     {error ? <Failure message={error} retry={retry} /> : loading ? <p role="status">正在检查疑似重复…</p> : data ? <>
-      <section className={`admin-panel ${styles.panel}`} aria-label="来源人物"><h2>来源人物</h2><div className={styles.identity}><PersonLabel person={data.source} /></div><p>确认合并后，来源记录仍保留，其无冲突引用归入保留人物。</p></section>
+      <section className={`admin-panel ${styles.panel}`} aria-label="来源人物"><h2>来源人物</h2><div className={styles.identity}><PersonLabel person={data.source} /><RecycleControl kind="person" id={data.source.id} name={data.source.preferred_name} onDeleted={() => window.location.assign(personPage())} /></div><p>确认合并后，来源记录仍保留，其无冲突引用归入保留人物。</p></section>
       {!allowed ? <p className={styles.notice}>当前账户可以查重。影响预览、合并与撤回仅向书库所有者开放。</p> : null}
       <section className={`admin-panel ${styles.panel}`} aria-label="疑似重复人物"><h2>疑似重复人物</h2><p>名称或标识符相同只是核对线索，不能直接认定为同一个人。</p>
         {data.results.length ? <ul className={styles.people}>{data.results.map((row) => <li key={row.person.id}><div className={styles.identity}><PersonLabel person={row.person} />

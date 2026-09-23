@@ -37,7 +37,7 @@ from .candidate_store import persist_metadata_candidates
 from .extract import extract_ocr_page_batch, persist_page_batch
 from .files import materialize_field_file
 from .ocr_pdf import create_searchable_ocr_pdf
-from .ocr_provider import OCR_RUNTIME_KEY, ocr_runtime_config
+from .ocr_provider import OCR_RUNTIME_KEY, OCRServiceBusy, ocr_runtime_config
 from .provider_gateway import refresh_remote_candidates
 from .taxonomy import (
     controlled_vocabulary_candidates_for_asset,
@@ -289,7 +289,9 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
             ProcessingJob.objects.select_for_update(skip_locked=True, of=("self",))
             .filter(job_type__in=supported_types)
             .filter(
-                Q(status=ProcessingJob.Status.RUNNING, started_at__lte=stage_cutoff)
+                (Q(status=ProcessingJob.Status.RUNNING) & (
+                    (Q(heartbeat_at__isnull=True) & Q(started_at__lte=stage_cutoff))
+                    | Q(heartbeat_at__lte=stage_cutoff)))
                 | Q(status=ProcessingJob.Status.PENDING, updated_at__lte=queue_cutoff)
                 | Q(status=ProcessingJob.Status.FAILED, error_code="queue_unavailable")
             )
@@ -298,6 +300,14 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
         requeued = 0
         exhausted = 0
         for job in jobs:
+            if job.status == ProcessingJob.Status.PENDING and job.task_id:
+                # Redeliver the same wakeup. A healthy queued task must not lose
+                # its identity just because another document occupies the worker.
+                job.updated_at = now
+                job.save(update_fields=["updated_at"])
+                transaction.on_commit(lambda jid=str(job.pk), kind=job.job_type, tid=job.task_id: _dispatch_processing_job(jid, kind, tid))
+                requeued += 1
+                continue
             if job.attempt >= job.max_attempts:
                 job.status = ProcessingJob.Status.FAILED
                 job.error_code = "max_attempts_exhausted"
@@ -332,6 +342,7 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
             job.status = ProcessingJob.Status.PENDING
             job.task_id = task_id
             job.started_at = None
+            job.heartbeat_at = None
             job.finished_at = None
             job.error_code = ""
             job.error_message = ""
@@ -341,6 +352,7 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
                     "status",
                     "task_id",
                     "started_at",
+                    "heartbeat_at",
                     "finished_at",
                     "error_code",
                     "error_message",
@@ -412,7 +424,7 @@ def queue_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = F
     return job
 
 
-def dispatch_ocr_job(job_id: str, task_id: str) -> bool:
+def dispatch_ocr_job(job_id: str, task_id: str, *, countdown: int = 0) -> bool:
     from ingestion.tasks import process_ocr_job
 
     try:
@@ -420,6 +432,7 @@ def dispatch_ocr_job(job_id: str, task_id: str) -> bool:
             args=[job_id],
             task_id=task_id,
             ignore_result=True,
+            countdown=countdown,
         )
     except (KombuOperationalError, OSError, ConnectionError, TimeoutError) as exc:
         ProcessingJob.objects.filter(pk=job_id, task_id=task_id).update(
@@ -933,7 +946,7 @@ def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
 
 def _ocr_phase(job, stats, phase, *, pages=()):
     stats.update(ocr_phase=phase, active_page_indexes=list(pages), phase_started_at=timezone.now().isoformat())
-    ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(stats=stats, updated_at=timezone.now())
+    ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(stats=stats, heartbeat_at=timezone.now(), updated_at=timezone.now())
 
 
 @transaction.atomic
@@ -1036,6 +1049,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
 
     cleanup = None
     next_task_id = ""
+    next_delay = 0
     try:
         _ocr_phase(job, stats, "preparing")
         job = _stage_ocr_job_asset(job)
@@ -1048,11 +1062,16 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
 
         provider = str(stats.get("engine") or asset.extraction_method or "paddleocr_nas")
         if remaining:
-            batch_size = 1 if stats.get("requested_mode") == "all_pages" or stats.get("retry_page_batch_size") == 1 else settings.OCR_PAGE_BATCH_SIZE
+            batch_size = 1  # Persist each page before requesting the next one.
             batch_indexes = remaining[:batch_size]
             local_path, cleanup = materialize_field_file(asset.file)
+            stats.update(total_pages=document_page_count, target_pages=target_page_count,
+                         processed_pages=target_page_count-len(remaining), remaining_pages=len(remaining))
             _ocr_phase(job, stats, "recognizing", pages=batch_indexes)
-            pages, provider = extract_ocr_page_batch(local_path, batch_indexes)
+            from .ocr_heartbeat import ocr_request_lease
+            identity = sha256(f"{job.pk}:{asset.pk}:{asset.sha256}:{batch_indexes}".encode()).hexdigest()
+            with ocr_request_lease(job, identity):
+                pages, provider = extract_ocr_page_batch(local_path, batch_indexes)
             returned_indexes = {page.index for page in pages}
             if returned_indexes != set(batch_indexes) or len(pages) != len(batch_indexes):
                 raise ValueError(
@@ -1320,6 +1339,22 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         job.finished_at = timezone.now()
         job.save()
         return job
+    except OCRServiceBusy:
+        # A full healthy OCR queue is not a failed recognition attempt. Keep
+        # the session and checkpoint, but issue a new delivery claim.
+        with transaction.atomic():
+            current = ProcessingJob.objects.select_for_update().filter(
+                pk=job.pk, status=ProcessingJob.Status.RUNNING, task_id=claim_task_id,
+            ).first()
+            if current:
+                next_task_id = str(uuid.uuid4())
+                next_delay = 30
+                current.status = ProcessingJob.Status.PENDING
+                current.task_id = next_task_id
+                current.stats = {**current.stats, "phase": "queued", "service_activity": "queued"}
+                current.save(update_fields=["status", "task_id", "stats", "updated_at"])
+                Edition.objects.filter(pk=current.edition_id).update(ocr_status=OcrStatus.PENDING)
+        return job
     except Exception as exc:
         if _processing_claim_is_current(job, claim_task_id):
             edition.ocr_status = OcrStatus.FAILED
@@ -1340,5 +1375,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         if cleanup:
             cleanup()
         if next_task_id:
-            dispatch_ocr_job(str(job.id), next_task_id)
+            if next_delay:
+                dispatch_ocr_job(str(job.id), next_task_id, countdown=next_delay)
+            else:
+                dispatch_ocr_job(str(job.id), next_task_id)
             job.refresh_from_db()

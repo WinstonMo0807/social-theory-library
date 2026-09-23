@@ -10,6 +10,22 @@ pytestmark = pytest.mark.django_db
 URL = "/api/ingestion/processing-center/"
 
 
+def test_busy_service_requeues_same_checkpoint_without_spending_retry_budget(failed_job):
+    from ingestion.services.ocr_provider import OCRServiceBusy
+    from ingestion.services.processing import run_ocr_job
+    failed_job.status = "pending"
+    failed_job.task_id = "busy-first"
+    failed_job.save()
+    with patch("ingestion.services.processing.materialize_field_file", return_value=("fixture.pdf", None)), patch("ingestion.services.processing.extract_ocr_page_batch", side_effect=OCRServiceBusy("busy")), patch("ingestion.services.processing.dispatch_ocr_job") as dispatch:
+        for _ in range(2):
+            run_ocr_job(str(failed_job.pk), task_id=failed_job.task_id)
+            failed_job.refresh_from_db()
+            assert failed_job.status == "pending" and failed_job.attempt == 1
+            assert failed_job.stats["processed_pages"] == 1
+            assert failed_job.stats["service_activity"] == "queued"
+            dispatch.assert_called_with(str(failed_job.pk), failed_job.task_id, countdown=30)
+
+
 @pytest.fixture
 def failed_job(settings, tmp_path):
     _, edition, _, asset = create_item_with_files(settings, tmp_path)

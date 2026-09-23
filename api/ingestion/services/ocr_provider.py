@@ -21,6 +21,11 @@ class OCRServiceUnavailable(RuntimeError):
     pass
 
 
+class OCRServiceBusy(RuntimeError):
+    """Healthy NAS queue: delay the same page without consuming retries."""
+    pass
+
+
 def ocr_runtime_config():
     stored = SiteSetting.objects.filter(key=OCR_RUNTIME_KEY).first()
     value = stored.value if stored and isinstance(stored.value, dict) else {}
@@ -57,6 +62,9 @@ def _request_document_gateway(
         "languages": "ch,en,chinese_cht",
         "layout": "true",
     }
+    from .ocr_heartbeat import request_identity
+    if request_identity.get():
+        data["request_id"] = request_identity.get()
     if model:
         data["model"] = model
     page_map = {}
@@ -74,7 +82,7 @@ def _request_document_gateway(
                 subset.insert_pdf(source, from_page=index - 1, to_page=index - 1)
             page_map = {index + 1: original for index, original in enumerate(selected)}
             data["page_numbers"] = ",".join(str(index) for index in page_map)
-            handle = stack.enter_context(BytesIO(subset.tobytes(garbage=3, deflate=True)))
+            handle = stack.enter_context(BytesIO(subset.tobytes(garbage=3, deflate=True, no_new_id=True)))
         else:
             handle = stack.enter_context(Path(path).open("rb"))
         response = httpx.post(
@@ -82,7 +90,8 @@ def _request_document_gateway(
             files={"file": (Path(path).name, handle, "application/pdf")},
             data=data,
             headers=headers,
-            timeout=settings.OCR_REQUEST_TIMEOUT_SECONDS,
+            timeout=httpx.Timeout(settings.OCR_REQUEST_TIMEOUT_SECONDS, connect=10),
+            trust_env=False,
         )
     response.raise_for_status()
     payload = response.json()
@@ -146,6 +155,13 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None):
             )
             return payload, provider
         except (httpx.HTTPError, ValueError) as exc:
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503} and provider == "paddleocr_nas":
+                try:
+                    detail = str(exc.response.json().get("detail", ""))
+                except (ValueError, AttributeError):
+                    detail = ""
+                if exc.response.status_code == 429 or "busy" in detail.lower():
+                    raise OCRServiceBusy("NAS OCR正在处理其他页面，本页稍后自动继续。") from exc
             failures.append(f"{provider} 不可用：{exc.__class__.__name__}")
     if configured == 0:
         raise OCRConfigurationError("没有配置可用的 OCR 服务。")

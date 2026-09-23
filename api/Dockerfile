@@ -34,4 +34,4 @@ USER library
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-class", "gthread", "--workers", "3", "--threads", "4", "--timeout", "180", "--graceful-timeout", "30"]
+CMD ["gunicorn", "--config", "python:config.gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-class", "gthread", "--workers", "3", "--threads", "4", "--timeout", "180", "--graceful-timeout", "30"]

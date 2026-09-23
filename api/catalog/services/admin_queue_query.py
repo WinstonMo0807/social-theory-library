@@ -4,6 +4,7 @@ Queue categories describe saved operational records. Publication itself still
 runs the full field/file/identity preflight in the existing domain command.
 """
 from django.core.paginator import Paginator
+from uuid import UUID
 from django.db.models import BooleanField, Case, CharField, Exists, F, OuterRef, Q, Subquery, Value, When
 from django.db.models.functions import Cast, Coalesce, Concat, Greatest
 
@@ -40,6 +41,8 @@ def edition_inventory():
     decisions = CatalogFieldDecision.objects.filter(edition_id=OuterRef("pk"))
     active = Q(state="published", active_catalog_revision__edition_id=F("pk"), active_catalog_revision__status="active", active_catalog_revision__metadata_ready=True)
     queryset = Edition.objects.annotate(
+        q_removed_intake=Exists(UploadItem.all_objects.filter(edition_id=OuterRef("pk"), status="deleted")),
+        q_manual_session=Exists(sessions.exclude(source_type="upload").filter(status__in=OPEN_STATUSES)),
         q_active=_flag(active), q_has_assets=Exists(assets), q_has_upload=Exists(uploads),
         q_pending_upload=Exists(pending), q_failed_upload=Exists(pending.filter(status="failed")),
         q_failed_job=Exists(jobs.filter(status="failed")),
@@ -58,6 +61,7 @@ def edition_inventory():
         q_publication=Case(When(state="withdrawn", then=Value("withdrawn")), When(q_active=True, then=Value("published")), When(state="published", active_catalog_revision__isnull=True, q_preparing=True, then=Value("publishing")), default=Value("unpublished"), output_field=CharField()),
         q_file_problem=_flag((~Q(publication_mode="bibliographic") | Q(q_has_assets=True)) & (~Q(q_original_ready=True) | ~Q(q_reader_ready=True))),
     )
+    queryset = queryset.exclude(q_removed_intake=True, q_has_upload=False, q_manual_session=False, q_active=False)
     # Required-field confirmation is queried from the existing decisions, not a
     # copied workflow status table. Missing author decisions can use approved
     # canonical contributions, exactly as the existing field reader does.
@@ -145,7 +149,13 @@ def _hydrate(keys, *, user=None):
         if row is not None:
             row.setdefault("recommendation_sources", []).append({"id": str(item.issue_id), "title": item.issue.title, "url": f"/admin/recommendations/issues/{item.issue_id}"})
     by_id.update({f"upload:{item.pk}": unbound_upload_row(item) for item in UploadItem.objects.filter(pk__in=item_ids)})
-    return [by_id[row["queue_id"]] for row in keys if row["queue_id"] in by_id]
+    return [by_id[_queue_key(row)] for row in keys if _queue_key(row) in by_id]
+
+
+def _queue_key(row):
+    # PostgreSQL casts UUIDs with dashes; SQLite casts without dashes.
+    kind, identifier = row["queue_id"].split(":", 1)
+    return f"{kind}:{UUID(identifier)}"
 
 
 def queue_page(*, user=None, category="all", page=1, ordering="priority", **filters):
@@ -159,8 +169,8 @@ def queue_page(*, user=None, category="all", page=1, ordering="priority", **filt
     page_keys = list(result.object_list)
     all_keys = {row["queue_id"]: row for rows in [page_keys, *preview_keys.values()] for row in rows}
     hydrated = {row["id"]: row for row in _hydrate(all_keys.values(), user=user)}
-    previews = {name: [hydrated[row["queue_id"]] for row in rows if row["queue_id"] in hydrated] for name, rows in preview_keys.items()}
-    return result, counts, [hydrated[row["queue_id"]] for row in page_keys if row["queue_id"] in hydrated], previews
+    previews = {name: [hydrated[_queue_key(row)] for row in rows if _queue_key(row) in hydrated] for name, rows in preview_keys.items()}
+    return result, counts, [hydrated[_queue_key(row)] for row in page_keys if _queue_key(row) in hydrated], previews
 
 
 def next_queue_item(*, user=None, exclude_edition=None, exclude_item=None):

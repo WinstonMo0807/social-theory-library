@@ -170,7 +170,7 @@ for origin in LAN_HTTP_TRUSTED_ORIGINS:
 SPECTACULAR_SETTINGS = {
     "TITLE": "Social Theory Library API",
     "DESCRIPTION": "Canonical catalog, editorial processes and permission-scoped reading APIs.",
-    "VERSION": "3.0.8",
+    "VERSION": "3.0.8.1",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {

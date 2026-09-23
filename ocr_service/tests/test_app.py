@@ -21,6 +21,46 @@ def burn_cpu(seconds: float) -> int:
 
 
 class OcrServiceConcurrencyTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        ocr_app.REQUESTS.clear()
+        ocr_app.REQUEST_GATE = asyncio.Lock()
+
+    async def test_repeated_request_shares_work_after_client_disconnect(self):
+        started, finish = asyncio.Event(), asyncio.Event()
+        async def recognize(*args, **kwargs):
+            started.set()
+            await finish.wait()
+            return {"pages": [{"index": 1, "blocks": [{"text": "saved text"}]}]}
+        def upload():
+            return UploadFile(filename="one.pdf", file=io.BytesIO(b"%PDF-same-source"))
+        async def request():
+            return await ocr_app.parse_pdf(file=upload(), languages="ch", layout=False, page_numbers="1", request_id="request-identity-001")
+        with patch.object(ocr_app, "run_in_ocr_process", side_effect=recognize) as compute:
+            first = asyncio.create_task(request())
+            await started.wait()
+            first.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await first
+            self.assertEqual((await ocr_app.request_status("request-identity-001"))["state"], "running")
+            retry = asyncio.create_task(request())
+            await asyncio.sleep(0)
+            finish.set()
+            result = await retry
+            self.assertEqual(result["pages"][0]["index"], 1)
+            self.assertEqual(compute.call_count, 1)
+            self.assertFalse(compute.call_args.args[1].exists())
+            replay = await request()
+            self.assertEqual(replay, result)
+            self.assertEqual(compute.call_count, 1)
+
+    async def test_request_identity_cannot_be_reused_for_different_pdf(self):
+        from fastapi import HTTPException
+        with patch.object(ocr_app, "run_in_ocr_process", new=AsyncMock(return_value={"pages": []})):
+            await ocr_app.parse_pdf(file=UploadFile(filename="one.pdf", file=io.BytesIO(b"%PDF-first")), languages="ch", layout=False, page_numbers="1", request_id="request-identity-002")
+            with self.assertRaises(HTTPException) as error:
+                await ocr_app.parse_pdf(file=UploadFile(filename="two.pdf", file=io.BytesIO(b"%PDF-other")), languages="ch", layout=False, page_numbers="1", request_id="request-identity-002")
+            self.assertEqual(error.exception.status_code, 409)
+
     def test_cache_diagnostics_do_not_nest_previous_probe(self):
         inventory = {
             "root": "/models",

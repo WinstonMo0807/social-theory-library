@@ -71,6 +71,9 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
     labels = {"preparing": "正在准备 PDF", "recognizing": "正在识别文字", "finalizing": "文字识别已完成，正在整理结果", "pdf": "文字识别已完成，正在准备阅读文件", "publishing": "正在提交公开内容更新", "complete": "识别任务已完成"}
     state_labels = {"pending": "等待处理", "paused": "已暂停，已完成页数保留", "failed": "识别中断", "canceled": "本次识别已取消", "succeeded": "识别任务已完成"}
     label = labels.get(phase, "正在处理") if job.status == "running" else state_labels.get(job.status, "状态待核实")
+    activity = stats.get("service_activity", "unknown")
+    if job.status == "running" and phase == "recognizing" and activity == "queued":
+        label = "OCR 服务已接收，等待识别当前页"
     if job.status == "pending" and done:
         label = "已保存当前页，等待继续识别"
     public = "本次识别不会发布未公开的书目。"
@@ -106,7 +109,10 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
         "active_pages": stats.get("active_page_indexes", []) if job.status == "running" else [],
         "updated_at": job.updated_at, "started_at": stats.get("session_started_at") or job.started_at,
         "phase_elapsed_seconds": max(0, int(((job.finished_at or timezone.now()) - phase_at).total_seconds())),
-        "stale": job.status in {"pending", "running"} and (timezone.now() - job.updated_at).total_seconds() > 90,
+        "heartbeat_at": job.heartbeat_at,
+        "worker_alive": job.status == "running" and job.heartbeat_at is not None and (timezone.now() - job.heartbeat_at).total_seconds() < 90,
+        "service_activity": activity,
+        "stale": job.status == "running" and (timezone.now() - (job.heartbeat_at or job.updated_at)).total_seconds() > 90,
         "error": job.error_message if job.status == "failed" else "",
         "warnings": [str(stats[key]) for key in ["ocr_pdf_warning", "page_label_warning", "front_matter_warning", "theory_suggestion_warning"] if stats.get(key)],
         "source_asset_id": str(stats.get("requested_asset_id") or stats.get("text_source_asset_id") or job.asset_id or ""),

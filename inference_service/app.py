@@ -22,7 +22,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="STL local discovery inference", version="3.0.8", lifespan=lifespan,
+app = FastAPI(title="STL local discovery inference", version="3.0.8.1", lifespan=lifespan,
               docs_url=None, redoc_url=None, openapi_url=None)
 
 

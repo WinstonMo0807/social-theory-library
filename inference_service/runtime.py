@@ -290,7 +290,7 @@ class Runtime:
         timer.daemon = True
         timer.start()
         try:
-            output = session.run(None, feeds, options)[0]
+            output = session.run([session.get_outputs()[0].name], feeds, options)[0]
         except Exception as exc:
             self.completed_roles.discard(role)
             code = "inference_timeout" if time.monotonic() >= deadline else "inference_failed"
@@ -316,7 +316,10 @@ class Runtime:
             if hidden.ndim != 3 or hidden.shape[-1] != 384:
                 raise InferenceError("invalid_output", "向量模型输出形状不符合固定契约。")
             weights = mask[..., None].astype(np.float32)
-            pooled = (hidden * weights).sum(axis=1) / np.maximum(weights.sum(axis=1), 1)
+            # The hidden tensor is owned by this call; avoid a second tensor of
+            # the same size without changing multiplication/reduction order.
+            hidden *= weights
+            pooled = hidden.sum(axis=1) / np.maximum(weights.sum(axis=1), 1)
             normalized = pooled / np.maximum(np.linalg.norm(pooled, axis=1, keepdims=True), 1e-12)
             vectors.extend(normalized.tolist())
         return {**self.identity("embedding"), "dimensions": 384, "vectors": vectors,

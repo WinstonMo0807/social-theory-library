@@ -29,8 +29,8 @@ def cover_state(edition, request):
     image_name = preview.get("cover", work.cover.name) or ""
     asset = edition.assets.filter(kind="normalized", is_current=True, status__in=["ready", "processing"]).order_by("-version", "-created_at", "pk").first()
     decision = CatalogFieldDecision.objects.filter(edition=edition, field_name="cover").first()
-    fingerprint = sha256(json.dumps([str(edition.pk), str(work.pk), str(work.updated_at),
-        str(draft.updated_at) if draft else None, str(decision.updated_at) if decision else None,
+    fingerprint = sha256(json.dumps([str(edition.pk), str(work.pk), image_name,
+        str(preview.get("cover_rendition", work.cover_rendition_id) or ""), str(decision.updated_at) if decision else None,
         str(asset.pk) if asset else None, asset.sha256 if asset else None], sort_keys=True).encode()).hexdigest()
     options = list(work.cover_candidates.filter(asset=asset).order_by("-selected", "-score", "page_index")) if asset else []
     attempt = ProcessingAttempt.objects.filter(upload_item__edition=edition, stage="cover_detection", invalidated_at__isnull=True).order_by("-started_at").first()

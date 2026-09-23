@@ -1,5 +1,6 @@
 "use client";
 
+import { RecycleControl } from "@/components/admin/recycle-control";
 import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -64,7 +65,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
           <div className={styles.cell}><small>出版版本</small><strong>{work.row_type === "edition" ? work.label || "出版信息待补" : work.primary_edition?.label || "未指定主版本"}</strong><span>{work.row_type === "edition" ? work.is_primary ? "主版本 · 用于作品列表" : "非主版本 · 保留版本身份" : `${work.edition_count ?? 0} 个版本`}</span><Link href={versionsHref}>查看此作品的全部版本</Link></div>
           <div className={styles.cell}><small>是否公开</small><StatusBadge {...publication} /><span>{publicationDescription(work.publication)}</span>{publicHref ? <Link href={publicHref} target="_blank">查看读者页面</Link> : null}</div>
           <div className={styles.cell}><small>文件、知识与策展</small><span>文件：{statusLabels[work.asset_state || ""] || "见版本文件"}</span><span>知识：{statusLabels[work.knowledge_status || ""] || "见对象详情"}</span><span>策展：{statusLabels[work.curation_status || ""] || "见对象详情"}</span><time>{new Date(work.updated_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></div>
-          <div className={styles.cell}>{destination ? <><Link href={withAdminReturn(destination, returnTo, "work")}>编辑当前版本 <ArrowRight size={13} /></Link><Link href={withAdminReturn(destination, returnTo, "file")}>文件与阅读</Link></> : <span>尚无可编辑出版版本，请核对作品记录。</span>}</div>
+          <div className={styles.cell}><RecycleControl kind={work.row_type === "edition" ? "edition" : "work"} id={work.id} name={work.title || "未命名作品"} onDeleted={resource.retry} />{destination ? <><Link href={withAdminReturn(destination, returnTo, "work")}>编辑当前版本 <ArrowRight size={13} /></Link><Link href={withAdminReturn(destination, returnTo, "file")}>文件与阅读</Link></> : <span>尚无可编辑出版版本，请核对作品记录。</span>}</div>
           {work.health ? <details className={styles.details}><summary>馆藏质量与处理原因</summary><CatalogHealth value={work.health} /></details> : null}
           {work.row_type === "edition" ? <details className={styles.details}><summary>版本文件与历史（{work.assets?.length ?? 0}）</summary><p className={styles.scope}>{work.current_reader_asset ? `当前阅读文件：${work.current_reader_asset.original_filename || kindLabels[work.current_reader_asset.kind] || work.current_reader_asset.kind}，文件版本${work.current_reader_asset.version}。` : "当前没有已选阅读文件。纯书目不需要虚构PDF或OCR进度。"} 替换和补充文件从“文件与阅读”进入；原件、历史及已有阅读页标识保留。</p>
             <ul className={styles.files}>{work.assets?.map((asset) => <li key={asset.id}><strong>{asset.original_filename || kindLabels[asset.kind] || asset.kind}</strong><span>{kindLabels[asset.kind] || asset.kind} · 第{asset.version}版 · {asset.is_current ? "当前文件" : "历史文件"}</span><StatusBadge {...pdfValidationPresentation(asset.validation_status)} /><span>{asset.page_count}页 · {statusLabels[asset.status] || asset.status}</span><small>{work.current_reader_asset?.id === asset.id ? "当前阅读使用" : "未作为当前阅读文件"}</small></li>)}</ul>

@@ -38,48 +38,18 @@ def test_short_internal_api_token_never_bypasses_throttling():
 
 
 @pytest.mark.django_db
-def test_published_entity_must_be_archived_before_permanent_delete(
-    api_client,
-    superadmin_user,
-):
-    topic = Topic.objects.create(
-        name="可下线的研究主题",
-        slug="archivable-topic",
-        editorial_status="published",
-    )
+def test_published_entity_can_be_recycled_and_restored_without_republishing(api_client, superadmin_user):
+    from catalog.models import RecycleEntry
+    topic = Topic.objects.create(name="可恢复删除的主题", slug="archivable-topic", editorial_status="published")
     api_client.force_authenticate(superadmin_user)
-
-    blocked = api_client.post(
-        f"/api/catalog/admin/lifecycle/topic/{topic.id}/",
-        {"action": "delete", "confirmed": True},
-        format="json",
-    )
-    assert blocked.status_code == 409
-
-    archived = api_client.post(
-        f"/api/catalog/admin/lifecycle/topic/{topic.id}/",
-        {"action": "archive"},
-        format="json",
-    )
-    assert archived.status_code == 202
-    topic.refresh_from_db()
-    assert topic.editorial_status == "published"
-    published = api_client.post(
-        f"/api{archived.data['editorial_revision']['publish_url']}",
-        {},
-        format="json",
-    )
-    assert published.status_code == 200
-    topic.refresh_from_db()
-    assert topic.editorial_status == "archived"
-
-    deleted = api_client.post(
-        f"/api/catalog/admin/lifecycle/topic/{topic.id}/",
-        {"action": "delete", "confirmed": True},
-        format="json",
-    )
-    assert deleted.status_code == 204
-    assert not Topic.objects.filter(pk=topic.id).exists()
+    deleted = api_client.post(f"/api/catalog/admin/lifecycle/topic/{topic.id}/", {"action": "delete", "confirmed": True}, format="json")
+    assert deleted.status_code == 200
+    assert not Topic.objects.filter(pk=topic.pk).exists()
+    assert Topic.all_objects.get(pk=topic.pk).editorial_status == "archived"
+    entry = RecycleEntry.objects.get(object_id=topic.pk, restored_at__isnull=True)
+    restored = api_client.post("/api/catalog/admin/recycle/", {"id": str(entry.pk)}, format="json")
+    assert restored.status_code == 200
+    assert Topic.objects.get(pk=topic.pk).editorial_status == "draft"
 
 
 @pytest.mark.django_db
@@ -193,12 +163,12 @@ def test_public_knowledge_lifecycle_uses_revision_for_every_supported_target(
 
 
 @pytest.mark.django_db
-def test_ordinary_administrator_cannot_permanently_delete_archived_entity(
+def test_administrator_can_recycle_archived_entity_without_hard_delete(
     api_client,
     admin_user,
 ):
     topic = Topic.objects.create(
-        name="仅 Owner 可永久删除的主题",
+        name="管理员可恢复删除的主题",
         slug="owner-only-topic-deletion",
         editorial_status="archived",
     )
@@ -210,8 +180,9 @@ def test_ordinary_administrator_cannot_permanently_delete_archived_entity(
         format="json",
     )
 
-    assert response.status_code == 403
-    assert Topic.objects.filter(pk=topic.id).exists()
+    assert response.status_code == 200
+    assert not Topic.objects.filter(pk=topic.id).exists()
+    assert Topic.all_objects.filter(pk=topic.id).exists()
 
 
 @pytest.mark.django_db
@@ -248,30 +219,15 @@ def test_published_discipline_update_stays_in_revision_until_confirmed(
 
 
 @pytest.mark.django_db
-def test_only_owner_can_hard_delete_archived_taxonomy(
-    api_client,
-    admin_user,
-    superadmin_user,
-):
-    discipline = Discipline.objects.create(
-        code="owner-delete-taxonomy",
-        name="待永久删除的学科",
-        slug="owner-delete-taxonomy",
-        editorial_status="archived",
-    )
+def test_editorial_delete_recycles_taxonomy_and_keeps_version_guard(api_client, admin_user):
+    discipline = Discipline.objects.create(code="recycle-taxonomy", name="待删除的学科", slug="recycle-taxonomy", editorial_status="archived")
     api_client.force_authenticate(admin_user)
-    denied = editorial_request(api_client, "delete",
-        f"/api/catalog/admin/disciplines/{discipline.id}/"
-    )
-    assert denied.status_code == 403
-    assert Discipline.objects.filter(pk=discipline.id).exists()
-
-    api_client.force_authenticate(superadmin_user)
-    deleted = editorial_request(api_client, "delete",
-        f"/api/catalog/admin/disciplines/{discipline.id}/"
-    )
+    url = f"/api/catalog/admin/disciplines/{discipline.pk}/"
+    assert api_client.delete(url).status_code == 428
+    deleted = editorial_request(api_client, "delete", url)
     assert deleted.status_code == 204
-    assert not Discipline.objects.filter(pk=discipline.id).exists()
+    assert not Discipline.objects.filter(pk=discipline.pk).exists()
+    assert Discipline.all_objects.filter(pk=discipline.pk).exists()
 
 
 @pytest.mark.django_db

@@ -16,7 +16,7 @@ from rest_framework.exceptions import ValidationError
 
 from catalog.models import (AboutPageBlock, EditorialRevision, EditorialRevisionMedia,
                             MediaRendition, RecommendationIssue, RecommendationIssueItem,
-                            SiteSetting, Edition, DocumentType)
+                            SiteSetting, Edition, DocumentType, RecycleEntry)
 from catalog.services.cataloging_sessions import open_cataloging_session
 from catalog.services.publication_eligibility import public_editions
 from ingestion.models import AuditEvent
@@ -183,8 +183,8 @@ def save_issue(identifier, data, actor):
         seen.add(item_id)
         record = existing.get(item_id)
         if record is None:
-            if RecommendationIssueItem.objects.filter(pk=item_id).exists():
-                raise ValidationError({"items": "推荐项不属于本期。"})
+            if RecommendationIssueItem.all_objects.filter(pk=item_id).exists():
+                raise ValidationError({"items": "推荐项不属于本期或已删除，请先在回收站恢复。"})
             record = RecommendationIssueItem.objects.create(id=item_id, issue=issue)
         row = {name: _text(item.get(name) or "", limit) for name, limit in (
             ("title", 600), ("authors", 1000), ("version_note", 1500), ("isbn", 40), ("doi", 255), ("note", 6000))}
@@ -304,6 +304,13 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"
     records = {str(row.pk): row for row in issue.items.select_related("cataloging_session")}
+    if public:
+        # Immutable issue text retains history. Recovery makes an item editable,
+        # but only a newly published issue can expose that restored item again.
+        deleted = RecycleEntry.objects.filter(model_label="catalog.recommendationissueitem", object_id__in=[row["id"] for row in payload.get("items", [])]).filter(
+            Q(restored_at__isnull=True) | Q(before__parent_public_revision=str(revision.pk if revision else issue.active_revision_id)))
+        hidden = {str(value) for value in deleted.values_list("object_id", flat=True)}
+        payload["items"] = [row for row in payload.get("items", []) if row["id"] not in hidden]
     edition_ids = {row.get("edition_id") for row in payload.get("items", []) if row.get("edition_id")}
     edition_ids.update(str(row.linked_edition_id) for row in records.values() if row.linked_edition_id)
     editions = {str(row.pk): row for row in public_editions().filter(pk__in=edition_ids)}
@@ -424,6 +431,8 @@ def save_site(data, actor):
         raise ValidationError({"about_blocks": "网站内容最多100项。"})
     clean_blocks, seen = [], set()
     for block in blocks:
+        if isinstance(block, dict) and AboutPageBlock.all_objects.filter(key=block.get("key")).exclude(pk__in=AboutPageBlock.objects.values("pk")).exists():
+            raise ValidationError({"about_blocks": "此网站模块已删除，请先从回收站恢复，或移除草稿中的旧模块。"})
         instance = AboutPageBlock.objects.filter(key=block.get("key")).first() if isinstance(block, dict) else None
         serializer = AboutPageBlockSerializer(instance, data=block)
         serializer.is_valid(raise_exception=True)
@@ -457,6 +466,8 @@ def publish_site(expected, actor):
     for block in payload["about_blocks"]:
         values = dict(block)
         key = values.pop("key")
+        if AboutPageBlock.all_objects.filter(key=key).exclude(pk__in=AboutPageBlock.objects.values("pk")).exists():
+            raise ValidationError({"about_blocks": "草稿包含已删除的网站模块，请先移除或恢复后再发布。"})
         keys.append(key)
         AboutPageBlock.objects.update_or_create(key=key, defaults={**values, "updated_by": actor})
     # Removed blocks are retained for history and are simply no longer shown.

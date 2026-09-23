@@ -32,6 +32,7 @@ import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
+import { RecycleControl } from "@/components/admin/recycle-control";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
@@ -614,7 +615,7 @@ export function TaxonomyAdmin({
           <header>
             <div>
               <Link href={draft.kind === "theory" ? "/admin/theories" : "/admin/topics"}>返回列表</Link>
-              <h2>{draft.id ? "编辑" : "新建"}{draft.kind === "theory" ? "理论流派" : "主题"}</h2>
+              <h2>{draft.id ? "编辑" : "新建"}{draft.kind === "theory" ? "理论流派" : "主题"}</h2>{draft.id ? <RecycleControl kind={draft.kind === "theory" ? "theory-school" : "topic"} id={draft.id} name={draft.name} onDeleted={() => window.location.assign(draft.kind === "theory" ? "/admin/theories" : "/admin/topics")} /> : null}
             </div>
           </header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
@@ -1211,7 +1212,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               <span>{scholar.birth_year ? `${scholar.birth_year}—${scholar.death_year ?? ""}` : "—"}</span>
               <span>{scholar.key_concerns.slice(0, 2).join("、") || "待补"}</span>
               <b>{scholar.public_eligible ? "已公开" : scholar.editorial_status === "published" ? "公开资格待处理" : "草稿"}</b>
-              <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link>{scholar.public_eligible ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
+              <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link><RecycleControl kind="scholar" id={scholar.id} name={scholar.preferred_name} onDeleted={resource.refresh} />{scholar.public_eligible ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
             </article>
           ))}
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
@@ -1220,7 +1221,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
           <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
-          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2></div>{draft.personId ? <Link className="button secondary" href={`/admin/scholars/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
+          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div>{draft.personId ? <Link className="button secondary" href={`/admin/scholars/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>

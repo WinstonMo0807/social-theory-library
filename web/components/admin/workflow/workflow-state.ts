@@ -185,7 +185,7 @@ export function validateWorkflowSection(
         issues.push({ field: `items.${index}.role`, message: `请选择第 ${index + 1} 位贡献者的角色。` });
       }
       if (!personId) {
-        issues.push({ field: `items.${index}.person_id`, message: `请为第 ${index + 1} 位贡献者关联馆内学者，或直接新建并关联。` });
+        issues.push({ field: `items.${index}.person_id`, message: `请为${role === "translator" ? "译者" : "作者"}“${displayName}”选择已有的人物；没有记录时点击下方“新建”。` });
       }
     });
   }

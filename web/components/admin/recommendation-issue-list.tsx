@@ -1,4 +1,5 @@
 "use client";
+import { RecycleControl } from "./recycle-control";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, CalendarDays, Users } from "lucide-react";
@@ -60,7 +61,7 @@ export function RecommendationIssueList() {
       </div>
       <section className="issue-admin-panel"><header><h2>精选主题</h2><button className="button secondary" onClick={() => editPlacement("home_topics")}>管理主题</button></header><div className="issue-admin-topics">{topics?.current?.items.map(item => <Link href={"/admin/topics/" + item.target.id} key={item.id}>{itemImage(item) ? <img src={itemImage(item)} alt=""/> : <div className="issue-admin-placeholder"/>}<h3>{itemLabel(item)}</h3><p>{item.reason}</p></Link>)}</div>{topics && !topics.current?.items.length ? <p className="empty-state">当前尚无已发布的主题推荐。</p> : null}</section>
       <section className="issue-admin-panel"><header><h2>全部推荐期</h2><span>草稿、已发布与后续排期</span></header><form className="issue-admin-search" onSubmit={event => { event.preventDefault(); setQuery(String(new FormData(event.currentTarget).get("q") || "")); setPage(1); }}><input name="q" aria-label="查找推荐期" placeholder="按标题查找推荐期"/><button className="button secondary">查找</button></form>
-        <div className="v307-admin-issue-list">{data?.results.map(issue => <Link href={"/admin/recommendations/issues/" + issue.id} key={issue.id}><div><p className="eyebrow">{issue.issue_label}</p><h3>{issue.title}</h3><p>{issue.public_byline}</p></div><span>{issue.has_unpublished_changes ? "有待发布修改" : issue.published_at ? "已发布" : "草稿"}</span><span>{issue.display_from ? dateLabel(issue.display_from) : "手动发布"}</span><span>继续编辑 →</span></Link>)}</div>
+        <div className="v307-admin-issue-list">{data?.results.map(issue => <div key={issue.id}><RecycleControl kind="recommendation-issue" id={issue.id} name={issue.title} onDeleted={resource.retry} /><Link href={"/admin/recommendations/issues/" + issue.id} key={issue.id}><div><p className="eyebrow">{issue.issue_label}</p><h3>{issue.title}</h3><p>{issue.public_byline}</p></div><span>{issue.has_unpublished_changes ? "有待发布修改" : issue.published_at ? "已发布" : "草稿"}</span><span>{issue.display_from ? dateLabel(issue.display_from) : "手动发布"}</span><span>继续编辑 →</span></Link></div>)}</div>
         {data?.count === 0 ? <p className="empty-state">没有符合条件的推荐期。</p> : null}<nav className="issue-pagination" aria-label="后台推荐归档分页"><button disabled={!data?.previous || resource.loading} onClick={() => setPage(page - 1)}>上一页</button><span>{data ? "共 " + data.count + " 期 · 第 " + page + " 页" : "正在读取"}</span><button disabled={!data?.next || resource.loading} onClick={() => setPage(page + 1)}>下一页</button></nav>
       </section>
     </>}
