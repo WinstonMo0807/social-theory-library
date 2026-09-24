@@ -10,6 +10,23 @@ pytestmark = pytest.mark.django_db
 URL = "/api/ingestion/processing-center/"
 
 
+def test_requeued_wait_excludes_previous_attempt_time(failed_job):
+    from datetime import timedelta
+    from django.utils import timezone
+    from ingestion.services.catalog_ocr import progress_row
+
+    now = timezone.now()
+    failed_job.status = "pending"
+    failed_job.updated_at = now - timedelta(seconds=40)
+    failed_job.started_at = now - timedelta(days=2)
+    failed_job.finished_at = None
+    failed_job.stats = {**failed_job.stats, "phase_started_at": failed_job.started_at.isoformat()}
+    with patch("ingestion.services.catalog_ocr.timezone.now", return_value=now):
+        row = progress_row(failed_job, actor=None)
+    assert row["phase_elapsed_seconds"] == 40
+    assert row["completed_pages"] == 1 and row["status"] == "pending"
+
+
 def test_busy_service_requeues_same_checkpoint_without_spending_retry_budget(failed_job):
     from ingestion.services.ocr_provider import OCRServiceBusy
     from ingestion.services.processing import run_ocr_job

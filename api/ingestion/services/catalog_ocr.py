@@ -100,7 +100,9 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
             check_resume_source(job, manual_retry=job.status == "failed")
         except ValueError as exc:
             can_resume, resume_reason = False, str(exc)
-    phase_at = parse_datetime(str(stats.get("phase_started_at") or "")) or job.started_at or job.created_at
+    # Requeued jobs retain their previous recognition phase for audit, but the
+    # visible queue wait starts with this pending transition, not an old attempt.
+    phase_at = job.updated_at if job.status == "pending" else parse_datetime(str(stats.get("phase_started_at") or "")) or job.started_at or job.created_at
     if timezone.is_naive(phase_at):
         phase_at = timezone.make_aware(phase_at)
     return {
