@@ -114,7 +114,7 @@ def validate_discovery_results(channel, rows, access_statuses):
         except (AttributeError, TypeError, ValueError):
             continue
     documents = list(DiscoveryDocument.objects.filter(pk__in=refs, channel=channel, keyword_ready=True,
-                                                  access_status__in=access_statuses))
+                                                  access_status__in=access_statuses).defer("normalized_text"))
     # Sessions can retain a retired generation; it is safe only while the same
     # source remains public at the same revision. Its index is not consulted.
     headers, output = {}, {}
@@ -132,6 +132,9 @@ def validate_discovery_results(channel, rows, access_statuses):
     spans = {str(row["id"]): row for row in EvidenceSpan.objects.filter(pk__in=span_ids, is_stale=False).values(
         "id", "document_revision_id", "page__asset_id", "original_text")}
     pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "text")}
+    # One request may contain several overlapping chunks from the same unit.
+    # Hash that exact freshly read unit once, retaining every text-slice check.
+    unit_hashes = {}
     for doc in documents:
         ref = refs[str(doc.pk)]
         if ref.get("source_revision") and ref["source_revision"] != doc.source_revision:
@@ -149,7 +152,12 @@ def validate_discovery_results(channel, rows, access_statuses):
             else:
                 unit = pages.get(page_id)
                 original = unit["text"] if unit and str(unit["asset_id"]) == header["asset_id"] else None
-            if original is None or fingerprint(original) != payload.get("unit_hash") or original[doc.start_offset:doc.end_offset] != doc.text:
+            if original is None:
+                continue
+            unit_key = ("span", span_id) if span_id else ("page", page_id)
+            if unit_key not in unit_hashes:
+                unit_hashes[unit_key] = fingerprint(original)
+            if unit_hashes[unit_key] != payload.get("unit_hash") or original[doc.start_offset:doc.end_offset] != doc.text:
                 continue
         # Do not overwrite the passage's OCR/language/locator metadata with its
         # bibliographic header or expose the full knowledge source on one card.

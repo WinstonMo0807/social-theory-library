@@ -1,7 +1,6 @@
 from celery import shared_task
 from pathlib import Path
 import json
-import shutil
 import tarfile
 import tempfile
 
@@ -85,6 +84,7 @@ def create_backup_archive(self, job_id):
             database = create_database_dump(staging)
             migration_heads = applied_migration_heads()
             assets = []
+            original_files = []
             for asset in Asset.objects.select_related("edition__work").all().iterator(chunk_size=200):
                 source = Path(asset.file.path)
                 record = {
@@ -103,9 +103,9 @@ def create_backup_archive(self, job_id):
                     and job.include_originals
                     and asset.kind == Asset.Kind.ORIGINAL
                 ):
-                    target = staging / "originals" / asset.file.name
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(source, target)
+                    # Stream immutable originals directly into the archive.
+                    # No second full copy (or cross-mount hard link) is needed.
+                    original_files.append((source, Path("originals") / asset.file.name))
             manifest = {
                 "schema": 1,
                 "created_at": backup_created_at.isoformat(),
@@ -123,9 +123,14 @@ def create_backup_archive(self, job_id):
                 encoding="utf-8",
             )
             with tarfile.open(archive, "w:gz") as tar:
+                # Preserve copy2's previous behavior for a file-field symlink:
+                # archive bytes, never a link to a path outside the backup.
+                tar.dereference = True
                 for path in sorted(staging.rglob("*")):
                     if path.is_file():
                         tar.add(path, arcname=path.relative_to(staging))
+                for source, archive_name in original_files:
+                    tar.add(source, arcname=archive_name, recursive=False)
         job.status = BackupJob.Status.COMPLETED
         job.archive_path = str(archive)
         job.checksum = _sha256(archive)

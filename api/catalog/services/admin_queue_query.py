@@ -4,6 +4,7 @@ Queue categories describe saved operational records. Publication itself still
 runs the full field/file/identity preflight in the existing domain command.
 """
 from django.core.paginator import Paginator
+from django.db import connection
 from uuid import UUID
 from django.db.models import BooleanField, Case, CharField, Exists, F, OuterRef, Q, Subquery, Value, When
 from django.db.models.functions import Cast, Coalesce, Concat, Greatest
@@ -160,17 +161,75 @@ def _queue_key(row):
 
 def queue_page(*, user=None, category="all", page=1, ordering="priority", **filters):
     editions, uploads = inventory(**filters)
-    keys = _keys(editions, uploads, category, ordering)
-    paginator = Paginator(keys, 30)
+    counts, ranked = _inventory_snapshot(editions, uploads, category, page, ordering)
+    paginator = Paginator(range(counts[category]), 30)
     result = paginator.get_page(page)
-    counts = {name: _keys(editions, uploads, name).count() for name in CATEGORY_FIELDS}
     # Old consumers receive bounded compatibility lists; totals always come from SQL.
-    preview_keys = {name: list(_keys(editions, uploads, name)[:12]) for name in ("continue", "attention", "exception", "publication_ready")}
-    page_keys = list(result.object_list)
+    preview_keys = {name: sorted([row for rank, row in ranked[name] if row["preview_position"] <= 12],
+                                key=lambda row: row["preview_position"])
+                    for name in ("continue", "attention", "exception", "publication_ready")}
+    offset = (result.number - 1) * 30
+    page_keys = [row for rank, row in ranked[category] if offset < rank <= offset + 30]
+    result.object_list = page_keys
     all_keys = {row["queue_id"]: row for rows in [page_keys, *preview_keys.values()] for row in rows}
     hydrated = {row["id"]: row for row in _hydrate(all_keys.values(), user=user)}
     previews = {name: [hydrated[_queue_key(row)] for row in rows if _queue_key(row) in hydrated] for name, rows in preview_keys.items()}
     return result, counts, [hydrated[_queue_key(row)] for row in page_keys if _queue_key(row) in hydrated], previews
+
+
+def _inventory_snapshot(editions, uploads, category, page, ordering):
+    """Compile saved-state flags once and reuse them for counts and bounded pages.
+
+    PostgreSQL 16 / SQLite >=3.35 materialize this request-local CTE; no persisted
+    cache or copied queue state can lag behind a save. Only selected IDs leave SQL.
+    """
+    CATEGORY_FIELDS[category]
+    order = QUEUE_ORDERING[ordering]
+    fields = ("queue_id", "queue_priority", "queue_updated", "q_actionable", "q_attention", "q_exception", "q_ready")
+    left = editions.order_by().annotate(queue_id=Concat(Value("edition:"), Cast("id", CharField())),
+        queue_priority=F("q_priority"), queue_updated=F("q_updated")).values(*fields)
+    right = uploads.order_by().annotate(queue_id=Concat(Value("upload:"), Cast("id", CharField())),
+        queue_priority=F("priority"), queue_updated=F("updated_at"), q_actionable=Value(True),
+        q_attention=_flag(Q(status="failed")), q_exception=_flag(Q(status="failed")), q_ready=Value(False)).values(*fields)
+    sql, params = left.union(right, all=True).query.sql_with_params()
+    categories = " UNION ALL ".join(
+        f"SELECT '{name}' AS category, queue_id, queue_priority, queue_updated FROM inventory"
+        + (f" WHERE q_{field}" if field else "") for name, field in CATEGORY_FIELDS.items())
+    order_sql = ", ".join(connection.ops.quote_name(field.lstrip("-")) + (" DESC" if field.startswith("-") else " ASC") for field in order)
+    try:
+        requested = int(page) if not isinstance(page, float) or page.is_integer() else 1
+    except (TypeError, ValueError):
+        requested = 1
+    if requested < 1 or requested > 9223372036854775807:
+        requested = 0
+    # get_page maps non-positive/out-of-range requests to the last page.
+    query = f"""
+        WITH inventory({', '.join(fields)}) AS MATERIALIZED ({sql}),
+        categories(category) AS (VALUES ('all'), ('continue'), ('attention'), ('exception'), ('publication_ready')),
+        categorized AS MATERIALIZED ({categories}),
+        counts AS (SELECT category, COUNT(*) AS total FROM categorized GROUP BY category),
+        bounds AS (SELECT CASE WHEN total IS NULL OR total = 0 THEN 1 ELSE (total + 29) / 30 END AS pages
+                   FROM categories LEFT JOIN counts USING(category) WHERE category = %s),
+        selected AS (SELECT CASE WHEN %s < 1 OR %s > pages THEN pages ELSE %s END AS page FROM bounds),
+        ranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY {order_sql}) AS position,
+                   ROW_NUMBER() OVER (PARTITION BY category ORDER BY queue_priority DESC, queue_updated ASC, queue_id ASC) AS preview_position
+                   FROM categorized)
+        SELECT categories.category, COALESCE(counts.total, 0), ranked.queue_id, ranked.position, ranked.preview_position
+        FROM categories LEFT JOIN counts USING(category)
+        LEFT JOIN ranked ON ranked.category = categories.category AND (
+            (categories.category != 'all' AND ranked.preview_position <= 12) OR
+            (categories.category = %s AND ranked.position > ((SELECT page FROM selected)-1)*30
+                                      AND ranked.position <= (SELECT page FROM selected)*30))
+        ORDER BY categories.category, ranked.position
+    """
+    counts, ranked = {}, {name: [] for name in CATEGORY_FIELDS}
+    with connection.cursor() as cursor:
+        cursor.execute(query, [*params, category, requested, requested, requested, category])
+        for name, total, key, rank, preview_rank in cursor.fetchall():
+            counts[name] = total
+            if key is not None:
+                ranked[name].append((rank, {"queue_id": key, "preview_position": preview_rank}))
+    return counts, ranked
 
 
 def next_queue_item(*, user=None, exclude_edition=None, exclude_item=None):

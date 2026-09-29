@@ -1,5 +1,10 @@
 # Codex repository rules
 
+## 开发任务前置 Skill
+
+- 每次在本仓库开始应用开发任务时，必须先完整读取并激活 `C:/Users/12297/.codex/skills/ponytail/SKILL.md`，再进行仓库审计、方案设计、编码、调试或代码审查。默认使用 `full`；用户明确指定 `lite`、`ultra` 或停用时，以当轮指令为准。
+- Ponytail 只用于减少不必要的代码、依赖和重复实现，不得用来跳过本文件要求的源码审计、根因定位、数据保护、权限边界、测试、进度记录、生产批准或回退准备。先理解完整调用链和实际需求，再选择最小可行改动。
+
 ## 架构重设计阅读入口
 
 - 讨论整体架构、后台或上架流程重设计时，先读`docs/GPT_ARCHITECTURE_CONTEXT.md`、`docs/ADMIN_ARCHITECTURE_PROFILE.md`、`docs/INGESTION_AND_PUBLICATION.md`、`docs/REDESIGN_BRIEF.md`和`docs/CURRENT_STATE.md`，再按定位阅读源码。

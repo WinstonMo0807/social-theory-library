@@ -6,7 +6,8 @@ for a bounded page are batch-loaded without building a heavy workspace per row.
 """
 from collections import defaultdict
 
-from django.db.models import Prefetch, Q, prefetch_related_objects
+from django.db.models import Count, F, Prefetch, Q, Window, prefetch_related_objects
+from django.db.models.functions import RowNumber
 
 from catalog.models import CatalogPublicationRevision, Edition, EditorialRevision, LegacyKnowledgeMapping
 from catalog.services.cataloging_sessions import OPEN_STATUSES
@@ -14,7 +15,7 @@ from catalog.services.catalog_availability import batch_catalog_availability
 from catalog.services.field_decisions import field_readiness, publication_field_check
 from catalog.services.publication_commands import catalog_health, catalog_publication_state, editorial_draft_applies_to_edition
 from common.capabilities import Capability, has_capability
-from ingestion.models import MetadataCandidate, UploadItem
+from ingestion.models import MetadataCandidate, ProcessingJob, UploadItem
 
 
 CATEGORIES = ("all", "continue", "attention", "exception", "publication_ready")
@@ -25,9 +26,19 @@ def load_admin_editions(queryset):
     editions = list(queryset.select_related("work", "active_catalog_revision", "active_catalog_revision__reader_asset"))
     if not editions:
         return editions
+    # Keep the latest created job (failure resolution) and ten latest updated
+    # jobs per source scope (capability diagnostics). Full history stays in the
+    # processing center, not every queue/library response.
+    partition = [F("edition_id"), F("job_type"), F("asset_id"), F("stats__document_revision_id")]
+    recent_jobs = ProcessingJob.objects.annotate(
+        _created_rank=Window(RowNumber(), partition_by=partition, order_by=[F("created_at").desc(), F("pk").desc()]),
+        _updated_rank=Window(RowNumber(), partition_by=partition, order_by=[F("updated_at").desc(), F("pk").desc()]),
+    ).filter(Q(_created_rank=1) | Q(_updated_rank__lte=10))
+    job_counts = dict(ProcessingJob.objects.filter(edition_id__in=[row.pk for row in editions])
+                      .values("edition_id").annotate(total=Count("pk")).values_list("edition_id", "total"))
     prefetch_related_objects(
         editions, "assets", "contributions__person", "field_decisions", "field_locks", "journal_articles",
-        "cataloging_sessions", "uploaditem_set__batch", "processing_jobs",
+        "cataloging_sessions", "uploaditem_set__batch", Prefetch("processing_jobs", queryset=recent_jobs),
         "work__discipline_relations", "work__subdiscipline_relations", "work__topic_relations",
         "work__knowledge_relations", "work__node_relations", "work__reading_path_items",
         "work__recommendationoverride_set__policy",
@@ -57,6 +68,7 @@ def load_admin_editions(queryset):
                                          "code": "metadata_candidate_conflict", "message": "候选来源存在分歧，需人工核对；不覆盖已确认值。"})
     availability = batch_catalog_availability(editions)
     for edition in editions:
+        edition._admin_processing_job_count = job_counts.get(edition.pk, 0)
         edition._admin_availability = availability[edition.pk]
         edition.work._admin_editorial_draft = drafts.get(("work", edition.work_id))
         edition._admin_editorial_draft = drafts.get(("edition", edition.pk))
@@ -176,6 +188,8 @@ def edition_summary(edition, *, user=None):
                         "error_code": row.error_code, "settings_version": row.settings_version,
                         "source": {key: row.stats[key] for key in ("catalog_revision_id", "document_revision_id", "text_revision", "source_asset_id") if key in (row.stats or {})}}
                        for row in jobs],
+        "processing_history_count": getattr(edition, "_admin_processing_job_count", len(jobs)),
+        "processing_history_truncated": getattr(edition, "_admin_processing_job_count", len(jobs)) > len(jobs),
         "permissions": {"can_publish": has_capability(user, Capability.PUBLISH_WORK),
                         "can_withdraw": has_capability(user, Capability.WITHDRAW_WORK)},
         "sources": {"session_ids": [str(row.pk) for row in sessions], "upload_item_ids": [str(row.pk) for row in uploads]},

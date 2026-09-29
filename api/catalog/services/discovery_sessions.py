@@ -6,7 +6,7 @@ only appends; signed cursors address the immutable stored order including tombst
 """
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import timedelta
 import hashlib
 import hmac
@@ -263,6 +263,7 @@ def _rrf(branches: list[tuple[list[dict], float]]) -> list[dict]:
 
 def _deduplicate(rows: list[dict]) -> list[dict]:
     seen, output = set(), []
+    intervals = defaultdict(list)
     for row in rows:
         text = re.sub(r"\s+", "", str(row.get("excerpt") or row.get("text") or ""))
         # Same paragraph duplicated by overlapping windows does not consume
@@ -277,19 +278,14 @@ def _deduplicate(rows: list[dict]) -> list[dict]:
         page = row.get("pdf_page") or metadata.get("pdf_page") or metadata.get("page_number")
         if isinstance(start, int) and isinstance(end, int) and end > start:
             duplicate = False
-            for prior in output:
-                old = prior.get("metadata") or {}
-                other_start = prior.get("start_offset", old.get("start_offset"))
-                other_end = prior.get("end_offset", old.get("end_offset"))
-                if (key[0] == str(prior.get("asset_id") or old.get("asset_id") or "") and
-                        page == (prior.get("pdf_page") or old.get("pdf_page") or old.get("page_number")) and
-                        isinstance(other_start, int) and isinstance(other_end, int) and other_end > other_start):
-                    overlap = max(0, min(end, other_end) - max(start, other_start))
-                    if overlap / min(end - start, other_end - other_start) >= 0.8:
-                        duplicate = True
-                        break
+            for other_start, other_end in intervals[(key[0], page)]:
+                overlap = max(0, min(end, other_end) - max(start, other_start))
+                if overlap / min(end - start, other_end - other_start) >= 0.8:
+                    duplicate = True
+                    break
             if duplicate:
                 continue
+            intervals[(key[0], page)].append((start, end))
         seen.add(key)
         output.append(row)
     return output

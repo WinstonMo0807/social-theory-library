@@ -293,7 +293,7 @@ def _is_current(job, generation, header):
     return bool(fresh and fresh["source_revision"] == header["source_revision"])
 
 
-def _write_chunk(job, generation, header, unit, child):
+def _prepare_chunk(job, generation, header, unit, child):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料或任务已更新，旧任务已停止。")
     identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}")
@@ -331,13 +331,37 @@ def _write_chunk(job, generation, header, unit, child):
         "aliases": header.get("aliases", []), "authors": header.get("authors", []),
         "normalized_text": child["normalized_text"], "language": payload.get("language") or header.get("language", "unknown"),
         "_vectors": {"discovery": vector}}
-    wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", [search_doc]))
+    return document, search_doc
+
+
+def _write_chunks(job, generation, header, unit, children, *, deadline=None):
+    # Batch only external indexing, retaining the existing single-text model
+    # calls, exact IDs/vectors and all source/claim guards.
+    if len(children) > 8:
+        raise ValueError("Discovery write batch exceeds eight chunks")
+    prepared = []
+    for child in children:
+        value = _prepare_chunk(job, generation, header, unit, child)
+        if value:
+            prepared.append(value)
+        if deadline is not None and time.monotonic() > deadline:
+            break
+    if not prepared:
+        return
+    if not _is_current(job, generation, header):
+        raise DiscoveryIndexError("superseded")
+    wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", [payload for _, payload in prepared]))
     # Ready is evidence of a successful external task, never merely a dispatched write.
     with transaction.atomic():
         ProcessingJob.objects.select_for_update().get(pk=job.pk)
         if not _is_current(job, generation, header):
             raise DiscoveryIndexError("superseded", "资料或任务已更新，旧写入不会标记为完成。")
-        DiscoveryDocument.objects.filter(pk=document.pk).update(keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+        DiscoveryDocument.objects.filter(pk__in=[document.pk for document, _ in prepared]).update(
+            keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+
+
+def _write_chunk(job, generation, header, unit, child):
+    _write_chunks(job, generation, header, unit, [child])
 
 
 def process_source(job, generation):
@@ -358,9 +382,10 @@ def process_source(job, generation):
             children = chunk_text(original, title=header["title"])
             if children.get("artifact_id") != generation.config_snapshot["embedding_artifact"]:
                 raise DiscoveryInferenceError("artifact_mismatch", "分块模型与索引版本不一致。")
-            for child in children["chunks"]:
-                child = {**child, "start": child["start"] + base, "end": child["end"] + base}
-                _write_chunk(job, generation, header, unit, child)
+            for offset in range(0, len(children["chunks"]), 8):
+                batch = [{**child, "start": child["start"] + base, "end": child["end"] + base}
+                         for child in children["chunks"][offset:offset + 8]]
+                _write_chunks(job, generation, header, unit, batch, deadline=deadline)
                 if time.monotonic() > deadline:
                     # Completed children are durable; replay only the current unit.
                     _guard_job(job, stats={**job.stats, "completed_units": unit_index})

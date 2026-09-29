@@ -1083,7 +1083,10 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 return ProcessingJob.objects.get(pk=job.pk)
             stats = dict(job.stats or {})
 
-            document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset, job)
+            # The claimed transaction persisted exactly this requested batch.
+            # Reuse the plan until the next task, which rechecks the source and
+            # all checkpoints. Avoid a second whole-file page-state read.
+            remaining = [index for index in remaining if index not in returned_indexes]
             processed_pages = target_page_count - len(remaining)
             providers = list(stats.get("providers") or [])
             if provider not in providers:
