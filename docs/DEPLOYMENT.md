@@ -1,10 +1,12 @@
 # 部署说明
 
-## 3.0.8.2源码与存储准备
+## 3.0.8.2已上线
 
-3.0.8.2性能候选已完成隔离验证，尚未生产切换。后续源码归档使用`scripts/package_release_source.py --ref <准确提交> --output <新路径>`，不要递归归档包含模型、依赖和旧升级包的NAS应用目录。镜像、私密环境和数据库回退资料单独保留；不因源码包精简删除上一成功版。当前约35GiB的具体组成与清理条件见[NAS审计](NAS_STORAGE_AUDIT_2026-09-29.md)。本条不授权删除或生产切换。
+NAS 2026-09-29T17:09:39+08:00完成切换，应用c660e1b已推送main，API/四Worker/Beat e6fe8cdd5666、Web 152aec40dca7。新鲜备份隔离恢复、新旧ORM保护摘要、正式镜像42项相关测试、内部HTTP及19项公网业务检查通过；无migration、活动索引/模型/原件保留。备份与回退目录为`storage/backups/pre-v3082-20260929/deploy-record`（数据库归档另在`pre-v3082-database-20260929`），回退入口`tools/rollback.sh`保留旧API/Worker不同镜像。准确SHA、版本资源、浏览器工具故障及验收限制见[3.0.8.2交付](V3.0.8.2_PERFORMANCE_RELEASE.md)。
 
-更新日期为2026-09-24。当前动作见根目录CURRENT_PROGRESS.md；下方版本记录保留各自时点，后续部署仍需检查实时状态。
+后续源码归档使用`scripts/package_release_source.py --ref <准确提交> --output <新路径>`，不要递归归档包含模型、依赖和旧升级包的NAS应用目录。镜像、私密环境和数据库回退资料单独保留；不因源码包精简删除上一成功版。约35GiB的组成与清理条件见[NAS审计](NAS_STORAGE_AUDIT_2026-09-29.md)。既有NAS资料本次未删除。
+
+更新日期为2026-09-29。当前动作见根目录CURRENT_PROGRESS.md；下方版本记录保留各自时点，后续部署仍需检查实时状态。
 
 ## 3.0.8.1已上线
 
