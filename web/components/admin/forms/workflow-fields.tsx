@@ -28,6 +28,7 @@ type CanonicalFieldProps = {
   onToggleLock?: () => void;
   onInspect?: () => void;
   error?: string;
+  assistantHint?: "available" | "manual";
 };
 
 export function CandidateIndicator({ count, onClick }: { count: number; onClick?: () => void }) {
@@ -59,6 +60,7 @@ export function CanonicalField({
   onToggleLock,
   onInspect,
   error,
+  assistantHint,
 }: CanonicalFieldProps) {
   const inputId = useId();
   const helpId = useId();
@@ -80,6 +82,7 @@ export function CanonicalField({
       <div className="workflow-field-label-row">
         <label htmlFor={inputId}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>
         <span>
+          {assistantHint ? <small className={`workflow-field-assistant-hint hint-${assistantHint}`} title={assistantHint === "available" ? "STL Assistant 可在右侧查看填写建议，是否采用由管理员确认。" : "此字段需要管理员直接确认，STL Assistant 不会自动改写。"}>{assistantHint === "available" ? "STL Assistant" : "人工确认"}</small> : null}
           {status ? <small className={`workflow-field-status status-${status}`}>{status}</small> : null}
           <CandidateIndicator count={candidateCount} onClick={onInspect} />
           {onToggleLock ? (

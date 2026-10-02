@@ -14,6 +14,7 @@ from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, 
 from .cover_views import EditionCoverView
 from .edition_file_views import EditionFileView
 from .primary_edition_views import PrimaryEditionView
+from .edition_defaults_views import AdminWorkEditionDefaultsView
 from .person_resolution_views import (
     AdminPersonSearchView, AdminPersonMergeHistoryView,
     AdminPersonDuplicateView, AdminPersonMergePreviewView, AdminPersonMergeView,
@@ -265,6 +266,7 @@ urlpatterns = [
     path("admin/editions/<uuid:edition_id>/publication/history/", PublicationHistoryView.as_view(), name="publication-history"),
     path("admin/editions/<uuid:edition_id>/publication/prepare/", PublicationPrepareView.as_view(), name="publication-prepare"),
     path("admin/editions/<uuid:edition_id>/primary/", PrimaryEditionView.as_view(), name="edition-primary"),
+    path("admin/works/<uuid:work_id>/edition-defaults/", AdminWorkEditionDefaultsView.as_view(), name="admin-work-edition-defaults"),
     path("admin/editions/<uuid:edition_id>/publication/rollback/", PublicationRollbackView.as_view(), name="publication-rollback"),
     path("admin/catalog-field-contracts/", CatalogFieldContractView.as_view(), name="catalog-field-contracts"),
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/import/", CatalogingMetadataImportView.as_view(), name="cataloging-metadata-import"),

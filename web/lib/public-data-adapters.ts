@@ -7,12 +7,14 @@ import type { PublicCuratedClaimGroups, PublicKnowledgeNodeLink } from "./api/cu
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 
 export function adaptApiWork(value: ApiWork, index = 0): Work {
+  const readerEdition = value.reader_edition ?? value.edition;
   const authorContributions = value.edition?.contributors.filter((row) => row.role === "author") ?? [];
   return {
-    id: value.edition?.readable_asset?.id ?? value.id,
+    id: readerEdition?.readable_asset?.id ?? value.id,
     workId: value.id,
-    editionId: value.edition?.id,
-    readerHref: value.edition?.readable_asset?.id ? `/reader/${value.edition.readable_asset.id}` : undefined,
+    editionId: readerEdition?.id,
+    downloadAssetId: value.download_edition?.readable_asset?.id ?? value.edition?.readable_asset?.id,
+    readerHref: readerEdition?.readable_asset?.id ? `/reader/${readerEdition.readable_asset.id}` : undefined,
     slug: value.edition?.public_slug ?? value.id,
     title: value.title,
     originalTitle: value.subtitle || undefined,
@@ -31,7 +33,7 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     coverImage: value.cover || value.recommendation_image || undefined,
     coverSources: (value.cover ? value.cover_media : value.recommendation_media)?.renditions,
     coverAlt: (value.cover ? value.cover_media : value.recommendation_media)?.alt_text || undefined,
-    pages: value.edition?.readable_asset?.page_count ?? 0,
+    pages: readerEdition?.readable_asset?.page_count ?? 0,
     language: value.language,
     authors: authorContributions.map((row) => ({
       name: row.person.preferred_name,

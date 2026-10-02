@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-03 3.0.9 管理端增量
+
+管理端继续使用同一 Django、PostgreSQL、Redis、Celery、Meilisearch、PaddleOCR 和公开 API。工作台状态、上传批次回收、字段定位、候选书目、作者/译者关联、封面保存、人物重复处理、发布阻断与学者卡片不建立第二套状态或静态数据源。新增 `Work.reader_default_edition` 与 `Work.download_default_edition` 两个可空受保护外键；管理员通过 `/api/catalog/admin/works/<work_id>/edition-defaults/` 在明确确认后分别设置在线阅读和下载入口。公开 WorkCard 的 `edition` 仍是列表主版本，新增只读 `reader_edition` 和 `download_edition`；撤回、文件验证失败或无活动公开修订时均回退到有效主版本。该增量需要 catalog 0064，发布前必须完成备份恢复演练、迁移兼容、公开入口和回退检查。
+
 2026-09-29上线的3.0.8.2保留现有架构、模型和公开数据契约：后台队列通过请求内物化CTE复用分类状态，任务列表有界预取而历史仍持久保存；Discovery仅优化等价去重、原文散列/列读取及小批索引提交，不调整召回和重排。OCR保留单页落库，备份原件直接写归档；源码发布改用准确Git提交归档，避免嵌套模型/旧包。无schema迁移，应用c660e1b已部署，见[实现与验证](V3.0.8.2_PERFORMANCE_RELEASE.md)。
 
 2026-09-23的3.0.8.1增加统一RecycleEntry和默认可见性Manager，覆盖19类管理记录；对象及历史外键继续存在，恢复不自动发布。catalog0063移除长文本B-tree，保留现有搜索索引职责。ProcessingJob新增heartbeat_at，OCR按单页提交并以稳定请求身份去重；15秒心跳与服务活动分开，页数仅按落库结果前进。API保留三个worker并启用预加载，推理减少中间复制且权重不变。完整范围、测量限制与实际发布见[V3.0.8.1交付记录](V3.0.8.1_COMPLETION_RELEASE.md)。以下版本条目为对应时点记录。

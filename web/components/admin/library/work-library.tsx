@@ -12,6 +12,7 @@ import { adminListHref, adminPageNumber, safeAdminHref, withAdminReturn } from "
 import { PageHeader, StatusBadge } from "@/components/admin-ui";
 import { Pagination } from "@/components/ui/pagination";
 import { CatalogHealth } from "@/components/admin/workflow/catalog-health";
+import { EditionDefaultsControl } from "./edition-defaults-control";
 import styles from "./admin-collection.module.css";
 
 const statusLabels: Record<string, string> = { ready: "已就绪", complete: "已完成", attention: "需处理", draft: "未完善", processing: "处理中", blocked: "已阻断", pending: "待处理", failed: "失败", paused: "已暂停", not_applicable: "不适用", unknown: "待核实" };
@@ -40,7 +41,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
     change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
   return <div className="admin-page work-library-page">
-    <PageHeader eyebrow="全局搜索" title={view === "editions" ? "出版版本与文件" : view === "quality" ? "需要检查的馆藏" : "馆藏搜索"} description="查找文献，修改资料或处理文件。同一作品的不同出版版本可以分别查看。" actions={<Link className="button" href={withAdminReturn("/admin/uploads", returnTo)}>上传文件</Link>} />
+    <PageHeader eyebrow="全局搜索" title={view === "editions" ? "出版版本管理" : view === "quality" ? "需要检查的馆藏" : "馆藏搜索"} description="查找文献，修改资料或处理文件。同一作品的不同出版版本可以分别查看。" actions={<Link className="button" href={withAdminReturn("/admin/uploads", returnTo)}>上传文件</Link>} />
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名、责任者、ISBN或DOI<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部馆藏" /></label>
       <label>馆藏视图<select value={view} onChange={(event) => change({ view: event.target.value, work_id: null })}>{Object.entries(viewLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
@@ -49,6 +50,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
       <button type="submit" className="button">搜索</button><button type="button" className="button secondary" onClick={resource.retry}><RefreshCw size={14} />刷新馆藏</button>
     </form>
     {search.get("work_id") ? <p className={styles.scope}>当前仅显示所选作品的出版版本。<Link href={adminListHref(pathname, search.toString(), { work_id: null, page: 1 })}>查看全部作品的版本</Link></p> : null}
+    {view === "editions" && search.get("work_id") ? <EditionDefaultsControl workId={search.get("work_id")!} /> : null}
     <p className={styles.count} role="status">{page ? `共 ${page.count} 项${view === "editions" ? "出版版本" : "作品"}，本页 ${page.results.length} 项。` : resource.error ? "馆藏数量读取失败。" : "正在读取馆藏数量…"}</p>
     {resource.error ? <div className={styles.error} role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取馆藏</button></div> : null}
     {resource.loading ? <p role="status">正在读取当前页…</p> : null}

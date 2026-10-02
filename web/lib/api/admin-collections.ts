@@ -34,6 +34,10 @@ export type WorkflowQueueItem = {
   warnings_count: number;
   blockers_count: number;
   updated_at: string;
+  provenance?: {
+    uploaded_by?: { id: string; name: string } | null;
+    last_edited_by?: { id: string; name: string } | null;
+  };
 };
 
 export type CollectionPage<T> = {

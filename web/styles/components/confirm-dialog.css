@@ -1,5 +1,7 @@
 /* 2026-08 admin publication, processing and reader interaction repair */
 .confirm-dialog {
+  margin: auto;
+  inset: 0;
   width: min(var(--stl-container-dialog), calc(100vw - 2rem));
   max-width: none;
   padding: 0;

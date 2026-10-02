@@ -110,6 +110,23 @@ class Work(UUIDTimeStampedModel):
     language = models.CharField(max_length=16, default="zh-CN")
     original_language = models.CharField(max_length=32, blank=True)
     first_publication_date = models.DateField(null=True, blank=True, db_index=True)
+    # A work can expose different published editions for reading and download.
+    # These are explicit administrative choices and fall back to the primary
+    # edition when unset or when the selected edition is no longer public.
+    reader_default_edition = models.ForeignKey(
+        "Edition",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reader_default_for_works",
+    )
+    download_default_edition = models.ForeignKey(
+        "Edition",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="download_default_for_works",
+    )
     translation_of = models.ForeignKey(
         "self",
         null=True,

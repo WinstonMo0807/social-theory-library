@@ -149,7 +149,7 @@ def _hydrate(keys, *, user=None):
         row = by_id.get(f"edition:{item.cataloging_session.edition_id}")
         if row is not None:
             row.setdefault("recommendation_sources", []).append({"id": str(item.issue_id), "title": item.issue.title, "url": f"/admin/recommendations/issues/{item.issue_id}"})
-    by_id.update({f"upload:{item.pk}": unbound_upload_row(item) for item in UploadItem.objects.filter(pk__in=item_ids)})
+    by_id.update({f"upload:{item.pk}": unbound_upload_row(item) for item in UploadItem.objects.filter(pk__in=item_ids).select_related("batch__created_by")})
     return [by_id[_queue_key(row)] for row in keys if _queue_key(row) in by_id]
 
 

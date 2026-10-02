@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Social Theory Library API",
-        "version": "3.0.8.2",
+        "version": "3.0.9",
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
@@ -8375,6 +8375,24 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "reader_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "download_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "theories": {
                         "type": "array",
                         "items": {
@@ -8409,8 +8427,10 @@
                     "cover_media",
                     "disciplines",
                     "document_type",
+                    "download_edition",
                     "edition",
                     "id",
+                    "reader_edition",
                     "recommendation_image",
                     "recommendation_media",
                     "subdisciplines",
@@ -8502,6 +8522,24 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "reader_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "download_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "theories": {
                         "type": "array",
                         "items": {
@@ -8567,10 +8605,12 @@
                     "curated_claims",
                     "disciplines",
                     "document_type",
+                    "download_edition",
                     "edition",
                     "editions",
                     "id",
                     "outline",
+                    "reader_edition",
                     "recommendation_image",
                     "recommendation_media",
                     "subdisciplines",

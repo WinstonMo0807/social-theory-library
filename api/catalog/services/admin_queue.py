@@ -15,7 +15,7 @@ from catalog.services.catalog_availability import batch_catalog_availability
 from catalog.services.field_decisions import field_readiness, publication_field_check
 from catalog.services.publication_commands import catalog_health, catalog_publication_state, editorial_draft_applies_to_edition
 from common.capabilities import Capability, has_capability
-from ingestion.models import MetadataCandidate, ProcessingJob, UploadItem
+from ingestion.models import AuditEvent, MetadataCandidate, ProcessingJob, UploadItem
 
 
 CATEGORIES = ("all", "continue", "attention", "exception", "publication_ready")
@@ -38,7 +38,7 @@ def load_admin_editions(queryset):
                       .values("edition_id").annotate(total=Count("pk")).values_list("edition_id", "total"))
     prefetch_related_objects(
         editions, "assets", "contributions__person", "field_decisions", "field_locks", "journal_articles",
-        "cataloging_sessions", "uploaditem_set__batch", Prefetch("processing_jobs", queryset=recent_jobs),
+        "cataloging_sessions", "uploaditem_set__batch__created_by", Prefetch("processing_jobs", queryset=recent_jobs),
         "work__discipline_relations", "work__subdiscipline_relations", "work__topic_relations",
         "work__knowledge_relations", "work__node_relations", "work__reading_path_items",
         "work__recommendationoverride_set__policy",
@@ -79,7 +79,38 @@ def load_admin_editions(queryset):
              "title": row.title, "author_display": row.author_display, "page_range": row.page_range, "position": row.position}
             for row in sorted(edition.journal_articles.all(), key=lambda row: (row.position, row.created_at, str(row.pk)))
         ]
+    # Provenance is read from the immutable upload batch and save audit trail.
+    # Keep it request-scoped and bounded to the hydrated page; the queue must
+    # never guess the current administrator when historical actor data is absent.
+    audit_by_edition = {}
+    for event in AuditEvent.objects.filter(
+        action="workspace.edits.saved",
+        object_type="edition",
+        object_id__in=[str(row.pk) for row in editions],
+    ).select_related("actor").order_by("-created_at", "-pk"):
+        audit_by_edition.setdefault(event.object_id, event)
+    for edition in editions:
+        uploads = sorted(edition.uploaditem_set.all(), key=lambda row: (row.created_at, str(row.pk)))
+        upload_item = uploads[0] if uploads else None
+        uploader = getattr(getattr(upload_item, "batch", None), "created_by", None)
+        saved = audit_by_edition.get(str(edition.pk))
+        sessions = sorted(edition.cataloging_sessions.all(), key=lambda row: (row.updated_at, str(row.pk)), reverse=True)
+        draft = getattr(edition, "_admin_editorial_draft", None)
+        editor = saved.actor if saved and saved.actor_id else (
+            getattr(sessions[0], "created_by", None) if sessions else getattr(draft, "created_by", None)
+        )
+        edition._admin_provenance = {
+            "uploaded_by": _actor_payload(uploader),
+            "last_edited_by": _actor_payload(editor),
+        }
     return editions
+
+
+def _actor_payload(actor):
+    if actor is None:
+        return None
+    name = (actor.get_full_name() or actor.get_username() or "").strip()
+    return {"id": str(actor.pk), "name": name or "未命名管理员"}
 
 
 def asset_row(asset):
@@ -193,6 +224,7 @@ def edition_summary(edition, *, user=None):
         "permissions": {"can_publish": has_capability(user, Capability.PUBLISH_WORK),
                         "can_withdraw": has_capability(user, Capability.WITHDRAW_WORK)},
         "sources": {"session_ids": [str(row.pk) for row in sessions], "upload_item_ids": [str(row.pk) for row in uploads]},
+        "provenance": getattr(edition, "_admin_provenance", {"uploaded_by": None, "last_edited_by": None}),
     }
 
 
@@ -208,7 +240,9 @@ def unbound_upload_row(item):
             "current_step": "file", "current_step_label": "文件导入", "overall_status": "attention" if failed else "working",
             "blockers_count": int(failed), "warnings_count": 0, "unresolved_count": int(failed),
             "categories": ["all", "continue", *(["attention", "exception"] if failed else [])],
-            "actionable": True, "updated_at": item.updated_at, "priority": item.priority, "preflight_required": True}
+            "actionable": True, "updated_at": item.updated_at, "priority": item.priority, "preflight_required": True,
+            "provenance": {"uploaded_by": _actor_payload(getattr(getattr(item, "batch", None), "created_by", None)),
+                           "last_edited_by": None}}
 
 
 def attach_library_editions(works):

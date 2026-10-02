@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, FileText, Plus, Tags, UserRound, CircleDot, Sparkles, AlertTriangle, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, FileText, Plus, Tags, UserRound, CircleDot, Sparkles, AlertTriangle } from "lucide-react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { useAdminSession } from "@/lib/admin-session";
@@ -33,10 +33,9 @@ export function AdminDashboard() {
   const queue = useApiResource<WorkflowQueuePage>("/catalog/admin/workflows/queue/?category=all&page_size=8", credential, context);
   const items = deduplicate(queue.data?.results ?? []).slice(0, 8);
   const cards = [
-    { title: "未完成馆藏", value: queue.data?.counts.all, detail: "当前需要处理的出版版本", href: "/admin/review", Icon: BookOpen },
-    { title: "需要处理的异常", value: queue.data?.counts.exception, detail: "查看原因与下一步", href: "/admin/review?category=exception", Icon: AlertTriangle },
-    { title: "等待发布检查", value: queue.data?.counts.publication_ready, detail: "请核对后明确发布", href: "/admin/review?category=publication_ready", Icon: FileText },
-    { title: "已公开馆藏", value: dashboard.data?.documents.published, detail: "来自当前馆藏汇总", href: "/admin/library?view=published", Icon: Upload },
+    { title: "待补", value: queue.data?.counts.continue, detail: "继续填写或核对馆藏", href: "/admin/review?category=continue", Icon: BookOpen },
+    { title: "失败", value: queue.data?.counts.exception, detail: "查看原因并重试处理", href: "/admin/review?category=exception", Icon: AlertTriangle },
+    { title: "待发布", value: queue.data?.counts.publication_ready, detail: "核对预览后明确发布", href: "/admin/review?category=publication_ready", Icon: FileText },
   ];
   const shortcuts = [
     {href:"/admin/topics", title:"主题", Icon:Tags}, {href:"/admin/scholars", title:"学者", Icon:UserRound},
@@ -50,9 +49,10 @@ export function AdminDashboard() {
       <section className="admin-panel admin-v307-unfinished"><header><div><h2>未完成的馆藏</h2><p>每个出版版本只列一次，直接进入当前需要处理的位置。</p></div><Link href="/admin/review">查看全部 <ArrowRight size={14} /></Link></header>
         {queue.error ? <p className="admin-error" role="alert">{queue.error}<button type="button" onClick={queue.retry}>重试工作队列</button></p> : null}
         {queue.loading ? <p role="status">正在读取待办…</p> : null}
-        <div className="admin-v307-table-scroll"><table><thead><tr><th>馆藏信息</th><th>类型</th><th>当前工作</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
+        <div className="admin-v307-table-scroll"><table><thead><tr><th>馆藏信息</th><th>类型</th><th>当前工作</th><th>上传管理员</th><th>最后保存</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
           const destination = queueWorkbenchHref(item);
-          return <tr key={item.id}><td><strong>{item.title || item.source_filename || "未命名馆藏"}</strong>{item.source_filename ? <small>{item.source_filename}</small> : null}</td><td>{documentLabels[item.document_type || ""] || "待确认"}</td><td><StatusBadge label={item.current_step_label || "继续编辑"} tone={item.blockers_count ? "warning" : "neutral"} /><small>{item.blockers_count ? `${item.blockers_count} 项需要处理` : item.unresolved_count ? `${item.unresolved_count} 项待确认` : "核对预览与发布"}</small></td><td><time>{new Date(item.updated_at).toLocaleDateString("zh-CN")}</time></td><td>{destination ? <Link className="button secondary" href={withAdminReturn(destination, "/admin", item.current_step)}>继续处理 <ArrowRight size={13} /></Link> : <span>工作位置待核实</span>}</td></tr>;
+          const provenance = item.provenance;
+          return <tr key={item.id}><td><strong>{item.title || item.source_filename || "未命名馆藏"}</strong>{item.source_filename ? <small>{item.source_filename}</small> : null}</td><td>{documentLabels[item.document_type || ""] || "待确认"}</td><td><StatusBadge label={item.current_step_label || "继续编辑"} tone={item.blockers_count ? "warning" : "neutral"} /><small>{item.blockers_count ? `${item.blockers_count} 项需要处理` : item.unresolved_count ? `${item.unresolved_count} 项待确认` : "核对预览与发布"}</small></td><td><span className="admin-provenance-name">{provenance?.uploaded_by?.name || "来源记录未标注"}</span></td><td><span className="admin-provenance-name">{provenance?.last_edited_by?.name || "尚无保存记录"}</span></td><td><time>{new Date(item.updated_at).toLocaleDateString("zh-CN")}</time></td><td>{destination ? <Link className="button secondary" href={withAdminReturn(destination, "/admin", item.current_step)}>继续处理 <ArrowRight size={13} /></Link> : <span>工作位置待核实</span>}</td></tr>;
         })}</tbody></table></div>
         {queue.data && !items.length ? <p className="admin-list-state">当前没有未完成的馆藏。</p> : null}
       </section>

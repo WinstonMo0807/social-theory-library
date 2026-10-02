@@ -67,6 +67,7 @@ from .services.scholar_publication import scholar_public_eligibility
 from .services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_q,
+    public_default_edition,
     public_editions,
     public_edition_q,
 )
@@ -581,6 +582,8 @@ class WorkCardSerializer(serializers.ModelSerializer):
     cover = serializers.SerializerMethodField()
     recommendation_image = serializers.SerializerMethodField()
     edition = serializers.SerializerMethodField()
+    reader_edition = serializers.SerializerMethodField()
+    download_edition = serializers.SerializerMethodField()
     theories = serializers.SerializerMethodField()
     topics = serializers.SerializerMethodField()
     disciplines = serializers.SerializerMethodField()
@@ -605,6 +608,8 @@ class WorkCardSerializer(serializers.ModelSerializer):
             "recommendation_image",
             "recommendation_media",
             "edition",
+            "reader_edition",
+            "download_edition",
             "theories",
             "topics",
             "disciplines",
@@ -619,14 +624,11 @@ class WorkCardSerializer(serializers.ModelSerializer):
         if not hasattr(self, "_public_catalog_cache"):
             self._public_catalog_cache = {}
         if obj.pk not in self._public_catalog_cache:
-            current = None, {}
-            for edition in obj.editions.all():
-                if not edition.is_primary:
-                    continue
-                snapshot = active_catalog_snapshot(edition)
-                if snapshot:
-                    current = edition, snapshot
-                    break
+            edition = next(
+                (row for row in obj.editions.all() if row.is_primary and active_catalog_snapshot(row)),
+                None,
+            )
+            current = (edition, active_catalog_snapshot(edition)) if edition else (None, {})
             self._public_catalog_cache[obj.pk] = current
         return self._public_catalog_cache[obj.pk]
 
@@ -685,6 +687,16 @@ class WorkCardSerializer(serializers.ModelSerializer):
     @extend_schema_field(EditionCompactSerializer(allow_null=True))
     def get_edition(self, obj):
         edition = self._public_edition(obj)
+        return EditionCompactSerializer(edition, context=self.context).data if edition else None
+
+    @extend_schema_field(EditionCompactSerializer(allow_null=True))
+    def get_download_edition(self, obj):
+        edition = public_default_edition(obj, mode="download")
+        return EditionCompactSerializer(edition, context=self.context).data if edition else None
+
+    @extend_schema_field(EditionCompactSerializer(allow_null=True))
+    def get_reader_edition(self, obj):
+        edition = public_default_edition(obj, mode="reader")
         return EditionCompactSerializer(edition, context=self.context).data if edition else None
 
     def _relations(self, obj, kind):
@@ -857,7 +869,7 @@ class WorkDetailSerializer(WorkCardSerializer):
 
     @extend_schema_field(PublicOutlineItemSerializer(many=True))
     def get_outline(self, obj):
-        edition = public_editions().filter(work=obj, is_primary=True).first()
+        edition = public_default_edition(obj, mode="reader")
         if not edition:
             return []
         document = active_catalog_snapshot(edition).get("document") or {}

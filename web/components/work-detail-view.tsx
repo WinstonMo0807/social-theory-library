@@ -84,7 +84,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
             ) : (
               work.pages ? <>
                 <Link className="button" href={`/reader/${work.id}`}><Eye size={16} /> 在线阅读</Link>
-                <AssetDownloadButton assetId={work.id} />
+                <AssetDownloadButton assetId={work.downloadAssetId || work.id} />
                 <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
               </> : <>
                 <span className="button disabled" aria-disabled="true"><Eye size={16} /> 当前版本不可在线阅读</span>

@@ -116,12 +116,16 @@ class SearchRequest:
 
 
 def public_work_queryset() -> QuerySet:
-    published_editions = public_editions().filter(is_primary=True).prefetch_related(
+    # A non-primary edition may be explicitly selected as the reader or
+    # download default. Keep all activated editions in the public work
+    # prefetch; serializers resolve the two entry points independently.
+    published_editions = public_editions().prefetch_related(
         "contributions__person",
         "assets",
     )
+    listed_editions = published_editions.filter(is_primary=True)
     return (
-        Work.objects.filter(editions__in=published_editions)
+        Work.objects.filter(editions__in=listed_editions)
         .distinct()
         .prefetch_related(
             Prefetch("editions", queryset=published_editions),

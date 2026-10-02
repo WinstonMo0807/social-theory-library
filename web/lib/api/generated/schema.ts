@@ -2382,6 +2382,8 @@ export interface components {
             readonly recommendation_image: string;
             readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly edition: components["schemas"]["EditionCompact"] | null;
+            readonly reader_edition: components["schemas"]["EditionCompact"] | null;
+            readonly download_edition: components["schemas"]["EditionCompact"] | null;
             readonly theories: components["schemas"]["PublicEntityLink"][];
             readonly topics: components["schemas"]["PublicEntityLink"][];
             readonly disciplines: components["schemas"]["PublicClassificationLink"][];
@@ -2407,6 +2409,8 @@ export interface components {
             readonly recommendation_image: string;
             readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly edition: components["schemas"]["EditionCompact"] | null;
+            readonly reader_edition: components["schemas"]["EditionCompact"] | null;
+            readonly download_edition: components["schemas"]["EditionCompact"] | null;
             readonly theories: components["schemas"]["PublicEntityLink"][];
             readonly topics: components["schemas"]["PublicEntityLink"][];
             readonly disciplines: components["schemas"]["PublicClassificationLink"][];

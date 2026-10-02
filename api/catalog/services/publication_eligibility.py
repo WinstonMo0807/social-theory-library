@@ -58,6 +58,24 @@ def public_editions(*, require_fulltext: bool = False) -> QuerySet:
     )
 
 
+def public_default_edition(work, *, mode: str = "reader"):
+    """Resolve a Work's public entry edition with a safe primary fallback.
+
+    The explicit reader/download choice is only effective while its edition
+    still has an activated public snapshot. This keeps a stale administrative
+    choice from leaking a withdrawn or half-published edition to readers.
+    """
+    preferred_id = getattr(work, f"{mode}_default_edition_id", None)
+    rows = list(getattr(work, "editions").all())
+    preferred = next((row for row in rows if preferred_id and row.pk == preferred_id), None)
+    if preferred is not None and active_catalog_snapshot(preferred):
+        return preferred
+    primary = next((row for row in rows if row.is_primary and active_catalog_snapshot(row)), None)
+    if primary is not None:
+        return primary
+    return next((row for row in rows if active_catalog_snapshot(row)), None)
+
+
 def public_taxonomy_snapshot(snapshot: dict) -> dict:
     """Mask withdrawn taxonomy at read time without rewriting past revisions.
 

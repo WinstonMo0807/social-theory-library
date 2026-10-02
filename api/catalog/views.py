@@ -115,6 +115,7 @@ from .services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_q,
     active_document_revision_q,
+    public_default_edition,
     public_edition_q,
 )
 from .services.text import clean_page_label, clipboard_payload, normalize_search_text, passage_snippet
@@ -138,11 +139,11 @@ def public_works():
 
 
 def _active_work_snapshot(work):
-    for edition in work.editions.all():
-        if edition.is_primary:
-            snapshot = active_catalog_snapshot(edition)
-            if snapshot:
-                return snapshot
+    edition = public_default_edition(work, mode="reader")
+    if edition:
+        snapshot = active_catalog_snapshot(edition)
+        if snapshot:
+            return snapshot
     return {}
 
 

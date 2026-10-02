@@ -10,6 +10,7 @@ import { publicationPresentation, queueWorkbenchHref, sourceLabels, type Workflo
 import { adminListHref, adminPageNumber, withAdminReturn } from "@/lib/admin-route-context";
 import { PageHeader, StatusBadge } from "./admin-ui";
 import { Pagination } from "./ui/pagination";
+import { RecycleControl } from "./admin/recycle-control";
 import { CurationDraftQueue } from "./admin/curation/curation-draft-queue";
 import styles from "./admin/library/admin-collection.module.css";
 
@@ -59,11 +60,11 @@ export function ReviewQueue() {
         const publication = publicationPresentation(item.publication);
         const destination = queueWorkbenchHref(item);
         return <article key={item.id} data-record-id={item.id}>
-          <div><strong>{item.title || item.source_filename || "未命名来源记录"}</strong><small>{sourceLabels[item.source_type] || "来源待核实"}{item.source_filename ? ` · ${item.source_filename}` : ""}</small>{item.recommendation_sources?.map(source => <Link key={source.id} href={source.url}>来自推荐 · {source.title}</Link>)}</div>
+          <div><strong>{item.title || item.source_filename || "未命名来源记录"}</strong><small>{sourceLabels[item.source_type] || "来源待核实"}{item.source_filename ? ` · ${item.source_filename}` : ""}</small><small>上传：{item.provenance?.uploaded_by?.name || "来源记录未标注"} · 最后保存：{item.provenance?.last_edited_by?.name || "尚无保存记录"}</small>{item.recommendation_sources?.map(source => <Link key={source.id} href={source.url}>来自推荐 · {source.title}</Link>)}</div>
           <div><StatusBadge {...publication} /></div>
           <div><strong>{item.current_step_label || "核对当前记录"}</strong><small>{item.blockers_count ? `${item.blockers_count} 项需要处理` : `${item.unresolved_count} 项待确认`}</small></div>
           <div><time>{new Date(item.updated_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></div>
-          <div>{destination ? <Link className="button" href={withAdminReturn(destination, returnTo,item.current_step)}>继续处理 <ArrowRight size={14} /></Link> : <span role="status">操作位置待核实，请刷新。</span>}</div>
+          <div>{destination ? <Link className="button" href={withAdminReturn(destination, returnTo,item.current_step)}>继续处理 <ArrowRight size={14} /></Link> : <span role="status">操作位置待核实，请刷新。</span>} {item.edition_id || item.item_id ? <RecycleControl kind={item.edition_id ? "edition" : "upload"} id={item.edition_id || item.item_id || ""} name={item.title || item.source_filename || "这条馆藏"} onDeleted={result.retry} /> : null}</div>
         </article>;
       })}
       {page && !page.results.length ? <p className="admin-list-state">当前条件下没有待办。可调整筛选，不代表其他来源没有异常。</p> : null}

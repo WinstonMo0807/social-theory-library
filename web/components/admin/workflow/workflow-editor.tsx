@@ -365,7 +365,7 @@ function candidateCount(candidates: WorkflowCandidate[], field: string) {
 }
 
 function WorkflowFieldAssistant({ fieldName, query, ...props }: BodyProps & { fieldName: AssistantFieldName; query?: string }) {
-  if (!["author", "translator", "topic", "theory"].includes(fieldName)) return null;
+  if (!(fieldName in FILL_FIELD_LABELS) && !(["author", "translator", "topic", "theory"] as string[]).includes(fieldName)) return <small className="workflow-field-assistant-hint hint-manual" title="此字段需要管理员直接确认，STL Assistant 不会自动改写。">人工确认</small>;
   const addDraft = (entity: { id: string; name: string; type: string }) => {
     if (fieldName === "author" || fieldName === "translator") {
       const rows = normalizeItems(props.draft.items, "display_name");
@@ -413,10 +413,10 @@ function WorkBody(props: BodyProps) {
     <div className="workflow-field-grid">
       {render("title", documentType === "journal_article" ? "论文标题" : documentType === "journal_issue" ? "本期标题" : "作品题名", { required: true })}
       {render("subtitle")}{render("original_title")}{render("uniform_title")}
-      <CanonicalField name="document_type" label="文献类型" value={fieldValue(draft, "document_type") || "book"} onChange={(next) => value("document_type", next)} options={documentTypeOptions} required disabled={!canEdit} error={errorFor(errors, "document_type")} />
+      <CanonicalField name="document_type" label="文献类型" value={fieldValue(draft, "document_type") || "book"} onChange={(next) => value("document_type", next)} options={documentTypeOptions} required disabled={!canEdit} error={errorFor(errors, "document_type")} assistantHint="manual" />
       {render("language", "作品语言", { options: languageOptions, required: true })}{render("original_language")}
       {render("first_publication_date", "作品首次出版日期", { type: "date", help: "记录作品最初问世的时间，不是当前 PDF 所属版本的出版日期。" })}
-      <fieldset disabled={!canEdit}><EntityPicker label="译自作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={translationId ? [{ id: translationId, name: translationName }] : []} onChange={(next) => update("work", "translation_of", next.at(-1)?.id ?? null)} /></fieldset>
+      <fieldset disabled={!canEdit}><EntityPicker label="译自作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={translationId ? [{ id: translationId, name: translationName }] : []} onChange={(next) => update("work", "translation_of", next.at(-1)?.id ?? null)} /><small className="workflow-field-assistant-hint hint-manual">人工确认关联</small></fieldset>
       {render("abstract", documentType === "journal_article" ? "论文摘要" : documentType === "journal_issue" ? "本期简介" : "馆藏简介", { multiline: true, rows: 6, help: "建议先填入此处，核对或修改后再保存；不会自动发布。" })}
     </div>
     <CoverField {...props} />
@@ -435,7 +435,7 @@ function BibliographyBody(props: BodyProps) {
   const issue = documentType === "journal_issue";
   return <ConditionalFieldGroup title={({ book: "图书版本", journal_article: "期刊论文出处", journal_issue: "整期期刊", thesis: "学位论文信息", report: "研究报告信息" } as Record<string, string>)[documentType] ?? "版本信息"} description="填写当前文件所属版本的信息。">
     <div className="workflow-field-grid">
-      <CanonicalField name="publication_mode" label="公开内容" value={fieldValue(draft, "publication_mode") || "document"} onChange={(next) => value("publication_mode", next)} disabled={!canEdit} options={[{ value: "document", label: "书目与全文 PDF" }, { value: "bibliographic", label: "仅公开书目" }]} help="保存并发布后生效，是否可只公开书目按文献类型检查。" />
+      <CanonicalField name="publication_mode" label="公开内容" value={fieldValue(draft, "publication_mode") || "document"} onChange={(next) => value("publication_mode", next)} disabled={!canEdit} options={[{ value: "document", label: "书目与全文 PDF" }, { value: "bibliographic", label: "仅公开书目" }]} help="保存并发布后生效，是否可只公开书目按文献类型检查。" assistantHint="manual" />
       {render("version_label", "版本说明")}
       {render("publication_date", issue ? "本期出版日期" : "本版本出版日期", { type: "date" })}
       {render("publication_year", issue ? "本期年份" : "本版本出版年份", { type: "number" })}
@@ -452,7 +452,8 @@ function BibliographyBody(props: BodyProps) {
   </ConditionalFieldGroup>;
 }
 
-function JournalContentsField({ draft, canEdit, errors, update }: BodyProps) {
+function JournalContentsField(props: BodyProps) {
+  const { draft, canEdit, errors, update } = props;
   const rows = asArray(draft.journal_contents).map(asRecord);
   const change = (next: Record<string, unknown>[]) => update("bibliography", "journal_contents", next.map((row, position) => ({ ...row, position })));
   const move = (index: number, offset: number) => {
@@ -466,9 +467,9 @@ function JournalContentsField({ draft, canEdit, errors, update }: BodyProps) {
     <p>按本期目录顺序填写论文。可关联已入馆论文，也可先保留题名和页码。未发布的论文不会生成公开链接。</p>
     <RepeatableField label="本期目录与论文" values={rows} disabled={!canEdit} create={() => ({ id: null, article_work_id: null, title: "", author_display: "", page_range: "", position: rows.length })} addLabel="添加目录论文" onChange={change} render={(row, index, setRow) => <div>
       <div className="workflow-field-grid">
-        <CanonicalField name={`journal_contents.${index}.title`} label={`第 ${index + 1} 篇题名`} value={asString(row.title)} onChange={(title) => setRow({ ...row, title })} disabled={!canEdit} required error={errorFor(errors, `journal_contents.${index}.title`)} />
-        <CanonicalField name={`journal_contents.${index}.author_display`} label="作者" value={asString(row.author_display)} onChange={(author_display) => setRow({ ...row, author_display })} disabled={!canEdit} />
-        <CanonicalField name={`journal_contents.${index}.page_range`} label="本期页码" value={asString(row.page_range)} onChange={(page_range) => setRow({ ...row, page_range })} disabled={!canEdit} />
+        <div><CanonicalField name={`journal_contents.${index}.title`} label={`第 ${index + 1} 篇题名`} value={asString(row.title)} onChange={(title) => setRow({ ...row, title })} disabled={!canEdit} required error={errorFor(errors, `journal_contents.${index}.title`)} assistantHint="available" /><WorkflowFieldAssistant {...props} fieldName="title" query={asString(row.title)} /></div>
+        <div><CanonicalField name={`journal_contents.${index}.author_display`} label="作者" value={asString(row.author_display)} onChange={(author_display) => setRow({ ...row, author_display })} disabled={!canEdit} assistantHint="available" /><WorkflowFieldAssistant {...props} fieldName="author" query={asString(row.author_display)} /></div>
+        <div><CanonicalField name={`journal_contents.${index}.page_range`} label="本期页码" value={asString(row.page_range)} onChange={(page_range) => setRow({ ...row, page_range })} disabled={!canEdit} assistantHint="available" /><WorkflowFieldAssistant {...props} fieldName="page_range" query={asString(row.page_range)} /></div>
         <fieldset disabled={!canEdit}><EntityPicker label="关联馆内论文" endpoint="/catalog/admin/library/works/?document_type=journal_article" queryParam="q" nameField="title" values={row.article_work_id ? [{ id: asString(row.article_work_id), name: asString(row.title, "已关联论文") }] : []} onChange={(values) => { const selected = values.at(-1); setRow({ ...row, article_work_id: selected?.id ?? null, title: asString(row.title).trim() || selected?.name || "" }); }} /></fieldset>
       </div>
       <div className="workflow-section-actions"><button type="button" className="button secondary" disabled={!canEdit || index === 0} onClick={() => move(index, -1)}>上移</button><button type="button" className="button secondary" disabled={!canEdit || index === rows.length - 1} onClick={() => move(index, 1)}>下移</button></div>
@@ -506,9 +507,9 @@ function ContributorsBody(props: BodyProps) {
 
 function ClassificationBody({ draft, canEdit, update }: BodyProps) {
   return <fieldset className="workflow-classification" disabled={!canEdit}>
-    <EntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.primary_disciplines)} onChange={(next) => update("classification", "primary_disciplines", next.slice(-1))} />
-    <EntityPicker label="相关学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.related_disciplines)} onChange={(next) => update("classification", "related_disciplines", next)} />
-    <EntityPicker label="子学科" endpoint="/catalog/admin/subdisciplines/" values={entities(draft.subdisciplines)} onChange={(next) => update("classification", "subdisciplines", next)} />
+    <div><EntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.primary_disciplines)} onChange={(next) => update("classification", "primary_disciplines", next.slice(-1))} /><small className="workflow-field-assistant-hint hint-manual">人工确认分类</small></div>
+    <div><EntityPicker label="相关学科" endpoint="/catalog/admin/disciplines/" values={entities(draft.related_disciplines)} onChange={(next) => update("classification", "related_disciplines", next)} /><small className="workflow-field-assistant-hint hint-manual">人工确认分类</small></div>
+    <div><EntityPicker label="子学科" endpoint="/catalog/admin/subdisciplines/" values={entities(draft.subdisciplines)} onChange={(next) => update("classification", "subdisciplines", next)} /><small className="workflow-field-assistant-hint hint-manual">人工确认分类</small></div>
     <p className="workflow-classification-note">可随时保存草稿。核对后选择确认本节，未选分类也可以确认为不适用。</p>
   </fieldset>;
 }
@@ -539,7 +540,7 @@ function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, bus
 }
 
 function ReaderBody({ draft, canEdit, update, inspectPdf }: BodyProps) {
-  return <div className="workflow-reader"><CatalogAvailability value={draft.availability}/><CanonicalField name="reader_rendition_policy" label="阅读文件策略" value={fieldValue(draft, "reader_rendition_policy") || "auto"} onChange={(next) => update("reader", "reader_rendition_policy", next)} options={[{ value: "auto", label: "自动，优先稳定可读文件" }, { value: "original", label: "原始 PDF" }, { value: "ocr", label: "优先已验证 OCR PDF" }]} disabled={!canEdit} help="智能内容处理异常时，已经就绪的阅读文件仍可发布。" /><button type="button" onClick={inspectPdf}><Eye size={14} />打开文件检查器</button></div>;
+  return <div className="workflow-reader"><CatalogAvailability value={draft.availability}/><CanonicalField name="reader_rendition_policy" label="阅读文件策略" value={fieldValue(draft, "reader_rendition_policy") || "auto"} onChange={(next) => update("reader", "reader_rendition_policy", next)} options={[{ value: "auto", label: "自动，优先稳定可读文件" }, { value: "original", label: "原始 PDF" }, { value: "ocr", label: "优先已验证 OCR PDF" }]} disabled={!canEdit} help="智能内容处理异常时，已经就绪的阅读文件仍可发布。" assistantHint="manual" /><button type="button" onClick={inspectPdf}><Eye size={14} />打开文件检查器</button></div>;
 }
 
 function PublicationBody({ draft, context, permissions, goToIssue, saveDraft, preview, preflight: runPreflight, preparation, publish, withdraw, publishing, busy }: BodyProps) {
@@ -1344,16 +1345,20 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const source = ({manual:"手工编目",upload:"文件上传",existing:"馆藏维护",import:"导入书目"} as Record<string,string>)[asString(payload.context.source_type)] || "已有馆藏";
   const previewUrl = asString(payload.context.page_preview_url);
   const previewReturnHref = withAdminReturn(`${routePathname}${routeParams.size ? `?${routeParams}` : ""}`, returnHref, active);
-  const requiredActions = [...new Map(payload.workflow.steps.flatMap((step) => step.issues
-    .filter((issue) => issue.severity === "blocker")
-    .map((issue) => [JSON.stringify([issue.code || issue.message, issue.field || "", issue.action_target || ""]), { ...issue, step: issue.step || step.key }] as const))).values()];
+  const issueRows = payload.workflow.steps.flatMap((step) => step.issues.map((issue) => ({ ...issue, step: issue.step || step.key })));
+  const deduplicateIssues = (issues: typeof issueRows) => [...new Map(issues.map((issue) => [JSON.stringify([issue.code || issue.message, issue.field || "", issue.action_target || ""]), issue] as const)).values()];
+  const requiredActions = deduplicateIssues(issueRows.filter((issue) => issue.severity === "blocker"));
+  const advisoryActions = deduplicateIssues(issueRows.filter((issue) => issue.severity === "warning"));
+  const workflowReadiness = currentDirtyCount
+    ? `未保存 ${currentDirtyCount} 项 · 请先保存后预览`
+    : `已保存 · 必须处理 ${requiredActions.length} 项 · 建议确认 ${advisoryActions.length} 项 · ${requiredActions.length ? "可预览 · 暂不可发布" : "可预览 · 发布前仍需检查"}`;
   return (
     <ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
     <ResearchWorkspaceContext.Provider value={researchWorkspace}>
     <div className="workflow-editor workflow-v307-editor" data-workflow-mode={payload.mode}>
       <WorkflowStepRail title={asString(payload.context.title)} filename={asString(payload.context.filename)} steps={payload.workflow.steps} active={active} unresolvedCount={payload.workflow.unresolved_count} dirtyCount={currentDirtyCount} returnHref={returnHref} onStep={goToStep} onExit={exit} />
       <main className="workflow-editor-main">
-        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>馆藏工作页</h1><strong className="workflow-v307-book-title">{asString(drafts.work.title, "未命名馆藏")}</strong><span>{payload.workflow.blockers_count ? `还需确认 ${payload.workflow.blockers_count} 项` : "没有阻断性问题"} · {currentDirtyCount ? `${currentDirtyCount} 项未保存` : "草稿已保存"}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === "save-draft" || busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveAllDirty()} disabled={Boolean(busy) || !canEdit || !currentDirtyCount}><Save size={14} />保存书目修改</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{canEdit && (itemId || editionId) ? <RecycleControl kind={mode === "intake" && itemId ? "upload" : "edition"} id={mode === "intake" && itemId ? itemId : editionId!} name={asString(payload.context.title) || "当前记录"} disabled={Boolean(busy)} onDeleted={() => { window.location.assign(returnHref); }} /> : null}{payload.context.page_preview_url && !currentDirtyCount ? <ActionLink className="workflow-header-preview" href={withAdminReturn(asString(payload.context.page_preview_url), previewReturnHref)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
+        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>馆藏工作页</h1><strong className="workflow-v307-book-title">{asString(drafts.work.title, "未命名馆藏")}</strong><span className="workflow-readiness-summary" aria-live="polite">{workflowReadiness}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === "save-draft" || busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveAllDirty()} disabled={Boolean(busy) || !canEdit || !currentDirtyCount}><Save size={14} />保存书目修改</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{canEdit && (itemId || editionId) ? <RecycleControl kind={mode === "intake" && itemId ? "upload" : "edition"} id={mode === "intake" && itemId ? itemId : editionId!} name={asString(payload.context.title) || "当前记录"} disabled={Boolean(busy)} onDeleted={() => { window.location.assign(returnHref); }} /> : null}{payload.context.page_preview_url && !currentDirtyCount ? <ActionLink className="workflow-header-preview" href={withAdminReturn(asString(payload.context.page_preview_url), previewReturnHref)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
         <section className="workflow-v306-identity" aria-label="当前作品与出版版本">
           <label>当前出版版本<select value={editionId} aria-label="当前出版版本" onChange={(event) => exit(withAdminReturn(`/admin/library/works/${encodeURIComponent(asString(payload.context.work_id))}?edition=${encodeURIComponent(event.target.value)}#${active}`,returnHref))}>
             {asArray(payload.context.available_editions).map(asRecord).map((edition) => <option key={asString(edition.id)} value={asString(edition.id)}>{asString(edition.version_label) || "未命名版本"} · {asString(edition.publication_year) || "年份待补"}{edition.is_primary ? " · 主版本" : " · 非主版本"}</option>)}

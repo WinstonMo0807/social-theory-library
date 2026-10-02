@@ -1221,7 +1221,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
           <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
-          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div>{draft.personId ? <Link className="button secondary" href={`/admin/scholars/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
+          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div></header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>

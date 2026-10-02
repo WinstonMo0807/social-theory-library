@@ -9,6 +9,7 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import type { CatalogPublication } from "@/lib/api/admin-collections";
 import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
 import { RecycleControl } from "@/components/admin/recycle-control";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ProcessingError } from "@/components/admin/processing-error";
 import {
   formatUploadBytes,
@@ -310,19 +311,34 @@ function buildMetadataPairings(pdfFiles: QueuedFile[], metadataFiles: File[]) {
   })) as Record<string, MetadataPairing>;
 }
 
+function BatchClearControl({ batch, onDeleted }: { batch: RecentBatch; onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function clearBatch() {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await apiRequest(`/ingestion/batches/${encodeURIComponent(batch.id)}/`, { method: "DELETE" }, getServerSessionCredential());
+      setOpen(false);
+      onDeleted();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "批次清理失败，请重试。请先刷新确认当前状态。");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <span className="upload-batch-clear-control">
+    <button type="button" className="danger-link" disabled={busy || !batch.items.length} onClick={() => setOpen(true)}>清空队列</button>
+    <ConfirmDialog open={open} title={`清空“${batch.label || `上传批次 ${batch.id.slice(0, 8)}`}”`} description="移除这个批次中仍在上传、处理中或待办列表里的记录，并取消尚未结束的任务。已建立的馆藏、原文件和历史记录保留，可在回收站恢复上传记录。" details={message ? [message] : []} confirmLabel="清空队列" tone="danger" pending={busy} onCancel={() => setOpen(false)} onConfirm={() => void clearBatch()} />
+  </span>;
+}
+
 export function AdminUpload() {
   const { startAction, finishAction } = useActionGuard();
   const input = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<QueuedFile[]>([]);
-  const [previewToken, setPreviewToken] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
-  const previewFile = files.find(item => item.token === previewToken) ?? files[0];
-  const previewPdf = previewFile?.file;
-  useEffect(() => {
-    const url = previewPdf ? URL.createObjectURL(previewPdf) : "";
-    const timer = window.setTimeout(() => setPreviewUrl(url), 0);
-    return () => { window.clearTimeout(timer); if (url) URL.revokeObjectURL(url); };
-  }, [previewPdf]);
   const [metadataFiles, setMetadataFiles] = useState<File[]>([]);
   const [metadataImportStates, setMetadataImportStates] = useState<Record<string, MetadataImportState>>({});
   const [batchLabel, setBatchLabel] = useState("");
@@ -1117,8 +1133,6 @@ export function AdminUpload() {
         />
       </section>
 
-      <aside className="upload-v307-preview admin-panel" aria-label="当前上传预览"><header><h2>上传预览</h2></header>{previewFile ? <><div className="upload-v307-file-preview">{previewUrl ? <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} title={`${previewFile.file.name} 本地 PDF 预览`} /> : <FileText size={48} />}</div><strong>{previewFile.file.name}</strong><dl><div><dt>文件类型</dt><dd>PDF</dd></div><div><dt>文件大小</dt><dd>{formatUploadBytes(previewFile.file.size)}</dd></div><div><dt>上传状态</dt><dd>{previewFile.message || "等待上传"}</dd></div></dl><p>文件上传并校验后，进入馆藏工作页完善书目、关联作者和发布。</p></> : <p className="admin-list-state">选择 PDF 后，可以在这里核对本地文件。</p>}</aside>
-
       {stagingSessions.length || uploadSnapshots.length ? (
         <section className="upload-staging-sessions admin-panel" aria-live="polite">
           <header>
@@ -1196,7 +1210,7 @@ export function AdminUpload() {
           <div key={item.token}>
             <FileText size={18} />
             <p>
-              <button type="button" className="upload-preview-select" onClick={() => setPreviewToken(item.token)}>{item.file.name}</button>
+              <strong>{item.file.name}</strong>
               <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
               <span className={`metadata-pair-status ${metadataPairings[item.token]?.status || "missing"}`}>
                 {metadataImportStates[item.token]?.message || metadataPairings[item.token]?.message}
@@ -1325,7 +1339,7 @@ export function AdminUpload() {
           <div key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>
         ))}
       </section>
-      <section className="upload-recent-batches admin-panel"><header><div><h2>最近上传批次</h2><p>历史文件继续保留在原馆藏工作页。</p></div><button type="button" className="button secondary" onClick={recentBatches.retry}>刷新批次</button></header>{recentBatches.error ? <p role="alert">{recentBatches.error}</p> : null}<div className="admin-v307-table-scroll"><table><thead><tr><th>批次</th><th>上传时间</th><th>文件数量</th><th>处理结果</th><th>操作</th></tr></thead><tbody>{recentBatches.data?.results.slice(0,5).map(batch=><tr key={batch.id}><td><strong>{batch.label || `上传批次 ${batch.id.slice(0,8)}`}</strong></td><td>{new Date(batch.created_at).toLocaleString("zh-CN")}</td><td>{batch.items.length} / {batch.expected_count}</td><td>{batch.completed_count} 项完成 · {batch.failed_count} 项失败</td><td><details><summary>查看批次文件</summary><ul>{batch.items.map(item=><li key={item.id}><Link href={`/admin/intake/${item.id}#file`}>{item.source_filename || "打开文件工作页"}</Link></li>)}</ul>{!batch.items.length ? <p>批次尚未收到文件。</p> : null}</details></td></tr>)}</tbody></table></div>{recentBatches.loading ? <p role="status">正在读取最近批次…</p> : recentBatches.data && !recentBatches.data.results.length ? <p className="admin-list-state">尚无上传批次。</p> : null}</section>
+      <section className="upload-recent-batches admin-panel"><header><div><h2>最近上传批次</h2><p>历史文件继续保留在原馆藏工作页；清理只移除上传队列记录，不删除已建立的馆藏。</p></div><button type="button" className="button secondary" onClick={recentBatches.retry}>刷新批次</button></header>{recentBatches.error ? <p role="alert">{recentBatches.error}</p> : null}<div className="admin-v307-table-scroll"><table><thead><tr><th>批次</th><th>上传时间</th><th>文件数量</th><th>处理结果</th><th>操作</th></tr></thead><tbody>{recentBatches.data?.results.slice(0,5).map(batch=><tr key={batch.id}><td><strong>{batch.label || `上传批次 ${batch.id.slice(0,8)}`}</strong></td><td>{new Date(batch.created_at).toLocaleString("zh-CN")}</td><td>{batch.items.length} / {batch.expected_count}</td><td>{batch.completed_count} 项完成 · {batch.failed_count} 项失败</td><td><details><summary>查看批次文件</summary><ul>{batch.items.map(item=><li key={item.id}><Link href={`/admin/intake/${item.id}#file`}>{item.source_filename || "打开文件工作页"}</Link></li>)}</ul>{!batch.items.length ? <p>批次尚未收到文件。</p> : null}</details><BatchClearControl batch={batch} onDeleted={recentBatches.retry} /></td></tr>)}</tbody></table></div>{recentBatches.loading ? <p role="status">正在读取最近批次…</p> : recentBatches.data && !recentBatches.data.results.length ? <p className="admin-list-state">尚无上传批次。</p> : null}</section>
     </div>
   );
 }

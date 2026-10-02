@@ -14,6 +14,7 @@ export type ReaderOutlineItem = components["schemas"]["PublicOutlineItem"];
 // has its own complete contract; it is not claimed as generated coverage.
 export type ApiWork = PublicWorkCard
   & Partial<Pick<PublicWorkDetail, "outline" | "theory_associations">>
+  & { reader_edition?: PublicEdition | null; download_edition?: PublicEdition | null }
   & { curated_claims?: Work["curatedClaims"] };
 
 type LinkedReaderScholar = Omit<ReaderManifestPayload["related_scholars"][number], "slug"> & { slug: string };
