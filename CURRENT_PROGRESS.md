@@ -1,10 +1,10 @@
 # Social Theory Library 当前进度
 
-## 2026-10-03 3.0.9 管理端视觉与真实接口候选完成，准备发布
+## 2026-10-03 3.0.9 管理端视觉与真实接口已部署
 
 本工作区为独立受管 `admin-visual-v309`，基线 origin/main a67dd56（3.0.8.2）。用户明确授权按 59 张图及 7 条新注释、出版版本默认设置注释进行真实应用开发，并授权完成后推送 Git 与公网部署。已完成工作台状态摘要、上传/批次回收、队列来源与最后保存者、出版版本管理（在线阅读/下载默认版本）、理论预览定位提示、人物查重从常规流程移除、每字段 STL Assistant、候选书目逐字段采用结果和公开读者入口区分。未覆盖的 3.0.8 既有封面、作者/译者、问题定位、发布阻断、学者卡片仍复用原真实 API 与组件，不建立静态 mock。原仓库及问题排查对话的改动保留。
 
-本地验证：Python compileall、Django check、migration drift、API 契约生成/校验、前端 TypeScript、生产 Web build、lint（0 error，22 条既有风格 warning）通过；后端定向测试 26+19+2 项通过。当前未提交、未上传 NAS、未执行生产迁移或切换。下一步按 `docs/V3.0.9_ADMIN_VISUAL_RELEASE_2026-10-03.md` 冻结提交、备份演练、候选镜像和公网切换，并记录 ready、迁移、Worker、公开接口和回退证据。
+本地验证：Python compileall、Django check、migration drift、API 契约生成/校验、前端 TypeScript、生产 Web build、lint（0 error，22 条既有风格 warning）通过；后端定向测试 26+19+2+4 项通过。运行时提交 `63c7294c66a71cf454160f386666df24998b685a` 已推送 `codex/admin-visual-v309` 和 `main`，3.0.9 已于 NAS 2026-10-03 01:27:06 +08:00 切换公网。`catalog.0064_work_edition_defaults` 迁移、API/Web/Worker/Beat 就绪、备份与回退资料、语义检索、Reader manifest 和 PDF Range 检查均已记录于 `docs/V3.0.9_ADMIN_VISUAL_RELEASE_2026-10-03.md`。真实浏览器登录后的管理员视觉、响应式、焦点高亮和删除对话框检查因 CUA 会话超时仍待核实，不写成已通过。
 
 ## 2026-09-29 3.0.8.2已部署，Git应用已推送
 

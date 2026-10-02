@@ -1,5 +1,11 @@
 # 部署说明
 
+## 3.0.9 管理端视觉与默认版本已上线
+
+NAS 于 2026-10-03T01:27:06+08:00 完成公网切换。运行时提交为 `63c7294c66a71cf454160f386666df24998b685a`，API/四 Worker/Beat 使用 `social-theory-library-api:3.0.9-63c7294`，Web 使用 `social-theory-library-web:3.0.9-63c7294`。生产 `/api/ready/` 返回 3.0.9、数据库可用且无待迁移；`catalog.0064_work_edition_defaults` 已成功执行。切换前新鲜备份、源码归档、镜像 ID、受保护数据与活动索引对照及回退入口保存在 NAS `storage/backups/pre-v309-20261003/deploy-record`，原件、模型、索引、队列和历史备份未删除。
+
+公网首页、探索、理论流派、学者、作品、Reader、登录和管理端壳页面均 HTTP 200；真实语义检索返回非空结果，Reader manifest 和 PDF Range 206 检查通过。管理员登录后的真实浏览器视觉、响应式、焦点高亮和删除对话框居中检查因 CUA 会话超时，仍待核实；本记录不把静态构建或 HTTP 就绪替代浏览器验收。完整证据见 [3.0.9 管理端视觉交付记录](V3.0.9_ADMIN_VISUAL_RELEASE_2026-10-03.md)。
+
 ## 3.0.8.2已上线
 
 NAS 2026-09-29T17:09:39+08:00完成切换，应用c660e1b已推送main，API/四Worker/Beat e6fe8cdd5666、Web 152aec40dca7。新鲜备份隔离恢复、新旧ORM保护摘要、正式镜像42项相关测试、内部HTTP及19项公网业务检查通过；无migration、活动索引/模型/原件保留。备份与回退目录为`storage/backups/pre-v3082-20260929/deploy-record`（数据库归档另在`pre-v3082-database-20260929`），回退入口`tools/rollback.sh`保留旧API/Worker不同镜像。准确SHA、版本资源、浏览器工具故障及验收限制见[3.0.8.2交付](V3.0.8.2_PERFORMANCE_RELEASE.md)。
