@@ -436,28 +436,34 @@ class BatchDetailView(generics.RetrieveAPIView):
     queryset = BatchListView.queryset
 
     def delete(self, request, *args, **kwargs):
-        batch = self.get_object()
-        items = list(batch.items.all())
-        if not items:
-            return Response({"deleted": 0, "detail": "批次中没有仍在队列里的上传记录。"})
         from catalog.services.recycle import recycle_object
 
-        for item in items:
-            recycle_object(item, actor=request.user, kind="upload", name=item.source_filename)
-        # A batch can contain completed items that already produced a real
-        # catalog record. Clearing the queue must not relabel those items as
-        # failures; only the unfinished portion becomes removed/failed.
-        batch.status = UploadBatch.Status.PARTIAL if batch.completed_count else UploadBatch.Status.FAILED
-        batch.failed_count = max(batch.failed_count, max(0, batch.expected_count - batch.completed_count))
-        batch.save(update_fields=["status", "failed_count", "updated_at"])
-        AuditEvent.objects.create(
-            actor=request.user,
-            action="upload_batch_recycled",
-            object_type="UploadBatch",
-            object_id=str(batch.pk),
-            after={"deleted_items": len(items), "files_preserved": True},
-            request_ip=_request_ip(request),
-        )
+        with transaction.atomic():
+            batch = UploadBatch.objects.select_for_update().get(pk=self.get_object().pk)
+            items = list(batch.items.all())
+            if not items:
+                return Response({"deleted": 0, "detail": "批次中没有仍在队列里的上传记录。"})
+            for item in items:
+                recycle_object(item, actor=request.user, kind="upload", name=item.source_filename)
+            # A batch can contain completed items that already produced a real
+            # catalog record. Clearing the queue must not relabel a fully
+            # completed batch as failed or partial.
+            if batch.completed_count >= batch.expected_count and not batch.failed_count:
+                batch.status = UploadBatch.Status.COMPLETED
+            elif batch.completed_count:
+                batch.status = UploadBatch.Status.PARTIAL
+            else:
+                batch.status = UploadBatch.Status.FAILED
+            batch.failed_count = max(batch.failed_count, max(0, batch.expected_count - batch.completed_count))
+            batch.save(update_fields=["status", "failed_count", "updated_at"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="upload_batch_recycled",
+                object_type="UploadBatch",
+                object_id=str(batch.pk),
+                after={"deleted_items": len(items), "files_preserved": True},
+                request_ip=_request_ip(request),
+            )
         return Response({"deleted": len(items), "batch_id": str(batch.pk)})
 
 
