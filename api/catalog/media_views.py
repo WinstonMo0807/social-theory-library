@@ -66,6 +66,10 @@ class MediaCollectionView(AdminPrivateResponseMixin, APIView):
     def get(self, request):
         from django.core.paginator import Paginator, InvalidPage
         rows = MediaAsset.objects.prefetch_related("renditions").order_by("-created_at", "pk")
+        query = str(request.query_params.get("q", "")).strip()[:200]
+        if query:
+            from django.db.models import Q
+            rows = rows.filter(Q(alt_text__icontains=query) | Q(source_label__icontains=query))
         pagination = Paginator(rows, 30)
         try:
             page = pagination.page(request.query_params.get("page", 1))

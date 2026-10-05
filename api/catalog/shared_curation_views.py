@@ -13,6 +13,7 @@ from catalog.editorial_issue_serializers import EditorialPublishSerializer
 from catalog.models import EditorialRevision, ScholarRelation
 from catalog.services import shared_curation as service
 from catalog.services.scoped_search import public_scholar_queryset
+from django.db.models.fields.json import KeyTextTransform
 from common.permissions import IsKnowledgeEditor, CanPublishAuthority
 
 
@@ -167,8 +168,11 @@ class AdminScholarRelationListView(EditorialErrorMixin, AdminPrivateResponseMixi
         rows = ScholarRelation.objects.select_related("active_revision")
         if request.query_params.get("scholar"):
             key = str(service.identifier(request.query_params["scholar"]))
-            latest = EditorialRevision.objects.filter(target_type="scholar_relation", target_id=OuterRef("pk")).order_by("-revision")
-            rows = rows.annotate(draft_source=Subquery(latest.values("materialized_preview__source_scholar")[:1]), draft_target=Subquery(latest.values("materialized_preview__target_scholar")[:1]))
+            latest = EditorialRevision.objects.filter(target_type="scholar_relation", target_id=OuterRef("pk")).annotate(
+                source_key=KeyTextTransform("source_scholar", "materialized_preview"),
+                target_key=KeyTextTransform("target_scholar", "materialized_preview"),
+            ).order_by("-revision")
+            rows = rows.annotate(draft_source=Subquery(latest.values("source_key")[:1]), draft_target=Subquery(latest.values("target_key")[:1]))
             rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key) | Q(draft_source=key) | Q(draft_target=key))
         return Response(paged(request, rows.order_by("-updated_at", "pk"), service.relation_payload))
 

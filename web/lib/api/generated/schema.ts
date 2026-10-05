@@ -1112,6 +1112,13 @@ export interface components {
             title?: string;
             document_type?: components["schemas"]["DocumentTypeEnum"];
             language?: string;
+            subtitle?: string;
+            abstract?: string;
+            publisher?: string;
+            publication_year?: number | null;
+            version_label?: string;
+            author_ids?: string[];
+            topic_ids?: string[];
             /** Format: uuid */
             request_key?: string;
         };
@@ -1165,9 +1172,13 @@ export interface components {
             edit_url: string;
             state: components["schemas"]["StateEnum"];
             can_edit: boolean;
+            changed_fields: string[];
         };
         CurationDraftPage: {
             count: number;
+            counts: {
+                [key: string]: number;
+            };
             page: number;
             page_size: number;
             total_pages: number;
@@ -2121,6 +2132,7 @@ export interface components {
             display_from?: string | null;
             /** Format: date-time */
             readonly published_at: string | null;
+            readonly public_url: string;
             items?: components["schemas"]["IssueItem"][];
             edit_version?: string;
             /** Format: uuid */
@@ -3350,7 +3362,15 @@ export interface operations {
     };
     catalog_admin_recommendation_issues_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 所选日期、之后的已保存排期、之前的公开版本。与 day 一起使用。 */
+                bucket?: "day" | "published" | "upcoming";
+                /** @description 编辑日历所选日期，按 Asia/Hong_Kong 时区分组。 */
+                day?: string;
+                page?: number;
+                /** @description 文章标题 */
+                q?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

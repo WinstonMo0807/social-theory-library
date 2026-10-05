@@ -3,7 +3,7 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-from catalog.models import CatalogingSession, DocumentType, Edition, Work
+from catalog.models import CatalogingSession, Contribution, DocumentType, Edition, Person, Topic, Work, WorkTopicRelation
 from ingestion.models import UploadItem
 
 
@@ -21,7 +21,8 @@ class CatalogingSessionConflict(ValueError):
 @transaction.atomic
 def open_cataloging_session(*, actor, edition_id=None, upload_item_id=None,
                             source_type="existing", title="", document_type="book",
-                            language="zh-CN", request_key=None):
+                            language="zh-CN", request_key=None, subtitle="", abstract="",
+                            publisher="", publication_year=None, version_label="", author_ids=None, topic_ids=None):
     """Open/reuse one process; never synthesize an UploadItem for metadata."""
     if source_type not in CatalogingSession.SourceType.values:
         raise ValueError("未知的编目来源。")
@@ -54,11 +55,37 @@ def open_cataloging_session(*, actor, edition_id=None, upload_item_id=None,
     if edition_id:
         edition = Edition.objects.select_for_update(of=("self",)).get(pk=edition_id)
     elif source_type in {CatalogingSession.SourceType.MANUAL, CatalogingSession.SourceType.IMPORT}:
-        work = Work.objects.create(title=title.strip(), document_type=document_type, language=language)
-        edition = Edition.objects.create(work=work, publication_mode=Edition.PublicationMode.BIBLIOGRAPHIC)
+        author_keys = list(dict.fromkeys(str(key) for key in author_ids or []))
+        topic_keys = list(dict.fromkeys(str(key) for key in topic_ids or []))
+        # Lock identities in the same order as merges so a selected identity
+        # cannot be retired between validation and creating its new relation.
+        people = {str(row.pk): row for row in Person.objects.select_for_update().filter(pk__in=author_keys).order_by("pk")}
+        topic_rows = {str(row.pk): row for row in Topic.objects.select_for_update().filter(pk__in=topic_keys).order_by("pk")}
+        if len(people) != len(author_keys) or len(topic_rows) != len(topic_keys):
+            raise Person.DoesNotExist("所选作者或主题已不存在。")
+        authors = [people[key] for key in author_keys]
+        topics = [topic_rows[key] for key in topic_keys]
+        if any(row.authority_status in {Person.AuthorityStatus.ARCHIVED, Person.AuthorityStatus.MERGED,
+                                       Person.AuthorityStatus.REJECTED} for row in authors):
+            raise CatalogingSessionConflict("所选作者已撤回或合并，请选择当前馆内对象。")
+        if any(row.editorial_status not in {"draft", "pending", "published"} for row in topics):
+            raise CatalogingSessionConflict("所选主题已撤回或合并，请选择当前馆内对象。")
+        work = Work.objects.create(title=title.strip(), subtitle=subtitle.strip(), abstract=abstract.strip(),
+                                   document_type=document_type, language=language)
+        edition = Edition.objects.create(work=work, publication_mode=Edition.PublicationMode.BIBLIOGRAPHIC,
+                                         publisher=publisher.strip(), publication_year=publication_year,
+                                         version_label=version_label.strip())
+        for order, author in enumerate(authors):
+            Contribution.objects.create(edition=edition, person=author, role="author", order=order,
+                                        approved=True, source="manual_catalog_creation")
+        for topic in topics:
+            WorkTopicRelation.objects.create(work=work, topic=topic, review_status="approved",
+                                             source="manual_catalog_creation", confidence=1)
         if source_type == CatalogingSession.SourceType.MANUAL:
             from catalog.services.field_decisions import record_edition_field_decision
-            for name, value in {"title": title.strip(), "document_type": document_type, "language": language}.items():
+            for name, value in {"title": title.strip(), "document_type": document_type, "language": language,
+                                "subtitle": subtitle.strip(), "abstract": abstract.strip(), "publisher": publisher.strip(),
+                                "publication_year": publication_year, "version_label": version_label.strip()}.items():
                 if value:
                     record_edition_field_decision(edition, name, value=value, status="confirmed", actor=actor,
                                                  provenance={"source": "manual_catalog_creation"})

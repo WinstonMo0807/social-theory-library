@@ -2,53 +2,87 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw } from "lucide-react";
-import type { FormEvent } from "react";
+import { RefreshCw, Monitor, Smartphone, Maximize2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { adminListHref, adminPageNumber, safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
 import { Pagination } from "@/components/ui/pagination";
-import { StatusBadge } from "@/components/admin-ui";
+import type { RecommendationIssue } from "@/lib/api/recommendation-issues.types";
+import { PreviewSurface, type KnowledgePreviewPayload } from "../preview/knowledge-page-preview";
+import { PreviewViewport } from "./fixed-page-editor";
 import styles from "../library/admin-collection.module.css";
 
 type CurationDraft = {
   id: string; object_id: string; title: string; object_type: string; label: string;
-  updated_at: string; edit_url: string; state: "draft" | "changes_pending"; can_edit: boolean;
+  changed_fields: string[]; updated_at: string; edit_url: string; state: "draft" | "changes_pending"; can_edit: boolean;
 };
-type DraftPage = { count: number; page: number; page_size: number; total_pages: number; results: CurationDraft[] };
+const groups = {all:"全部",theories:"理论流派",scholars:"学者",topics:"主题",recommendations:"每日荐读",site:"网站内容"};
+const changedLabels: Record<string,string> = {person:"个人介绍",biography:"个人介绍",introduction:"内容介绍",abstract:"内容简介",essential_works:"重要文献",works:"重要文献",curation:"内容策展",title:"标题",name:"名称",canonical_name_zh:"名称",body_blocks:"文章内容",items:"推荐书目",display_from:"发布时间",cover_url:"封面",hero_image:"页面图片",site_config:"网站内容",config:"网站内容",about_blocks:"关于书库",description:"内容介绍",timeline:"生平与时间线",core_questions:"研究问题",key_concepts:"核心概念",network:"学术关系",frequently_read_scholars:"相关人物",related_theories:"理论关联",stages:"阅读阶段"};
+function changeSummary(fields:string[]){return [...new Set(fields.map(field=>changedLabels[field.split(".").at(-1)!] || changedLabels[field.split(".")[0]]).filter(Boolean))].join("、") || "—";}
+type DraftPage = { counts:Record<keyof typeof groups,number>; count: number; page: number; page_size: number; total_pages: number; results: CurationDraft[] };
 
 export function CurationDraftQueue() {
   const pathname = usePathname();
   const search = useSearchParams();
   const router = useRouter();
   const query = search.get("q") || "";
+  const group = search.get("group") || "";
   const ordering = search.get("ordering") === "updated_at" ? "updated_at" : "-updated_at";
-  const params = new URLSearchParams({ q: query, ordering, page: String(adminPageNumber(search.get("page"))) });
+  const params = new URLSearchParams({ q: query, ordering, group, page: String(adminPageNumber(search.get("page"))) });
   const resource = useApiResource<DraftPage>(`/catalog/admin/curation-drafts/?${params}`, getServerSessionCredential());
   const page = resource.data;
+  const [selectedId, setSelectedId] = useState("");
+  const selected = selectedId ? page?.results.find(item => item.id === selectedId) : page?.results[0];
   const returnTo = `${pathname}?${search}`;
   const change = (values: Record<string, string | number | null>) => router.push(adminListHref(pathname, search.toString(), { page: 1, ...values }));
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
-  return <section aria-label="策展草稿">
-    <p className="admin-help">继续整理学者、主题、理论、阅读路径、网站和推荐草稿。每个对象只列一次，保存与公开发布分别完成。</p>
-    <form className={styles.toolbar} onSubmit={submit}>
+  return <section className="admin-reference-split curation-reference" aria-label="策展草稿"><div className="admin-reference-list">
+    <nav className="reference-draft-tabs" aria-label="草稿分类">{Object.entries(groups).map(([key,label])=><button type="button" key={key} aria-pressed={(group||"all")===key} onClick={()=>change({group:key==="all" ? null : key})}>{label} {page?.counts[key as keyof typeof groups] ?? "—"}</button>)}</nav>
+    <details className="reference-list-filters" open={Boolean(query || ordering==="updated_at")}><summary>搜索与排序</summary><form className={styles.toolbar} onSubmit={submit}>
       <label>名称或标题<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部策展草稿" /></label>
       <label>排序<select value={ordering} onChange={event => change({ ordering: event.target.value })}><option value="-updated_at">最近更新在前</option><option value="updated_at">较早更新在前</option></select></label>
       <button className="button" type="submit">搜索</button><button className="button secondary" type="button" onClick={resource.retry}><RefreshCw size={14} />刷新草稿</button>
-    </form>
+    </form></details>
     {resource.error ? <div className={styles.error} role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取策展草稿</button></div> : null}
     <p className={styles.count} role="status">{resource.loading ? "正在读取策展草稿…" : page ? `当前条件共 ${page.count} 项，第 ${page.page} 页显示 ${page.results.length} 项。` : "草稿数量未能读取。"}</p>
     <div className="admin-v307-review-table">
-      <header><span>草稿对象</span><span>内容类型</span><span>草稿状态</span><span>更新时间</span><span>操作</span></header>
+      <header><span>标题</span><span>修改了哪一块</span><span>保存时间</span><span>操作</span></header>
       {page?.results.map(item => {
         const destination = safeAdminHref(item.edit_url, "");
-        return <article key={item.id} data-record-id={item.id}><div><strong>{item.title || "未命名草稿"}</strong></div><div>{item.label || item.object_type}</div><div><StatusBadge label={item.state === "changes_pending" ? "有待发布修改" : "尚未发布"} tone="neutral" /></div><div><time>{new Date(item.updated_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></div><div>{item.can_edit && destination ? <Link className="button" href={withAdminReturn(destination, returnTo)}>继续编辑</Link> : <span>{item.can_edit ? "编辑位置待核实" : "当前账户只读"}</span>}</div></article>;
+        return <article key={item.id} data-record-id={item.id} className={selected?.id === item.id ? "selected" : ""}><div><button type="button" className="reference-select-title" aria-pressed={selected?.id === item.id} onClick={() => setSelectedId(item.id)}>{item.title || "未命名草稿"}</button><small>{item.label || "—"}</small></div><div title={item.changed_fields?.join("、")}>{changeSummary(item.changed_fields || [])}</div><div><time>{new Date(item.updated_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</time></div><div>{item.can_edit && destination ? <Link className="button" href={withAdminReturn(destination, returnTo)}>继续编辑</Link> : <span>{item.can_edit ? "编辑位置待核实" : "当前账户只读"}</span>}</div></article>;
       })}
       {page && !page.results.length ? <p className="admin-list-state">当前条件下没有策展草稿。可以调整搜索，或从学者、主题、理论、网站与推荐栏目新建。</p> : null}
     </div>
     {page ? <Pagination className={styles.pagination} label="策展草稿分页" page={page.page} totalPages={page.total_pages} previousHref={adminListHref(pathname, search.toString(), { page: Math.max(1, page.page - 1) })} nextHref={adminListHref(pathname, search.toString(), { page: Math.min(page.total_pages, page.page + 1) })} /> : null}
-  </section>;
+  </div><CurationSelectionPreview key={selected?.id || "empty"} item={selected} returnTo={returnTo}/></section>;
+}
+
+const previewTypes: Record<string, string> = { scholar_profile: "scholar", topic: "topic", knowledge_node: "theory", discipline: "discipline", subdiscipline: "subdiscipline", reading_path: "reading_path" };
+
+export function CurationSelectionPreview({ item, returnTo }: { item?: Pick<CurationDraft, "object_type" | "object_id" | "title" | "label" | "edit_url" | "can_edit">; returnTo: string }) {
+  const type = item && previewTypes[item.object_type];
+  const resource = useApiResource<KnowledgePreviewPayload>(type && item ? `/catalog/admin/knowledge-preview/${type}/${item.object_id}/` : "", getServerSessionCredential());
+  const issue = useApiResource<RecommendationIssue>(item?.object_type==="recommendation_issue" ? `/catalog/admin/recommendation-issues/${item.object_id}/` : "",getServerSessionCredential());
+  const [perspective, setPerspective] = useState<"draft" | "published">("draft");
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const data = resource.data;
+  const surface = data?.perspectives[perspective];
+  const href = perspective === "published" ? data?.preview_routes.published || (issue.data?.public_url?.startsWith("/recommendations/") ? issue.data.public_url : "") || (item?.object_type === "site_content" ? "/about" : "") : type && item ? `/admin/preview/knowledge/${type}/${item.object_id}` : item?.object_type === "recommendation_issue" ? `/admin/recommendations/issues/${item.object_id}/preview` : item?.object_type === "site_content" ? "/admin/about/preview" : "";
+  const frameHref = !type && href ? href.startsWith("/admin/") ? `${href}?embed=1` : href : "";
+  const edit = item && safeAdminHref(item.edit_url, "");
+  return <aside className="selected-work-preview curation-selection-preview" aria-label="选中内容的读者预览">
+    <header><h2>选中内容的读者预览</h2><p>对比修改后的效果，确认无误后继续编辑。</p></header>
+    <div className="selected-preview-tools"><div role="group" aria-label="预览内容">{(["draft", "published"] as const).map(value => <button type="button" key={value} aria-pressed={perspective === value} onClick={() => setPerspective(value)}>{value === "draft" ? "修改后" : "当前线上"}</button>)}</div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div>{href ? <Link href={href} target="_blank"><Maximize2 size={15}/>放大查看</Link> : null}</div>
+    <p className="selected-preview-caption">{item ? `${item.label} › ${item.title}` : "选择待发布的页面修改"}</p>
+    {issue.error ? <p role="alert">{issue.error}<button type="button" onClick={issue.retry}>重新读取文章公开状态</button></p> : null}
+    {resource.error ? <p role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取预览</button></p> : null}
+    <div className={`selected-preview-viewport ${device}`}>
+      {resource.loading ? <p role="status">正在读取已保存内容…</p> : data && surface?.available ? <><PreviewViewport device={device}><div inert><PreviewSurface payload={{ ...data, perspective: surface, active_perspective: perspective }} pageId="overview"/></div></PreviewViewport>{surface.unsupported_preview_fields?.length ? <p role="status">以下内容尚未提供预览：{surface.unsupported_preview_fields.join("、")}</p> : null}</> : frameHref ? <PreviewViewport device={device}><iframe src={frameHref} title={`${item?.title || "选中页面"}预览`} style={{ width: "100%", height: 1100, border: 0 }}/></PreviewViewport> : <p className="empty-state">—</p>}
+    </div>
+    {item?.can_edit && edit ? <footer><Link className="button" href={withAdminReturn(edit, returnTo)}>打开该页面继续编辑</Link></footer> : null}
+  </aside>;
 }

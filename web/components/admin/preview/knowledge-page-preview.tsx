@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 import { useSearchParams } from "next/navigation";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,7 +14,7 @@ import { ScholarSectionPublicView } from "@/components/public/scholar-section-pu
 import { SubdisciplinePublicView } from "@/components/public/subdiscipline-public-view";
 import { TopicPublicView } from "@/components/public/topic-public-view";
 import { TopicSectionPublicView } from "@/components/public/topic-section-public-view";
-import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
+import type { PublishedEvidenceCuration } from "@/lib/api/evidence-curation.types";
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import type { TheorySchool } from "@/lib/data";
@@ -23,6 +24,7 @@ import type { ApiTopic } from "@/lib/api/topics.types";
 import { adminListHref, safeAdminHref } from "@/lib/admin-route-context";
 import type { Discipline, Subdiscipline } from "@/lib/api/taxonomy.types";
 import type { KnowledgeNodeDetail, LocalTheoryGraph, NormalizedTimelineEvent, NormalizedReadingPath, TheoryDisciplinePage } from "@/lib/api/knowledge.types";
+import type { ScholarRelation } from "@/lib/api/scholar-relations.types";
 
 type PreviewPerspective = {
   source: string;
@@ -60,6 +62,7 @@ export type KnowledgePreviewPayload = {
     }>;
   };
   secondary_preview?: {
+    scholar_relations?: ScholarRelation[];
     graph?: LocalTheoryGraph;
     timeline?: NormalizedTimelineEvent[];
     reading_paths?: NormalizedReadingPath[];
@@ -91,7 +94,12 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
-export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload; pageId: string }) {
+export function PreviewSurface({ payload, pageId, evidenceCuration }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration }) {
+  const path = payload.preview_routes?.published || (payload.object_type === "scholar" ? "/scholars" : payload.object_type === "topic" ? "/topics" : "/theories");
+  return <><SiteHeader preview previewPath={path}/><PreviewContent payload={payload} pageId={pageId} evidenceCuration={evidenceCuration}/></>;
+}
+
+function PreviewContent({ payload, pageId, evidenceCuration }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration }) {
   const data = payload.perspective.data;
   if (!data || typeof data !== "object") {
     return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
@@ -113,10 +121,11 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
         return <p className="admin-list-state is-unavailable">学者预览缺少身份或公开路径，已停止渲染并保留草稿。</p>;
       }
       const adapted = adaptApiScholarDetail(item);
+      if (evidenceCuration) adapted.evidenceCuration = evidenceCuration;
       const theorySchools = payload.secondary_preview?.legacy_theory_schools ?? [];
       return pageId && pageId !== "overview"
-        ? <ScholarSectionPublicView data={adapted} schools={theorySchools} section={pageId} slug={item.slug} />
-        : <ScholarPublicView data={adapted} footer={footer} slug={item.slug} theorySchools={theorySchools} />;
+        ? <ScholarSectionPublicView data={adapted} schools={theorySchools} section={pageId} slug={item.slug} relations={payload.secondary_preview?.scholar_relations ?? []}/>
+        : <ScholarPublicView data={adapted} footer={footer} slug={item.slug} theorySchools={theorySchools} relations={payload.secondary_preview?.scholar_relations ?? []}/>;
     }
     case "topic": {
       const raw = data as ApiTopic;
@@ -124,6 +133,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
         return <p className="admin-list-state is-unavailable">主题预览缺少规范身份，已停止渲染并保留草稿。</p>;
       }
       const item = adaptApiTopic(raw);
+      if (evidenceCuration) item.evidenceCuration = evidenceCuration;
       return pageId && pageId !== "overview"
         ? <TopicSectionPublicView topic={item} section={pageId} />
         : <TopicPublicView topic={item} footer={footer} />;
@@ -140,6 +150,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
       }
       const node = {
         ...raw,
+        ...(evidenceCuration ? {evidenceCuration} : {}),
         core_questions: raw.core_questions ?? [],
         basic_propositions: raw.basic_propositions ?? [],
         representative_scholars: raw.representative_scholars ?? [],
@@ -160,7 +171,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
         return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><p className="eyebrow">局部关系浏览</p><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的规范关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
-        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><p className="eyebrow">历史时间轴</p><h1>{node.canonical_name_zh}的发展脉络</h1><p>这里只显示已经审核并关联到该理论的真实时间轴事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
+        return <KnowledgeNodePublicView node={node} timeline={payload.secondary_preview?.timeline ?? []} allPaths={payload.secondary_preview?.reading_paths ?? []} slug={node.slug} footer={footer} section="timeline" />;
       }
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];

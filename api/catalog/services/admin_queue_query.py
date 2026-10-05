@@ -47,6 +47,7 @@ def edition_inventory():
         q_active=_flag(active), q_has_assets=Exists(assets), q_has_upload=Exists(uploads),
         q_pending_upload=Exists(pending), q_failed_upload=Exists(pending.filter(status="failed")),
         q_failed_job=Exists(jobs.filter(status="failed")),
+        q_processing=Exists(jobs.filter(status__in=["pending", "running"])),
         q_open_session=Exists(sessions.filter(status__in=OPEN_STATUSES)),
         q_draft=Exists(drafts),
         q_preparing=Exists(revisions.filter(status="preparing")),

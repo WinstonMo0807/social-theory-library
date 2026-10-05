@@ -263,7 +263,7 @@ function fixturePayload(pathname, query = new URLSearchParams()) {
     count:25,next:null,previous:"?page=1",results:[{id:"path-second-page",slug:"path-second-page",title:"第二页关联阅读路径",introduction:"先筛选该理论再分页。",items:[{id:"path-item",reading_order:1,stage_name:"开始阅读",stage_description:"",node_data:{id:"secondary-page-node",canonical_name_zh:"次级分页测试理论"},work_data:null}]}],
   };
   if (pathname === "/api/catalog/theory-system/timeline/" && query.get("node") === "secondary-page-fixture") return {
-    count:25,next:null,previous:"?page=1",results:[{id:"event-second-page",date_label:"1990",start_year:1990,title:"第二页关联理论事件",description:"保留真实事件入口。"}],
+    count:25,next:null,previous:"?page=1",results:[{id:"event-second-page",date_label:"1990",start_year:1990,title:"第二页关联理论事件",description:"保留真实事件入口。",relations:[],event_type:"publication",source:"",reader_href:null}],
   };
   if (pathname === "/api/catalog/theory-system/overview/") return {
     disciplines: [], browse: {}, reading_paths: [],
@@ -452,7 +452,7 @@ test("renders the three search modes and the editable about page", async () => {
   assert.match(aboutHtml, /从原文出发/);
   assert.match(aboutHtml, /为什么建设这座书库/);
   assert.match(aboutHtml, /资料如何进入书库/);
-  assert.match(aboutHtml, /当前版本/);
+  assert.match(aboutHtml, /<footer>.*?进入书库.*?2\.8\.1.*?<\/footer>/s);
 });
 
 test("discovery server-renders three independent empty channels without fabricated evidence", async () => {
@@ -658,6 +658,7 @@ test("theory secondary pages preserve associated paths and events beyond the fir
     const response=await render(`/theories/nodes/secondary-page-fixture/${section}?page=2`);
     assert.equal(response.status,200);
     const html=await response.text();
+    assert.ok(!html.includes("这部分内容没有正常载入"), renderErrors.join("; "));
     assert.match(html,new RegExp(label));
     const links=Array.from(html.matchAll(/href="([^"]+)"/g),match=>new URL(match[1].replaceAll("&amp;","&"),"http://localhost"));
     assert.ok(links.some(link=>link.pathname===`/theories/nodes/secondary-page-fixture/${section}`&&link.searchParams.get("page")==="1"));

@@ -11,7 +11,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { KnowledgeNodeListItem, NormalizedReadingPath, TheoryDisciplineCompact, TheoryWorkCompact } from "@/lib/api/knowledge.types";
-import { ArchitecturalImage } from "./ui";
 import { ResponsiveMediaImage } from "./responsive-media-image";
 import type { components } from "@/lib/api/generated/schema";
 import { CollectionLink } from "@/components/collection-link";
@@ -39,7 +38,7 @@ export function TheoryBanner({ image, media }: { image?: string; media?: compone
   return image ? (
     <div className="theory-system-banner has-image" style={{ backgroundImage: `url("${image}")` }} />
   ) : (
-    <div className="theory-system-banner"><ArchitecturalImage compact /></div>
+    <div className="theory-system-banner" aria-hidden="true" />
   );
 }
 

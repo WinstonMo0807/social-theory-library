@@ -10,6 +10,28 @@ from .test_publication_invariants_v305 import published_edition
 pytestmark = pytest.mark.django_db
 
 
+def test_home_preview_renders_public_snapshot_and_publishes_the_signed_selection(api_client, admin_user):
+    edition, _ = published_edition("已公开的推荐题名")
+    edition.work.title = "不可公开的题名草稿"
+    edition.work.save(update_fields=["title"])
+    policy = RecommendationPolicy.objects.get(placement="home_random")
+    before = policy.snapshots.count()
+    api_client.force_authenticate(admin_user)
+    preview = api_client.post("/api/catalog/admin/recommendations/home_random/preview/", {
+        "items": [{"target_type": "work", "id": str(edition.work_id)}],
+    }, format="json")
+    assert preview.status_code == 200
+    assert preview.data["items"][0]["target"]["title"] == "已公开的推荐题名"
+    assert policy.snapshots.count() == before
+    publish = api_client.post("/api/catalog/admin/recommendations/home_random/refresh/", {
+        **command(policy), "preview_token": preview.data["preview_token"],
+        "items": [{"target_type": "work", "id": str(uuid4())}],
+    }, format="json")
+    assert publish.status_code == 200
+    assert publish.data["publication_effective"] is True
+    assert [row["target"]["id"] for row in publish.data["current"]["items"]] == [str(edition.work_id)]
+
+
 def command(policy, **extra):
     policy.refresh_from_db()
     current = policy.snapshots.filter(is_current=True).first()

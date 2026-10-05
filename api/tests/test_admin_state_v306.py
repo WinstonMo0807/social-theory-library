@@ -35,6 +35,29 @@ def upload(admin, edition=None, *, failed=False):
                                      status="failed" if failed else "ready", error_code="validation_failed" if failed else "")
 
 
+def test_reference_lists_keep_saved_edition_metadata_and_public_capabilities(api_client, admin_user):
+    from catalog.models import Contribution, Person
+
+    edition = _manual_ready(admin_user)
+    edition.publisher = "真实出版社"
+    edition.publication_year = 2024
+    edition.save(update_fields=["publisher", "publication_year"])
+    candidate = Person.objects.create(preferred_name="尚未确认的责任者")
+    Contribution.objects.create(edition=edition, person=candidate, role="author", approved=False)
+    other = Edition.objects.create(work=edition.work, publisher="另一版本出版社", publication_year=1990)
+    api_client.force_authenticate(admin_user)
+    listed = api_client.get(LIBRARY, {"q": edition.work.title}).data["results"][0]
+    queued = api_client.get(QUEUE, {"q": edition.work.title}).data["results"]
+    queue_row = next(row for row in queued if row["edition_id"] == str(edition.pk))
+    for row in (listed, queue_row):
+        assert row["publisher"] == "真实出版社"
+        assert row["publication_year"] == 2024
+        assert row["contributors"] == ["人工确认作者"]
+        assert row["availability"]["edition_id"] == str(edition.pk)
+        assert all(not cap["public_ready"] for cap in row["availability"]["capabilities"])
+    assert next(row for row in queued if row["edition_id"] == str(other.pk))["publisher"] == "另一版本出版社"
+
+
 @pytest.mark.parametrize("invalid", ["missing", "foreign", "superseded", "not_ready"])
 def test_A01_A02_all_admin_consumers_use_actual_active_revision(api_client, admin_user, invalid):
     edition, revision = published_edition(f"状态一致-{invalid}")
@@ -239,6 +262,28 @@ def test_A11_library_traversal_filter_sort_and_edition_scope(api_client, admin_u
     assert len(all_ids) == len(set(all_ids)) == 43
     assert set(all_ids) == ids
     assert api_client.get(LIBRARY, {"view": "editions", "work_id": next(iter(ids))}).data["count"] == 1
+
+
+def test_reference_library_filters_use_selected_edition_and_current_jobs(api_client, admin_user):
+    from ingestion.models import ProcessingJob
+
+    primary, _ = published_edition("参考图筛选")
+    other = Edition.objects.create(work=primary.work, is_primary=False, publication_mode="bibliographic")
+    stale_work = Work.objects.create(title="参考图筛选旧状态")
+    stale = Edition.objects.create(work=stale_work, state="published", publication_mode="bibliographic")
+    job = ProcessingJob.objects.create(edition=other, job_type="ocr", status="running")
+    api_client.force_authenticate(admin_user)
+    assert api_client.get(LIBRARY, {"q":"参考图筛选", "publication_state":"published"}).data["count"] == 1
+    assert api_client.get(LIBRARY, {"q":"参考图筛选", "progress":"processing"}).data["count"] == 0
+    editions = api_client.get(LIBRARY, {"view":"editions", "q":"参考图筛选", "publication_state":"unpublished", "progress":"processing"})
+    assert [row["id"] for row in editions.data["results"]] == [str(other.pk)]
+    assert set(row["id"] for row in api_client.get(LIBRARY, {"view":"editions", "q":"参考图筛选", "publication_state":"unpublished"}).data["results"]) == {str(other.pk),str(stale.pk)}
+    ProcessingJob.objects.create(edition=other, job_type="ocr", status="succeeded")
+    assert api_client.get(LIBRARY, {"view":"editions", "q":"参考图筛选", "progress":"processing"}).data["count"] == 0
+    job.refresh_from_db()
+    assert job.status == "running"  # Read filters never rewrite historical tasks.
+    assert api_client.get(LIBRARY, {"progress":"invented"}).status_code == 400
+    assert api_client.get(LIBRARY, {"publication_state":"invented"}).status_code == 400
 
 
 def test_A12_publication_scope_paginates_beyond_upload_sources(api_client, admin_user):

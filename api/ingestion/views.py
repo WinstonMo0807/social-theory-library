@@ -2747,7 +2747,7 @@ class ProcessingCenterView(APIView):
             edition = edition_for(request.query_params.get("ocr_edition_id"))
             if request.query_params.get("work_id") and str(edition.work_id) != request.query_params["work_id"]:
                 return Response({"detail": "这个出版版本不属于所选馆藏，请重新选择。"}, status=400)
-            response = Response(ocr_context(edition, request.user, page=request.query_params.get("ocr_page", 1)))
+            response = Response(ocr_context(edition, request.user, page=request.query_params.get("ocr_page", 1), preview_page=request.query_params.get("ocr_preview_page")))
             response["Cache-Control"] = "no-store"
             return response
         from .services.processing_center import page_number, processing_task_page

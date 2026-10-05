@@ -707,6 +707,8 @@ class AdminRecommendationPreviewView(APIView):
     @transaction.atomic
     def post(self, request, placement):
         from .services.recommendations import select_recommendation_targets, _target_key
+        from .serializers import WorkCardSerializer, ScholarProfileSerializer, TopicSerializer
+        from .services.scoped_search import public_work_queryset
 
         policy = get_object_or_404(RecommendationPolicy.objects.select_for_update(), placement=placement)
         raw = request.data.get("items")
@@ -725,12 +727,23 @@ class AdminRecommendationPreviewView(APIView):
         targets, _seed, _manual = select_recommendation_targets(policy, selected_targets=selected)
         current = policy.snapshots.filter(is_current=True).first()
         items = [{"target_type": _target_key(target)[0], "id": str(target.pk)} for target in targets]
+        def preview_target(target):
+            # Use the same public serializers as the home page. A signed list
+            # identifies the selection; its display data is never published.
+            if isinstance(target, Work):
+                public_work = public_work_queryset().filter(pk=target.pk).first()
+                return WorkCardSerializer(public_work, context={"request": request}).data if public_work else None
+            if isinstance(target, ScholarProfile):
+                return ScholarProfileSerializer(target, context={"request": request}).data
+            if isinstance(target, Topic):
+                return TopicSerializer(target, context={"request": request}).data
+            return None
         payload = {"placement": placement, "actor": str(request.user.pk), "items": items,
                    "expected_updated_at": policy.updated_at.isoformat(), "expected_snapshot_id": str(current.pk) if current else None,
                    "source": "manual" if raw is not None else "automatic"}
         return Response({**payload, "preview_token": signing.dumps(payload, salt="recommendation-preview-v306", compress=True),
                          "expected_updated_at": RecommendationPolicySerializer().fields["updated_at"].to_representation(policy.updated_at),
-                         "items": [{**row, "name": getattr(target, "title", getattr(target, "name", "")) or (target.person.preferred_name if isinstance(target, ScholarProfile) else "未命名内容")} for row, target in zip(items, targets)],
+                         "items": [{**row, "name": getattr(target, "title", getattr(target, "name", "")) or (target.person.preferred_name if isinstance(target, ScholarProfile) else "未命名内容"), "target": preview_target(target)} for row, target in zip(items, targets)],
                          "expires_in_seconds": 900, "public_unchanged": True}, headers={"Cache-Control": "private, no-store"})
 
 

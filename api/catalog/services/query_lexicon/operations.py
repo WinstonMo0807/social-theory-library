@@ -47,13 +47,17 @@ def _entry_label(row: QueryLexiconEntry) -> str:
     return getattr(target, "name", str(target))
 
 
-def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: int = 60) -> dict:
+def query_lexicon_workspace(*, query: str = "", entity_type: str = "", entity_id=None, limit: int = 60, offset: int = 0) -> dict:
     try:
         limit = max(1, min(int(limit), 200))
     except (TypeError, ValueError):
         limit = 60
+    try:
+        offset = max(0, int(offset))
+    except (TypeError, ValueError):
+        offset = 0
     state = QueryLexiconState.objects.select_related("active_generation").first()
-    if state is None:
+    if state is None or state.active_generation_id is None:
         return {
             "initialized": False,
             "revision": None,
@@ -63,6 +67,7 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
             "admin_resolvable_entries": 0,
             "entities": [],
             "terms": [],
+            "term_count": 0, "offset": offset, "limit": limit, "has_more": False,
             "pending_events": 0,
             "failed_events": 0,
             "last_reconciliation": None,
@@ -71,11 +76,14 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
     entries = QueryLexiconEntry.objects.filter(generation=generation)
     if entity_type:
         entries = entries.filter(entity_type=entity_type)
+    if entity_id:
+        entries = entries.filter(entity_id=entity_id)
     query = str(query or "").strip()
     if query:
         entries = entries.filter(Q(term__icontains=query) | Q(normalized_term__icontains=query))
     rows = []
-    for row in entries.order_by("entity_type", "normalized_term")[:limit]:
+    term_count = entries.count()
+    for row in entries.order_by("entity_type", "normalized_term", "pk")[offset:offset + limit]:
         rows.append(
             {
                 "id": str(row.id),
@@ -126,10 +134,11 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
             "built_at": generation.built_at,
         },
         "entries": generation.entry_count,
-        "public_active_entries": entries.filter(public_active=True).count() if not query and not entity_type else QueryLexiconEntry.objects.filter(generation=generation, public_active=True).count(),
-        "admin_resolvable_entries": entries.filter(admin_resolvable=True).count() if not query and not entity_type else QueryLexiconEntry.objects.filter(generation=generation, admin_resolvable=True).count(),
+        "public_active_entries": QueryLexiconEntry.objects.filter(generation=generation, public_active=True).count(),
+        "admin_resolvable_entries": QueryLexiconEntry.objects.filter(generation=generation, admin_resolvable=True).count(),
         "entities": by_entity,
         "terms": rows,
+        "term_count": term_count, "offset": offset, "limit": limit, "has_more": offset + len(rows) < term_count,
         "pending_events": pending_events,
         "failed_events": failed_events,
         "last_reconciliation": {

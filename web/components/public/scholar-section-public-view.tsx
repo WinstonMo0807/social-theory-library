@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { KnowledgeMap } from "@/components/knowledge-map";
-import { BookCard, SectionHeading } from "@/components/ui";
+import { BookCard, SectionHeading, ScholarPortrait } from "@/components/ui";
 import type { TheorySchool } from "@/lib/data";
 import type { ScholarDetailData } from "@/lib/public-data-adapters";
 import type { ReactNode } from "react";
 import type { ScholarRelation } from "@/lib/api/scholar-relations.types";
 import { ScholarRelationNetwork } from "@/components/scholar-relation-network";
 import { EvidenceCurationView } from "@/components/public/evidence-curation-view";
+import { relationArrow, scholarRelationLabels } from "@/lib/api/scholar-relations.types";
 
 export const scholarSectionTitles: Record<string, string> = {
   biography: "完整传记",
@@ -66,7 +67,7 @@ export function ScholarSectionPublicView({
   return (
     <main className="page-shell secondary-detail-page v307-knowledge knowledge-section-page" data-public-page={section}>
       <Link className="back-link" href={`/scholars/${slug}`}><ArrowLeft size={15} />返回{scholar.name}主页</Link>
-      <header><p className="eyebrow">学者档案</p><h1>{scholarSectionTitles[section]}</h1><p>{scholar.name} · {scholar.years}</p></header>
+      {section === "network" ? <header className="scholar-network-reference-heading"><ScholarPortrait scholar={scholar} large/><div><h1>{scholar.name}</h1><p>{scholar.originalName}</p><p>{scholar.years}</p><p>{data.shortDescription}</p><nav><Link href={`/scholars/${slug}`}>概述</Link><Link href={`/scholars/${slug}/works`}>主要作品</Link><span aria-current="page">学术关系</span></nav></div></header> : <header><p className="eyebrow">学者档案</p><h1>{scholarSectionTitles[section]}</h1><p>{scholar.name} · {scholar.years}</p></header>}
       {section === "evidence" ? data.evidenceCuration?.configured ? <EvidenceCurationView items={data.evidenceCuration.items} /> : <CuratedClaimSections groups={data.curatedClaims} /> : null}
       {section === "biography" ? <section className="panel longform-panel" data-module-id="scholar-biography"><p>{scholar.biography}</p></section> : null}
       {section === "timeline" ? (
@@ -94,12 +95,13 @@ export function ScholarSectionPublicView({
       ) : null}
       {section === "concept-map" ? <section className="panel" data-module-id="scholar-concept-map" data-edit-section="concept-map"><KnowledgeMap entries={curated.conceptMap} emptyText="概念地图尚待管理员编辑。" /></section> : null}
       {section === "network" ? (
-        <section data-module-id="scholar-network"><ScholarRelationNetwork key={selectedRelationId||"all"} relations={relations} centerScholarId={data.profileId} initialSelectedId={selectedRelationId}/>{relationPagination}
+        <section data-module-id="scholar-network"><h2>学术关系</h2><div className="scholar-network-reference-cards">{relations.map(row=><article key={row.id} data-relation-id={row.id} data-edit-section="details"><header><strong>{row.source_name}</strong><div><small>{scholarRelationLabels[row.relation_type]}</small><span>{relationArrow(row.direction)}</span></div><strong>{row.target_name}</strong></header><p>{row.summary}</p><p className="scholar-network-source"><strong>来源：</strong>{row.source}</p></article>)}</div>{!relations.length ? <p className="empty-state">尚无已确认的学术关系。</p> : <details><summary>查看关系图</summary><ScholarRelationNetwork key={selectedRelationId||"all"} relations={relations} centerScholarId={data.profileId} initialSelectedId={selectedRelationId}/></details>}{relationPagination}
         {curated.network.length ? <div className="panel secondary-link-list"><h2>历史关联阅读</h2>
           {curated.network.map((item) => <Link href={`/scholars/${item.scholar.slug}`} key={item.scholar.id}><span className="tiny-portrait" /><p><strong>{item.scholar.name}</strong><small>{item.relation} · {item.source}</small></p><ArrowRight size={15} /></Link>)}
         </div> : null}
         </section>
       ) : null}
+      {section === "network" && essentialWorks.length ? <section className="scholar-network-related"><h2>相关著作</h2><div className="four-book-grid">{essentialWorks.map(work=><BookCard work={work} key={work.id} dense/>)}</div></section> : null}
       {section === "theories" ? (
         <section className="panel secondary-link-list" data-module-id="scholar-theories">
           {relatedSchools.map((school) => <Link href={school.href} key={school.slug}><span className="theory-symbol">{school.symbol}</span><p><strong>{school.name}</strong><small>{school.description}</small></p><ArrowRight size={15} /></Link>)}

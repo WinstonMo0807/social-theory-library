@@ -14,7 +14,10 @@ test("candidate review uses one evidence/status shell for both candidate domains
   assert.match(source, /candidate-review/);
   assert.match(source, /evidence_records/);
   assert.match(source, /candidate-review\/\$\{candidate\.review_kind\}/);
-  assert.match(source, /<CandidateDecisionBar/);
+  assert.match(source, /resolveCandidateActionDescriptors\(decisionCandidate\(candidate\)\)/);
+  assert.match(source, /buildCandidateActionBody\(descriptor, editedValue, fallbackBody\)/);
+  assert.match(source, /if \(actionPending\.current \|\| descriptor\.disabled\) return false/);
+  assert.match(source, /const disabled=busy \|\| candidate\.status!=="pending"/);
   assert.match(source, /<EvidenceEnvelopeCard/);
   assert.match(decisions, /resolveCandidateActionDescriptors/);
   assert.match(evidence, /normalizeEvidenceEnvelope/);

@@ -34,6 +34,7 @@ from catalog.models import (
     ReadingPathCandidate,
     RelationReviewStatus,
     ScholarProfile,
+    ScholarRelation,
     Subdiscipline,
     TheorySchool,
     TheoryTimelineEvent,
@@ -3315,13 +3316,23 @@ def _theory_secondary_preview(
     }
 
 
-def _scholar_secondary_preview() -> dict[str, Any]:
-    """Return the published legacy TheorySchool fallback used by public pages."""
+def _scholar_secondary_preview(*, object_id: str) -> dict[str, Any]:
+    """Use the same published relationships and endpoint visibility as public pages."""
+    from catalog.services.scoped_search import public_scholar_queryset
+    from catalog.services.shared_curation import relation_payload
+
+    public = public_scholar_queryset().values("pk")
+    relations = ScholarRelation.objects.filter(
+        status="published", active_revision__status="published",
+        source_scholar_id__in=public, target_scholar_id__in=public,
+    ).filter(Q(source_scholar_id=object_id) | Q(target_scholar_id=object_id))
 
     rows = TheorySchool.objects.filter(
         editorial_status=KnowledgePublicationStatus.PUBLISHED,
     ).order_by("name")[:50]
     return {
+        "scholar_relations": [relation_payload(row, public=True) for row in
+                              relations.select_related("active_revision").order_by("-updated_at", "pk")[:100]],
         "legacy_theory_schools": [
             {
                 "slug": row.slug,
@@ -3384,7 +3395,7 @@ def knowledge_object_preview_payload(
     elif selection["object_type"] == "scholar" and isinstance(
         active_payload.get("data"), dict
     ):
-        payload["secondary_preview"] = _scholar_secondary_preview()
+        payload["secondary_preview"] = _scholar_secondary_preview(object_id=selection["id"])
     return payload
 
 

@@ -7,6 +7,8 @@ import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { useActionGuard } from "@/lib/use-action-guard";
 import type { CatalogPublication } from "@/lib/api/admin-collections";
+import { SelectedWorkPreview } from "@/components/admin/preview/selected-work-preview";
+import { publicationPublicHref } from "@/lib/api/admin-collections";
 import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
 import { RecycleControl } from "@/components/admin/recycle-control";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -354,6 +356,7 @@ export function AdminUpload() {
   const recentBatches = useApiResource<{results:RecentBatch[]}>("/ingestion/batches/?page_size=5", getServerSessionCredential(), result?.batch.id || "");
   const [error, setError] = useState("");
   const [ingestionItems, setIngestionItems] = useState<IngestionItem[]>([]);
+  const [selectedUploadId, setSelectedUploadId] = useState("");
   const [ingestionError, setIngestionError] = useState("");
   const [retryingItem, setRetryingItem] = useState("");
   const [stagingSessions, setStagingSessions] = useState<R2StagingSession[]>([]);
@@ -1010,9 +1013,11 @@ export function AdminUpload() {
     }
   }
 
+  const selectedUpload = selectedUploadId ? ingestionItems.find(item=>item.id===selectedUploadId) : ingestionItems.find(item=>item.edition);
+  const readyUploads = ingestionItems.filter(item=>item.edition);
   return (
-    <div className="admin-page upload-page">
-      <header className="admin-page-title"><div><p>管理后台 / 上传</p><h1>上传</h1><span>一次选择最多 5 个 PDF，每个文件独立校验、重试，再进入馆藏工作页。</span></div></header>
+    <div className="admin-page upload-page upload-reference">
+      <header className="admin-page-title"><div><h1>上传PDF</h1><span>上传馆藏的PDF文件，随后填写书目信息并完成发布。</span></div><nav className="knowledge-reference-steps" aria-label="上传与编目步骤">{["选择PDF","填写书目","作者与分类","预览发布"].map((label,index)=><span key={label} aria-current={index===0 ? "step" : undefined}><b>{index+1}</b><strong>{label}</strong></span>)}</nav></header><div className="upload-reference-columns"><div className="upload-reference-files"><h2>1. 选择要上传的PDF文件</h2><p>最多5份文件。上传后仅保存文件，接下来填写书目信息。</p>
       <details className="upload-policy-panel admin-panel" aria-labelledby="upload-policy-title">
         <summary id="upload-policy-title">本批处理方式与访问权限</summary>
         <header>
@@ -1116,7 +1121,7 @@ export function AdminUpload() {
         aria-label="拖入 PDF 和配套元数据"
       >
         <Upload size={31} />
-        <h2>拖拽 PDF 文件到此处</h2>
+        <h3>拖拽PDF文件到此处</h3>
         <p>每批最多 5 个 PDF；也可附上同名 RIS、BibTeX 或 JSON 等元数据。</p>
         <small>配套文件只生成待审候选，不会直接覆盖馆藏。</small>
         <button className="button" type="button" onClick={() => input.current?.click()}>选择 PDF 文件</button>
@@ -1278,7 +1283,7 @@ export function AdminUpload() {
               return (
                 <article className={`ingestion-card status-${stagingOwnsStatus ? stagingStatus : item.status}`} key={item.id}>
                   <header>
-                    <div><FileText size={18} /><span><strong>{title}</strong><small>{item.source_filename}</small></span></div>
+                    <div><FileText size={18} /><span><button type="button" className="reference-select-title" aria-pressed={selectedUpload?.id===item.id} onClick={()=>setSelectedUploadId(item.id)}>{title}</button><small>{item.source_filename}</small></span></div>
                     <b>{primaryStatus}</b>
                   </header>
                   {stagingOwnsStatus ? (
@@ -1293,7 +1298,7 @@ export function AdminUpload() {
                       <b>{item.stage_progress}%</b>
                     </div>
                   )}
-                  <dl>
+                  <details><summary>处理信息</summary><dl>
                     <UploadPublicationResult editionId={item.edition} publication={item.review_data?.publication} />
                     <div><dt>文献类型</dt><dd>{displayMetadataValue(item.review_data?.document_type ?? metadata.document_type)}</dd></div>
                     <div><dt>作者</dt><dd>{displayMetadataValue(item.review_data?.authors ?? metadata.authors)}</dd></div>
@@ -1317,7 +1322,7 @@ export function AdminUpload() {
                       <span className={candidateCounts[field] ? "available" : ""} key={field}>{label}<b>{candidateCounts[field] || 0}</b></span>
                     ))}
                   </div>
-                  {visibleErrorMessage ? <ProcessingError code={visibleErrorCode || ""} message={visibleErrorMessage} /> : null}
+                  </details>{visibleErrorMessage ? <ProcessingError code={visibleErrorCode || ""} message={visibleErrorMessage} /> : null}
                   {!item.edition && !visibleErrorMessage && !stagingOwnsStatus ? <p className="ingestion-item-note">文件已安全保存。书目记录建立后，可直接进入候选复核；等待期间无需重复点击。</p> : null}
                   <footer>
                     <RecycleControl kind="upload" id={item.id} name={item.source_filename} onDeleted={() => { setIngestionItems((current) => current.filter((row) => row.id !== item.id)); setResult((current) => current ? { ...current, accepted: current.accepted.filter((id) => id !== item.id) } : current); recentBatches.retry(); }} />
@@ -1333,13 +1338,12 @@ export function AdminUpload() {
         </section>
       ) : null}
 
-      <section className="pipeline-explainer admin-panel">
-        <header><h2>处理步骤</h2></header>
-        {["上传与文件校验", "填写书目与选择封面", "关联作者与分类", "预览并明确发布"].map((step, index) => (
-          <div key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>
-        ))}
-      </section>
+      <aside className="upload-reference-note">上传完成后，可以先整理已就绪的书目，识别等任务在后台继续，无需等待同批其他文件。</aside>
+      <footer className="upload-reference-next">{selectedUpload?.edition || readyUploads[0]?.edition ? <Link className="button" href={`/admin/intake/${selectedUpload?.edition ? selectedUpload.id : readyUploads[0].id}#bibliography`}>下一步：填写书目（{readyUploads.length}本已就绪） →</Link> : <button type="button" className="button" disabled>下一步：填写书目</button>}</footer>
+      </div><SelectedWorkPreview editionId={selectedUpload?.edition} title={selectedUpload?.review_data?.title || selectedUpload?.source_filename} publicHref={publicationPublicHref(selectedUpload?.review_data?.publication)}/></div>
+      <details className="upload-reference-history"><summary>最近上传批次</summary>
       <section className="upload-recent-batches admin-panel"><header><div><h2>最近上传批次</h2><p>历史文件继续保留在原馆藏工作页；清理只移除上传队列记录，不删除已建立的馆藏。</p></div><button type="button" className="button secondary" onClick={recentBatches.retry}>刷新批次</button></header>{recentBatches.error ? <p role="alert">{recentBatches.error}</p> : null}<div className="admin-v307-table-scroll"><table><thead><tr><th>批次</th><th>上传时间</th><th>文件数量</th><th>处理结果</th><th>操作</th></tr></thead><tbody>{recentBatches.data?.results.slice(0,5).map(batch=><tr key={batch.id}><td><strong>{batch.label || `上传批次 ${batch.id.slice(0,8)}`}</strong></td><td>{new Date(batch.created_at).toLocaleString("zh-CN")}</td><td>{batch.items.length} / {batch.expected_count}</td><td>{batch.completed_count} 项完成 · {batch.failed_count} 项失败</td><td><details><summary>查看批次文件</summary><ul>{batch.items.map(item=><li key={item.id}><Link href={`/admin/intake/${item.id}#file`}>{item.source_filename || "打开文件工作页"}</Link></li>)}</ul>{!batch.items.length ? <p>批次尚未收到文件。</p> : null}</details><BatchClearControl batch={batch} onDeleted={recentBatches.retry} /></td></tr>)}</tbody></table></div>{recentBatches.loading ? <p role="status">正在读取最近批次…</p> : recentBatches.data && !recentBatches.data.results.length ? <p className="admin-list-state">尚无上传批次。</p> : null}</section>
+      </details>
     </div>
   );
 }

@@ -1,2 +1,2 @@
-import { DistributionAdmin } from "@/components/admin-sections";
-export default function Page() { return <DistributionAdmin />; }
+import { FileStorageAdmin } from "@/components/admin/storage-backups";
+export default function Page() { return <FileStorageAdmin />; }

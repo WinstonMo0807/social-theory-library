@@ -17,6 +17,37 @@ from reading.models import ReadingList
 pytestmark = pytest.mark.django_db
 
 
+def test_admin_calendar_filters_saved_dates_with_pagination_and_public_snapshot(api_client, admin_user, monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    monkeypatch.setattr(timezone, "now", lambda: datetime(2026, 10, 4, 12, tzinfo=ZoneInfo("Asia/Hong_Kong")))
+    day = "2026-10-04"
+    selected = [service.create_issue({**issue_data(), "title": f"当天 {index}", "display_from": f"{day}T08:00:00+08:00"}, admin_user) for index in range(14)]
+    service.create_issue({**issue_data(), "title": "未来", "display_from": "2026-10-05T00:00:00+08:00"}, admin_user)
+    previous = service.create_issue({**issue_data(), "title": "正式旧稿", "display_from": "2026-10-03T23:59:59+08:00"}, admin_user)
+    service.publish_issue(previous.pk, service.issue_payload(previous)["edit_version"], admin_user)
+    service.save_issue(previous.pk, {**service.issue_payload(previous), "title": "改期草稿", "display_from": "2026-10-05T08:00:00+08:00"}, admin_user)
+    api_client.force_authenticate(admin_user)
+    first = api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=day")
+    assert first.status_code == 200 and first.data["count"] == 14
+    assert len(first.data["results"]) == 12 and first.data["next"]
+    second = api_client.get(first.data["next"])
+    assert len(second.data["results"]) == 2
+    assert {row["id"] for row in first.data["results"] + second.data["results"]} == {str(row.pk) for row in selected}
+    upcoming = api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=upcoming")
+    assert upcoming.data["count"] == 2
+    assert {row["title"] for row in upcoming.data["results"]} == {"未来", "改期草稿"}
+    upcoming_by_title = {row["title"]: row for row in upcoming.data["results"]}
+    assert upcoming_by_title["未来"]["public_url"] == ""
+    assert upcoming_by_title["改期草稿"]["public_url"] == f"/recommendations/{previous.slug}"
+    published = api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=published")
+    assert published.data["count"] == 1 and published.data["results"][0]["title"] == "正式旧稿"
+    assert api_client.get("/api/catalog/admin/recommendation-issues/?day=2026-02-30").status_code == 400
+    assert api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=invalid").status_code == 400
+    api_client.force_authenticate(None)
+    assert api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}").status_code in (401, 403)
+
+
 def test_admin_issue_summary_uses_whole_inventory_and_approved_schedule(api_client, admin_user):
     for index in range(14):
         service.create_issue({"title": f"未发布 {index}"}, admin_user)
@@ -35,6 +66,8 @@ def test_admin_issue_summary_uses_whole_inventory_and_approved_schedule(api_clie
     assert response.data["summary"] == {"total": 19, "published": 1, "drafts": 15, "scheduled": 4}
     assert response.data["current"]["id"] == str(live.pk)
     assert [row["title"] for row in response.data["upcoming"]] == ["排期 0", "排期 1", "排期 2"]
+    assert all(row["public_url"] == "" for row in response.data["upcoming"])
+    assert response.data["current"]["public_url"] == f"/recommendations/{live.slug}"
     public = api_client.get("/api/catalog/recommendation-issues/").data
     assert "summary" not in public and "upcoming" not in public
 

@@ -8,29 +8,48 @@ import { normalizeEvidenceEnvelope } from "../components/admin/research/evidence
 
 test("user administration exposes only Reader Editor and Administrator roles", async () => {
   const [sections, shell] = await Promise.all([
-    readFile(new URL("../components/admin-sections.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin/users-reference.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(sections, /<option value="reader">读者<\/option>/);
-  assert.match(sections, /<option value="editor">编辑<\/option>/);
-  assert.match(sections, /<option value="admin">管理员<\/option>/);
+  assert.match(sections, /<option value="editor">内容编辑<\/option>/);
+  assert.match(sections, /<option value="admin">系统管理员<\/option>/);
   assert.doesNotMatch(sections, /<option value="reviewer">/);
   assert.doesNotMatch(shell, /user\.role === "reviewer" \? "审核者"/);
-  assert.match(sections, /只有 System Owner 可以授予或撤销 Administrator/);
+  assert.match(sections, /hasAdminCapability\(actor, "can_manage_roles"\)/);
+  assert.match(sections, /canManageRoles && !selected\.is_library_owner/);
+  assert.match(sections, /只有系统所有者可以修改用户角色/);
 });
 
-test("admin footer uses the shared 3.0.7 cataloging version", async () => {
+test("admin footer uses the shared 3.0.9.1 cataloging version", async () => {
   const [shell, version] = await Promise.all([
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/version.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(version, /WEB_APP_VERSION = "3\.0\.7"/);
-  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.7 馆藏管理与公开发布"/);
+  assert.match(version, /WEB_APP_VERSION = "3\.0\.9\.1"/);
+  assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.9\.1 馆藏管理与观点检索"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
-  assert.match(shell, /<span>\{ADMIN_VERSION_LABEL\}<\/span>/);
+  assert.match(shell, /className="admin-version">\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
+});
+
+test("storage and backup pages keep real API boundaries visible", async () => {
+  const [storagePage, backupPage, component] = await Promise.all([
+    readFile(new URL("../app/admin/storage/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/backups/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/admin/storage-backups.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(storagePage, /FileStorageAdmin/);
+  assert.match(backupPage, /BackupRestoreAdmin/);
+  assert.match(component, /\/catalog\/admin\/system-status\//);
+  assert.match(component, /\/ingestion\/system-health\//);
+  assert.match(component, /\/ingestion\/items\/\?page_size=5&ordering=-created_at/);
+  assert.match(component, /\/distribution\/backups\//);
+  assert.match(component, /恢复执行暂未接入/);
+  assert.match(component, /尚未提供 NAS 配置保存接口/);
 });
 
 test("hybrid search weight copy preserves the semantic_ratio API contract", async () => {
@@ -84,7 +103,9 @@ test("semantic administration exposes a real evaluation workflow and no fake rer
   assert.match(indexSource, /馆内检索评估/);
   assert.match(indexSource, /mode: "dry_run"/);
   assert.match(indexSource, /mode: "enqueue"/);
-  assert.match(indexSource, /至少要把一个结果标为具有证据价值或直接回应/);
+  assert.doesNotMatch(indexSource, /if \(!judgments.some/);
+  assert.match(indexSource, /不相关结果可以全部保存/);
+  assert.match(indexSource, /value:null,label:"待判断"/);
   assert.match(indexSource, /不会切换或删除任何索引版本/);
   assert.match(indexSource, /Recall@20/);
   assert.match(indexSource, /nDCG@10/);
@@ -115,13 +136,15 @@ test("semantic admin distinguishes loading, unverified model state and server-co
   assert.match(settingsSource, /if \(!token \|\| !semanticRuntimeReady\)/);
 });
 
-test("admin navigation uses the thirteen approved entries and only real routes", async () => {
+test("admin navigation uses the nine reference groups and real routes", async () => {
   const source=await readFile(new URL("../components/admin-shell.tsx",import.meta.url),"utf8");
   const navigation=source.slice(source.indexOf("const navigation = ["),source.indexOf("const routeCapabilities"));
-  const routes=[...navigation.matchAll(/\["(\/admin[^"]*)",\s*[A-Za-z]+,/g)].map(match=>match[1]);
-  assert.deepEqual(routes,["/admin","/admin/uploads","/admin/review","/admin/theories","/admin/scholars","/admin/topics","/admin/recommendations","/admin/about","/admin/processing","/admin/storage","/admin/backups","/admin/analytics","/admin/users"]);
-  assert.equal(new Set(routes).size,13);
-  assert.doesNotMatch(navigation,/\/admin\/(?:knowledge|theory-timeline|people|settings|media)"/);
+  const routes=[...navigation.matchAll(/primary: "(\/admin[^"]*)"/g)].map(match=>match[1]);
+  assert.deepEqual(routes,["/admin","/admin/uploads","/admin/theories","/admin/scholars","/admin/topics","/admin/recommendations","/admin/about","/admin/processing","/admin/storage"]);
+  assert.equal(new Set(routes).size,9);
+  assert.match(navigation,/\/admin\/scholars\/new/);
+  assert.match(navigation,/surface=documents/);
+  assert.match(navigation,/surface=research-sources/);
   await Promise.all(routes.map(route=>access(new URL(route === "/admin" ? "../app/admin/page.tsx" : `../app${route}/page.tsx`,import.meta.url))));
 });
 
@@ -204,7 +227,8 @@ test("admin-only navigation permissions remain explicit after regrouping", async
     "/admin/backups",
     "/admin/settings",
   ]);
-  assert.match(source, /user\.role === "admin" \|\| !administratorOnlyRoutes\.has\(href\.split/);
+  assert.match(source, /user\.role === "admin" \|\| !Array\.from\(administratorOnlyRoutes\)\.some/);
+  assert.match(source, /section\.children\.some\(\(\[href\]\) => canViewRoute\(href\)\)/);
   assert.match(source, /"\/admin\/processing": \["can_view_system_status"\]/);
   assert.match(source, /"\/admin\/query-lexicon": \["can_view_query_lexicon"\]/);
   assert.match(source, /"\/admin\/semantic-index": \["can_view_semantic_index"\]/);
@@ -320,16 +344,16 @@ test("scholar summary and full biography remain distinct on the public profile",
   assert.match(view,/href\("biography"\)/);
 });
 
-test("admin primitives are integrated without fixed-width dashboard overflow", async () => {
+test("dashboard uses real selected-record preview and retains responsive shared controls", async () => {
   const [dashboard, styles] = await Promise.all([
     readFile(new URL("../components/admin-dashboard.tsx", import.meta.url), "utf8"),
     readStyleSource(),
   ]);
 
-  assert.match(dashboard, /import \{ PageHeader, StatusBadge \} from "\.\/admin-ui"/);
-  assert.match(dashboard, /<PageHeader/);
-  assert.match(dashboard, /<StatusBadge/);
-  assert.match(dashboard, /尚无上传记录/);
+  assert.match(dashboard, /<SelectedWorkPreview/);
+  assert.match(dashboard, /editionId=\{selected\?\.edition_id\}/);
+  assert.match(dashboard, /当前没有未完成的馆藏/);
+  assert.match(dashboard, /queue\.error/);
   assert.doesNotMatch(dashboard, /<CheckCircle2/);
 
   assert.match(styles, /--admin-control-height: var\(--stl-control-height\)/);

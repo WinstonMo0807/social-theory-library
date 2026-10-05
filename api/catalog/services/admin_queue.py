@@ -200,6 +200,8 @@ def edition_summary(edition, *, user=None):
         "id": f"edition:{edition.pk}", "work_id": str(edition.work_id), "edition_id": str(edition.pk),
         "item_id": str(item.pk) if item else None, "session_id": str(session.pk) if session else None,
         "source_type": source, "title": edition.work.title, "source_filename": item.source_filename if item else "",
+        "contributors": [row.person.preferred_name for row in sorted(edition.contributions.all(), key=lambda row: row.order) if row.approved],
+        "publisher": edition.publisher, "publication_year": edition.publication_year, "version_label": edition.version_label,
         "document_type": edition.work.document_type, "workbench_url": workbench, "return_href": "/admin/review",
         "publication": publication, "health": health, "current_step": step, "current_step_label": step_label,
         "availability": edition._admin_availability,

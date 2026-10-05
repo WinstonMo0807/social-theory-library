@@ -47,6 +47,7 @@ class RecommendationIssueSerializer(serializers.Serializer):
     cover_rendition_id = serializers.UUIDField(required=False, allow_null=True)
     display_from = serializers.DateTimeField(required=False, allow_null=True)
     published_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    public_url = serializers.CharField(read_only=True, allow_blank=True)
     items = IssueItemSerializer(many=True, required=False)
     edit_version = serializers.CharField(required=False)
     draft_revision_id = serializers.UUIDField(read_only=True, allow_null=True)

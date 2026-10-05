@@ -4,7 +4,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from catalog.models import CatalogingSession, Edition, Work
+from catalog.models import CatalogingSession, Contribution, Edition, Person, Topic, Work, WorkTopicRelation
 from catalog.services.cataloging_sessions import (
     CatalogingSessionConflict, abandon_cataloging_session, open_cataloging_session,
 )
@@ -39,12 +39,61 @@ def test_manual_create_retries_do_not_duplicate_catalog(admin_user):
     assert Work.objects.count() == Edition.objects.count() == CatalogingSession.objects.count() == 1
 
 
+def test_manual_form_saves_bibliography_and_existing_relations_without_publishing(api_client, admin_user):
+    author = Person.objects.create(preferred_name="馆内作者")
+    topic = Topic.objects.create(name="馆内主题", slug="manual-reference-topic")
+    api_client.force_authenticate(admin_user)
+    body = {"source_type": "manual", "request_key": str(uuid4()), "title": "新书目",
+            "subtitle": "副标题", "abstract": "管理员填写的简介", "publisher": "出版社",
+            "publication_year": 2026, "version_label": "第一版", "author_ids": [str(author.pk)],
+            "topic_ids": [str(topic.pk)]}
+    response = api_client.post("/api/catalog/admin/cataloging-sessions/", body, format="json")
+    assert response.status_code == 201
+    edition = Edition.objects.get(pk=response.data["edition_id"])
+    assert (edition.work.subtitle, edition.work.abstract, edition.publisher, edition.publication_year) == (
+        "副标题", "管理员填写的简介", "出版社", 2026)
+    assert edition.version_label == "第一版" and edition.state == "draft"
+    assert Contribution.objects.get(edition=edition).person == author
+    assert WorkTopicRelation.objects.get(work=edition.work).topic == topic
+    assert not public_editions().exists() and not UploadItem.objects.exists()
+    retried = api_client.post("/api/catalog/admin/cataloging-sessions/", body, format="json")
+    assert retried.status_code == 200 and retried.data["id"] == response.data["id"]
+    assert Work.objects.count() == 1 and Contribution.objects.count() == 1
+    invalid = {**body, "request_key": str(uuid4()), "author_ids": [str(uuid4())]}
+    assert api_client.post("/api/catalog/admin/cataloging-sessions/", invalid, format="json").status_code == 404
+    assert Work.objects.count() == Edition.objects.count() == 1
+
+
 def test_existing_entry_reuses_same_open_process(admin_user):
     first = manual_session(admin_user)
     second, created = open_cataloging_session(actor=admin_user, edition_id=first.edition_id)
     assert second.pk == first.pk
     assert not created
     assert second.source_type == "manual"
+
+
+@pytest.mark.parametrize("kind,status", [
+    ("person", "merged"), ("person", "archived"), ("person", "rejected"),
+    ("topic", "archived"), ("topic", "rejected"),
+])
+def test_manual_create_rejects_retired_identity_without_partial_catalog(api_client, admin_user, kind, status):
+    author = Person.objects.create(preferred_name="当前作者")
+    topic = Topic.objects.create(name="当前主题", slug="manual-current-topic")
+    if kind == "person":
+        retired = Person.objects.create(preferred_name="失效作者", authority_status=status,
+                                       merged_into=author if status == "merged" else None)
+    else:
+        topic.editorial_status = status
+        topic.save(update_fields=["editorial_status"])
+    body = {"source_type": "manual", "title": "不能建立的书目", "request_key": str(uuid4()),
+            "author_ids": [str(author.pk), str(retired.pk)] if kind == "person" else [str(author.pk)],
+            "topic_ids": [str(topic.pk)]}
+    api_client.force_authenticate(admin_user)
+    result = api_client.post("/api/catalog/admin/cataloging-sessions/", body, format="json")
+    assert result.status_code == 409
+    assert result.data["code"] == "catalog.session_conflict"
+    assert not Work.objects.exists() and not Edition.objects.exists() and not CatalogingSession.objects.exists()
+    assert not Contribution.objects.exists() and not WorkTopicRelation.objects.exists()
 
 
 def test_upload_entry_keeps_the_real_upload_reference(admin_user):

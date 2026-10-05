@@ -6,7 +6,7 @@ import { SaveIssueList } from "@/components/save-issue-list";
 import { IssueRelatedWorks } from "@/components/issue-related-works";
 
 export function IssueItemCard({ item }: { item: IssueItem }) {
-  const cover = item.cover_url ? <img className="issue-book-cover" src={item.cover_url} alt={`${item.title}封面`} loading="lazy" /> : <div className="issue-book-cover issue-book-typographic"><span>{item.title}</span><small>{item.authors}</small></div>;
+  const cover = item.cover_url ? <img className="issue-book-cover" src={item.cover_url} alt={`${item.title}封面`} loading="lazy" /> : <div className="issue-book-cover issue-book-empty" />;
   return <article className="issue-book-card">
     {item.work_url ? <CollectionLink href={item.work_url} aria-label={`查看${item.title}`}>{cover}</CollectionLink> : cover}
     <h3>{item.work_url ? <CollectionLink href={item.work_url}>{item.title}</CollectionLink> : item.title}</h3>
@@ -19,18 +19,28 @@ export function IssueItemCard({ item }: { item: IssueItem }) {
 }
 
 export function RecommendationIssueView({ issue, preview = false }: { issue: RecommendationIssue; preview?: boolean }) {
-  const asideQuote = issue.body_blocks.find(block => block.type === "quote");
-  return <article className="issue-article">
-    <nav className="breadcrumbs" aria-label="位置"><Link href="/">首页</Link><span>›</span><Link href="/recommendations">本期书库推荐</Link><span>›</span><span>{issue.title}</span></nav>
-    <section className="issue-hero" data-edit-section="identity">
-      <div className="issue-hero-copy"><p className="eyebrow">本期书库推荐 {issue.issue_label}</p><h1>{issue.title || "填写本期标题"}</h1><p className="issue-introduction">{issue.introduction}</p>
-        <div className="issue-byline"><span>{issue.public_byline ? `本期策划 ${issue.public_byline}` : ""}</span>{issue.published_at ? <time dateTime={issue.published_at}>{new Date(issue.published_at).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })} 发布</time> : null}</div>
-      </div>
-      <div className="issue-hero-image" data-edit-section="cover"><img src={issue.cover_url || "/editorial/library-architecture-hero.webp"} alt="" /></div>
-    </section>
-    {issue.body_blocks.length ? <section className={`issue-prose${asideQuote ? " has-quote" : ""}`} data-edit-section="body"><header><h2>导语</h2><span className="eyebrow">Introduction</span></header><div>{issue.body_blocks.map((block, index) => block === asideQuote ? null : block.type === "heading" ? <h3 key={index}>{block.text}</h3> : block.type === "quote" ? <blockquote key={index}><p>{block.text}</p><cite>{block.source}</cite></blockquote> : block.type === "link" ? <p key={index}><a href={block.url} rel="noopener noreferrer">{block.text}</a></p> : <p key={index}>{block.text}</p>)}</div>{asideQuote ? <aside><blockquote><p>{asideQuote.text}</p>{asideQuote.source ? <cite>{asideQuote.source}</cite> : null}</blockquote></aside> : null}</section> : null}
-    <section className="issue-works" data-edit-section="items"><header className="v307-section-heading"><h2>推荐书目 <small>Featured works</small></h2><p>{issue.items.length} 项 · 按策展阅读顺序推荐</p></header><div className="issue-books-grid">{issue.items.map((item, index) => <IssueItemCard item={item} key={item.id || index} />)}</div></section>
-    {!preview ? <SaveIssueList slug={issue.slug} /> : <p className="issue-save-banner">保存本期书单 · 读者登录后可保存到自己的书架</p>}
-    <IssueRelatedWorks excludedHrefs={issue.items.map(item => item.work_url || "")} />
+  const headings = issue.body_blocks.flatMap((block,index)=>block.type==="heading" ? [{index,text:block.text}] : []);
+  const date = issue.display_from || issue.published_at;
+  return <article className="issue-article issue-reference-article">
+    <div className="issue-reference-main">
+      <header data-edit-section="identity"><Link className="issue-section-label" href="/recommendations">每日荐读</Link>{issue.issue_label ? <p className="issue-reference-category">{issue.issue_label}</p> : null}<h1>{issue.title}</h1><p className="issue-introduction">{issue.introduction}</p><div className="issue-byline"><span>{issue.public_byline}</span>{date ? <time dateTime={date}>{new Date(date).toLocaleDateString("zh-CN",{timeZone:"Asia/Hong_Kong"})}</time> : null}</div></header>
+      <div className="issue-reference-image" data-edit-section="cover">{issue.cover_url ? <img src={issue.cover_url} alt=""/> : null}</div>
+      <section className="issue-reference-prose" data-edit-section="body">{issue.body_blocks.map((block,index)=>block.type==="heading" ? <h2 id={`issue-section-${index}`} key={index}>{block.text}</h2> : block.type==="quote" ? <blockquote key={index}><p>{block.text}</p>{block.source ? <cite>{block.source}</cite> : null}</blockquote> : block.type==="link" ? <p key={index}><a href={block.url} rel="noopener noreferrer">{block.text}</a></p> : <p key={index}>{block.text}</p>)}</section>
+      {!preview ? <SaveIssueList slug={issue.slug}/> : null}
+    </div>
+    <aside className="issue-reference-aside">
+      <section className="issue-reference-books" data-edit-section="items"><header><h2>本文提及的书目</h2></header>{issue.items.map((item,index)=><IssueItemCard item={item} key={item.id || index}/>)}</section>
+      {headings.length ? <nav className="issue-reference-toc" aria-label="文章目录"><h2>文章目录</h2>{headings.map(heading=><a href={`#issue-section-${heading.index}`} key={heading.index}>{heading.text}</a>)}</nav> : null}
+      <IssueRelatedWorks excludedHrefs={issue.items.map(item=>item.work_url || "")}/>
+    </aside>
   </article>;
+}
+
+export function DailyReadingContent({lead,cards,preview=false}: {lead:RecommendationIssue|null;cards:RecommendationIssue[];preview?:boolean}) {
+  const issueLink = (issue:RecommendationIssue) => `/recommendations/${issue.slug}`;
+  return <div className="daily-reading-content">
+    {lead ? <section className="daily-reading-lead"><Link className="daily-reading-lead-image" href={issueLink(lead)}>{lead.cover_url ? <img src={lead.cover_url} alt=""/> : null}</Link><div className="daily-reading-lead-copy"><p className="eyebrow">{lead.issue_label || "每日荐读"}</p><h2><Link href={issueLink(lead)}>{lead.title}</Link></h2><p>{lead.introduction}</p><div className="daily-reading-byline"><span>{lead.public_byline}</span>{lead.published_at ? <time dateTime={lead.published_at}>{new Date(lead.published_at).toLocaleDateString("zh-CN",{timeZone:"Asia/Hong_Kong"})}</time> : null}</div><Link className="button" href={issueLink(lead)}>阅读文章 →</Link></div></section> : <p className="empty-state">当前没有匹配文章。</p>}
+    {cards.length ? <section className="daily-reading-section"><header><h2>最新文章</h2></header><div className="daily-reading-grid">{cards.map(issue => <article key={issue.id}><Link href={issueLink(issue)}>{issue.cover_url ? <img src={issue.cover_url} alt="" loading="lazy"/> : <div className="daily-reading-empty-image"/>}<p className="eyebrow">{issue.issue_label || "每日荐读"}</p><h3>{issue.title}</h3><p>{issue.introduction}</p><span>{issue.public_byline}</span></Link></article>)}</div></section> : null}
+    {lead?.items.length ? <section className="daily-reading-books"><header><h2>从馆藏继续阅读</h2>{!preview ? <Link href="/explore">探索更多相关书籍 →</Link> : null}</header><div>{lead.items.map(item => <article key={item.id}><span className="daily-reading-book-cover">{item.cover_url ? <img src={item.cover_url} alt="" loading="lazy"/> : null}</span><div><h3>{item.work_url ? <Link href={item.work_url}>{item.title}</Link> : item.title}</h3><p>{item.authors}</p><small>{item.version_note}</small></div></article>)}</div></section> : null}
+  </div>;
 }

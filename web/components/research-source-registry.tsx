@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, FlaskConical, Save, ServerCog, ShieldAlert } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight, FlaskConical, Save, Info } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { ActionButton, AsyncStatus, ToastHost, type ActionState } from "./action-feedback";
 
@@ -103,6 +103,7 @@ function credentialTimeLabel(value: string | null, emptyLabel: string) {
 }
 
 export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: number }) {
+  const [selectedKey, setSelectedKey] = useState("");
   const [payload, setPayload] = useState<RegistryPayload | null>(null);
   const [drafts, setDrafts] = useState<Record<string, AliasDraft>>({});
   const [loading, setLoading] = useState(true);
@@ -162,16 +163,6 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load, revision]);
-
-  const grouped = useMemo(() => {
-    const result = new Map<string, ResearchSource[]>();
-    for (const source of payload?.adapters ?? []) {
-      const rows = result.get(source.category) ?? [];
-      rows.push(source);
-      result.set(source.category, rows);
-    }
-    return [...result.entries()];
-  }, [payload?.adapters]);
 
   function actionState(actionKey: string): ActionState {
     if (pendingAction === actionKey) return "pending";
@@ -310,101 +301,39 @@ export function ResearchSourceRegistryPanel({ revision = 0 }: { revision?: numbe
     }
   }
 
-  return (
-    <section className="processing-diagnostics admin-panel" id="processing-research-sources" aria-labelledby="research-source-registry-title">
-      <header>
-        <div>
-          <p>Research Sources</p>
-          <h2 id="research-source-registry-title">研究来源与证据入口</h2>
-          <span>先说明用途、配置和用户功能影响。测试只在明确点击后进行，密钥始终留在服务器环境中；凭据加密保存且不会回传浏览器。</span>
-        </div>
-        {payload ? <span className={payload.summary.degraded ? "warning" : "healthy"}>{payload.summary.degraded ? `${payload.summary.degraded} 项降级` : `${payload.summary.configured} 项可用`}</span> : null}
-      </header>
+  const source = payload?.adapters.find(row => row.key === selectedKey) ?? payload?.adapters[0];
+  const draft = source ? drafts[source.key] ?? { endpointAlias: "", credentialAlias: "", credentialValue: "" } : null;
+  const saveChanges: Record<string, unknown> = {};
+  if (draft?.endpointAlias.trim()) saveChanges.endpoint_alias = draft.endpointAlias.trim();
+  if (draft?.credentialAlias.trim()) saveChanges.credential_alias = draft.credentialAlias.trim();
 
-      <AsyncStatus state={loading && !payload ? "pending" : "idle"} message={loading && !payload ? "正在读取来源注册表……" : ""} />
-      <AsyncStatus state="error" message={error} assertive />
-      <ToastHost
-        items={feedback.message ? [{ id: feedback.actionKey || "research-source", state: feedback.state === "idle" ? "success" : feedback.state, message: feedback.message }] : []}
-        onDismiss={() => setFeedback(EMPTY_FEEDBACK)}
-        label="Research Source 操作反馈"
-      />
-
-      {payload ? (
-        <>
-          <div className="processing-diagnostics-summary" aria-label="Research Source 摘要">
-            <div><ServerCog size={17} /><span>已启用</span><strong>{payload.summary.enabled}</strong></div>
-            <div><CheckCircle2 size={17} /><span>已配置</span><strong>{payload.summary.configured}</strong></div>
-            <div><ShieldAlert size={17} /><span>降级</span><strong>{payload.summary.degraded}</strong></div>
-            <div><FlaskConical size={17} /><span>中文扩展</span><strong>{payload.summary.chinese_extensions}</strong></div>
-          </div>
-
-          <div className="processing-diagnostic-sections">
-            {grouped.map(([category, sources]) => (
-              <section className="processing-diagnostic-section" key={category}>
-                <header><div><ServerCog size={17} /><h3>{CATEGORY_LABELS[category] ?? category}</h3></div><span>{sources.length} 个 adapter</span><strong>{sources.filter((row) => row.enabled).length}</strong></header>
-                <div className="processing-diagnostic-list">
-                  {sources.map((source) => {
-                    const draft = drafts[source.key] ?? { endpointAlias: "", credentialAlias: "", credentialValue: "" };
-                    const saveChanges: Record<string, unknown> = {};
-                    if (draft.endpointAlias.trim()) saveChanges.endpoint_alias = draft.endpointAlias.trim();
-                    if (draft.credentialAlias.trim()) saveChanges.credential_alias = draft.credentialAlias.trim();
-                    return (
-                      <article className={`processing-diagnostic-item ${source.status === "configured" ? "info" : "warning"}`} key={source.key}>
-                        <header><div><span>{source.category}</span><h4>{source.label}</h4></div><b>{STATUS_LABELS[source.status] ?? source.status}</b></header>
-                        <p>{source.purpose}</p>
-                        <dl>
-                          <div><dt>受影响功能</dt><dd>{source.affected_features.join("、")}</dd></div>
-                          <div><dt>配置需求</dt><dd>{source.configuration_requirements.join("、") || "无需额外配置"}</dd></div>
-                          <div><dt>Endpoint</dt><dd>{source.endpoint_configured ? "已在服务器配置" : source.endpoint_alias_supported ? "未配置" : "固定来源或无需单独配置"}</dd></div>
-                          <div><dt>Credential</dt><dd>{source.credential_configured ? "已在服务器配置" : source.credential_alias_set ? "alias 已设置，环境值缺失" : source.credential_alias_supported ? "未配置" : "无需 credential"}</dd></div>
-                          {source.credential_alias_supported ? <div><dt>凭据更新</dt><dd>{credentialTimeLabel(source.credential_updated_at, "尚未加密保存")}</dd></div> : null}
-                          {source.credential_alias_supported ? <div><dt>凭据测试</dt><dd>{source.credential_last_tested_at ? `${credentialTimeLabel(source.credential_last_tested_at, "")}·${source.credential_last_test_status || "状态未知"}${source.credential_last_test_message ? `·${source.credential_last_test_message}` : ""}` : "尚未测试"}</dd></div> : null}
-                          <div><dt>最近成功</dt><dd>{timeLabel(source.last_success_at)}</dd></div>
-                          <div><dt>最近错误</dt><dd>{source.last_error_category || "无持久化错误"}</dd></div>
-                          <div><dt>使用边界</dt><dd>{source.usage_policy}</dd></div>
-                          <div><dt>Metadata</dt><dd>{source.metadata_formats.join("、") || "不适用"}</dd></div>
-                        </dl>
-                        {payload.permissions.can_edit_sensitive_aliases ? (
-                          <details>
-                            <summary>配置服务器 alias</summary>
-                            <div className="processing-runtime-rows">
-                              {source.endpoint_alias_supported ? <label><span>Endpoint alias</span><input value={draft.endpointAlias} placeholder={source.endpoint_alias_set ? "已设置，留空保持不变" : "例如 ncpssd-public"} onChange={(event) => setDrafts((current) => ({ ...current, [source.key]: { ...draft, endpointAlias: event.target.value } }))} /></label> : null}
-                              {source.credential_alias_supported ? <label><span>Credential alias</span><input value={draft.credentialAlias} placeholder={source.credential_alias_set ? "已设置，留空保持不变" : "只填环境变量别名"} onChange={(event) => setDrafts((current) => ({ ...current, [source.key]: { ...draft, credentialAlias: event.target.value } }))} /></label> : null}
-                            </div>
-                            <ActionButton className="button secondary" state={actionState(`save-alias:${source.key}`)} pendingLabel="正在保存" disabled={!Object.keys(saveChanges).length || Boolean(pendingAction)} onClick={() => void updateSource(source, saveChanges, `save-alias:${source.key}`)}><Save size={14} />保存 alias</ActionButton>
-                            {source.credential_alias_supported ? (
-                              <div className="processing-runtime-rows">
-                                <label>
-                                  <span>Provider credential</span>
-                                  <input
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={draft.credentialValue}
-                                    placeholder={source.credential_configured ? "输入新值可更新，原值不会显示" : "输入 API Key 或 Token"}
-                                    onChange={(event) => setDrafts((current) => ({ ...current, [source.key]: { ...draft, credentialValue: event.target.value } }))}
-                                  />
-                                </label>
-                                <div className="admin-action-row">
-                                  <ActionButton className="button secondary" state={actionState(`credential:${source.key}`)} pendingLabel="正在加密保存" disabled={!draft.credentialValue || Boolean(pendingAction)} onClick={() => void storeCredential(source)}>更新凭据</ActionButton>
-                                  <ActionButton className="button secondary" state={actionState(`credential-delete:${source.key}`)} pendingLabel="正在删除" disabled={!draft.credentialAlias || Boolean(pendingAction)} onClick={() => void deleteCredential(source)}>删除凭据</ActionButton>
-                                </div>
-                              </div>
-                            ) : null}
-                          </details>
-                        ) : <p><strong>敏感配置</strong>只有 System Owner 可以修改 endpoint 或 credential alias。</p>}
-                        <footer>
-                          {payload.permissions.can_test ? <ActionButton className="button secondary" state={actionState(`test:${source.key}`)} pendingLabel="测试中" disabled={Boolean(pendingAction)} onClick={() => void testSource(source)}><FlaskConical size={14} />测试</ActionButton> : null}
-                          {payload.permissions.can_edit ? <ActionButton className="button secondary" state={actionState(`toggle:${source.key}`)} pendingLabel="正在保存" disabled={Boolean(pendingAction)} pressed={source.enabled} onClick={() => void updateSource(source, { enabled: !source.enabled }, `toggle:${source.key}`)}>{source.enabled ? "禁用" : "启用"}</ActionButton> : null}
-                        </footer>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </>
-      ) : null}
-    </section>
-  );
+  return <section className="source-reference" id="processing-research-sources" aria-label="资料来源">
+    <div className="source-reference-intro"><p>配置和管理外部资料来源，用于在查找书目信息时获取作者、书名、出版社等数据。<br/>这些来源的结果仅作为填写建议，不会直接在网站前台显示。</p><aside><Info size={19}/><div><strong>读者影响</strong><p>来源提供的书目信息仅用于编辑时的填写参考，不会直接显示在网站上。</p></div></aside></div>
+    <AsyncStatus state={loading && !payload ? "pending" : "idle"} message={loading && !payload ? "正在读取资料来源…" : ""}/>
+    <AsyncStatus state="error" message={error} assertive/>
+    <ToastHost items={feedback.message ? [{ id: feedback.actionKey || "research-source", state: feedback.state === "idle" ? "success" : feedback.state, message: feedback.message }] : []} onDismiss={() => setFeedback(EMPTY_FEEDBACK)} label="资料来源操作反馈"/>
+    {payload ? <div className="source-reference-columns">
+      <section className="source-reference-list"><header><h2>来源列表（{payload.adapters.length}）</h2><button type="button" className="button" disabled title="当前接口不支持添加自定义来源">＋ 添加来源</button></header>
+        <div role="list" aria-label="已登记资料来源">{payload.adapters.map(row => <button role="listitem" type="button" key={row.key} className={source?.key === row.key ? "selected" : ""} onClick={() => setSelectedKey(row.key)} aria-pressed={source?.key === row.key}>
+          <span><strong>{row.label}</strong><small>{CATEGORY_LABELS[row.category] ?? row.category}</small></span><span><b className={`source-state ${row.status}`}>{STATUS_LABELS[row.status] ?? row.status}</b><small>上次检查：{credentialTimeLabel(row.credential_last_tested_at, "未检查")}</small></span><ChevronRight size={16}/>
+        </button>)}</div>
+      </section>
+      {source && draft ? <section className="source-reference-detail" aria-label={`${source.label}设置`}>
+        <header><div><h2>{source.label}</h2><b className={`source-state ${source.status}`}>{STATUS_LABELS[source.status] ?? source.status}</b></div>{payload.permissions.can_edit ? <ActionButton className="button secondary" state={actionState(`toggle:${source.key}`)} pendingLabel="正在保存" disabled={Boolean(pendingAction)} onClick={() => void updateSource(source, { enabled: !source.enabled }, `toggle:${source.key}`)}>{source.enabled ? "禁用" : "启用"}</ActionButton> : null}</header>
+        <p>{source.purpose}</p>
+        <section className="source-reference-status"><h3>当前状态</h3><div><dl><div><dt>上次检查</dt><dd>{credentialTimeLabel(source.credential_last_tested_at, "未检查")}</dd></div><div><dt>连接状态</dt><dd>{source.credential_last_test_status || "—"}</dd></div><div><dt>返回结果</dt><dd>{source.credential_last_test_message || "—"}</dd></div></dl>{payload.permissions.can_test ? <ActionButton className="button" state={actionState(`test:${source.key}`)} pendingLabel="检查中" disabled={Boolean(pendingAction)} onClick={() => void testSource(source)}><FlaskConical size={15}/>检查连接</ActionButton> : null}</div></section>
+        <section className="source-reference-settings"><h3>设置</h3><label><input type="checkbox" checked={source.enabled} disabled={!payload.permissions.can_edit || Boolean(pendingAction)} onChange={event => void updateSource(source, { enabled: event.target.checked }, `toggle:${source.key}`)}/><span>启用此来源<small>启用后，将在查找书目信息时使用此来源。</small></span></label><label><input type="checkbox" checked={false} disabled/><span>在查找结果中优先显示此来源的内容<small>—</small></span></label></section>
+        <details className="source-reference-advanced"><summary>高级设置<span>技术地址、访问凭据等</span></summary>
+          <dl><div><dt>受影响功能</dt><dd>{source.affected_features.join("、") || "—"}</dd></div><div><dt>配置需求</dt><dd>{source.configuration_requirements.join("、") || "无需额外配置"}</dd></div><div><dt>技术地址</dt><dd>{source.endpoint_configured ? "已在服务器配置" : source.endpoint_alias_supported ? "未配置" : "无需单独配置"}</dd></div><div><dt>访问凭据</dt><dd>{source.credential_configured ? "已安全保存" : source.credential_alias_supported ? "未配置" : "无需凭据"}</dd></div><div><dt>最近成功</dt><dd>{timeLabel(source.last_success_at)}</dd></div><div><dt>最近错误</dt><dd>{source.last_error_category || "—"}</dd></div><div><dt>使用边界</dt><dd>{source.usage_policy}</dd></div></dl>
+          {payload.permissions.can_edit_sensitive_aliases ? <div className="processing-runtime-rows">
+            {source.endpoint_alias_supported ? <label><span>地址别名</span><input value={draft.endpointAlias} placeholder={source.endpoint_alias_set ? "已设置，留空保持不变" : "服务器地址别名"} onChange={event => setDrafts(current => ({ ...current, [source.key]: { ...draft, endpointAlias: event.target.value } }))}/></label> : null}
+            {source.credential_alias_supported ? <label><span>凭据别名</span><input value={draft.credentialAlias} placeholder="只填服务器凭据别名" onChange={event => setDrafts(current => ({ ...current, [source.key]: { ...draft, credentialAlias: event.target.value } }))}/></label> : null}
+            <ActionButton className="button secondary" state={actionState(`save-alias:${source.key}`)} pendingLabel="正在保存" disabled={!Object.keys(saveChanges).length || Boolean(pendingAction)} onClick={() => void updateSource(source, saveChanges, `save-alias:${source.key}`)}><Save size={14}/>保存设置</ActionButton>
+            {source.credential_alias_supported ? <><label><span>访问凭据</span><input type="password" autoComplete="new-password" value={draft.credentialValue} placeholder={source.credential_configured ? "输入新值可更新，原值不会显示" : "输入 API Key 或 Token"} onChange={event => setDrafts(current => ({ ...current, [source.key]: { ...draft, credentialValue: event.target.value } }))}/></label><div className="admin-action-row"><ActionButton className="button secondary" state={actionState(`credential:${source.key}`)} pendingLabel="正在保存" disabled={!draft.credentialValue || Boolean(pendingAction)} onClick={() => void storeCredential(source)}>加密保存凭据</ActionButton>{source.credential_configured && draft.credentialAlias ? <ActionButton className="button secondary" state={actionState(`credential-delete:${source.key}`)} disabled={Boolean(pendingAction)} onClick={() => void deleteCredential(source)}>删除服务器凭据</ActionButton> : null}</div></> : null}
+          </div> : <p>当前账户不能修改技术地址或访问凭据。</p>}
+        </details>
+        <aside className="source-reference-note"><Info size={19}/><div><strong>使用提示</strong><p>如果连接检查失败，请确认网络是否正常，或稍后再试。频繁检查可能会被对方服务暂时限制。</p></div></aside>
+      </section> : <p className="empty-state">—</p>}
+    </div> : null}
+  </section>;
 }

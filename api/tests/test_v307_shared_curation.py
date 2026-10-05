@@ -154,10 +154,15 @@ def test_scholar_relation_shared_identity_keeps_public_draft_isolation(api_clien
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["count"] == 1
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={third.pk}").data["count"] == 0
     assert api_client.get(f"/api/catalog/admin/scholar-relations/?scholar={third.pk}").data["count"] == 1
+    preview_url = f"/api/catalog/admin/knowledge-preview/scholar/{first.pk}/"
+    preview = api_client.get(preview_url)
+    assert preview.status_code == 200
+    assert preview.data["secondary_preview"]["scholar_relations"][0]["target_scholar"] == str(second.pk)
     assert api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "edit_version": created.data["edit_version"]}, format="json").status_code == 409
     second.editorial_status = "draft"
     second.save(update_fields=["editorial_status"])
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["count"] == 0
+    assert api_client.get(preview_url).data["secondary_preview"]["scholar_relations"] == []
 
 
 def test_scholar_relation_requires_source_and_public_endpoints(admin_user, api_client, reader_user):

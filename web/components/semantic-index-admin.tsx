@@ -1,9 +1,12 @@
 "use client";
 
 import { BarChart3, Pause, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import styles from "./semantic-index-reference.module.css";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
+import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
 
 type IndexPayload = {
   permissions: { can_manage: boolean };
@@ -126,12 +129,18 @@ const operationLabels: Record<string, string> = {
 };
 
 export function SemanticIndexAdmin() {
+  const [surface, setSurface] = useState<"index" | "evaluation">("index");
+  const [step, setStep] = useState(1);
+  const [selectedVersion, setSelectedVersion] = useState("");
+  const [savedQuestions, setSavedQuestions] = useState<{id:string;query_text:string;judgments:unknown[]}[]>([]);
+  const actionPending = useRef(false);
   const [data, setData] = useState<IndexPayload | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [query, setQuery] = useState("");
-  const [testResult, setTestResult] = useState<TestPayload | null>(null);
+  const [previewQuery, setPreviewQuery] = useState("");
+  const [testResult, setTestResult] = useState<(TestPayload & { testedQuery: string }) | null>(null);
   const [activateTarget, setActivateTarget] = useState<IndexPayload["index_versions"][number] | null>(null);
   const [evaluationSets, setEvaluationSets] = useState<EvaluationSetSummary[]>([]);
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRunSummary[]>([]);
@@ -144,6 +153,8 @@ export function SemanticIndexAdmin() {
   const [evaluationIndexId, setEvaluationIndexId] = useState("");
   const [evaluationJudgments, setEvaluationJudgments] = useState<Record<string, number>>({});
   const [evaluationMessage, setEvaluationMessage] = useState("");
+  const judgmentsDirty = useUnsavedForm(evaluationJudgments, {});
+  const allowQueryChange = () => !judgmentsDirty || window.confirm("当前评价尚未保存，确定放弃后重新选择问题吗？");
   const effectiveEvaluationIndexId = evaluationIndexId
     || data?.index_versions.find((version) => version.status === "ready")?.id
     || data?.index_versions.find((version) => version.status === "active")?.id
@@ -231,9 +242,19 @@ export function SemanticIndexAdmin() {
     return () => window.clearInterval(timer);
   }, [evaluationRuns, refreshEvaluations]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const reset = window.setTimeout(() => setSavedQuestions([]), 0);
+    if (evaluationTargetSetId) void apiRequest<{queries: typeof savedQuestions}>(`/catalog/admin/search-evaluations/sets/${evaluationTargetSetId}/`, {signal:controller.signal}, getServerSessionCredential())
+      .then(result => { if (!controller.signal.aborted) setSavedQuestions(result.queries); })
+      .catch(reason => { if (!controller.signal.aborted) setEvaluationError(reason instanceof Error ? reason.message : "问题列表读取失败"); });
+    return () => { controller.abort();window.clearTimeout(reset); };
+  }, [evaluationTargetSetId]);
+
   async function runAction(action: string, assetId?: string | null) {
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || actionPending.current) return;
+    actionPending.current = true;
     setBusy(action);
     try {
       await apiRequest("/catalog/admin/semantic-index/", {
@@ -244,6 +265,7 @@ export function SemanticIndexAdmin() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "索引操作失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
@@ -251,20 +273,27 @@ export function SemanticIndexAdmin() {
   async function testQuery(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
-    if (!token || query.trim().length < 2) return;
+    const testedQuery = query.trim();
+    if (!token || testedQuery.length < 2 || actionPending.current) return;
+    if (!allowQueryChange()) return;
+    actionPending.current = true;
+    setPreviewQuery(testedQuery);
     setBusy("test");
     setError("");
     setTestResult(null);
     setEvaluationJudgments({});
     try {
-      setTestResult(await apiRequest<TestPayload>("/catalog/admin/semantic-index/test-query/", {
+      const result = await apiRequest<TestPayload>("/catalog/admin/semantic-index/test-query/", {
         method: "POST",
-        body: JSON.stringify({ query: query.trim() }),
-      }, token));
+        body: JSON.stringify({ query: testedQuery }),
+      }, token);
+      setTestResult({ ...result, testedQuery });
+      setStep(2);
     } catch (reason) {
       setTestResult(null);
       setError(reason instanceof Error ? reason.message : "测试查询失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
@@ -276,15 +305,12 @@ export function SemanticIndexAdmin() {
       chunk_id: chunkId,
       relevance,
     }));
-    if (!token || !testResult || !query.trim()) return;
-    if (!judgments.some((judgment) => judgment.relevance >= 2)) {
-      setEvaluationMessage("至少要把一个结果标为具有证据价值或直接回应。");
-      return;
-    }
+    if (!token || !testResult || testResult.testedQuery !== query.trim() || actionPending.current) return;
     if (!evaluationTargetSetId && !evaluationName.trim()) {
       setEvaluationMessage("新建评估集时需要填写名称。");
       return;
     }
+    actionPending.current = true;
     setBusy("save_evaluation_query");
     setEvaluationMessage("");
     try {
@@ -294,7 +320,7 @@ export function SemanticIndexAdmin() {
           {
             method: "POST",
             body: JSON.stringify({
-              query_text: query.trim(),
+              query_text: testResult.testedQuery,
               judgments,
             }),
           },
@@ -309,7 +335,7 @@ export function SemanticIndexAdmin() {
             description: evaluationDescription.trim(),
             language: evaluationLanguage,
             is_active: true,
-            queries: [{ query_text: query.trim(), judgments }],
+            queries: [{ query_text: testResult.testedQuery, judgments }],
           }),
         }, token);
         setEvaluationMessage("评估集已建立。可以继续加入查询，或先运行一次基线评估。");
@@ -317,20 +343,24 @@ export function SemanticIndexAdmin() {
         setEvaluationDescription("");
       }
       setEvaluationJudgments({});
+      setTestResult(null);
       await refreshEvaluations();
     } catch (reason) {
       setEvaluationMessage(reason instanceof Error ? reason.message : "评估查询保存失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
 
   async function runEvaluation(evaluationSetId: string) {
     const token = getServerSessionCredential();
+    if (actionPending.current) return;
     if (!token || !effectiveEvaluationIndexId || !data) {
       setEvaluationMessage("请先选择一个候选或活动索引版本。");
       return;
     }
+    actionPending.current = true;
     setBusy(`evaluate:${evaluationSetId}`);
     setEvaluationMessage("正在核对评估集、模型配置和候选索引文档数……");
     const payload = {
@@ -356,13 +386,15 @@ export function SemanticIndexAdmin() {
     } catch (reason) {
       setEvaluationMessage(reason instanceof Error ? reason.message : "检索评估提交失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
 
   async function toggleEvaluationSet(evaluationSet: EvaluationSetSummary) {
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || actionPending.current) return;
+    actionPending.current = true;
     setBusy(`evaluation_set:${evaluationSet.id}`);
     try {
       await apiRequest(`/catalog/admin/search-evaluations/sets/${evaluationSet.id}/`, {
@@ -374,13 +406,15 @@ export function SemanticIndexAdmin() {
     } catch (reason) {
       setEvaluationMessage(reason instanceof Error ? reason.message : "评估集状态修改失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
 
   async function activateVersion() {
     const token = getServerSessionCredential();
-    if (!token || !activateTarget) return;
+    if (!token || !activateTarget || actionPending.current) return;
+    actionPending.current = true;
     setBusy("activate_version");
     setError("");
     try {
@@ -397,26 +431,42 @@ export function SemanticIndexAdmin() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "候选索引切换失败。");
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
 
-  return (
-    <div className="admin-page">
-      <header className="admin-page-title">
-        <div><p>观点检索</p><h1>语义索引管理</h1><span>查看分块与向量进度，重试失败项目，并用真实查询检查排序。</span></div>
-        <button className="button secondary" type="button" onClick={refresh} disabled={Boolean(busy)}><RefreshCw size={16} />刷新</button>
-      </header>
-      {error ? <p className="form-message error" role="alert">{error}</p> : null}
-      <section className="metric-grid semantic-index-metrics">
-        {[
-          ["可处理文献", data?.documents.eligible],
-          ["已建立索引", data?.documents.indexed],
-          ["等待处理", data?.documents.pending],
-          ["失败", data?.documents.failed],
-        ].map(([label, value]) => <article className="metric-card" key={String(label)}><span>{label}</span><strong>{value ?? "—"}</strong></article>)}
+  const current = data?.index_versions.find(version=>version.status==="active");
+  const candidate = data?.index_versions.find(version=>version.id===selectedVersion) ?? data?.index_versions.find(version=>["building","ready","failed"].includes(version.status));
+  const failedJobs = data?.recent_jobs.filter(job=>job.status==="failed") ?? [];
+  const resultList = (<>          <div className="semantic-index-test-results">
+            {testResult?.results.map((item, index) => (
+              <article key={item.id}>
+                <strong>{item.relevance} · {item.title}</strong>
+                <span>{item.printed_label ? `引用第 ${item.printed_label} 页 · ` : ""}PDF 第 {item.page_index} 页</span>
+                <p>{item.snippet}</p>
+                <fieldset className={styles.judgments} disabled={Boolean(busy)}><legend>与问题的相关性</legend>{[{value:2,label:"相关"},{value:0,label:"不相关"},{value:null,label:"待判断"}].map(choice=><label key={choice.label}><input type="radio" name={`evaluation_relevance_${index}`} checked={(evaluationJudgments[item.id] ?? null)===choice.value} onChange={()=>setEvaluationJudgments(current=>{ const next={...current};if(choice.value===null) delete next[item.id];else next[item.id]=choice.value;return next; })}/>{choice.label}</label>)}</fieldset>
+              </article>
+            ))}
+          </div>
+</>);
+  return <div className={styles.page}>
+    <header className="admin-page-title"><div><h1>{surface==="index" ? "搜索内容更新" : "检查搜索结果"}</h1><p>{surface==="index" ? "检查搜索内容的更新进度，确认失败项目。" : "选择问题、检查实际返回的段落，再保存判断。"}</p></div><button type="button" className="button secondary" disabled={Boolean(busy)} onClick={()=>void refresh()}><RefreshCw size={16}/>重新检查</button></header>
+    <nav className={styles.switcher} aria-label="搜索维护"><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="index"} onClick={()=>setSurface("index")}>搜索内容更新</button><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="evaluation"} onClick={()=>setSurface("evaluation")}>检查搜索结果</button></nav>
+    {error ? <p role="alert">{error}</p> : null}
+    {surface==="evaluation" ? <ol className="reference-step-strip">{["输入问题","检查结果","保存评价"].map((label,index)=><li key={label} aria-current={step===index+1 ? "step" : undefined}><button type="button" disabled={Boolean(busy) || (index>0 && !testResult)} onClick={()=>setStep(index+1)}><b>{index+1}</b>{label}</button></li>)}</ol> : null}
+    <div className={styles.layout}><div>
+    {surface==="index" ? <section className={styles.versions}><h2>搜索版本</h2><p>切换版本仅对所有者开放。请先检查完整性与评估结果。</p><label>当前使用版本<strong>{current ? `${new Date(current.created_at).toLocaleDateString("zh-CN")}（正式版）` : "—"}</strong></label><label>准备中的版本<select disabled={Boolean(busy)} value={candidate?.id || ""} onChange={event=>setSelectedVersion(event.target.value)}><option value="">—</option>{data?.index_versions.filter(version=>version.status!=="active").map(version=><option key={version.id} value={version.id}>{new Date(version.created_at).toLocaleDateString("zh-CN")} · {indexStatusLabels[version.status] || version.status}</option>)}</select></label>
+      <h2>建立进度</h2>{candidate ? <><progress max={candidate.expected_document_count || 1} value={candidate.document_count}/><p>已保存索引文档 {candidate.document_count} / {candidate.expected_document_count || "—"}</p>{candidate.error ? <p role="alert">{candidate.error}</p> : null}{candidate.status==="ready" && data?.permissions.can_manage ? <button className="button" type="button" disabled={Boolean(busy)} onClick={()=>setActivateTarget(candidate)}>验证并启用</button> : null}</> : <p>—</p>}
+      <dl>{[["全库已建立索引",data?.documents.indexed],["全库等待处理",data?.documents.pending],["全库失败",data?.documents.failed]].map(([label,value])=><div key={String(label)}><dt>{label}</dt><dd>{value ?? "—"}</dd></div>)}</dl>
+      <h2>处理失败的内容</h2><p>最近返回的 {data?.recent_jobs.length ?? "—"} 条任务中，失败 {data ? failedJobs.length : "—"} 条。</p>{failedJobs.map(job=><article key={job.id}><strong>{job.title || "全库任务"}</strong><p>{job.error}</p>{job.asset_id && data?.permissions.can_manage ? <button type="button" disabled={Boolean(busy)} onClick={()=>void runAction("rebuild_asset",job.asset_id)}>重试该文档</button> : null}</article>)}{data?.permissions.can_manage ? <button className="button secondary" type="button" disabled={Boolean(busy)} onClick={()=>void runAction("retry_failed")}>重试失败项</button> : null}
+      <details><summary>版本、任务与配置记录</summary>      <section className="admin-panel semantic-job-list">
+        <header><h2>索引版本</h2><span>新版本完整验证后才切换生产指针</span></header>
+        <div className="admin-table-scroll"><table><thead><tr><th>索引</th><th>模型</th><th>模型版本</th><th>维度</th><th>文档</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
+          {data?.index_versions.map((version) => <tr key={version.id}><td><strong>{version.uid}</strong>{version.error ? <small className="attempt-error">{version.error}</small> : null}</td><td>{version.model_repo_id}</td><td>{version.model_revision}</td><td>{version.dimensions ?? "模型默认"}</td><td>{version.document_count}{version.expected_document_count ? ` / ${version.expected_document_count}` : ""}</td><td>{indexStatusLabels[version.status] ?? version.status}</td><td>{new Date(version.created_at).toLocaleString("zh-CN")}</td><td>{version.status === "ready" && data.permissions.can_manage ? <button type="button" disabled={Boolean(busy)} onClick={() => setActivateTarget(version)}>验证并切换</button> : version.status === "active" ? "当前生产" : "—"}</td></tr>)}
+          {!dataLoaded ? <tr><td colSpan={8}>正在读取索引版本……</td></tr> : !data ? <tr><td colSpan={8}>索引版本暂时无法读取。</td></tr> : !data.index_versions.length ? <tr><td colSpan={8}>尚未建立版本化索引。</td></tr> : null}
+        </tbody></table></div>
       </section>
-      <section className="admin-grid semantic-index-grid">
         <article className="admin-panel semantic-index-runtime">
           <header><h2>当前配置</h2><span className={data?.paused ? "status warning" : "status"}>{!data ? "加载中" : data.paused ? "已暂停" : "运行中"}</span></header>
           <dl>
@@ -439,55 +489,22 @@ export function SemanticIndexAdmin() {
             <button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => runAction("clean_orphans")}><Trash2 size={15} />清理孤立索引</button></> : <span className="status">只读。索引构建与切换由超级管理员执行。</span>}
           </div>
         </article>
-        <form className="admin-panel semantic-index-test" onSubmit={testQuery}>
-          <header><h2>测试一条查询</h2></header>
-          <label><span>观点或问题</span><textarea rows={4} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="例如：为什么农业现代化以后，农民反而更依赖组织？" /></label>
-          <button className="button" type="submit" disabled={busy === "test" || query.trim().length < 2} aria-busy={busy === "test"}><Search size={15} />{busy === "test" ? "正在测试" : "运行测试"}</button>
-          {testResult ? <p className="semantic-index-test-summary">返回 {testResult.count} 条 · {testResult.timing_ms ?? "未记录"} ms · {testResult.fallback_used || testResult.engine === "keyword_fallback" ? "服务端确认使用关键词检索" : testResult.engine === "hybrid" ? "服务端确认完成混合检索" : "服务端已完成查询"}{testResult.effective_configuration?.semantic_ratio === undefined ? " · 混合检索权重未返回" : ` · 实际混合检索权重 ${Math.round(testResult.effective_configuration.semantic_ratio * 100)}%`}</p> : null}
-          {testResult?.comparison ? <dl className="ocr-runtime-status"><div><dt>关键词结果</dt><dd>{testResult.comparison.keyword_results.length} 条 · {testResult.comparison.latency_ms.keyword ?? "—"} ms</dd></div><div><dt>语义结果</dt><dd>{testResult.comparison.semantic_results.length} 条 · {testResult.comparison.latency_ms.semantic ?? "—"} ms</dd></div><div><dt>最终结果</dt><dd>{testResult.comparison.final_results.length} 条 · {testResult.comparison.latency_ms.final ?? "—"} ms</dd></div></dl> : null}
-          <div className="semantic-index-test-results">
-            {testResult?.results.slice(0, 10).map((item, index) => (
-              <article key={item.id}>
-                <strong>{item.relevance} · {item.title}</strong>
-                <span>{item.printed_label ? `引用第 ${item.printed_label} 页 · ` : ""}PDF 第 {item.page_index} 页</span>
-                <p>{item.snippet}</p>
-                <label className="evaluation-relevance-field">
-                  <span>评估相关性</span>
-                  <select
-                    name={`evaluation_relevance_${index}`}
-                    value={evaluationJudgments[item.id] ?? ""}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setEvaluationJudgments((current) => {
-                        if (value === "") {
-                          const next = { ...current };
-                          delete next[item.id];
-                          return next;
-                        }
-                        return { ...current, [item.id]: Number(value) };
-                      });
-                    }}
-                  >
-                    <option value="">不纳入标注</option>
-                    <option value="0">不相关</option>
-                    <option value="1">同主题但未回应</option>
-                    <option value="2">具有实质证据价值</option>
-                    <option value="3">直接回应问题</option>
-                  </select>
-                </label>
-              </article>
-            ))}
-          </div>
-        </form>
-      </section>
       <section className="admin-panel semantic-job-list">
-        <header><h2>索引版本</h2><span>新版本完整验证后才切换生产指针</span></header>
-        <div className="admin-table-scroll"><table><thead><tr><th>索引</th><th>模型</th><th>模型版本</th><th>维度</th><th>文档</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
-          {data?.index_versions.map((version) => <tr key={version.id}><td><strong>{version.uid}</strong>{version.error ? <small className="attempt-error">{version.error}</small> : null}</td><td>{version.model_repo_id}</td><td>{version.model_revision}</td><td>{version.dimensions ?? "模型默认"}</td><td>{version.document_count}{version.expected_document_count ? ` / ${version.expected_document_count}` : ""}</td><td>{indexStatusLabels[version.status] ?? version.status}</td><td>{new Date(version.created_at).toLocaleString("zh-CN")}</td><td>{version.status === "ready" && data.permissions.can_manage ? <button type="button" disabled={Boolean(busy)} onClick={() => setActivateTarget(version)}>验证并切换</button> : version.status === "active" ? "当前生产" : "—"}</td></tr>)}
-          {!dataLoaded ? <tr><td colSpan={8}>正在读取索引版本……</td></tr> : !data ? <tr><td colSpan={8}>索引版本暂时无法读取。</td></tr> : !data.index_versions.length ? <tr><td colSpan={8}>尚未建立版本化索引。</td></tr> : null}
+        <header><h2>最近索引任务</h2><span>{data ? `${data.recent_jobs.length} 条` : "加载中"}</span></header>
+        <div className="admin-table-scroll"><table><thead><tr><th>文献</th><th>任务类型</th><th>状态</th><th>进度</th><th>尝试次数</th><th>时间</th><th>操作</th></tr></thead><tbody>
+          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{operationLabels[job.operation] ?? job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id && data.permissions.can_manage ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
+          {!dataLoaded ? <tr><td colSpan={7}>正在读取索引任务……</td></tr> : !data ? <tr><td colSpan={7}>索引任务暂时无法读取。</td></tr> : !data.recent_jobs.length ? <tr><td colSpan={7}>还没有语义索引任务。</td></tr> : null}
         </tbody></table></div>
       </section>
-      <section className="admin-panel search-evaluation-panel" aria-labelledby="search-evaluation-title">
+</details></section> : <>
+      <section className={styles.questions}><h2>测试问题</h2><label>问题集<select disabled={Boolean(busy)} value={evaluationTargetSetId} onChange={event=>setEvaluationTargetSetId(event.target.value)}><option value="">新增问题集</option>{evaluationSets.map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>{evaluationError ? <p role="alert">{evaluationError}</p> : null}{savedQuestions.map((item,index)=><button type="button" key={item.id} disabled={Boolean(busy)} aria-pressed={query===item.query_text} onClick={()=>{if(!allowQueryChange()) return;setQuery(item.query_text);setTestResult(null);setEvaluationJudgments({});setPreviewQuery("");setStep(1);}}><b>{index+1}</b>{item.query_text}</button>)}</section>
+      {step<3 ? <>{        <form className="admin-panel semantic-index-test" onSubmit={testQuery}>
+          <header><h2>测试一条查询</h2></header>
+          <label><span>观点或问题</span><textarea rows={4} value={query} disabled={Boolean(busy)} onChange={(event) => { if (!allowQueryChange()) return; setQuery(event.target.value); setTestResult(null); setPreviewQuery(""); setEvaluationJudgments({}); setEvaluationMessage(""); }} placeholder="例如：为什么农业现代化以后，农民反而更依赖组织？" /></label>
+          <button className="button" type="submit" disabled={Boolean(busy) || query.trim().length < 2} aria-busy={busy === "test"}><Search size={15} />{busy === "test" ? "正在测试" : "运行测试"}</button>
+          {testResult ? <p className="semantic-index-test-summary">返回 {testResult.count} 条 · {testResult.timing_ms ?? "未记录"} ms · {testResult.fallback_used || testResult.engine === "keyword_fallback" ? "服务端确认使用关键词检索" : testResult.engine === "hybrid" ? "服务端确认完成混合检索" : "服务端已完成查询"}{testResult.effective_configuration?.semantic_ratio === undefined ? " · 混合检索权重未返回" : ` · 实际混合检索权重 ${Math.round(testResult.effective_configuration.semantic_ratio * 100)}%`}</p> : null}
+          {testResult?.comparison ? <dl className="ocr-runtime-status"><div><dt>关键词结果</dt><dd>{testResult.comparison.keyword_results.length} 条 · {testResult.comparison.latency_ms.keyword ?? "—"} ms</dd></div><div><dt>语义结果</dt><dd>{testResult.comparison.semantic_results.length} 条 · {testResult.comparison.latency_ms.semantic ?? "—"} ms</dd></div><div><dt>最终结果</dt><dd>{testResult.comparison.final_results.length} 条 · {testResult.comparison.latency_ms.final ?? "—"} ms</dd></div></dl> : null}
+        </form>}</> :       <section className="admin-panel search-evaluation-panel" aria-labelledby="search-evaluation-title">
         <header>
           <div>
             <h2 id="search-evaluation-title"><BarChart3 size={17} />馆内检索评估</h2>
@@ -498,7 +515,7 @@ export function SemanticIndexAdmin() {
         <div className="search-evaluation-workspace">
           <form className="search-evaluation-editor" onSubmit={saveEvaluationQuery}>
             <h3>保存当前测试查询</h3>
-            <p>先在上方运行真实查询，再给结果标注相关性。至少需要一个相关结果。</p>
+            <p>先在上方运行真实查询，再给结果标注相关性。不相关结果可以全部保存；待判断的结果不提交标注。</p>
             <label>
               <span>保存位置</span>
               <select
@@ -555,12 +572,12 @@ export function SemanticIndexAdmin() {
             <button
               className="button secondary"
               type="submit"
-              disabled={busy === "save_evaluation_query" || !testResult || !Object.keys(evaluationJudgments).length}
+              disabled={Boolean(busy) || !testResult || testResult.testedQuery !== query.trim()}
             >
               <Plus size={15} />{evaluationTargetSetId ? "加入评估集" : "建立评估集"}
             </button>
           </form>
-          <div className="search-evaluation-sets">
+          <details className="search-evaluation-sets"><summary>索引评估与评估集管理</summary>
             <div className="evaluation-index-picker">
               <label>
                 <span>运行所用索引</span>
@@ -616,10 +633,10 @@ export function SemanticIndexAdmin() {
                 <p className="evaluation-empty">还没有评估集。运行一次测试查询并标注结果后，可以在左侧建立第一组基线。</p>
               ) : null}
             </div>
-          </div>
+          </details>
         </div>
         {evaluationMessage ? <p className="evaluation-message" role="status" aria-live="polite">{evaluationMessage}</p> : null}
-        <div className="evaluation-run-history">
+        <details className="evaluation-run-history"><summary>最近运行</summary>
           <h3>最近运行</h3>
           <div className="admin-table-scroll">
             <table>
@@ -645,15 +662,14 @@ export function SemanticIndexAdmin() {
               </tbody>
             </table>
           </div>
-        </div>
+        </details>
       </section>
-      <section className="admin-panel semantic-job-list">
-        <header><h2>最近索引任务</h2><span>{data ? `${data.recent_jobs.length} 条` : "加载中"}</span></header>
-        <div className="admin-table-scroll"><table><thead><tr><th>文献</th><th>任务类型</th><th>状态</th><th>进度</th><th>尝试次数</th><th>时间</th><th>操作</th></tr></thead><tbody>
-          {data?.recent_jobs.map((job) => <tr key={job.id}><td><strong>{job.title || "全库任务"}</strong>{job.error ? <small className="attempt-error">{job.error}</small> : null}</td><td>{operationLabels[job.operation] ?? job.operation}</td><td>{jobStatusLabels[job.status] ?? job.status}</td><td>{job.progress}%</td><td>{job.attempts}</td><td>{new Date(job.created_at).toLocaleString("zh-CN")}</td><td>{job.asset_id && data.permissions.can_manage ? <button type="button" onClick={() => runAction("rebuild_asset", job.asset_id)}>单本重建</button> : null}</td></tr>)}
-          {!dataLoaded ? <tr><td colSpan={7}>正在读取索引任务……</td></tr> : !data ? <tr><td colSpan={7}>索引任务暂时无法读取。</td></tr> : !data.recent_jobs.length ? <tr><td colSpan={7}>还没有语义索引任务。</td></tr> : null}
-        </tbody></table></div>
-      </section>
+}
+    </>}
+    </div><div>
+    {surface==="index" ? <AdminPublicPreviewFrame title="搜索结果预览" src={previewQuery ? `/explore?mode=semantic&q=${encodeURIComponent(previewQuery)}` : null} emptyMessage="输入查询后检查当前公开搜索"><div className={styles.switcher}><button type="button" disabled title="缺少候选索引的交互预览接口">修改后</button><span>当前线上</span></div><form onSubmit={event=>{event.preventDefault();setPreviewQuery(query.trim());}}><label>查询<input value={query} onChange={event=>setQuery(event.target.value)}/></label><button className="button" disabled={!query.trim()}>搜索</button></form></AdminPublicPreviewFrame> : <section className={styles.results}><h2>本次查询结果</h2><p>以下判断对应测试接口返回的原文段落。候选索引需另行运行评估。</p>{testResult ? <><h3>“{testResult.testedQuery}”的搜索结果</h3><p>返回 {testResult.count} 条</p>{resultList}</> : <p>—</p>}</section>}
+    </div></div>
+    {surface==="evaluation" ? <footer className={styles.actions}><button className="button secondary" type="button" disabled={Boolean(busy) || step===1} onClick={()=>setStep(value=>value-1)}>上一步</button>{step<3 ? <button className="button" type="button" disabled={Boolean(busy) || !testResult} onClick={()=>setStep(3)}>保存本次评价</button> : null}<p role="status">{evaluationMessage}</p></footer> : null}
       <ConfirmDialog
         open={Boolean(activateTarget)}
         title="验证并切换生产语义索引"
@@ -669,6 +685,5 @@ export function SemanticIndexAdmin() {
         onCancel={() => setActivateTarget(null)}
         onConfirm={() => void activateVersion()}
       />
-    </div>
-  );
+  </div>;
 }

@@ -279,3 +279,38 @@ export function mergeRemoteDrafts<T extends Record<WorkflowStepKey, Record<strin
   });
   return merged;
 }
+
+export type WorkflowFieldConflict = { step: WorkflowStepKey; path: string; local: unknown; remote: unknown };
+
+/** A completed save acknowledges the submitted snapshot, not later input. */
+export function dirtyFieldsAfterSave<T extends Record<WorkflowStepKey, Record<string, unknown>>>(
+  current: T, submitted: T, dirty: DirtyFields,
+): DirtyFields {
+  return Object.fromEntries(WORKFLOW_STEP_KEYS.map((step) => [step, (dirty[step] ?? []).filter((path) =>
+    JSON.stringify(valueAtPath(current[step], path)) !== JSON.stringify(valueAtPath(submitted[step], path)),
+  )]));
+}
+
+export function workflowFieldConflicts<T extends Record<WorkflowStepKey, Record<string, unknown>>>(
+  local: T, remote: T, dirty: DirtyFields, base?: T | null,
+): WorkflowFieldConflict[] {
+  return WORKFLOW_STEP_KEYS.flatMap((step) => [...new Set(dirty[step] ?? [])].flatMap((path) => {
+    const localValue = valueAtPath(local[step], path);
+    const remoteValue = valueAtPath(remote[step], path);
+    if (JSON.stringify(localValue) === JSON.stringify(remoteValue)) return [];
+    if (base && JSON.stringify(valueAtPath(base[step], path)) === JSON.stringify(remoteValue)) return [];
+    return [{ step, path, local: localValue, remote: remoteValue }];
+  }));
+}
+
+export function resolveWorkflowConflicts<T extends Record<WorkflowStepKey, Record<string, unknown>>>(
+  local: T, remote: T, dirty: DirtyFields, conflicts: readonly WorkflowFieldConflict[],
+  choices: Record<string, "local" | "remote">,
+): { drafts: T; dirty: DirtyFields } {
+  if (conflicts.some(({ step, path }) => !["local", "remote"].includes(choices[`${step}.${path}`]))) {
+    throw new Error("请逐项选择要保留的内容。");
+  }
+  const takeRemote = new Set(conflicts.filter(({ step, path }) => choices[`${step}.${path}`] === "remote").map(({ step, path }) => `${step}.${path}`));
+  const remaining: DirtyFields = Object.fromEntries(WORKFLOW_STEP_KEYS.map((step) => [step, (dirty[step] ?? []).filter((path) => !takeRemote.has(`${step}.${path}`))]));
+  return { drafts: mergeRemoteDrafts(local, remote, remaining), dirty: remaining };
+}

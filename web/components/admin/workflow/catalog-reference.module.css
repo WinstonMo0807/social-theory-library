@@ -1,0 +1,38 @@
+.editor { grid-template-columns:minmax(360px,.78fr) minmax(0,1fr)!important; gap:18px!important; }
+.heading { grid-column:1/-1; display:flex; justify-content:space-between; align-items:start; padding:14px 0 4px; }
+.heading h1 { font:600 32px/1.4 var(--stl-type-serif); margin:0 0 10px; }
+.heading p { font:16px/1.7 var(--stl-type-serif); color:var(--admin-v2-muted); margin:0; }
+.heading>span { font:17px/1.5 var(--stl-type-serif); white-space:nowrap; }
+.versionDetails { border-bottom:1px solid var(--admin-v2-line); padding:12px 0; margin-bottom:16px; font-size:13px; }
+.versionDetails>summary { cursor:pointer; color:var(--admin-v2-muted); }
+.fieldTabs { display:flex; gap:24px; padding:0 18px; border:1px solid var(--admin-v2-line); background:var(--admin-v2-surface); }
+.fieldTabs button { padding:15px 6px; background:transparent; border:0; cursor:pointer; font:18px/1.4 var(--stl-type-serif); }
+.fieldTabs [aria-pressed=true] { border-bottom:2px solid var(--admin-v2-ink); }
+.stepActions { display:flex; justify-content:space-between; gap:12px; margin:18px 0; }
+.editor :global(.workflow-v307-rail nav) { border:0; padding:12px 0; }
+.editor :global(.workflow-v307-rail nav>button:not(:last-child))::after { content:""; height:1px; flex:1; margin:17px 10px 0; background:var(--admin-v2-line); }
+.editor :global(.workflow-editor-main) { grid-column:1; min-width:0; }
+.editor :global(.workflow-v307-live-preview),.editor>:global(.workflow-inspector) { grid-column:2; grid-row:3/span 2; position:sticky; top:64px; max-height:calc(100vh - 80px); overflow:auto; min-width:0; border:1px solid var(--admin-v2-line); border-radius:4px; background:var(--admin-v2-surface); padding:18px; }
+.editor :global(.workflow-field-grid) { grid-template-columns:1fr!important; }
+.editor :global(.workflow-v307-live-preview .fixed-preview-canvas) { max-height:none; }
+.editor :global(.workflow-section-heading) { background:transparent; }
+.conflict { padding:26px; border:1px solid var(--admin-v2-line); border-radius:4px; background:var(--admin-v2-surface); font-family:var(--stl-type-serif); }
+.conflict h2 { margin:0 0 10px; font-size:28px; }
+.conflict h3 { margin:24px 0; padding-bottom:24px; border-bottom:1px solid var(--admin-v2-line); font-size:24px; }
+.conflict p { color:var(--admin-v2-muted); line-height:1.8; }
+.conflict fieldset { border:0; padding:0; margin:24px 0; min-width:0; }
+.conflict legend { padding:0; margin-bottom:14px; font-size:19px; font-weight:600; }
+.conflictColumns { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.conflictColumns>label { min-width:0; display:grid; gap:12px; padding:16px 12px; border:1px solid transparent; border-radius:4px; background:#eeeae2; cursor:pointer; }
+.conflictColumns>label[data-side=remote] { background:#f0efec; }
+.conflictColumns>label[data-selected=true] { border-color:var(--admin-v2-accent); }
+.conflictColumns small { color:var(--admin-v2-muted); }
+.conflictColumns span { display:flex; gap:8px; align-items:center; }
+.conflictValue { padding:14px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; background:var(--admin-v2-surface); border:1px solid var(--admin-v2-line); border-radius:3px; }
+.conflictValue dl { margin:0; }.conflictValue dt { color:var(--admin-v2-muted); font-size:12px; }.conflictValue dd { margin:0 0 8px; }.conflictValue ol { padding-left:20px; }
+.conflictNotice { padding:18px; border:1px solid var(--admin-v2-line); background:#f7f3eb; }
+.conflict footer { display:flex; flex-wrap:wrap; gap:12px; }
+.mobileViews { display:none; }
+@media(max-width:700px) { .mobileViews { display:flex;grid-column:1/-1;border:1px solid var(--admin-v2-line);border-radius:3px;overflow:hidden;margin:0 0 16px; }.mobileViews button { flex:1;padding:12px;border:0;background:var(--admin-v2-surface);font-size:14px;cursor:pointer; }.mobileViews button[aria-pressed=true] { background:var(--admin-v2-ink);color:white; }.editor[data-mobile-view=preview]>:global(.workflow-editor-main),.editor[data-mobile-view=edit]>:global(.workflow-v307-live-preview),.editor[data-mobile-view=edit]>:global(.workflow-inspector) { display:none; } }
+@media(max-width:600px) { .conflict { padding:16px; }.conflictColumns { grid-template-columns:1fr; } }
+@media(max-width:1000px) { .editor { grid-template-columns:1fr!important; }.editor :global(.workflow-v307-live-preview),.editor>:global(.workflow-inspector) { grid-column:1;grid-row:auto;position:static;max-height:80vh; }.heading { flex-wrap:wrap;gap:12px; } }

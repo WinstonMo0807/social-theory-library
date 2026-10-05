@@ -58,7 +58,7 @@ def public_editions(*, require_fulltext: bool = False) -> QuerySet:
     )
 
 
-def public_default_edition(work, *, mode: str = "reader"):
+def public_default_edition(work, *, mode: str = "reader", editions=None):
     """Resolve a Work's public entry edition with a safe primary fallback.
 
     The explicit reader/download choice is only effective while its edition
@@ -66,7 +66,7 @@ def public_default_edition(work, *, mode: str = "reader"):
     choice from leaking a withdrawn or half-published edition to readers.
     """
     preferred_id = getattr(work, f"{mode}_default_edition_id", None)
-    rows = list(getattr(work, "editions").all())
+    rows = list(editions) if editions is not None else list(getattr(work, "editions").all())
     preferred = next((row for row in rows if preferred_id and row.pk == preferred_id), None)
     if preferred is not None and active_catalog_snapshot(preferred):
         return preferred

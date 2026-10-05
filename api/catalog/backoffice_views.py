@@ -36,7 +36,7 @@ from catalog.services.query_lexicon.operations import (
 )
 
 
-class AdminQueryLexiconWorkspaceView(APIView):
+class AdminQueryLexiconWorkspaceView(AdminPrivateResponseMixin, APIView):
     """Read-only inspector plus explicit dry-run/reconcile actions."""
 
     def get_permissions(self):
@@ -44,15 +44,26 @@ class AdminQueryLexiconWorkspaceView(APIView):
 
     def get(self, request):
         from catalog.services.query_lexicon.operations import query_lexicon_workspace
+        from rest_framework import serializers
+
+        raw_id = request.query_params.get("entity_id")
+        entity_id = serializers.UUIDField().run_validation(raw_id) if raw_id else None
 
         payload = query_lexicon_workspace(
                 query=request.query_params.get("q", ""),
                 entity_type=request.query_params.get("entity_type", ""),
+                entity_id=entity_id,
+                offset=request.query_params.get("offset", 0),
                 limit=request.query_params.get("limit", 60),
             )
         payload["permissions"] = {
             "can_manage": CanManageQueryLexicon().has_permission(request, self),
         }
+        if entity_id and request.query_params.get("entity_type") == "person":
+            from catalog.models import Person
+            from catalog.serializers import PersonCompactSerializer
+            person = get_object_or_404(Person.objects.select_related("scholar_profile"), pk=entity_id)
+            payload["person"] = PersonCompactSerializer(person, context={"request": request}).data
         return Response(payload)
 
     def post(self, request):

@@ -3,12 +3,9 @@
 import Link from "next/link";
 import {
   AlertCircle,
-  CheckCircle2,
   ClipboardCheck,
   ChevronRight,
-  Clock3,
   Cpu,
-  FileText,
   PauseCircle,
   Play,
   RefreshCw,
@@ -31,6 +28,9 @@ import { CatalogOcrPicker, OcrProgressDisplay, ocrPageRanges as pageRanges, type
 import { OcrTaskMonitor } from "./ocr-task-monitor";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
+import { SelectedWorkPreview } from "./admin/preview/selected-work-preview";
+import { ResearchSourceRegistryPanel } from "./research-source-registry";
+import { publicationPublicHref, type CatalogPublication } from "@/lib/api/admin-collections";
 import { DiscoveryIndexPanel } from "./discovery-index-panel";
 
 type Attempt = {
@@ -53,7 +53,7 @@ type ProcessingItem = {
   error_code: string;
   error_message: string;
   updated_at: string;
-  review_data: { title: string } | null;
+  review_data: { title: string; authors?: string[]; publication_year?: number | null; publisher?: string; version_label?: string; publication?: CatalogPublication } | null;
   attempts: Attempt[];
   is_stalled: boolean;
   stalled_seconds: number;
@@ -350,11 +350,15 @@ export function ProcessingCenter() {
   const [jobType, setJobType] = useState("");
   const [jobStatus, setJobStatus] = useState("");
   const [filtersReady, setFiltersReady] = useState(false);
-  const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("documents");
+  const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("overview");
   const [revision, setRevision] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<ProcessingItem | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
-  const selectedDocument = items.find(item => item.id === selectedDocumentId) ?? null;
+  const selectedDocument = items.find(item => item.id === selectedDocumentId) ?? items[0] ?? null;
+  const [documentDetail, setDocumentDetail] = useState(false);
+  const [problemType, setProblemType] = useState("all");
+  const [selectedReviewId, setSelectedReviewId] = useState("");
+  const selectedReview = reviewTasks.find(task => task.id === selectedReviewId) ?? reviewTasks[0] ?? null;
   const [actionPending, setActionPending] = useState(false);
   const [pendingOperation, setPendingOperation] = useState("");
   const operationInFlightRef = useRef("");
@@ -687,7 +691,6 @@ export function ProcessingCenter() {
 
   const statusCounts = taskMeta?.counts ?? {};
   const typeCounts = taskMeta?.type_counts ?? {};
-  const totalCounts = taskMeta?.total_counts ?? {};
   const filteredJobs = jobs;
   const canManageTasks = taskMeta?.can_manage === true;
   const historicalNetworkFailures = useMemo(() => jobs.filter((job) => (
@@ -695,20 +698,15 @@ export function ProcessingCenter() {
     && job.status === "failed"
     && /huggingface|dns|name or service|network unreachable|resolve/i.test(`${job.error_code} ${job.last_error}`)
   )).length, [jobs]);
-  const summary = {
-    active: taskMeta ? (totalCounts.pending ?? 0) + (totalCounts.running ?? 0) : null,
-    review: reviewMeta ? (reviewCounts.pending ?? 0) + (reviewCounts.in_progress ?? 0) : null,
-    failed: taskMeta ? totalCounts.failed ?? 0 : null,
-    succeeded: taskMeta ? totalCounts.succeeded ?? 0 : null,
-  };
-  const healthSurface: FunctionalHealthSurface | null = activeSurface === "documents" ? null : activeSurface;
+  const healthSurface: FunctionalHealthSurface | null = activeSurface === "ai-models" || activeSurface === "projections" || activeSurface === "faults" ? activeSurface : null;
+  const problemItems = items.filter(item => problemType === "all" || (problemType === "file" ? item.document_stages?.file?.status === "failed" || item.status === "failed" && !item.document_stages?.ocr?.error && !item.document_stages?.index?.error : ["failed", "paused", "pending", "running"].includes(item.document_stages?.[problemType as "ocr" | "index"]?.status || "")));
 
   return (
-    <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
+    <div className="admin-page processing-center-page processing-reference-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><p>管理后台 / 文档与任务</p><h1>Processing Center</h1><span>管理文档处理，查看真实任务进度和需要处理的问题。</span></div>
+        <div><h1>{documentDetail ? "查看这本书的处理情况" : activeSurface === "research-sources" ? "资料来源" : activeSurface === "workers" ? "人工核对" : activeSurface === "documents" ? "文字识别" : "处理中心"}</h1><span>{documentDetail ? "了解文件处理进度、当前问题与下一步操作" : activeSurface === "research-sources" ? "用于查找书目信息的来源" : "处理文件和搜索问题，确保读者能够正常浏览、阅读和检索。"}</span></div>
         <div className="admin-action-row">
-          <ActionLink className="button secondary" href="/admin/review?category=publication_ready">待发布馆藏 <ChevronRight size={15} /></ActionLink>
+          <ActionLink className="button secondary" href="/admin/processing/status">查看系统运行状态 <ChevronRight size={15} /></ActionLink>
           <ActionButton
             className="button secondary"
             state={pendingOperation === "refresh" || (loading && !items.length) ? "pending" : error ? "error" : "idle"}
@@ -716,9 +714,38 @@ export function ProcessingCenter() {
             errorLabel="重新刷新"
             disabled={Boolean(pendingOperation) && pendingOperation !== "refresh"}
             onClick={() => void refreshNow()}
-          ><RefreshCw size={15} />刷新</ActionButton>
+          ><RefreshCw size={15} />立即检查</ActionButton>
         </div>
       </header>
+      <div
+        className="processing-center-surface"
+        id={`processing-surface-${activeSurface}`}
+        aria-label="处理任务与读者效果"
+        tabIndex={0}
+      >
+      {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
+      {activeSurface === "projections" ? <DiscoveryIndexPanel revision={revision} /> : null}
+      {activeSurface === "research-sources" ? <ResearchSourceRegistryPanel revision={revision}/> : null}
+      {activeSurface === "overview" || activeSurface === "documents" ? <>
+        {documentDetail && selectedDocument ? <div className="processing-reference-document-heading"><div><h2>{selectedDocument.review_data?.title || selectedDocument.source_filename}</h2><p>{[selectedDocument.review_data?.authors?.join("、"), selectedDocument.review_data?.publisher, selectedDocument.review_data?.publication_year, selectedDocument.review_data?.version_label].filter(Boolean).join("　｜　")}</p></div><div><strong>{stageLabels[selectedDocument.status] ?? selectedDocument.status}</strong><small>最后检查：{timeLabel(selectedDocument.updated_at)}</small></div><button type="button" className="button secondary" onClick={() => setDocumentDetail(false)}>返回待处理任务</button></div> : null}
+        <div className="processing-reference-columns">
+          {documentDetail && selectedDocument ? <section className="processing-reference-document" aria-label="文档处理详情">
+            <h2>处理进度</h2><ol className="processing-reference-progress">{(["file", "ocr", "index"] as const).map((stageKey, index) => { const stage = selectedDocument.document_stages?.[stageKey]; const complete = stage && ["completed", "succeeded"].includes(stage.status); return <li key={stageKey} className={complete ? "complete" : stage?.status === "failed" ? "failed" : ""}><b>{complete ? "✓" : index + 1}</b><strong>{["文件上传", "读取文字", "更新搜索结果"][index]}</strong><span>{stage ? statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status : "尚无记录"}</span><small>{timeLabel(stage?.updated_at ?? null)}</small></li>; })}</ol>
+            {selectedDocument.error_message || selectedDocument.dispatch_error ? <div className="processing-reference-alert" role="alert"><AlertCircle size={18}/><div><strong>处理尚未完成</strong><p>{selectedDocument.error_message || selectedDocument.dispatch_error}</p></div></div> : null}
+            <div className="admin-action-row">{selectedDocument.suggested_action === "retry" || selectedDocument.suggested_action === "resume" ? <ActionButton className="button" state={operationState(`item-retry:${selectedDocument.id}`)} disabled={Boolean(pendingOperation)} onClick={() => void retry(selectedDocument)}><RotateCcw size={16}/>重试失败处理</ActionButton> : null}<Link className="button secondary" href={`/admin/intake/${selectedDocument.id}#file`}>回到馆藏编辑</Link></div>
+            <h3>处理历史</h3>{selectedDocument.attempts.length ? <ol className="processing-reference-history">{selectedDocument.attempts.map(attempt => <li key={attempt.id}><i className={attempt.status}/><div><strong>{stageLabels[attempt.stage] ?? jobLabels[attempt.stage] ?? attempt.stage}</strong><p>{statusLabels[attempt.status] ?? attempt.status}</p>{attempt.error_message ? <p>{attempt.error_message}</p> : null}</div><time>{timeLabel(attempt.started_at)}</time></li>)}</ol> : <p className="empty-state">尚无处理历史。</p>}
+            <details><summary>技术详情（仅管理员可见）</summary><dl><div><dt>原始文件</dt><dd>{selectedDocument.source_filename}</dd></div><div><dt>调度状态</dt><dd>{selectedDocument.dispatch_status}</dd></div><div><dt>进度</dt><dd>{selectedDocument.stage_progress}%</dd></div></dl>{canRemoveRecords ? <button className="danger-link" type="button" disabled={Boolean(pendingOperation)} onClick={() => setRemoveTarget(selectedDocument)}>移除上传记录</button> : null}</details>
+          </section> : <section className="processing-reference-tasks"><header><h2>待处理任务 <small>{itemMeta?.count ?? "—"}</small></h2></header><nav className="processing-reference-filters" aria-label="本页问题筛选">{[["all", "全部"], ["file", "上传问题"], ["ocr", "识别问题"], ["index", "搜索问题"]].map(([value, label]) => <button type="button" key={value} aria-pressed={problemType === value} onClick={() => setProblemType(value)}>{label}</button>)}</nav>
+            <div className="processing-reference-table"><header><span>书目</span><span>问题状态</span><span>影响读者</span><span>下一步操作</span></header>{problemItems.map(item => <article key={item.id} className={selectedDocument?.id === item.id ? "selected" : ""}><button type="button" className="reference-select-title" aria-pressed={selectedDocument?.id === item.id} onClick={() => setSelectedDocumentId(item.id)}><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.review_data?.authors?.join("、")}</small><small>{[item.review_data?.publication_year, item.review_data?.version_label].filter(Boolean).join(" · ")}</small></button><div><strong className={item.status === "failed" ? "failed" : ""}>{stageLabels[item.status] ?? item.status}</strong><small>{timeLabel(item.updated_at)}</small></div><div>{item.review_data?.publication ? publicationPublicHref(item.review_data.publication) ? "书目可以访问；阅读及搜索请核对预览" : "此版本尚无公开页面" : "—"}</div><div><button type="button" className="button secondary" onClick={() => { setSelectedDocumentId(item.id); setDocumentDetail(true); }}>查看原因</button></div></article>)}</div>
+            {!loading && !problemItems.length ? <p className="admin-list-state">当前页没有符合条件的待处理记录。</p> : null}
+            {itemMeta ? <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil(itemMeta.count / 24))} count={itemMeta.count} busy={loading} onChange={page => { setItemPage(page); setSelectedDocumentId(""); }}/> : null}
+          </section>}
+          <SelectedWorkPreview key={selectedDocument?.id || "empty"} editionId={selectedDocument?.edition} publicHref={publicationPublicHref(selectedDocument?.review_data?.publication)}/>
+        </div>
+        <section className="processing-reference-services"><h2>系统运行状态</h2><div>{[["后台任务", queueHealth?.worker_online], ["文件存储", null], ["文字识别服务", queueHealth?.ocr.reachable], ["搜索服务", queueHealth?.search.reachable]].map(([label, state]) => <article key={String(label)}><i className={state === true ? "healthy" : state === false ? "failed" : "unknown"}/><div><strong>{label}</strong><span>{state === true ? "可连接" : state === false ? "不可连接" : "待核实"}</span><small>上次检查：{timeLabel(queueHealth?.checked_at ?? null)}{queueHealth?.stale ? "（已过期）" : ""}</small></div></article>)}<Link className="button secondary" href="/admin/processing/status">运行检查详情 →</Link></div></section>
+      </> : null}
+      {activeSurface === "workers" ? <section className="processing-reference-review"><nav className="reference-review-steps" aria-label="人工核对步骤"><span><b>1</b>查看差异</span><span className="active"><b>2</b>核对原文件</span><span><b>3</b>确认处理</span></nav><div className="processing-reference-review-columns"><aside><header><h2>待处理任务（{reviewMeta?.count ?? "—"}）</h2><select aria-label="审核任务状态" value={reviewStatus} onChange={event => { setReviewStatus(event.target.value); setReviewPage(1); setSelectedReviewId(""); }}>{Object.entries(reviewStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></header>{reviewTasks.map(task => <button type="button" key={task.id} className={selectedReview?.id === task.id ? "selected" : ""} onClick={() => setSelectedReviewId(task.id)} aria-pressed={selectedReview?.id === task.id}><strong>{task.item_title || task.source_filename || task.title}</strong><small>{reviewTypeLabels[task.task_type] ?? task.title}</small><ChevronRight size={16}/></button>)}<TaskPagination label="人工待办翻页" page={reviewMeta?.page ?? reviewPage} pages={reviewMeta?.pages ?? 1} count={reviewMeta?.count ?? 0} busy={loading} onChange={setReviewPage}/></aside><section>{selectedReview ? <><h2>核对{reviewTypeLabels[selectedReview.task_type] ?? "书目信息"}</h2><h3>{selectedReview.item_title || selectedReview.source_filename}</h3><p>{selectedReview.title}</p><div className="processing-reference-alert"><AlertCircle size={18}/><p>请查看右侧原文件，核对正确的信息。已确认值和识别建议在这份馆藏的编辑页逐字段处理。</p></div><dl><div><dt>当前状态</dt><dd>{reviewStatusLabels[selectedReview.status]}</dd></div><div><dt>负责人</dt><dd>{selectedReview.assigned_to_name || "尚未领取"}</dd></div><div><dt>创建时间</dt><dd>{timeLabel(selectedReview.created_at)}</dd></div></dl><footer>{canManageReviewTasks && selectedReview.status === "pending" ? <ActionButton className="button secondary" state={operationState(`review:assign_self:${selectedReview.id}`)} disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(selectedReview, "assign_self")}>领取任务</ActionButton> : null}{selectedReview.upload_item ? <Link className="button" href={`/admin/intake/${selectedReview.upload_item}#bibliography`}>下一步：核对并确认 →</Link> : <Link className="button" href="/admin/candidate-review">查看候选与处理入口 →</Link>}</footer></> : <p className="empty-state">当前没有人工审核任务。</p>}</section><section>{selectedReview?.upload_item ? <WorkflowInspector key={selectedReview.id} selection={{ kind: "pdf", title: "原文件与出版信息", pdfUrl: `/ingestion/items/${selectedReview.upload_item}/preview/` }} token={getServerSessionCredential()} onClose={() => setSelectedReviewId("")}/> : <p className="empty-state">—</p>}</section></div></section> : null}
+      <details className="processing-reference-technical"><summary>技术信息（折叠）<span>任务记录、服务日志与维护设置</span></summary>
       <nav className="processing-type-tabs processing-center-surfaces" aria-label="处理中心分类" role="tablist">
         {PROCESSING_SURFACES.map((surface) => (
           <button
@@ -736,30 +763,7 @@ export function ProcessingCenter() {
         ))}
       </nav>
       <section className="processing-v307-maintenance" aria-label="高级维护与配置"><strong>高级维护与配置</strong><nav><Link href="/admin/processing/settings">处理服务设置</Link><Link href="/admin/processing/query-lexicon">检索词典</Link><Link href="/admin/processing/semantic-index">语义索引</Link><Link href="/admin/processing/status">运行状态</Link><Link href="/admin/processing/health">专业自检</Link></nav></section>
-      <div
-        className="processing-center-surface"
-        id={`processing-surface-${activeSurface}`}
-        role="tabpanel"
-        aria-labelledby={`processing-surface-tab-${activeSurface}`}
-        tabIndex={0}
-      >
-      {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
-      {activeSurface === "documents" || activeSurface === "projections" ? <DiscoveryIndexPanel revision={revision} /> : null}
-      {activeSurface === "overview" || activeSurface === "documents" ? <section className="processing-summary">
-        <article><Clock3 size={18} /><strong>{summary.active ?? "—"}</strong><span>等待或运行</span></article>
-        <article><FileText size={18} /><strong>{summary.review ?? "—"}</strong><span>待复核</span></article>
-        <article><AlertCircle size={18} /><strong>{summary.failed ?? "—"}</strong><span>失败</span></article>
-        <article><CheckCircle2 size={18} /><strong>{summary.succeeded ?? "—"}</strong><span>成功</span></article>
-      </section> : null}
-      {activeSurface === "documents" ? <section className="processing-list admin-panel processing-v307-documents">
-        <header><div><h2>文档处理</h2><p>每一步来自实际上传与后台任务记录；未记录的阶段不会标记成功。</p></div><span>{itemMeta?.count ?? "—"} 个文档</span></header>
-        <div className="admin-v307-table-scroll"><table><thead><tr><th>文档</th><th>文件与识别</th><th>OCR</th><th>索引</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
-          const stageCell = (stage: DocumentStage | null | undefined) => stage ? <><span className={`processing-v307-state state-${stage.status}`}>{statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status}</span>{stage.progress !== null ? <progress value={stage.progress} max={100} aria-label={`${stage.kind}任务进度`} /> : null}{stage.error ? <small className="processing-v307-stage-error">{stage.error}</small> : null}</> : <span className="muted">尚无任务记录</span>;
-          return <tr key={item.id}><td><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></td><td>{stageCell(item.document_stages?.file)}</td><td>{stageCell(item.document_stages?.ocr)}</td><td>{stageCell(item.document_stages?.index)}</td><td>{timeLabel(item.updated_at)}</td><td><button type="button" className="button secondary" onClick={() => setSelectedDocumentId(item.id)}>查看详情</button></td></tr>;        })}</tbody></table></div>
-        {!loading && itemMeta && !items.length ? <p className="admin-list-state">当前没有待处理上传记录。</p> : null}
-        {itemMeta ? <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil(itemMeta.count / 24))} count={itemMeta.count} busy={loading} onChange={setItemPage} /> : null}
-        {selectedDocument ? <section className="processing-v307-document-detail" aria-label="文档处理详情"><header><div><small>文档详情</small><h3>{selectedDocument.review_data?.title || selectedDocument.source_filename}</h3></div><button type="button" className="button secondary" onClick={() => setSelectedDocumentId("")}>返回文档列表</button></header><div className="processing-v307-document-columns"><div><h4>处理进度</h4><p>{stageLabels[selectedDocument.status] ?? selectedDocument.status} · {selectedDocument.stage_progress}%</p><progress value={selectedDocument.stage_progress} max={100} aria-label="文档处理进度" /><dl><div><dt>原始文件</dt><dd>{selectedDocument.source_filename}</dd></div><div><dt>最近更新</dt><dd>{timeLabel(selectedDocument.updated_at)}</dd></div><div><dt>调度状态</dt><dd>{selectedDocument.dispatch_status}</dd></div></dl>{selectedDocument.error_message || selectedDocument.dispatch_error ? <p role="alert">{selectedDocument.error_message || selectedDocument.dispatch_error}</p> : null}<h4>各阶段最新任务</h4><dl>{(["file", "ocr", "index"] as const).map(stageKey => { const stage = selectedDocument.document_stages?.[stageKey]; return <div key={stageKey}><dt>{{file:"文件与文本",ocr:"OCR 识别",index:"检索索引"}[stageKey]}</dt><dd>{stage ? <><strong>{statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status}</strong>{stage.progress !== null ? <span> · {stage.progress}%</span> : null}<small>{stage.updated_at ? `更新于 ${timeLabel(stage.updated_at)}` : ""}</small>{stage.error ? <p role="status">{stage.error}</p> : null}</> : "尚无任务记录"}</dd></div>; })}</dl><h4>处理历史</h4>{selectedDocument.attempts.length ? <ol>{selectedDocument.attempts.map(attempt => <li key={attempt.id}><strong>{stageLabels[attempt.stage] ?? jobLabels[attempt.stage] ?? attempt.stage}</strong><span>{statusLabels[attempt.status] ?? attempt.status} · {timeLabel(attempt.started_at)}</span>{attempt.error_message ? <p>{attempt.error_message}</p> : null}</li>)}</ol> : <p>尚无处理历史。</p>}<div className="admin-action-row"><Link className="button" href={`/admin/intake/${selectedDocument.id}#file`}>打开馆藏工作页</Link>{selectedDocument.suggested_action === "retry" || selectedDocument.suggested_action === "resume" ? <ActionButton state={operationState(`item-retry:${selectedDocument.id}`)} disabled={Boolean(pendingOperation)} onClick={() => void retry(selectedDocument)}>重试失败处理</ActionButton> : null}{canRemoveRecords ? <button className="danger-link" type="button" disabled={Boolean(pendingOperation)} onClick={() => setRemoveTarget(selectedDocument)}>删除上传</button> : null}</div></div><WorkflowInspector selection={{kind:"pdf",title:"PDF 文件预览",pdfUrl:`/ingestion/items/${selectedDocument.id}/preview/`}} token={getServerSessionCredential()} onClose={() => setSelectedDocumentId("")} /></div></section> : null}
-      </section> : null}
+
       {activeSurface === "overview" || activeSurface === "workers" || activeSurface === "ai-models" || activeSurface === "documents" ? (
       <div className={`processing-health-grid ${activeSurface === "overview" ? "" : "single"}`}>
         {(activeSurface === "overview" || activeSurface === "workers" || activeSurface === "documents") && queueHealth ? (
@@ -920,6 +924,7 @@ export function ProcessingCenter() {
         <TaskPagination label="后台任务翻页" page={taskMeta?.page ?? jobPage} pages={taskMeta?.pages ?? 1} count={taskMeta?.count ?? 0} busy={loading} onChange={setJobPage} />
         {!canManageTasks ? <p>当前账户只读。任务启停与恢复需要管理员或系统所有者权限。</p> : null}
       </section> : null}
+      </details>
       </div>
       <ToastHost
         items={feedback.message ? [{ id: feedback.actionKey || "processing", state: feedback.state === "idle" ? "success" : feedback.state, message: feedback.message }] : []}

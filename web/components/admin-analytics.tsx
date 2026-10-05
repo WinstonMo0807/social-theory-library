@@ -1,6 +1,8 @@
 "use client";
 
-import { BarChart3, BookOpen, Download, Search } from "lucide-react";
+import { BarChart3, BookOpen, Users, Search } from "lucide-react";
+import { useState } from "react";
+import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
@@ -18,24 +20,16 @@ type Analytics = {
 export function AdminAnalytics() {
   const user = useAdminSession();
   const allowed = hasAdminCapability(user, "can_view_audit_log");
-  const { data, error, retry } = useApiResource<Analytics>(allowed ? "/catalog/admin/usage-analytics/?days=30" : "", user ? getServerSessionCredential() : null, String(user?.id ?? ""));
+  const [days,setDays]=useState(30);
+  const [selected,setSelected]=useState("");
+  const { data, error, retry } = useApiResource<Analytics>(allowed ? `/catalog/admin/usage-analytics/?days=${days}` : "", user ? getServerSessionCredential() : null, String(user?.id ?? ""));
   if (!allowed) return <div className="admin-page"><h1>当前账户没有统计查看权限</h1><p>请返回今日工作继续编目。</p></div>;
-  const cards = [
-    ["匿名阅读会话", data?.anonymous_sessions ?? "—", BarChart3],
-    ["图书打开", data?.events.reader_open ?? "—", BookOpen],
-    ["搜索提交", data?.events.search_submit ?? "—", Search],
-    ["下载", data?.events.download ?? "—", Download],
-  ] as const;
-  return (
-    <div className="admin-page analytics-page">
-      <header className="admin-page-title"><div><p>数据分析</p><h1>阅读与搜索统计</h1><span>只使用第一方匿名会话做聚合，不以 IP 标识读者，也不与注册账号永久关联。</span></div></header>
-      {error ? <p className="review-error" role="alert">{error}<button type="button" onClick={retry}>重试统计</button></p> : null}
-      <section className="metric-grid">{cards.map(([label, value, Icon]) => <article key={label}><header><span>{label}</span><Icon size={15} /></header><div><strong>{value}</strong></div><p>最近 30 天</p></article>)}</section>
-      <div className="admin-grid top">
-        <section className="admin-panel"><h2>热门馆藏</h2>{(data?.top_works ?? []).map((item) => <p className="status-count-row" key={item.work_id}><span>{item.work__title}</span><strong>{item.opens} 次 · {item.unique_sessions} 会话</strong></p>)}{data && !data.top_works.length ? <p className="empty-state">尚无匿名阅读事件。</p> : null}</section>
-        <section className="admin-panel"><h2>搜索质量</h2><p className="status-count-row"><span>无结果搜索</span><strong>{data?.zero_result_searches ?? "—"}</strong></p><p className="status-count-row"><span>结果点击</span><strong>{data?.events.search_result_click ?? "—"}</strong></p><p className="empty-state">原始事件保留 {data?.privacy.retention_days ?? 90} 天，长期仅保留聚合。</p></section>
-      </div>
-      <section className="admin-panel"><h2>热门搜索</h2><div className="admin-table-scroll"><table><thead><tr><th>规范化查询</th><th>搜索</th><th>匿名会话</th><th>点击</th><th>点击率</th><th>无结果</th></tr></thead><tbody>{(data?.top_queries ?? []).map((item) => <tr key={item.normalized_query}><td>{item.normalized_query}</td><td>{item.search_count}</td><td>{item.unique_sessions}</td><td>{item.click_count}</td><td>{Math.round(item.click_through_rate * 100)}%</td><td>{item.zero_result_count}</td></tr>)}{data && !data.top_queries.length ? <tr><td colSpan={6}>尚无达到聚合条件的搜索。</td></tr> : null}</tbody></table></div></section>
-    </div>
-  );
+  const cards = [["页面浏览量", "—", BarChart3],["匿名阅读会话",data?.anonymous_sessions ?? "—",Users],["站内搜索次数",data?.events.search_submit ?? "—",Search],["馆藏阅读次数",data?.events.reader_open ?? "—",BookOpen]] as const;
+  const zeroQueries=(data?.top_queries || []).filter(row=>row.zero_result_count>0).sort((a,b)=>b.zero_result_count-a.zero_result_count).slice(0,5);
+  const selectedUrl=selected || (zeroQueries[0] ? `/explore?q=${encodeURIComponent(zeroQueries[0].normalized_query)}` : "");
+  return <div className="admin-page analytics-page analytics-reference"><header className="admin-page-title"><div><h1>使用统计</h1><span>查看读者如何使用书库，了解哪些内容受欢迎，并发现可以改进的地方。</span></div></header><div className="analytics-reference-period"><select aria-label="统计范围" value={days} onChange={event=>{setDays(Number(event.target.value));setSelected("");}}>{[7,30,90,365].map(value=><option key={value} value={value}>最近 {value} 天</option>)}</select><p>数据为匿名聚合统计，不包含个人信息、私人笔记或 IP 地址。</p></div>
+    {error ? <p role="alert">{error}<button type="button" onClick={retry}>重试统计</button></p> : null}
+    <section className="metric-grid">{cards.map(([label,value,Icon])=><article key={label}><Icon size={25}/><div><span>{label}</span><strong>{value}</strong><small>较上期　—</small></div></article>)}</section>
+    <div className="analytics-reference-columns"><div><section className="admin-panel"><h2>阅读与搜索趋势</h2><div className="analytics-reference-chart" aria-label="当前接口未提供按日趋势">—</div></section><section className="admin-panel"><h2>热门馆藏 <small>按阅读次数</small></h2><table><thead><tr><th>#</th><th>书名</th><th>阅读次数</th><th>匿名会话</th><th>操作</th></tr></thead><tbody>{(data?.top_works || []).map((row,index)=><tr key={row.work_id}><td>{index+1}</td><td>{row.work__title}</td><td>{row.opens}</td><td>{row.unique_sessions}</td><td><button type="button" onClick={()=>setSelected(`/works/${row.work_id}`)}>查看</button></td></tr>)}</tbody></table>{data && !data.top_works.length ? <p>尚无匿名阅读记录。</p> : null}</section><section className="admin-panel"><h2>热门无结果查询 <small>当前热门查询中的前 5 项</small></h2><table><thead><tr><th>#</th><th>查询关键词</th><th>无结果次数</th><th>操作</th></tr></thead><tbody>{zeroQueries.map((row,index)=><tr key={row.normalized_query}><td>{index+1}</td><td>{row.normalized_query}</td><td>{row.zero_result_count}</td><td><button type="button" onClick={()=>setSelected(`/explore?q=${encodeURIComponent(row.normalized_query)}`)}>在馆藏中检索</button></td></tr>)}</tbody></table>{data && !zeroQueries.length ? <p>当前没有达到聚合条件的无结果查询。</p> : null}</section></div><AdminPublicPreviewFrame title="读者会看到什么" description="选择查询或热门馆藏，查看它在前台的实际呈现。" src={selectedUrl || null}><select aria-label="预览查询与馆藏" value={selectedUrl} onChange={event=>setSelected(event.target.value)}><option value="">选择内容</option>{zeroQueries.map(row=><option key={row.normalized_query} value={`/explore?q=${encodeURIComponent(row.normalized_query)}`}>无结果查询：{row.normalized_query}</option>)}{(data?.top_works || []).map(row=><option key={row.work_id} value={`/works/${row.work_id}`}>{row.work__title}</option>)}</select></AdminPublicPreviewFrame></div>
+  </div>;
 }

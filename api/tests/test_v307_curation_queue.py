@@ -31,6 +31,8 @@ def test_curation_queue_counts_sql_pages_and_one_row_per_object(api_client, admi
         response = api_client.get("/api/catalog/admin/curation-drafts/?q=策展&page=2")
     assert response.status_code == 200
     assert response.data["count"] == 37
+    assert response.data["counts"]["topics"] == 37
+    assert response.data["counts"]["all"] == 37
     assert response.data["total_pages"] == 2
     assert len(response.data["results"]) == 7
     assert len({row["id"] for row in response.data["results"]}) == 7
@@ -39,6 +41,10 @@ def test_curation_queue_counts_sql_pages_and_one_row_per_object(api_client, admi
     result = api_client.get("/api/catalog/admin/curation-drafts/?q=最新稿").data
     assert result["count"] == 1
     assert result["results"][0]["title"] == "策展最新稿"
+    filtered = api_client.get("/api/catalog/admin/curation-drafts/?group=topics&q=策展&page=2")
+    assert filtered.data["count"] == 37 and len(filtered.data["results"]) == 7
+    assert "group=topics" in filtered.data["previous"]
+    assert api_client.get("/api/catalog/admin/curation-drafts/?group=invalid").status_code == 400
 
 
 def test_curation_queue_excludes_finished_revision_and_preserves_draft_title(api_client, admin_user):
@@ -46,13 +52,17 @@ def test_curation_queue_excludes_finished_revision_and_preserves_draft_title(api
     draft("topic", finished, name="历史草稿")
     draft("topic", finished, 2, status="published", name="已完成")
     pending = Topic.objects.create(name="公开名称", slug="changed", editorial_status="published")
-    draft("topic", pending, name="待发布新名称")
+    pending_revision = draft("topic", pending, name="待发布新名称")
+    pending_revision.changed_fields = ["name", "description"]
+    pending_revision.save(update_fields=["changed_fields"])
     api_client.force_authenticate(admin_user)
     response = api_client.get("/api/catalog/admin/curation-drafts/")
     rows = {row["object_id"]: row for row in response.data["results"]}
     assert str(finished.pk) not in rows
+    assert str(pending.pk) in rows, response.data
     assert rows[str(pending.pk)]["title"] == "待发布新名称"
     assert rows[str(pending.pk)]["state"] == "changes_pending"
+    assert rows[str(pending.pk)]["changed_fields"] == ["name", "description"]
     assert rows[str(pending.pk)]["edit_url"] == f"/admin/topics/{pending.pk}"
     assert response["Cache-Control"] == "private, no-store"
 

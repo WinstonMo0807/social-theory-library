@@ -172,7 +172,7 @@ def retry_ocr_job(job, *, actor):
     return job
 
 
-def ocr_context(edition, actor, *, page=1):
+def ocr_context(edition, actor, *, page=1, preview_page=None):
     from .processing_identity import edition_titles
     jobs_query = ProcessingJob.objects.filter(edition=edition, job_type="ocr").order_by("-created_at", "-id")
     count = jobs_query.count()
@@ -186,6 +186,26 @@ def ocr_context(edition, actor, *, page=1):
     events = {str(row.pk): row for row in KnowledgePublicationEvent.objects.filter(pk__in=event_ids).select_related("catalog_revision")}
     mode = ocr_runtime_config()["mode"]
     can_run = has_capability(actor, Capability.RETRY_JOBS)
+    preview = None
+    if preview_page is not None:
+        try:
+            preview_index = int(preview_page)
+            if preview_index < 1:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise ValidationError({"ocr_preview_page": ["PDF 页序必须是正整数。"]})
+        job = jobs[0] if jobs else None
+        result_asset = edition.assets.filter(pk=job.asset_id).first() if job and job.asset_id else None
+        if result_asset and preview_index > result_asset.page_count:
+            raise ValidationError({"ocr_preview_page": ["页序超出本次识别文件范围。"]})
+        # A rerun may share anchors with older text. Only show pages that this
+        # exact job has persisted, never pass old text off as a new OCR result.
+        saved = job and preview_index in (job.stats.get("completed_page_indexes") or [])
+        text_page = result_asset.pages.filter(index=preview_index).first() if result_asset and saved else None
+        preview = {"job_id": str(job.pk) if job else "", "page_index": preview_index,
+                   "asset_id": str(result_asset.pk) if result_asset else "",
+                   "saved": bool(text_page), "text": text_page.text if text_page else "",
+                   "updated_at": text_page.updated_at if text_page else None}
     return {
         "edition_id": str(edition.pk), "work_id": str(edition.work_id), **edition_titles([edition])[str(edition.work_id)],
         "edition_label": edition.version_label or "当前出版版本", "can_run": can_run,
@@ -199,6 +219,7 @@ def ocr_context(edition, actor, *, page=1):
         "job_count": count, "page": page, "total_pages": max(1, (count + 9) // 10),
         "active_job_id": str(jobs_query.filter(status__in=ACTIVE).values_list("pk", flat=True).first() or ""),
         "checked_at": timezone.now(),
+        "text_preview": preview,
     }
 
 

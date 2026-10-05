@@ -6,6 +6,7 @@ import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type StatusValue = Record<string, unknown>;
 type StatusPayload = {
+  generated_at?: string;
   database: StatusValue;
   redis: StatusValue;
   celery: StatusValue;
@@ -69,6 +70,7 @@ export function SystemStatusCenter() {
   const [payload, setPayload] = useState<StatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [selectedKey, setSelectedKey] = useState("database");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,24 +89,38 @@ export function SystemStatusCenter() {
   }, [load]);
 
   const cards = payload ? [
-    ["数据库", payload.database],
-    ["Redis", payload.redis],
-    ["Celery 任务", payload.celery],
-    ["NAS 存储", payload.storage],
-    ["QueryLexicon 词典", payload.query_lexicon],
-    ["语义索引", payload.semantic],
-    ["Embedding 模型", payload.embedding],
-    ["AI 服务", payload.ai],
-    ["联网补全来源", payload.web_enrichment],
-    ["备份", payload.backup],
-  ] as Array<[string, Record<string, unknown>]> : [];
+    ["database", "数据库", payload.database],
+    ["redis", "Redis", payload.redis],
+    ["celery", "Celery 任务", payload.celery],
+    ["storage", "NAS 存储", payload.storage],
+    ["query_lexicon", "QueryLexicon 词典", payload.query_lexicon],
+    ["semantic", "语义索引", payload.semantic],
+    ["embedding", "Embedding 模型", payload.embedding],
+    ["ai", "AI 服务", payload.ai],
+    ["web_enrichment", "联网补全来源", payload.web_enrichment],
+    ["backup", "备份", payload.backup],
+  ] as Array<[string, string, Record<string, unknown>]> : [];
+
+  const selected = cards.find(([key]) => key === selectedKey) ?? cards[0];
 
   return (
     <div className="admin-page">
-      <header className="admin-page-title"><div><p>运营</p><h1>系统状态中心</h1><span>把“为什么不可用”显示出来，不展示密码、Token 或其他 secret。</span></div><div className="admin-title-actions"><button className="button secondary" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} />刷新</button></div></header>
+      <header className="admin-page-title"><div><p>处理中心 / 运行检查</p><h1>运行检查</h1><span>查看网站各项服务的运行状态，及时发现并处理可能的问题。</span></div><div className="admin-title-actions"><button className="button secondary" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} />刷新状态</button></div></header>
       {message ? <p className="form-message" role="alert"><CircleAlert size={15} />{message}</p> : null}
       {loading && !payload ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取系统状态……</p> : null}
-      <section className="health-component-grid">{cards.map(([title, value]) => <article className="admin-panel health-component" key={title}><header><h2>{title}</h2><strong>{scalarLabel(value.status ?? value.configured)}</strong></header><dl>{Object.entries(value).filter(([key]) => !["profiles", "structured"].includes(key)).slice(0, 12).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>{value.profiles ? <details><summary>模型配置档</summary><StatusDetails value={value.profiles} /></details> : null}{value.structured ? <details><summary>结构化来源</summary><StatusDetails value={value.structured} /></details> : null}</article>)}</section>
+      {payload ? <section className="system-status-v2" aria-label="服务运行状况">
+        <div className="system-status-v2-list admin-panel">
+          <header><h2>服务运行状况</h2><span>{cards.length} 项</span></header>
+          <div role="listbox" aria-label="服务项目">
+            {cards.map(([key, title, value]) => <button type="button" role="option" aria-selected={selected?.[0] === key} className={selected?.[0] === key ? "selected" : ""} key={key} onClick={() => setSelectedKey(key)}>
+              <span className="system-status-v2-dot" data-status={String(value.status ?? value.configured)} aria-hidden="true" /><strong>{title}</strong><span>{scalarLabel(value.status ?? value.configured)}</span><time>{payload.generated_at ? new Date(payload.generated_at).toLocaleString("zh-CN", { hour12: false }) : "当前快照"}</time><em>查看详情</em>
+            </button>)}
+          </div>
+        </div>
+        <section className="system-status-v2-detail admin-panel" aria-live="polite">
+          {selected ? <><header><div><p className="eyebrow">当前检查详情</p><h2>{selected[1]}</h2></div><strong className="system-status-v2-state">{scalarLabel(selected[2].status ?? selected[2].configured)}</strong></header><p className="system-status-v2-note">以下字段来自当前状态快照；接口没有提供的历史记录保持空缺。</p><dl>{Object.entries(selected[2]).filter(([key]) => !["profiles", "structured"].includes(key)).slice(0, 24).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>{selected[2].profiles ? <details><summary>模型配置档</summary><StatusDetails value={selected[2].profiles} /></details> : null}{selected[2].structured ? <details><summary>结构化来源</summary><StatusDetails value={selected[2].structured} /></details> : null}</> : <p className="admin-list-state">尚未读取服务状态。</p>}
+        </section>
+      </section> : null}
     </div>
   );
 }

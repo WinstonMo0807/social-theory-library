@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.core.paginator import Paginator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, transaction
+from django.db.models import F, OuterRef, Q, Subquery
 from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -422,6 +423,10 @@ class WorkLibraryListView(AdminPrivateResponseMixin, APIView):
         query = str(request.query_params.get("q") or "").strip()
         view = str(request.query_params.get("view") or "").strip()
         ordering = str(request.query_params.get("ordering") or "title")
+        publication_state = request.query_params.get("publication_state", "")
+        progress = request.query_params.get("progress", "")
+        if publication_state not in {"", "published", "unpublished", "withdrawn"} or progress not in {"", "attention", "processing", "ready"}:
+            return Response({"detail": "未知公开状态或整理进度。"}, status=400)
         if ordering not in {"title", "-title", "updated_at", "-updated_at"}:
             return Response({"detail": "未知馆藏排序。"}, status=400)
         queryset = work_library_queryset(query=query, view=view, ordering=ordering)
@@ -447,6 +452,32 @@ class WorkLibraryListView(AdminPrivateResponseMixin, APIView):
                     queryset = queryset.filter(pk=UUID(edition_id))
                 except ValueError:
                     return Response({"detail": "出版版本编号格式不正确。"}, status=400)
+        if publication_state or progress:
+            from catalog.services.admin_queue_query import edition_inventory
+
+            matching = edition_inventory()
+            if publication_state:
+                matching = matching.filter(q_publication__in=["unpublished", "publishing"] if publication_state == "unpublished" else [publication_state])
+            if progress == "attention":
+                matching = matching.filter(q_attention=True)
+            elif progress == "processing":
+                matching = matching.filter(Q(q_processing=True) | Q(q_preparing=True))
+            elif progress == "ready":
+                matching = matching.filter(q_ready=True)
+            if edition_mode:
+                queryset = queryset.filter(pk__in=matching.values("pk"))
+            else:
+                # Match the edition actually represented by the work row,
+                # never a different historical/non-primary edition.
+                selected = Edition.objects.filter(work_id=OuterRef("pk")).order_by(
+                    "-is_primary", F("last_published_at").desc(nulls_last=True),
+                    F("publication_year").desc(nulls_last=True), "-updated_at", "pk",
+                )
+                queryset = queryset.annotate(_selected_edition_id=Subquery(selected.values("pk")[:1]))
+                condition = Q(_selected_edition_id__in=matching.values("pk"))
+                if publication_state == "unpublished" and not progress:
+                    condition |= Q(_selected_edition_id__isnull=True)
+                queryset = queryset.filter(condition)
         try:
             page_number = max(1, int(request.query_params.get("page", 1)))
         except (TypeError, ValueError):

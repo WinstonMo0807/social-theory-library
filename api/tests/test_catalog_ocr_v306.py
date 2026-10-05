@@ -129,3 +129,14 @@ def test_catalog_ocr_full_rerun_counts_only_newly_persisted_pages(api_client, ad
     assert progress["total_pages"] == 3
     assert progress["percent"] == 33.3
     assert list(source[3].pages.order_by("index").values_list("pk", flat=True)) == old_ids
+    preview = api_client.get(URL, {"ocr_edition_id": str(source[1].pk), "ocr_preview_page": 1})
+    assert preview["Cache-Control"] == "no-store"
+    assert preview.data["text_preview"]["text"] == "新文字"
+    assert preview.data["text_preview"]["job_id"] == str(job.pk)
+    pending = api_client.get(URL, {"ocr_edition_id": str(source[1].pk), "ocr_preview_page": 2})
+    assert pending.data["text_preview"]["saved"] is False
+    assert pending.data["text_preview"]["text"] == ""
+    for invalid in [0, 4, "invalid"]:
+        assert api_client.get(URL, {"ocr_edition_id": str(source[1].pk), "ocr_preview_page": invalid}).status_code == 400
+    api_client.force_authenticate(None)
+    assert api_client.get(URL, {"ocr_edition_id": str(source[1].pk), "ocr_preview_page": 1}).status_code in {401, 403}

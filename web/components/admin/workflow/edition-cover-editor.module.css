@@ -19,3 +19,6 @@
 .manual { margin-block: 18px; padding-block: 16px; border-block: 1px solid #d8d4ce; }
 .message { padding: 12px; background: #f1eee8; overflow-wrap: anywhere; }
 @media (max-width: 620px) { .current { grid-template-columns: minmax(0, 1fr); } .current > :first-child { max-width: 230px; } .actions { align-items: stretch; } .actions button { flex: 1 1 150px; } }
+.tabs { display:flex;gap:18px;border-bottom:1px solid var(--line);margin-top:22px; }.tabs button { border:0;background:none;border-radius:0; }.tabs [aria-pressed=true] { border-bottom:2px solid var(--ink);font-weight:600; }
+.choices { grid-template-columns:repeat(6,minmax(0,1fr));gap:8px; }.editor .choice { border:1px solid var(--line);padding:4px;background:none;font-size:12px; }.choice[aria-pressed=true] { border-color:var(--ink);box-shadow:0 0 0 1px var(--ink); }.choice .image { height:145px; }.choice strong { font-weight:400; }.choice small { min-height:18px;font-size:11px; }.upload { padding:24px 0; }.editor footer { margin-top:30px;justify-content:space-between; }.editor footer button:last-child { background:var(--ink);color:var(--paper); }
+@media(max-width:650px) { .choices { grid-template-columns:repeat(3,minmax(0,1fr)); } }

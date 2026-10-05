@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -23,7 +23,14 @@ import { usePublicSession } from "./public-session-provider";
 import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
 
-export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
+const SiteConfigContext = createContext<SiteConfig>(defaultSiteConfig);
+export function SiteConfigProvider({ config, children }: { config: SiteConfig; children: ReactNode }) {
+  return <SiteConfigContext value={config}>{children}</SiteConfigContext>;
+}
+
+export function Wordmark({ config: suppliedConfig }: { config?: SiteConfig }) {
+  const sharedConfig = use(SiteConfigContext);
+  const config = suppliedConfig ?? sharedConfig;
   return (
     <span className="wordmark" aria-label={config.site_name}>
       {config.wordmark_lines.map((line) => (
@@ -33,11 +40,15 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
   );
 }
 
-export function SiteHeader({ config = defaultSiteConfig, preview = false }: { config?: SiteConfig; preview?: boolean }) {
-  const pathname = usePathname();
+export function SiteHeader({ config: suppliedConfig, preview = false, previewPath }: { config?: SiteConfig; preview?: boolean; previewPath?: string }) {
+  const sharedConfig = use(SiteConfigContext);
+  const config = suppliedConfig ?? sharedConfig;
+  const currentPath = usePathname();
+  const pathname = preview && previewPath ? previewPath : currentPath;
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
   const [open, setOpen] = useState(false);
+  const menuOpen = open && !preview;
   const [logoutError, setLogoutError] = useState("");
   const { pendingAction, startAction, finishAction } = useActionGuard();
   const { state: session } = usePublicSession();
@@ -53,15 +64,17 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
   ] as const;
 
   useEffect(() => {
-    document.body.classList.toggle("menu-open", open);
+    if (preview) return;
+    document.body.classList.toggle("menu-open", menuOpen);
     return () => document.body.classList.remove("menu-open");
-  }, [open]);
+  }, [menuOpen, preview]);
 
   function closeMenu() {
     setOpen(false);
   }
 
   async function logout() {
+    if (preview) return;
     const actionKey = "logout";
     if (!startAction(actionKey)) return;
     setLogoutError("");
@@ -81,6 +94,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
 
   return (
     <header
+      inert={preview || undefined}
       data-edit-section={preview ? "brand" : undefined}
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
@@ -117,15 +131,15 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
           ref={menuButtonRef}
           className="icon-button menu-button"
           type="button"
-          aria-label={open ? "关闭菜单" : "打开菜单"}
-          aria-expanded={open}
+          aria-label={menuOpen ? "关闭菜单" : "打开菜单"}
+          aria-expanded={menuOpen}
           aria-controls="site-menu"
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? <X size={25} /> : <Menu size={25} />}
+          {menuOpen ? <X size={25} /> : <Menu size={25} />}
         </IconButton>
       </div>
-      {open ? (
+      {menuOpen ? (
         <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
           <button className="site-menu-backdrop" type="button" aria-label="关闭菜单" onClick={closeMenu} />
           <aside className="site-menu-panel" aria-labelledby="site-menu-title">

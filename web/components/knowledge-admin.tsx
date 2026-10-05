@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { CurationSelectionPreview } from "@/components/admin/curation/curation-draft-queue";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
@@ -156,6 +157,8 @@ export function DisciplinesAdmin() {
   const paging = useAdminListPage();
   const requestedId = useSearchParams().get("discipline")?.trim() ?? "";
   const requested = useResource<DisciplineRow>(requestedId ? `/catalog/admin/disciplines/${encodeURIComponent(requestedId)}/` : null);
+  const [editorOpen, setEditorOpen] = useState(Boolean(requestedId));
+  const [selectedId, setSelectedId] = useState("");
   const opened = useRef("");
   const [openedId, setOpenedId] = useState("");
   const [editConflict, setEditConflict] = useState(false);
@@ -182,6 +185,7 @@ export function DisciplinesAdmin() {
     if (dirty && !window.confirm("本学科还有未保存的填写。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditConflict(false);
+    setEditorOpen(true);
     setEditing(row ?? null);
     setDraft(row ? disciplineToDraft(row) : { ...emptyDiscipline });
     setSavedDraft(row ? disciplineToDraft(row) : { ...emptyDiscipline });
@@ -195,7 +199,7 @@ export function DisciplinesAdmin() {
     const selected = requested.data;
     const timer = window.setTimeout(() => {
       if (dirty) { setMessage("已保留尚未保存的学科填写。请先保存或从列表明确切换。"); return; }
-      opened.current = requestedId; setOpenedId(requestedId);
+      opened.current = requestedId; setOpenedId(requestedId); setEditorOpen(true);
       setEditing(selected);
       setDraft(disciplineToDraft(selected));
       setSavedDraft(disciplineToDraft(selected));
@@ -260,23 +264,26 @@ export function DisciplinesAdmin() {
     return false;
   }
 
+  const selected = resource.data?.results.find(row => row.id === selectedId) || resource.data?.results[0];
   return (
-    <Frame eyebrow="知识管理" title="学科" description="社会学、人类学和民族学是初始数据。新增学科后，同一套理论、子学科、主题和馆藏关系会自动形成新的学科入口。">
-      <div className="knowledge-admin-layout knowledge-admin-workspace">
-        <section className="admin-panel knowledge-admin-list">
+    <Frame eyebrow="理论流派" title={editorOpen ? "编辑学科介绍" : "学科与子学科"} description={editorOpen ? "设置学科的名称、简介与封面图片，这些内容将展示在学科入口卡片和学科详情页。" : "选择学科，查看并编辑读者看到的介绍。"}>
+      {editorOpen ? <button type="button" className="button secondary" onClick={() => {if (!dirty || window.confirm("当前学科还有未保存修改，返回列表并保留当前填写吗？")) setEditorOpen(false);}}>返回学科列表</button> : null}
+      <div className={editorOpen ? "discipline-reference-editor" : "knowledge-directory-reference"}>
+        {!editorOpen ? <section className="admin-panel knowledge-admin-list">
           <header><h2>学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增学科</button></header>
           {resource.loading ? <p>正在读取……</p> : null}<Notice>{resource.error}</Notice>
           {resource.data?.results.map((row) => (
-            <article key={row.id}>
+            <article key={row.id} className={selected?.id === row.id ? "selected" : ""}>
               <div className="knowledge-admin-thumb" style={row.hero_image ? { backgroundImage: `url("${row.hero_image}")` } : undefined}>{!row.hero_image ? row.name.slice(0, 1) : null}</div>
-              <div><strong>{row.name}</strong><small>{row.foreign_name || row.code}</small><p>{row.description || "尚未填写说明"}</p></div>
+              <div><button type="button" className="reference-select-title" aria-pressed={selected?.id === row.id} onClick={() => setSelectedId(row.id)}>{row.name}</button><small>{row.foreign_name || row.code}</small><p>{row.description || "尚未填写说明"}</p></div>
               <dl><span>{row.counts.theories} 个理论</span><span>{row.counts.subdisciplines} 个子学科</span><span>{row.counts.topics} 个主题</span></dl>
               <button type="button" onClick={() => start(row)}><Pencil size={14} />编辑</button>
             </article>
           ))}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} />
-        </section>
-        <KnowledgeVisualEditor objectType="discipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={draft} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
+        </section> : null}
+        {!editorOpen ? <CurationSelectionPreview key={selected?.id || "empty-discipline"} item={selected ? {object_type:"discipline",object_id:selected.id,title:selected.name,label:"学科",edit_url:`/admin/theories/disciplines?discipline=${selected.id}`,can_edit:true} : undefined} returnTo="/admin/theories/disciplines"/> : null}
+        {editorOpen ? <KnowledgeVisualEditor objectType="discipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={draft} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
         <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={(event) => void save(event, true)}>
           <Notice>{requested.error}</Notice>
           <fieldset disabled={Boolean(pendingAction) || Boolean(requestedId && openedId !== requestedId)} style={{ display: "contents" }}>
@@ -328,7 +335,7 @@ export function DisciplinesAdmin() {
             onChanged={resource.refresh}
           />
         </div>
-        </KnowledgeVisualEditor>
+        </KnowledgeVisualEditor> : null}
       </div>
     </Frame>
   );
@@ -527,9 +534,12 @@ export function SubdisciplinesAdmin() {
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || "未归类";
   const subdisciplineName = (id: string) => rows.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择子学科";
   return (
-    <Frame eyebrow="知识管理" title="子学科" description="子学科属于学科，但不作为理论传统的上下级。理论与子学科通过经过审核的关系表连接。">
-      <div className="knowledge-admin-layout knowledge-admin-workspace">
-        <section className="admin-panel knowledge-admin-list"><header><h2>子学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增子学科</button></header><Notice>{rows.error}</Notice>{rows.data?.results.map((row) => <article key={row.id}><div className="knowledge-admin-thumb">{row.name.slice(0, 2)}</div><div><strong>{row.name}</strong><small>{disciplineName(row.discipline)}</small><p>{row.research_object || row.description || "研究对象待编辑"}</p></div><button type="button" onClick={() => start(row)}><Pencil size={14} />编辑</button></article>)}<AdminListPages data={rows.data} paging={paging} loading={rows.loading} /></section>
+    <Frame eyebrow="理论流派" title="编辑子学科信息" description="完善子学科的简介与研究问题，这些内容将展示在前台页面。">
+      <div className="subdiscipline-reference-workspace">
+        <aside className="subdiscipline-reference-tree admin-panel"><header><h2>学科与子学科</h2><button type="button" onClick={() => start()}><Plus size={15}/>新增子学科</button></header><Notice>{rows.error}</Notice>{rows.loading ? <p role="status">正在读取子学科…</p> : null}
+          {[...new Set((rows.data?.results || []).map(row => row.discipline))].map(id => <details key={id} open><summary>{disciplineName(id)}</summary>{rows.data?.results.filter(row => row.discipline === id).map(row => <button type="button" key={row.id} aria-pressed={editing?.id === row.id} onClick={() => start(row)}>{row.name}</button>)}</details>)}
+          <AdminListPages data={rows.data} paging={paging} loading={rows.loading}/>
+        </aside>
         <KnowledgeVisualEditor objectType="subdiscipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels}}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
         <form ref={editorRef} className="admin-panel knowledge-admin-editor knowledge-wide-editor" onSubmit={(event) => void save(event, true)}>
           <header><div><h2>{editing ? `编辑 ${editing.name}` : "新增子学科"}</h2><p>保存本页名称、说明和所属学科，不跳转。与理论的关联在关系管理中维护。已有公开内容的修改需另行发布。</p></div></header>

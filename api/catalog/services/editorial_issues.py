@@ -300,6 +300,12 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     payload = deepcopy(revision.materialized_preview) if revision else issue_draft_payload(issue)
     published_at = revision.published_at if revision else issue.published_at
     payload.update(id=str(issue.pk), slug=issue.slug, published_at=published_at.isoformat() if published_at else None)
+    now = timezone.now()
+    publicly_visible = bool(
+        issue.scheduled_revision_id and issue.scheduled_for and issue.scheduled_for <= now and issue.scheduled_revision.status == "published"
+        or issue.active_revision_id and issue.display_from and issue.display_from <= now and issue.active_revision.status == "published"
+    )
+    payload["public_url"] = f"/recommendations/{issue.slug}" if publicly_visible else ""
     if payload.get("cover_rendition_id"):
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"

@@ -9,7 +9,7 @@ x-discovery-client: &discovery-client
   DISCOVERY_INDEX_TASK_QUEUE: discovery_index
 
 x-discovery-worker: &discovery-worker
-  image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.8}
+    image: ${LIBRARY_API_IMAGE:-social-theory-library-api:3.0.9.1}
   restart: unless-stopped
   init: true
   security_opt: [no-new-privileges:true]

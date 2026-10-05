@@ -22,6 +22,11 @@ export type WorkflowQueueItem = {
   recommendation_sources?: { id: string; title: string; url: string }[];
   title: string;
   source_filename?: string;
+  contributors?: string[];
+  publisher?: string;
+  publication_year?: number | null;
+  version_label?: string;
+  issues?: Array<{ field?: string; code?: string; message: string }>;
   document_type?: string;
   workbench_url: string;
   return_href?: string;
@@ -66,6 +71,11 @@ export type EditionFile = {
 
 export type WorkLibraryRow = {
   row_type: "work" | "edition";
+  issues?: Array<{field?:string;step?:string;code?:string;message:string}>;
+  warnings?: Array<{field?:string;step?:string;code?:string;message:string}>;
+  publisher?: string;
+  publication_year?: number | null;
+  version_label?: string;
   id: string;
   work_id?: string;
   edition_id?: string;
@@ -80,6 +90,8 @@ export type WorkLibraryRow = {
   publication?: CatalogPublication;
   health?: Record<string, string>;
   asset_state?: string;
+  availability?: { capabilities: Array<{ key: string; status: string; public_ready: boolean; detail: string }> } | null;
+  reader_capabilities?: Record<string, { public_ready: boolean; detail: string } | null>;
   knowledge_status?: string;
   curation_status?: string;
   assets?: EditionFile[];

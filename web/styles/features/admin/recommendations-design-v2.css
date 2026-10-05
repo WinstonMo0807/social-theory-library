@@ -1,0 +1,240 @@
+/* Recommendation scenes 28, 31 and 59. Keep this file separate from the shared v2 token sheet. */
+.recommendation-calendar-v2, .recommendation-curation-v2, .recommendation-issue-editor-v2 {
+  --recommendation-paper: #f7f5f0;
+  --recommendation-surface: #fdfcf9;
+  --recommendation-line: #d6d1c7;
+  --recommendation-muted: #68655d;
+  --recommendation-ink: #1b1b18;
+  --recommendation-focus: #766654;
+}
+
+.recommendation-issue-progress{width:55%;min-width:420px}
+.recommendation-issue-progress>p{margin:0 0 12px;font:600 17px/1.4 var(--stl-type-serif)}
+.recommendation-issue-stepper{display:flex;gap:0;align-items:center}
+.recommendation-issue-stepper button{position:relative;flex:1;display:flex;flex-direction:column;gap:8px;align-items:center;background:none;border:0;color:var(--recommendation-muted);cursor:pointer;padding:0}
+.recommendation-issue-stepper button:not(:last-child):after{content:"";position:absolute;top:17px;left:65%;right:-35%;height:1px;background:var(--recommendation-line)}
+.recommendation-issue-stepper b{display:grid;place-items:center;border:1px solid var(--recommendation-line);border-radius:50%;width:34px;height:34px;font:20px/1 var(--stl-type-serif)}
+.recommendation-issue-stepper span{font:14px/1.4 var(--stl-type-serif)}
+.recommendation-issue-stepper .active{color:var(--recommendation-ink)}
+.recommendation-issue-stepper .active b{background:var(--recommendation-ink);color:#fff;border-color:var(--recommendation-ink)}
+.recommendation-issue-stepper .done b{background:var(--recommendation-focus);color:#fff;border-color:var(--recommendation-focus)}
+.recommendation-issue-editor-v2 .fixed-page-editor{grid-template-columns:minmax(340px,.72fr) minmax(0,1fr);gap:18px}
+.recommendation-issue-editor-v2 .fixed-editor-fields>h2{font:600 23px/1.4 var(--stl-type-serif)}
+.recommendation-issue-editor-v2 .fixed-editor-fields fieldset{display:grid;gap:18px;border:0;padding:0;margin:0}
+.recommendation-issue-editor-v2 fieldset label{display:grid;gap:8px;font:16px/1.5 var(--stl-type-serif)}
+.recommendation-issue-editor-v2 fieldset input,.recommendation-issue-editor-v2 fieldset select,.recommendation-issue-editor-v2 fieldset textarea{width:100%;font:16px/1.6 var(--stl-type-serif);padding:10px 12px;border:1px solid var(--recommendation-line);border-radius:3px;background:var(--recommendation-surface)}
+.recommendation-current-cover{display:block;max-width:250px;width:100%;height:150px;object-fit:cover}
+.recommendation-issue-actions{display:flex;gap:12px;padding:16px;border-top:1px solid var(--recommendation-line);align-items:center;flex-wrap:wrap}
+.recommendation-issue-actions .button:last-child{margin-left:auto}
+.recommendation-preview-location{display:flex;gap:12px;align-items:center;padding:10px 16px;font-size:12px;color:var(--recommendation-muted)}
+.recommendation-preview-location select{background:var(--recommendation-surface);border:1px solid var(--recommendation-line);padding:6px 12px;min-width:250px}
+.recommendation-date-fields,.recommendation-date-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.recommendation-month,.recommendation-upcoming{border:1px solid var(--recommendation-line);border-radius:3px;padding:14px 10px}
+.recommendation-month>header{display:flex;align-items:center;gap:8px;margin-bottom:20px;font:18px/1.4 var(--stl-type-serif)}
+.recommendation-month>header strong{flex:1;font-weight:600}.recommendation-month>header button{display:grid;place-items:center;border:0;background:none;cursor:pointer}
+.recommendation-month-days{display:grid;grid-template-columns:repeat(7,1fr);gap:7px 1px;text-align:center}
+.recommendation-month-days>span{font-size:12px;color:var(--recommendation-muted);padding:6px 0}
+.recommendation-month-days>button{border:0;background:none;border-radius:50%;aspect-ratio:1;cursor:pointer;padding:4px;font:14px/1 var(--stl-type-serif)}
+.recommendation-month-days>button[aria-pressed=true]{background:var(--recommendation-focus);color:#fff}
+.recommendation-upcoming>h3{font:16px/1.4 var(--stl-type-serif);margin:0 0 12px}
+.recommendation-upcoming>a{display:grid;gap:4px;padding:10px 8px;border-bottom:1px solid var(--recommendation-line);color:inherit;font:14px/1.5 var(--stl-type-serif)}
+.recommendation-upcoming time,.recommendation-upcoming small{font-size:12px;color:var(--recommendation-muted)}
+.recommendation-issue-schedule-status{padding:18px;background:var(--recommendation-paper);margin-top:18px}
+.recommendation-issue-schedule-status p{font-size:13px;line-height:1.7;color:var(--recommendation-muted);margin:6px 0 0}
+.issue-reference-article{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:50px;max-width:1380px;padding:36px 0 60px}
+.issue-reference-main{min-width:0}.issue-reference-main>header h1{font:600 clamp(32px,3.5vw,50px)/1.3 var(--stl-type-serif);margin:12px 0 16px}
+.issue-section-label{font:600 18px/1.4 var(--stl-type-serif);color:var(--admin-v2-focus)}
+.issue-reference-category{font:18px/1.5 var(--stl-type-serif);margin:16px 0 0}
+.issue-reference-main .issue-byline{justify-content:flex-start;border:0;gap:20px;margin:18px 0 16px;padding:0}
+.issue-reference-main .issue-byline time{font-size:13px}
+.issue-reference-image{min-height:280px;background:var(--admin-v2-wash)}
+.issue-reference-image img{width:100%;height:auto;max-height:450px;object-fit:cover;display:block}
+.issue-reference-prose{font:18px/1.9 var(--stl-type-serif);padding-top:28px}
+.issue-reference-prose h2{font:600 26px/1.4 var(--stl-type-serif);margin:22px 0 10px;scroll-margin-top:90px}
+.issue-reference-prose p{white-space:pre-line;margin:0 0 18px}
+.issue-reference-prose blockquote{border-left:2px solid var(--admin-v2-focus);padding:12px 20px;margin:20px 0;background:var(--admin-v2-wash)}
+.issue-reference-aside{border:1px solid var(--admin-v2-line);border-radius:3px;padding:20px 24px;align-self:start;min-width:0}
+.issue-reference-aside h2{font:600 20px/1.4 var(--stl-type-serif);margin:0 0 20px}
+.issue-reference-books .issue-book-card{display:grid;grid-template-columns:110px minmax(0,1fr);column-gap:24px;border:0;background:none;padding:0;margin:0 0 26px;border-radius:0}
+.issue-reference-books .issue-book-card>a:first-child,.issue-reference-books .issue-book-card>.issue-book-cover{grid-column:1;grid-row:1 / span 6}
+.issue-reference-books .issue-book-cover{width:110px;height:150px;object-fit:contain;margin:0;filter:none}
+.issue-book-empty{background:var(--admin-v2-wash);aspect-ratio:2/3}
+.issue-reference-books .issue-book-card>h3{font:600 21px/1.4 var(--stl-type-serif);margin:0 0 6px}
+.issue-reference-books .issue-book-card>p,.issue-reference-books .issue-book-card>.text-link,.issue-reference-books .issue-book-card>.issue-awaiting{grid-column:2}
+.issue-reference-books .issue-book-note{font:14px/1.8 var(--stl-type-serif);margin:10px 0}
+.issue-reference-books .issue-item-status{border:0;margin:8px 0;font-size:11px}
+.issue-reference-toc{border-top:1px solid var(--admin-v2-line);padding:20px 0}
+.issue-reference-toc>a{display:block;padding:7px 0 7px 16px;font:15px/1.6 var(--stl-type-serif);border-left:2px solid var(--admin-v2-focus)}
+.issue-reference-aside .issue-related-works{padding:20px 0 0}
+.issue-reference-aside .v307-section-heading{flex-wrap:wrap;gap:8px}
+.issue-reference-aside .v307-section-heading h2 small{display:none}
+.issue-reference-aside .v307-section-heading>a{font-size:11px}
+.issue-reference-aside .v307-recent-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:1050px){.issue-reference-article{gap:24px;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr)}.issue-reference-aside{padding:16px}.issue-reference-books .issue-book-card{grid-template-columns:80px minmax(0,1fr);gap:14px}.issue-reference-books .issue-book-cover{width:80px;height:120px}.recommendation-issue-editor-v2 .fixed-page-editor{grid-template-columns:1fr}.recommendation-issue-progress{width:100%;min-width:0}.recommendation-issue-editor-v2 .v307-editor-heading{display:block}}
+@media(max-width:760px){.issue-reference-article{grid-template-columns:1fr;padding-top:20px}.issue-reference-aside{padding:18px}.issue-reference-image{min-height:180px}.issue-reference-main>header h1{font-size:32px}.issue-reference-prose{font-size:16px}.recommendation-date-grid{grid-template-columns:1fr}.recommendation-date-fields{gap:10px}.recommendation-issue-actions .button:last-child{margin-left:0}.recommendation-issue-stepper span{font-size:11px}.recommendation-preview-location select{min-width:0;flex:1}}
+
+.recommendation-calendar-v2 .v307-editor-heading,
+.recommendation-curation-v2 .recommendation-v2-heading {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.recommendation-calendar-v2 .v307-editor-heading h1,
+.recommendation-curation-v2 h1,
+.recommendation-calendar-v2 h2,
+.recommendation-curation-v2 h2,
+.recommendation-curation-v2 h3 {
+  font-family: var(--stl-type-serif, "Noto Serif SC", "Songti SC", serif);
+}
+.recommendation-calendar-v2 .v307-editor-heading > div:last-child { display: flex; gap: 10px; align-items: center; }
+.recommendation-calendar-v2 .v307-admin-tabs { margin-bottom: 20px; }
+.recommendation-calendar-layout { display: grid; grid-template-columns: minmax(0, .98fr) minmax(510px, 1.02fr); gap: 16px; align-items: start; }
+.recommendation-calendar-board,
+.recommendation-calendar-preview,
+.recommendation-calendar-archive,
+.recommendation-v2-control,
+.recommendation-v2-reader { border: 1px solid var(--recommendation-line); background: var(--recommendation-surface); border-radius: 4px; }
+.recommendation-calendar-date { display: flex; justify-content: space-between; align-items: center; padding: 17px 18px; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-calendar-date strong { font-family: var(--stl-type-serif, serif); font-size: 21px; font-weight: 500; }
+.recommendation-calendar-date button { border: 1px solid var(--recommendation-line); background: var(--recommendation-surface); width: 30px; height: 30px; font-size: 22px; line-height: 1; color: var(--recommendation-ink); }
+.recommendation-calendar-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: 560px; }
+.recommendation-calendar-columns > div { padding: 14px 10px 18px; border-right: 1px solid var(--recommendation-line); }
+.recommendation-calendar-columns > div:last-child { border-right: 0; }
+.recommendation-calendar-columns h2 { margin: 0 0 3px; font-size: 20px; font-weight: 500; }
+.recommendation-calendar-columns small { color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-calendar-card { display: grid; gap: 9px; margin-top: 12px; padding: 8px; border: 1px solid var(--recommendation-line); color: inherit; text-decoration: none; background: #fff; }
+.recommendation-calendar-card:hover { border-color: var(--recommendation-focus); }
+.recommendation-calendar-image { height: 92px; background: #e9e6df; overflow: hidden; display: grid; place-items: center; color: var(--recommendation-muted); font-family: var(--stl-type-serif, serif); }
+.recommendation-calendar-image img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.15); }
+.recommendation-calendar-card h3 { margin: 4px 0; font-family: var(--stl-type-serif, serif); font-size: 16px; line-height: 1.3; font-weight: 500; }
+.recommendation-calendar-card p, .recommendation-calendar-card time { display: block; margin: 0; color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-calendar-status { display: inline-flex; align-items: center; gap: 5px; color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-calendar-status::before { width: 7px; height: 7px; border-radius: 50%; background: #aaa59b; content: ""; }
+.recommendation-calendar-status.published::before { background: #3c8b59; }
+.recommendation-calendar-status.scheduled::before { background: var(--recommendation-focus); }
+.recommendation-calendar-add { width: 100%; margin-top: 16px; padding: 9px 8px; border: 1px dashed var(--recommendation-focus); background: transparent; color: var(--recommendation-focus); }
+.recommendation-calendar-preview { overflow: hidden; }
+.recommendation-calendar-preview > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 17px 18px; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-calendar-preview > header h2 { margin: 0 0 5px; font-size: 22px; font-weight: 500; }
+.recommendation-calendar-preview > header p { margin: 0; color: var(--recommendation-muted); font-size: 13px; }
+.recommendation-calendar-preview > header > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-calendar-preview > header > div:last-child > span,
+.recommendation-calendar-preview > header > div:last-child > a { padding: 6px 8px; border: 1px solid var(--recommendation-line); color: inherit; text-decoration: none; }
+.recommendation-calendar-preview > header > div:last-child > .active { color: #fff; background: var(--recommendation-focus); border-color: var(--recommendation-focus); }
+.recommendation-calendar-reader { margin: 16px; border: 1px solid var(--recommendation-line); background: #fff; min-height: 530px; }
+.recommendation-reader-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-reader-head strong { font-family: Arial, sans-serif; font-size: 16px; line-height: .78; letter-spacing: -.08em; }
+.recommendation-reader-head nav { font-family: var(--stl-type-serif, serif); font-size: 13px; }
+.recommendation-calendar-reader > h2 { margin: 23px 22px 10px; font-family: var(--stl-type-serif, serif); font-size: 28px; font-weight: 500; }
+.recommendation-calendar-feature { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; margin: 0 22px; padding-bottom: 20px; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-calendar-feature img { width: 100%; height: 170px; object-fit: cover; filter: grayscale(.25); }
+.recommendation-calendar-feature > div { padding: 6px 0; }
+.recommendation-calendar-feature span, .recommendation-calendar-feature small { color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-calendar-feature h3 { margin: 8px 0; font-size: 26px; line-height: 1.18; font-weight: 500; }
+.recommendation-calendar-feature p { margin: 0 0 12px; color: var(--recommendation-muted); font-size: 14px; line-height: 1.6; }
+.recommendation-calendar-feature a { display: block; margin-top: 14px; color: var(--recommendation-ink); font-size: 13px; text-decoration: underline; }
+.recommendation-calendar-latest-title { margin: 16px 22px 8px; font-size: 19px; font-weight: 500; }
+.recommendation-calendar-latest { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0 22px 20px; }
+.recommendation-calendar-latest a { display: grid; gap: 4px; padding: 10px; border-top: 1px solid var(--recommendation-line); color: inherit; text-decoration: none; }
+.recommendation-calendar-latest span { color: var(--recommendation-muted); font-size: 11px; }
+.recommendation-calendar-latest strong { font-family: var(--stl-type-serif, serif); font-size: 16px; font-weight: 500; }
+.recommendation-calendar-archive { margin-top: 16px; padding: 16px 18px; }
+.recommendation-calendar-archive > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.recommendation-calendar-archive h2 { margin: 0; font-size: 22px; font-weight: 500; }
+.recommendation-calendar-archive form { display: flex; gap: 8px; }
+.recommendation-calendar-archive input { min-width: 250px; border: 1px solid var(--recommendation-line); padding: 8px 10px; background: #fff; }
+.recommendation-calendar-archive > div { margin-top: 12px; border-top: 1px solid var(--recommendation-line); }
+.recommendation-calendar-archive > div > a { display: grid; grid-template-columns: 1fr 2fr 1fr auto; gap: 10px; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--recommendation-line); color: inherit; text-decoration: none; }
+.recommendation-calendar-archive > div > a strong { font-family: var(--stl-type-serif, serif); font-weight: 500; }
+.recommendation-calendar-archive > div > a small { color: var(--recommendation-muted); }
+.recommendation-calendar-archive .recycle-control { justify-self: end; }
+
+.recommendation-curation-v2 { color: var(--recommendation-ink, #1b1b18); }
+.recommendation-v2-heading { display: flex; justify-content: space-between; gap: 20px; }
+.recommendation-v2-heading h1 { margin: 0; font-size: 34px; font-weight: 500; }
+.recommendation-v2-heading p { color: var(--recommendation-muted); }
+.recommendation-v2-state { padding-top: 30px; color: var(--recommendation-muted); font-size: 14px; white-space: nowrap; }
+.recommendation-v2-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: 16px; border-top: 1px solid var(--recommendation-line); border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-v2-steps span { position: relative; padding: 13px 12px; color: var(--recommendation-muted); text-align: center; font-size: 14px; }
+.recommendation-v2-steps span + span::before { position: absolute; left: 0; top: 20px; width: 25%; border-top: 1px solid var(--recommendation-line); content: ""; }
+.recommendation-v2-steps .active { color: var(--recommendation-ink); font-weight: 700; border-bottom: 2px solid var(--recommendation-ink); }
+.recommendation-v2-steps .done { color: var(--recommendation-focus); }
+.recommendation-v2-grid { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(560px, 1.1fr); gap: 16px; align-items: start; }
+.recommendation-v2-control, .recommendation-v2-reader { padding: 16px; }
+.recommendation-v2-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: -16px -16px 18px; background: var(--recommendation-line); }
+.recommendation-v2-tabs button { border: 0; padding: 13px 8px; background: var(--recommendation-surface); color: var(--recommendation-ink); }
+.recommendation-v2-tabs button.active { color: #fff; background: var(--recommendation-focus); }
+.recommendation-v2-control h2, .recommendation-v2-reader h2 { margin: 0 0 5px; font-size: 22px; font-weight: 500; }
+.recommendation-v2-help { margin: 0 0 14px; color: var(--recommendation-muted); font-size: 13px; line-height: 1.6; }
+.recommendation-v2-selected { display: grid; gap: 7px; }
+.recommendation-v2-selected article { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 8px; border: 1px solid var(--recommendation-line); background: #fff; }
+.recommendation-v2-order { text-align: center; font-family: var(--stl-type-serif, serif); font-size: 18px; }
+.recommendation-v2-selected img, .recommendation-v2-selected .recommendation-v2-image-empty { width: 44px; height: 52px; object-fit: cover; background: #e8e5de; }
+.recommendation-v2-selected strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--stl-type-serif, serif); font-weight: 500; }
+.recommendation-v2-selected small { color: var(--recommendation-muted); font-size: 11px; }
+.recommendation-v2-row-actions { display: flex; gap: 3px; }
+.recommendation-v2-row-actions button { min-width: 28px; padding: 6px 5px; border: 1px solid var(--recommendation-line); background: var(--recommendation-surface); color: var(--recommendation-ink); font-size: 11px; }
+.recommendation-v2-row-actions button:disabled { opacity: .4; }
+.recommendation-v2-search { display: flex; gap: 7px; margin-top: 14px; }
+.recommendation-v2-search label { display: flex; align-items: center; flex: 1; gap: 7px; border: 1px solid var(--recommendation-line); padding: 0 9px; background: #fff; }
+.recommendation-v2-search input { width: 100%; border: 0; padding: 9px 0; outline: 0; }
+.recommendation-v2-search > button { border: 1px solid var(--recommendation-ink); padding: 0 13px; background: var(--recommendation-ink); color: #fff; }
+.recommendation-v2-candidates { display: grid; gap: 4px; max-height: 170px; margin-top: 8px; overflow: auto; }
+.recommendation-v2-candidates label { display: flex; align-items: center; gap: 7px; padding: 7px 8px; border-bottom: 1px solid var(--recommendation-line); font-size: 13px; }
+.recommendation-v2-candidates label.selected { background: #eeeae2; }
+.recommendation-v2-candidates label svg { margin-left: auto; color: var(--recommendation-focus); }
+.recommendation-v2-pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; color: var(--recommendation-muted); font-size: 11px; }
+.recommendation-v2-pagination button { border: 1px solid var(--recommendation-line); background: var(--recommendation-surface); padding: 5px 8px; }
+.recommendation-v2-rule { margin-top: 15px; padding: 12px; background: var(--recommendation-paper); color: var(--recommendation-muted); font-size: 12px; line-height: 1.55; }
+.recommendation-v2-rule strong { display: block; margin-bottom: 4px; color: var(--recommendation-ink); font-family: var(--stl-type-serif, serif); font-size: 15px; }
+.recommendation-v2-rule p { margin: 0; }
+.recommendation-v2-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.recommendation-v2-reader > header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.recommendation-v2-reader > header p { margin: 0; color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-v2-view-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; font-size: 11px; }
+.recommendation-v2-view-tools span, .recommendation-v2-view-tools button { border: 1px solid var(--recommendation-line); padding: 6px 8px; background: var(--recommendation-surface); color: var(--recommendation-muted); }
+.recommendation-v2-view-tools .active { color: #fff; background: var(--recommendation-focus); border-color: var(--recommendation-focus); }
+.recommendation-v2-public-preview { border: 1px solid var(--recommendation-line); background: #fff; }
+.recommendation-v2-public-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-v2-public-header strong { font-family: Arial, sans-serif; font-size: 15px; line-height: .78; letter-spacing: -.08em; }
+.recommendation-v2-public-header nav { font-family: var(--stl-type-serif, serif); font-size: 13px; }
+.recommendation-v2-public-context { display: grid; gap: 5px; padding: 20px 16px; color: #fff; background: #33312d; }
+.recommendation-v2-public-context span { color: #d8d2c8; font-size: 11px; }
+.recommendation-v2-public-context strong { font-family: var(--stl-type-serif, serif); font-size: 22px; font-weight: 500; }
+.recommendation-v2-public-context small { color: #d8d2c8; font-size: 11px; }
+.recommendation-v2-public-preview section { padding: 14px 16px; }
+.recommendation-v2-public-section-title { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--recommendation-line); }
+.recommendation-v2-public-section-title h3, .recommendation-v2-public-topics h3 { margin: 0 0 7px; font-family: var(--stl-type-serif, serif); font-size: 20px; font-weight: 500; }
+.recommendation-v2-public-section-title span { color: var(--recommendation-muted); font-size: 11px; }
+.recommendation-v2-public-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.recommendation-v2-public-cards article { min-width: 0; padding: 5px; border: 1px solid var(--recommendation-line); }
+.recommendation-v2-public-cards article.preview-selected { border: 2px solid var(--recommendation-focus); padding: 4px; }
+.recommendation-v2-public-cards img, .recommendation-v2-public-cards .recommendation-v2-image-empty { display: block; width: 100%; height: 100px; object-fit: cover; background: #e8e5de; }
+.recommendation-v2-public-cards strong, .recommendation-v2-public-cards small { display: block; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recommendation-v2-public-cards strong { font-family: var(--stl-type-serif, serif); font-size: 14px; font-weight: 500; }
+.recommendation-v2-public-cards small { color: var(--recommendation-muted); font-size: 10px; }
+.recommendation-v2-public-topics { border-top: 1px solid var(--recommendation-line); }
+.recommendation-v2-public-topics span { color: var(--recommendation-muted); font-family: var(--stl-type-serif, serif); font-size: 13px; }
+.recommendation-v2-preview-note, .recommendation-v2-message, .recommendation-v2-alert { color: var(--recommendation-muted); font-size: 12px; }
+.recommendation-v2-alert { padding: 9px 12px; border: 1px solid var(--recommendation-line); }
+.recommendation-v2-alert button { margin-left: 8px; text-decoration: underline; }
+
+@media (max-width: 1120px) {
+  .recommendation-calendar-layout, .recommendation-v2-grid { grid-template-columns: 1fr; }
+  .recommendation-calendar-preview { order: -1; }
+}
+@media (max-width: 720px) {
+  .recommendation-calendar-v2 .v307-editor-heading > div:last-child, .recommendation-v2-heading { flex-direction: column; align-items: stretch; }
+  .recommendation-calendar-columns { grid-template-columns: 1fr; }
+  .recommendation-calendar-columns > div { border-right: 0; border-bottom: 1px solid var(--recommendation-line); }
+  .recommendation-calendar-feature { grid-template-columns: 1fr; }
+  .recommendation-calendar-archive > header { align-items: stretch; flex-direction: column; }
+  .recommendation-calendar-archive form { width: 100%; }
+  .recommendation-calendar-archive input { min-width: 0; flex: 1; }
+  .recommendation-calendar-archive > div > a { grid-template-columns: 1fr auto; }
+  .recommendation-calendar-archive > div > a span, .recommendation-calendar-archive > div > a small { grid-column: 1; }
+  .recommendation-calendar-archive .recycle-control { grid-column: 2; grid-row: 1 / span 2; }
+  .recommendation-v2-public-cards { grid-template-columns: repeat(2, 1fr); }
+  .recommendation-v2-selected article { grid-template-columns: 22px 40px minmax(0, 1fr); }
+  .recommendation-v2-row-actions { grid-column: 3; }
+  .recommendation-v2-actions { flex-direction: column; }
+}

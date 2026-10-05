@@ -38,8 +38,6 @@ from .knowledge_views import (
     AdminKnowledgeRelationDetailView,
     AdminKnowledgeRelationListCreateView,
     AdminRecommendationListView,
-    AdminRecommendationOverrideDetailView,
-    AdminRecommendationOverrideListView,
     AdminRecommendationPolicyView,
     AdminRecommendationRefreshView,
     AdminRecommendationPreviewView,
@@ -77,9 +75,7 @@ from .enrichment_views import (
     AdminCandidateReviewView,
     AdminFieldEnrichmentCandidateDetailView,
     AdminFieldEnrichmentDecisionView,
-    AdminFieldEnrichmentPolicyView,
     AdminFieldEnrichmentView,
-    AdminNewAuthorityCandidateView,
 )
 from .backoffice_views import (
     AdminFunctionalHealthView,
@@ -89,7 +85,6 @@ from .backoffice_views import (
     AdminPromptRegistryView,
     AdminProjectionRefreshView,
     AdminProjectionStatusView,
-    AdminQueryLexiconTermInspectorView,
     AdminQueryLexiconWorkspaceView,
     AdminSystemStatusView,
     AdminWorkPagePreviewView,
@@ -115,7 +110,6 @@ from .workflow_suggestion_views import (
     MaintenanceWorkflowSuggestionView,
     ResearchCandidateVerifyView,
     ResearchLeadVerifyView,
-    WorkflowSuggestionPolicyView,
 )
 from .viewpoint_views import ViewpointSearchView
 from .research_views import (
@@ -183,8 +177,6 @@ from .views import (
     WorkListView,
 )
 from .theory_system_views import (
-    AdminEvidenceDetailView,
-    AdminEvidenceListView,
     AdminKnowledgeNodeDetailView,
     AdminKnowledgeNodeListView,
     AdminKnowledgeNodeMergePreviewView,
@@ -364,11 +356,6 @@ urlpatterns = [
         name="admin-work-maintenance-suggestions",
     ),
     path(
-        "admin/workflow-suggestion-policies/",
-        WorkflowSuggestionPolicyView.as_view(),
-        name="admin-workflow-suggestion-policies",
-    ),
-    path(
         "admin/research/candidates/<uuid:candidate_id>/verify/",
         ResearchCandidateVerifyView.as_view(),
         name="admin-research-candidate-verify",
@@ -444,11 +431,6 @@ urlpatterns = [
         name="admin-query-lexicon-workspace",
     ),
     path(
-        "admin/query-lexicon/terms/",
-        AdminQueryLexiconTermInspectorView.as_view(),
-        name="admin-query-lexicon-term-inspector",
-    ),
-    path(
         "admin/knowledge-workspace/",
         AdminKnowledgeWorkspaceView.as_view(),
         name="admin-knowledge-workspace",
@@ -519,11 +501,6 @@ urlpatterns = [
         name="admin-field-enrichment",
     ),
     path(
-        "admin/field-enrichment/policies/",
-        AdminFieldEnrichmentPolicyView.as_view(),
-        name="admin-field-enrichment-policies",
-    ),
-    path(
         "admin/field-enrichment/candidates/<uuid:candidate_id>/",
         AdminFieldEnrichmentCandidateDetailView.as_view(),
         name="admin-field-enrichment-candidate-detail",
@@ -532,11 +509,6 @@ urlpatterns = [
         "admin/field-enrichment/candidates/<uuid:candidate_id>/decision/",
         AdminFieldEnrichmentDecisionView.as_view(),
         name="admin-field-enrichment-candidate-decision",
-    ),
-    path(
-        "admin/new-authority-candidates/",
-        AdminNewAuthorityCandidateView.as_view(),
-        name="admin-new-authority-candidates",
     ),
     path(
         "admin/authority-suggestions/",
@@ -592,8 +564,6 @@ urlpatterns = [
     path("admin/recommendations/<str:placement>/", AdminRecommendationPolicyView.as_view(), name="admin-recommendation-policy"),
     path("admin/recommendations/<str:placement>/refresh/", AdminRecommendationRefreshView.as_view(), name="admin-recommendation-refresh"),
     path("admin/recommendations/<str:placement>/preview/", AdminRecommendationPreviewView.as_view(), name="admin-recommendation-preview"),
-    path("admin/recommendation-overrides/", AdminRecommendationOverrideListView.as_view(), name="admin-recommendation-override-list"),
-    path("admin/recommendation-overrides/<uuid:pk>/", AdminRecommendationOverrideDetailView.as_view(), name="admin-recommendation-override-detail"),
     path("admin/about-blocks/", AdminAboutPageBlockListView.as_view(), name="admin-about-page-block-list"),
     path("admin/about-blocks/<uuid:pk>/", AdminAboutPageBlockDetailView.as_view(), name="admin-about-page-block-detail"),
     path("admin/knowledge-relations/<str:kind>/", AdminKnowledgeRelationListCreateView.as_view(), name="admin-knowledge-relation-list"),
@@ -652,16 +622,6 @@ urlpatterns = [
         "admin/theory-system/work-relations/<uuid:pk>/",
         AdminWorkNodeRelationDetailView.as_view(),
         name="admin-work-node-relation-detail",
-    ),
-    path(
-        "admin/theory-system/evidence/",
-        AdminEvidenceListView.as_view(),
-        name="admin-theory-evidence-list",
-    ),
-    path(
-        "admin/theory-system/evidence/<uuid:pk>/",
-        AdminEvidenceDetailView.as_view(),
-        name="admin-theory-evidence-detail",
     ),
     path(
         "admin/theory-system/review-tasks/",

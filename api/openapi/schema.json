@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Social Theory Library API",
-        "version": "3.0.9",
+        "version": "3.0.9.1",
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
@@ -1799,6 +1799,45 @@
         "/api/catalog/admin/recommendation-issues/": {
             "get": {
                 "operationId": "catalog_admin_recommendation_issues_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "bucket",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "day",
+                                "published",
+                                "upcoming"
+                            ]
+                        },
+                        "description": "所选日期、之后的已保存排期、之前的公开版本。与 day 一起使用。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "day",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "description": "编辑日历所选日期，按 Asia/Hong_Kong 时区分组。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "文章标题"
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -3929,6 +3968,44 @@
                         "minLength": 1,
                         "maxLength": 16
                     },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string",
+                        "maxLength": 20000
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "maximum": 9999,
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "author_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 30
+                    },
+                    "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 30
+                    },
                     "request_key": {
                         "type": "string",
                         "format": "uuid"
@@ -4066,10 +4143,17 @@
                     },
                     "can_edit": {
                         "type": "boolean"
+                    },
+                    "changed_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "required": [
                     "can_edit",
+                    "changed_fields",
                     "edit_url",
                     "id",
                     "label",
@@ -4085,6 +4169,12 @@
                 "properties": {
                     "count": {
                         "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
                     },
                     "page": {
                         "type": "integer"
@@ -4112,6 +4202,7 @@
                 },
                 "required": [
                     "count",
+                    "counts",
                     "next",
                     "page",
                     "page_size",
@@ -7401,6 +7492,10 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "public_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "items": {
                         "type": "array",
                         "items": {
@@ -7425,6 +7520,7 @@
                     "draft_revision_id",
                     "has_unpublished_changes",
                     "id",
+                    "public_url",
                     "published_at",
                     "title"
                 ]

@@ -1,14 +1,17 @@
 "use client";
 
 import { Filter, LoaderCircle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import {
   buildCandidateActionBody,
+  candidateEditableValue, candidateRejectionAction, candidateRejectionReasons, parseCandidateEditableValue, resolveCandidateActionDescriptors,
   type CandidateActionDescriptor,
   type CandidateActionSource,
 } from "./admin/research/candidate-action-contract";
-import { CandidateDecisionBar } from "./admin/research/candidate-decision-bar";
+import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
+import { SelectedWorkPreview } from "./admin/preview/selected-work-preview";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { EvidenceEnvelopeCard } from "./admin/research/evidence-envelope-card";
 
 type Evidence = {
@@ -55,6 +58,10 @@ type Candidate = {
   upload_item_id?: string | null;
   possible_matches?: Array<{ entity_type?: string; entity_id?: string; label?: string; canonical_label?: string }>;
   work_id?: string | null;
+  edition_id?: string | null;
+  workbench_url?: string;
+  target_type?: string;
+  target_id?: string;
   action_descriptors?: unknown;
   actions?: unknown;
   available_actions?: string[];
@@ -88,10 +95,6 @@ function statusLabel(value: string) {
   return ({ pending: "待审核", accepted: "已接受", rejected: "已拒绝", superseded: "已替代", draft_created: "已创建草稿", matched: "已匹配" } as Record<string, string>)[value] ?? value;
 }
 
-function entityLabel(value?: string) {
-  return ({ person: "学者", work: "作品", edition: "版本", discipline: "学科", subdiscipline: "子学科", knowledge_node: "理论节点", topic: "主题", reading_path: "阅读路径" } as Record<string, string>)[value || ""] ?? (value || "未解析");
-}
-
 function decisionCandidate(candidate: Candidate): Candidate & CandidateActionSource {
   if (candidate.action_descriptors || (Array.isArray(candidate.actions) && candidate.actions.some((row) => row && typeof row === "object"))) {
     return candidate;
@@ -120,9 +123,15 @@ export function CandidateReview() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
+  const [selectedKey, setSelectedKey] = useState("");
+  const [selectionDirty, setSelectionDirty] = useState(false);
+  const loadRevision = useRef(0);
+  const actionPending = useRef(false);
 
   const load = useCallback(async () => {
+    const revision = ++loadRevision.current;
     setLoading(true);
+    setData(null);
     setMessage("");
     try {
       const credential = getServerSessionCredential();
@@ -132,25 +141,27 @@ export function CandidateReview() {
         {},
         credential,
       );
-      setData(payload);
+      if (revision === loadRevision.current) setData(payload);
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "候选读取失败。");
+      if (revision === loadRevision.current) setMessage(reason instanceof Error ? reason.message : "候选读取失败。");
     } finally {
-      setLoading(false);
+      if (revision === loadRevision.current) setLoading(false);
     }
   }, [kind, status]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    return () => { window.clearTimeout(timer); loadRevision.current += 1; };
   }, [load]);
 
   async function decide(candidate: Candidate, descriptor: CandidateActionDescriptor, editedValue?: unknown) {
+    if (actionPending.current || descriptor.disabled) return false;
     const action = descriptor.action;
     if (descriptor.source !== "descriptor" && !["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind)) {
       setMessage("该条记录请从 Intake 或专用理论审核页面处理，统一列表只展示证据和入口。");
-      return;
+      return false;
     }
+    actionPending.current = true;
     setBusy(`${candidate.id}:${action}`);
     setMessage("");
     try {
@@ -159,7 +170,7 @@ export function CandidateReview() {
         const match = candidate.possible_matches?.[0];
         if (!match?.entity_id) {
           setMessage("当前没有可安全选择的已有实体，请打开 Knowledge Workspace 后再决定。");
-          return;
+          return false;
         }
         fallbackBody.target_type = match.entity_type;
         fallbackBody.target_id = match.entity_id;
@@ -177,56 +188,65 @@ export function CandidateReview() {
       );
       setData((current) => current ? {
         ...current,
-        results: current.results.map((row) => row.id === updated.id ? updated : row),
+        results: current.results.map((row) => row.id === candidate.id && row.review_kind === candidate.review_kind ? {...row, ...updated} : row),
       } : current);
       setMessage(action === "reject" ? "候选已拒绝，证据仍保留。" : "候选已按其领域规则处理，草稿不会自动发布。");
+      setSelectionDirty(false);
+      return true;
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "审核操作失败。");
+      return false;
     } finally {
+      actionPending.current = false;
       setBusy("");
     }
   }
 
-  return (
-    <section className="admin-section candidate-review" aria-label="统一候选审核">
-      <header className="admin-section-heading">
-        <div><p className="eyebrow">审核工作流</p><h1>候选审核中心</h1><span>这里管理待审核的字段补全、PDF 词典和新权威对象候选。它不是词典本身；接受动作仍写入各自的权威来源。</span></div>
-        <div className="admin-section-actions"><button type="button" onClick={() => void load()} disabled={loading}><Filter size={15} />刷新</button></div>
-      </header>
-      <div className="admin-toolbar candidate-review-toolbar">
-        <label><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
-        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新权威对象</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
-        {data ? <small>待审核队列共 {data.counts.total ?? data.results.length} 条 · 字段补全 {data.counts.field_enrichment ?? 0} · PDF 词典 {data.counts.query_lexicon ?? 0} · 新权威对象 {data.counts.new_authority ?? 0}{data.truncated ? " · 当前只显示排序靠前的一页" : ""}</small> : null}
-      </div>
-      <p className="admin-help candidate-review-explanation">“全部审核来源”只是把不同领域的待审记录集中展示，不是会自动更新的社会科学词典。QueryLexicon 是由已确认 authority 派生的检索词典；这里的接受、拒绝或匹配动作仍分别写回各自的来源对象。</p>
-      {message ? <p className="form-message" role="status">{message}</p> : null}
-      {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取候选……</p> : null}
-      {!loading && !data?.results.length ? <p className="admin-list-state">当前筛选没有候选。0 也是有效状态。</p> : null}
-      <div className="candidate-review-list">
-        {data?.results.map((candidate) => (
-          <article className="panel candidate-review-card" key={`${candidate.review_kind}-${candidate.id}`}>
-            <header>
-              <div><p className="eyebrow">{kindLabel(candidate.review_kind)}</p><h2>{candidate.field_name ?? candidate.candidate_type ?? "候选"}</h2><span>{candidate.target_label || `${entityLabel(candidate.target_entity_type)} · ${candidate.target_entity_id ?? "未解析"}`}</span></div>
-              <strong>{Math.round(candidate.confidence * 100)}%</strong>
-            </header>
-            <div className="candidate-review-comparison"><section><small>当前值</small><pre>{valueText(candidate.current_value)}</pre></section><section><small>候选值</small><pre>{valueText(candidate.proposed_value ?? candidate.proposed_term)}</pre></section></div>
-            <p className="candidate-review-meta">{candidate.language ? `语言 ${candidate.language} · ` : ""}状态 {statusLabel(candidate.status)} · 证据 {candidate.evidence_count} 条 · 独立来源 {candidate.independent_source_count} 个</p>
-            {candidate.conflicts?.length ? <details><summary>来源冲突</summary><pre>{valueText(candidate.conflicts)}</pre></details> : null}
-            {candidate.confidence_factors ? <details><summary>置信度因素</summary><pre>{valueText(candidate.confidence_factors)}</pre></details> : null}
-            <div className="candidate-review-evidence">
-              {(candidate.evidence_records ?? []).filter((evidence) => evidence.is_current !== false).map((evidence) => <EvidenceEnvelopeCard evidence={evidence} key={evidence.id} />)}
-            </div>
-            {candidate.status === "pending" && (["field_enrichment", "query_lexicon", "new_authority"].includes(candidate.review_kind) || candidate.action_descriptors || candidate.actions) ? <CandidateDecisionBar
-              candidate={decisionCandidate(candidate)}
-              className="candidate-review-actions"
-              showInspect={false}
-              busyAction={busy.startsWith(`${candidate.id}:`) ? busy.slice(candidate.id.length + 1) : ""}
-              disabled={Boolean(busy)}
-              onAction={(descriptor, editedValue) => void decide(candidate, descriptor, editedValue)}
-            /> : candidate.review_action === "open_intake_workspace" && candidate.upload_item_id ? <footer className="candidate-review-actions"><a href={`/admin/intake/${candidate.upload_item_id}`}>打开上架工作台</a></footer> : null}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
+  const selected = data?.results.find(row=>`${row.review_kind}:${row.id}`===selectedKey) || data?.results[0];
+  const canSwitch = () => !busy && (!selectionDirty || window.confirm("当前处理选择尚未提交，放弃输入并切换吗？"));
+  return <section className="admin-section candidate-review candidate-reference" aria-label="核对填写建议">
+    <header className="admin-section-heading"><div><h1>核对填写建议</h1><span>根据原文内容与系统建议，核对确认以下信息是否正确。</span></div><button type="button" className="button secondary" disabled={loading || Boolean(busy)} onClick={()=>{if(canSwitch()){setSelectionDirty(false);void load();}}}><Filter size={15}/>重新读取</button></header>
+    <details className="candidate-reference-directory" open={!selected}><summary>选择需要核对的内容（{data?.counts.total ?? "—"}）</summary><div className="admin-toolbar">
+      <label>状态<select value={status} onChange={event=>{if(canSwitch()){setSelectionDirty(false);setStatus(event.target.value);}}}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
+      <label>建议来源<select value={kind} onChange={event=>{if(canSwitch()){setSelectionDirty(false);setKind(event.target.value);}}}><option value="all">全部</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">检索用语</option><option value="new_authority">新对象</option><option value="metadata">书目</option><option value="theory">理论与关系</option></select></label></div>
+      <div className="candidate-reference-index">{data?.results.map(row=><button type="button" key={`${row.review_kind}:${row.id}`} aria-pressed={selected?.id===row.id && selected?.review_kind===row.review_kind} onClick={()=>{if(canSwitch()){setSelectionDirty(false);setSelectedKey(`${row.review_kind}:${row.id}`);}}}>{row.target_label || row.proposed_term || row.field_name || kindLabel(row.review_kind)}<small>{statusLabel(row.status)}</small></button>)}</div>{data?.truncated ? <p>当前为排序靠前的 {data.returned_count} 项，请缩小筛选范围。</p> : null}</details>
+    {message ? <p className="form-message" role="status">{message}</p> : null}{loading ? <p role="status"><LoaderCircle size={18}/>正在读取建议…</p> : null}
+    {!loading && !selected ? <p className="empty-state">当前筛选没有需要核对的建议。</p> : null}
+    {selected ? <CandidateReviewWorkspace key={`${selected.review_kind}:${selected.id}`} candidate={selected} busy={Boolean(busy)} onDirty={setSelectionDirty} onDecision={decide}/> : null}
+  </section>;
+}
+
+function CandidateReviewWorkspace({candidate,busy,onDirty,onDecision}: {candidate:Candidate;busy:boolean;onDirty:(dirty:boolean)=>void;onDecision:(candidate:Candidate,descriptor:CandidateActionDescriptor,value?:unknown)=>Promise<boolean>}) {
+  const [step,setStep]=useState(1), [action,setAction]=useState("");
+  const [edited,setEdited]=useState(()=>candidateEditableValue(candidate));
+  const [reason,setReason]=useState("unsupported_content"), [detail,setDetail]=useState("");
+  const [showPdf,setShowPdf]=useState(true);
+  const dirty=useUnsavedForm(action ? {action,edited,reason,detail} : null,null);
+  useEffect(()=>onDirty(dirty),[dirty,onDirty]);
+  const descriptors=resolveCandidateActionDescriptors(decisionCandidate(candidate)).filter(row=>row.action!=="inspect");
+  const choice=descriptors.find(row=>row.action===action);
+  const disabled=busy || candidate.status!=="pending";
+  const valid=Boolean(choice && !choice.disabled && (!choice.editable || edited.trim()) && (action!=="reject" || reason!=="other" || detail.trim()));
+  const source=(candidate.evidence_records || []).filter(row=>row.is_current!==false);
+  const pdf=source.find(row=>row.pdf_url);
+  const edition=candidate.edition_id || (candidate.target_type==="edition" ? candidate.target_id : candidate.target_entity_type==="edition" ? candidate.target_entity_id : "");
+  const fieldNames:Record<string,string>={publisher:"出版社",publication_year:"出版年份",title:"书名",original_title:"原文书名",abstract:"简介",language:"语言",isbn:"ISBN"};
+  const heading=fieldNames[candidate.field_name || ""] || candidate.field_name || candidate.candidate_type || "建议内容";
+  async function confirm() {
+    if (!choice || !valid || disabled) return;
+    const descriptor=action==="reject" ? candidateRejectionAction(choice,reason,detail) : choice;
+    if (await onDecision(candidate,descriptor,choice.editable ? parseCandidateEditableValue(edited,candidate.proposed_value) : undefined)) {setAction("");setReason("unsupported_content");setDetail("");}
+  }
+  return <><nav className="knowledge-reference-steps" aria-label="核对步骤">{["查看建议","核对出处","确认采用"].map((label,index)=><button type="button" key={label} aria-current={step===index ? "step" : undefined} disabled={busy || (index===2&&!valid)} onClick={()=>setStep(index)}><span>{index+1}</span><strong>{label}</strong></button>)}</nav>
+    <div className="candidate-reference-columns"><section className="admin-panel candidate-reference-form"><h2>{heading}<small>{statusLabel(candidate.status)}</small></h2><p>请根据右侧的出处核对内容，再选择处理方式。</p><div className="candidate-reference-values"><label>当前值<textarea readOnly value={valueText(candidate.current_value)}/></label><label>系统建议值<textarea readOnly value={valueText(candidate.proposed_value ?? candidate.proposed_term)}/></label></div>
+      <fieldset disabled={disabled}><legend>处理方式</legend>{descriptors.map(row=><label className="candidate-reference-option" key={row.action}><input type="radio" name={`decision-${candidate.id}`} checked={action===row.action} disabled={row.disabled} onChange={()=>setAction(row.action)}/><span>{row.label}{row.disabledReason ? <small>{row.disabledReason}</small> : null}</span></label>)}
+      {choice?.editable ? <label>修改后采用<textarea value={edited} onChange={event=>setEdited(event.target.value)}/></label> : null}{action==="reject" ? <><label>不采用理由<select value={reason} onChange={event=>setReason(event.target.value)}>{Object.entries(candidateRejectionReasons).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><label>补充说明<textarea value={detail} onChange={event=>setDetail(event.target.value)}/></label></> : null}</fieldset>
+      {step===2 && choice ? <aside className="candidate-reference-notice"><strong>请确认：{choice.label}</strong><p>{choice.editable ? edited : action==="reject" ? candidateRejectionReasons[reason] : valueText(candidate.proposed_value ?? candidate.proposed_term)}</p><p>提交后按这条建议的实际规则处理；不会自动发布。</p></aside> : <aside className="candidate-reference-notice">核对提示：请检查原文的正式名称与版本。现有人工确认和锁定规则仍由保存接口校验。</aside>}
+      <details><summary>其他信息（本次不处理）</summary><p>{candidate.target_label}</p><p>{kindLabel(candidate.review_kind)} · 证据 {candidate.evidence_count} 条</p>{candidate.conflicts?.length ? <pre>{valueText(candidate.conflicts)}</pre> : null}{candidate.confidence_factors ? <pre>{valueText(candidate.confidence_factors)}</pre> : null}</details>
+      {!descriptors.length && candidate.workbench_url ? <a className="button" href={candidate.workbench_url}>回到书目工作页核对</a> : null}
+      <footer><button type="button" className="button secondary" disabled={busy || step===0} onClick={()=>setStep(step-1)}>上一步</button><button type="button" className="button secondary" disabled title="当前接口不支持暂存处理选择">保存草稿</button>{step<2 ? <button type="button" className="button" disabled={disabled || (step===1&&!valid)} onClick={()=>setStep(step+1)}>下一步：{step===0 ? "核对出处" : "确认采用"} →</button> : <button type="button" className="button" disabled={disabled || !valid} onClick={()=>void confirm()}>{busy ? "正在提交…" : "确认处理"}</button>}</footer>
+    </section><section className="admin-panel candidate-reference-evidence"><h2>证据与预览</h2><nav className="reference-tabs"><button type="button" aria-pressed={showPdf} onClick={()=>setShowPdf(true)}>原文证据</button><button type="button" aria-pressed={!showPdf} onClick={()=>setShowPdf(false)}>前台书目位置预览</button></nav>
+      {showPdf ? <>{pdf?.pdf_url ? <WorkflowInspector key={pdf.pdf_url} selection={{kind:"pdf",title:pdf.work_title || "原文证据",pdfUrl:pdf.pdf_url}} token={getServerSessionCredential()} onClose={()=>setShowPdf(false)}/> : source.length ? source.map(row=><EvidenceEnvelopeCard key={row.id} evidence={row}/>) : <p className="empty-state">—</p>}</> : null}
+      <div hidden={showPdf && !edition}><h3>前台书目位置预览</h3>{edition ? <SelectedWorkPreview editionId={edition} title={candidate.target_label}/> : <p className="empty-state">—</p>}</div>
+    </section></div></>;
 }

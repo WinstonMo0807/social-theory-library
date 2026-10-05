@@ -10,10 +10,10 @@ export function fileDraftFromWorkspace(value: Record<string, unknown>) {
 }
 
 export const WORKFLOW_GROUPS = [
-  { label:"文件与识别", steps:["file","reader"] },
+  { label:"检查文件", steps:["file","reader"] },
   { label:"书目与封面", steps:["work","bibliography"] },
   { label:"作者与分类", steps:["contributors","classification","curation"] },
-  { label:"预览与发布", steps:["publication"] },
+  { label:"预览发布", steps:["publication"] },
 ] as const;
 
 export function fileKindLabel(value:unknown){return ({original:"上传原件",normalized:"阅读文件",ocr_pdf:"可搜索的扫描文件",extracted_text:"提取的文字",ocr_text:"识别的文字"} as Record<string,string>)[String(value)] || "附件";}

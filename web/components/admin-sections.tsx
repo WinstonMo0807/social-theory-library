@@ -11,7 +11,6 @@ import {
   HardDrive,
   ImagePlus,
   LoaderCircle,
-  LockKeyhole,
   Pencil,
   Plus,
   RefreshCw,
@@ -23,7 +22,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
@@ -37,9 +36,12 @@ import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
 import { TopicMergePanel } from "@/components/admin/curation/topic-merge-panel";
+import { CurationSelectionPreview } from "@/components/admin/curation/curation-draft-queue";
 import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
+import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
+import { AdminReaderPreview } from "@/components/admin/admin-reader-preview";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import {
   mergeUniqueStrings,
@@ -276,6 +278,8 @@ export function TaxonomyAdmin({
   const topics = useAdminResource<Paginated<AdminTopic>>(
     !editorOnly && showTopics ? `/catalog/admin/topics/?page=${topicPaging.page}` : null,
   );
+  const [selectedTopicId, setSelectedTopicId] = useState("");
+  const selectedTopic = selectedTopicId ? topics.data?.results.find(item => item.id === selectedTopicId) : topics.data?.results[0];
   const detailBase = mode === "topic"
     ? "/catalog/admin/topics"
     : "/catalog/admin/theory-schools";
@@ -564,13 +568,13 @@ export function TaxonomyAdmin({
           ? "管理主题的公开页面、关键概念、时间线和馆藏关系。"
           : "自动识别提出候选，人工确认后写入作品关系。流派和主题保持为不同对象。"}
     >
-      <div className={`taxonomy-layout ${editorOnly ? "editor-only" : ""}`}>
+      <div className={`taxonomy-layout ${editorOnly ? "editor-only" : mode === "topic" ? "knowledge-directory-reference" : ""}`}>
         {!editorOnly ? <section>
           {showTheories ? (
             <>
               <div className="admin-list-toolbar">
                 <h2>理论流派</h2>
-                <Link href="/admin/theories?node_type=theory_tradition"><Plus size={15} />新建规范理论</Link>
+                <Link href="/admin/theories?create=1&node_type=theory_tradition"><Plus size={15} />新建规范理论</Link>
               </div>
               <ResourceState loading={theories.loading} error={theories.error} empty={!theories.data?.results.length} />
               <div className="taxonomy-admin-grid">
@@ -596,9 +600,9 @@ export function TaxonomyAdmin({
               <ResourceState loading={topics.loading} error={topics.error} empty={!topics.data?.results.length} />
               <div className="taxonomy-admin-grid">
                 {topics.data?.results.map((topic) => (
-                  <article className={`admin-panel ${draft.id === topic.id ? "selected" : ""}`} key={topic.id}>
+                  <article className={`admin-panel ${selectedTopic?.id === topic.id ? "selected" : ""}`} key={topic.id}>
                     <span className="theory-symbol">{topic.name.slice(0, 2)}</span>
-                    <h2>{topic.name}</h2>
+                    <h2><button type="button" className="reference-select-title" aria-pressed={selectedTopic?.id === topic.id} onClick={() => setSelectedTopicId(topic.id)}>{topic.name}</button></h2>
                     <p>{topic.description || "尚未填写说明。"}</p>
                     <dl><div><dt>关联馆藏</dt><dd>{topic.work_count}</dd></div><div><dt>状态</dt><dd>{topic.editorial_status === "published" ? "公开" : "草稿"}</dd></div></dl>
                     <Link href={`/admin/topics/${topic.id}`}><Pencil size={14} />编辑</Link>
@@ -609,6 +613,7 @@ export function TaxonomyAdmin({
             </>
           ) : null}
         </section> : null}
+        {!editorOnly && mode === "topic" ? <CurationSelectionPreview key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type: "topic", object_id: selectedTopic.id, title: selectedTopic.name, label: "主题", edit_url: `/admin/topics/${selectedTopic.id}`, can_edit: true } : undefined} returnTo="/admin/topics"/> : null}
         {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
           <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
@@ -1015,6 +1020,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const prefills = useEditorialPrefills(draft.id || "new-scholar", draft, setDraft, () => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; });
   const [editConflict, setEditConflict] = useState(false);
   const visible = resource.data?.results ?? [];
+  const [selectedScholarId, setSelectedScholarId] = useState("");
+  const selectedScholar = selectedScholarId ? visible.find(item => item.id === selectedScholarId) : visible[0];
 
   useEffect(() => {
     let active = true;
@@ -1202,12 +1209,12 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   return (
     <AdminPageFrame eyebrow="人物资料" title="学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
       {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => { const normalized = query.trim(); setSubmittedQuery(normalized); router.replace(normalized ? `/admin/scholars?q=${encodeURIComponent(normalized)}` : "/admin/scholars"); }} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
-      <div className={`admin-master-detail ${editorOnly ? "editor-only" : ""}`}>
+      <div className={`admin-master-detail ${editorOnly ? "editor-only" : "knowledge-directory-reference"}`}>
         {!editorOnly ? <section className="admin-entity-table scholar-admin-table admin-panel">
           <header><span>学者</span><span>原名</span><span>年代</span><span>关注领域</span><span>公开档案</span><span>操作</span></header>
           {visible.map((scholar) => (
-            <article className={draft.id === scholar.id ? "selected" : ""} key={scholar.id}>
-              <p><span className="tiny-portrait" /><strong>{scholar.preferred_name}</strong></p>
+            <article className={selectedScholar?.id === scholar.id ? "selected" : ""} key={scholar.id}>
+              <p>{scholar.portrait ? <img className="tiny-portrait" src={normalizePublicResourceUrl(scholar.portrait)} alt=""/> : <span className="tiny-portrait" />}<button type="button" className="reference-select-title" aria-pressed={selectedScholar?.id === scholar.id} onClick={() => setSelectedScholarId(scholar.id)}>{scholar.preferred_name}</button></p>
               <span>{scholar.original_name || "—"}</span>
               <span>{scholar.birth_year ? `${scholar.birth_year}—${scholar.death_year ?? ""}` : "—"}</span>
               <span>{scholar.key_concerns.slice(0, 2).join("、") || "待补"}</span>
@@ -1218,6 +1225,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
+        {!editorOnly ? <CurationSelectionPreview key={selectedScholar?.id || "empty-scholar"} item={selectedScholar ? { object_type: "scholar_profile", object_id: selectedScholar.id, title: selectedScholar.preferred_name, label: "学者", edit_url: `/admin/scholars/${selectedScholar.id}`, can_edit: true } : undefined} returnTo={`/admin/scholars${requestedQuery ? `?q=${encodeURIComponent(requestedQuery)}` : ""}`}/> : null}
         {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
           <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
@@ -1409,110 +1417,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   );
 }
 
-type AdminUser = {
-  id: number;
-  email: string;
-  display_name: string;
-  role: "admin" | "editor" | "reviewer" | "reader";
-  is_active: boolean;
-  date_joined: string;
-  last_login: string | null;
-  annotation_count: number;
-  bookmark_count: number;
-  saved_count: number;
-  is_library_owner: boolean;
-  can_manage_admin_role: boolean;
-};
-
-export function UsersAdmin() {
-  const resource = useAdminResource<Paginated<AdminUser>>("/auth/users/");
-  const [target, setTarget] = useState<number | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<AdminUser["role"]>("reader");
-  const [active, setActive] = useState(true);
-  const [newPassword, setNewPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const selected = resource.data?.results.find((user) => user.id === target);
-  const canManageAdminRole = Boolean(resource.data?.results.some((user) => user.can_manage_admin_role));
-
-  function select(user: AdminUser) {
-    setTarget(user.id);
-    setDisplayName(user.display_name);
-    setRole(user.role);
-    setActive(user.is_active);
-    setMessage("");
-  }
-
-  async function saveAccount() {
-    const token = getServerSessionCredential();
-    if (!token || target === null) return;
-    try {
-      await apiRequest(
-        `/auth/users/${target}/`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ display_name: displayName, role, is_active: active }),
-        },
-        token,
-      );
-      setMessage("账户状态和角色已经更新。");
-      resource.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "账户更新失败。");
-    }
-  }
-
-  async function reset(event: FormEvent) {
-    event.preventDefault();
-    const token = getServerSessionCredential();
-    if (!token || target === null) {
-      setMessage("请先从真实用户列表选择账户。");
-      return;
-    }
-    try {
-      await apiRequest(
-        `/auth/users/${target}/set-password/`,
-        { method: "POST", body: JSON.stringify({ new_password: newPassword }) },
-        token,
-      );
-      setNewPassword("");
-      setMessage("新密码已设置。系统没有读取或显示旧密码。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "设置失败。");
-    }
-  }
-
-  return (
-    <AdminPageFrame eyebrow="账户与权限" title="读者用户" description="管理员可以设置新密码、停用账户或调整角色。旧密码始终不可读取。">
-      <ResourceState loading={resource.loading} error={resource.error} empty={!resource.data?.results.length} />
-      <section className="user-admin-grid">
-        <div className="admin-panel">
-          <header><h2>用户列表</h2><span>{resource.data?.count ?? 0} 人</span></header>
-          {resource.data?.results.map((user, index) => <button className={target === user.id ? "active" : ""} type="button" key={user.id} onClick={() => select(user)}><span>{index + 1}</span><p><strong>{user.display_name}{user.is_library_owner ? " · 最高管理员" : ""}</strong><small>{user.email}</small></p><b>{user.is_active ? user.role : "已停用"}</b></button>)}
-        </div>
-        <div className="user-admin-actions">
-          <section className="admin-panel account-editor">
-            <h2>账户状态</h2>
-            <p>{selected?.email ?? "从左侧选择用户"}</p>
-            <label><span>显示名</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} disabled={!selected} /></label>
-            <label><span>角色</span><select value={role === "reviewer" ? "editor" : role} onChange={(event) => setRole(event.target.value as AdminUser["role"])} disabled={!selected || selected.is_library_owner || (selected.role === "admin" && !canManageAdminRole)}><option value="reader">读者</option><option value="editor">编辑</option>{canManageAdminRole || selected?.role === "admin" ? <option value="admin">管理员</option> : null}</select><small>{canManageAdminRole ? "只有 System Owner 可以授予或撤销 Administrator。" : "账户角色提升由 System Owner 管理。"}</small></label>
-            <label className="switch-row"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} disabled={!selected || selected.is_library_owner} /><span>账户有效</span></label>
-            {selected ? <p className="account-counts">批注 {selected.annotation_count} · 书签 {selected.bookmark_count} · 收藏 {selected.saved_count}</p> : null}
-            <button className="button secondary" type="button" onClick={saveAccount} disabled={!selected}>保存账户</button>
-          </section>
-          <form className="admin-panel direct-reset" onSubmit={reset}>
-            <LockKeyhole size={25} />
-            <h2>直接设置新密码</h2>
-            <p>目标账户：{selected?.email ?? "尚未选择"}</p>
-            <label><span>新密码</span><input type="password" minLength={10} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={!selected} /></label>
-            <button className="button" type="submit" disabled={!selected}>设置新密码</button>
-          </form>
-          {message ? <p className="form-message" role="status">{message}</p> : null}
-        </div>
-      </section>
-    </AdminPageFrame>
-  );
-}
+export { UsersAdmin } from "./admin/users-reference";
 
 type CloudProvider = {
   id: string;
@@ -1853,22 +1758,6 @@ type AIRuntimeDocument = {
   deployment_fields: string[];
 };
 
-const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
-  metadata_extraction: "元数据提取",
-  library_qa: "书库问答默认服务（可选）",
-  field_enrichment_optional: "联网补全可选判断",
-  entity_reasoning: "实体推理",
-  claim_extraction: "Claim 提取",
-  claim_attribution: "Claim 归属",
-  claim_stance: "Claim 立场",
-  rerank: "结果重排",
-  theory_reasoning: "理论推理",
-  knowledge_relation_reasoning: "知识关系推理",
-  debate_discovery: "Debate 发现",
-  reading_path_generation: "Reading Path 生成",
-  curation_reasoning: "内容编排建议",
-};
-
 const aiCapabilityGuidance: Partial<Record<AIRuntimeCapability, string>> = {
   claim_extraction: "默认以 shadow task 运行。服务暂不可用时保持等待，不阻断出版。",
   claim_attribution: "必须返回绑定 EvidenceSpan 的结构化判断，不能用模型常识补足原文。",
@@ -1901,6 +1790,11 @@ const settingsSections=[['public-display','网站内容'],['submissions','荐书
 export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backups" | "processing" }) {
   const sections = settingsSections.filter(([key]) => scope === "backups" ? key === "backups" : scope === "processing" ? ["ocr", "ai", "search", "prompts", "submissions"].includes(key) : true);
   const [activeSection,setActiveSection]=useState(scope === "backups" ? "backups" : scope === "processing" ? "ocr" : "public-display");
+  const [aiCapability,setAiCapability]=useState<AIRuntimeCapability>("metadata_extraction");
+  const [aiChecks,setAiChecks]=useState<Record<string,{available:boolean;detail:string;checkedAt:string}>>({});
+  const [ocrCheck,setOcrCheck]=useState<{reachable:boolean;detail:string;target:string;checkedAt:string}|null>(null);
+  const [ocrPausedDraft,setOcrPausedDraft]=useState<boolean|null>(null);
+  const ocrWorkload=useAdminResource<{paused:boolean;can_manage:boolean}>(scope === "processing" && activeSection === "ocr" ? "/ingestion/processing-center/?ocr_monitor=1" : null);
   useEffect(()=>{const sync=()=>{const requested=window.location.hash.slice(1);if(settingsSections.some(([key])=>key===requested) && (scope === "legacy" || scope === "backups" && requested === "backups" || scope === "processing" && ["ocr","ai","search","prompts","submissions"].includes(requested)))setActiveSection(requested);};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[scope]);
   const user = useAdminSession();
   const canRunBackup = hasAdminCapability(user, "can_run_backup");
@@ -1931,6 +1825,9 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     ?? defaultSemanticRuntime;
   const semanticRuntimeReady = Boolean(semanticDraft ?? semanticResource.data);
   const aiRuntime = aiRuntimeDraft ?? aiRuntimeResource.data;
+  const ocrRuntimeReady=Boolean(ocrDraft ?? ocrResource.data);
+  const ocrPaused=ocrPausedDraft ?? ocrWorkload.data?.paused;
+  useUnsavedForm(Boolean(ocrDraft && JSON.stringify(ocrDraft)!==JSON.stringify(ocrResource.data) || aiRuntimeDraft && JSON.stringify(aiRuntimeDraft)!==JSON.stringify(aiRuntimeResource.data) || ocrPausedDraft!==null && ocrPausedDraft!==ocrWorkload.data?.paused || submissionEmailDraft!==null && submissionEmailDraft!==submissionResource.data?.email),false);
 
   function updateConfig(patch: Partial<SiteConfig>) {
     setDraft({ ...config, ...patch });
@@ -2012,7 +1909,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   async function saveOcrRuntime(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || !ocrRuntimeReady) return;
     await runSettingsAction("save-ocr-runtime", "正在保存 OCR 设置……", "OCR 设置保存失败。", async () => {
       const saved = await apiRequest<OcrRuntime>(
         "/catalog/admin/ocr-runtime/",
@@ -2027,6 +1924,12 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
         token,
       );
       setOcrDraft(saved);
+      ocrResource.refresh();
+      if(ocrPausedDraft!==null && ocrPausedDraft!==ocrWorkload.data?.paused){
+        try { await apiRequest("/ingestion/processing-center/",{method:"POST",body:JSON.stringify({action:ocrPausedDraft ? "pause_workload" : "resume_workload",job_type:"ocr"})},token); }
+        catch(reason){throw new Error(`OCR 运行配置已保存，但全库开关未确认成功：${reason instanceof Error ? reason.message : "请重试"}`);}
+        ocrWorkload.refresh();
+      }
       return "OCR 运行方式已经保存。新上传的扫描 PDF 将使用该设置。";
     });
   }
@@ -2041,6 +1944,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
         token,
       );
       ocrResource.refresh();
+      setOcrCheck({...result,checkedAt:new Date().toISOString()});
       return `${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 测试结果：${result.reachable ? "可连接" : "不可用"}。${result.detail || ""}`;
     });
   }
@@ -2130,6 +2034,8 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
         token,
       );
       setAiRuntimeDraft(saved);
+      setAiChecks({});
+      aiRuntimeResource.refresh();
       return "AI Runtime profiles 已保存。非密钥参数会在下一次任务或问答时读取。";
     });
   }
@@ -2147,13 +2053,15 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
         { method: "POST", body: JSON.stringify({ profile_key: profileKey }) },
         token,
       );
+      setAiChecks(checks=>({...checks,[profileKey]:{...result,checkedAt:new Date().toISOString()}}));
       return `${result.profile_key}：${result.available ? "模型服务可用" : "模型服务不可用"}。${result.detail}`;
     });
   }
 
   return (
-    <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="查看已保存的配置与真实记录。各部分明确保存，敏感操作仍受权限保护。">
+    <AdminPageFrame eyebrow={scope === "processing" ? "处理中心" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? activeSection==="ai" ? "辅助填写设置" : activeSection==="ocr" ? "文字识别设置" : "处理服务设置" : "设置兼容入口"} description={activeSection==="ai" ? "配置 AI 辅助服务，帮助编辑完善馆藏内容。所有建议均需人工审核后保存。" : activeSection==="ocr" ? "配置 OCR 服务，管理全库文字识别功能。" : "查看已保存的配置与真实记录。各部分明确保存。"}>
       <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
+      <div className={scope === "processing" ? "admin-v2-ops-split" : undefined}>
       <section className="settings-grid settings-tabbed">
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
           <header><h2>品牌与首页</h2></header>
@@ -2199,8 +2107,13 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <ActionButton className="button secondary" type="submit" state={pendingAction === "save-submission-email" ? "pending" : "idle"} pendingLabel="正在保存邮箱" disabled={Boolean(pendingAction) && pendingAction !== "save-submission-email"}><Save size={15} />保存投稿邮箱</ActionButton>
         </form>
         <form className="admin-panel ocr-runtime-settings" hidden={activeSection!=='ocr'} role="tabpanel" aria-labelledby="settings-tab-ocr" id="ocr" onSubmit={saveOcrRuntime}>
-          <header><h2>OCR 资源</h2></header>
-          <p>配置与运行状态分开显示。远程 URL、模型和 API Key 必须同时齐全，远程回退才会参与任务。</p>
+          <header><h2>OCR 服务状态</h2></header>
+          <p>控制全库 PDF 的文字识别任务。暂停后，已经保存的文字和阅读文件保留。</p>
+          {scope==="processing" ? <><label className="switch-row"><input type="checkbox" role="switch" aria-label="允许运行全库文字识别" checked={ocrPaused===false} disabled={!ocrWorkload.data || !ocrWorkload.data.can_manage || Boolean(pendingAction)} onChange={event=>setOcrPausedDraft(!event.target.checked)}/><span>当前状态：{ocrPaused===undefined ? "正在读取" : ocrPaused ? "已暂停" : "允许运行"}{ocrPausedDraft!==null && ocrPausedDraft!==ocrWorkload.data?.paused ? "（尚未保存）" : ""}</span></label>{ocrWorkload.error ? <p role="alert">{ocrWorkload.error}<button type="button" onClick={ocrWorkload.refresh}>重试</button></p> : null}{ocrPaused ? <aside className="settings-reference-note">保存暂停后不再开始新识别任务，当前批次会先保存结果。重新允许运行也不会自动重启历史暂停任务。</aside> : null}</> : null}
+          <section className="settings-reference-section"><h3>识别语言</h3><select disabled aria-label="识别语言设置暂未接入"><option>—</option></select><div className="settings-reference-languages">{["中文（简体）","中文（繁体）","英文","其他语言"].map(label=><label key={label}><input type="checkbox" disabled checked={false} readOnly/>{label}</label>)}</div><small>当前没有语言选择保存接口。</small></section>
+          <section className="settings-reference-section"><h3>上次检查</h3><p>检测 OCR 服务连接，不会提交识别任务或改变设置。</p><div className="settings-reference-check"><dl><div><dt>本次会话检查时间</dt><dd>{ocrCheck ? new Date(ocrCheck.checkedAt).toLocaleString("zh-CN") : "—"}</dd></div><div><dt>服务连接</dt><dd>{ocrCheck ? ocrCheck.reachable ? "可连接" : "不可用" : "未检查"}</dd></div><div><dt>识别测试</dt><dd>未执行</dd></div></dl><ActionButton className="button secondary" type="button" disabled={!ocrRuntimeReady || Boolean(pendingAction)} onClick={()=>void testOcrRuntime(ocrRuntime.mode==="remote_only" ? "test_remote" : "test_nas")}>检查连接</ActionButton></div>{ocrCheck ? <p>{ocrCheck.detail}</p> : null}</section>
+          {!ocrRuntimeReady ? <p role={ocrResource.error ? "alert" : "status"}>{ocrResource.error || "正在读取服务配置…"}</p> : null}
+          <details><summary>高级设置（可选）</summary><fieldset disabled={!ocrRuntimeReady || Boolean(pendingAction)}>
           <label>
             <span>运行方式</span>
             <select
@@ -2227,20 +2140,23 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           </dl>
           {ocrRuntime.last_job?.error ? <p className="attempt-error">最近错误：{ocrRuntime.last_job.error}</p> : null}
           <small>远程密钥只写入服务器的 <code>OCR_REMOTE_API_KEY</code> 环境变量，后台页面不会读取或显示密钥原文。</small>
-          <div className="admin-action-row"><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_nas" ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== "test-ocr:test_nas"} onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</ActionButton><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_remote" ? "pending" : "idle"} pendingLabel="测试中" disabled={!ocrRuntime.remote_fallback_available || (Boolean(pendingAction) && pendingAction !== "test-ocr:test_remote")} onClick={() => void testOcrRuntime("test_remote")}>测试远程 OCR</ActionButton><ActionButton className="button" type="submit" state={pendingAction === "save-ocr-runtime" ? "pending" : "idle"} pendingLabel="正在保存 OCR" disabled={Boolean(pendingAction) && pendingAction !== "save-ocr-runtime"}><Save size={15} />保存 OCR 设置</ActionButton></div>
+          <div className="admin-action-row"><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_nas" ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== "test-ocr:test_nas"} onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</ActionButton><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_remote" ? "pending" : "idle"} pendingLabel="测试中" disabled={!ocrRuntime.remote_fallback_available || (Boolean(pendingAction) && pendingAction !== "test-ocr:test_remote")} onClick={() => void testOcrRuntime("test_remote")}>测试远程 OCR</ActionButton></div>
+          </fieldset></details><footer className="settings-reference-footer"><ActionButton className="button" type="submit" state={pendingAction === "save-ocr-runtime" ? "pending" : "idle"} pendingLabel="正在保存 OCR" disabled={!ocrRuntimeReady || Boolean(pendingAction)}><Save size={15} />保存设置</ActionButton><small>保存后用于后续任务，无需发布。</small></footer>
         </form>
         <form className="admin-panel ai-runtime-settings" hidden={activeSection!=='ai'} role="tabpanel" aria-labelledby="settings-tab-ai" id="ai" onSubmit={saveAiRuntime}>
-          <header><h2>服务器 AI 能力（可选）</h2></header>
-          <p>注册读者可以在 Ask 页面使用自己的云端模型。这里仅维护元数据处理、联网补全和可选的服务器默认问答服务，不是读者配置入口；密钥和实际 endpoint 只由服务器环境提供。</p>
+          <header><h2>服务设置</h2></header><p>选择需要启用的辅助填写服务，并检查模型连接状态。</p>
+          <fieldset className="settings-reference-purpose"><legend>服务用途</legend><label><input type="radio" name="ai-capability" checked={aiCapability==="metadata_extraction"} onChange={()=>setAiCapability("metadata_extraction")}/><span>书目信息补全<small>根据书籍资料，提供待人工核对的书目信息。</small></span></label><label><input type="radio" name="ai-capability" disabled checked={false} readOnly/><span>摘要建议<small>独立摘要服务暂未接入。</small></span></label><label><input type="radio" name="ai-capability" checked={aiCapability==="library_qa"} onChange={()=>setAiCapability("library_qa")}/><span>馆内问答<small>基于馆藏内容回答问题。</small></span></label></fieldset>
           {aiRuntime ? <>
-            {aiRuntime.profiles.map((profile) => (
+            <h3>已配置的模型</h3>{aiRuntime.profiles.filter(profile=>profile.capability===aiCapability).map((profile) => (
               <fieldset key={profile.key}>
-                <legend>{aiCapabilityLabels[profile.capability]} · {profile.key}</legend>
+                <legend>{profile.model || "尚未填写模型"}</legend>
+                <div className="settings-reference-model"><strong>{aiChecks[profile.key] ? aiChecks[profile.key].available ? "连接正常" : "连接不可用" : "尚未检查"}</strong><div><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={()=>void testAiRuntime(profile.key)}>检查连接</button><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={()=>void testAiRuntime(profile.key)}>重试</button></div><small>上次检查：{aiChecks[profile.key] ? new Date(aiChecks[profile.key].checkedAt).toLocaleString("zh-CN") : "—"}（服务器已保存配置）</small>{aiChecks[profile.key] ? <p>{aiChecks[profile.key].detail}</p> : null}</div>
                 {aiCapabilityGuidance[profile.capability] ? <p className="admin-help">{aiCapabilityGuidance[profile.capability]}</p> : null}
                 <label className="switch-row">
                   <input type="checkbox" checked={profile.enabled} onChange={(event) => updateAiProfile(profile.key, { enabled: event.target.checked })} />
-                  <span>启用该 profile</span>
+                  <span>启用这项服务</span>
                 </label>
+                <details><summary>高级设置（仅所有者可修改）</summary><fieldset disabled={!canManagePrompts || Boolean(pendingAction)}>
                 <label><span>服务类型</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI 兼容接口</option></select></label>
                 <label><span>模型标识</span><input value={profile.model} onChange={(event) => updateAiProfile(profile.key, { model: event.target.value })} /></label>
                 <label><span>该能力的 active profile</span><select value={aiRuntime.active[profile.capability] || ""} onChange={(event) => updateAiActiveProfile(profile.capability, event.target.value)}>{aiRuntime.profiles.filter((candidate) => candidate.capability === profile.capability).map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.key}{candidate.enabled ? " · 已启用" : " · 已停用"}</option>)}</select></label>
@@ -2257,10 +2173,12 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
                   <div><dt>生效方式</dt><dd>模型参数热读取；密钥和 endpoint 需部署环境变更</dd></div>
                 </dl>
                 <ActionButton className="button secondary" type="button" state={pendingAction === `test-ai-runtime:${profile.key}` ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== `test-ai-runtime:${profile.key}`} onClick={() => void testAiRuntime(profile.key)}>测试配置</ActionButton>
+                </fieldset></details>
               </fieldset>
             ))}
-            <small>当前配置来源：{aiRuntime.source}。健康检查失败不会自动停用 profile。</small>
-            <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存 AI Runtime" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存 AI Runtime</ActionButton>
+            {!aiRuntime.profiles.some(profile=>profile.capability===aiCapability) ? <p className="empty-state">该服务尚无模型配置。</p> : null}
+            <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存设置" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存设置</ActionButton>
+            {canManagePrompts ? <details><summary>提示词设置</summary><Link href="/admin/processing/settings#prompts">打开提示词编辑 →</Link></details> : null}
           </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
         {scope !== "backups" ? <div hidden={activeSection!=='prompts'} role="tabpanel" aria-labelledby="settings-tab-prompts" id="prompts">{canManagePrompts ? <PromptRegistryAdmin /> : <section className="admin-panel"><h2>AI 提示词</h2><p>只有书库所有者可以查看和修改。</p></section>}</div> : null}
@@ -2352,6 +2270,8 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           </>}
         </section>
       </section>
+      {scope === "processing" ? activeSection === "ocr" ? <AdminReaderPreview /> : activeSection==="ai" ? <AdminReaderPreview kind="book"/> : <AdminPublicPreviewFrame title="读者预览" emptyMessage="当前设置没有可预览的内容" /> : null}
+      </div>
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
     </AdminPageFrame>
   );

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
 import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { EvidenceCurationView } from "@/components/public/evidence-curation-view";
+import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
 import {
   TheoryBanner,
   TheorySectionHeading,
@@ -51,11 +52,11 @@ export function KnowledgeNodePublicView({
           <strong>{node.canonical_name_zh}</strong>
         </div>
 
-        <section className="theory-node-hero" data-module-id="theory-identity" data-edit-section="identity">
+        <section className={`theory-node-hero ${["relations","timeline"].includes(section) ? "reference-theory-hero" : ""}`} data-module-id="theory-identity" data-edit-section="identity">
           <div className="theory-node-intro">
             <p className="eyebrow">{nodeTypeLabels[node.node_type]}</p>
             <h1>{node.canonical_name_zh}</h1>
-            {section !== "overview" ? <h2>{({timeline: "流派脉络", concepts: "概念与人物", works: "代表作品与阅读路径", evidence: "相关原文", relations: "学术关系", propositions: "基本命题与理论边界"} as Record<string, string>)[section]}</h2> : null}
+            {section !== "overview" && !["relations","timeline"].includes(section) ? <h2>{({concepts: "概念与人物", works: "代表作品与阅读路径", evidence: "相关原文", propositions: "基本命题与理论边界"} as Record<string, string>)[section]}</h2> : null}
             {node.canonical_name_en ? <h2>{node.canonical_name_en}</h2> : null}
             {disciplineLinks.length ? <div className="theory-discipline-pills" data-module-id="theory-disciplines">{disciplineLinks.map((discipline, index) => discipline ? <Link className={index === 0 ? "primary" : ""} href={`/theories/disciplines/${discipline.slug}`} key={discipline.id}>{discipline.name}</Link> : null)}</div> : null}
             {subdisciplines.length ? <div className="theory-discipline-pills" data-module-id="theory-disciplines" aria-label="规范子学科">
@@ -79,6 +80,7 @@ export function KnowledgeNodePublicView({
             </dl>
           </div>
         </section>
+        {section !== "overview" ? <nav className="reference-theory-tabs" aria-label="理论页面">{[["overview","概述"],["concepts","重要人物"],["timeline","流派脉络"],["propositions","核心概念"],["relations","学术关系"],["works","代表著作"]].map(([id,label])=><Link href={`/theories/nodes/${slug}${id === "overview" ? "" : `/${id}`}`} key={id} aria-current={section===id ? "page" : undefined}>{label}</Link>)}</nav> : null}
 
         {section === "overview" && node.node_type === "theory_tradition" ? <section className="knowledge-section"><TheorySectionHeading title={`深入了解${node.canonical_name_zh}`} /><div className="knowledge-three-grid">{[{id: "timeline", title: "流派脉络", text: "沿真实事件与来源，了解形成与发展。"}, {id: "concepts", title: "概念与人物", text: "从核心概念、相关人物与学术关系继续。"}, {id: "works", title: "代表作品与阅读路径", text: "回到馆藏文献，沿策展路径深入阅读。"}].map(item => <Link className="knowledge-entry-card" href={`/theories/nodes/${slug}/${item.id}`} key={item.id}><TheoryBanner image={node.cover_url} media={node.cover_media}/><h2>{item.title}</h2><p>{item.text}</p><span>进入页面 <ArrowRight size={16}/></span></Link>)}</div></section> : null}
         {(section === "propositions" || (section === "overview" && node.node_type !== "theory_tradition")) && (node.basic_propositions.length || node.theoretical_boundary) ? <section className="theory-node-foundations" data-module-id="theory-propositions" data-edit-section="content">
@@ -89,16 +91,16 @@ export function KnowledgeNodePublicView({
         {section === "evidence" ? <div data-module-id="theory-curated-claims">{node.evidenceCuration?.configured ? <EvidenceCurationView items={node.evidenceCuration.items} /> : <CuratedClaimSections groups={node.curated_claims} debate={node.node_type === "debate"} />}</div> : null}
 
         {section === "timeline" && timeline.length ? <section className="theory-node-development" data-module-id="theory-development" data-edit-section="timeline">
-          <TheorySectionHeading title="形成与发展" href={`/theories/timeline?node=${encodeURIComponent(slug)}`} action="查看完整时间轴" />
-          <div>{timeline.map((event) => <Link href={`/theories/events/${event.id}`} key={event.id}><i /><time>{event.date_label || event.start_year}</time><strong>{event.title}</strong><small>{event.description}</small></Link>)}</div>
+          <TheorySectionHeading title="流派脉络" href={`/theories/timeline?node=${encodeURIComponent(slug)}`} action="查看完整时间轴" />
+          <TheoryTimelinePublicList events={timeline} />
         </section> : null}
 
         {["concepts", "relations"].includes(section) && node.direct_relations.length ? <section className="theory-node-relations" data-module-id="theory-relations" data-edit-section="relations">
-          <TheorySectionHeading title="与其他理论的关系" href={`/theories/graph?center=${encodeURIComponent(slug)}`} action="打开局部图谱" />
-          <div>{node.direct_relations.map((relation) => {
+          <TheorySectionHeading title="学术关系" href={`/theories/graph?center=${encodeURIComponent(slug)}`} action="打开局部图谱" />
+          <div className="reference-theory-relations">{node.direct_relations.map((relation) => {
             const outgoing = relation.source_node === node.id;
             const target = outgoing ? { name: relation.target_name, slug: relation.target_slug } : { name: relation.source_name, slug: relation.source_slug };
-            return <Link href={`/theories/nodes/${target.slug}`} key={relation.id}><span className="relation-mark"><Network size={20} /></span><span><small>{relation.relation_label}</small><strong>{target.name}</strong><p>{relation.description}</p></span><ArrowRight size={18} /></Link>;
+            return section === "relations" ? <article key={relation.id}><div className="reference-relation-diagram"><span>{relation.source_name}</span><div><b>{relation.relation_label}</b><i>{relation.direction === "undirected" ? "↔" : "→"}</i></div><span>{relation.target_name}</span></div><dl><dt>关系说明</dt><dd>{relation.description || "—"}</dd><dt>出处</dt><dd>{relation.evidence_source || "—"}</dd></dl>{target.slug ? <Link href={`/theories/nodes/${target.slug}`}>查看{target.name} <ArrowRight size={15}/></Link> : null}</article> : <Link href={`/theories/nodes/${target.slug}`} key={relation.id}><span className="relation-mark"><Network size={20} /></span><span><small>{relation.relation_label}</small><strong>{target.name}</strong><p>{relation.description}</p></span><ArrowRight size={18} /></Link>;
           })}</div>
         </section> : null}
 

@@ -141,6 +141,34 @@ def test_query_lexicon_workspace_is_readable_without_initialized_state(api_clien
     ).status_code == 403
 
 
+def test_query_lexicon_person_filter_and_pagination_are_private_and_complete(api_client):
+    from catalog.models import PersonNameVariant
+    from catalog.services.query_lexicon.sync import rebuild_query_lexicon
+
+    first = Person.objects.create(preferred_name="词典甲", original_name="Lexicon A", authority_status="verified")
+    second = Person.objects.create(preferred_name="词典乙", authority_status="verified")
+    PersonNameVariant.objects.create(person=first, name="词典甲别名", variant_type="alias", is_verified=True)
+    rebuild_query_lexicon()
+    url = "/api/catalog/admin/query-lexicon/"
+    assert api_client.get(url, {"entity_id": str(first.pk)}).status_code in {401, 403}
+    api_client.force_authenticate(user=_admin())
+    params = {"entity_type": "person", "entity_id": str(first.pk), "limit": 1}
+    result = api_client.get(url, params)
+    assert result.status_code == 200 and "no-store" in result["Cache-Control"]
+    assert result.data["person"]["id"] == str(first.pk)
+    assert result.data["term_count"] >= 3 and result.data["has_more"] is True
+    identifiers = []
+    for offset in range(result.data["term_count"]):
+        page = api_client.get(url, {**params, "offset": offset}).data
+        assert len(page["terms"]) == 1
+        assert page["terms"][0]["entity_id"] == str(first.pk)
+        assert page["terms"][0]["entity_id"] != str(second.pk)
+        identifiers.append(page["terms"][0]["id"])
+        assert page["has_more"] is (offset + 1 < result.data["term_count"])
+    assert len(set(identifiers)) == result.data["term_count"]
+    assert api_client.get(url, {"entity_id": "bad"}).status_code == 400
+
+
 def test_semantic_index_workspace_is_read_only_for_ordinary_admin(api_client):
     user = _admin()
     api_client.force_authenticate(user=user)

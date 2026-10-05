@@ -11,7 +11,7 @@ import styles from "./edition-cover-editor.module.css";
 type Cover = { id: string; page_index: number; thumbnail_url: string; selected: boolean; reasons: string[] };
 type CoverState = { edition_id: string; work_id: string; fingerprint: string; asset_id: string | null; source_checksum: string | null; page_count: number; state: string; poll: boolean; is_default: boolean; has_unpublished_cover: boolean; image_url: string; results: Cover[]; detail?: string; preview_candidate?: Cover | null };
 
-function CoverImage({ url, alt, token }: { url: string; alt: string; token: string | null }) {
+export function CoverImage({ url, alt, token }: { url: string; alt: string; token: string | null }) {
   const [image, setImage] = useState<{ url: string; token: string | null; src: string; failed: boolean } | null>(null);
   useEffect(() => {
     let active = true, objectUrl = "";
@@ -25,13 +25,14 @@ function CoverImage({ url, alt, token }: { url: string; alt: string; token: stri
 type EditionCoverEditorProps = {
   editionId: string; workId: string; documentType: string; token: string | null; canEdit: boolean;
   beforeAction: () => Promise<boolean>; onSaved: () => void | Promise<void>;
+  onDone?: () => void; onPreviewImage?: (src: string | null) => void;
 };
 
 export function EditionCoverEditor(props: EditionCoverEditorProps) {
   return <EditionCoverEditorState key={`${props.workId}:${props.editionId}`} {...props} />;
 }
 
-function EditionCoverEditorState({ editionId, workId, documentType, token, canEdit, onSaved }: EditionCoverEditorProps) {
+function EditionCoverEditorState({ editionId, workId, documentType, token, canEdit, onSaved, onDone, onPreviewImage }: EditionCoverEditorProps) {
   const [data, setData] = useState<CoverState | null>(null);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -40,11 +41,22 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
   const [file, setFile] = useState<File | null>(null);
   const [manual, setManual] = useState<Cover | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [tab, setTab] = useState("pdf");
+  const [chosen, setChosen] = useState<Cover | null>(null);
   const active = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const retry = useRef<{ signature: string; requestKey: string } | null>(null);
   const url = `/catalog/admin/editions/${editionId}/cover/`;
-  useUnsavedForm(file ? [file.name, file.size, file.lastModified] : null, null);
+  useUnsavedForm(file || chosen || (tab==="default" && data && !data.is_default) ? [file?.name,file?.size,file?.lastModified,chosen?.id,tab] : null, null);
+  useEffect(()=>{
+    if(!onPreviewImage)return;
+    let active=true,objectUrl="";
+    if(tab==="default")onPreviewImage("");
+    else if(tab==="upload" && file){objectUrl=URL.createObjectURL(file);onPreviewImage(objectUrl);}
+    else if(tab==="pdf" && chosen)void apiBlob(chosen.thumbnail_url,token).then(blob=>{objectUrl=URL.createObjectURL(blob);if(active)onPreviewImage(objectUrl);else URL.revokeObjectURL(objectUrl);}).catch(()=>{if(active){setFailed(true);setMessage("所选页面预览读取失败，请重试。");}});
+    else onPreviewImage(null);
+    return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);onPreviewImage(null);};
+  },[tab,file,chosen,token,onPreviewImage]);
   const reload = useCallback((signal?: AbortSignal) => {
     return apiRequest<CoverState>(url, { signal }, token).then(value => {
       if (value.edition_id !== editionId || value.work_id !== workId) throw new Error("封面不属于当前作品或版本，请重新进入。");
@@ -78,7 +90,7 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
       const result = await apiRequest<CoverState>(url, { method: "POST", body: requestBody }, token);
       submitted = true; retry.current = null; setData(result); setMessage(result.detail || "封面操作已完成。");
       if (action === "preview_page") setManual(result.preview_candidate ?? null);
-      if (["select", "upload", "default"].includes(action)) { setManual(null); if (action === "upload") { setFile(null); if (fileInput.current) fileInput.current.value = ""; } await onSaved(); }
+      if (["select", "upload", "default"].includes(action)) { setManual(null); if (action === "upload") { setFile(null); if (fileInput.current) fileInput.current.value = ""; } await onSaved(); setChosen(null); onDone?.(); }
     } catch (error) {
       setFailed(true);
       if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500) { retry.current = null; if (error.status === 409) await reload().catch(() => undefined); }
@@ -86,27 +98,23 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
     } finally { active.current = false; setBusy(""); }
   }
   const locked = !canEdit || Boolean(busy) || !data;
-  const options = data?.results ?? [];
-  const renderOption = (option: Cover, manualChoice = false) => <article className={styles.choice} key={option.id}>
-    <CoverImage url={option.thumbnail_url} alt={`PDF第${option.page_index}页封面候选`} token={token} />
-    <strong>PDF 第 {option.page_index} 页</strong><small>{option.reasons?.slice(0, 2).join("；") || "来自当前PDF"}</small>
-    <button type="button" disabled={locked || option.selected} onClick={() => void command("select", option)}>{option.selected ? "已选用这一页" : manualChoice ? "用这一页作封面" : "选作封面"}</button>
-  </article>;
+  const options = [...(data?.results ?? [])].sort((a,b)=>a.page_index-b.page_index);
+  const renderOption = (option: Cover) => <button type="button" className={styles.choice} key={option.id} aria-pressed={chosen ? chosen.id===option.id : option.selected} disabled={locked} onClick={()=>setChosen(option)}>
+    <CoverImage url={option.thumbnail_url} alt={`PDF第${option.page_index}页`} token={token}/><strong>第 {option.page_index} 页</strong><small>{option.selected ? "当前封面" : ""}</small>
+  </button>;
   return <section className={styles.editor} aria-label="当前版本封面">
-    <header className={styles.header}><h3>封面（可选）</h3><button type="button" disabled={Boolean(busy)} onClick={() => void reload().catch((error) => { setFailed(true); setMessage(String(error.message)); })}>刷新封面</button></header>
-    <p>PDF入队后会先校验文件并准备候选，不用等全文OCR。候选仅供选择，不会自动替换你选好的封面。{!["book", "journal_issue"].includes(documentType) ? "论文等没有独立封面时，可以直接保持默认样式。" : "没有合适封面也可正常上架。"}</p>
+    <header className={styles.header}><h3>选择封面</h3><button type="button" disabled={Boolean(busy)} onClick={()=>void reload().catch(error=>{setFailed(true);setMessage(String(error.message));})}>刷新</button></header>
+    <p>为本书选择合适的封面，读者将在图书详情页和搜索结果中看到。{!["book","journal_issue"].includes(documentType) ? "没有独立封面时，可保持默认样式。" : ""}</p>
+    <nav className={styles.tabs} aria-label="封面来源">{[["pdf","PDF中选页"],["upload","上传图片"],["default","默认封面"]].map(([id,label])=><button type="button" key={id} aria-pressed={tab===id} disabled={Boolean(busy)} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     {message ? <p className={styles.message} role={failed ? "alert" : "status"}>{message}</p> : null}
-    <div className={styles.current}><div>{data?.image_url ? <CoverImage url={data.image_url} alt="当前保存的封面" token={token} /> : <div className={styles.placeholder}>默认样式<br />按题名显示，无需封面图片</div>}</div><div>
-      <p>{data?.has_unpublished_cover ? "已保存封面修改，正式发布后读者才会看到。" : data?.is_default ? "当前使用默认样式。" : data ? "当前保存的封面" : "正在读取当前版本…"}</p>
-      <label><span>上传封面图片</span><input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={locked} onChange={(event) => { setFile(event.target.files?.[0] ?? null); retry.current = null; }} /></label>
-      <p>支持 JPEG、PNG、WebP，最多12 MB。这里只保存封面，不会发布书目。</p>
-      <div className={styles.actions}><button type="button" disabled={locked || !file} onClick={() => void command("upload")}>{busy === "upload" ? "正在保存封面…" : "上传并保存封面"}</button><button type="button" disabled={locked} onClick={() => void command("default")}>使用默认样式，不选封面</button><Link href={`/admin/media?edition=${encodeURIComponent(editionId)}&slot=cover`}>从媒体库选封面</Link></div>
-    </div></div>
-    <h4>系统推荐的PDF页面</h4>
-    {data?.poll ? <p role="status">正在准备封面候选，页面会自动更新。你可以先填写其他资料。</p> : null}
-    {data?.state === "failed" ? <p role="alert">这次封面分析未完成。可重新准备候选、指定PDF页或上传图片，不影响上架。</p> : null}
-    {options.length ? <div className={styles.choices}>{(expanded ? options : options.slice(0, 3)).map((option) => renderOption(option))}</div> : <p>{data?.asset_id ? "暂时没有候选，可点击准备候选或指定PDF页。" : "PDF尚未准备好。可先上传封面图片，或保持默认样式。"}</p>}
-    <div className={styles.actions}>{options.length > 3 ? <button type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "收起候选" : `查看全部${options.length}张候选`}</button> : null}<button type="button" disabled={locked || !data?.asset_id} onClick={() => void command("regenerate")}>{busy === "regenerate" ? "正在分析PDF页面…" : options.length ? "重新准备封面候选" : "准备封面候选"}</button></div>
-    <div className={styles.manual}><label><span>自己选择PDF页</span><input aria-label="封面PDF页码" type="number" min={1} max={data?.page_count || undefined} value={page} disabled={locked || !data?.asset_id} onChange={(event) => setPage(event.target.value)} /><span>{data?.page_count ? `共${data.page_count}页` : "按PDF实际页序，不是书上印的页码"}</span><button type="button" disabled={locked || !data?.asset_id || !Number.isInteger(Number(page)) || Number(page) < 1} onClick={() => void command("preview_page")}>{busy === "preview_page" ? "正在准备这一页…" : "预览这一页"}</button></label>{manual ? <div className={styles.choices}>{renderOption(manual, true)}</div> : null}</div>
+    <div hidden={tab!=="pdf"}><h4>从PDF中选择封面页</h4>{data?.poll ? <p role="status">正在准备封面候选，可以先填写其他资料。</p> : null}{data?.state==="failed" ? <p role="alert">封面分析未完成，可以重新准备候选、指定PDF页或上传图片。</p> : null}
+      {options.length ? <div className={styles.choices}>{(expanded ? options : options.slice(0,6)).map(renderOption)}</div> : <p>{data?.asset_id ? "暂时没有候选，可准备候选或指定PDF页。" : "PDF尚未准备好，可先上传图片或使用默认样式。"}</p>}
+      <div className={styles.actions}>{options.length>6 ? <button type="button" onClick={()=>setExpanded(!expanded)}>{expanded ? "收起页面" : `查看全部${options.length}页`}</button> : null}<button type="button" disabled={locked || !data?.asset_id} onClick={()=>void command("regenerate")}>准备封面候选</button></div>
+      <div className={styles.manual}><label>指定页码<input aria-label="封面PDF页码" type="number" min={1} max={data?.page_count || undefined} value={page} disabled={locked || !data?.asset_id} onChange={event=>setPage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();if(!locked && data?.asset_id && Number.isInteger(Number(page)) && Number(page)>=1 && Number(page)<=data.page_count)void command("preview_page");}}}/><span>页 {data?.page_count ? `（共${data.page_count}页）` : ""}</span><button type="button" disabled={locked || !data?.asset_id || !Number.isInteger(Number(page)) || Number(page)<1 || Number(page)>data.page_count} onClick={()=>void command("preview_page")}>预览这一页</button></label>{manual ? <div className={styles.choices}>{renderOption(manual)}</div> : null}</div>
+    </div>
+    <div hidden={tab!=="upload"} className={styles.upload}><label>上传封面图片<input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={locked} onChange={event=>{setFile(event.target.files?.[0] ?? null);retry.current=null;}}/></label><p>支持 JPEG、PNG、WebP，最多12 MB。</p><Link href={`/admin/media?edition=${encodeURIComponent(editionId)}&slot=cover`}>从图片库选择</Link></div>
+    <div hidden={tab!=="default"}><p>按题名显示，不设置封面图片。已保存的原图与历史仍保留。</p></div>
+    <p className={styles.message}>此操作只保存封面，不会修改其他步骤的书目信息。其他未保存输入仍保留。</p>
+    <footer className={styles.actions}><button type="button" disabled={Boolean(busy)} onClick={()=>{if((file || chosen || (tab==="default" && data && !data.is_default)) && !window.confirm("封面选择尚未保存，放弃并返回吗？"))return;onDone?.();}}>上一步</button><button type="button" disabled={locked || (tab==="pdf" ? !chosen : tab==="upload" ? !file : false)} onClick={()=>void command(tab==="pdf" ? "select" : tab==="upload" ? "upload" : "default",chosen || undefined)}>{busy ? "正在保存…" : "保存封面并返回 →"}</button></footer>
   </section>;
 }

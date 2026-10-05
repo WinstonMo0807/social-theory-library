@@ -1,12 +1,13 @@
 from datetime import timedelta
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from django.utils import timezone
 
 from catalog.models import (
     Contribution, Edition, EditorialRevision, EditorialRevisionMedia, EnrichmentCandidate,
-    HealthCheckRun, MediaAsset, Person, ScholarProfile, Work,
+    HealthCheckRun, MediaAsset, Person, RecycleEntry, ScholarProfile, Work,
 )
 from catalog.services.knowledge_studio import _assistance_usage
 from catalog.services.media import build_rendition, ingest_image
@@ -17,6 +18,23 @@ from ingestion.models import AuditEvent
 from .test_media_v305 import picture
 
 pytestmark = pytest.mark.django_db
+
+
+def test_recycle_category_search_and_pagination_keep_restored_rows_private(api_client, admin_user, reader_user):
+    for kind, name, restored in [("work", "馆藏甲", None), ("topic", "专题甲", None),
+                                 ("work", "已恢复甲", timezone.now())]:
+        RecycleEntry.objects.create(model_label=f"catalog.{kind}", object_id=uuid4(),
+                                    kind=kind, name=name, restored_at=restored)
+    api_client.force_authenticate(reader_user)
+    assert api_client.get("/api/catalog/admin/recycle/", {"kind": "work"}).status_code == 403
+    api_client.force_authenticate(admin_user)
+    response = api_client.get("/api/catalog/admin/recycle/", {"kind": "work,topic", "search": "甲"})
+    assert response.status_code == 200 and response.data["count"] == 2
+    assert {row["name"] for row in response.data["results"]} == {"馆藏甲", "专题甲"}
+    assert api_client.get("/api/catalog/admin/recycle/", {"kind": "work"}).data["count"] == 1
+    assert api_client.get("/api/catalog/admin/recycle/", {"kind": "unknown"}).data["count"] == 0
+    last = api_client.get("/api/catalog/admin/recycle/", {"kind": "work,topic", "offset": 1})
+    assert last.data["count"] == 2 and len(last.data["results"]) == 1
 
 
 def test_all_health_surfaces_use_the_same_expired_observation():
@@ -156,7 +174,9 @@ def test_person_business_impact_preserves_guard_and_shows_actual_role_and_no_fal
 def test_media_collection_can_reach_every_image_and_preserves_legacy_endpoint(api_client, admin_user):
     for index in range(61):
         MediaAsset.objects.create(file=f"private/test/{index}.png", media_type="image/png", width=1, height=1,
-                                  checksum=f"{index:064x}", byte_size=1)
+                                  checksum=f"{index:064x}", byte_size=1,
+                                  alt_text="检索图片" if index == 0 else "",
+                                  source_label="检索来源" if index == 60 else "")
     api_client.force_authenticate(admin_user)
     seen = []
     for page in (1, 2, 3):
@@ -167,6 +187,10 @@ def test_media_collection_can_reach_every_image_and_preserves_legacy_endpoint(ap
     assert len(seen) == len(set(seen)) == 61
     assert len(api_client.get("/api/catalog/admin/media/").data) == 60
     assert api_client.get("/api/catalog/admin/media/collection/", {"page": "bad"}).status_code == 404
+    filtered = api_client.get("/api/catalog/admin/media/collection/", {"q": "检索"})
+    assert filtered.status_code == 200 and filtered.data["count"] == 2
+    assert len(filtered.data["results"]) == 2
+    assert api_client.get("/api/catalog/admin/media/collection/", {"q": "未存在的图片"}).data["count"] == 0
 
 
 def test_media_detail_reports_draft_and_actual_public_references_without_file_mutation(api_client, admin_user, settings, tmp_path):

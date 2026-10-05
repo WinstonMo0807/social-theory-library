@@ -8,7 +8,16 @@ import "../styles/features/admin/fixed-page-editor.css";
 import "../styles/features/admin/workspace-v307.css";
 import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
-import { SiteHeader } from "@/components/site-header";
+// The reference design must follow the legacy editor rules in the cascade.
+import "../styles/features/admin/design-v2.css";
+import "../styles/features/admin/collections-v2.css";
+import "../styles/features/admin/recommendations-design-v2.css";
+import "../styles/features/admin/storage-backups.css";
+import "../styles/features/admin/operations-v2.css";
+import "../styles/features/admin/knowledge-reference.css";
+import "../styles/features/admin/site-system-reference.css";
+import "../styles/features/admin/processing-reference.css";
+import { SiteHeader, SiteConfigProvider } from "@/components/site-header";
 import { loadSiteConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
@@ -54,8 +63,9 @@ export default async function RootLayout({
           <a className="skip-link" href="#main-content">
             跳到主要内容
           </a>
-          <SiteHeader config={config} />
+          <SiteConfigProvider config={config}><SiteHeader config={config} />
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
+          </SiteConfigProvider>
         </PublicSessionProvider>
       </body>
     </html>

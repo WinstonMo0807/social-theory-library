@@ -22,10 +22,21 @@ class CatalogingSessionCreateSerializer(serializers.Serializer):
     title = serializers.CharField(required=False, allow_blank=True, max_length=600)
     document_type = serializers.ChoiceField(required=False, choices=DocumentType.choices)
     language = serializers.CharField(required=False, allow_blank=False, max_length=16)
+    subtitle = serializers.CharField(required=False, allow_blank=True, max_length=600)
+    abstract = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    publisher = serializers.CharField(required=False, allow_blank=True, max_length=300)
+    publication_year = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=9999)
+    version_label = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    author_ids = serializers.ListField(child=serializers.UUIDField(), required=False, max_length=30)
+    topic_ids = serializers.ListField(child=serializers.UUIDField(), required=False, max_length=30)
     request_key = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
         source = attrs["source_type"]
+        if source != "manual" and any(name in attrs for name in (
+            "subtitle", "abstract", "publisher", "publication_year", "version_label", "author_ids", "topic_ids",
+        )):
+            raise serializers.ValidationError("这些初始书目信息仅用于新建手工书目，已有馆藏请从编辑器保存。")
         if source == "upload" and not attrs.get("upload_item_id"):
             raise serializers.ValidationError({"upload_item_id": "请选择真实上传记录。"})
         if source != "upload" and attrs.get("upload_item_id"):

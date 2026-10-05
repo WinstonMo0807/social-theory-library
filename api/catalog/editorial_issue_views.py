@@ -1,14 +1,21 @@
 """Issue articles and fixed site templates, with protected draft previews."""
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import DateTimeField, Exists, OuterRef, Q, Subquery
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast, Coalesce
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import EditorialRevision, RecommendationIssue, RecommendationIssueItem, MediaRendition, SiteSetting
@@ -18,7 +25,7 @@ from catalog.editorial_issue_serializers import (RecommendationIssueSerializer, 
     AdminRecommendationIssueCollectionSerializer, EditorialPublishSerializer, PlannedItemLinkSerializer, SiteContentSerializer, SavedIssueListSerializer)
 
 
-def collection(request, queryset, *, public=False):
+def collection(request, queryset, *, public=False, ordering=None):
     query = request.query_params.get("q", "").strip()
     if query:
         # Public searches only consult the already published snapshot.
@@ -28,7 +35,7 @@ def collection(request, queryset, *, public=False):
                                        (~due & Q(active_revision__materialized_preview__title__icontains=query)))
         else:
             queryset = queryset.filter(title__icontains=query)
-    paginator = Paginator(queryset.order_by("-effective_display_from" if public else "-created_at", "-created_at", "id"), 12)
+    paginator = Paginator(queryset.order_by(ordering or ("-effective_display_from" if public else "-created_at"), "-created_at", "id"), 12)
     page = paginator.get_page(request.query_params.get("page", 1))
     def page_url(number):
         params = request.query_params.copy()
@@ -90,12 +97,44 @@ class EditorialErrorMixin:
 class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
-    @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer)
+    @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer, parameters=[
+        OpenApiParameter("day", OpenApiTypes.DATE, description="编辑日历所选日期，按 Asia/Hong_Kong 时区分组。"),
+        OpenApiParameter("bucket", OpenApiTypes.STR, enum=["day", "upcoming", "published"], description="所选日期、之后的已保存排期、之前的公开版本。与 day 一起使用。"),
+        OpenApiParameter("q", OpenApiTypes.STR, description="文章标题"),
+        OpenApiParameter("page", OpenApiTypes.INT),
+    ])
     def get(self, request):
         issues = RecommendationIssue.objects.select_related("active_revision", "scheduled_revision")
         upcoming = issues.filter(scheduled_revision__status="published", scheduled_for__gt=timezone.now())
         drafts = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk"), status="draft")
-        payload = collection(request, issues)
+        selected_day = request.query_params.get("day", "")
+        if selected_day:
+            try:
+                day = parse_date(selected_day)
+            except ValueError:
+                day = None
+            if day is None or day.isoformat() != selected_day:
+                raise ValidationError({"day": "请选择有效日期（YYYY-MM-DD）。"})
+            start = datetime.combine(day, time.min, ZoneInfo("Asia/Hong_Kong"))
+            end = start + timedelta(days=1)
+            bucket = request.query_params.get("bucket", "day")
+            if bucket == "published":
+                # This column represents the confirmed public snapshot, even
+                # when its article has a newer, differently dated draft.
+                payload = collection(request, service.published_issues().filter(effective_display_from__lt=start), public=True)
+            elif bucket in {"day", "upcoming"}:
+                latest = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk")).order_by("-revision")
+                latest = latest.annotate(saved_display=KeyTextTransform("display_from", "materialized_preview"))
+                dated = issues.annotate(calendar_display_from=Coalesce(
+                    Cast(Subquery(latest.values("saved_display")[:1]), DateTimeField()),
+                    "display_from", "published_at", output_field=DateTimeField(),
+                ))
+                dated = dated.filter(calendar_display_from__gte=end) if bucket == "upcoming" else dated.filter(calendar_display_from__gte=start, calendar_display_from__lt=end)
+                payload = collection(request, dated, ordering="calendar_display_from")
+            else:
+                raise ValidationError({"bucket": "日历范围无效。"})
+        else:
+            payload = collection(request, issues)
         # Dashboard metrics describe the inventory, independently of a search
         # or page. A published issue can also have a draft or a future revision.
         payload["summary"] = {"total": issues.count(), "published": service.published_issues().count(),

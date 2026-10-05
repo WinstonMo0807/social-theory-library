@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, Eye, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, Download, Bookmark } from "lucide-react";
 import type { ReactNode } from "react";
 import { AssetDownloadButton } from "@/components/asset-download-button";
 import { SaveWorkButton } from "@/components/save-work-button";
 import { WorkCitationPanel } from "@/components/work-citation-panel";
 import { BookCard, BookCover, SectionHeading, TagList } from "@/components/ui";
 import type { Work } from "@/lib/data";
+import { WorkDetailTabs } from "./work-detail-tabs";
+import styles from "./work-detail.module.css";
 
 type WorkDetailViewProps = {
   work: Work;
@@ -35,6 +37,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
     en: "英文",
   } as Record<string, string>)[work.language ?? "zh-CN"] ?? work.language;
   const previewPdf = preview?.pdfPreviewUrl || "";
+  const renderTags = (items: string[]) => preview ? <div inert><TagList items={items}/></div> : <TagList items={items}/>;
   const curatedGroups = [
     { key: "core_viewpoint", title: "核心观点", claims: work.curatedClaims?.core_viewpoint ?? [] },
     { key: "major_criticism", title: "主要批评", claims: work.curatedClaims?.major_criticism ?? [] },
@@ -43,44 +46,36 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
 
   return (
     <>
-      <div className="page-shell work-detail">
-        {preview ? (
-          <div className="admin-page-preview-banner" role="status">
-            <ShieldCheck size={16} />
-            <strong>草稿预览</strong>
-            <span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span>
-            <Link href={preview.returnHref}>返回编辑</Link>
-          </div>
-        ) : null}
+      <div className={`page-shell work-detail ${styles.detail}`}>
         <p className="breadcrumbs">
-          {preview ? <>前台页面效果 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
+          {preview ? <>首页 / 馆藏 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
         </p>
         <section className="work-hero">
-          <BookCover work={work} size="large" />
+          {work.coverImage ? <BookCover work={work} size="large" /> : <div className={styles.emptyCover} aria-label="封面待补"/>}
           <div>
-            <p className="eyebrow">{work.kind} · {work.school}</p>
             <h1>{work.title}</h1>
+            {work.subtitle ? <p className="work-subtitle">{work.subtitle}</p> : null}
             {work.originalTitle ? <p className="original-title">{work.originalTitle}</p> : null}
             {primaryAuthor && !preview ? (
               <Link className="work-author-link" href={`/scholars/${primaryAuthor.slug}`}>
                 {work.author} <ArrowRight size={15} />
               </Link>
             ) : <p className="work-author-link">{work.author}</p>}
-            <p className="work-summary">{work.summary}</p>
-            <TagList items={tags} />
-          </div>
-          <aside>
+            {work.translators?.length ? <p className="work-translators">{work.translators.map((translator,index)=><span key={`${translator.name}-${index}`}>{index ? "、" : ""}{translator.slug && !preview ? <Link href={`/scholars/${translator.slug}`}>{translator.name}</Link> : translator.name}</span>)} 译</p> : null}
             <dl>
+              <div><dt>出版信息</dt><dd>{[work.publisher,work.year,work.versionLabel].filter(Boolean).join(" · ") || "—"}</dd></div>
+              <div><dt>原作语言</dt><dd>{({"zh-CN":"简体中文","zh-TW":"繁体中文",en:"英语",fr:"法语",de:"德语",ja:"日语",ru:"俄语"} as Record<string,string>)[work.originalLanguage || ""] || work.originalLanguage || "—"}</dd></div>
+              <div><dt>主题</dt><dd>{(work.topics??[]).map(item=>item.name).join(" · ") || "—"}</dd></div>
+              <div><dt>所属流派</dt><dd>{(work.theories??[]).map(item=>item.name).join(" · ") || "—"}</dd></div>
+              <div><dt>ISBN</dt><dd>{work.isbn || "—"}</dd></div>
               <div><dt>出版年份</dt><dd>{work.year}</dd></div>
               <div><dt>文献类型</dt><dd>{work.kind}</dd></div>
               <div><dt>页数</dt><dd>{work.pages}</dd></div>
               <div><dt>文件状态</dt><dd>{work.pages ? "可在线阅读" : "准备中"}</dd></div>
               <div><dt>语言</dt><dd>{languageLabel}</dd></div>
             </dl>
-            {preview ? (
-              previewPdf
-                ? <a className="button" href={previewPdf} target="_blank" rel="noreferrer"><Eye size={16} /> 后台 PDF</a>
-                : <span className="button disabled" aria-disabled="true"><Eye size={16} /> PDF 尚未就绪</span>
+            <div className={styles.actions}>{preview ? (
+              <><span className="button disabled" aria-disabled="true" title={previewPdf ? "预览中不执行公开阅读操作" : "PDF 尚未就绪"}><Eye size={16}/>在线阅读</span><span className="button secondary disabled" aria-disabled="true"><Download size={16}/>下载 PDF</span><span className="button secondary disabled" aria-disabled="true"><Bookmark size={16}/>加入书架</span></>
             ) : (
               work.pages ? <>
                 <Link className="button" href={`/reader/${work.id}`}><Eye size={16} /> 在线阅读</Link>
@@ -90,14 +85,17 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
                 <span className="button disabled" aria-disabled="true"><Eye size={16} /> 当前版本不可在线阅读</span>
                 <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
               </>
-            )}
+            )}</div>
+          </div>
+          <aside>
+            <h2>关于本书</h2><p className="work-summary">{work.summary}</p>
+            <h2>相关主题</h2>{renderTags(tags)}
           </aside>
         </section>
 
-        <div className="work-body">
-          <section className="panel">
-            <SectionHeading title="内容简介" />
-            <p>{work.summary}</p>
+        <WorkDetailTabs panels={[
+          {id:"summary",label:"内容简介",content:<p>{work.summary}</p>},
+          {id:"outline",label:"目录",content:<>
             <h2>{work.kind === "整期期刊" ? "本期目录与论文" : "目录"}</h2>
             {(work.kind === "整期期刊" ? work.journalContents ?? [] : []).map((item, index) => <div className="toc-row" key={item.id || `issue-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span><div>{item.article_href && !preview ? <Link href={item.article_href}><strong>{item.title}</strong></Link> : <strong>{item.title}</strong>}{item.author_display ? <p>{item.author_display}</p> : null}</div><small>{item.page_range}</small>
@@ -114,14 +112,11 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
               )
             ))}
             {!work.outline?.length && !work.journalContents?.length ? <p className="empty-state">{work.kind === "整期期刊" ? "本期目录尚待补充。" : "该 PDF 没有可识别的目录书签。"}</p> : null}
-          </section>
-          {preview ? (
-            <section className="panel admin-preview-note">
-              <SectionHeading title="预览边界" />
-              <p>引用、保存、下载和公共 Reader 动作在管理员页面预览中不执行。发布后，公开页面会使用相同的内容组件并恢复这些动作。</p>
-            </section>
-          ) : work.editionId ? <WorkCitationPanel editionId={work.editionId} /> : null}
-        </div>
+          </>},
+          {id:"edition",label:"版本信息",content:<><dl><div><dt>出版信息</dt><dd>{[work.publisher,work.year,work.versionLabel].filter(Boolean).join(" · ") || "—"}</dd></div><div><dt>语言</dt><dd>{languageLabel || "—"}</dd></div></dl>{!preview && work.editionId ? <WorkCitationPanel editionId={work.editionId}/> : null}</>},
+          {id:"related",label:"相关书目",content:preview ? <p>—</p> : <div className="four-book-grid">{relatedWorks.slice(0,4).map(item=><BookCard work={item} key={item.id}/>)}{!relatedWorks.length ? <p className="empty-state">尚无依据已确认流派或主题关联的其他公开馆藏。</p> : null}</div>},
+          {id:"topics",label:"相关主题",content:renderTags((work.topics??[]).map(item=>item.name))},
+        ]}/>
         {curatedGroups.map((group) => group.claims.length ? (
           <section className={`detail-section work-curated-claims work-curated-${group.key}`} key={group.key}>
             <SectionHeading title={group.title} />
@@ -194,17 +189,8 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer }: Wor
             </div>
           </section>
         ) : null}
-        {!preview ? (
-          <section className="detail-section">
-            <SectionHeading title="相关馆藏" href={`/explore?q=${work.school}`} />
-            <div className="four-book-grid">
-              {relatedWorks.slice(0, 4).map((item) => <BookCard work={item} key={item.id} />)}
-              {!relatedWorks.length ? <p className="empty-state">尚无依据已确认流派或主题关联的其他公开馆藏。</p> : null}
-            </div>
-          </section>
-        ) : null}
       </div>
-      {footer}
+      {preview ? <div inert>{footer}</div> : footer}
     </>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRef, useState } from "react";
+import { PreviewViewport } from "./admin/curation/fixed-page-editor";
+import { PreviewSurface, type KnowledgePreviewPayload } from "./admin/preview/knowledge-page-preview";
 import { useSearchParams } from "next/navigation";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
@@ -155,20 +158,46 @@ export function KnowledgeWorkspaceDiagnostics() {
   );
   const studio = data?.studio;
   const selected = objectId ? studio?.selection : null;
-  const returnUrl = objectId && valid ? `/admin/knowledge?object_type=${encodeURIComponent(kind)}&object_id=${encodeURIComponent(objectId)}` : "/admin/knowledge";
+  const returnUrl = selected?.editor_url || (objectId && valid ? `/admin/knowledge?object_type=${encodeURIComponent(kind)}&object_id=${encodeURIComponent(objectId)}` : "/admin/knowledge");
   const projections = selected?.frontend_impact?.projection_states;
-  return <div className="admin-page">
-    <header className="admin-page-title"><div><p>系统诊断</p><h1>知识处理诊断</h1><span>只读核对对象来源、修订和投影；编辑、候选决定及发布统一回到知识工作台。</span></div><div className="admin-title-actions"><Link className="button" href={returnUrl}>返回当前对象工作台</Link><button className="button secondary" type="button" disabled={loading || !valid} onClick={retry}>重新读取诊断</button></div></header>
+  const preview = useApiResource<KnowledgePreviewPayload>(selected && kind !== "work" ? `/catalog/admin/knowledge-preview/${kind}/${objectId}/` : "", getServerSessionCredential());
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [step, setStep] = useState(1);
+  const [section, setSection] = useState("overview");
+  const fullPreview = useRef<HTMLDialogElement>(null);
+  const draft = preview.data?.perspectives.draft;
+  const published = preview.data?.perspectives.published;
+  const hasDraft = Boolean(draft?.available && draft.source !== published?.source);
+  const latest = selected?.revisions?.find(row => row.status === "draft");
+  const visible = selected?.frontend_impact?.public_visibility;
+  const staleProjection = projections?.find(row => row.lag > 0 || Boolean(row.last_error_code));
+  const reason = latest ? "修改已保存为草稿，尚未发布。读者仍看到当前线上内容。" : staleProjection ? "已保存内容的显示更新仍有未完成项，请检查下面的处理记录。" : visible === false ? "当前对象尚未公开，请回到页面编辑器检查发布条件。" : "请对照当前线上与已保存内容；没有诊断记录的环节仍待核实。";
+  const comparison = <div className="diagnostics-comparison">{(["published", "draft"] as const).map(perspective => {
+    const value = preview.data?.perspectives[perspective];
+    return <section key={perspective}><h3>{perspective === "published" ? "当前线上（网站上的内容）" : "修改后（已保存内容）"}</h3>{value?.available && preview.data ? <PreviewViewport device={device}><PreviewSurface payload={{...preview.data,active_perspective:perspective,perspective:value}} pageId={section}/></PreviewViewport> : <p className="empty-state">—</p>}</section>;
+  })}</div>;
+  return <div className="admin-page diagnostics-reference">
+    <header className="admin-page-title"><div><h1>为什么修改还没显示</h1><span>检查内容发布状态，找到当前停留的环节，并继续处理。</span></div><button className="button secondary" type="button" disabled={loading || !valid} onClick={()=>{retry();preview.retry();}}>重新检查</button></header>
+    <nav className="knowledge-reference-steps" aria-label="检查步骤">{["选择页面","找到停在哪一步","回去处理"].map((label,index)=><button type="button" key={label} aria-current={step===index ? "step" : undefined} onClick={()=>setStep(index)}><span>{index+1}</span><strong>{label}</strong></button>)}</nav>
     {!valid ? <p role="alert">对象类型或编号无效，未读取其他对象作为替代。</p> : null}
-    {error ? <p role="alert">{error}</p> : null}
-    {loading ? <p role="status">正在读取已保存的诊断记录…</p> : null}
+    {error ? <p role="alert">{error}</p> : null}{loading && valid ? <p role="status">正在读取已保存的诊断记录…</p> : null}
     {objectId && studio?.selection_error ? <p role="alert">无法找到指定对象，没有显示其他对象的结果。</p> : null}
-    {selected ? <section className="admin-panel" aria-label="当前知识对象诊断"><h2>{selected.label}</h2><p>对象 {selected.object_type} · {selected.id}</p>
-      <h3>投影与来源修订</h3>{projections ? projections.length ? <div className="knowledge-studio-list">{projections.map((row) => <article key={row.type}><strong>{row.name} · {row.status}</strong><p>来源修订 {row.source_revision} · 已处理修订 {row.projected_revision} · 落后 {row.lag}</p>{row.last_error_code ? <p role="status">错误 {row.last_error_code}；从工作台的原发布记录检查影响及允许的恢复操作。</p> : null}</article>)}</div> : <p>当前没有投影记录，不能据此认定所有能力就绪。</p> : <p>当前API未返回投影诊断，状态待核实。</p>}
-      <details><summary>修订与并发约束</summary><p>正式内容发布资格由原后端执行，不在诊断页重建发布动作。</p><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(selected.mutation_contract ?? {}, null, 2)}</pre>{selected.revisions?.map((row) => <p key={row.id}>修订 {row.revision} · 基于 {row.base_revision} · {row.status}{row.has_conflict ? " · 存在冲突" : ""} · {row.id}</p>)}</details>
-      <details><summary>原文依据与定位检查</summary>{selected.evidence?.length ? selected.evidence.map((row, index) => <EvidenceEnvelopeCard evidence={row} key={index} />) : <p>当前对象没有独立依据，不能用候选存在代替原文依据。</p>}</details>
-      <details><summary>机器派生记录（非正式内容）</summary>{selected.claims?.derived?.length ? selected.claims.derived.map((row) => <article key={row.id}><strong>{row.title || row.claim_type || "机器命题"}</strong><p>{row.proposition}</p><small>{row.id} · {row.status} · {row.attribution || "归因待核"}</small></article>) : <p>当前没有机器派生记录。</p>}</details>
-      <details><summary>候选来源与状态</summary>{selected.ai_candidates?.length ? selected.ai_candidates.map((row) => <article key={`${row.candidate_type}:${row.id}`}><strong>{String(row.field_name || row.field || row.candidate_type)} · {row.status}</strong><p>候选 {row.id}</p><p>{typeof row.source === "object" ? JSON.stringify(row.source) : String(row.source || "未提供来源")}</p></article>) : <p>当前没有高价值候选。无结果不等于服务失败。</p>}<Link href={returnUrl}>在当前对象核对并决定</Link></details>
-    </section> : !objectId && studio ? <section className="admin-panel"><h2>选择需要诊断的对象</h2><p>专业入口只展示来源与处理记录，日常编辑使用同一知识工作台。下列最多 {studio.filters.limit} 项。</p><div className="knowledge-studio-list">{studio.objects.map((row) => <article key={`${row.object_type}:${row.id}`}><Link href={`/admin/system-health/knowledge?object_type=${encodeURIComponent(row.object_type)}&object_id=${encodeURIComponent(row.id)}`}>{row.label}</Link><small>{row.object_type} · {row.status}</small></article>)}</div></section> : null}
+    {studio && (!objectId || step===0) ? <section className="admin-panel"><h2>选择需要检查的页面</h2><div className="knowledge-studio-list">{studio.objects.map(row=><Link key={`${row.object_type}:${row.id}`} href={`/admin/processing/health/knowledge?object_type=${encodeURIComponent(row.object_type)}&object_id=${encodeURIComponent(row.id)}`} onClick={()=>{setStep(1);setSection("overview");}}>{row.label}<small>{row.secondary_label}</small></Link>)}</div></section> : null}
+    {selected && step!==0 ? <div className="diagnostics-reference-columns"><section className="admin-panel"><h2>当前检查的页面</h2><h3>{selected.label}</h3>{selected.preview_routes?.published ? <Link className="button secondary" href={selected.preview_routes.published} target="_blank">查看当前公开页面</Link> : null}
+      <h3>发布流程与当前状态</h3><ol className="diagnostics-publication-steps">
+        <li><b>1</b><div><strong>已保存草稿</strong><p>{latest || hasDraft ? "有已保存的修改" : draft?.available ? "可读取已保存内容" : "—"}</p><small>{latest?.created_at ? new Date(latest.created_at).toLocaleString("zh-CN") : ""}</small></div></li>
+        <li className={latest || visible===false ? "current" : ""}><b>2</b><div><strong>{latest ? "尚未发布（当前原因）" : "发布状态"}</strong><p>{latest ? "内容仍在草稿中" : visible === undefined ? "—" : visible ? "当前有公开内容" : "尚未公开"}</p></div></li>
+        <li><b>3</b><div><strong>前台显示</strong><p>{published?.available ? "可查看当前线上内容" : "—"}</p></div></li>
+        <li className={staleProjection ? "current" : ""}><b>4</b><div><strong>搜索更新</strong><p>{projections?.length ? projections.map(row=>`${row.name}：${row.last_error_code ? "处理失败" : row.lag > 0 ? "等待更新" : row.status}`).join("；") : "—"}</p></div></li>
+      </ol><aside className="diagnostics-reason"><h3>当前检查结果</h3><p>{reason}</p></aside>
+      <h3>相关信息</h3><dl><div><dt>预计生效时间</dt><dd>—</dd></div><div><dt>对读者的影响</dt><dd>{latest ? "前台保留当前公开内容，草稿不会自行生效" : visible ? "已有公开页面，具体修改请对照右侧" : "当前对象尚未公开"}</dd></div></dl>
+      <details><summary>修订与处理记录</summary>{projections?.map(row=><p key={row.type}>{row.name} · 来源修订 {row.source_revision} · 已处理 {row.projected_revision}{row.last_error_code ? ` · ${row.last_error_code}` : ""}</p>)}{selected.revisions?.map(row=><p key={row.id}>修订 {row.revision} · {row.status}{row.has_conflict ? " · 存在冲突" : ""}</p>)}</details>
+      <details><summary>原文依据与定位</summary>{selected.evidence?.map((row,index)=><EvidenceEnvelopeCard key={index} evidence={row}/>)}</details>
+    </section><section className="admin-panel diagnostics-preview"><header><h2>读者会看到什么</h2><div className="diagnostics-preview-tools"><button type="button" aria-pressed={device==="desktop"} onClick={()=>setDevice("desktop")}>电脑</button><button type="button" aria-pressed={device==="mobile"} onClick={()=>setDevice("mobile")}>手机</button><button type="button" onClick={()=>fullPreview.current?.showModal()}>放大查看</button></div></header>
+      {preview.data?.public_control?.page_tree?.length ? <label>查看位置<select value={section} onChange={event=>setSection(event.target.value)}>{preview.data.public_control.page_tree.map(page=><option key={page.page_id} value={page.page_id}>{page.display_name}</option>)}</select></label> : null}
+      {preview.error ? <p role="alert">{preview.error}</p> : null}{comparison}
+      <aside className="diagnostics-change"><h3>本次修改的主要内容</h3><p>{latest?.change_note || (latest?.changed_fields.length ? latest.changed_fields.join("、") : "—")}</p></aside><footer><Link className="button" href={returnUrl}>回到页面继续处理 →</Link></footer>
+    </section></div> : null}
+    <dialog ref={fullPreview} className="fixed-preview-dialog"><header><strong>当前线上与已保存内容</strong><button type="button" onClick={()=>fullPreview.current?.close()}>关闭</button></header>{comparison}</dialog>
   </div>;
 }

@@ -53,6 +53,12 @@ export type Work = {
   slug: string;
   title: string;
   originalTitle?: string;
+  subtitle?: string;
+  publisher?: string;
+  isbn?: string;
+  originalLanguage?: string;
+  versionLabel?: string;
+  translators?: {name:string;slug?:string|null}[];
   author: string;
   year: string;
   kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告";

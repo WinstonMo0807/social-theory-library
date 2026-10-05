@@ -8,8 +8,11 @@ import { preservingAdminRedirect } from "../lib/admin-route-context.ts";
 import {
   bibliographyFields,
   dirtyFieldCount,
+  dirtyFieldsAfterSave,
   invalidatedResearchFields,
   mergeRemoteDrafts,
+  workflowFieldConflicts,
+  resolveWorkflowConflicts,
   nextWorkflowStep,
   sectionPresentations,
   stepFromHash,
@@ -29,6 +32,29 @@ const steps = [
   { key: "curation", status: "pending" },
   { key: "publication", status: "pending" },
 ];
+
+test("save acknowledgement preserves edits typed while the request was in flight", () => {
+  const submitted = Object.fromEntries(steps.map(({key})=>[key,{}]));
+  submitted.work = {title:"提交时的题名", abstract:"已提交简介"};
+  submitted.contributors = {items:[{display_name:"甲"}]};
+  const current = structuredClone(submitted);
+  current.work.title = "保存期间继续输入";
+  current.bibliography.publisher = "保存期间补的出版社";
+  current.contributors.items[0].display_name = "乙";
+  const dirty = {work:["title","abstract"], bibliography:["publisher"], contributors:["items.0.display_name"]};
+  const remaining = dirtyFieldsAfterSave(current,submitted,dirty);
+  assert.deepEqual(remaining.work,["title"]);
+  assert.deepEqual(remaining.bibliography,["publisher"]);
+  assert.deepEqual(remaining.contributors,["items.0.display_name"]);
+  const remote = structuredClone(submitted);
+  remote.work.expected_updated_at = "new-version";
+  const merged = mergeRemoteDrafts(current,remote,remaining);
+  assert.equal(merged.work.title,"保存期间继续输入");
+  assert.equal(merged.work.expected_updated_at,"new-version");
+  assert.equal(merged.bibliography.publisher,"保存期间补的出版社");
+  assert.equal(merged.contributors.items[0].display_name,"乙");
+  assert.equal(submitted.work.title,"提交时的题名");
+});
 
 test("workflow payload preserves an editorial revision that can be published", () => {
   const revision = normalizeEditorialRevision({
@@ -112,6 +138,37 @@ test("draft title changes invalidate dependent bibliographic research without hi
   assert.ok(!invalidated.has("primary_disciplines"));
 });
 
+test("concurrent refresh requires a choice for overlapping edits and preserves unrelated remote updates", () => {
+  const base = Object.fromEntries(steps.map(({ key }) => [key, {}]));
+  base.work = { title: "原题名", abstract: "原简介", language: "zh-CN" };
+  base.bibliography = { journal_contents: [{ title: "原论文" }], publisher: "原出版社" };
+  const local = structuredClone(base);
+  local.work.title = "本地题名";
+  local.work.abstract = "本地简介";
+  local.bibliography.journal_contents[0].title = "本地论文";
+  const remote = structuredClone(base);
+  remote.work.abstract = "他人简介";
+  remote.work.language = "en";
+  remote.bibliography.journal_contents[0].title = "他人论文";
+  remote.bibliography.publisher = "新出版社";
+  const dirty = { work: ["title", "abstract"], bibliography: ["journal_contents.0.title"] };
+  const before = JSON.stringify({ local, remote, dirty, base });
+  const conflicts = workflowFieldConflicts(local, remote, dirty, base);
+  assert.deepEqual(conflicts.map(({ step, path }) => `${step}.${path}`), ["work.abstract", "bibliography.journal_contents.0.title"]);
+  assert.throws(() => resolveWorkflowConflicts(local, remote, dirty, conflicts, { "work.abstract": "local" }), /逐项选择/);
+  const resolved = resolveWorkflowConflicts(local, remote, dirty, conflicts, { "work.abstract": "local", "bibliography.journal_contents.0.title": "remote" });
+  assert.equal(resolved.drafts.work.title, "本地题名");
+  assert.equal(resolved.drafts.work.abstract, "本地简介");
+  assert.equal(resolved.drafts.work.language, "en");
+  assert.equal(resolved.drafts.bibliography.journal_contents[0].title, "他人论文");
+  assert.equal(resolved.drafts.bibliography.publisher, "新出版社");
+  assert.deepEqual(resolved.dirty, { ...Object.fromEntries(steps.map(({ key }) => [key, []])), work: ["title", "abstract"] });
+  assert.equal(JSON.stringify({ local, remote, dirty, base }), before);
+  // A rejected save must explicitly rebase even edits that were disjoint.
+  assert.equal(workflowFieldConflicts(local, remote, dirty).length, 3);
+  assert.equal(workflowFieldConflicts(remote, remote, dirty, base).length, 0);
+});
+
 test("section validation blocks continuation before backend save", () => {
   assert.deepEqual(
     validateWorkflowSection("work", { title: "", document_type: "book", language: "zh-CN" }),
@@ -133,7 +190,7 @@ test("section validation blocks continuation before backend save", () => {
   );
   assert.deepEqual(
     validateWorkflowSection("contributors", { items: [{ display_name: "候选作者", role: "author", person_id: null }] }),
-    [{ field: "items.0.person_id", message: "请为第 1 位贡献者关联馆内学者，或直接新建并关联。" }],
+    [{ field: "items.0.person_id", message: "请为作者“候选作者”选择已有的人物；没有记录时点击下方“新建”。" }],
   );
 });
 

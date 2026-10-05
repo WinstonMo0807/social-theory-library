@@ -26,6 +26,7 @@ export type RecommendationPlacement = {
   enabled: boolean;
   last_generated_at: string | null;
   next_refresh_at: string | null;
+  updated_at: string;
   current: {
     id: string;
     starts_at: string;

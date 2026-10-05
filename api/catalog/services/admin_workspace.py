@@ -1105,6 +1105,7 @@ def work_library_queryset(*, query: str = "", view: str = "", ordering: str = "t
 
 def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
     from catalog.services.admin_queue import edition_summary, load_admin_editions
+    from catalog.services.publication_eligibility import public_default_edition
 
     editions = work._admin_editions if hasattr(work, "_admin_editions") else load_admin_editions(work.editions.all())
     edition_count = getattr(work, "edition_count_value", len(editions))
@@ -1198,6 +1199,10 @@ def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
         for row in work.recommendationoverride_set.all()
     )
     summary = edition_summary(primary, user=user) if primary else None
+    reader_capabilities = {}
+    for action, mode, key in (("pdf", "reader", "pdf"), ("download", "download", "pdf"), ("fulltext", "reader", "fulltext")):
+        selected = public_default_edition(work, mode=mode, editions=editions)
+        reader_capabilities[action] = next((row for row in selected._admin_availability["capabilities"] if row["key"] == key), None) if selected else None
     return {
         "row_type": "work", "work_id": str(work.id),
         "id": str(work.id),
@@ -1211,6 +1216,10 @@ def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
             "label": primary_label,
             "version_label": primary.version_label if primary else "",
         },
+        "publisher": primary.publisher if primary else "",
+        "publication_year": primary.publication_year if primary else None,
+        "availability": summary["availability"] if summary else None,
+        "reader_capabilities": reader_capabilities,
         "publication_state": publication_state,
         "publication": summary["publication"] if summary else {"public_state": "unpublished", "publicly_visible": False,
                                                                "listed_publicly": False, "catalog_revision_active": False, "public_url": "", "detail": "尚无出版版本。"},

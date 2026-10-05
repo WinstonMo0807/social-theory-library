@@ -16,6 +16,9 @@ class AdminRecycleView(APIView):
         search = str(request.query_params.get("search", ""))[:200]
         if search:
             rows = rows.filter(name__icontains=search)
+        kinds = [value for value in str(request.query_params.get("kind", "")).split(",") if value]
+        if kinds:
+            rows = rows.filter(kind__in=kinds)
         try:
             offset = max(0, int(request.query_params.get("offset", 0)))
         except (ValueError, TypeError):

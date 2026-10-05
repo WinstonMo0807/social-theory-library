@@ -7,13 +7,13 @@ import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin
 import { safeAdminHref } from "@/lib/admin-route-context";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
+import { CurationSelectionPreview } from "@/components/admin/curation/curation-draft-queue";
 
 import {
   BookOpen,
   Check,
   Clock3,
   ExternalLink,
-  FileText,
   GitMerge,
   History,
   Pencil,
@@ -25,8 +25,9 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
-import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
+import { FixedPageEditor } from "@/components/admin/curation/fixed-page-editor";
+import { PreviewSurface, type KnowledgePreviewPayload } from "@/components/admin/preview/knowledge-page-preview";
+import type { KnowledgeNodeDetail, NormalizedTimelineEvent } from "@/lib/api/knowledge.types";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminListHref, adminPageNumber } from "@/lib/admin-route-context";
@@ -393,7 +394,38 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
   const nodeId = initialNodeId || search.get("node") || "";
   const legacyId = search.get("legacy_id") || "";
   if (search.get("section") === "timeline") return <TimelineEditor key={`${nodeId}:${search.get("event") || "list"}`} nodeId={nodeId} requestedId={search.get("event") || ""} />;
+  if (!nodeId && !legacyId && search.get("create") !== "1") return <TheoryNodesDirectory />;
   return <TheoryNodesEditor key={`${nodeId}:${legacyId}`} initialNodeId={nodeId} initialLegacyId={legacyId} />;
+}
+
+function TheoryNodesDirectory() {
+  const location = useEditorListLocation();
+  const page = adminPageNumber(location.search.get("page"));
+  const query = location.search.get("q") || "";
+  const type = location.search.get("node_type") || "";
+  const params = new URLSearchParams({ page: String(page), q: query, type });
+  const nodes = useAdminData<Page<KnowledgeNode>>(`/catalog/admin/theory-system/nodes/?${params}`);
+  const [selectedId, setSelectedId] = useState("");
+  const selected = nodes.data?.results.find(node => node.id === selectedId) || nodes.data?.results[0];
+  const returnTo = location.href({});
+  return <AdminFrame eyebrow="理论流派" title="理论流派管理" description="选择流派或概念继续编辑" actions={<Link className="button secondary" href="/admin/theories?create=1">新建流派或概念</Link>}>
+    <form className="theory-directory-toolbar" onSubmit={event => { event.preventDefault(); location.update({ page: 1, q: String(new FormData(event.currentTarget).get("q") || "").trim() }); }}>
+      <label><Search size={17}/><input key={query} type="search" name="q" defaultValue={query} aria-label="搜索流派名称、原名或关键词" placeholder="搜索流派名称、原名或关键词"/></label>
+      <select aria-label="资料类型" value={type} onChange={event => location.update({ page: 1, node_type: event.target.value })}><option value="">全部类型</option>{editableNodeTypeEntries.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+      <button type="submit" className="button secondary">搜索</button>
+    </form>
+    <div className="knowledge-directory-reference theory-directory-reference"><section className="admin-panel">
+      <ErrorNotice message={nodes.error} retry={nodes.refresh}/>
+      {nodes.loading ? <p role="status">正在读取流派与概念…</p> : null}
+      <table className="theory-directory-table"><thead><tr><th>名称</th><th>类型</th><th>主要领域</th><th>操作</th></tr></thead><tbody>{nodes.data?.results.map(node => <tr key={node.id} className={selected?.id === node.id ? "selected" : ""}>
+        <td><button type="button" className="reference-select-title" aria-pressed={selected?.id === node.id} onClick={() => setSelectedId(node.id)}>{node.canonical_name_zh}<small>{node.canonical_name_en}</small></button></td>
+        <td>{nodeTypeLabels[node.node_type] || "—"}</td><td>{node.primary_discipline_data?.name || "—"}</td>
+        <td><Link className={`button${selected?.id === node.id ? "" : " secondary"}`} href={`/admin/theories/${node.id}`}>编辑</Link></td>
+      </tr>)}</tbody></table>
+      {!nodes.loading && !nodes.error && !nodes.data?.results.length ? <p className="empty-state">当前条件下没有流派或概念。</p> : null}
+      <EditorListPages data={nodes.data} page={page} pageKey="page" label="流派与概念分页" ordering="按显示顺序排列" busy={nodes.loading} href={location.href}/>
+    </section><CurationSelectionPreview key={selected?.id || "empty"} item={selected ? {object_type:"knowledge_node",object_id:selected.id,title:selected.canonical_name_zh,label:nodeTypeLabels[selected.node_type] || "理论流派",edit_url:`/admin/theories/${selected.id}`,can_edit:true} : undefined} returnTo={returnTo}/></div>
+  </AdminFrame>;
 }
 
 function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: string; initialLegacyId: string }) {
@@ -405,9 +437,9 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const [legacyOpened, setLegacyOpened] = useState(false);
   const [requestedNodeId, setRequestedNodeId] = useState(initialNodeId);
   const [requestedNodeOpened, setRequestedNodeOpened] = useState(false);
-  const [statusFilter, setStatusFilter] = useState(theoryLocation.search.get("status") || "");
-  const [disciplineFilter, setDisciplineFilter] = useState(theoryLocation.search.get("discipline") || "");
-  const [query, setQuery] = useState(theoryLocation.search.get("q") || "");
+  const statusFilter = theoryLocation.search.get("status") || "";
+  const disciplineFilter = theoryLocation.search.get("discipline") || "";
+  const query = theoryLocation.search.get("q") || "";
   const [editing, setEditing] = useState<KnowledgeNode | null>(null);
   const [draft, setDraft] = useState<NodeDraft>(emptyNodeDraft);
   const nodeDirty = useUnsavedForm(draft, editing ? nodeToDraft(editing) : emptyNodeDraft);
@@ -422,7 +454,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const [pendingRevision, setPendingRevision] = useState<EditorialRevisionSummary | null>(null);
 
   const params = useMemo(() => {
-    const search = new URLSearchParams({ node_type: nodeType, page: String(nodePage) });
+    const search = new URLSearchParams({ type: nodeType, page: String(nodePage) });
     if (statusFilter) search.set("status", statusFilter);
     if (disciplineFilter) search.set("discipline", disciplineFilter);
     if (query.trim()) search.set("q", query.trim());
@@ -493,19 +525,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       active = false;
     };
   }, [requestedNode.data, requestedNodeId, requestedNodeOpened]);
-
-  function start(node?: KnowledgeNode) {
-    if (nodeDirty && !window.confirm("当前理论或概念还有未保存的填写。放弃填写并切换吗？")) return;
-    prefills.clear();
-    setEditing(node ?? null);
-    setDraft(node ? nodeToDraft(node) : { ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" });
-    setMessage("");
-    setMessageState("idle");
-    setEntityLabels({});
-    setVersions(null);
-    setMergeTarget("");
-    setPendingRevision(node?.editorial_revision ?? null);
-  }
 
   async function saveNode(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
@@ -694,7 +713,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     }
   }
 
-  const visibleNodes = nodes.data?.results ?? [];
   const openingNode = Boolean(requestedNodeId && !requestedNodeOpened) || Boolean(legacyId && !legacyOpened);
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
   const subdisciplineName = (id: string) => editing?.subdiscipline_links?.find((item) => item.subdiscipline.id === id)?.subdiscipline.name || entityLabels[id] || "已选择子学科";
@@ -703,40 +721,11 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   return (
     <AdminFrame
       eyebrow="内容管理"
-      title="理论与概念"
-      description="选择条目后修改名称、简介和相关资料。保存后可预览，确认发布后读者才会看到修改。"
+      title={editing ? `编辑理论流派 · ${editing.canonical_name_zh}` : "新建理论或概念"}
+      description=""
       actions={<><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
     >
-      <div className="theory-node-admin-grid knowledge-object-host-layout">
-        <section className="admin-panel theory-node-table-panel">
-          <nav className="theory-node-tabs">
-            {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); start(); }}>{label}</button>)}
-          </nav>
-          <div className="theory-admin-filters">
-            <ResearchEntityPicker label="所属学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="filter_discipline" values={onePickerValue(disciplineFilter, disciplineName(disciplineFilter))} onChange={(next) => { const selected = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(selected?.id ?? ""); theoryLocation.update({ page: 1, discipline: selected?.id ?? "" }); }} />
-            <label><span>状态</span><select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); theoryLocation.update({ page: 1, status: event.target.value }); }}><option value="">全部</option><option value="draft">草稿</option><option value="pending">待审核</option><option value="published">已发布</option><option value="rejected">已拒绝</option><option value="archived">已下线</option></select></label>
-            <label className="theory-admin-search"><span>名称或别名</span><div><Search size={15} /><input value={query} onChange={(event) => { setQuery(event.target.value); theoryLocation.update({ page: 1, q: event.target.value }); }} placeholder="搜索理论或概念……" /></div></label>
-            <button className="button" type="button" onClick={() => start()}><Plus size={15} />新建理论或概念</button>
-          </div>
-          <ErrorNotice message={nodes.error || disciplines.error} retry={nodes.refresh} />
-          {nodes.loading ? <div className="theory-admin-loading">正在读取理论或概念……</div> : null}
-          <div className="theory-admin-table-wrap">
-            <table className="theory-admin-table">
-              <thead><tr><th>标准中文名</th><th>资料类型</th><th>主要学科</th><th>关联学科</th><th>别名</th><th>馆藏</th><th>关系</th><th>状态</th><th>最后编辑</th></tr></thead>
-              <tbody>{visibleNodes.map((node) => <tr className={editing?.id === node.id ? "selected" : ""} key={node.id}>
-                <td data-label="名称"><button type="button" aria-label={`编辑 ${node.canonical_name_zh}`} onClick={() => start(node)}><strong>{node.canonical_name_zh}</strong><small>{node.canonical_name_en}</small></button></td>
-                <td data-label="类型">{nodeTypeLabels[node.node_type]}</td>
-                <td data-label="主要学科">{node.primary_discipline_data?.name || "未指定"}</td>
-                <td data-label="关联学科">{node.discipline_links.filter((item) => item.relation_type !== "primary").map((item) => item.discipline.name).join("、") || "—"}</td>
-                <td data-label="别名">{node.aliases.length}</td><td data-label="馆藏">{node.work_count}</td><td data-label="关系">{node.relation_count}</td>
-                <td data-label="状态"><StatusBadge value={node.status} /></td><td data-label="最后编辑">{asDate(node.updated_at)}</td>
-              </tr>)}</tbody>
-            </table>
-          </div>
-          {!nodes.loading && !visibleNodes.length ? <div className="theory-admin-empty"><FileText size={22} /><strong>当前筛选下没有理论或概念</strong><button type="button" onClick={() => start()}>建立第一个理论或概念</button></div> : null}
-          <EditorListPages data={nodes.data} page={nodePage} pageKey="page" label="理论与概念分页" ordering="按排序值、名称及编号稳定排序" busy={nodes.loading} href={(updates) => theoryLocation.href({ node_type: nodeType, status: statusFilter, discipline: disciplineFilter, q: query, ...updates })} />
-        </section>
-
+      <div className="theory-node-editor-page">
         <KnowledgeVisualEditor objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
         {openingNode ? <div role="status"><p>正在读取指定理论或概念，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
         <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
@@ -830,7 +819,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           {editing ? <div className="theory-node-secondary-actions"><ActionButton type="button" state={pendingAction === "load-node-versions" ? "pending" : "idle"} pendingLabel="读取中" disabled={Boolean(pendingAction) && pendingAction !== "load-node-versions"} onClick={() => void loadVersions()}><History size={14} />历史版本</ActionButton></div> : null}
           {versions ? <section className="theory-version-list"><header><strong>历史版本</strong><button type="button" aria-label="关闭历史版本" onClick={() => setVersions(null)}><X size={14} /></button></header>{versions.map((version) => <article key={version.id}><strong>第 {version.version_number} 版</strong><span>{version.change_note || "内容更新"}</span><small>{version.created_by_name || "系统"} · {asDate(version.created_at)}</small></article>)}</section> : null}
           {pendingRevision?.status === "draft" ? <section className="theory-editorial-revision"><div><strong>待发布编辑草稿</strong><p>第 {pendingRevision.revision} 版修改 {pendingRevision.changed_fields.join("、")}。当前公开页仍使用正式内容。</p></div><ActionButton className="button" type="button" state={pendingAction === "publish-node-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(pendingAction) || pendingRevision.has_conflict} onClick={() => void publishRevision()}><Check size={14} />单人确认并发布</ActionButton></section> : null}
-          {editing ? <section className="theory-merge-box"><strong><GitMerge size={15} />合并重复理论或概念</strong><p>合并前会计算文献、关系、学者、时间轴和阅读路径的影响。</p><div><ResearchEntityPicker label="选择保留的保留的理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="merge_target" values={onePickerValue(mergeTarget, nodeName(mergeTarget))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing.id || selected?.status === "archived") return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setMergeTarget(selected?.id ?? ""); }} /><ActionButton type="button" state={pendingAction === "merge-theory-node" ? "pending" : "idle"} pendingLabel="正在计算影响" disabled={!mergeTarget || (Boolean(pendingAction) && pendingAction !== "merge-theory-node")} onClick={() => void mergeNode()}>预览并合并</ActionButton></div></section> : null}
+          {editing ? <section className="theory-merge-box"><strong><GitMerge size={15} />合并重复理论或概念</strong><p>合并前会计算文献、关系、学者、时间轴和阅读路径的影响。</p><div><ResearchEntityPicker label="选择保留的理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="merge_target" values={onePickerValue(mergeTarget, nodeName(mergeTarget))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing.id || selected?.status === "archived") return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setMergeTarget(selected?.id ?? ""); }} /><ActionButton type="button" state={pendingAction === "merge-theory-node" ? "pending" : "idle"} pendingLabel="正在计算影响" disabled={!mergeTarget || (Boolean(pendingAction) && pendingAction !== "merge-theory-node")} onClick={() => void mergeNode()}>预览并合并</ActionButton></div></section> : null}
           {editing ? <EntityLifecycleActions kind="knowledge-node" id={editing.id} name={editing.canonical_name_zh} status={draft.status} previewHref={`/theories/nodes/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, status: snapshot.status })); setEditing((current) => current ? { ...current, status: snapshot.status } : current); nodes.refresh(); allNodes.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" }); nodes.refresh(); allNodes.refresh(); }} /> : null}
           <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存本页资料" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{"保存本页草稿"}</ActionButton></div>
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
@@ -899,12 +888,6 @@ function relationToDraft(row: KnowledgeRelation) {
   return { source_node: row.source_node, target_node: row.target_node, relation_type: row.relation_type, direction: row.direction, description: row.description, evidence_source: row.evidence_source, confidence: row.confidence, status: row.status };
 }
 
-function RelationGraphPreview({relations,centerId,onSelect}:{relations:KnowledgeRelation[];centerId?:string;onSelect:(row:KnowledgeRelation)=>void}) {
- const visible=relations.filter(row=>!centerId || row.source_node===centerId || row.target_node===centerId);
- const nodes=[...new Map(visible.flatMap(row=>[{id:row.source_node,name:row.source_name,kind:"knowledge_node" as const,node_type:"theory_tradition",summary:row.description},{id:row.target_node,name:row.target_name,kind:"knowledge_node" as const,node_type:"theory_tradition",summary:row.description}]).map(row=>[row.id,row])).values()];
- return <TheoryGraphExplorer graph={{center:centerId || null,nodes,edges:visible.map(row=>({id:row.id,source:row.source_node,target:row.target_node,relation_type:row.relation_type,relation_label:row.relation_label,direction:row.direction,description:row.description})),depth:1,limit:visible.length,truncated:false}} onSelectRelation={id=>{const row=relations.find(item=>item.id===id);if(row)onSelect(row);}}/>;
-}
-
 const workRelationOptions = [
   ["foundational_work", "奠基性原著"],
   ["systematic_exposition", "系统阐释"],
@@ -959,6 +942,12 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
   const [editingRelation, setEditingRelation] = useState<KnowledgeRelation | null>(null);
   const [relationDraft, setRelationDraft] = useState(emptyRelationDraft);
+  const [relationStep, setRelationStep] = useState("details");
+  const relationSteps = [{id:"identity",label:"选择关系"},{id:"details",label:"填写说明"},{id:"publication",label:"预览发布"}];
+  const relationStepIndex = relationSteps.findIndex(row => row.id === relationStep);
+  const relationSource = useAdminData<KnowledgeNode>(relationDraft.source_node ? `/catalog/admin/theory-system/nodes/${relationDraft.source_node}/` : null);
+  const relationPreviewType = relationSource.data?.node_type === "theory_tradition" ? "theory" : relationSource.data?.node_type;
+  const relationPreview = useAdminData<KnowledgePreviewPayload>(relationPreviewType ? `/catalog/admin/knowledge-preview/${relationPreviewType}/${relationDraft.source_node}/` : null);
   const relationDirty = useUnsavedForm(relationDraft, editingRelation ? relationToDraft(editingRelation) : emptyRelationDraft);
 
   const taskParams = useMemo(() => {
@@ -1158,8 +1147,11 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
 
   const relationNodeName = (id: string) => entityLabels[id] || nodes.data?.results.find((item) => item.id === id)?.canonical_name_zh || (editingRelation?.source_node === id ? editingRelation.source_name : editingRelation?.target_node === id ? editingRelation.target_name : "") || "已选择理论";
   const relationDisciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
+  const previewNode = relationPreview.data?.perspective.data as KnowledgeNodeDetail | undefined;
+  const previewRelation = {...relationDraft,id:editingRelation?.id || "current-input",source_name:relationNodeName(relationDraft.source_node),target_name:relationNodeName(relationDraft.target_node),source_slug:previewNode?.slug || "",target_slug:nodes.data?.results.find(row=>row.id===relationDraft.target_node)?.slug || "",relation_label:knowledgeRelationOptions.find(([value])=>value===relationDraft.relation_type)?.[1] || relationDraft.relation_type};
+  const relationPreviewPayload = relationPreview.data && previewNode ? {...relationPreview.data,perspective:{...relationPreview.data.perspective,data:{...previewNode,direct_relations:[...(previewNode.direct_relations || []).filter(row=>row.id!==editingRelation?.id),...(relationDraft.source_node && relationDraft.target_node ? [previewRelation] : [])]}}} : null;
   return (
-    <AdminFrame eyebrow="知识与关联" title="理论关系" description="先核对系统建议，或在下方手工编辑理论之间的关系。保存修改后，确认发布才会更新读者页面。">
+    <AdminFrame eyebrow="知识与关联" title="编辑学术关系" description="设置两个理论流派之间的学术关系及说明，在网站上向读者展示它们的思想联系。">
       <details className="theory-suggestion-section" open={Boolean(taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
       <summary>系统建议{tasks.data ? `（当前筛选共 ${tasks.data.count} 条）` : ""}</summary>
       <div className="theory-review-layout">
@@ -1202,43 +1194,42 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
       </div>
 
       </details>
-      <section className="admin-panel theory-relation-editor-section">
-        <header>
-          <div><p>人工维护</p><h2>{editingRelation ? "编辑理论关系" : "理论与理论之间的关系"}</h2><span>先保存修改，再确认发布。公开后会显示在相关理论页面和关系图中。</span></div>
-          {relationDraft.source_node ? <Link
-            className="admin-outline-button"
-            href={`/theories/graph?center=${encodeURIComponent(nodes.data?.results.find((node) => node.id === relationDraft.source_node)?.slug || "")}`}
-            target="_blank"
-          >查看当前公开关系图 <ExternalLink size={14} /></Link> : <Link className="admin-outline-button" href="/theories/graph" target="_blank">查看当前公开关系图 <ExternalLink size={14} /></Link>}
-        </header>
-        <div className="theory-relation-bottom-grid">
-          <form aria-label="编辑理论关系" onSubmit={saveRelation}>
+      <nav className="knowledge-reference-steps" aria-label="学术关系编辑步骤">{relationSteps.map((step,index)=><button key={step.id} type="button" aria-current={relationStep===step.id ? "step" : undefined} onClick={()=>setRelationStep(step.id)}><span>{index<relationStepIndex ? "✓" : index+1}</span><strong>{step.label}</strong></button>)}</nav>
+      <section className="reference-theory-relation-editor">
+        <FixedPageEditor sections={relationSteps} navigationSections={[]} activeSection={relationStep} onSectionChange={setRelationStep} dirty={relationDirty}
+          preview={relationPreviewPayload ? <PreviewSurface payload={relationPreviewPayload} pageId="relations"/> : <p role={relationPreview.error ? "alert" : "status"}>{relationPreview.error || (relationDraft.source_node ? "正在读取理论页面…" : "选择起点流派后显示页面预览。")}</p>}
+          publishedHref={relationPreview.data?.preview_routes.published ? `${relationPreview.data.preview_routes.published}/relations` : undefined}
+          toolbar={<footer className="knowledge-reference-step-actions"><button type="button" className="button secondary" disabled={relationStepIndex===0} onClick={()=>setRelationStep(relationSteps[relationStepIndex-1].id)}>上一步</button><button className="button secondary" type="submit" form="theory-relation-form" disabled={Boolean(pendingAction) || !relationDraft.source_node || !relationDraft.target_node}>保存草稿</button>{relationStepIndex<2 ? <button type="button" className="button" onClick={()=>setRelationStep(relationSteps[relationStepIndex+1].id)}>下一步：{relationSteps[relationStepIndex+1].label}</button> : <button type="button" className="button" disabled={!canPublish || relationDirty || !editingRelation?.editorial_revision || Boolean(pendingAction)} onClick={()=>void publishRelation()}>确认发布</button>}</footer>}
+          fields={<form id="theory-relation-form" aria-label="编辑理论关系" onSubmit={saveRelation}>
+
             <ErrorNotice message={requested.error} retry={requested.refresh} />
             {requestedId && !requested.data ? <p>正在读取所选关系。</p> : null}
             <fieldset className="dedicated-editor-fields" disabled={Boolean(pendingAction) || Boolean(requestedId && !requested.data)}>
+            <div hidden={relationStep=== "publication"}>
             <div className="inline-fields"><ResearchEntityPicker label="源理论" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_relations" field="source_node" values={onePickerValue(relationDraft.source_node, relationNodeName(relationDraft.source_node))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setRelationDraft({ ...relationDraft, source_node: picked?.id ?? "", target_node: picked?.id === relationDraft.target_node ? "" : relationDraft.target_node }); }} /><ResearchEntityPicker label="目标理论" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_relations" field="target_node" values={onePickerValue(relationDraft.target_node, relationNodeName(relationDraft.target_node))} onChange={(next) => { const picked = next.at(-1); if (picked?.id === relationDraft.source_node) return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setRelationDraft({ ...relationDraft, target_node: picked?.id ?? "" }); }} /></div>
             <div className="inline-fields"><label><span>关系类型</span><select value={relationDraft.relation_type} onChange={(event) => setRelationDraft({ ...relationDraft, relation_type: event.target.value })}>{knowledgeRelationOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><label><span>方向</span><select value={relationDraft.direction} onChange={(event) => setRelationDraft({ ...relationDraft, direction: event.target.value })}><option value="directed">有方向</option><option value="undirected">无方向</option></select></label></div>
             <label><span>关系说明</span><textarea rows={3} value={relationDraft.description} onChange={(event) => setRelationDraft({ ...relationDraft, description: event.target.value })} /></label>
             <label><span>证据来源</span><textarea rows={3} value={relationDraft.evidence_source} onChange={(event) => setRelationDraft({ ...relationDraft, evidence_source: event.target.value })} placeholder="馆藏页码、参考文献或人工校订说明" /></label>
+            </div>
+            <div hidden={relationStep!=="publication"}><p>{previewRelation.source_name} → {previewRelation.target_name}</p><p>{relationDraft.description}</p><p>{relationDraft.evidence_source}</p>
             <div className="inline-fields"><label><span>保存后的安排</span><select value={relationDraft.status} onChange={(event) => setRelationDraft({ ...relationDraft, status: event.target.value })}><option value="draft">留作草稿</option><option value="pending">留待核对</option><option value="published" disabled={!canPublish && editingRelation?.status !== "published"}>准备公开</option><option value="rejected">不采用</option><option value="archived" disabled={!canPublish}>准备下线</option></select></label></div>
-            <div className="theory-review-primary-actions"><ActionButton className="button" type="submit" state={pendingAction === (editingRelation ? `save-relation:${editingRelation.id}` : "create-relation") ? "pending" : "idle"} pendingLabel="正在保存修改" disabled={Boolean(pendingAction)}><Save size={15} />保存关系</ActionButton>{editingRelation ? <button type="button" onClick={() => { if (relationDirty && !window.confirm("放弃当前尚未保存的输入吗？")) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); }}>新建另一条关系</button> : null}</div>
+            </div>
+            {editingRelation ? <button type="button" onClick={() => { if (relationDirty && !window.confirm("放弃当前尚未保存的输入吗？")) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); setRelationStep("identity"); }}>新建另一条关系</button> : null}
             </fieldset>
             <SavedDraftActions revision={editingRelation?.editorial_revision} dirty={relationDirty} busy={Boolean(pendingAction)} impact="请核对上方的理论、关系和来源。发布后，相关理论页面和关系图会使用已保存的内容。" publish={() => void publishRelation()} />
             <EditorialConflictHelp visible={editConflict} href={location.href({ relation: editingRelation?.id ?? null })} />
             {editingRelation && message ? <AsyncStatus state={messageState} message={message} /> : null}
-          </form>
-          <div className="theory-existing-relations">
+          </form>} />
+          <details className="theory-existing-relations"><summary>已保存的关系</summary>
             <form className="theory-relation-list-filters" onSubmit={(event) => { event.preventDefault(); location.update({ relation_q: relationQuery.trim(), relations_page: 1 }); }}>
               <label><span>查找关系</span><input value={relationQuery} onChange={(event) => setRelationQuery(event.target.value)} placeholder="理论名称、说明或来源…" /></label>
               <label><span>当前公开状态</span><select value={relationStatus} onChange={(event) => location.update({ relation_status: event.target.value, relations_page: 1 })}><option value="">全部</option><option value="published">已公开</option><option value="draft">草稿</option><option value="pending">待核对</option><option value="rejected">不采用</option><option value="archived">已下线</option></select></label>
               <button type="submit">搜索关系</button>
             </form>
             <ErrorNotice message={relations.error} retry={relations.refresh} />
-            <RelationGraphPreview relations={[...(relations.data?.results ?? []).filter(row=>row.id!==editingRelation?.id), ...(relationDraft.source_node && relationDraft.target_node ? [{...relationDraft,id:editingRelation?.id || "local-draft",source_name:relationNodeName(relationDraft.source_node),target_name:relationNodeName(relationDraft.target_node),relation_label:knowledgeRelationOptions.find(([value])=>value===relationDraft.relation_type)?.[1] || relationDraft.relation_type,updated_at:editingRelation?.updated_at || ""}] : [])]} centerId={relationDraft.source_node} onSelect={row=>{if(row.id!=="local-draft" && row.id!==editingRelation?.id)editRelation(row);}} />
             <h3>现有关系</h3>{relations.data?.results.map((relation) => <article className={editingRelation?.id === relation.id ? "selected" : ""} key={relation.id}><div><strong>{relation.source_name}</strong><span>{relation.relation_label}</span><strong>{relation.target_name}</strong></div><p>{relation.description || relation.evidence_source || "尚未填写说明"}</p>{relation.editorial_revision ? <p>有已保存的修改，尚未公开</p> : null}<footer><StatusBadge value={relation.public_status ?? relation.status} /><span><button type="button" onClick={() => editRelation(relation)}><Pencil size={13} />编辑</button><ActionButton type="button" state={pendingAction === `delete-relation:${relation.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-relation:${relation.id}`} onClick={() => void removeRelation(relation)}><Trash2 size={13} />删除</ActionButton></span></footer></article>)}{!relations.data?.results.length ? <p>尚未建立规范理论关系。</p> : null}
-          </div>
-        </div>
         <EditorListPages data={relations.data} page={relationPage} pageKey="relations_page" label="关系列表分页" ordering="按修改时间从新到旧" busy={relations.loading} href={location.href} />
+          </details>
       </section>
     </AdminFrame>
   );
@@ -1455,6 +1446,13 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const [editing, setEditing] = useState<TimelineEvent | null>(null);
   const initialDraft = useMemo(() => ({ ...emptyTimelineDraft, nodes: nodeId ? [nodeId] : [] }), [nodeId]);
   const [draft, setDraft] = useState<TimelineDraft>(initialDraft);
+  const [timelineStep, setTimelineStep] = useState("details");
+  const timelineSteps = [{id:"identity",label:"选择事件"},{id:"details",label:"编辑内容"},{id:"publication",label:"预览发布"}];
+  const timelineStepIndex = timelineSteps.findIndex(row=>row.id===timelineStep);
+  const previewNodeId = nodeId || draft.nodes[0] || "";
+  const timelineSource = useAdminData<KnowledgeNode>(previewNodeId ? `/catalog/admin/theory-system/nodes/${previewNodeId}/` : null);
+  const timelinePreviewType = timelineSource.data?.node_type === "theory_tradition" ? "theory" : timelineSource.data?.node_type;
+  const timelinePreview = useAdminData<KnowledgePreviewPayload>(timelinePreviewType ? `/catalog/admin/knowledge-preview/${timelinePreviewType}/${previewNodeId}/` : null);
   const timelineDirty = useUnsavedForm(draft, editing ? timelineToDraft(editing) : initialDraft);
   const disciplineFilter = location.search.get("discipline") || "";
   const typeFilter = location.search.get("event_type") || "";
@@ -1609,6 +1607,11 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const timelineScholarName = (id: string) => scholars.data?.results.find((item) => item.id === id)?.preferred_name || entityLabels[id] || "已选择学者";
   const timelineWorkName = (id: string) => works.data?.results.find((item) => item.id === id)?.title || entityLabels[id] || "已选择馆藏";
 
+  const matchesSavedSource = Boolean(editing?.evidence_file && editing.evidence_file.id===draft.evidence_asset && String(editing.evidence_page ?? "")===draft.evidence_page && editing.evidence_file.work_id===draft.source_work && editing.evidence_file.edition_id===draft.source_edition);
+  const liveTimelineEvent: NormalizedTimelineEvent = {id:editing?.id || "current-input",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year ? Number(draft.start_year) : null,end_year:draft.end_year ? Number(draft.end_year) : null,date_label:draft.date_label,source:draft.source,evidence_page:draft.evidence_page ? Number(draft.evidence_page) : null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:matchesSavedSource ? editing?.evidence_file?.reader_href || null : null};
+  const liveTimeline = [...(timelinePreview.data?.secondary_preview?.timeline || []).filter(row=>row.id!==editing?.id),...(draft.title && draft.nodes.includes(previewNodeId) ? [liveTimelineEvent] : [])].sort((a,b)=>(a.start_year ?? Infinity)-(b.start_year ?? Infinity));
+  const timelinePreviewPayload = timelinePreview.data ? {...timelinePreview.data,secondary_preview:{...timelinePreview.data.secondary_preview,timeline:liveTimeline}} : null;
+
   return (
     <AdminFrame eyebrow="理论管理 / 时间线" title={nodeId ? `${selectedNode.data?.canonical_name_zh || "所选理论"}的时间线` : "全部理论事件"} description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
       <nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>
@@ -1616,8 +1619,9 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       {nodeId && !selectedNode.data ? <p>尚未读取到所选理论。不会改为另一个理论，也不能在此新建事件。</p> : null}
       {wrongNode ? <p role="alert">这个事件不属于当前理论。请返回事件所属理论，或从全部理论事件中查看。</p> : null}
       <p>同一事件可以关联多个理论，修改会影响所有关联理论。关联学者或馆藏用于说明事件涉及谁、哪部作品，不会自动替代学者生平或主题发展内容。</p>
-      <div className="timeline-admin-grid">
-        <section className="admin-panel normalized-timeline-list">
+      <nav className="knowledge-reference-steps" aria-label="时间线编辑步骤">{timelineSteps.map((step,index)=><button key={step.id} type="button" aria-current={timelineStep===step.id ? "step" : undefined} onClick={()=>setTimelineStep(step.id)}><span>{index<timelineStepIndex ? "✓" : index+1}</span><strong>{step.label}</strong></button>)}</nav>
+      <div className="timeline-reference-editor">
+        <section className="admin-panel normalized-timeline-list" hidden={timelineStep!=="identity"}>
           <form className="theory-admin-filters timeline" onSubmit={(event) => { event.preventDefault(); location.update({ q: query.trim(), page: 1 }); }}>
             <ResearchEntityPicker label="学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_timeline" field="filter_discipline" values={onePickerValue(disciplineFilter, timelineDisciplineName(disciplineFilter))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(picked?.id ?? ""); }} />
             <label><span>事件类型</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="">全部</option>{timelineTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
@@ -1637,7 +1641,11 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <EditorListPages data={events.data} page={page} pageKey="page" label="事件列表分页" ordering="按发生年份从早到晚，同年按排序与标题排列" busy={events.loading} href={location.href} />
         </section>
 
-        <div className="timeline-focused-editor"><form className="admin-panel timeline-event-editor" onSubmit={saveEvent}>
+        <FixedPageEditor sections={timelineSteps} navigationSections={[]} activeSection={timelineStep} onSectionChange={setTimelineStep} dirty={timelineDirty}
+          preview={timelinePreviewPayload ? <PreviewSurface payload={timelinePreviewPayload} pageId="timeline"/> : <p role={timelinePreview.error ? "alert" : "status"}>{timelinePreview.error || "选择关联理论后显示完整时间线预览。"}</p>}
+          publishedHref={timelinePreview.data?.preview_routes.published ? `${timelinePreview.data.preview_routes.published}/timeline` : undefined}
+          toolbar={<footer className="knowledge-reference-step-actions"><button type="button" className="button secondary" disabled={timelineStepIndex===0} onClick={()=>setTimelineStep(timelineSteps[timelineStepIndex-1].id)}>上一步</button><button className="button secondary" type="submit" form="timeline-event-form" disabled={Boolean(pendingAction) || wrongNode || Boolean(nodeId && !selectedNode.data)}>保存草稿</button>{timelineStepIndex<2 ? <button type="button" className="button" onClick={()=>setTimelineStep(timelineSteps[timelineStepIndex+1].id)}>下一步：{timelineSteps[timelineStepIndex+1].label}</button> : <button type="button" className="button" disabled={!canPublish || timelineDirty || !editing?.editorial_revision || Boolean(pendingAction)} onClick={()=>void publishEvent()}>确认发布</button>}</footer>}
+          fields={<form id="timeline-event-form" className="timeline-event-editor" onSubmit={saveEvent}>
           <ErrorNotice message={requested.error} retry={requested.refresh} />
           {requestedId && !requested.data ? <p>正在读取所选事件。</p> : null}
           <fieldset className="dedicated-editor-fields" disabled={Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
@@ -1653,12 +1661,11 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <TimelineEvidenceFields draft={draft} saved={editing} workName={entityLabels[draft.source_work] || editing?.evidence_file?.work_title || "已选择出处馆藏"} onLabels={(values) => setEntityLabels((current) => ({ ...current, ...pickerLabels(values) }))} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
           <label><span>证据原文或来源说明</span><textarea rows={4} value={draft.evidence_text} onChange={(event) => setDraft({ ...draft, evidence_text: event.target.value })} /></label>
           <div className="inline-fields"><label><span>保存后的安排</span><select value={draft.review_status} onChange={(event) => setDraft({ ...draft, review_status: event.target.value })}><option value="suggested">留待核对</option><option value="approved" disabled={!canPublish && editing?.review_status !== "approved"}>准备公开</option><option value="rejected">不采用或准备下线</option></select></label><label><span>排序</span><input type="number" value={draft.display_order} onChange={(event) => setDraft({ ...draft, display_order: Number(event.target.value) })} /></label></div>
-          <ActionButton className="button" type="submit" state={pendingAction?.startsWith("save-timeline-event:") || pendingAction === "create-timeline-event" ? "pending" : "idle"} pendingLabel="正在保存事件" disabled={Boolean(pendingAction)}><Save size={15} />保存事件</ActionButton>
           </fieldset>
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
           <EditorialConflictHelp visible={editConflict} href={location.href({ event: editing?.id ?? null })} />
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
-        </form><aside className="timeline-current-preview"><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:Number(draft.start_year)||null,end_year:Number(draft.end_year)||null,date_label:draft.date_label,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/></aside></div>
+        </form>} />
       </div>
     </AdminFrame>
   );

@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
+import { DailyReadingContent } from "@/components/public/recommendation-issue-view";
 import { loadRecommendationIssues } from "@/lib/api/recommendation-issues.server";
-export const metadata = { title: "本期书库推荐与归档" };
-export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
-  const query = await searchParams, page = Math.max(1, Number(query.page) || 1);
-  const data = await loadRecommendationIssues(query.q || "", page);
-  const href = (next: number) => `/recommendations?${new URLSearchParams({ q: query.q || "", page: String(next) })}`;
-  return <><div className="page-shell issue-archive"><header><p className="eyebrow">Reading together</p><h1>本期书库推荐</h1><p>沿着一份有导语的阅读书单，走进具体的问题与文献。</p><form><input name="q" aria-label="搜索推荐期" placeholder="搜索期名、标题" defaultValue={query.q} /><button className="button">搜索</button></form></header><div className="issue-archive-grid">{data.results.map(issue => <article key={issue.id}><Link href={`/recommendations/${issue.slug}`}><img src={issue.cover_url || "/editorial/library-architecture-hero.webp"} alt="" loading="lazy" /><p className="eyebrow">{issue.issue_label}</p><h2>{issue.title}</h2><p>{issue.introduction}</p><span>{issue.public_byline}</span></Link></article>)}</div>{!data.count ? <p className="empty-state">暂时没有符合条件的已发布推荐。</p> : null}<nav className="issue-pagination" aria-label="推荐归档分页">{data.previous ? <Link href={href(page - 1)}>上一页</Link> : null}<span>共 {data.count} 期 · 第 {page} 页</span>{data.next ? <Link href={href(page + 1)}>下一页</Link> : null}</nav></div><SiteFooter /></>;
+export const metadata = {title:"每日荐读"};
+export default async function Page({searchParams}: {searchParams:Promise<{q?:string;page?:string}>}) {
+  const query = await searchParams;
+  const requestedPage = Number(query.page);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const data = await loadRecommendationIssues(query.q || "",page);
+  const href = (next:number) => `/recommendations?${new URLSearchParams({q:query.q || "",page:String(next)})}`;
+  const lead = query.q || page > 1 ? data.results[0] || null : data.current || data.results[0] || null;
+  const cards = data.results.filter(issue=>issue.id!==lead?.id);
+  return <><main className="page-shell daily-reading-page"><header className="daily-reading-header"><div><p className="eyebrow">Social Theory Library</p><h1>每日荐读</h1><p>沿着一篇文章走进具体的问题与馆藏。</p></div><form className="daily-reading-search"><label><span className="sr-only">搜索文章标题</span><input name="q" type="search" placeholder="搜索文章标题" defaultValue={query.q}/></label><button className="button" type="submit">搜索</button></form></header><div className="daily-reading-categories"><Link className="active" href="/recommendations">全部</Link></div><DailyReadingContent lead={lead} cards={cards}/><nav className="issue-pagination" aria-label="推荐文章分页">{data.previous ? <Link href={href(page-1)}>上一页</Link> : <span aria-disabled="true">上一页</span>}<span>共 {data.count} 期 · 第 {page} 页</span>{data.next ? <Link href={href(page+1)}>下一页</Link> : <span aria-disabled="true">下一页</span>}</nav></main><SiteFooter/></>;
 }

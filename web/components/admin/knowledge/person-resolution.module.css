@@ -1,5 +1,7 @@
 .workspace { color: var(--ink); }
-.content { display: grid; gap: 20px; max-width: 1160px; }
+.content { display: grid; gap: 20px; }
+.mergeWorkspace {min-width:0}
+.mergeWorkspace .panel {padding:0}
 .panel { display: grid; gap: 16px; padding: 24px; min-width: 0; font-size: 1rem; line-height: 1.65; }
 .panel h2, .panel h3, .panel h4, .panel p { margin: 0; }
 .panel h2 { font-size: 1.3rem; }

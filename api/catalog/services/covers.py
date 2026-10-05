@@ -283,7 +283,10 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False, auto_select:
     # Keep manually chosen pages and prior evidence. A refresh only replaces
     # the current ranking; it must not delete an administrator's selection.
     candidates = []
-    for page_index, metrics in ranked[:4]:
+    visible_pages = {page for page, _metrics in ranked[:4]} | set(range(1, min(max_pages, 6) + 1))
+    for page_index, metrics in ranked:
+        if page_index not in visible_pages:
+            continue
         candidate, _created = CoverCandidate.objects.update_or_create(
             asset=asset,
             page_index=page_index,
