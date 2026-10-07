@@ -26,7 +26,7 @@ function TheoryOverview({node,footer,pagination}:{node:KnowledgeNodePayload;foot
       <div className="theory-reference-overview-intro">
         <nav className="theory-reference-breadcrumb" aria-label="当前位置"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{node.canonical_name_zh}</span></nav>
         <h1 data-edit-section="identity">{node.canonical_name_zh}</h1>
-        {node.canonical_name_en?<p className="theory-reference-original-name" data-edit-section="original-name">{node.canonical_name_en}</p>:null}
+        <p className="theory-reference-original-name" data-edit-section="original-name">{node.canonical_name_en}</p>
         <div className="theory-reference-primary" data-edit-section="primary-discipline">{node.primary_discipline?node.primary_discipline.slug?<Link href={`/theories/disciplines/${node.primary_discipline.slug}`}>{node.primary_discipline.name}</Link>:<span>{node.primary_discipline.name}</span>:null}</div>
         <p className="theory-reference-description" data-edit-section="summary">{node.summary}</p>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Maximize2, Monitor, Smartphone } from "lucide-react";
+import { Search, Monitor, Smartphone } from "lucide-react";
 
 /** An isolated viewport keeps public media queries and typography identical to the page. */
 export function PreviewViewport({ children, device }: { children: ReactNode; device?: "desktop" | "mobile" }) {
@@ -97,7 +97,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
       <div className="fixed-editor-fields" ref={fieldRef}>{!hideFieldHeading ? <><h2>{fieldHeading || sections.find(section => section.id === activeSection)?.label}</h2><p>{sections.find(section => section.id === activeSection)?.description}</p></> : null}{fields}</div>{toolbar}
     </aside>
     <section className="fixed-editor-preview" aria-label="当前输入实时预览"><header><strong>读者会看到什么</strong><span>{perspective === "published" ? "当前线上内容" : dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</span></header>
-      <div className="selected-preview-tools fixed-editor-preview-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} disabled={!canViewPublished} title={!canViewPublished ? "当前对象尚无线上预览" : undefined} onClick={() => setPerspective("published")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={() => {setExpanded(true);fullPreviewRef.current?.showModal();}}><Maximize2 size={15}/>放大查看</button></div>
+      <div className="selected-preview-tools fixed-editor-preview-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} disabled={!canViewPublished} title={!canViewPublished ? "当前对象尚无线上预览" : undefined} onClick={() => setPerspective("published")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={() => {setExpanded(true);fullPreviewRef.current?.showModal();}}><Search size={17}/>放大查看</button></div>
       {previewToolbar}
       <PreviewViewport device={device}>{perspective === "published" ? publishedPreview ?? (publishedHref ? <iframe src={publishedHref} title="当前线上页面" style={{width:"100%",height:1000,border:0}}/> : <p className="empty-state">—</p>) : <div ref={element => {
         previewRef.current = element;

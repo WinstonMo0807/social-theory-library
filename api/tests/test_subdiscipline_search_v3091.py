@@ -24,3 +24,21 @@ def test_tree_search_filters_the_full_queryset_before_pagination(api_client, adm
 def test_tree_search_does_not_expose_private_taxonomy_to_readers(api_client, reader_user):
     api_client.force_authenticate(reader_user)
     assert api_client.get("/api/catalog/admin/subdisciplines/", {"search": "社会学"}).status_code == 403
+
+
+@pytest.mark.parametrize("query_param", ["search", "q"])
+def test_discipline_picker_filters_before_pagination(api_client, admin_user, query_param):
+    sociology = Discipline.objects.create(name="社会学", foreign_name="Social Science Inquiry", code="sociology-picker", slug="sociology-picker")
+    Discipline.objects.create(name="人类学", code="anthropology-picker", slug="anthropology-picker")
+    api_client.force_authenticate(admin_user)
+    for query in ["社会", "Science Inquiry", "sociology-picker"]:
+        response = api_client.get("/api/catalog/admin/disciplines/", {query_param: query, "page_size": 1})
+        assert response.status_code == 200
+        assert response.data["count"] == 1
+        assert [row["id"] for row in response.data["results"]] == [str(sociology.pk)]
+    assert api_client.get("/api/catalog/admin/disciplines/", {query_param: "不存在的学科"}).data["count"] == 0
+
+
+def test_discipline_picker_keeps_staff_permission(api_client, reader_user):
+    api_client.force_authenticate(reader_user)
+    assert api_client.get("/api/catalog/admin/disciplines/", {"search": "社会学"}).status_code == 403

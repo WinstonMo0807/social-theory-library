@@ -280,7 +280,7 @@ export function EntityPicker({
   const statusLabel = (value?: string) => ({ published: "已发布", draft: "草稿", pending: "待审核", verified: "已核验", needs_review: "待审核", suggested: "建议" } as Record<string, string>)[String(value ?? "")] ?? value ?? "馆内条目";
   return (
     <div className={`workflow-entity-picker${singleSelect ? " is-single-select" : ""}`} onBlurCapture={singleSelect ? event => {if(!event.currentTarget.contains(event.relatedTarget)){setOpen(false);setQuery("");}} : undefined}>
-      <label htmlFor={inputId}>{label}</label>
+      <label htmlFor={inputId}>{ariaRequired ? <span>{label} <b aria-hidden="true">*</b></span> : label}</label>
       {!singleSelect ? <div className="workflow-entity-values">{values.map((value, index) => (
         <button type="button" aria-label={`移除${value.name}`} key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}>
           {value.name}{value.id ? "" : " · 未解析"} ×

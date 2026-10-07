@@ -1,7 +1,7 @@
 /* Admin design v2: the shared visual grammar for the 59 reference scenes. */
 :root {
-  --admin-v2-paper: #f7f5f0;
-  --admin-v2-surface: #fdfcf9;
+  --admin-v2-paper: #fbfaf7;
+  --admin-v2-surface: #fdfcf8;
   --admin-v2-wash: #eeeae2;
   --admin-v2-ink: #1b1b18;
   --admin-v2-muted: #68655d;
@@ -21,26 +21,26 @@ html:has(.admin-shell) { background: var(--admin-v2-paper); }
 
 .admin-shell .admin-sidebar {
   width: 208px;
-  padding: 0 0 22px;
+  padding: 0 0 30px;
   border-right: 1px solid var(--admin-v2-line);
-  background: #efebe4;
+  background: #f1ece8;
 }
 
 .admin-shell .admin-logo {
   display: block;
-  height: 140px;
-  padding: 32px 34px;
+  height: 104px;
+  padding: 18px 23px;
   color: var(--admin-v2-ink);
 }
 
 .admin-shell .admin-logo .wordmark {
   gap: 0;
   font-family: "Arial Black", Arial, sans-serif;
-  font-size: 30px;
+  font-size: 23px;
   font-weight: 900;
-  letter-spacing: -1.6px;
-  line-height: .86;
-  transform: scaleX(.85);
+  letter-spacing: -1px;
+  line-height: .94;
+  transform: none;
   transform-origin: left center;
 }
 
@@ -49,46 +49,47 @@ html:has(.admin-shell) { background: var(--admin-v2-paper); }
 .admin-shell .admin-sidebar nav .admin-nav-primary {
   display: grid !important;
   grid-template-columns: 24px minmax(0, 1fr) !important;
-  gap: 13px;
-  min-height: 49px !important;
-  padding: 0 32px !important;
-  border-left: 5px solid transparent !important;
+  gap: 10px;
+  min-height: 52px !important;
+  padding: 0 24px !important;
+  border-left: 3px solid transparent !important;
   border-radius: 0;
   font-size: 18px !important;
-  font-weight: 500 !important;
+  font:400 18px/1.5 var(--stl-type-serif) !important;
+  color:var(--admin-v2-ink);
 }
 .admin-shell .admin-nav-section.active > .admin-nav-primary {
   border-left-color: var(--admin-v2-ink) !important;
-  background: rgba(118, 102, 84, .14) !important;
+  background: rgba(118, 102, 84, .08) !important;
   color: var(--admin-v2-ink) !important;
+  font-weight:600 !important;
 }
 .admin-shell .admin-nav-children {
   display: grid;
-  gap: 1px;
-  margin: 10px 0 15px 50px;
-  padding: 0 0 0 12px;
-  border-left: 1px solid #cbc4b8;
+  gap: 0;
+  margin: 11px 0 0;
+  padding: 0;
+  border-left: 0;
 }
 .admin-shell .admin-sidebar nav .admin-nav-children a {
   display: block !important;
-  min-height: 34px !important;
-  padding: 5px 10px !important;
+  min-height: 36px !important;
+  padding: 5px 14px 5px 61px !important;
   border: 0 !important;
   color: var(--admin-v2-muted);
-  font-size: 14px !important;
-  font-weight: 400 !important;
+  font:400 16px/26px var(--stl-type-serif) !important;
 }
 .admin-shell .admin-sidebar nav .admin-nav-children a:hover { color: var(--admin-v2-ink); background: rgba(118, 102, 84, .06); }
-.admin-shell .admin-sidebar nav .admin-nav-children a.active { color: var(--admin-v2-focus); background: transparent; box-shadow: none; font-weight: 400 !important; }
+.admin-shell .admin-sidebar nav .admin-nav-children a.active { color: var(--admin-v2-ink); background: transparent; box-shadow: none; font-weight: 400 !important; }
 
 .admin-shell .admin-sidebar footer {
   gap: 10px;
   margin-top: auto;
-  padding: 15px 32px 0;
+  padding: 15px 27px 0;
   border-top: 0;
-  font-size: 15px;
+  font:16px/1.5 var(--stl-type-serif);
 }
-.admin-sidebar footer .admin-back-public { display: inline-flex; gap: 9px; align-items: center; color: var(--admin-v2-ink); }
+.admin-sidebar footer .admin-back-public { display: inline-flex; gap: 14px; align-items: center; color: var(--admin-v2-ink); }
 .admin-sidebar footer .admin-version { color: var(--admin-v2-muted); font-size: 10px; }
 
 .admin-shell .admin-main { margin-left: 208px; }

@@ -403,6 +403,16 @@ class AdminDisciplineListView(
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     queryset = Discipline.objects.all().order_by("sort_order", "name", "pk")
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("search", "").strip() or self.request.query_params.get("q", "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query) | Q(foreign_name__icontains=query)
+                | Q(code__icontains=query) | Q(slug__icontains=query)
+            )
+        return queryset
+
 
 class AdminDisciplineDetailView(
     AdminEditorialDraftReadMixin,
