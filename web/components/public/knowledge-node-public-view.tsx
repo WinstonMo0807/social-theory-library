@@ -70,12 +70,14 @@ export function KnowledgeNodePublicView({
   const disciplineLinks = [node.primary_discipline, ...node.related_disciplines].filter(Boolean);
   const subdisciplines = (node.subdiscipline_links ?? []).map((row) => row.subdiscipline);
   const topics = (node.topic_links ?? []).map((row) => row.topic);
+  const referenceSection=["relations","timeline"].includes(section);
+  const referenceTabs=section==="relations" ? [["overview","概述"],["propositions","核心概念"],["concepts","重要人物"],["relations","学术关系"],["works","延伸阅读"]] : section==="timeline" ? [["overview","概述"],["concepts","重要人物"],["timeline","流派脉络"],["propositions","核心概念"],["works","代表著作"],["paths","延伸阅读"]] : [["overview","概述"],["concepts","重要人物"],["timeline","流派脉络"],["propositions","核心概念"],["relations","学术关系"],["works","代表著作"]];
 
   if(section==="overview" && node.node_type==="theory_tradition")return <TheoryOverview node={node} footer={footer} pagination={pagination}/>;
 
   return (
     <>
-      <main className={`page-shell theory-system-page theory-node-page v307-knowledge theory-v307 ${section !== "overview" ? "knowledge-section-page" : ""}`}>
+      <main className={`page-shell theory-system-page theory-node-page v307-knowledge theory-v307 ${section !== "overview" ? "knowledge-section-page" : ""} ${referenceSection ? `reference-theory-${section}-page` : ""}`}>
         <div className="theory-breadcrumb">
           <Link href="/theories">理论流派</Link><span>/</span>
           {node.primary_discipline ? <><Link href={`/theories/disciplines/${node.primary_discipline.slug}`}>{node.primary_discipline.name}</Link><span>/</span></> : null}
@@ -97,7 +99,7 @@ export function KnowledgeNodePublicView({
             </div> : null}
             {(["relations","timeline"].includes(section) ? node.summary : node.definition || node.summary) ? <p className="definition" data-module-id="theory-definition">{["relations","timeline"].includes(section) ? node.summary : node.definition || node.summary}</p> : null}
             {node.core_questions.length ? <div className="theory-core-question" data-module-id="theory-core-questions"><strong>{node.node_type === "debate" ? "争论问题" : "核心问题"}</strong><p>{node.core_questions[0]}</p></div> : null}
-            <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
+            {!referenceSection ? <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} /> : null}
           </div>
           <div className="theory-node-hero-side">
             <TheoryBanner image={node.cover_url} media={node.cover_media} />
@@ -110,7 +112,7 @@ export function KnowledgeNodePublicView({
             </dl>
           </div>
         </section>
-        {section !== "overview" ? <nav className="reference-theory-tabs" aria-label="理论页面">{[["overview","概述"],["concepts","重要人物"],["timeline","流派脉络"],["propositions","核心概念"],["relations","学术关系"],["works","代表著作"]].map(([id,label])=><Link href={`/theories/nodes/${slug}${id === "overview" ? "" : `/${id}`}`} key={id} aria-current={section===id ? "page" : undefined}>{label}</Link>)}</nav> : null}
+        {section !== "overview" ? <nav className="reference-theory-tabs" aria-label="理论页面">{referenceTabs.map(([id,label])=><Link href={`/theories/nodes/${slug}${id === "overview" ? "" : `/${id}`}`} key={id} aria-current={section===id ? "page" : undefined}>{label}</Link>)}</nav> : null}
 
         {section === "overview" && node.node_type === "theory_tradition" ? <section className="knowledge-section"><TheorySectionHeading title={`深入了解${node.canonical_name_zh}`} /><div className="knowledge-three-grid">{[{id: "timeline", title: "流派脉络", text: "沿真实事件与来源，了解形成与发展。"}, {id: "concepts", title: "概念与人物", text: "从核心概念、相关人物与学术关系继续。"}, {id: "works", title: "代表作品与阅读路径", text: "回到馆藏文献，沿策展路径深入阅读。"}].map(item => <Link className="knowledge-entry-card" href={`/theories/nodes/${slug}/${item.id}`} key={item.id}><TheoryBanner image={node.cover_url} media={node.cover_media}/><h2>{item.title}</h2><p>{item.text}</p><span>进入页面 <ArrowRight size={16}/></span></Link>)}</div></section> : null}
         {(section === "propositions" || (section === "overview" && node.node_type !== "theory_tradition")) && (node.basic_propositions.length || node.theoretical_boundary) ? <section className="theory-node-foundations" data-module-id="theory-propositions" data-edit-section="content">
@@ -121,12 +123,14 @@ export function KnowledgeNodePublicView({
         {section === "evidence" ? <div data-module-id="theory-curated-claims">{node.evidenceCuration?.configured ? <EvidenceCurationView items={node.evidenceCuration.items} /> : <CuratedClaimSections groups={node.curated_claims} debate={node.node_type === "debate"} />}</div> : null}
 
         {section === "timeline" && timeline.length ? <section className="theory-node-development" data-module-id="theory-development" data-edit-section="timeline">
-          <TheorySectionHeading title="流派脉络" href={`/theories/timeline?node=${encodeURIComponent(slug)}`} action="查看完整时间轴" />
+          <TheorySectionHeading title="流派脉络" />
+          <p className="reference-timeline-introduction" />
           <TheoryTimelinePublicList events={timeline} reference selectedId={selectedTimelineId}/>
         </section> : null}
 
         {["concepts", "relations"].includes(section) && node.direct_relations.length ? <section className="theory-node-relations" data-module-id="theory-relations" data-edit-section="relations">
-          <TheorySectionHeading title="学术关系" href={`/theories/graph?center=${encodeURIComponent(slug)}`} action="打开局部图谱" />
+          <TheorySectionHeading title="学术关系" />
+          <p className="reference-relation-introduction">展示此理论流派与其他理论流派之间的思想联系。</p>
           <div className="reference-theory-relations">{node.direct_relations.map((relation) => {
             const outgoing = relation.source_node === node.id;
             const target = outgoing ? { name: relation.target_name, slug: relation.target_slug } : { name: relation.source_name, slug: relation.source_slug };
@@ -171,7 +175,7 @@ export function KnowledgeNodePublicView({
         {section === "works" && !groupedWorks.length && !readingPaths.length ? <p className="empty-state">尚无已确认并公开的相关馆藏与阅读路径。</p> : null}
         {section === "propositions" && !node.basic_propositions.length && !node.theoretical_boundary ? <p className="empty-state">基本命题与理论边界尚待编辑。</p> : null}
         {section === "relations" && !node.direct_relations.length ? <p className="empty-state">尚无已确认并公开的学术关系。</p> : null}
-        <nav className="knowledge-section-nav"><Link href={`/theories/nodes/${slug}`}>返回条目总览</Link><Link href={`/theories/nodes/${slug}/timeline`}>流派脉络</Link><Link href={`/theories/nodes/${slug}/concepts`}>概念与人物</Link><Link href={`/theories/nodes/${slug}/works`}>作品与阅读路径</Link><Link href={`/theories/nodes/${slug}/propositions`}>基本命题与边界</Link><Link href={`/theories/nodes/${slug}/evidence`}>相关原文</Link><Link href={`/theories/graph?center=${encodeURIComponent(slug)}`}>打开完整图谱</Link></nav>
+        {!referenceSection ? <nav className="knowledge-section-nav"><Link href={`/theories/nodes/${slug}`}>返回条目总览</Link><Link href={`/theories/nodes/${slug}/timeline`}>流派脉络</Link><Link href={`/theories/nodes/${slug}/concepts`}>概念与人物</Link><Link href={`/theories/nodes/${slug}/works`}>作品与阅读路径</Link><Link href={`/theories/nodes/${slug}/propositions`}>基本命题与边界</Link><Link href={`/theories/nodes/${slug}/evidence`}>相关原文</Link><Link href={`/theories/graph?center=${encodeURIComponent(slug)}`}>打开完整图谱</Link></nav> : null}
       </main>
       {footer}
     </>

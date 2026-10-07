@@ -79,11 +79,12 @@ function EditorListPages({ data, page, pageKey, label, ordering, busy, href }: {
   </footer>;
 }
 
-function ReferenceEditorSteps({ steps, current, onChange, label }: {
+function ReferenceEditorSteps({ steps, current, onChange, label, numberedLabels = false }: {
   steps:Array<{id:string;label:string;description?:string}>; current:string; onChange:(id:string)=>void; label:string;
+  numberedLabels?:boolean;
 }) {
   const currentIndex=steps.findIndex(step=>step.id===current);
-  return <nav className="knowledge-reference-steps" aria-label={label}>{steps.map((step,index)=><button key={step.id} type="button" aria-current={current===step.id ? "step" : undefined} data-complete={index<currentIndex} onClick={()=>onChange(step.id)}><span>{index<currentIndex ? <Check size={18}/> : index+1}</span><div><strong>{step.label}</strong>{step.description ? <small>{step.description}</small> : null}</div></button>)}</nav>;
+  return <nav className="knowledge-reference-steps" aria-label={label}>{steps.map((step,index)=><button key={step.id} type="button" aria-current={current===step.id ? "step" : undefined} data-complete={index<currentIndex} onClick={()=>onChange(step.id)}><span>{index<currentIndex ? <Check size={18}/> : index+1}</span><div><strong>{numberedLabels || index<currentIndex ? `${index+1} ` : ""}{step.label}</strong>{step.description ? <small>{step.description}</small> : null}</div></button>)}</nav>;
 }
 
 function knowledgeStudioNodeType(nodeType: string): KnowledgeObjectType {
@@ -1453,7 +1454,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   },[editing?.id,liveTimeline,location,timelineDirty,timelineSections]);
 
   return (
-    <AdminFrame className="timeline-reference-page" eyebrow="理论管理 / 时间线" title="编辑流派时间线事件" description={`${timelineName}${timelineEnglishName ? `（${timelineEnglishName}）` : ""}`} actions={<div className="timeline-reference-progress"><span className="knowledge-current-step">当前：第 {timelineStepIndex+1} / 3 步</span><ReferenceEditorSteps steps={timelineSteps} current={timelineStep} onChange={setTimelineStep} label="时间线编辑步骤"/></div>}>
+    <AdminFrame className="timeline-reference-page" eyebrow="理论管理 / 时间线" title="编辑流派时间线事件" description={`${timelineName}${timelineEnglishName ? `（${timelineEnglishName}）` : ""}`} actions={<div className="timeline-reference-progress"><span className="knowledge-current-step">当前：第 {timelineStepIndex+1} / 3 步</span><ReferenceEditorSteps steps={timelineSteps} current={timelineStep} onChange={setTimelineStep} label="时间线编辑步骤" numberedLabels/></div>}>
       <nav hidden={timelineStep!=="identity"} aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>
       <ErrorNotice message={selectedNode.error} retry={selectedNode.refresh} />
       {nodeId && !selectedNode.data ? <p>尚未读取到所选理论。不会改为另一个理论，也不能在此新建事件。</p> : null}
