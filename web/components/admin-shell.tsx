@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  Bell,
   BookOpen,
   Boxes,
   CalendarDays,
@@ -13,7 +12,6 @@ import {
   ListTodo,
   Menu,
   RefreshCw,
-  Search,
   Tags,
   UserRound,
   X,
@@ -22,6 +20,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ADMIN_VERSION_LABEL } from "@/lib/version";
+import { logoutCurrentSession } from "@/lib/api";
 import { AdminSessionContext } from "@/lib/admin-session";
 import { adminLoginHref, adminTaskScope, safeAdminHref } from "@/lib/admin-route-context";
 import { Wordmark } from "./site-header";
@@ -85,6 +84,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const focusMode = false;
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -166,6 +167,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   const user = session.user;
+  const currentSection = navigation.find(section => pathname === "/admin/review" && searchParams.get("workspace") === "curation" ? section.key === "work" : section.match.some(match => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`))));
+  const currentChild = currentSection?.children.find(([href]) => {
+    const [path, query] = href.split("?");
+    return path === pathname && (query ? Array.from(new URLSearchParams(query)).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") && !searchParams.get("workspace"));
+  });
   const embeddedPreview = searchParams.get("embed") === "1" && (pathname.startsWith("/admin/preview/") || pathname === "/admin/about/preview" || /^\/admin\/recommendations\/issues\/[^/]+\/preview$/.test(pathname));
   if (embeddedPreview) return <AdminSessionContext.Provider value={user}><div className="admin-embedded-preview">{children}</div></AdminSessionContext.Provider>;
   const capabilities = user.capabilities === undefined
@@ -211,7 +217,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Link className="admin-nav-primary" aria-current={active ? "page" : undefined} href={primaryHref} prefetch={false} onClick={closeNavigation}>
                 <section.Icon size={17} />
                 <span>{section.label}</span>
-                <ChevronDown size={14} aria-hidden="true" />
               </Link>
               {active ? <div className="admin-nav-children">
                 {section.children.filter(([childHref]) => canViewRoute(childHref)).map(([childHref, childLabel]) => {
@@ -225,7 +230,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>;
           })}
         </nav>
-        <footer><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="admin-version">{ADMIN_VERSION_LABEL}</span></footer>
+        <footer><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="sr-only">{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
       <div className="admin-main" inert={compactNavigation && open}>
         {!focusMode ? <header className="admin-topbar">
@@ -238,13 +243,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><span>后台</span><b>›</b><strong>{scope.title}</strong></div>
-          <form action="/admin/library">
-            <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏……" aria-label="搜索后台馆藏" /></label>
-            <button className="sr-only" type="submit">搜索</button>
-          </form>
-          {canViewRoute("/admin/processing") ? <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link> : null}
-          <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small></p></div>
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{currentChild?.[1] || "编辑内容"}</span></div>
+          <details className="admin-account-menu"><summary className="admin-user"><span>{user.display_name.slice(0, 1)}</span><strong>{user.display_name}</strong><ChevronDown size={13}/></summary><div><Link href="/account" prefetch={false}>我的账户</Link><button type="button" disabled={logoutPending} onClick={async () => { if (logoutPending) return; setLogoutPending(true); setLogoutError(""); try { await logoutCurrentSession(); } catch (error) { setLogoutError(error instanceof Error ? error.message : "退出失败，请重试。"); } finally { setLogoutPending(false); } }}>{logoutPending ? "正在退出…" : "退出登录"}</button>{logoutError ? <p role="alert">{logoutError}</p> : null}</div></details>
         </header> : null}
         <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>
       </div>

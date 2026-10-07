@@ -59,7 +59,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
   const suggestions = (draft.suggestions || {}) as Row;
   const labels = (draft.preview_labels || {}) as Record<string,string>;
   const reference = (id:unknown,previous:unknown) => {const existing=(previous || {}) as Row;return id && typeof id === "string" ? (existing.id === id ? existing : {id,name:labels[id] || "已选择的馆内条目",slug:""}) : null;};
-  const workPool = [base.works, curated.essential_works, curated.foundational_works, curated.recent_works];
+  const workPool = [draft.previewWorks, base.works, curated.essential_works, curated.foundational_works, curated.recent_works];
   const candidateWorks = ((suggestions.works || []) as Row[]).map(row=>({id:row.id,title:row.title || row.name || "",document_type:row.document_type || "book",theories:[],topics:[],language:"",abstract:row.description || "",edition:null}));
   workPool.push(candidateWorks);
   if (type === "reading_path") return {...defaults,...draft,primary_discipline_data:base.primary_discipline_data || null, items:((draft.stages || []) as Row[]).flatMap((stage,stageIndex) => ((stage.items || []) as Row[]).map((item,index) => {const saved = ((base.items || []) as Row[]).find(row => (item.id && row.id === item.id) || (item.work && row.work === item.work) || (item.node && row.node === item.node)); return {id:item.id || `${stageIndex}-${index}`,reading_order:index+1,stage_name:stage.name,stage_description:stage.description,recommendation_reason:item.recommendation_reason,prerequisite:item.prerequisite,is_required:item.is_required,work_data:item.work ? saved?.work_data || {id:item.work,title:item.work_name,detail_href:`/works/${item.work}`} : null,node_data:item.node ? saved?.node_data || {id:item.node,canonical_name_zh:item.node_name,slug:"",summary:""}:null};}))};
@@ -114,7 +114,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const fields = form ? flatten(form.props.children) : [];
   const groups = fields.map(node => ({node, section:sectionFor(node)}));
   const evidenceType: EvidenceCurationType | null = objectType === "scholar" || objectType === "topic" ? objectType : ["theory", "concept", "debate", "research_problem"].includes(objectType) ? "node" : null;
-  const sections = Object.entries(sectionLabels).filter(([id]) => groups.some(row => row.section === id) || ["publication","media"].includes(id) || (id === "passages" && evidenceType)).map(([id,label]) => ({id,label}));
+  const sections = Object.entries(sectionLabels).filter(([id]) => groups.some(row => row.section === id) || ["publication","media"].includes(id) || (id === "passages" && evidenceType)).map(([id,label]) => ({id,label:objectType === "scholar" && id === "works" ? "重要文献" : objectType === "scholar" && id === "timeline" ? "生平" : label}));
   const selected = sections.some(row => row.id === active) ? active : "identity";
   const stepGroups = (objectType === "reading_path" ? [
     {label:"路径介绍",ids:["identity","content","relations","media"]},
@@ -122,14 +122,14 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     {label:"预览发布",ids:["publication"]},
   ] : [
     {label: objectType === "scholar" ? "个人介绍" : objectType === "topic" ? "主题介绍" : "基本介绍", ids:["identity","biography","history","media"]},
-    {label: objectType === "scholar" ? "思想与文献" : objectType === "topic" ? "问题与阅读" : "内容与文献", ids:["content","questions","dimensions","methods","concepts","concept-map","works","paths"]},
-    {label: objectType === "topic" ? "学者与原文" : objectType === "scholar" ? "关系与原文" : "关系与时间线", ids:["network","relations","timeline","passages"]},
+    {label: objectType === "scholar" ? "思想与文献" : objectType === "topic" ? "问题与阅读" : "内容与文献", ids:objectType === "scholar" ? ["works","concepts","timeline","concept-map"] : ["content","questions","dimensions","methods","concepts","concept-map","works","paths"]},
+    {label: objectType === "topic" ? "学者与原文" : objectType === "scholar" ? "关系与原文" : "关系与时间线", ids:objectType === "scholar" ? ["network","relations","passages"] : ["network","relations","timeline","passages"]},
     {label:"预览发布",ids:["publication"]},
   ]).filter(step => sections.some(section => step.ids.includes(section.id)));
   const stepped = ["scholar","topic","theory","concept","debate","research_problem","reading_path"].includes(objectType);
   const stepIndex = stepGroups.findIndex(step => step.ids.includes(selected));
-  const stepSections = stepped ? sections.filter(section => stepGroups[stepIndex]?.ids.includes(section.id)) : sections;
-  const firstSection = (index: number) => sections.find(section => stepGroups[index]?.ids.includes(section.id))?.id;
+  const stepSections = stepped ? objectType === "scholar" ? (stepGroups[stepIndex]?.ids || []).flatMap(id => sections.filter(section => section.id === id)) : sections.filter(section => stepGroups[stepIndex]?.ids.includes(section.id)) : sections;
+  const firstSection = (index: number) => objectType === "scholar" ? stepGroups[index]?.ids.find(id => sections.some(section => section.id === id)) : sections.find(section => stepGroups[index]?.ids.includes(section.id))?.id;
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
   const page = objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";

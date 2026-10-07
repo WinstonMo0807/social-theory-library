@@ -72,10 +72,12 @@ export function AdminWorkPagePreview({
   editionId,
   footer,
   embedded = false,
+  embeddedView = "details",
 }: {
   editionId: string;
   footer: ReactNode;
   embedded?: boolean;
+  embeddedView?: "details" | "card";
 }) {
   const routeParams = useSearchParams();
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
@@ -148,7 +150,7 @@ export function AdminWorkPagePreview({
           : null,
       }}
     /></>;
-  if (embedded || routeParams.get("embed") === "1") return page;
+  if (embedded || routeParams.get("embed") === "1") return embeddedView === "card" ? <div className={styles.cardPreview} inert><BookCard work={work} exploreActions/></div> : page;
   const fields = payload.editorial_revision?.changed_fields ?? [];
   const changes = [
     { title: "基本信息", step: "bibliography", fields: fields.filter(field => !/cover|abstract/.test(field)) },

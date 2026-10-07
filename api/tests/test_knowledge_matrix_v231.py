@@ -67,6 +67,35 @@ def create_scholar(name: str, slug: str, *, status: str = "published"):
 
 
 @pytest.mark.django_db
+def test_scholar_essential_work_order_saves_and_publication_keeps_drafts_private(api_client, admin_user):
+    works = [create_published_work(f"编排文献{index}", DocumentType.BOOK, 2010 + index) for index in range(3)]
+    scholar = create_scholar("编排学者", "curated-order", status="draft")
+    path = f"/api/catalog/admin/scholars/{scholar.pk}/"
+    initial = [str(work.pk) for work in works]
+    reordered = [initial[2], initial[0], initial[1]]
+    api_client.force_authenticate(admin_user)
+    saved = editorial_request(api_client, "patch", path, {"curation": {"essential_work_ids": initial}}, format="json")
+    assert saved.status_code == 200
+    assert api_client.get(path).data["curation"]["essential_work_ids"] == initial
+    published = editorial_request(api_client, "patch", path, {"editorial_status": "published"}, format="json")
+    assert published.status_code == 200
+    edited = editorial_request(api_client, "patch", path, {"curation": {"essential_work_ids": reordered}}, format="json")
+    assert edited.status_code == 202
+    assert api_client.get(path).data["curation"]["essential_work_ids"] == reordered
+    api_client.force_authenticate(user=None)
+    public = api_client.get(f"/api/catalog/scholars/{scholar.slug}/")
+    assert public.status_code == 200
+    assert [row["id"] for row in public.data["curated"]["essential_works"]] == initial
+    api_client.force_authenticate(admin_user)
+    revision_id = edited.data["editorial_revision"]["id"]
+    accepted = api_client.post(f"/api/catalog/admin/editorial-revisions/{revision_id}/publish/", {}, format="json")
+    assert accepted.status_code == 200
+    api_client.force_authenticate(user=None)
+    public = api_client.get(f"/api/catalog/scholars/{scholar.slug}/")
+    assert [row["id"] for row in public.data["curated"]["essential_works"]] == reordered
+
+
+@pytest.mark.django_db
 def test_recommendations_are_shared_rotate_together_and_accept_all_document_types(
     api_client,
     admin_user,

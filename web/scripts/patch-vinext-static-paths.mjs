@@ -20,6 +20,15 @@ const patches = [
     patched: "__collectAppPageSearchParams(searchParams).pageSearchParams,",
     description: "request query parameters in server redirect probes",
   },
+  {
+    // Backport https://github.com/cloudflare/vinext/pull/2929 to 0.0.50.
+    // LAN HTTP lacks SubtleCrypto; the existing server already accepts this
+    // legacy cache key. Secure contexts retain the original SHA-256 key.
+    file: "server/app-rsc-cache-busting.js",
+    original: '\tconst digest = await globalThis.crypto.subtle.digest("SHA-256", textEncoder.encode(input));',
+    patched: '\tconst subtle = globalThis.crypto?.subtle;\n\tif (!subtle) return fnv1a64(input);\n\tconst digest = await subtle.digest("SHA-256", textEncoder.encode(input));',
+    description: "RSC cache keys in HTTP LAN browser contexts",
+  },
 ];
 
 for (const { file, original, patched, description } of patches) {

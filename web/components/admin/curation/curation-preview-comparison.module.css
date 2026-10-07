@@ -1,0 +1,22 @@
+.root [hidden] { display: none !important; }
+.focused, .comparison { outline: 1px solid var(--admin-v2-focus, #796a58); outline-offset: 6px; border-radius: 3px; }
+.comparison { padding: 16px; margin: 24px 0; }
+.comparison > h2 { font: 600 30px/1.4 var(--stl-type-serif); margin: 0 0 14px; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.columns > div { border: 1px solid var(--admin-v2-line, #dedbd5); border-radius: 3px; padding: 16px; min-width: 0; }
+.columns > div > h3 { margin: 0 0 14px; font: 600 21px/1.4 var(--stl-type-serif); }
+.columns h3 > small { margin-left: 10px; padding: 4px 8px; border-radius: 3px; color: #fff; background: var(--admin-v2-focus, #796a58); font: 13px/1.4 var(--stl-type-serif); }
+.columns > div > :last-child { margin: 0; padding: 0; border: 0; }
+.columns :global(.knowledge-books-grid), .columns :global(.four-book-grid) { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.columns :global(.book-card) { padding: 0; border: 0; background: none; }
+.columns :global(.book-card).changedCard { outline: 1px solid var(--admin-v2-focus, #796a58); outline-offset: 7px; border-radius: 2px; }
+.columns :global(.book-card-main) { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; }
+.columns :global(.book-cover) { width: 58px; min-height: 80px; height: 80px; }
+.columns :global(.book-meta) { padding: 0; min-width: 0; }
+.columns :global(.book-meta) h3 { font: 600 18px/1.5 var(--stl-type-serif); margin: 0 0 5px; }
+.columns :global(.book-meta) p { font-size: 14px; margin: 0 0 4px; }
+.columns :global(.book-actions), .columns :global(.book-summary-expand), .columns :global(.book-meta .eyebrow) { display: none; }
+.caption { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.caption select { max-width: 100%; border: 0; background: transparent; font: inherit; color: inherit; }
+.caption > small { margin-left: auto; font: inherit; color: var(--admin-v2-muted); }
+@media (max-width: 600px) { .columns { grid-template-columns: 1fr; }.comparison { padding: 10px; }.comparison > h2 { font-size: 24px; } }

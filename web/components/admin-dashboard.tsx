@@ -46,6 +46,6 @@ export function AdminDashboard() {
       {queue.data && !items.length ? <p className="admin-list-state">当前没有未完成的馆藏。</p> : null}
       <Link className="reference-all-link" href="/admin/review">查看全部待办 →</Link>
     </section>
-    <SelectedWorkPreview key={selected?.id || "empty"} currentStep={selected?.current_step} editionId={selected?.edition_id} title={selected?.title} publicHref={publicationPublicHref(selected?.publication)} editHref={destination ? withAdminReturn(destination, "/admin", selected?.current_step) : ""}/>
+    <SelectedWorkPreview key={selected?.id || "empty"} currentStep={selected?.current_step} editionId={selected?.edition_id} title={selected?.title} subtitle={selected ? [selected.contributors?.join("、"), selected.publisher, selected.publication_year ? `${selected.publication_year} 版` : selected.version_label].filter(Boolean).join(" · ") : ""} publicHref={publicationPublicHref(selected?.publication)} editHref={destination ? withAdminReturn(destination, "/admin", selected?.current_step) : ""}/>
   </div>;
 }

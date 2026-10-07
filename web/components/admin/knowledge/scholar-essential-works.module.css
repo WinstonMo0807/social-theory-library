@@ -1,0 +1,23 @@
+.editor {min-width:0;color:var(--ink)}
+.editor h3 {margin:0 0 6px;font-size:1.1rem;font-weight:600}
+.editor > p {margin:0 0 14px;color:var(--muted);font-size:.875rem;line-height:1.6}
+.cards {display:grid;gap:10px}
+.card {display:grid;grid-template-columns:36px minmax(0,1fr);border:1px solid var(--line);border-radius:3px;min-width:0}
+.number {display:flex;align-items:flex-start;justify-content:center;padding-top:37px;border-right:1px solid var(--line);font-size:1.25rem}
+.content {padding:12px;min-width:0}
+.book {display:grid;grid-template-columns:54px minmax(0,1fr) 22px;gap:14px;align-items:start;min-height:80px}
+.cover {width:54px;height:80px;display:block}
+.cover img {width:100%;height:100%;object-fit:contain;object-position:left top}
+.metadata {min-width:0;padding-top:3px}
+.metadata .title {padding:0;border:0;background:none;color:inherit;font:inherit;font-size:1rem;font-weight:600;text-align:left;line-height:1.35;cursor:pointer}
+.metadata small {display:block;font-size:.75rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+.metadata p {margin:5px 0 0;font-size:.75rem;line-height:1.35;color:var(--muted)}
+.book .handle {align-self:center;padding:2px;border:0;background:none;color:var(--muted);cursor:grab;touch-action:none}
+.book .handle:active {cursor:grabbing}
+.reason {display:grid;gap:5px;margin-top:9px;font-size:.875rem}
+.reason textarea {box-sizing:border-box;min-height:70px;width:100%;resize:none;border:1px solid var(--line);border-radius:3px;background:transparent;color:var(--ink);opacity:1}
+.selection {display:flex;gap:6px;margin-top:8px}
+.selection select {min-width:0;flex:1}
+.selection button {white-space:nowrap}
+.editor button:focus-visible {outline:2px solid var(--ink);outline-offset:3px}
+@media(max-width:600px) {.card{grid-template-columns:28px minmax(0,1fr)}.content{padding:10px}.book{gap:10px;grid-template-columns:48px minmax(0,1fr) 20px}.cover{width:48px;height:74px}.selection{flex-wrap:wrap}}

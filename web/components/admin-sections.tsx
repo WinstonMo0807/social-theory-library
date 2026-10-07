@@ -40,6 +40,8 @@ import { CurationSelectionPreview } from "@/components/admin/curation/curation-d
 import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
+import { ScholarEssentialWorks } from "@/components/admin/knowledge/scholar-essential-works";
+import type { ApiWork } from "@/lib/api/public-catalog";
 import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
 import { AdminReaderPreview } from "@/components/admin/admin-reader-preview";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
@@ -1005,6 +1007,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       : null,
   );
   const [draft, setDraftState] = useState<ScholarDraft>({ ...emptyScholar, name: createName });
+  const [essentialWorks, setEssentialWorks] = useState<ApiWork[]>([]);
   const [message, setMessage] = useState("");
   const [portraitRevision, setPortraitRevision] = useState(0);
   const unsaved = useRef(false);
@@ -1226,7 +1229,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
         {!editorOnly ? <CurationSelectionPreview key={selectedScholar?.id || "empty-scholar"} item={selectedScholar ? { object_type: "scholar_profile", object_id: selectedScholar.id, title: selectedScholar.preferred_name, label: "学者", edit_url: `/admin/scholars/${selectedScholar.id}`, can_edit: true } : undefined} returnTo={`/admin/scholars${requestedQuery ? `?q=${encodeURIComponent(requestedQuery)}` : ""}`}/> : null}
-        {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
+        {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={{...draft, previewWorks:essentialWorks}} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
           <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
           <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div></header>
@@ -1357,10 +1360,11 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
             <p>系统依据作者贡献和共同流派、主题给出候选，管理员选择后才进入公开学者页。</p>
-            <CuratedSelector
-              label="重要文献"
+            <ScholarEssentialWorks data-editor-section="works"
               options={draft.suggestions.works ?? []}
               selected={draft.essentialWorkIds}
+              works={essentialWorks}
+              onResolve={setEssentialWorks}
               onChange={(essentialWorkIds) => setDraft({ ...draft, essentialWorkIds })}
             />
             <CuratedSelector
