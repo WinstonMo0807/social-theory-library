@@ -37,6 +37,7 @@
 .is-inline-taxonomy .taxonomy-form-actions .button { margin:0;min-width:116px;min-height:40px;border-radius:3px;padding:9px 18px;font-size:14px; }
 .discipline-admin-page .taxonomy-form-actions .button:last-child { min-width:154px; }
 .is-inline-taxonomy .fixed-editor-preview { display:grid;grid-template-columns:285px minmax(0,1fr);align-items:center;padding:12px 16px 0;position:static; }
+.discipline-admin-page .fixed-editor-preview { align-self:stretch;grid-template-rows:auto auto minmax(0,1fr) auto; }
 .is-inline-taxonomy .fixed-editor-preview>header { grid-column:1;grid-row:1;padding:0; }
 .is-inline-taxonomy .fixed-editor-preview>header strong { font:700 19px/1.5 var(--stl-type-serif);white-space:nowrap; }
 .is-inline-taxonomy .fixed-editor-preview>header span { display:none; }
@@ -47,12 +48,12 @@
 .is-inline-taxonomy .fixed-editor-preview-tools [aria-label="预览内容"] button { width:75px;padding-inline:8px; }
 .is-inline-taxonomy .fixed-editor-preview-tools [aria-label="预览尺寸"] button { width:63px;padding-inline:8px; }
 .is-inline-taxonomy .fixed-editor-preview-tools [aria-label="预览尺寸"] svg { display:none; }
-.is-inline-taxonomy .fixed-editor-preview-tools>button { min-width:116px; }
+.is-inline-taxonomy .fixed-editor-preview-tools>button { min-width:116px;border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface); }
 .is-inline-taxonomy .fixed-editor-preview-tools button[aria-pressed=true] { background:var(--admin-v2-ink);color:var(--admin-v2-surface); }
 .is-inline-taxonomy .taxonomy-preview-location,.is-inline-taxonomy .fixed-preview-canvas,.is-inline-taxonomy .taxonomy-preview-footer { grid-column:1/-1; }
 .taxonomy-preview-location { padding:10px 14px;margin-top:14px;border:1px solid var(--admin-v2-line);border-bottom:0;border-radius:3px 3px 0 0;font:13px/22px var(--stl-type-sans); }
 .admin-shell .taxonomy-preview-location select { height:22px;min-height:0;border:0;padding:0 8px;background:transparent;color:var(--admin-v2-ink);font:inherit;max-width:90%; }
-.is-inline-taxonomy .fixed-preview-canvas { max-height:696px;background:var(--admin-v2-surface);border:1px solid var(--admin-v2-line); }
+.is-inline-taxonomy .fixed-preview-canvas { max-height:696px;scrollbar-gutter:auto;background:var(--admin-v2-surface);border:1px solid var(--admin-v2-line); }
 .taxonomy-preview-footer { display:flex;justify-content:space-between;gap:12px;padding:14px 18px;background:var(--admin-v2-wash);color:#817c73;font-size:13px; }
 .taxonomy-preview-footer small { font-size:12px; }
 .admin-content .subdiscipline-admin-page>.admin-page-title { margin-bottom:32px; }
@@ -63,7 +64,7 @@
 .subdiscipline-reference-workspace .fixed-editor-panel { border-radius:0 3px 3px 0; }
 .subdiscipline-reference-workspace .fixed-editor-fields form { min-height:756px; }
 .subdiscipline-reference-workspace .fixed-editor-fields { padding:23px 20px 17px; }
-.subdiscipline-reference-workspace .fixed-editor-preview { grid-template-columns:138px minmax(0,1fr);padding-inline:18px; }
+.subdiscipline-reference-workspace .fixed-editor-preview { grid-template-columns:138px minmax(0,1fr);padding-inline:18px;align-self:stretch;align-content:start; }
 .subdiscipline-reference-workspace .fixed-editor-preview-tools [aria-label="预览内容"] button { width:80px; }
 .subdiscipline-reference-workspace .fixed-editor-preview-tools { gap:24px; }
 .subdiscipline-reference-workspace .fixed-editor-preview-tools>button { min-width:96px;padding-inline:10px; }
@@ -157,10 +158,14 @@
   .admin-shell:has(.taxonomy-admin-page):not(.focus-mode) .admin-main { margin-left:var(--taxonomy-sidebar-width); }
   .admin-shell:has(.taxonomy-admin-page) .admin-content { padding-right:20px;padding-left:20px;padding-bottom:12px; }
   .admin-shell:has(.subdiscipline-admin-page) .admin-content { padding-right:8px;padding-left:12px; }
-  .admin-shell:has(.taxonomy-admin-page) .admin-logo { height:116px;padding:20px 30px; }
-  .admin-shell:has(.taxonomy-admin-page) .admin-logo .wordmark { font-size:27px; }
+  .admin-shell:has(.taxonomy-admin-page) .admin-logo { height:108px;padding:20px 30px; }
+  .admin-shell:has(.taxonomy-admin-page) .admin-logo .wordmark { font-size:26px; }
+  .admin-shell:has(.subdiscipline-admin-page) .admin-logo { height:98px;padding:15px 24px; }
+  .admin-shell:has(.subdiscipline-admin-page) .admin-logo .wordmark { font-size:24px; }
   .admin-shell:has(.taxonomy-admin-page) .admin-sidebar nav .admin-nav-primary { padding-right:20px!important;padding-left:16px!important;font-size:16px!important;gap:6px; }
-  .admin-shell:has(.taxonomy-admin-page) .admin-nav-children { margin-left:40px;padding-left:0;border:0; }
+  .admin-shell:has(.taxonomy-admin-page) .admin-nav-children { margin:6px 0 7px 40px;padding-left:0;border:0;gap:1px; }
+  .admin-shell:has(.subdiscipline-admin-page) .admin-sidebar nav .admin-nav-primary { height:42px!important;min-height:42px!important; }
+  .admin-shell:has(.subdiscipline-admin-page) .admin-nav-children { margin:10px 0 6px 40px;gap:2px; }
   .admin-shell:has(.taxonomy-admin-page) .admin-sidebar nav .admin-nav-children a.active { border-left:2px solid var(--admin-v2-ink)!important;border-radius:0!important;background:var(--admin-v2-wash); }
   .admin-shell:has(.taxonomy-admin-page) .admin-sidebar footer { padding-left:24px;font-size:13px; }
 }

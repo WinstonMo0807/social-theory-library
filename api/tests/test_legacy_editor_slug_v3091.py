@@ -97,3 +97,22 @@ def test_reference_form_content_patch_preserves_hidden_metadata(api_client, admi
     row.refresh_from_db()
     assert {name: getattr(row, name) for name in protected} == before
     assert getattr(row, field) == ("旧内容" if published else "可见简介已修改")
+
+
+@pytest.mark.parametrize("published", [False, True])
+@pytest.mark.parametrize("kind", ["scholars", "topics", "disciplines", "subdisciplines", "theory-system/nodes", "theory-system/reading-paths"])
+def test_legacy_unicode_public_address_keeps_publication_and_draft_boundaries(
+    api_client, admin_user, kind, published,
+):
+    row, admin_url, field, _target = object_editor(kind, published)
+    row.slug = "旧中文地址"
+    row.save(update_fields=["slug"])
+    api_client.force_authenticate(admin_user)
+    saved = editorial_request(api_client, "patch", admin_url, {field: "仅在草稿中的新内容"}, format="json")
+    assert saved.status_code == (202 if published else 200), saved.data
+    api_client.force_authenticate(user=None)
+    response = api_client.get(f"/api/catalog/{kind}/{row.slug}/")
+    assert response.status_code == (200 if published else 404)
+    if published:
+        assert response.data["slug"] == "旧中文地址"
+        assert response.data[field] == "旧内容"

@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import {
-  BookOpen,
-  Boxes,
-  CalendarDays,
-  ChartNoAxesCombined,
-  CircleDot,
+  LibraryBig,
+  NotebookText,
+  CalendarCheck,
+  Settings,
+  Layers,
   ChevronDown,
-  LayoutDashboard,
-  ListTodo,
+  House,
   Menu,
   RefreshCw,
-  Tags,
+  FileText,
   UserRound,
   X,
 } from "lucide-react";
@@ -26,15 +25,15 @@ import { adminLoginHref, adminTaskScope, safeAdminHref } from "@/lib/admin-route
 import { Wordmark } from "./site-header";
 
 const navigation = [
-  { key: "work", primary: "/admin", label: "工作台", Icon: LayoutDashboard, match: ["/admin"], children: [["/admin", "今日工作"], ["/admin/review?workspace=curation", "待完成"], ["/admin/uploads", "最近上传"]] },
-  { key: "library", primary: "/admin/uploads", label: "馆藏", Icon: BookOpen, match: ["/admin/library", "/admin/uploads", "/admin/review", "/admin/intake", "/admin/cataloging", "/admin/" + "media", "/admin/publication"], children: [["/admin/library", "馆藏列表"], ["/admin/uploads", "上传 PDF"], ["/admin/review", "待完成"], ["/admin/" + "media", "图片库"]] },
-  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: CircleDot, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "流派列表"], ["/admin/theories/disciplines", "学科与子学科"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/reading-paths", "阅读路径"]] },
+  { key: "work", primary: "/admin", label: "工作台", Icon: House, match: ["/admin"], children: [["/admin", "今日工作"], ["/admin/review?workspace=curation", "待完成"], ["/admin/uploads", "最近上传"]] },
+  { key: "library", primary: "/admin/uploads", label: "馆藏", Icon: LibraryBig, match: ["/admin/library", "/admin/uploads", "/admin/review", "/admin/intake", "/admin/cataloging", "/admin/" + "media", "/admin/publication"], children: [["/admin/library", "馆藏列表"], ["/admin/uploads", "上传 PDF"], ["/admin/review", "待完成"], ["/admin/" + "media", "图片库"]] },
+  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: Layers, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "流派列表"], ["/admin/theories/disciplines", "学科与子学科"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/reading-paths", "阅读路径"]] },
   { key: "scholars", primary: "/admin/scholars", label: "学者", Icon: UserRound, match: ["/admin/scholars", "/admin/" + "people"], children: [["/admin/scholars", "学者列表"], ["/admin/scholars/new", "新建学者"], ["/admin/scholars/people", "人物查重"]] },
-  { key: "topics", primary: "/admin/topics", label: "主题", Icon: Tags, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"]] },
-  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: CalendarDays, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
-  { key: "site", primary: "/admin/about", label: "网站内容", Icon: Boxes, match: ["/admin/about"], children: [["/admin/about", "首页与关于书库"], ["/admin/about?section=brand", "品牌与页脚"]] },
-  { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: ListTodo, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?surface=documents", "文字识别"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/query-lexicon", "检索用语"], ["/admin/processing/status", "运行检查"]] },
-  { key: "system", primary: "/admin/storage", label: "系统管理", Icon: ChartNoAxesCombined, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
+  { key: "topics", primary: "/admin/topics", label: "主题", Icon: FileText, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"]] },
+  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: CalendarCheck, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
+  { key: "site", primary: "/admin/about", label: "网站内容", Icon: NotebookText, match: ["/admin/about"], children: [["/admin/about", "首页与关于书库"], ["/admin/about?section=brand", "品牌与页脚"]] },
+  { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: RefreshCw, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?surface=documents", "文字识别"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/query-lexicon", "检索用语"], ["/admin/processing/status", "运行检查"]] },
+  { key: "system", primary: "/admin/storage", label: "系统管理", Icon: Settings, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
 ] as const;
 
 const routeCapabilities: Record<string, string[]> = {

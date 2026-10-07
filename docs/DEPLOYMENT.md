@@ -1,5 +1,11 @@
 # 部署说明
 
+## 3.0.9.1隔离候选，生产未切换
+
+2026-10-07当前隔离候选085ad808ecaff6640dfefb4b6459b2064478582c，tree 40eb1a02406be799fa9aa35b4f6442543cb348e4，源码归档SHA256 bea4d17ef580e0176123266bf89976d8ffdce845aff610c38c29788f76c977d5。NAS构建、43项PG定向检查、迁移检查与正常鉴权浏览器通过，实际保存/预览范围见逐图报告。隔离stl-v3091-ui-*使用独立恢复数据库和媒体副本，LAN 19091无公网隧道。源码开发分支已推送，main未合并；同日公网ready实际为3.0.9、database=true、pending_migrations=0。
+
+59图完整视觉/功能验收尚未完成，后续中文公开地址与侧栏/预览细节修正待冻结。原生产镜像、源码、环境、Compose与恢复资料在storage/backups/pre-v3091-20261005/deploy-record保留；10月6日数据库备份已隔离恢复与保护摘要核对，正式切换前须重新核对备份时效及最新保护摘要。无本批schema迁移，不删除生产卷、ORIGINAL PDF、锁定元数据、确认关系、私人数据、历史文件、模型或活动索引。
+
 ## 3.0.9 管理端视觉与默认版本已上线
 
 NAS 于 2026-10-03T01:27:06+08:00 完成公网切换。运行时提交为 `63c7294c66a71cf454160f386666df24998b685a`，API/四 Worker/Beat 使用 `social-theory-library-api:3.0.9-63c7294`，Web 使用 `social-theory-library-web:3.0.9-63c7294`。生产 `/api/ready/` 返回 3.0.9、数据库可用且无待迁移；`catalog.0064_work_edition_defaults` 已成功执行。切换前新鲜备份、源码归档、镜像 ID、受保护数据与活动索引对照及回退入口保存在 NAS `storage/backups/pre-v309-20261003/deploy-record`，原件、模型、索引、队列和历史备份未删除。
