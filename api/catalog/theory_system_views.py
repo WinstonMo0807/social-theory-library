@@ -853,50 +853,16 @@ class AdminKnowledgeNodeDetailView(
         serializer = self.get_serializer(node, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         values = dict(serializer.validated_data)
-        aliases = values.get("aliases")
-        if aliases is not None:
-            values["aliases"] = [dict(row) for row in aliases]
-        links = values.get("discipline_links")
-        if links is not None:
-            values["discipline_links"] = [
-                {
-                    "discipline_id": str(row["discipline"].id),
-                    "relation_type": row.get("relation_type", "related"),
-                    "discipline_specific_summary": row.get(
-                        "discipline_specific_summary", ""
-                    ),
-                    "sort_order": row.get("sort_order", 0),
-                    "status": row.get("status", "pending"),
-                }
-                for row in links
-            ]
-        subdiscipline_links = values.get("subdiscipline_links")
-        if subdiscipline_links is not None:
-            values["subdiscipline_links"] = [
-                {
-                    "subdiscipline_id": str(row["subdiscipline"].id),
-                    "is_primary": row.get("is_primary", False),
-                    "relation_role": row.get("relation_role", ""),
-                    "source": row.get("source", ""),
-                    "confidence": row.get("confidence", 0),
-                    "sort_order": row.get("sort_order", 0),
-                    "status": row.get("status", "pending"),
-                }
-                for row in subdiscipline_links
-            ]
-        topic_links = values.get("topic_links")
-        if topic_links is not None:
-            values["topic_links"] = [
-                {
-                    "topic_id": str(row["topic"].id),
-                    "relation_label": row.get("relation_label", ""),
-                    "source": row.get("source", ""),
-                    "confidence": row.get("confidence", 0),
-                    "sort_order": row.get("sort_order", 0),
-                    "status": row.get("status", "pending"),
-                }
-                for row in topic_links
-            ]
+        from catalog.services.knowledge_nodes import NODE_TAXONOMY_FIELDS, node_taxonomy_patch_rows
+
+        if values.get("aliases") is not None:
+            values["aliases"] = [dict(row) for row in values["aliases"]]
+        for field_name, (id_field, _fields) in NODE_TAXONOMY_FIELDS.items():
+            if field_name not in values:
+                continue
+            foreign_key = id_field.removesuffix("_id")
+            rows = [{id_field: str(row[foreign_key].pk), **{key: value for key, value in row.items() if key != foreign_key}} for row in values[field_name]]
+            values[field_name] = node_taxonomy_patch_rows(node, field_name, rows)
         from catalog.services.editorial_revision import (
             EditorialRevisionError,
             changed_editorial_patch,

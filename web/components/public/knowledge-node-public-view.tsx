@@ -18,6 +18,30 @@ type KnowledgeNodePayload = NonNullable<Awaited<ReturnType<typeof loadKnowledgeN
 type ReadingPathPayload = Awaited<ReturnType<typeof loadNormalizedReadingPaths>>;
 type TimelinePayload = Awaited<ReturnType<typeof loadNormalizedTheoryTimeline>>;
 
+function TheoryOverview({node,footer,pagination}:{node:KnowledgeNodePayload;footer:ReactNode;pagination?:ReactNode}) {
+  const works=[...new Map(Object.values(node.work_groups).flat().flatMap(relation=>relation.work_data?[[relation.work_data.id,relation.work_data] as const]:[])).values()];
+  return <><main className="page-shell theory-system-page theory-node-page v307-knowledge theory-v307 theory-reference-overview">
+    <section className="theory-reference-overview-hero">
+      <TheoryBanner image={node.cover_url} media={node.cover_media}/>
+      <div className="theory-reference-overview-intro">
+        <nav className="theory-reference-breadcrumb" aria-label="当前位置"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{node.canonical_name_zh}</span></nav>
+        <h1 data-edit-section="identity">{node.canonical_name_zh}</h1>
+        {node.canonical_name_en?<p className="theory-reference-original-name" data-edit-section="original-name">{node.canonical_name_en}</p>:null}
+        <div className="theory-reference-primary" data-edit-section="primary-discipline">{node.primary_discipline?node.primary_discipline.slug?<Link href={`/theories/disciplines/${node.primary_discipline.slug}`}>{node.primary_discipline.name}</Link>:<span>{node.primary_discipline.name}</span>:null}</div>
+        <p className="theory-reference-description" data-edit-section="summary">{node.summary}</p>
+      </div>
+    </section>
+    <nav className="theory-reference-overview-tabs" aria-label="理论页面">{[["overview","概览"],["questions","主要问题"],["concepts","核心概念"],["scholars","代表人物"],["works","相关原文"]].map(([id,label])=><Link href={`#${id}`} key={id} aria-current={id==="overview"?"page":undefined}>{label}</Link>)}</nav>
+    <div className="theory-reference-overview-grid" id="overview">
+      <section id="questions" data-edit-section="questions"><h2>主要问题</h2><ul>{node.core_questions.map((question,index)=><li key={`${index}-${question}`}>{question}</li>)}</ul></section>
+      <section id="concepts"><h2>核心概念</h2><div className="theory-reference-concepts-space"/></section>
+      <section id="scholars" data-edit-section="relations"><h2>代表人物</h2><div className="theory-reference-people">{node.representative_scholars.map(person=><article key={person.id}><span className="theory-reference-person-image">{person.portrait_url?<img src={person.portrait_url} alt={person.name}/>:null}</span>{person.scholar_slug?<Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link>:<strong>{person.name}</strong>}{person.original_name?<small>{person.original_name}</small>:null}</article>)}</div></section>
+      <section id="works" data-edit-section="works"><h2>相关原文</h2><div className="theory-reference-evidence">{works.map(work=><WorkCompactCard key={work.id} work={work}/>)}</div></section>
+    </div>
+    {pagination}
+  </main>{footer}</>;
+}
+
 export function KnowledgeNodePublicView({
   node,
   timeline,
@@ -42,6 +66,8 @@ export function KnowledgeNodePublicView({
   const disciplineLinks = [node.primary_discipline, ...node.related_disciplines].filter(Boolean);
   const subdisciplines = (node.subdiscipline_links ?? []).map((row) => row.subdiscipline);
   const topics = (node.topic_links ?? []).map((row) => row.topic);
+
+  if(section==="overview" && node.node_type==="theory_tradition")return <TheoryOverview node={node} footer={footer} pagination={pagination}/>;
 
   return (
     <>

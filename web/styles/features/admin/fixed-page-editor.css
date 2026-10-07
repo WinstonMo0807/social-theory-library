@@ -14,6 +14,7 @@
 .fixed-preview-tools button[aria-pressed=true] { background:var(--ink); color:var(--surface); }
 .fixed-preview-tools span { margin-left:auto; color:var(--muted); font-size:11px; }
 .fixed-preview-canvas { max-height:calc(100vh - 225px); overflow:auto; background:var(--wash); scrollbar-gutter:stable; }
+.fixed-preview-canvas[data-fit-width=true] { overflow-x:hidden; }
 .fixed-preview-stage { position:relative; margin:0 auto; overflow:hidden; background:var(--paper); }
 .fixed-preview-frame { display:block; position:absolute; left:0; top:0; border:0; transform-origin:top left; background:var(--paper); }
 .fixed-preview-document { display:flow-root; }

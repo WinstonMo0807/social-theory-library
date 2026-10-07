@@ -3,6 +3,7 @@
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
+import { buildTheoryNodePayload, theoryNodeToDraft as nodeToDraft, type TheoryNodeDraft } from "@/lib/theory-node-draft";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
 import { safeAdminHref } from "@/lib/admin-route-context";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
@@ -19,7 +20,6 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  Save,
   Search,
   Trash2,
   X,
@@ -232,10 +232,6 @@ const statusLabels: Record<string, string> = {
   insufficient_evidence: "证据不足",
 };
 
-function lines(value: string) {
-  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-}
-
 function editorLines(value: string) {
   return value === "" ? [] : value.split(/\r?\n/);
 }
@@ -283,19 +279,21 @@ function useAdminData<T>(path: string | null) {
   return { data: current ? result.data : null, loading: Boolean(path && (loading || !current)), error: current ? result.error : "", refresh };
 }
 
-function AdminFrame({ eyebrow, title, description, actions, children }: {
+function AdminFrame({ eyebrow, title, description, actions, children, className = "", hideHeader = false }: {
   eyebrow: string;
   title: string;
   description: string;
   actions?: ReactNode;
   children: ReactNode;
+  className?: string;
+  hideHeader?: boolean;
 }) {
   return (
-    <div className="admin-page theory-system-admin">
-      <header className="admin-page-title theory-admin-title">
+    <div className={`admin-page theory-system-admin ${className}`}>
+      {!hideHeader ? <header className="admin-page-title theory-admin-title">
         <div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
         {actions ? <div className="theory-admin-title-actions">{actions}</div> : null}
-      </header>
+      </header> : null}
       {children}
     </div>
   );
@@ -310,28 +308,7 @@ function ErrorNotice({ message, retry }: { message?: string; retry?: () => void 
   return <div className="theory-admin-error" role="alert"><span>{message}</span>{retry ? <button type="button" onClick={retry}>重试</button> : null}</div>;
 }
 
-type NodeDraft = {
-  node_type: string;
-  canonical_name_zh: string;
-  canonical_name_en: string;
-  slug: string;
-  aliases: Array<{ alias: string; language: string; alias_type: string }>;
-  summary: string;
-  definition: string;
-  core_questions: string;
-  basic_propositions: string;
-  theoretical_boundary: string;
-  start_year: string;
-  end_year: string;
-  period_label: string;
-  parent: string;
-  primary_discipline: string;
-  related_disciplines: string[];
-  subdisciplines: string[];
-  topics: string[];
-  status: string;
-  sort_order: number;
-};
+type NodeDraft = TheoryNodeDraft;
 
 const emptyNodeDraft: NodeDraft = {
   node_type: "theory_tradition",
@@ -356,38 +333,6 @@ const emptyNodeDraft: NodeDraft = {
   sort_order: 0,
 };
 
-function nodeToDraft(node: KnowledgeNode): NodeDraft {
-  return {
-    node_type: node.node_type,
-    canonical_name_zh: node.canonical_name_zh,
-    canonical_name_en: node.canonical_name_en,
-    slug: node.slug,
-    aliases: node.aliases.map((item) => ({
-      alias: item.alias,
-      language: item.language || "zh-CN",
-      alias_type: item.alias_type || "alias",
-    })),
-    summary: node.summary,
-    definition: node.definition,
-    core_questions: node.core_questions.join("\n"),
-    basic_propositions: node.basic_propositions.join("\n"),
-    theoretical_boundary: node.theoretical_boundary,
-    start_year: node.start_year?.toString() ?? "",
-    end_year: node.end_year?.toString() ?? "",
-    period_label: node.period_label,
-    parent: node.parent ?? "",
-    primary_discipline: node.primary_discipline ?? "",
-    related_disciplines: node.discipline_links
-      .filter((item) => item.relation_type !== "primary")
-      .map((item) => item.discipline.id),
-    subdisciplines: (node.subdiscipline_links ?? []).map(
-      (item) => item.subdiscipline.id,
-    ),
-    topics: (node.topic_links ?? []).map((item) => item.topic.id),
-    status: node.status,
-    sort_order: node.sort_order,
-  };
-}
 
 export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: string }) {
   const search = useSearchParams();
@@ -429,6 +374,7 @@ function TheoryNodesDirectory() {
 }
 
 function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: string; initialLegacyId: string }) {
+  const router = useRouter();
   const theoryLocation = useEditorListLocation();
   const nodePage = adminPageNumber(theoryLocation.search.get("page"));
   const [editConflict, setEditConflict] = useState(false);
@@ -531,67 +477,20 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     const token = getServerSessionCredential();
     if (!token) return false;
     const actionKey = "save-theory-node";
+    if (editing && !nodeDirty && !prefills.ids.length) {
+      setMessage("当前没有需要保存的修改。");
+      setMessageState("success");
+      return true;
+    }
     if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这份理论或概念资料？读者将看到本页内容。")) return false;
     if (!startAction(actionKey)) return false;
     setEditConflict(false);
     setMessage("");
     setMessageState("pending");
-    const aliases = draft.aliases
-      .map((item) => ({
-        alias: item.alias.trim(),
-        language: item.language || "zh-CN",
-        alias_type: item.alias_type || "alias",
-      }))
-      .filter((item) => item.alias);
-    const discipline_links = draft.related_disciplines.map((discipline_id, index) => ({
-      discipline_id,
-      relation_type: "related",
-      discipline_specific_summary: "",
-      sort_order: index,
-      status: draft.status === "published" ? "published" : "pending",
-    }));
-    const subdiscipline_links = draft.subdisciplines.map(
-      (subdiscipline_id, index) => ({
-        subdiscipline_id,
-        is_primary: index === 0,
-        relation_role: index === 0 ? "home" : "related",
-        source: "editorial",
-        confidence: 1,
-        sort_order: index,
-        status: draft.status === "published" ? "published" : "pending",
-      }),
-    );
-    const topic_links = draft.topics.map((topic_id, index) => ({
-      topic_id,
-      relation_label: index === 0 ? "核心研究主题" : "相关研究主题",
-      source: "editorial",
-      confidence: 1,
-      sort_order: index,
-      status: draft.status === "published" ? "published" : "pending",
-    }));
     const payload = {
+      ...buildTheoryNodePayload(draft, editing, draftOnly),
       assisted_candidates: prefills.ids,
       assisted_candidate_decisions: prefills.decisions,
-      node_type: draft.node_type,
-      canonical_name_zh: draft.canonical_name_zh,
-      canonical_name_en: draft.canonical_name_en,
-      slug: draft.slug,
-      aliases,
-      summary: draft.summary,
-      definition: draft.definition,
-      core_questions: lines(draft.core_questions),
-      basic_propositions: lines(draft.basic_propositions),
-      theoretical_boundary: draft.theoretical_boundary,
-      start_year: draft.start_year ? Number(draft.start_year) : null,
-      end_year: draft.end_year ? Number(draft.end_year) : null,
-      period_label: draft.period_label,
-      parent: draft.parent || null,
-      primary_discipline: draft.primary_discipline || null,
-      discipline_links,
-      subdiscipline_links,
-      topic_links,
-      status: draftOnly ? (editing?.status ?? "draft") : draft.status,
-      sort_order: draft.sort_order,
     };
     try {
       const saved = await apiRequest<KnowledgeNode>(
@@ -603,6 +502,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       prefills.clear();
       setPendingRevision(saved.editorial_revision ?? null);
       setDraft(nodeToDraft(saved));
+      if (!editing) router.replace(`/admin/theories/${saved.id}${window.location.search}`);
       setMessage(saved.editorial_revision
         ? `本页资料已保存（${new Date().toLocaleTimeString("zh-CN")}），尚未发布。公开页保持原内容，你仍在当前编辑页。`
         : `本页资料已保存（${new Date().toLocaleTimeString("zh-CN")}）。${saved.status === "published" ? "当前资料已公开。" : "尚未公开。"}你仍在当前编辑页。`);
@@ -714,26 +614,32 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   }
 
   const openingNode = Boolean(requestedNodeId && !requestedNodeOpened) || Boolean(legacyId && !legacyOpened);
-  const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
+  const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || (editing?.primary_discipline_data?.id===id?editing.primary_discipline_data.name:"") || editing?.discipline_links?.find(item=>item.discipline.id===id)?.discipline.name || entityLabels[id] || "已选择学科";
   const subdisciplineName = (id: string) => editing?.subdiscipline_links?.find((item) => item.subdiscipline.id === id)?.subdiscipline.name || entityLabels[id] || "已选择子学科";
   const topicName = (id: string) => editing?.topic_links?.find((item) => item.topic.id === id)?.topic.name || entityLabels[id] || "已选择主题";
   const nodeName = (id: string) => allNodes.data?.results.find((item) => item.id === id)?.canonical_name_zh || entityLabels[id] || "已选择理论或概念";
   return (
     <AdminFrame
-      eyebrow="内容管理"
-      title={editing ? `编辑理论流派 · ${editing.canonical_name_zh}` : "新建理论或概念"}
+      eyebrow=""
+      title=""
       description=""
-      actions={<><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
+      className="theory-reference-editor"
+      hideHeader
     >
       <div className="theory-node-editor-page">
-        <KnowledgeVisualEditor objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
+        <KnowledgeVisualEditor key={editing?.id || "new"} presentation="theory" editorTitle={`${editing ? "编辑" : "新建"}${draft.node_type==="theory_tradition"?"理论流派":nodeTypeLabels[draft.node_type] || "理论条目"}`} objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
         {openingNode ? <div role="status"><p>正在读取指定理论或概念，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
-        <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
-          <p>保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>
+        <form id="theory-node-form" className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
           <EditorialPrefillNotice state={prefills} />
-          <fieldset disabled={openingNode} style={{ display: "contents" }}>
-          <header><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建条目"}</h2><p>{editing ? `相关文献 ${editing.work_count} · 关联 ${editing.relation_count}` : "先填写名称和简介，其他资料可以稍后补充。"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/admin/preview/knowledge/${knowledgeStudioNodeType(editing.node_type)}/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={14} /></Link><Link href={`/admin/theories/${editing.id}?section=timeline&returnTo=${encodeURIComponent(theoryLocation.href({ node: editing.id }))}`}>管理此理论的时间线</Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">查看公开关系图 <ExternalLink size={14} /></Link></div> : null}</header>
-          <div className="inline-fields"><label><span>标准中文名</span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label><label><span>资料类型</span><select value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}>{editableNodeTypeEntries.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+          <fieldset disabled={openingNode || Boolean(pendingAction)} style={{ display: "contents" }}>
+          <label data-editor-section="identity"><span>中文名 <b aria-hidden="true">*</b></span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label>
+          <label data-editor-section="original-name"><span>原名 <b aria-hidden="true">*</b></span><input aria-required="true" value={draft.canonical_name_en} onChange={(event) => setDraft({ ...draft, canonical_name_en: event.target.value })} /></label>
+          <div className="theory-reference-discipline" data-editor-section="primary-discipline"><EntityPicker label="所属学科" endpoint="/catalog/admin/disciplines/" singleSelect ariaRequired values={onePickerValue(draft.primary_discipline, disciplineName(draft.primary_discipline))} onChange={(next) => { const selected=next.at(-1);setEntityLabels((current)=>({...current,...pickerLabels(next)}));setDraft({...draft,primary_discipline:selected?.id??"",related_disciplines:draft.related_disciplines.filter(id=>id!==selected?.id)}); }}/></div>
+          <label className="theory-reference-summary" data-editor-section="summary"><span>简介 <b aria-hidden="true">*</b></span><textarea aria-required="true" maxLength={500} rows={6} value={draft.summary} onChange={(event)=>setDraft({...draft,summary:event.target.value})}/><small>{draft.summary.length} / 500</small></label>
+          <details className="theory-reference-other" data-editor-section="identity"><summary>其他信息（别名、关键词、简介来源等）</summary>
+          <label><span>资料类型</span><select value={draft.node_type} onChange={(event)=>setDraft({...draft,node_type:event.target.value})}>{editableNodeTypeEntries.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          <label><span>固定链接</span><input value={draft.slug} onChange={(event)=>setDraft({...draft,slug:event.target.value})}/></label>
+          <label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event)=>setDraft({...draft,sort_order:Number(event.target.value)})}/></label>
           <CurationFieldAssistant
             label="名称"
             scopeId={editing?.id || "new"}
@@ -746,7 +652,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
               canonical_name_en: suggestion.originalName || current.canonical_name_en,
             }))}
           />
-          <label><span>外文名称</span><input value={draft.canonical_name_en} onChange={(event) => setDraft({ ...draft, canonical_name_en: event.target.value })} /></label>
           <details className="theory-editor-group"><summary>其他名称与译名</summary>
           <StructuredRowsEditor
             label="别名和不同译名"
@@ -780,8 +685,14 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
             onAccepted={refreshAssistantRevision}
           />
           </details>
-          <div className="inline-fields three"><ResearchEntityPicker label="主要学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="primary_discipline" values={onePickerValue(draft.primary_discipline, disciplineName(draft.primary_discipline))} onChange={(next) => { const selected = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, primary_discipline: selected?.id ?? "", related_disciplines: draft.related_disciplines.filter((id) => id !== selected?.id) }); }} /><ResearchEntityPicker label="所属理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="parent" values={onePickerValue(draft.parent, nodeName(draft.parent))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing?.id) return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, parent: selected?.id ?? "" }); }} /><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="symbolic-interactionism" /></label></div>
-          <details className="theory-editor-group"><summary>更多学科和主题关联</summary>
+          </details>
+          <label><span>完整定义</span><textarea rows={5} value={draft.definition} onChange={(event) => setDraft({ ...draft, definition: event.target.value })} /></label>
+          <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.core_questions)} onChange={(value) => setDraft({ ...draft, core_questions: value.join("\n") })} addLabel="添加问题" />
+          <StringListEditor label="基本命题" itemLabel="命题" value={editorLines(draft.basic_propositions)} onChange={(value) => setDraft({ ...draft, basic_propositions: value.join("\n") })} addLabel="添加命题" />
+          <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
+          <div className="inline-fields three" data-editor-section="content"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>
+          <div data-editor-section="relations"><ResearchEntityPicker label="所属理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="parent" values={onePickerValue(draft.parent,nodeName(draft.parent))} onChange={(next)=>{const selected=next.at(-1);if(selected?.id===editing?.id)return;setEntityLabels(current=>({...current,...pickerLabels(next)}));setDraft({...draft,parent:selected?.id??""});}}/></div>
+          <details className="theory-editor-group" data-editor-section="relations"><summary>更多学科和主题关联</summary>
           <ResearchEntityPicker label="关联学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="related_disciplines" multiple values={manyPickerValues(draft.related_disciplines, disciplineName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, related_disciplines: next.flatMap((value) => value.id && value.id !== draft.primary_discipline ? [value.id] : []) }); }} />
           <div className="inline-fields">
             <ResearchEntityPicker label="子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="maintenance_theory_nodes" field="subdiscipline_links" multiple values={manyPickerValues(draft.subdisciplines, subdisciplineName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, subdisciplines: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
@@ -806,23 +717,15 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
             return prefills.fill(candidateId, (current) => ({ ...current, subdisciplines: [...new Set([...current.subdisciplines, id])] }));
           }} lookupLabel="获取分类建议" /></div>
           </details>
-          <label><span>简介</span><textarea rows={3} value={draft.summary} onChange={(event) => setDraft({ ...draft, summary: event.target.value })} /></label>
-          <details className="theory-editor-group"><summary>定义、问题、命题与发展时期</summary>
-          <label><span>完整定义</span><textarea rows={5} value={draft.definition} onChange={(event) => setDraft({ ...draft, definition: event.target.value })} /></label>
-          <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.core_questions)} onChange={(value) => setDraft({ ...draft, core_questions: value.join("\n") })} addLabel="添加问题" />
-          <StringListEditor label="基本命题" itemLabel="命题" value={editorLines(draft.basic_propositions)} onChange={(value) => setDraft({ ...draft, basic_propositions: value.join("\n") })} addLabel="添加命题" />
-          <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
-          <div className="inline-fields three"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>
-          </details>
-          <div className="inline-fields"><label><span>审核状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="rejected">拒绝</option><option value="archived">下线</option></select></label><label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>
-          <p>页面图片在媒体面板中选择。请先保存其他未保存内容。</p>
+          <div data-editor-section="publication">
           {editing ? <div className="theory-node-secondary-actions"><ActionButton type="button" state={pendingAction === "load-node-versions" ? "pending" : "idle"} pendingLabel="读取中" disabled={Boolean(pendingAction) && pendingAction !== "load-node-versions"} onClick={() => void loadVersions()}><History size={14} />历史版本</ActionButton></div> : null}
           {versions ? <section className="theory-version-list"><header><strong>历史版本</strong><button type="button" aria-label="关闭历史版本" onClick={() => setVersions(null)}><X size={14} /></button></header>{versions.map((version) => <article key={version.id}><strong>第 {version.version_number} 版</strong><span>{version.change_note || "内容更新"}</span><small>{version.created_by_name || "系统"} · {asDate(version.created_at)}</small></article>)}</section> : null}
           {pendingRevision?.status === "draft" ? <section className="theory-editorial-revision"><div><strong>待发布编辑草稿</strong><p>第 {pendingRevision.revision} 版修改 {pendingRevision.changed_fields.join("、")}。当前公开页仍使用正式内容。</p></div><ActionButton className="button" type="button" state={pendingAction === "publish-node-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(pendingAction) || pendingRevision.has_conflict} onClick={() => void publishRevision()}><Check size={14} />单人确认并发布</ActionButton></section> : null}
           {editing ? <section className="theory-merge-box"><strong><GitMerge size={15} />合并重复理论或概念</strong><p>合并前会计算文献、关系、学者、时间轴和阅读路径的影响。</p><div><ResearchEntityPicker label="选择保留的理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="merge_target" values={onePickerValue(mergeTarget, nodeName(mergeTarget))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing.id || selected?.status === "archived") return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setMergeTarget(selected?.id ?? ""); }} /><ActionButton type="button" state={pendingAction === "merge-theory-node" ? "pending" : "idle"} pendingLabel="正在计算影响" disabled={!mergeTarget || (Boolean(pendingAction) && pendingAction !== "merge-theory-node")} onClick={() => void mergeNode()}>预览并合并</ActionButton></div></section> : null}
           {editing ? <EntityLifecycleActions kind="knowledge-node" id={editing.id} name={editing.canonical_name_zh} status={draft.status} previewHref={`/theories/nodes/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, status: snapshot.status })); setEditing((current) => current ? { ...current, status: snapshot.status } : current); nodes.refresh(); allNodes.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" }); nodes.refresh(); allNodes.refresh(); }} /> : null}
-          <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存本页资料" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{"保存本页草稿"}</ActionButton></div>
-          {message ? <AsyncStatus state={messageState} message={message} /> : null}
+          </div>
+          <footer className="theory-reference-save" data-editor-section="publication"><ActionButton form="theory-node-form" className="button secondary" state={pendingAction==="save-theory-node"?"pending":"idle"} pendingLabel="正在保存" disabled={openingNode || Boolean(pendingAction)} type="submit">保存草稿</ActionButton></footer>
+          {message ? <div role={messageState==="error"?"alert":"status"} className={messageState==="error"?"":"sr-only"}><AsyncStatus state={messageState} message={message}/></div> : null}
           <EditorialConflictHelp visible={editConflict} href={`/admin/theories?node=${editing?.id}`} />
           </fieldset>
         </form>

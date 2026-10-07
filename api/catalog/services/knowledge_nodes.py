@@ -30,9 +30,83 @@ from catalog.models import (
 )
 from catalog.services.canonical_mutations import record_admin_canonical_change
 
+NODE_TAXONOMY_FIELDS = {
+    "discipline_links": ("discipline_id", ("relation_type", "discipline_specific_summary", "sort_order", "status")),
+    "subdiscipline_links": ("subdiscipline_id", ("is_primary", "relation_role", "source", "confidence", "sort_order", "status")),
+    "topic_links": ("topic_id", ("relation_label", "source", "confidence", "sort_order", "status")),
+}
+
 
 def _user_id(user):
     return user.pk if user and getattr(user, "is_authenticated", False) else None
+
+
+@transaction.atomic
+def sync_node_aliases(node, rows, actor):
+    existing = {row.normalized_alias: row for row in node.aliases.select_for_update()}
+    retained, seen = [], set()
+    for row in rows:
+        name = str(row.get("alias") or "").strip()
+        normalized = " ".join(name.casefold().split())
+        if not normalized or normalized in seen:
+            raise ValueError("同一节点的别名不能为空或重复。")
+        seen.add(normalized)
+        values = {key: row[key] for key in ("language", "alias_type", "source_kind", "is_verified") if key in row}
+        values["alias"] = name
+        previous = existing.get(normalized)
+        if previous is None:
+            alias = KnowledgeNodeAlias.objects.create(node=node, created_by=actor, **values)
+        else:
+            changed = [key for key, value in values.items() if getattr(previous, key) != value]
+            for key in changed:
+                setattr(previous, key, values[key])
+            if changed:
+                previous.save(update_fields=[*changed, "updated_at"])
+            alias = previous
+        retained.append(alias.pk)
+    node.aliases.exclude(pk__in=retained).delete()
+
+
+@transaction.atomic
+def sync_node_taxonomy_links(node, field_name, rows, actor):
+    id_field, fields = NODE_TAXONOMY_FIELDS[field_name]
+    manager = getattr(node, field_name)
+    existing = {str(getattr(row, id_field)): row for row in manager.select_for_update(of=("self",))}
+    retained, seen = [], set()
+    for row in rows:
+        identifier = str(row[id_field])
+        if identifier in seen:
+            raise ValueError("同一节点不能重复关联同一条资料。")
+        seen.add(identifier)
+        values = {key: row[key] for key in fields if key in row}
+        previous = existing.get(identifier)
+        previous_status = previous.status if previous is not None else None
+        if values.get("status", previous_status) == "published" and previous_status != "published":
+            values.update(reviewed_by=actor, reviewed_at=timezone.now())
+        if previous is None:
+            link = manager.create(**{id_field: identifier}, **values)
+        else:
+            changed = [key for key, value in values.items() if getattr(previous, key) != value]
+            for key in changed:
+                setattr(previous, key, values[key])
+            if changed:
+                previous.save(update_fields=[*changed, "updated_at"])
+            link = previous
+        retained.append(link.pk)
+    manager.exclude(pk__in=retained).delete()
+
+
+def node_taxonomy_patch_rows(node, field_name, rows):
+    id_field, fields = NODE_TAXONOMY_FIELDS[field_name]
+    manager = getattr(node, field_name)
+    existing = {str(getattr(link, id_field)): {key: getattr(link, key) for key in fields} for link in manager.all()}
+    revision = EditorialRevision.objects.filter(target_type="knowledge_node", target_id=node.pk, status="draft").order_by("-revision").first()
+    for row in revision.patch.get(field_name, []) if revision else []:
+        existing[str(row[id_field])] = row
+    return [{id_field: str(row[id_field]), **{
+        key: row.get(key, existing.get(str(row[id_field]), {}).get(key, manager.model._meta.get_field(key).get_default()))
+        for key in fields
+    }} for row in rows]
 
 
 def node_snapshot(node: KnowledgeNode) -> dict:

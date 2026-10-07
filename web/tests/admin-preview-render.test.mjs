@@ -17,6 +17,7 @@ const { PublicSessionProvider } = await import("../components/public-session-pro
 const { WorkDetailView } = await import("../components/work-detail-view.tsx");
 const { SubdisciplinePublicView } = await import("../components/public/subdiscipline-public-view.tsx");
 const { DisciplinePublicView } = await import("../components/public/discipline-public-view.tsx");
+const { KnowledgeNodePublicView } = await import("../components/public/knowledge-node-public-view.tsx");
 
 test("preview headers cannot navigate or expose session controls, public headers remain active", () => {
   const render = preview => renderToStaticMarkup(React.createElement(PathnameContext.Provider, { value: "/explore" },
@@ -63,4 +64,16 @@ test("discipline scalar previews do not claim unloaded theory collections are em
   assert.match(preview,/href="\/subdisciplines\/history"/);
   assert.doesNotMatch(preview,/该分类尚无公开条目|theory-discipline-directory|理论系统快捷入口/);
   assert.match(render(true),/该分类尚无公开条目/);
+});
+
+test("theory overview uses the edited summary and actual relations while unsupported concepts stay empty",()=>{
+  const node={id:"theory",node_type:"theory_tradition",canonical_name_zh:"保存的理论",canonical_name_en:"Saved Theory",slug:"saved-theory",summary:"当前编辑的简介",definition:"不应替代简介的完整定义",cover_url:"",cover_media:null,primary_discipline:{id:"discipline",name:"实际学科",slug:"actual-discipline"},related_disciplines:[],core_questions:["真实保存的问题"],representative_scholars:[{id:"person",name:"实际学者",original_name:"Actual Scholar",scholar_slug:"actual-scholar",portrait_url:""}],work_groups:{},subdiscipline_links:[],topic_links:[{topic:{id:"topic",name:"不能冒充核心概念的主题",slug:"topic"}}]};
+  const html=renderToStaticMarkup(React.createElement(PathnameContext.Provider,{value:"/theories/nodes/saved-theory"},React.createElement(PublicSessionProvider,null,React.createElement(KnowledgeNodePublicView,{node,timeline:[],allPaths:[],slug:node.slug,footer:null}))));
+  assert.match(html,/当前编辑的简介/);
+  assert.match(html,/真实保存的问题/);
+  assert.match(html,/href="\/theories\/disciplines\/actual-discipline"/);
+  assert.match(html,/href="\/scholars\/actual-scholar"/);
+  assert.match(html,/Actual Scholar/);
+  assert.match(html,/核心概念/);
+  assert.doesNotMatch(html,/不应替代简介的完整定义|不能冒充核心概念的主题|深入了解|architectural-image/);
 });

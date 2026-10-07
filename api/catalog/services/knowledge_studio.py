@@ -316,9 +316,10 @@ class KnowledgeObjectEditorAdapter:
             raise ValueError(f"{field_name} preview is not a list of objects")
 
         if field_name == "aliases":
+            existing = {row.normalized_alias: row for row in target.aliases.all()}
             aliases = [
                 KnowledgeNodeAlias(
-                    id=None,
+                    id=getattr(existing.get(" ".join(str(row.get("alias") or "").casefold().split())), "pk", None),
                     node=target,
                     alias=str(row.get("alias") or "").strip(),
                     language=str(row.get("language") or "zh-CN")[:16],
@@ -346,13 +347,14 @@ class KnowledgeObjectEditorAdapter:
             return
 
         if field_name == "discipline_links":
+            existing = {str(row.discipline_id): row for row in target.discipline_links.all()}
             related = cls._related_objects(
                 Discipline,
                 [row.get("discipline_id") for row in value],
             )
             links = [
                 KnowledgeNodeDiscipline(
-                    id=None,
+                    id=getattr(existing.get(str(row["discipline_id"])), "pk", None),
                     node=target,
                     discipline=related[str(row["discipline_id"])],
                     relation_type=str(row.get("relation_type") or "related"),
@@ -407,6 +409,7 @@ class KnowledgeObjectEditorAdapter:
         related_model, id_field, relation_model, serializer_class = relation_specs[
             field_name
         ]
+        existing = {str(getattr(row, id_field)): row for row in getattr(target, field_name).all()}
         related = cls._related_objects(
             related_model,
             [row.get(id_field) for row in value],
@@ -414,7 +417,7 @@ class KnowledgeObjectEditorAdapter:
         links = []
         for row in value:
             common = {
-                "id": None,
+                "id": getattr(existing.get(str(row[id_field])), "pk", None),
                 "node": target,
                 id_field.removesuffix("_id"): related[str(row[id_field])],
                 "source": str(row.get("source") or ""),

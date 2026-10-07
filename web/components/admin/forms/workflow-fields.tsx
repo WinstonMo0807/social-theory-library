@@ -171,6 +171,8 @@ export function EntityPicker({
   queryParam = "search",
   placeholder = "搜索已有条目",
   allowUnresolved = false,
+  singleSelect = false,
+  ariaRequired = false,
 }: {
   label: string;
   endpoint: string;
@@ -181,6 +183,8 @@ export function EntityPicker({
   queryParam?: string;
   placeholder?: string;
   allowUnresolved?: boolean;
+  singleSelect?: boolean;
+  ariaRequired?: boolean;
 }) {
   const inputId = useId();
   const listboxId = useId();
@@ -275,16 +279,16 @@ export function EntityPicker({
   };
   const statusLabel = (value?: string) => ({ published: "已发布", draft: "草稿", pending: "待审核", verified: "已核验", needs_review: "待审核", suggested: "建议" } as Record<string, string>)[String(value ?? "")] ?? value ?? "馆内条目";
   return (
-    <div className="workflow-entity-picker">
+    <div className={`workflow-entity-picker${singleSelect ? " is-single-select" : ""}`} onBlurCapture={singleSelect ? event => {if(!event.currentTarget.contains(event.relatedTarget)){setOpen(false);setQuery("");}} : undefined}>
       <label htmlFor={inputId}>{label}</label>
-      <div className="workflow-entity-values">{values.map((value, index) => (
+      {!singleSelect ? <div className="workflow-entity-values">{values.map((value, index) => (
         <button type="button" aria-label={`移除${value.name}`} key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}>
           {value.name}{value.id ? "" : " · 未解析"} ×
         </button>
-      ))}</div>
+      ))}</div> : null}
       <div className="workflow-entity-combobox">
         <Search size={14} aria-hidden="true" />
-        <input id={inputId} value={query} placeholder={placeholder} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-describedby={liveId} aria-activedescendant={open && keyboardOptions.length ? `${listboxId}-option-${activeIndex}` : undefined} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} />
+        <input id={inputId} value={singleSelect && !open ? values.at(-1)?.name || "" : query} placeholder={placeholder} role="combobox" aria-required={ariaRequired || undefined} aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-describedby={liveId} aria-activedescendant={open && keyboardOptions.length ? `${listboxId}-option-${activeIndex}` : undefined} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} />
         <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} aria-hidden="true" /></button>
         <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>

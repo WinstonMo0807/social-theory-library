@@ -672,6 +672,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         SlugField: PreservedSlugField,
     }
     edit_version = serializers.CharField(read_only=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)
     subdiscipline_links = KnowledgeNodeSubdisciplineSerializer(
@@ -796,45 +797,45 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("只有管理员可以发布或下线理论节点。")
         return value
 
+    def validate_slug(self, value):
+        if self.instance is not None and not value:
+            raise serializers.ValidationError("已有资料的固定链接不能为空。")
+        return value
+
     def _sync_aliases(self, node, rows):
-        node.aliases.all().delete()
+        from catalog.services.knowledge_nodes import sync_node_aliases
+
         actor = getattr(self.context.get("request"), "user", None)
-        for row in rows:
-            KnowledgeNodeAlias.objects.create(node=node, created_by=actor, **row)
+        try:
+            sync_node_aliases(node, rows, actor)
+        except ValueError as error:
+            raise serializers.ValidationError({"aliases": str(error)}) from error
+
+    def _sync_taxonomy(self, node, field_name, foreign_key, rows):
+        from catalog.services.knowledge_nodes import sync_node_taxonomy_links
+
+        values = [{f"{foreign_key}_id": str(row[foreign_key].pk), **{key: value for key, value in row.items() if key != foreign_key}} for row in rows]
+        actor = getattr(self.context.get("request"), "user", None)
+        try:
+            sync_node_taxonomy_links(node, field_name, values, actor)
+        except ValueError as error:
+            raise serializers.ValidationError({field_name: str(error)}) from error
 
     def _sync_disciplines(self, node, rows):
-        node.discipline_links.all().delete()
-        for row in rows:
-            KnowledgeNodeDiscipline.objects.create(node=node, **row)
+        self._sync_taxonomy(node, "discipline_links", "discipline", rows)
 
     def _sync_subdisciplines(self, node, rows):
-        node.subdiscipline_links.all().delete()
-        actor = getattr(self.context.get("request"), "user", None)
-        now = timezone.now()
-        for row in rows:
-            status_value = row.get("status", "pending")
-            KnowledgeNodeSubdiscipline.objects.create(
-                node=node,
-                reviewed_by=actor if status_value == "published" else None,
-                reviewed_at=now if status_value == "published" else None,
-                **row,
-            )
+        self._sync_taxonomy(node, "subdiscipline_links", "subdiscipline", rows)
 
     def _sync_topics(self, node, rows):
-        node.topic_links.all().delete()
-        actor = getattr(self.context.get("request"), "user", None)
-        now = timezone.now()
-        for row in rows:
-            status_value = row.get("status", "pending")
-            KnowledgeNodeTopic.objects.create(
-                node=node,
-                reviewed_by=actor if status_value == "published" else None,
-                reviewed_at=now if status_value == "published" else None,
-                **row,
-            )
+        self._sync_taxonomy(node, "topic_links", "topic", rows)
 
     @transaction.atomic
     def create(self, validated_data):
+        from catalog.serializers import _available_slug
+
+        if not validated_data.get("slug"):
+            validated_data["slug"] = _available_slug(KnowledgeNode, validated_data.get("canonical_name_en") or validated_data["canonical_name_zh"])
         changed_fields = list(validated_data)
         aliases = validated_data.pop("aliases", [])
         discipline_links = validated_data.pop("discipline_links", [])

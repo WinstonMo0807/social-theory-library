@@ -1148,81 +1148,15 @@ def _validate_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, A
 
 
 def _apply_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, Any], actor) -> None:
-    aliases = patch.get("aliases")
-    if aliases is not None:
-        existing = {row.normalized_alias: row for row in target.aliases.select_for_update()}
-        retained = []
-        for row in aliases:
-            values = {"alias": str(row["alias"]).strip(), "language": str(row.get("language") or "zh-CN")[:16],
-                      "alias_type": str(row.get("alias_type") or KnowledgeNodeAlias.AliasType.ALIAS),
-                      "source_kind": str(row.get("source_kind") or KnowledgeNodeAlias.SourceKind.OTHER),
-                      "is_verified": bool(row.get("is_verified", True))}
-            normalized = " ".join(values["alias"].casefold().split())
-            previous = existing.get(normalized)
-            changed = previous is None or any(getattr(previous, key) != value for key, value in values.items())
-            if changed:
-                if values["is_verified"]:
-                    values["source_kind"] = KnowledgeNodeAlias.SourceKind.EDITORIAL
-                alias, _created = KnowledgeNodeAlias.objects.update_or_create(
-                    node=target, normalized_alias=normalized, defaults={**values, "created_by": actor},
-                )
-            else:
-                alias = previous
-            retained.append(alias.pk)
-        target.aliases.exclude(pk__in=retained).delete()
-    links = patch.get("discipline_links")
-    if links is not None:
-        target.discipline_links.all().delete()
-        for row in links:
-            KnowledgeNodeDiscipline.objects.create(
-                node=target,
-                discipline_id=row["discipline_id"],
-                relation_type=row["relation_type"],
-                discipline_specific_summary=str(row.get("discipline_specific_summary") or ""),
-                sort_order=max(0, int(row.get("sort_order") or 0)),
-                status=str(row.get("status") or "pending"),
-                reviewed_by=actor if row.get("status") == "published" else None,
-                reviewed_at=timezone.now() if row.get("status") == "published" else None,
-            )
-    normalized_models = (
-        (
-            "subdiscipline_links",
-            KnowledgeNodeSubdiscipline,
-            "subdiscipline_id",
-            ("is_primary", "relation_role", "source", "confidence", "sort_order"),
-        ),
-        (
-            "topic_links",
-            KnowledgeNodeTopic,
-            "topic_id",
-            ("relation_label", "source", "confidence", "sort_order"),
-        ),
+    from catalog.services.knowledge_nodes import (
+        NODE_TAXONOMY_FIELDS, sync_node_aliases, sync_node_taxonomy_links,
     )
-    for field_name, model, id_field, value_fields in normalized_models:
-        if field_name not in patch:
-            continue
-        getattr(target, field_name).all().delete()
-        for row in patch[field_name]:
-            status_value = str(row.get("status") or "pending")
-            defaults = {
-                "is_primary": False,
-                "relation_role": "",
-                "relation_label": "",
-                "source": "",
-                "confidence": 0,
-                "sort_order": 0,
-            }
-            model.objects.create(
-                node=target,
-                **{id_field: row[id_field]},
-                **{
-                    field: row.get(field, defaults[field])
-                    for field in value_fields
-                },
-                status=status_value,
-                reviewed_by=actor if status_value == "published" else None,
-                reviewed_at=timezone.now() if status_value == "published" else None,
-            )
+
+    if "aliases" in patch:
+        sync_node_aliases(target, patch["aliases"], actor)
+    for field_name in NODE_TAXONOMY_FIELDS:
+        if field_name in patch:
+            sync_node_taxonomy_links(target, field_name, patch[field_name], actor)
 
 
 def _apply_scholar_person(target: ScholarProfile, values: dict[str, Any], actor=None) -> None:
