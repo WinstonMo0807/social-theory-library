@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, SlugField
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
 from common.capabilities import Capability, has_capability
+from catalog.serializer_fields import PreservedSlugField
 
 from catalog.models import (
     Asset,
@@ -666,6 +667,10 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
 
 class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
+    serializer_field_mapping = {
+        **serializers.ModelSerializer.serializer_field_mapping,
+        SlugField: PreservedSlugField,
+    }
     edit_version = serializers.CharField(read_only=True)
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)

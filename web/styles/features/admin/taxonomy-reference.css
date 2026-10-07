@@ -1,0 +1,107 @@
+/* Reference 20/21 use simultaneous fields rather than the general editor tabs. */
+.is-inline-taxonomy .fixed-page-editor { grid-template-columns:minmax(360px,41%) minmax(0,1fr);gap:8px; }
+.is-inline-taxonomy .fixed-editor-panel { border-radius:3px; }
+.is-inline-taxonomy .fixed-editor-fields { padding:20px; }
+.is-inline-taxonomy .fixed-editor-fields form { min-height:805px;display:flex;flex-direction:column;gap:0;border:0;padding:0;background:none; }
+.is-inline-taxonomy .fixed-editor-fields form>fieldset { display:contents; }
+.is-inline-taxonomy .taxonomy-reference-form h2 { margin:0 0 20px;font:600 22px/1.5 var(--stl-type-serif); }
+.is-inline-taxonomy .taxonomy-reference-form header p { margin:-9px 0 28px;font-size:14px; }
+.is-inline-taxonomy .fixed-editor-fields label { margin:0 0 26px;gap:8px;font-size:14px; }
+.is-inline-taxonomy .fixed-editor-fields input,.is-inline-taxonomy .fixed-editor-fields textarea { font:16px/1.65 var(--stl-type-serif);background:#fff;border-radius:3px; }
+.is-inline-taxonomy .fixed-editor-fields input { min-height:38px;padding:7px 11px; }
+.is-inline-taxonomy .fixed-editor-fields textarea { min-height:136px;padding:10px 12px;resize:vertical; }
+.taxonomy-reference-form label b,.taxonomy-cover-field>span b { color:#af3029;font-weight:400;margin-left:7px; }
+.is-inline-taxonomy .taxonomy-field-count { color:#8a8985;text-align:right;font:13px/1.3 var(--stl-type-sans); }
+.taxonomy-cover-field { margin:0 0 27px;font-size:14px; }
+.taxonomy-cover-field>div { display:grid;grid-template-columns:58% minmax(0,1fr);gap:15px;margin-top:10px; }
+.taxonomy-cover-field img,.taxonomy-empty-cover { display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:3px; }
+.taxonomy-empty-cover { border:1px solid var(--admin-v2-line);background:transparent; }
+.is-inline-taxonomy .taxonomy-change-image { display:block;position:relative;align-self:start;margin:0;font-size:13px; }
+.taxonomy-change-image>span { display:block;width:max-content;padding:7px 20px;border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface); }
+.is-inline-taxonomy .taxonomy-change-image input { position:absolute;inset:0 auto auto 0;width:100%;height:37px;opacity:0;cursor:pointer; }
+.taxonomy-change-image small { display:block;margin-top:10px;color:#8a8985;line-height:1.8; }
+.taxonomy-subdiscipline-selection { font-size:14px;margin-bottom:34px; }
+.taxonomy-subdiscipline-selection>small { display:block;margin:6px 0 12px;color:#8a8985; }
+.taxonomy-subdiscipline-selection>div { display:flex;flex-wrap:wrap;gap:8px; }
+.taxonomy-subdiscipline-selection>div>span,.taxonomy-subdiscipline-selection>div>button { border:1px solid var(--admin-v2-line);border-radius:3px;padding:6px 12px;background:var(--admin-v2-surface);font-size:13px; }
+.taxonomy-subdiscipline-selection span button { margin-left:14px;background:none;border:0;color:#7b7872; }
+.is-inline-taxonomy .taxonomy-form-actions { display:flex;justify-content:flex-end;gap:8px;padding-top:25px;margin-top:20px; }
+.is-inline-taxonomy [data-field-section=publication]:has(.taxonomy-form-actions) { margin-top:auto; }
+.is-inline-taxonomy .taxonomy-form-actions .button { margin:0;min-width:116px;min-height:40px;border-radius:3px;padding:9px 18px;font-size:14px; }
+.is-inline-taxonomy .fixed-editor-preview { display:grid;grid-template-columns:180px minmax(0,1fr);align-items:center;padding:12px 16px 0;position:static; }
+.is-inline-taxonomy .fixed-editor-preview>header { grid-column:1;grid-row:1;padding:0; }
+.is-inline-taxonomy .fixed-editor-preview>header strong { font:600 19px/1.5 var(--stl-type-serif);white-space:nowrap; }
+.is-inline-taxonomy .fixed-editor-preview>header span { display:none; }
+.is-inline-taxonomy .fixed-editor-preview-tools { grid-column:2;grid-row:1;padding:0;border:0;justify-content:space-between;gap:10px; }
+.is-inline-taxonomy .fixed-editor-preview-tools button { min-height:32px;font-size:12px;padding:6px 12px; }
+.is-inline-taxonomy .taxonomy-preview-location,.is-inline-taxonomy .fixed-preview-canvas,.is-inline-taxonomy .taxonomy-preview-footer { grid-column:1/-1; }
+.taxonomy-preview-location { padding:14px 0;margin-top:10px;border-top:1px solid var(--admin-v2-line);font-size:13px; }
+.taxonomy-preview-location select { border:0;padding:0 8px;background:transparent;color:var(--admin-v2-ink);font:inherit;max-width:90%; }
+.is-inline-taxonomy .fixed-preview-canvas { max-height:696px;background:var(--admin-v2-surface);border:1px solid var(--admin-v2-line); }
+.taxonomy-preview-footer { display:flex;justify-content:space-between;gap:12px;padding:14px 18px;background:var(--admin-v2-wash);color:#817c73;font-size:13px; }
+.taxonomy-preview-footer small { font-size:12px; }
+.subdiscipline-reference-workspace .is-inline-taxonomy .fixed-page-editor { grid-template-columns:minmax(310px,35%) minmax(0,1fr);gap:6px; }
+.subdiscipline-reference-workspace .fixed-editor-panel { border-radius:0 3px 3px 0; }
+.subdiscipline-reference-workspace .fixed-editor-fields form { min-height:756px; }
+.subdiscipline-reference-workspace .fixed-editor-fields { padding:23px 20px 17px; }
+.subdiscipline-reference-workspace .taxonomy-reference-form h2 { font-size:26px; }
+.subdiscipline-reference-workspace .fixed-editor-fields textarea { font:14px/1.7 var(--stl-type-sans);min-height:104px; }
+.taxonomy-unsaved-note { display:flex;align-items:center;gap:12px;margin:36px 0 0;padding:10px 12px;border-radius:3px;background:var(--admin-v2-wash);font-size:12px; }
+.taxonomy-unsaved-note small { color:var(--admin-v2-muted);font-size:11px; }
+.subdiscipline-reference-tree .taxonomy-tree-search { display:flex;align-items:center;gap:7px;border:1px solid var(--admin-v2-line);border-radius:3px;padding:7px;background:white; }
+.taxonomy-tree-search input { width:100%;min-width:0;border:0;background:none;padding:0;font:12px var(--stl-type-sans); }
+.taxonomy-tree-search button { border:0;background:none;padding:0;line-height:0; }
+.taxonomy-add-subdiscipline { display:flex;align-items:center;gap:5px;border:0;background:none;font-size:12px;padding:12px 4px; }
+.taxonomy-publish-dialog { width:min(1000px,94vw);max-height:90vh;padding:24px;border:1px solid var(--admin-v2-line);background:var(--admin-v2-paper);color:var(--admin-v2-ink); }
+.taxonomy-publish-dialog::backdrop { background:#17161199; }
+.taxonomy-publish-dialog>header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px; }
+.taxonomy-publish-dialog>header h2 { margin:0;font:600 24px var(--stl-type-serif); }
+.taxonomy-publish-dialog>header button { padding:7px 16px;border:1px solid var(--admin-v2-line);background:var(--admin-v2-surface); }
+
+/* The same public components render the live page and the isolated preview. */
+.subdiscipline-reference-page,.discipline-reference-page { padding:24px 28px 36px!important; }
+.taxonomy-public-breadcrumb { display:flex;gap:14px;align-items:center;margin-bottom:32px;font:17px/1.6 var(--stl-type-serif); }
+.taxonomy-public-breadcrumb strong { font-weight:400; }
+.taxonomy-public-hero { display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:26px;align-items:start; }
+.taxonomy-public-hero h1 { margin:38px 0 17px;font:600 52px/1.25 var(--stl-type-serif); }
+.taxonomy-public-hero p { font:22px/1.75 var(--stl-type-serif);margin:0 0 16px; }
+.taxonomy-public-hero .taxonomy-public-parent { margin-bottom:20px; }
+.taxonomy-public-image { width:100%;height:300px;background:transparent center/cover; }
+.taxonomy-public-questions { border:1px solid var(--line);border-radius:3px;padding:18px 16px;margin:24px 0 36px;max-width:67%;min-height:110px; }
+.taxonomy-public-questions h2,.taxonomy-public-related h2 { margin:0 0 14px;font:600 23px/1.5 var(--stl-type-serif); }
+.taxonomy-public-questions p { margin:0;font:21px/1.8 var(--stl-type-serif); }
+.taxonomy-public-related { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:25px 0 0;border-top:1px solid var(--line);gap:24px; }
+.taxonomy-public-related>article { padding-right:22px;border-right:1px solid var(--line);min-height:200px; }
+.taxonomy-public-related>article:last-child { border-right:0;padding-right:0; }
+.taxonomy-public-related strong { font:600 21px/1.5 var(--stl-type-serif); }
+.taxonomy-public-work { display:grid;grid-template-columns:82px minmax(0,1fr);gap:14px; }
+.taxonomy-public-work .book-cover,.taxonomy-missing-work-cover { width:82px;height:126px;border:0!important;border-radius:0!important;background-color:transparent!important; }
+.taxonomy-public-work small { display:block;font:17px/1.65 var(--stl-type-serif);margin-top:5px; }
+.taxonomy-related-more { display:block;font:600 18px/1.6 var(--stl-type-serif);margin-top:24px; }
+.taxonomy-related-more>summary,.taxonomy-related-more:not(details) { display:flex;gap:8px;align-items:center;cursor:pointer; }
+.taxonomy-related-more>div { display:grid;gap:10px;padding:14px 0; }
+.discipline-reference-directory>header h1 { margin:14px 0 12px;font:600 50px/1.3 var(--stl-type-serif); }
+.discipline-reference-directory>header p { margin:0 0 40px;font:22px/1.7 var(--stl-type-serif); }
+.discipline-reference-cards { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px; }
+.discipline-reference-cards>div { min-width:0;border:1px solid var(--line);border-radius:3px;padding:5px; }
+.discipline-reference-cards>div.selected { border-color:var(--admin-v2-focus); }
+.discipline-reference-cards .theory-discipline-card { display:flex!important;flex-direction:column;gap:0;border:0!important;border-radius:0!important;padding:0!important;background:none!important;min-height:0; }
+.discipline-reference-cards .theory-system-banner { order:-1;width:100%;height:220px;min-height:220px;border:0;border-radius:0;margin:0; }
+.discipline-reference-cards .theory-discipline-copy { padding:12px 8px 0; }
+.discipline-reference-cards .theory-discipline-copy h2 { font:600 23px/1.4 var(--stl-type-serif);margin:0 0 8px; }
+.discipline-reference-cards .theory-discipline-copy p { font:18px/1.6 var(--stl-type-serif);margin:0;max-height:59px;overflow:hidden; }
+.discipline-reference-cards .theory-discipline-card footer { display:flex;justify-content:flex-end;border:0;padding:4px 8px 10px; }
+.discipline-reference-cards .theory-stat { display:none; }
+.discipline-reference-cards footer>svg { border:1px solid var(--line-dark);border-radius:50%;width:36px;height:36px;padding:8px; }
+.discipline-reference-overview { margin-top:40px;padding:26px 0 35px;border-top:1px solid var(--line); }
+.discipline-reference-overview>header { display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:25px; }
+.discipline-reference-overview h1 { font:600 47px/1.4 var(--stl-type-serif);margin:0; }
+.discipline-reference-overview nav { display:flex;gap:28px;font:18px/1.5 var(--stl-type-serif);align-items:center; }
+.discipline-reference-overview nav [aria-current] { border-bottom:2px solid var(--ink);padding:9px 0; }
+.discipline-reference-overview nav button { border:0;padding:0;background:none;font:inherit;color:var(--muted); }
+.discipline-reference-overview>p { margin:0 0 22px;font:22px/1.8 var(--stl-type-serif); }
+.discipline-reference-overview>div>span { display:block;font:20px/1.6 var(--stl-type-serif);margin-bottom:12px; }
+.discipline-reference-overview>div>div { display:flex;flex-wrap:wrap;gap:12px; }
+.discipline-reference-overview>div a { padding:7px 16px;border-radius:3px;background:var(--wash);font:18px/1.5 var(--stl-type-serif); }
+@media(max-width:1250px) { .subdiscipline-reference-workspace .is-inline-taxonomy .fixed-page-editor { grid-template-columns:1fr; }.is-inline-taxonomy .fixed-editor-preview { grid-template-columns:1fr; }.is-inline-taxonomy .fixed-editor-preview-tools { grid-row:2;grid-column:1;justify-content:flex-start;margin-top:15px; }.is-inline-taxonomy .fixed-editor-fields form { min-height:0; } }
+@media(max-width:900px) { .is-inline-taxonomy .fixed-page-editor { grid-template-columns:1fr; }.taxonomy-public-hero { grid-template-columns:1fr; }.taxonomy-public-image { height:230px; }.taxonomy-public-questions { max-width:none; }.taxonomy-public-related { grid-template-columns:1fr; }.taxonomy-public-related>article { border-right:0;border-bottom:1px solid var(--line);padding-bottom:20px;min-height:0; }.discipline-reference-overview>header { flex-wrap:wrap; }.discipline-reference-cards { grid-template-columns:1fr; } }

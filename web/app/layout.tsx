@@ -15,6 +15,7 @@ import "../styles/features/admin/recommendations-design-v2.css";
 import "../styles/features/admin/storage-backups.css";
 import "../styles/features/admin/operations-v2.css";
 import "../styles/features/admin/knowledge-reference.css";
+import "../styles/features/admin/taxonomy-reference.css";
 import "../styles/features/admin/site-system-reference.css";
 import "../styles/features/admin/processing-reference.css";
 import { SiteHeader, SiteConfigProvider } from "@/components/site-header";

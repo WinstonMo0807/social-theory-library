@@ -64,10 +64,10 @@ export function PreviewViewport({ children, device }: { children: ReactNode; dev
 }
 
 export type FixedEditorSection = { id: string; label: string; description?: string };
-export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar }: {
+export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar, hideFieldHeading = false, previewFooter }: {
   sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string) => void;
   navigationSections?: FixedEditorSection[];
-  fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode;
+  fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode; hideFieldHeading?: boolean; previewFooter?: ReactNode;
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -85,11 +85,15 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
   function select(id: string, focus = false) {
     if (!sections.some(section => section.id === id)) return;
     onSectionChange(id);
-    if (focus) window.requestAnimationFrame(() => { Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []).find(element => !element.closest("[hidden]") && element.offsetParent !== null)?.focus(); });
+    if (focus) window.requestAnimationFrame(() => {
+      const groups = Array.from(fieldRef.current?.querySelectorAll<HTMLElement>(`[data-field-section="${CSS.escape(id)}"]`) || []);
+      const controls = groups.length ? groups.flatMap(group=>Array.from(group.querySelectorAll<HTMLElement>("input,textarea,select,button"))) : Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []);
+      controls.find(element => !element.closest("[hidden]") && element.offsetParent !== null)?.focus();
+    });
   }
   return <div className="fixed-page-editor">
     <aside className="fixed-editor-panel"><nav className="fixed-editor-sections" aria-label="编辑区域">{navigationSections.map(section => <button type="button" key={section.id} aria-current={activeSection === section.id ? "true" : undefined} onClick={() => select(section.id)}>{section.label}</button>)}</nav>
-      <div className="fixed-editor-fields" ref={fieldRef}><h2>{sections.find(section => section.id === activeSection)?.label}</h2><p>{sections.find(section => section.id === activeSection)?.description}</p>{fields}</div>{toolbar}
+      <div className="fixed-editor-fields" ref={fieldRef}>{!hideFieldHeading ? <><h2>{sections.find(section => section.id === activeSection)?.label}</h2><p>{sections.find(section => section.id === activeSection)?.description}</p></> : null}{fields}</div>{toolbar}
     </aside>
     <section className="fixed-editor-preview" aria-label="当前输入实时预览"><header><strong>读者会看到什么</strong><span>{perspective === "published" ? "当前线上内容" : dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</span></header>
       <div className="selected-preview-tools fixed-editor-preview-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} disabled={!canViewPublished} title={!canViewPublished ? "当前对象尚无线上预览" : undefined} onClick={() => setPerspective("published")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={() => {setExpanded(true);fullPreviewRef.current?.showModal();}}><Maximize2 size={15}/>放大查看</button></div>
@@ -107,6 +111,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
         if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", true); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div>}</PreviewViewport>
+      {previewFooter}
     </section>
     <dialog className="fixed-preview-dialog" ref={fullPreviewRef} onClose={() => setExpanded(false)}><header><strong>{perspective === "published" ? "当前线上内容" : dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</strong>{fullHref ? <a href={fullHref} target="_blank" rel="noopener">在新标签页打开已保存页面</a> : null}<button type="button" onClick={() => fullPreviewRef.current?.close()}>关闭预览</button></header>{expanded ? <PreviewViewport device={device}>{perspective === "published" ? publishedPreview ?? (publishedHref ? <iframe src={publishedHref} title="当前线上页面放大预览" style={{width:"100%",height:1000,border:0}}/> : null) : <div inert>{preview}</div>}</PreviewViewport> : null}</dialog>
   </div>;

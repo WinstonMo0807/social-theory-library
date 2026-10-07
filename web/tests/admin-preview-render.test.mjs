@@ -15,6 +15,7 @@ registerHooks({
 const { SiteHeader } = await import("../components/site-header.tsx");
 const { PublicSessionProvider } = await import("../components/public-session-provider.tsx");
 const { WorkDetailView } = await import("../components/work-detail-view.tsx");
+const { SubdisciplinePublicView } = await import("../components/public/subdiscipline-public-view.tsx");
 
 test("preview headers cannot navigate or expose session controls, public headers remain active", () => {
   const render = preview => renderToStaticMarkup(React.createElement(PathnameContext.Provider, { value: "/explore" },
@@ -41,4 +42,14 @@ test("work previews preserve tabs while protecting topic and footer navigation",
   assert.match(published, /href="\/reader\/asset"/);
   assert.match(published, /href="\/scholars\/author"/);
   assert.doesNotMatch(published, /inert=""/);
+});
+
+test("subdiscipline renders saved questions and real links while missing media stays empty", () => {
+  const item = {id:"sub",name:"历史社会学",slug:"history",discipline:{id:"discipline",name:"社会学",slug:"sociology"},description:"实际保存的简介",hero_image:"",research_object:"",core_questions:["历史过程如何改变制度？"],theories:[{id:"theory",name:"制度理论",slug:"institutions"}],scholars:[{id:"scholar",name:"已关联学者",slug:"related-scholar"}],works:[]};
+  const html=renderToStaticMarkup(React.createElement(SubdisciplinePublicView,{item,footer:null}));
+  assert.match(html,/历史过程如何改变制度？/);
+  assert.match(html,/href="\/theory-schools\/institutions"/);
+  assert.match(html,/href="\/scholars\/related-scholar"/);
+  assert.match(html,/background-image:none/);
+  assert.doesNotMatch(html,/architectural-image|待考|待管理员补充/);
 });

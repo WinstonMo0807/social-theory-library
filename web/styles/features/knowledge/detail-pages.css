@@ -789,24 +789,25 @@
   white-space: nowrap;
 }
 
-/* Book pages and their isolated previews share the same header proportions. */
+/* Detail pages and their isolated previews share the same header proportions. */
 @media (min-width: 821px) {
-  body:has(.work-detail) .site-header {
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header {
     min-height: 118px;
     padding: 24px 42px;
     border-bottom: 1px solid var(--line);
     background: var(--surface);
   }
-  body:has(.work-detail) .site-header .wordmark {
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header .wordmark {
     font: 900 29px/.86 "Arial Black", Arial, sans-serif;
     letter-spacing: -1.5px;
   }
-  body:has(.work-detail) .site-header .desktop-nav {
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header .desktop-nav {
     gap: clamp(30px, 4vw, 64px);
     font: 21px/1.5 var(--stl-type-serif);
   }
-  body:has(.work-detail) .site-header .header-search { font-size: 21px; }
-  body:has(.work-detail) .site-header .header-search svg { width: 28px; height: 28px; }
-  body:has(.work-detail) .site-header[inert] .header-search span,
-  body:has(.work-detail) .site-header[inert] .menu-button { display: none; }
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header .desktop-nav a { font: inherit; }
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header .header-search { font-size: 21px; }
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header .header-search svg { width: 28px; height: 28px; }
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header[inert] .header-search span,
+  body:has(.work-detail,.discipline-reference-page,.subdiscipline-reference-page) .site-header[inert] .menu-button { display: none; }
 }

@@ -118,18 +118,14 @@ export function BookCard({
 }
 
 export function ScholarPortrait({ scholar, large = false }: { scholar: Scholar; large?: boolean }) {
-  const initials = scholar.originalName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
   return (
     <div
-      className={`scholar-portrait ${large ? "large" : ""} ${scholar.portrait ? "has-image" : ""}`}
+      className={`scholar-portrait ${large ? "large" : ""} ${scholar.portrait ? "has-image" : "is-empty"}`}
       style={scholar.portrait && !scholar.portraitSources?.length ? { backgroundImage: `url("${scholar.portrait}")` } : undefined}
-      aria-label={scholar.portrait ? `${scholar.name}肖像` : `${scholar.name}肖像占位`}
+      aria-label={scholar.portrait ? `${scholar.name}肖像` : undefined}
+      aria-hidden={!scholar.portrait || undefined}
     >
-      {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : !scholar.portrait ? <span>{initials}</span> : null}
+      {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : null}
     </div>
   );
 }

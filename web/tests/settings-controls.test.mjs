@@ -31,7 +31,7 @@ test("admin footer uses the shared 3.0.9.1 cataloging version", async () => {
   assert.match(version, /WEB_APP_VERSION = "3\.0\.9\.1"/);
   assert.match(version, /ADMIN_VERSION_LABEL = "v3\.0\.9\.1 馆藏管理与观点检索"/);
   assert.match(shell, /import \{ ADMIN_VERSION_LABEL \} from "@\/lib\/version"/);
-  assert.match(shell, /className="admin-version">\{ADMIN_VERSION_LABEL\}<\/span>/);
+  assert.match(shell, /className="sr-only">\{ADMIN_VERSION_LABEL\}<\/span>/);
   assert.doesNotMatch(shell, /v2\.7(?:\.1)? 持续增长架构/);
 });
 
@@ -179,8 +179,10 @@ test("AI settings expose every 3.0 capability and immutable Prompt revisions", a
 
 test("admin navigation does not prefetch every management page at once", async () => {
   const source = await readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8");
-  assert.match(source, /navigation\.filter[\s\S]*\.map[\s\S]*prefetch=\{false\}/);
-  assert.match(source, /admin-processing-link[\s\S]*prefetch=\{false\}/);
+  const nav = source.slice(source.indexOf("<nav>"), source.indexOf("</nav>") + 6);
+  const links = [...nav.matchAll(/<Link\b[^>]*>/g)].map(match=>match[0]);
+  assert.ok(links.length >= 2);
+  assert.ok(links.every(link=>link.includes("prefetch={false}")));
 });
 
 test("shared public navigation avoids anonymous API bursts from route prefetch", async () => {
@@ -320,8 +322,7 @@ test("authority identity suggestions require an explicit request and never fill 
   assert.match(shared, /typeof entry === "string"/);
   assert.match(shared, /text\(row\.name\) \|\| text\(row\.alias\)/);
   assert.match(sections, /authorityType="person"/);
-  assert.match(knowledge, /entityType="discipline"/);
-  assert.match(knowledge, /entityType="subdiscipline"/);
+  assert.doesNotMatch(knowledge, /<IdentitySuggestionPanel|<CurationFieldAssistant/);
   assert.match(theory, /authorityType=\{draft\.node_type === "theory_tradition"/);
   const assistant = await readFile(new URL("../components/admin/curation/curation-field-assistant.tsx", import.meta.url), "utf8");
   assert.match(assistant, /async function adopt[\s\S]*onApply\?\./);

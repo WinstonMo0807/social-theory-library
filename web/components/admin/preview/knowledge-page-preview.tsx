@@ -12,6 +12,7 @@ import { ReadingPathPublicView } from "@/components/public/reading-path-public-v
 import { ScholarPublicView } from "@/components/public/scholar-public-view";
 import { ScholarSectionPublicView } from "@/components/public/scholar-section-public-view";
 import { SubdisciplinePublicView } from "@/components/public/subdiscipline-public-view";
+import type { TheorySystemOverview } from "@/lib/api/knowledge.types";
 import { TopicPublicView } from "@/components/public/topic-public-view";
 import { TopicSectionPublicView } from "@/components/public/topic-section-public-view";
 import type { PublishedEvidenceCuration } from "@/lib/api/evidence-curation.types";
@@ -108,8 +109,8 @@ function PreviewContent({ payload, pageId, evidenceCuration }: { payload: Knowle
   const footer = null;
   switch (payload.object_type) {
     case "discipline": {
-      const item = data as Discipline;
-      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} />;
+      const item = data as Discipline & {preview_directory?:TheorySystemOverview["disciplines"];preview_subdisciplines?:{id:string;name:string;slug:string}[]};
+      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} directory={pageId === "directory" ? item.preview_directory : undefined} subdisciplines={item.preview_subdisciplines}/>;
     }
     case "subdiscipline": {
       const item = data as Subdiscipline;

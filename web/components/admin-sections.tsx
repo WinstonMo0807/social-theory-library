@@ -1844,21 +1844,21 @@ const defaultSemanticRuntime: SemanticRuntime = {
 const settingsSections=[['public-display','网站内容'],['submissions','荐书邮箱'],['ocr','文字识别'],['ai','AI 服务'],['search','检索'],['backups','备份'],['prompts','AI 提示词']] as const;
 export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backups" | "processing" }) {
   const sections = settingsSections.filter(([key]) => scope === "backups" ? key === "backups" : scope === "processing" ? ["ocr", "ai", "search", "prompts", "submissions"].includes(key) : true);
-  const [activeSection,setActiveSection]=useState(scope === "backups" ? "backups" : scope === "processing" ? "ocr" : "public-display");
+  const [activeSection,setActiveSection]=useState(scope === "backups" ? "backups" : scope === "processing" ? "" : "public-display");
   const [aiCapability,setAiCapability]=useState<AIRuntimeCapability>("metadata_extraction");
   const [aiChecks,setAiChecks]=useState<Record<string,{available:boolean;detail:string;checkedAt:string}>>({});
   const [ocrCheck,setOcrCheck]=useState<{reachable:boolean;detail:string;target:string;checkedAt:string}|null>(null);
   const [ocrPausedDraft,setOcrPausedDraft]=useState<boolean|null>(null);
   const ocrWorkload=useAdminResource<{paused:boolean;can_manage:boolean}>(scope === "processing" && activeSection === "ocr" ? "/ingestion/processing-center/?ocr_monitor=1" : null);
-  useEffect(()=>{const sync=()=>{const requested=window.location.hash.slice(1);if(settingsSections.some(([key])=>key===requested) && (scope === "legacy" || scope === "backups" && requested === "backups" || scope === "processing" && ["ocr","ai","search","prompts","submissions"].includes(requested)))setActiveSection(requested);};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[scope]);
+  useEffect(()=>{const sync=()=>{const requested=window.location.hash.slice(1);const valid=settingsSections.some(([key])=>key===requested) && (scope === "legacy" || scope === "backups" && requested === "backups" || scope === "processing" && ["ocr","ai","search","prompts","submissions"].includes(requested));setActiveSection(valid ? requested : scope === "processing" ? "ocr" : scope === "backups" ? "backups" : "public-display");};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[scope]);
   const user = useAdminSession();
   const canRunBackup = hasAdminCapability(user, "can_run_backup");
   const canManagePrompts = hasAdminCapability(user, "can_manage_prompt_registry");
   const configResource = useAdminResource<SiteConfig>(scope === "legacy" ? "/catalog/site-config/" : null);
-  const submissionResource = useAdminResource<{ email: string }>(scope !== "backups" ? "/catalog/admin/reader-submission/" : null);
-  const ocrResource = useAdminResource<OcrRuntime>(scope !== "backups" ? "/catalog/admin/ocr-runtime/" : null);
-  const semanticResource = useAdminResource<SemanticRuntime>(scope !== "backups" ? "/catalog/admin/semantic-runtime/" : null);
-  const aiRuntimeResource = useAdminResource<AIRuntimeDocument>(scope !== "backups" ? "/reading/admin/ai-runtime-profiles/" : null);
+  const submissionResource = useAdminResource<{ email: string }>(activeSection === "submissions" ? "/catalog/admin/reader-submission/" : null);
+  const ocrResource = useAdminResource<OcrRuntime>(activeSection === "ocr" ? "/catalog/admin/ocr-runtime/" : null);
+  const semanticResource = useAdminResource<SemanticRuntime>(activeSection === "search" ? "/catalog/admin/semantic-runtime/" : null);
+  const aiRuntimeResource = useAdminResource<AIRuntimeDocument>(activeSection === "ai" ? "/reading/admin/ai-runtime-profiles/" : null);
   const backups = useAdminResource<Paginated<BackupJob>>(canRunBackup && scope !== "processing" ? "/distribution/backups/" : null);
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [ocrDraft, setOcrDraft] = useState<OcrRuntime | null>(null);
@@ -1873,7 +1873,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   const config = draft ?? configResource.data ?? defaultSiteConfig;
   const submissionEmail = submissionEmailDraft
     ?? submissionResource.data?.email
-    ?? "submissions@example.com";
+    ?? "";
   const ocrRuntime = ocrDraft ?? ocrResource.data ?? defaultOcrRuntime;
   const semanticRuntime = semanticDraft
     ?? semanticResource.data
@@ -2236,7 +2236,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
             {canManagePrompts ? <details><summary>提示词设置</summary><Link href="/admin/processing/settings#prompts">打开提示词编辑 →</Link></details> : null}
           </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
         </form>
-        {scope !== "backups" ? <div hidden={activeSection!=='prompts'} role="tabpanel" aria-labelledby="settings-tab-prompts" id="prompts">{canManagePrompts ? <PromptRegistryAdmin /> : <section className="admin-panel"><h2>AI 提示词</h2><p>只有书库所有者可以查看和修改。</p></section>}</div> : null}
+        {activeSection === "prompts" ? <div role="tabpanel" aria-labelledby="settings-tab-prompts" id="prompts">{canManagePrompts ? <PromptRegistryAdmin /> : <section className="admin-panel"><h2>AI 提示词</h2><p>只有书库所有者可以查看和修改。</p></section>}</div> : null}
         <form className="admin-panel semantic-runtime-settings" hidden={activeSection!=='search'} role="tabpanel" aria-labelledby="settings-tab-search" id="search" onSubmit={saveSemanticRuntime}>
           <header><h2>观点检索资源</h2><Link href="/admin/semantic-index">打开索引管理</Link></header>
           <p>原文检索不受这里影响。向量模式会为公开全文段落生成嵌入；发生故障时，是否完成关键词降级要以测试查询返回的运行结果为准。</p>

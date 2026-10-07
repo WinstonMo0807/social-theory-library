@@ -467,6 +467,12 @@ class AdminSubdisciplineListView(
                 slug_field="discipline__slug",
                 id_field="discipline_id",
             )
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | Q(foreign_name__icontains=search)
+                | Q(discipline__name__icontains=search)
+            )
         return queryset.order_by("discipline__sort_order", "name", "pk")
 
 

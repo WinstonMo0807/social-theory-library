@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, CircleDot, Compass, Grid2X2, MessagesSquare, User
 import type { ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
 import { SaveTopicButton } from "@/components/save-topic-button";
-import { ArchitecturalImage, BookCard, ScholarPortrait, SectionHeading } from "@/components/ui";
+import { BookCard, ScholarPortrait, SectionHeading } from "@/components/ui";
 import type { LibraryTopic } from "@/lib/api/topics.types";
 
 export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer?: ReactNode }) {
@@ -15,7 +15,7 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
   const hasEvidence = curatedEvidence ? curatedEvidence.length > 0 : topic.passages.length > 0;
   return <><main className="page-shell v307-knowledge topic-v307">
     <p className="breadcrumbs"><Link href="/topics">主题</Link><span>›</span>{topic.name}</p>
-    <section className="knowledge-hero" data-module-id="topic-identity" data-edit-section="identity"><div><p className="eyebrow">主题</p><h1>{topic.name}</h1><p>{topic.problemStatement || topic.description}</p><AskLibraryLink context="topics" ids={[topic.id]} label="向图书馆提问" /></div><div className="knowledge-hero-image" style={topic.heroImage ? { backgroundImage: `url("${topic.heroImage}")` } : undefined}>{!topic.heroImage ? <ArchitecturalImage compact /> : null}</div></section>
+    <section className="knowledge-hero" data-module-id="topic-identity" data-edit-section="identity"><div><p className="eyebrow">主题</p><h1>{topic.name}</h1><p>{topic.problemStatement || topic.description}</p><AskLibraryLink context="topics" ids={[topic.id]} label="向图书馆提问" /></div><div className="knowledge-hero-image" style={{ backgroundImage: topic.heroImage ? `url("${topic.heroImage}")` : "none", backgroundColor: topic.heroImage ? undefined : "transparent" }} /></section>
     <div className="knowledge-facts"><span>相关学科 <strong>{topic.disciplines.map(row => row.name).join("、") || "跨学科"}</strong></span><span>关联馆藏 <strong>{topic.workCount} 部</strong></span><span>关联学者 <strong>{scholars.length} 位</strong></span><SaveTopicButton topicId={topic.id} /></div>
     <section className="topic-module-grid">
       {topic.coreQuestions.length || topic.problemStatement ? <article data-module-id="topic-framework" data-edit-section="questions"><MessagesSquare size={21}/><SectionHeading title="研究对象与核心问题"/><p>{topic.problemStatement}</p><ul>{topic.coreQuestions.slice(0, 4).map(item => <li key={item}>{item}</li>)}</ul><Link href={href("questions")}>深入了解 <ArrowRight size={15}/></Link></article> : null}

@@ -10,6 +10,7 @@ from uuid import UUID
 from common.capabilities import Capability, has_capability
 from catalog.services.timeline_evidence import TimelineEvidenceListSerializer
 from .media_views import PublicCoverMediaSerializer
+from .serializer_fields import PreservedSlugField
 from .public_response_serializers import (
     PublicClassificationLinkSerializer, PublicContributionSnapshotSerializer,
     PublicEntityLinkSerializer, PublicJournalContentSerializer,
@@ -2148,7 +2149,7 @@ class AboutPageBlockSerializer(serializers.ModelSerializer):
 
 class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
     edit_version = serializers.CharField(read_only=True)
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
     code = serializers.SlugField(required=False, allow_blank=True)
     counts = serializers.SerializerMethodField()
 
@@ -2213,7 +2214,7 @@ class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelS
 
 class AdminSubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
     edit_version = serializers.CharField(read_only=True)
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
 
     class Meta:
         model = Subdiscipline
@@ -2662,7 +2663,7 @@ class ReaderSubmissionSettingsSerializer(serializers.Serializer):
 class AdminTheorySchoolSerializer(serializers.ModelSerializer):
     work_count = serializers.SerializerMethodField()
     suggestions = serializers.SerializerMethodField()
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
     normalized_relations = serializers.SerializerMethodField()
 
     class Meta:
@@ -2800,7 +2801,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
     edit_version = serializers.CharField(read_only=True)
     work_count = serializers.SerializerMethodField()
     suggestions = serializers.SerializerMethodField()
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
     normalized_relations = serializers.SerializerMethodField()
 
     class Meta:
@@ -2946,7 +2947,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     biography = serializers.CharField(source="person.biography", required=False, allow_blank=True)
     portrait = serializers.ImageField(source="person.portrait", required=False, allow_null=True)
     portrait_media = serializers.SerializerMethodField()
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = PreservedSlugField(required=False, allow_blank=True)
     suggestions = serializers.SerializerMethodField()
     authority_status = serializers.CharField(source="person.authority_status", read_only=True)
     public_eligible = serializers.SerializerMethodField()

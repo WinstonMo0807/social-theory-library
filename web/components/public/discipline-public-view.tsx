@@ -3,13 +3,13 @@ import { ArrowRight, BookOpen, CircleDot, Layers3, Network, UsersRound } from "l
 import type { ReactNode } from "react";
 import {
   KnowledgeNodeCard,
+  DisciplineCard,
   ReadingPathCard,
-  TheoryBanner,
   TheoryEmpty,
   TheorySectionHeading,
-  TheorySearchForm,
 } from "@/components/theory-system-ui";
 import type { loadTheoryDisciplinePage } from "@/lib/api/knowledge.server";
+import type { TheorySystemOverview } from "@/lib/api/knowledge.types";
 
 type DisciplinePagePayload = NonNullable<Awaited<ReturnType<typeof loadTheoryDisciplinePage>>>;
 
@@ -18,28 +18,24 @@ export function DisciplinePublicView({
   activeType,
   slug,
   footer,
+  directory,
+  subdisciplines = [],
 }: {
   payload: DisciplinePagePayload;
   activeType: string;
   slug: string;
   footer: ReactNode;
+  directory?: TheorySystemOverview["disciplines"];
+  subdisciplines?: {id:string;name:string;slug:string}[];
 }) {
   const { discipline, counts } = payload;
+  const contextCards = directory ? [{...discipline,counts},...directory.filter(row=>row.id!==discipline.id)].slice(0,3) : [];
 
   return (
     <>
-      <main className="page-shell theory-system-page theory-discipline-page v307-knowledge discipline-v307">
-        <div className="theory-breadcrumb"><Link href="/theories">理论流派</Link><span>/</span><strong>{discipline.name}</strong></div>
-        <section className="theory-discipline-hero" data-edit-section="identity">
-          <div>
-            <p className="eyebrow">学科详情</p>
-            <h1>{discipline.name}</h1>
-            {discipline.foreign_name ? <h2>{discipline.foreign_name}</h2> : null}
-            {discipline.description ? <p>{discipline.description}</p> : null}
-            <TheorySearchForm action="/theories/directory" discipline={slug} />
-          </div>
-          <TheoryBanner image={discipline.hero_image} />
-        </section>
+      <main className="page-shell theory-system-page theory-discipline-page v307-knowledge discipline-v307 discipline-reference-page">
+        {directory ? <section className="discipline-reference-directory"><header><h1>理论流派</h1><p>从不同学科视角，探索社会世界的多重面向。</p></header><div className="discipline-reference-cards" data-edit-section="media">{contextCards.map(row=><div key={row.id} className={row.id===discipline.id ? "selected" : ""}><DisciplineCard discipline={row} counts={row.counts}/></div>)}</div></section> : <nav className="taxonomy-public-breadcrumb"><Link href="/theories">理论流派</Link><span>›</span><strong>{discipline.name}</strong></nav>}
+        <section className="discipline-reference-overview" id="overview"><header><h1 data-edit-section="identity">{discipline.name}</h1><nav aria-label="学科详情栏目"><a href="#overview" aria-current="page">概述</a><button type="button" disabled>主要议题</button><button type="button" disabled>代表学者</button><Link href={`/explore?discipline=${encodeURIComponent(slug)}`}>相关书籍</Link></nav></header><p data-edit-section="content">{discipline.description}</p>{subdisciplines.length ? <div data-edit-section="relations"><span>主要子学科</span><div>{subdisciplines.slice(0,5).map(row=><Link key={row.id} href={`/subdisciplines/${row.slug}`}>{row.name}</Link>)}</div></div> : null}</section>
 
         <section className="theory-discipline-directory panel" data-edit-section="content">
           <nav className="theory-tab-list" aria-label="学科内容分类">

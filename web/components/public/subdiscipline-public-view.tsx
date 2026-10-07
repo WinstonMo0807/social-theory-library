@@ -1,46 +1,33 @@
 import Link from "next/link";
 import { CollectionLink } from "@/components/collection-link";
-import { ArrowRight, BookOpen, CalendarDays, CircleDot, Layers3, MessagesSquare, Wrench } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { ArchitecturalImage, BookCover, SectionHeading } from "@/components/ui";
+import { BookCover } from "@/components/ui";
 import type { loadSubdiscipline } from "@/lib/api/taxonomy.server";
 
 type SubdisciplinePayload = NonNullable<Awaited<ReturnType<typeof loadSubdiscipline>>>;
 
 export function SubdisciplinePublicView({ item, footer }: { item: SubdisciplinePayload; footer: ReactNode }) {
-  return (
-    <>
-      <main className="page-shell subdiscipline-page v307-knowledge">
-        <p className="breadcrumb">理论流派　/　{item.discipline.name}　/　子学科　/　{item.name}</p>
-        <section className="subdiscipline-hero" data-edit-section="identity">
-          <div><p className="eyebrow">{item.discipline.name}</p><h1>{item.name}</h1><p>{item.description || item.research_object}</p></div>
-          <div className={item.hero_image ? "knowledge-hero-image has-image" : "knowledge-hero-image"} style={item.hero_image ? { backgroundImage: `url("${item.hero_image}")` } : undefined}>{!item.hero_image ? <ArchitecturalImage compact /> : null}</div>
-        </section>
-        <section className="subdiscipline-facts">
-          <article><CircleDot /><span><small>研究对象</small><strong>{item.research_object || "待管理员补充"}</strong></span></article>
-          <article><CalendarDays /><span><small>形成时期</small><strong>{item.formation_period || "待考"}</strong></span></article>
-          <article><Layers3 /><span><small>相关理论</small><strong>{item.theories.map((theory) => theory.name).slice(0, 3).join("、") || "尚未确认"}</strong></span></article>
-          <article><BookOpen /><span><small>馆藏文献</small><strong>{item.works.length}</strong></span></article>
-        </section>
-        <div className="subdiscipline-detail-grid">
-          <KnowledgeList icon={<CircleDot />} title="研究对象与核心问题" items={item.core_questions} />
-          <KnowledgeList icon={<CalendarDays />} title="形成与发展" items={item.formation_period ? [item.formation_period] : []} />
-          <KnowledgeList icon={<Layers3 />} title="主要研究方向" items={item.research_directions} />
-          <KnowledgeList icon={<Wrench />} title="常用方法" items={item.methods} />
-          <KnowledgeList icon={<MessagesSquare />} title="代表性议题" items={item.representative_issues} />
-          <section className="panel knowledge-list-card"><SectionHeading title="相关理论传统" /><div className="tag-list">{item.theories.map((theory) => <Link href={`/theory-schools/${theory.slug}`} key={theory.id}>{theory.name}</Link>)}</div></section>
-        </div>
-        <section className="panel subdiscipline-reading">
-          <SectionHeading title="精选文献导读" href={`/explore?subdiscipline=${item.slug}`} action="查看全部" />
-          <div>{item.works.slice(0, 8).map((work) => <CollectionLink href={`/works/${work.slug}`} key={work.id}><BookCover work={work} size="small" /><span><strong>{work.title}</strong><small>{work.author}</small><time>{work.year}</time></span><ArrowRight /></CollectionLink>)}</div>
-          {!item.works.length ? <p className="empty-state">审核 PDF 的知识归位后，相关馆藏会自动汇入这里。</p> : null}
-        </section>
-      </main>
-      {footer}
-    </>
-  );
+  const firstTheory = item.theories[0];
+  const firstScholar = item.scholars?.[0];
+  const firstWork = item.works[0];
+  return <>
+    <main className="page-shell subdiscipline-page subdiscipline-reference-page v307-knowledge">
+      <nav className="taxonomy-public-breadcrumb" aria-label="当前位置"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><Link href={`/theories/disciplines/${item.discipline.slug}`}>{item.discipline.name}</Link><span>›</span><strong>{item.name}</strong></nav>
+      <section className="taxonomy-public-hero" data-edit-section="identity">
+        <div><h1>{item.name}</h1><p className="taxonomy-public-parent">隶属于：{item.discipline.name}</p><p data-edit-section="content">{item.description || item.research_object}</p></div>
+        <div className="taxonomy-public-image" data-edit-section="media" style={{backgroundImage:item.hero_image ? `url("${item.hero_image}")` : "none"}} aria-label={item.hero_image ? `${item.name}配图` : undefined}/>
+      </section>
+      <section className="taxonomy-public-questions" data-edit-section="questions"><h2>研究问题</h2>{item.core_questions.length ? <p>{item.core_questions.join(" ")}</p> : null}</section>
+      <section className="taxonomy-public-related" data-edit-section="relations">
+        <article><h2>相关理论</h2>{firstTheory ? <><Link href={`/theory-schools/${firstTheory.slug}`}><strong>{firstTheory.name}</strong></Link><RelatedMore title="相关理论">{item.theories.map(theory=><Link key={theory.id} href={`/theory-schools/${theory.slug}`}>{theory.name}</Link>)}</RelatedMore></> : null}</article>
+        <article><h2>相关学者</h2>{firstScholar ? <><Link href={`/scholars/${firstScholar.slug}`}><strong>{firstScholar.name}</strong></Link><RelatedMore title="相关学者">{item.scholars.map(scholar=><Link key={scholar.id} href={`/scholars/${scholar.slug}`}>{scholar.name}</Link>)}</RelatedMore></> : null}</article>
+        <article><h2>相关馆藏</h2>{firstWork ? <><CollectionLink className="taxonomy-public-work" href={`/works/${firstWork.slug}`}>{firstWork.coverImage ? <BookCover work={firstWork} size="small"/> : <div className="taxonomy-missing-work-cover"/>}<span><strong>{firstWork.title}</strong>{firstWork.author ? <small>{firstWork.author}</small> : null}{firstWork.publisher || firstWork.year ? <small>{[firstWork.publisher,firstWork.year ? `${firstWork.year}年版` : ""].filter(Boolean).join(" ")}</small> : null}</span></CollectionLink><Link className="taxonomy-related-more" href={`/explore?subdiscipline=${encodeURIComponent(item.slug)}`}>查看更多 <ArrowRight size={16}/></Link></> : null}</article>
+      </section>
+    </main>
+    {footer}
+  </>;
 }
-
-function KnowledgeList({ icon, title, items }: { icon: ReactNode; title: string; items: string[] }) {
-  return <section className="panel knowledge-list-card"><header>{icon}<h2>{title}</h2></header>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p className="empty-state">待管理员编辑确认。</p>}</section>;
+function RelatedMore({title,children}: {title:string;children:ReactNode}) {
+  return <details className="taxonomy-related-more"><summary aria-label={`查看更多${title}`}>查看更多 <ArrowRight size={16}/></summary><div>{children}</div></details>;
 }

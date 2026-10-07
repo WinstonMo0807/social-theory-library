@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, useRef, useState, type FocusEvent, type ReactElement, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FixedPageEditor } from "@/components/admin/curation/fixed-page-editor";
@@ -14,7 +14,7 @@ import { AsyncStatus } from "@/components/action-feedback";
 import { EvidenceCurationEditor } from "@/components/admin/curation/evidence-curation-editor";
 import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
-type Props = {objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void};
+type Props = {objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; presentation?: "sections" | "inline"};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
 const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
@@ -70,7 +70,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 }
 
 /** One content task at a time; preview uses the same public component and only local form input. */
-export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished}: Props) {
+export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, presentation = "sections"}: Props) {
   const searchParams = useSearchParams();
   const [active, setActive] = useState(initialSection || searchParams.get("section") || "identity");
   const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
@@ -79,6 +79,10 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const canPublish = hasAdminCapability(useAdminSession(),"can_publish_authority");
   const [publishing,setPublishing] = useState(false);
   const [publicationMessage,setPublicationMessage] = useState("");
+  const reviewRef = useRef<HTMLDialogElement>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [previewLocation, setPreviewLocation] = useState(objectType === "discipline" ? "directory" : "overview");
+  const inline = presentation === "inline";
   async function publishSaved() {
     if(!objectId || !savedRecord || dirty || publishing || !canPublish)return;
     const endpoint = ({scholar:"scholars",topic:"topics",discipline:"disciplines",subdiscipline:"subdisciplines",reading_path:"theory-system/reading-paths"} as Record<string,string>)[objectType] || "theory-system/nodes";
@@ -95,7 +99,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
   useEffect(() => {let current = true; queueMicrotask(()=>{if(current){setPayload(null);setError("");}}); if (!objectId) return()=>{current=false;}; apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/`, {}, getServerSessionCredential()).then(value => {if (current) setPayload(value);}).catch(reason => {if (current) setError(reason instanceof Error ? reason.message : "预览读取失败");}); return () => {current = false;};},[objectType, objectId, refreshKey]);
   const childList = Children.toArray(children);
-  const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode}> | undefined;
+  const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode;onFocusCapture?: (event:FocusEvent<HTMLFormElement>) => void}> | undefined;
   const rail = childList.filter(node => node !== form);
   const originalFields = form ? Children.toArray(form.props.children) : [];
   const disabled = originalFields.some(node => isValidElement<FieldProps>(node) && node.props.disabled);
@@ -120,7 +124,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const firstSection = (index: number) => objectType === "scholar" ? stepGroups[index]?.ids.find(id => sections.some(section => section.id === id)) : sections.find(section => stepGroups[index]?.ids.includes(section.id))?.id;
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
-  const page = objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
+  const page = inline ? previewLocation : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
   function changeSection(id: string) {
     if (id === selected) return;
     if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;
@@ -129,13 +133,17 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   }
   const steps = stepped ? <nav className="knowledge-reference-steps" aria-label="编辑步骤">{stepGroups.map((step,index) => <button key={step.label} type="button" aria-current={index === stepIndex ? "step" : undefined} onClick={() => { const id = firstSection(index); if (id) changeSection(id); }}><span>{index+1}</span><strong>{step.label}</strong></button>)}</nav> : null;
   const nextStep = stepped ? <footer className="knowledge-reference-step-actions"><button type="button" className="button secondary" disabled={stepIndex <= 0} onClick={() => {const id = firstSection(stepIndex-1); if(id)changeSection(id);}}>上一步</button>{stepIndex < stepGroups.length-1 ? <button type="button" className="button" onClick={() => {const id=firstSection(stepIndex+1);if(id)changeSection(id);}}>下一步：{stepGroups[stepIndex+1].label} →</button> : null}</footer> : null;
+  const publication = objectId && savedRecord ? <section className="knowledge-publish-action"><button type="button" className="button" disabled={dirty || publishing || !canPublish} onClick={()=>void publishSaved()}>{publishing?"正在发布…":"发布已保存内容"}</button><p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账号没有正式发布权限。":"将已保存的当前对象内容发布给读者。"}</p>{publicationMessage?<p role="status">{publicationMessage}</p>:null}</section> : <p>请先保存草稿，再检查发布内容。</p>;
+  const reviewButton = <button type="button" className="button" onClick={() => {setReviewOpen(true);reviewRef.current?.showModal();}}>{objectType === "discipline" ? "查看发布预览 →" : "预览发布"}</button>;
 
   if (selected === "passages" && evidenceType) return <div className="knowledge-visual-editor">{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={stepSections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div>;
-  return <div className="knowledge-visual-editor">{steps}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}<FixedPageEditor sections={sections} navigationSections={stepSections} toolbar={nextStep} activeSection={selected} onSectionChange={changeSection} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
+  return <div className={`knowledge-visual-editor${inline ? " is-inline-taxonomy" : ""}`}>{steps}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}<FixedPageEditor sections={sections} navigationSections={inline ? [] : stepSections} hideFieldHeading={inline} toolbar={nextStep} activeSection={selected} onSectionChange={changeSection} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
     publishedHref={payload?.perspectives.published.available ? payload.preview_routes.published || undefined : undefined}
     publishedPreview={payload?.perspectives.published.available ? <div inert><PreviewSurface payload={{...payload, active_perspective:"published", perspective:payload.perspectives.published}} pageId={page}/></div> : undefined}
-    fields={form ? cloneElement(form,{},<fieldset disabled={disabled} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
+    fields={form ? cloneElement(form,inline ? {onFocusCapture:event => {const id=(event.target as HTMLElement).closest<HTMLElement>("[data-editor-section],[data-field-section]")?.dataset;const section=id?.editorSection || id?.fieldSection;if(section && sections.some(row=>row.id===section))setActive(section);}} : {},<fieldset disabled={disabled} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={!inline && section !== selected && !alwaysVisible(node)} data-field-section={section}>{inline && isValidElement<FieldProps>(node) && node.type === "footer" ? cloneElement(node,{},node.props.children,reviewButton) : node}</div>)}</fieldset>) : children}
+    previewToolbar={inline ? <div className="taxonomy-preview-location"><label>{objectType === "discipline" ? "位置：" : "当前位置："}<select aria-label="预览位置" value={previewLocation} onChange={event => setPreviewLocation(event.target.value)}>{objectType === "discipline" ? <option value="directory">理论流派首页 · 学科入口卡片</option> : null}<option value="overview">{String((live.discipline as Row)?.name || "")}{objectType === "subdiscipline" ? " › " : ""}{String(live.name || "")} · 详情页</option></select></label></div> : undefined}
+    previewFooter={inline ? <footer className="taxonomy-preview-footer"><span>{dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</span><small>预览的是正在编辑的内容，尚未对外发布。</small></footer> : undefined}
     preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，保存后可重新打开预览。</p> : objectId && !payload ? <p role="status">正在读取当前对象的受控预览…</p> : <div className="knowledge-preview-pane"><div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page}/></div></div>}/>
-    <details className="knowledge-editor-support" hidden={!["publication","media","relations"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{selected === "publication" && objectId && savedRecord ? <section className="knowledge-publish-action"><button type="button" className="button" disabled={dirty || publishing || !canPublish} onClick={()=>void publishSaved()}>{publishing?"正在发布…":"发布已保存内容"}</button><p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账号没有正式发布权限。":"将已保存的当前对象内容发布给读者。"}</p>{publicationMessage?<p role="status">{publicationMessage}</p>:null}</section>:null}{rail}</details>
+    {inline ? <dialog className="taxonomy-publish-dialog" ref={reviewRef} onClose={() => setReviewOpen(false)}><header><h2>预览发布</h2><button type="button" onClick={() => reviewRef.current?.close()}>关闭</button></header>{reviewOpen ? <>{publication}{rail}</> : null}</dialog> : <details className="knowledge-editor-support" hidden={!["publication","media","relations"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{selected === "publication" ? publication : null}{rail}</details>}
   </div>;
 }

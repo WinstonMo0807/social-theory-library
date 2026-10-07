@@ -38,7 +38,7 @@ export function TheoryBanner({ image, media }: { image?: string; media?: compone
   return image ? (
     <div className="theory-system-banner has-image" style={{ backgroundImage: `url("${image}")` }} />
   ) : (
-    <div className="theory-system-banner" aria-hidden="true" />
+    <div className="theory-system-banner" aria-hidden="true" style={{ backgroundImage: "none", backgroundColor: "transparent" }} />
   );
 }
 
