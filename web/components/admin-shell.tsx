@@ -3,6 +3,12 @@
 import Link from "next/link";
 import {
   BookMarked,
+  CalendarCheck,
+  FileText,
+  House,
+  Layers,
+  LibraryBig,
+  NotebookText,
   PanelsTopLeft,
   Newspaper,
   Settings,
@@ -36,6 +42,16 @@ const navigation = [
   { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: SquareCheckBig, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?surface=documents", "文字识别"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/query-lexicon", "检索用语"], ["/admin/processing/status", "运行检查"]] },
   { key: "system", primary: "/admin/storage", label: "系统管理", Icon: Settings, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
 ] as const;
+
+const standardNavigationIcons: Partial<Record<(typeof navigation)[number]["key"], typeof House>> = {
+  work: House,
+  library: LibraryBig,
+  theory: Layers,
+  topics: FileText,
+  recommendations: CalendarCheck,
+  site: NotebookText,
+  processing: RefreshCw,
+};
 
 const routeCapabilities: Record<string, string[]> = {
   "/admin/processing": ["can_view_system_status"],
@@ -78,15 +94,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const scope = adminTaskScope(pathname);
   const searchParams = useSearchParams();
+  const theoryReferencePage = /^\/admin\/theories\/[0-9a-f-]{36}$/i.test(pathname)
+    || (pathname === "/admin/theories" && (searchParams.get("create") === "1" || !!searchParams.get("node")));
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
   const focusMode = false;
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
+  const [desktopNavigationCollapsed, setDesktopNavigationCollapsed] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [readingPathTitle, setReadingPathTitle] = useState("");
+  const [theoryTitle, setTheoryTitle] = useState("");
+  const [taxonomyTrail, setTaxonomyTrail] = useState<string[]>([]);
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -94,8 +115,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const updateTitle = (event: Event) => setReadingPathTitle(typeof (event as CustomEvent).detail === "string" ? (event as CustomEvent<string>).detail : "");
+    const updateTheoryTitle = (event: Event) => setTheoryTitle(typeof (event as CustomEvent).detail === "string" ? (event as CustomEvent<string>).detail : "");
+    const updateTaxonomyTrail = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      setTaxonomyTrail(Array.isArray(detail) && detail.every(value => typeof value === "string") ? detail : []);
+    };
     window.addEventListener("admin-reading-path-title", updateTitle);
-    return () => window.removeEventListener("admin-reading-path-title", updateTitle);
+    window.addEventListener("admin-theory-title", updateTheoryTitle);
+    window.addEventListener("admin-taxonomy-trail", updateTaxonomyTrail);
+    return () => {
+      window.removeEventListener("admin-reading-path-title", updateTitle);
+      window.removeEventListener("admin-theory-title", updateTheoryTitle);
+      window.removeEventListener("admin-taxonomy-trail", updateTaxonomyTrail);
+    };
   }, []);
 
   useEffect(() => {
@@ -202,7 +234,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell ${focusMode ? "focus-mode" : ""}`}>
+    <div className={`admin-shell ${focusMode ? "focus-mode" : ""} ${!compactNavigation && desktopNavigationCollapsed ? "admin-navigation-collapsed" : ""}`}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
@@ -210,8 +242,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         aria-label="后台导航"
         role={compactNavigation && open ? "dialog" : undefined}
         aria-modal={compactNavigation && open ? true : undefined}
-        aria-hidden={compactNavigation && !open}
-        inert={compactNavigation && !open}
+        aria-hidden={compactNavigation ? !open : desktopNavigationCollapsed}
+        inert={compactNavigation ? !open : desktopNavigationCollapsed}
       >
         <Link className="admin-logo" href="/" prefetch={false}><Wordmark /></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
@@ -220,9 +252,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
             const primaryHref = canViewRoute(section.primary) ? section.primary : section.children.find(([href]) => canViewRoute(href))![0];
             const curationQueue = pathname === "/admin/review" && searchParams.get("workspace") === "curation";
             const active = curationQueue ? section.key === "work" : section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
+            let Icon = theoryReferencePage ? section.Icon : standardNavigationIcons[section.key] ?? section.Icon;
+            if (section.key === "theory" && pathname === "/admin/theories/reading-paths") Icon = Network;
+            if (section.key === "theory" && pathname === "/admin/theories/subdisciplines") Icon = LibraryBig;
             return <div className={`admin-nav-section ${active ? "active" : ""}`} key={section.key}>
               <Link className="admin-nav-primary" aria-current={active ? "page" : undefined} href={primaryHref} prefetch={false} onClick={closeNavigation}>
-                <section.Icon size={17} />
+                <Icon size={17} />
                 <span>{section.label}</span>
               </Link>
               {active ? <div className="admin-nav-children">
@@ -245,12 +280,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
             ref={menuButtonRef}
             className="admin-menu-button"
             type="button"
-            aria-label="打开后台菜单"
-            aria-expanded={compactNavigation ? open : undefined}
+            aria-label={compactNavigation ? "打开后台菜单" : desktopNavigationCollapsed ? "展开后台菜单" : "收起后台菜单"}
+            aria-expanded={compactNavigation ? open : !desktopNavigationCollapsed}
             aria-controls="admin-navigation"
-            onClick={() => setOpen(true)}
+            onClick={() => compactNavigation ? setOpen(true) : setDesktopNavigationCollapsed(current => !current)}
           ><Menu size={20} /></button>
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{currentChild?.[1] || "编辑内容"}</span>{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}</div>
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{theoryReferencePage ? "流派列表" : currentChild?.[1] || "编辑内容"}</span>{theoryReferencePage && theoryTitle ? <><b>›</b><span>{theoryTitle}</span></> : null}{["/admin/theories/disciplines", "/admin/theories/subdisciplines"].includes(pathname) ? taxonomyTrail.map((label, index) => <span className="admin-breadcrumb-part" key={`${index}:${label}`}><b>›</b><span>{label}</span></span>) : null}{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}</div>
           <details className="admin-account-menu"><summary className="admin-user"><span>{user.display_name.slice(0, 1)}</span><strong>{user.display_name}</strong><ChevronDown size={13}/></summary><div><Link href="/account" prefetch={false}>我的账户</Link><button type="button" disabled={logoutPending} onClick={async () => { if (logoutPending) return; setLogoutPending(true); setLogoutError(""); try { await logoutCurrentSession(); } catch (error) { setLogoutError(error instanceof Error ? error.message : "退出失败，请重试。"); } finally { setLogoutPending(false); } }}>{logoutPending ? "正在退出…" : "退出登录"}</button>{logoutError ? <p role="alert">{logoutError}</p> : null}</div></details>
         </header> : null}
         <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>

@@ -33,23 +33,25 @@
 .theory-reference-editor .theory-reference-other[open]>summary::before { transform:rotate(90deg); }
 .theory-reference-editor .theory-reference-other>summary::-webkit-details-marker { display:none; }
 .theory-reference-editor .theory-reference-other> :not(summary) { margin-top:18px; }
-.theory-reference-editor .knowledge-reference-step-actions { margin-top:auto;border:0;padding:75px 0 22px;gap:12px;align-items:stretch;justify-content:space-between; }
-.theory-reference-editor .knowledge-reference-step-actions>.button { margin:0;padding:11px 16px;font:16px/1.5 var(--stl-type-serif);white-space:nowrap; }
-.theory-reference-editor .theory-reference-save { margin:0;display:flex; }
-.theory-reference-editor .theory-reference-save>.button { margin:0;padding:11px 24px;font:16px/1.5 var(--stl-type-serif);white-space:nowrap; }
-.theory-reference-editor .fixed-editor-preview { border:0;border-radius:0;background:none;position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:34px 44px minmax(0,1fr);gap:12px 0;align-items:start; }
+.theory-reference-editor .knowledge-reference-step-actions { margin-top:auto;border:0;padding:75px 0 22px;gap:18px;align-items:stretch;justify-content:flex-start; }
+.theory-reference-editor .knowledge-reference-step-actions>.button { margin:0;padding:11px 28px;font:16px/1.5 var(--stl-type-serif);white-space:nowrap; }
+.theory-reference-editor .knowledge-reference-step-actions>.button:first-child { padding-inline:26.5px; }
+.theory-reference-editor .theory-reference-save { margin:0 0 0 auto;display:flex; }
+.theory-reference-editor .theory-reference-save>.button { margin:0;padding:11px 28px;font:16px/1.5 var(--stl-type-serif);white-space:nowrap; }
+.theory-reference-editor .fixed-editor-preview { border:0;border-radius:0;background:none;position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:34px 40px minmax(0,1fr);gap:14px 0;align-items:start; }
 .admin-shell .theory-reference-editor .fixed-editor-preview>header { display:contents; }
 .theory-reference-editor .fixed-editor-preview>header strong { grid-column:1;grid-row:1;font:600 21px/1.5 var(--stl-type-serif); }
 .theory-reference-editor .fixed-editor-preview>header span { grid-column:2;grid-row:2;text-align:right;align-self:center;font:14px/1.5 var(--stl-type-serif); }
 .theory-reference-editor .fixed-editor-preview-tools { grid-column:1;grid-row:2;border:0;padding:0;gap:24px;flex-wrap:nowrap; }
-.admin-shell .theory-reference-editor .fixed-editor-preview-tools button { min-height:34px;height:34px;padding:6px 18px;font:14px/1.5 var(--stl-type-serif); }
+.admin-shell .theory-reference-editor .fixed-editor-preview-tools button { min-height:34px;height:34px;padding:6px 20px;font:16px/1.5 var(--stl-type-serif); }
+.admin-shell .theory-reference-editor .fixed-editor-preview-tools>button { padding-inline:12px; }
 .theory-reference-editor .fixed-editor-preview-tools button[aria-pressed=true] { background:var(--admin-v2-ink);color:white; }
 .theory-reference-editor .fixed-editor-preview-tools [role=group] button svg { display:none; }
 .theory-reference-editor .fixed-editor-preview-tools [role=group] { padding:0; }
 .theory-reference-editor .theory-reference-preview-location { grid-column:2;grid-row:1; }
-.theory-reference-preview-location label { display:flex;align-items:center;gap:4px;font:14px/1.5 var(--stl-type-serif); }
-.admin-shell .theory-reference-preview-location select { width:130px;min-height:34px;height:34px;padding:6px 10px;font:14px/1.5 var(--stl-type-serif); }
-.theory-reference-editor .fixed-preview-canvas { grid-column:1/-1;grid-row:3;max-height:none;min-height:0;align-self:stretch;border:1px solid var(--admin-v2-focus);border-radius:3px;scrollbar-gutter:auto; }
+.theory-reference-preview-location label { display:flex;align-items:center;gap:0;height:34px;padding:0 10px;border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface);font:14px/1.5 var(--stl-type-serif); }
+.admin-shell .theory-reference-preview-location select { width:104px;min-height:32px;height:32px;border:0;background:none;padding:4px;font:14px/1.5 var(--stl-type-serif); }
+.theory-reference-editor .fixed-preview-canvas { grid-column:1/-1;grid-row:3;max-height:none;min-height:0;align-self:stretch;border:1px solid var(--admin-v2-focus);border-radius:3px;scrollbar-gutter:auto;background:var(--admin-v2-surface); }
 .theory-reference-overview.page-shell { width:100%;max-width:none;margin:0;padding:0; }
 .theory-reference-overview-hero { display:grid;grid-template-columns:27% minmax(0,1fr);min-height:468px;background:var(--surface); }
 .theory-reference-overview-hero>.theory-system-banner { margin:0;border:0;border-radius:0;min-height:468px;height:100%; }
@@ -89,7 +91,7 @@
 .fixed-preview-document:has(.theory-reference-overview) .site-header .desktop-nav>a::after { display:none; }
 .fixed-preview-document:has(.theory-reference-overview) .header-search span { display:none; }
 @media(min-width:760px) { .fixed-preview-document:has(.theory-reference-overview) .menu-button { display:none; } }
-@media(min-width:1251px) { .admin-shell:has(.theory-reference-editor) .admin-sidebar { width:206px; }.admin-shell:has(.theory-reference-editor):not(.focus-mode) .admin-main { margin-left:206px; }.admin-shell:has(.theory-reference-editor) .admin-content { padding:20px 22px 0; }.admin-shell:has(.theory-reference-editor) .admin-topbar { min-height:50px; } }
+@media(min-width:1251px) { .admin-shell:has(.theory-reference-editor) .admin-sidebar { width:206px; }.admin-shell:has(.theory-reference-editor):not(.focus-mode) .admin-main { margin-left:206px; }.admin-shell:has(.theory-reference-editor) .admin-content { padding:20px 22px 0; }.admin-shell:has(.theory-reference-editor) .admin-topbar { min-height:50px;padding-left:22px;grid-template-columns:16px minmax(0,1fr) auto;gap:8px; }.admin-shell:has(.theory-reference-editor) .admin-menu-button { display:grid;place-items:center;width:16px;height:16px;min-height:0;padding:0;border:0;background:none; }.admin-shell:has(.theory-reference-editor) .admin-menu-button>svg { width:16px;height:16px; } }
 @media(max-width:1250px) { .theory-reference-editor .fixed-editor-preview { grid-template-columns:1fr;grid-template-rows:min-content min-content min-content minmax(0,1fr); }.theory-reference-editor .fixed-editor-preview>header span { grid-column:1;grid-row:2;justify-self:start; }.theory-reference-editor .fixed-editor-preview-tools { grid-row:3;gap:10px;flex-wrap:wrap; }.theory-reference-editor .theory-reference-preview-location { grid-column:1;grid-row:1;justify-self:end; }.theory-reference-editor .fixed-preview-canvas { grid-row:4; } }
 @media(max-width:1000px) { .theory-reference-editor .fixed-page-editor { grid-template-columns:1fr; }.theory-reference-editor .fixed-editor-panel { border-right:0;padding:0; }.theory-reference-editor .knowledge-reference-step-actions { padding-top:32px; } }
 @media(max-width:650px) { .theory-reference-editor-heading { flex-wrap:wrap;gap:8px; }.theory-reference-editor .knowledge-reference-steps>button { flex:1;min-width:0; }.theory-reference-editor .knowledge-reference-steps::before { left:12%;right:12%; }.theory-reference-editor .knowledge-reference-steps>button>strong { font-size:12px;white-space:normal; }.theory-reference-editor .knowledge-reference-step-actions { flex-wrap:wrap;gap:8px;padding-bottom:20px; }.theory-reference-editor .knowledge-reference-step-actions>.button,.theory-reference-editor .theory-reference-save>.button { font-size:14px;padding:9px 12px; }.theory-reference-overview-hero { grid-template-columns:1fr; }.theory-reference-overview-hero>.theory-system-banner { display:none; }.theory-reference-overview h1 { font-size:36px; }.theory-reference-overview .theory-reference-original-name { font-size:24px; }.theory-reference-overview-intro { padding:24px 20px; }.theory-reference-breadcrumb { font-size:14px; }.theory-reference-primary>a,.theory-reference-primary>span { font-size:16px; }.theory-reference-overview .theory-reference-description { padding:12px 0;font-size:18px; }.theory-reference-overview-tabs { gap:24px;margin:0 20px; }.theory-reference-overview-tabs>a { font-size:16px; }.theory-reference-overview-grid { grid-template-columns:1fr;margin:24px 20px;gap:28px; }.theory-reference-overview-grid>section:nth-child(even) { border-left:0;padding-left:0; }.theory-reference-overview-grid h2 { font-size:23px; }.theory-reference-overview-grid ul { font-size:17px;min-height:0; }.theory-reference-concepts-space { min-height:0; }.theory-reference-people { gap:12px; }.theory-reference-people article { font-size:14px; }.theory-reference-people small { font-size:12px; } }

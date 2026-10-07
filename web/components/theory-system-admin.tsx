@@ -399,6 +399,20 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const [mergeTarget, setMergeTarget] = useState("");
   const [pendingRevision, setPendingRevision] = useState<EditorialRevisionSummary | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      const typeLabel = draft.node_type === "theory_tradition" ? "理论流派" : nodeTypeLabels[draft.node_type] || "理论条目";
+      const title = `${editing ? "编辑" : "新建"}${typeLabel}${draft.canonical_name_zh ? ` · ${draft.canonical_name_zh}` : ""}`;
+      window.dispatchEvent(new CustomEvent("admin-theory-title", { detail: title }));
+    });
+    return () => {
+      active = false;
+      window.dispatchEvent(new CustomEvent("admin-theory-title", { detail: "" }));
+    };
+  }, [editing, draft.node_type, draft.canonical_name_zh]);
+
   const params = useMemo(() => {
     const search = new URLSearchParams({ type: nodeType, page: String(nodePage) });
     if (statusFilter) search.set("status", statusFilter);

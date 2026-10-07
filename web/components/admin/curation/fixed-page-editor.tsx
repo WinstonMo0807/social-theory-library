@@ -64,11 +64,11 @@ export function PreviewViewport({ children, device }: { children: ReactNode; dev
 }
 
 export type FixedEditorSection = { id: string; label: string; description?: string };
-export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar, hideFieldHeading = false, previewFooter, fieldHeader, fieldHeading }: {
+export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar, hideFieldHeading = false, previewFooter, fieldHeader, fieldHeading, expandIcon }: {
   sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string) => void;
   navigationSections?: FixedEditorSection[];
   fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode; hideFieldHeading?: boolean; previewFooter?: ReactNode | ((perspective:"draft" | "published") => ReactNode);
-  fieldHeader?: ReactNode; fieldHeading?: string;
+  fieldHeader?: ReactNode; fieldHeading?: string; expandIcon?: ReactNode;
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -97,7 +97,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
       <div className="fixed-editor-fields" ref={fieldRef}>{!hideFieldHeading ? <><h2>{fieldHeading || sections.find(section => section.id === activeSection)?.label}</h2><p>{sections.find(section => section.id === activeSection)?.description}</p></> : null}{fields}</div>{toolbar}
     </aside>
     <section className="fixed-editor-preview" aria-label="当前输入实时预览"><header><strong>读者会看到什么</strong><span>{perspective === "published" ? "当前线上内容" : dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</span></header>
-      <div className="selected-preview-tools fixed-editor-preview-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} disabled={!canViewPublished} title={!canViewPublished ? "当前对象尚无线上预览" : undefined} onClick={() => setPerspective("published")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={() => {setExpanded(true);fullPreviewRef.current?.showModal();}}><Search size={17}/>放大查看</button></div>
+      <div className="selected-preview-tools fixed-editor-preview-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} disabled={!canViewPublished} title={!canViewPublished ? "当前对象尚无线上预览" : undefined} onClick={() => setPerspective("published")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={() => {setExpanded(true);fullPreviewRef.current?.showModal();}}>{expandIcon || <Search size={17}/>}放大查看</button></div>
       {previewToolbar}
       <PreviewViewport device={device}>{perspective === "published" ? publishedPreview ?? (publishedHref ? <iframe src={publishedHref} title="当前线上页面" style={{width:"100%",height:1000,border:0}}/> : <p className="empty-state">—</p>) : <div ref={element => {
         previewRef.current = element;

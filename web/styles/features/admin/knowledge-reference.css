@@ -173,10 +173,11 @@
   .admin-shell:has(.reading-path-v280-page) .admin-sidebar { width:188px; }
   .admin-shell:has(.reading-path-v280-page):not(.focus-mode) .admin-main { margin-left:188px; }
   .admin-shell:has(.reading-path-v280-page) .admin-topbar { min-height:50px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-logo { height:108px;padding:20px 24px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-logo .wordmark { font-size:24px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-primary { padding-right:20px!important;padding-left:16px!important;font-size:16px!important;gap:6px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-logo { height:108px;padding:15px 24px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-logo .wordmark { font-size:21px;transform:scaleX(.85);transform-origin:left center; }
+  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-primary { padding-right:20px!important;padding-left:24px!important;font-size:16px!important;gap:6px; }
   .admin-shell:has(.reading-path-v280-page) .admin-nav-children { margin:6px 0 7px 40px;padding-left:0;border:0;gap:1px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-children a { padding:5px 5px 5px 17px!important; }
   .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-children a.active { border-left:2px solid var(--admin-v2-ink)!important;border-radius:0!important;background:var(--admin-v2-wash); }
 }
 @media(max-width:1200px) { .reading-path-v280-page .fixed-editor-preview { grid-template-columns:1fr; }.reading-path-v280-page .fixed-editor-preview-tools { grid-column:1;grid-row:2;margin-top:12px;flex-wrap:wrap; }.reading-path-v280-page .fixed-page-editor { grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); }.reading-path-reference-book { grid-template-columns:66px minmax(0,1fr);gap:12px; }.reading-path-reference-book>button { grid-column:2;justify-self:start; } }

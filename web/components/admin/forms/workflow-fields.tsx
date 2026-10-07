@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { Input, Select, Textarea } from "@/components/ui/controls";
@@ -289,7 +289,7 @@ export function EntityPicker({
       <div className="workflow-entity-combobox">
         <Search size={14} aria-hidden="true" />
         <input id={inputId} value={singleSelect && !open ? values.at(-1)?.name || "" : query} placeholder={placeholder} role="combobox" aria-required={ariaRequired || undefined} aria-autocomplete="list" aria-expanded={open} aria-controls={listboxId} aria-describedby={liveId} aria-activedescendant={open && keyboardOptions.length ? `${listboxId}-option-${activeIndex}` : undefined} onKeyDown={onComboboxKeyDown} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} />
-        <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} aria-hidden="true" /></button>
+        <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}>{singleSelect ? <ChevronDown size={14} aria-hidden="true"/> : <ChevronsUpDown size={14} aria-hidden="true"/>}</button>
         <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>
           {loading ? <small>正在搜索……</small> : null}
