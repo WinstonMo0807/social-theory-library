@@ -253,7 +253,7 @@ def _locked_work_item(*, work_id, item_id) -> tuple[ReadingPath, ReadingPathItem
     path = ReadingPath.objects.select_for_update().get(pk=identity["reading_path_id"])
     try:
         item = (
-            ReadingPathItem.objects.select_for_update()
+            ReadingPathItem.objects.select_for_update(of=("self",))
             .select_related("reading_path", "stage")
             .get(pk=item_id, reading_path=path, work_id=work_id)
         )
