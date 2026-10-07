@@ -377,9 +377,11 @@ class PersonCompactSerializer(serializers.ModelSerializer):
         return None
 
     def get_portrait(self, obj) -> str:
+        if not self.get_scholar_slug(obj):
+            return ""
         if obj.portrait_rendition_id:
-            return f"/api/catalog/people/{obj.pk}/portrait/?rendition={obj.portrait_rendition_id}" if self.get_scholar_slug(obj) else ""
-        return obj.portrait.url if obj.portrait else ""
+            return f"/api/catalog/people/{obj.pk}/portrait/?rendition={obj.portrait_rendition_id}"
+        return f"/api/catalog/people/{obj.pk}/portrait/" if obj.portrait else ""
 
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_portrait_media(self, obj):
@@ -2991,6 +2993,8 @@ class AdminScholarSerializer(serializers.ModelSerializer):
         media = data.get("portrait_media")
         if media:
             data["portrait"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
+        elif data.get("portrait"):
+            data["portrait"] = f"/api/catalog/admin/scholars/{instance.pk}/portrait/?image=1"
         return data
 
     def get_suggestions(self, obj):

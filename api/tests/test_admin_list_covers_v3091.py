@@ -35,7 +35,7 @@ def test_list_and_queue_return_saved_private_cover_without_cover_state(api_clien
         assert image.status_code == 200
         assert b"".join(image.streaming_content) == b"saved draft cover"
         assert image["Cache-Control"] == "private, no-store"
-        image.close()
+        # APIClient closes a streaming response when its iterator is exhausted.
     work.refresh_from_db()
     assert work.cover.read() == b"canonical cover"
     work.cover.close()

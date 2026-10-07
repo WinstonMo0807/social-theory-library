@@ -41,6 +41,8 @@ import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { ScholarEssentialWorks } from "@/components/admin/knowledge/scholar-essential-works";
+import { SavedEditionCover } from "@/components/admin/preview/selected-work-preview";
+import directoryStyles from "./admin/knowledge/directory-lists.module.css";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
 import { AdminReaderPreview } from "@/components/admin/admin-reader-preview";
@@ -260,6 +262,40 @@ const emptyTaxonomy: TaxonomyDraft = {
   status: "draft",
 };
 
+function DirectoryImage({url, name, portrait = false}: {url?: string | null;name: string;portrait?: boolean}) {
+  const normalized = url ? normalizePublicResourceUrl(url) : "";
+  // Image fields can also contain a relative public media path; apiBlob expects those as full URLs.
+  const src = normalized.startsWith("/") && !normalized.startsWith("/api/") && typeof window !== "undefined"
+    ? new URL(normalized, window.location.origin).href : normalized;
+  return <span className={`${directoryStyles.image} ${portrait ? directoryStyles.portrait : ""}`} data-empty={!src || undefined}>
+    <SavedEditionCover coverUrl={src} title={name}/>
+  </span>;
+}
+
+export function TopicDirectoryTable({topics, selectedId, onSelect}: {topics: Pick<AdminTopic,"id"|"slug"|"name"|"description"|"hero_image"|"editorial_status">[];selectedId?:string;onSelect:(id:string)=>void}) {
+  return <div className={directoryStyles.tableWrap}><table className={`${directoryStyles.table} ${directoryStyles.topicTable}`}><colgroup><col/><col/><col/><col/></colgroup>
+    <thead><tr><th scope="col">主题名称</th><th scope="col">主题介绍</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>
+    <tbody>{topics.map(topic=><tr key={topic.id} data-selected={selectedId===topic.id || undefined}>
+      <td><button type="button" className={directoryStyles.imageButton} aria-label={`预览${topic.name}`} aria-pressed={selectedId===topic.id} onClick={()=>onSelect(topic.id)}><DirectoryImage url={topic.hero_image} name={`${topic.name}图片`}/></button></td>
+      <td><button className={directoryStyles.title} type="button" aria-pressed={selectedId===topic.id} onClick={()=>onSelect(topic.id)}>{topic.name}</button><p className={directoryStyles.description}>{topic.description || ""}</p></td>
+      <td><span className={directoryStyles.status} data-state={topic.editorial_status}>{topic.editorial_status==="published" ? "已公开" : "未公开"}</span></td>
+      <td><div className={directoryStyles.actions}><button type="button" onClick={()=>onSelect(topic.id)}>查看</button><Link prefetch={false} href={`/admin/topics/${topic.id}`}>编辑</Link></div></td>
+    </tr>)}</tbody>
+  </table>{!topics.length ? <p className={directoryStyles.empty}>没有匹配的真实主题。</p> : null}</div>;
+}
+
+export function ScholarDirectoryTable({scholars, selectedId, onSelect}: {scholars: Pick<AdminScholar,"id"|"slug"|"preferred_name"|"original_name"|"birth_year"|"death_year"|"portrait"|"public_eligible"|"public_visibility_reason"|"editorial_status">[];selectedId?:string;onSelect:(id:string)=>void}) {
+  return <div className={directoryStyles.tableWrap}><table className={`${directoryStyles.table} ${directoryStyles.scholarTable}`}><colgroup><col/><col/><col/><col/></colgroup>
+    <thead><tr><th scope="col">学者（姓名 / 原名）</th><th scope="col">生卒年</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>
+    <tbody>{scholars.map(scholar=><tr key={scholar.id} data-selected={selectedId===scholar.id || undefined}>
+      <td><button className={directoryStyles.person} type="button" aria-pressed={selectedId===scholar.id} onClick={()=>onSelect(scholar.id)}><DirectoryImage portrait url={scholar.portrait} name={`${scholar.preferred_name}肖像`}/><span><strong>{scholar.preferred_name}</strong><small>{scholar.original_name || ""}</small></span></button></td>
+      <td>{scholar.birth_year || scholar.death_year ? `${scholar.birth_year ?? ""} – ${scholar.death_year ?? ""}` : ""}</td>
+      <td><span className={directoryStyles.status} data-state={scholar.public_eligible ? "published" : "draft"} title={scholar.public_visibility_reason}>{scholar.public_eligible ? "已发布" : scholar.editorial_status==="published" ? "资格待处理" : "草稿"}</span></td>
+      <td><div className={directoryStyles.actions}><Link prefetch={false} href={`/admin/scholars/${scholar.id}`}>编辑</Link>{scholar.public_eligible && scholar.slug ? <Link prefetch={false} href={`/scholars/${scholar.slug}`} target="_blank">查看前台</Link> : null}</div></td>
+    </tr>)}</tbody>
+  </table>{!scholars.length ? <p className={directoryStyles.empty}>没有匹配的真实学者档案。</p> : null}</div>;
+}
+
 export function TaxonomyAdmin({
   mode = "combined",
   entityId,
@@ -268,7 +304,9 @@ export function TaxonomyAdmin({
   entityId?: string;
 }) {
   const router = useRouter();
-  const createName = useSearchParams().get("create")?.trim() ?? "";
+  const searchParams = useSearchParams();
+  const createName = searchParams.get("create")?.trim() ?? "";
+  const topicQuery = searchParams.get("q")?.trim() ?? "";
   const editorOnly = entityId !== undefined;
   const showTheories = mode !== "topic";
   const showTopics = mode !== "theory";
@@ -278,10 +316,10 @@ export function TaxonomyAdmin({
     !editorOnly && showTheories ? `/catalog/admin/theory-schools/?page=${theoryPaging.page}` : null,
   );
   const topics = useAdminResource<Paginated<AdminTopic>>(
-    !editorOnly && showTopics ? `/catalog/admin/topics/?page=${topicPaging.page}` : null,
+    !editorOnly && showTopics ? `/catalog/admin/topics/?page=${topicPaging.page}&search=${encodeURIComponent(topicQuery)}` : null,
   );
   const [selectedTopicId, setSelectedTopicId] = useState("");
-  const selectedTopic = selectedTopicId ? topics.data?.results.find(item => item.id === selectedTopicId) : topics.data?.results[0];
+  const selectedTopic = topics.data?.results.find(item => item.id === selectedTopicId) ?? topics.data?.results[0];
   const detailBase = mode === "topic"
     ? "/catalog/admin/topics"
     : "/catalog/admin/theory-schools";
@@ -559,6 +597,22 @@ export function TaxonomyAdmin({
       <Link href={mode === "topic" ? "/admin/topics" : "/admin/theories"}>返回列表</Link>
     </AdminPageFrame>;
   }
+
+  if (!editorOnly && mode === "topic") return <div className={`${directoryStyles.page} ${directoryStyles.topics}`}>
+    <section className={directoryStyles.listColumn}>
+      <header className={directoryStyles.topicHeading}><div><h1>主题管理</h1><Link className={directoryStyles.create} href="/admin/topics/new"><Plus size={16}/>新建主题</Link></div>
+        <div><h2>选择要编辑的研究主题</h2><form className={directoryStyles.topicSearch} role="search" onSubmit={event=>{
+          event.preventDefault(); setSelectedTopicId(""); topicPaging.reset({q:String(new FormData(event.currentTarget).get("q") || "").trim()});
+        }}><Search size={16}/><input key={topicQuery} name="q" type="search" defaultValue={topicQuery} placeholder="搜索主题名称或关键词" aria-label="搜索主题名称或关键词"/><button className="sr-only" type="submit">搜索主题</button></form></div>
+        <p>管理网站的研究主题内容，编辑介绍、图片、研究问题、入门阅读和代表学者等。</p>
+      </header>
+      <ResourceState loading={topics.loading} error={topics.error} empty={false}/>
+      {topics.error ? <button type="button" onClick={topics.refresh}>重新读取主题列表</button> : null}
+      <TopicDirectoryTable topics={topics.data?.results ?? []} selectedId={selectedTopic?.id} onSelect={setSelectedTopicId}/>
+      <AdminListPages data={topics.data} paging={topicPaging} loading={topics.loading} filters={{q:topicQuery}} label="主题列表分页"/>
+    </section>
+    <div className={directoryStyles.preview}><CurationSelectionPreview key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type:"topic",object_id:selectedTopic.id,title:selectedTopic.name,label:"主题",edit_url:`/admin/topics/${selectedTopic.id}`,can_edit:true } : undefined} returnTo={`/admin/topics${searchParams.size ? `?${searchParams}` : ""}`}/></div>
+  </div>;
 
   return (
     <AdminPageFrame
@@ -1024,7 +1078,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const [editConflict, setEditConflict] = useState(false);
   const visible = resource.data?.results ?? [];
   const [selectedScholarId, setSelectedScholarId] = useState("");
-  const selectedScholar = selectedScholarId ? visible.find(item => item.id === selectedScholarId) : visible[0];
+  const selectedScholar = visible.find(item => item.id === selectedScholarId) ?? visible[0];
 
   useEffect(() => {
     let active = true;
@@ -1209,26 +1263,23 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
     </AdminPageFrame>;
   }
 
+  if (!editorOnly) return <div className={`${directoryStyles.page} ${directoryStyles.scholars}`}>
+    <header className={directoryStyles.scholarHeading}><div><h1>学者列表</h1><p>选择要编辑的学者，右侧可查看该学者在前台的实际展示效果。</p></div>
+      <form className={directoryStyles.scholarSearch} role="search" onSubmit={event=>{
+        event.preventDefault();const normalized=query.trim();setSubmittedQuery(normalized);setSelectedScholarId("");paging.reset({q:normalized});
+      }}><Search size={18}/><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="搜索学者姓名、原名或关键词" aria-label="搜索学者姓名、原名或关键词"/><button type="submit">搜索</button></form>
+    </header>
+    <div className={directoryStyles.columns}><section className={directoryStyles.scholarList}>
+      <ResourceState loading={resource.loading} error={resource.error} empty={false}/>
+      {resource.error ? <button type="button" onClick={resource.refresh}>重新读取学者列表</button> : null}
+      <ScholarDirectoryTable scholars={visible} selectedId={selectedScholar?.id} onSelect={setSelectedScholarId}/>
+      <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{q:submittedQuery}} label="学者列表分页"/>
+    </section><div className={directoryStyles.preview}><CurationSelectionPreview key={selectedScholar?.id || "empty-scholar"} item={selectedScholar ? {object_type:"scholar_profile",object_id:selectedScholar.id,title:selectedScholar.preferred_name,label:"学者",edit_url:`/admin/scholars/${selectedScholar.id}`,can_edit:true} : undefined} returnTo={`/admin/scholars${searchParams.size ? `?${searchParams}` : ""}`}/></div></div>
+  </div>;
+
   return (
     <AdminPageFrame eyebrow="人物资料" title="学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
-      {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => { const normalized = query.trim(); setSubmittedQuery(normalized); router.replace(normalized ? `/admin/scholars?q=${encodeURIComponent(normalized)}` : "/admin/scholars"); }} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
-      <div className={`admin-master-detail ${editorOnly ? "editor-only" : "knowledge-directory-reference"}`}>
-        {!editorOnly ? <section className="admin-entity-table scholar-admin-table admin-panel">
-          <header><span>学者</span><span>原名</span><span>年代</span><span>关注领域</span><span>公开档案</span><span>操作</span></header>
-          {visible.map((scholar) => (
-            <article className={selectedScholar?.id === scholar.id ? "selected" : ""} key={scholar.id}>
-              <p>{scholar.portrait ? <img className="tiny-portrait" src={normalizePublicResourceUrl(scholar.portrait)} alt=""/> : <span className="tiny-portrait" />}<button type="button" className="reference-select-title" aria-pressed={selectedScholar?.id === scholar.id} onClick={() => setSelectedScholarId(scholar.id)}>{scholar.preferred_name}</button></p>
-              <span>{scholar.original_name || "—"}</span>
-              <span>{scholar.birth_year ? `${scholar.birth_year}—${scholar.death_year ?? ""}` : "—"}</span>
-              <span>{scholar.key_concerns.slice(0, 2).join("、") || "待补"}</span>
-              <b>{scholar.public_eligible ? "已公开" : scholar.editorial_status === "published" ? "公开资格待处理" : "草稿"}</b>
-              <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link><RecycleControl kind="scholar" id={scholar.id} name={scholar.preferred_name} onDeleted={resource.refresh} />{scholar.public_eligible ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
-            </article>
-          ))}
-          {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
-          <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
-        </section> : null}
-        {!editorOnly ? <CurationSelectionPreview key={selectedScholar?.id || "empty-scholar"} item={selectedScholar ? { object_type: "scholar_profile", object_id: selectedScholar.id, title: selectedScholar.preferred_name, label: "学者", edit_url: `/admin/scholars/${selectedScholar.id}`, can_edit: true } : undefined} returnTo={`/admin/scholars${requestedQuery ? `?q=${encodeURIComponent(requestedQuery)}` : ""}`}/> : null}
+      <div className="admin-master-detail editor-only">
         {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={{...draft, previewWorks:essentialWorks}} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
           <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
@@ -2283,29 +2334,6 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
 
 function AdminPageFrame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
   return <div className="admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
-}
-
-function Toolbar({
-  query,
-  onQueryChange,
-  onSubmit,
-  onCreate,
-  createHref,
-  createLabel,
-}: {
-  query: string;
-  onQueryChange: (value: string) => void;
-  onSubmit: () => void;
-  onCreate?: () => void;
-  createHref?: string;
-  createLabel: string;
-}) {
-  return (
-    <form className="admin-list-toolbar" onSubmit={(event) => { event.preventDefault(); onSubmit(); }}>
-      <label><Search size={15} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索……" /></label>
-      {createHref ? <Link href={createHref}><Plus size={15} />{createLabel}</Link> : <button type="button" onClick={onCreate}><Plus size={15} />{createLabel}</button>}
-    </form>
-  );
 }
 
 function StatusCard({ icon: Icon, title, value, description }: { icon: typeof Cloud; title: string; value: string; description: string }) {

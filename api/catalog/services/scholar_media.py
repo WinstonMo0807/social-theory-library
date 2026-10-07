@@ -14,6 +14,19 @@ def portrait_selection(profile):
             "legacy_path": profile.person.portrait.name or ""}
 
 
+def current_portrait_selection(profile):
+    revision = EditorialRevision.objects.filter(target_type="scholar_profile", target_id=profile.pk, status="draft").order_by("-revision").first()
+    value = revision.materialized_preview.get("portrait_selection", portrait_selection(profile)) if revision else portrait_selection(profile)
+    return revision, validate_portrait_selection(profile, value)
+
+
+def open_legacy_portrait(person, path):
+    """Open only this person's canonical legacy file, never a requested path."""
+    if not path or path != person.portrait.name:
+        raise FileNotFoundError("当前肖像不存在。")
+    return person.portrait.storage.open(path, "rb")
+
+
 _READ_LATEST = object()
 
 

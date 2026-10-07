@@ -351,7 +351,9 @@ export function ProcessingCenter() {
   const [jobStatus, setJobStatus] = useState("");
   const [filtersReady, setFiltersReady] = useState(false);
   const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("overview");
+  const [technicalOpen, setTechnicalOpen] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [panelRevision, setPanelRevision] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<ProcessingItem | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const selectedDocument = items.find(item => item.id === selectedDocumentId) ?? items[0] ?? null;
@@ -365,7 +367,7 @@ export function ProcessingCenter() {
   const loadRequestRef = useRef<{ key: string; controller: AbortController; promise: Promise<boolean> } | null>(null);
 
   const load = useCallback((): Promise<boolean> => {
-    const key = JSON.stringify([reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+    const key = JSON.stringify([activeSurface, technicalOpen, reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
     if (loadRequestRef.current?.key === key) return loadRequestRef.current.promise;
     loadRequestRef.current?.controller.abort();
     const controller = new AbortController();
@@ -382,14 +384,18 @@ export function ProcessingCenter() {
         return false;
       }
       try {
+      const showDocuments = activeSurface === "overview" || activeSurface === "documents";
+      const showReview = activeSurface === "workers";
+      const showSemantic = technicalOpen && (activeSurface === "overview" || activeSurface === "ai-models");
+      const showJobs = technicalOpen && (showDocuments || showReview || showSemantic || activeSurface === "research-sources");
       const [itemsResult, healthResult, jobsResult, semanticResult, reviewResult] = await Promise.allSettled([
-        apiRequest<Paginated<ProcessingItem>>(
+        showDocuments ? apiRequest<Paginated<ProcessingItem>>(
           `/ingestion/items/?scope=processing&ordering=-updated_at,-id&page=${itemPage}`,
           options,
           token,
-        ),
-        apiRequest<QueueHealth>("/ingestion/queue-health/", options, token),
-        apiRequest<ProcessingJobsPayload>(`/ingestion/processing-center/?${new URLSearchParams({ job_type: jobType, status: jobStatus, page: String(jobPage), q: jobQuery, ocr_inventory_page: String(ocrPage), ocr_query: ocrQuery })}`, options, token).then((result) => {
+        ) : null,
+        showDocuments || (technicalOpen && showReview) ? apiRequest<QueueHealth>("/ingestion/queue-health/", options, token) : null,
+        showJobs ? apiRequest<ProcessingJobsPayload>(`/ingestion/processing-center/?${new URLSearchParams({ job_type: jobType, status: jobStatus, page: String(jobPage), q: jobQuery, ocr_inventory_page: String(ocrPage), ocr_query: ocrQuery })}`, options, token).then((result) => {
           // Job feedback must not wait for slow provider/worker health checks.
           if (!current()) return result;
           setJobs(result.results);
@@ -399,36 +405,36 @@ export function ProcessingCenter() {
           setWorkloads(result.workloads ?? {});
           setPausedOCRInventory(result.paused_ocr_inventory ?? null);
           return result;
-        }),
-        apiRequest<SemanticHealthPayload>("/catalog/admin/semantic-index/", options, token),
-        apiRequest<ReviewTasksPayload>(
+        }) : null,
+        showSemantic ? apiRequest<SemanticHealthPayload>("/catalog/admin/semantic-index/", options, token) : null,
+        showReview ? apiRequest<ReviewTasksPayload>(
           `/ingestion/review-tasks/?page_size=30&page=${reviewPage}${reviewStatus ? `&status=${encodeURIComponent(reviewStatus)}` : ""}`,
           options,
           token,
-        ),
+        ) : null,
       ]);
       if (!current()) {
         if (timedOut && loadRequestRef.current?.controller === controller) setError("部分状态读取超时，已保留最近结果；可点击刷新重试。不会重新启动识别。");
         return false;
       }
       const failures: string[] = [];
-      if (itemsResult.status === "fulfilled") {
+      if (itemsResult.status === "fulfilled" && itemsResult.value) {
         setItems(itemsResult.value.results);
         setItemMeta(itemsResult.value);
-      } else {
+      } else if (itemsResult.status === "rejected") {
         failures.push("上传记录暂时读取失败，保留上次结果。");
       }
       setQueueHealth(healthResult.status === "fulfilled" ? healthResult.value : null);
       setSemanticHealth(semanticResult.status === "fulfilled" ? semanticResult.value : null);
       if (jobsResult.status === "rejected") failures.push("任务进度暂时读取失败，保留上次结果。");
       if (healthResult.status === "rejected" || semanticResult.status === "rejected") failures.push("部分服务状态未能读取，不能据此判断正常。");
-      if (reviewResult.status === "fulfilled") {
+      if (reviewResult.status === "fulfilled" && reviewResult.value) {
         setReviewTasks(reviewResult.value.results);
         setReviewMeta(reviewResult.value);
         setReviewPage(reviewResult.value.page);
         setReviewCounts(reviewResult.value.counts);
         setCanManageReviewTasks(reviewResult.value.can_manage);
-      } else {
+      } else if (reviewResult.status === "rejected") {
         failures.push("人工待办暂时读取失败，保留上次结果。");
       }
         setError(failures.length ? `${failures.join(" ")}可点击刷新重试，不会重新启动任务。` : "");
@@ -447,7 +453,7 @@ export function ProcessingCenter() {
       if (loadRequestRef.current?.promise === request) loadRequestRef.current = null;
     });
     return request;
-  }, [reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+  }, [activeSurface, technicalOpen, reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
 
   function beginOperation(actionKey: string, pendingMessage: string) {
     if (operationInFlightRef.current) return false;
@@ -517,10 +523,12 @@ export function ProcessingCenter() {
     if (!beginOperation(actionKey, "正在刷新处理中心。")) return;
     setLoading(true);
     try {
+      const hasOwnPanel = ["research-sources", "ai-models", "projections", "faults"].includes(activeSurface);
+      if (hasOwnPanel) setPanelRevision(value => value + 1);
       const succeeded = await load();
       setFeedback({
         state: succeeded ? "success" : "error",
-        message: succeeded ? "处理中心已刷新。" : "处理中心刷新失败，请查看页面错误。",
+        message: succeeded ? hasOwnPanel ? "已请求重新读取当前面板，结果请见下方。" : "处理中心已刷新。" : "处理中心刷新失败，请查看页面错误。",
         actionKey,
       });
     } finally {
@@ -717,15 +725,17 @@ export function ProcessingCenter() {
           ><RefreshCw size={15} />立即检查</ActionButton>
         </div>
       </header>
+      {loading && !items.length && !jobs.length && !reviewTasks.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
+      <AsyncStatus state="error" message={error} assertive />
       <div
         className="processing-center-surface"
         id={`processing-surface-${activeSurface}`}
         aria-label="处理任务与读者效果"
         tabIndex={0}
       >
-      {healthSurface ? <FunctionalHealthPanel revision={revision} surface={healthSurface} /> : null}
-      {activeSurface === "projections" ? <DiscoveryIndexPanel revision={revision} /> : null}
-      {activeSurface === "research-sources" ? <ResearchSourceRegistryPanel revision={revision}/> : null}
+      {healthSurface ? <FunctionalHealthPanel revision={revision + panelRevision} surface={healthSurface} /> : null}
+      {activeSurface === "projections" ? <DiscoveryIndexPanel revision={revision + panelRevision} /> : null}
+      {activeSurface === "research-sources" ? <ResearchSourceRegistryPanel revision={revision + panelRevision}/> : null}
       {activeSurface === "overview" || activeSurface === "documents" ? <>
         {documentDetail && selectedDocument ? <div className="processing-reference-document-heading"><div><h2>{selectedDocument.review_data?.title || selectedDocument.source_filename}</h2><p>{[selectedDocument.review_data?.authors?.join("、"), selectedDocument.review_data?.publisher, selectedDocument.review_data?.publication_year, selectedDocument.review_data?.version_label].filter(Boolean).join("　｜　")}</p></div><div><strong>{stageLabels[selectedDocument.status] ?? selectedDocument.status}</strong><small>最后检查：{timeLabel(selectedDocument.updated_at)}</small></div><button type="button" className="button secondary" onClick={() => setDocumentDetail(false)}>返回待处理任务</button></div> : null}
         <div className="processing-reference-columns">
@@ -745,7 +755,8 @@ export function ProcessingCenter() {
         <section className="processing-reference-services"><h2>系统运行状态</h2><div>{[["后台任务", queueHealth?.worker_online], ["文件存储", null], ["文字识别服务", queueHealth?.ocr.reachable], ["搜索服务", queueHealth?.search.reachable]].map(([label, state]) => <article key={String(label)}><i className={state === true ? "healthy" : state === false ? "failed" : "unknown"}/><div><strong>{label}</strong><span>{state === true ? "可连接" : state === false ? "不可连接" : "待核实"}</span><small>上次检查：{timeLabel(queueHealth?.checked_at ?? null)}{queueHealth?.stale ? "（已过期）" : ""}</small></div></article>)}<Link className="button secondary" href="/admin/processing/status">运行检查详情 →</Link></div></section>
       </> : null}
       {activeSurface === "workers" ? <section className="processing-reference-review"><nav className="reference-review-steps" aria-label="人工核对步骤"><span><b>1</b>查看差异</span><span className="active"><b>2</b>核对原文件</span><span><b>3</b>确认处理</span></nav><div className="processing-reference-review-columns"><aside><header><h2>待处理任务（{reviewMeta?.count ?? "—"}）</h2><select aria-label="审核任务状态" value={reviewStatus} onChange={event => { setReviewStatus(event.target.value); setReviewPage(1); setSelectedReviewId(""); }}>{Object.entries(reviewStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></header>{reviewTasks.map(task => <button type="button" key={task.id} className={selectedReview?.id === task.id ? "selected" : ""} onClick={() => setSelectedReviewId(task.id)} aria-pressed={selectedReview?.id === task.id}><strong>{task.item_title || task.source_filename || task.title}</strong><small>{reviewTypeLabels[task.task_type] ?? task.title}</small><ChevronRight size={16}/></button>)}<TaskPagination label="人工待办翻页" page={reviewMeta?.page ?? reviewPage} pages={reviewMeta?.pages ?? 1} count={reviewMeta?.count ?? 0} busy={loading} onChange={setReviewPage}/></aside><section>{selectedReview ? <><h2>核对{reviewTypeLabels[selectedReview.task_type] ?? "书目信息"}</h2><h3>{selectedReview.item_title || selectedReview.source_filename}</h3><p>{selectedReview.title}</p><div className="processing-reference-alert"><AlertCircle size={18}/><p>请查看右侧原文件，核对正确的信息。已确认值和识别建议在这份馆藏的编辑页逐字段处理。</p></div><dl><div><dt>当前状态</dt><dd>{reviewStatusLabels[selectedReview.status]}</dd></div><div><dt>负责人</dt><dd>{selectedReview.assigned_to_name || "尚未领取"}</dd></div><div><dt>创建时间</dt><dd>{timeLabel(selectedReview.created_at)}</dd></div></dl><footer>{canManageReviewTasks && selectedReview.status === "pending" ? <ActionButton className="button secondary" state={operationState(`review:assign_self:${selectedReview.id}`)} disabled={Boolean(pendingOperation)} onClick={() => void reviewTaskAction(selectedReview, "assign_self")}>领取任务</ActionButton> : null}{selectedReview.upload_item ? <Link className="button" href={`/admin/intake/${selectedReview.upload_item}#bibliography`}>下一步：核对并确认 →</Link> : <Link className="button" href="/admin/candidate-review">查看候选与处理入口 →</Link>}</footer></> : <p className="empty-state">当前没有人工审核任务。</p>}</section><section>{selectedReview?.upload_item ? <WorkflowInspector key={selectedReview.id} selection={{ kind: "pdf", title: "原文件与出版信息", pdfUrl: `/ingestion/items/${selectedReview.upload_item}/preview/` }} token={getServerSessionCredential()} onClose={() => setSelectedReviewId("")}/> : <p className="empty-state">—</p>}</section></div></section> : null}
-      <details className="processing-reference-technical"><summary>技术信息（折叠）<span>任务记录、服务日志与维护设置</span></summary>
+      <details className="processing-reference-technical" open={technicalOpen} onToggle={event => setTechnicalOpen(event.currentTarget.open)}><summary>技术信息（折叠）<span>任务记录、服务日志与维护设置</span></summary>
+      {technicalOpen ? <>
       <nav className="processing-type-tabs processing-center-surfaces" aria-label="处理中心分类" role="tablist">
         {PROCESSING_SURFACES.map((surface) => (
           <button
@@ -851,8 +862,6 @@ export function ProcessingCenter() {
         </div>
         <TaskPagination label="暂停识别翻页" page={pausedOCRInventory?.page ?? ocrPage} pages={pausedOCRInventory?.pages ?? 1} count={pausedOCRInventory?.total ?? 0} busy={loading} onChange={setOcrPage} />
       </section> : null}
-      {loading && !items.length && !jobs.length ? <AsyncStatus state="pending" message="正在读取处理进度……" /> : null}
-      <AsyncStatus state="error" message={error} assertive />
       {activeSurface === "workers" ? <section className="processing-list admin-panel processing-review-queue" aria-labelledby="processing-review-title">
         <header className="processing-job-toolbar">
           <div><h2 id="processing-review-title">人工审核队列</h2><p>元数据冲突、同名人物、实体消歧和页码问题集中在这里处理。</p></div>
@@ -924,6 +933,7 @@ export function ProcessingCenter() {
         <TaskPagination label="后台任务翻页" page={taskMeta?.page ?? jobPage} pages={taskMeta?.pages ?? 1} count={taskMeta?.count ?? 0} busy={loading} onChange={setJobPage} />
         {!canManageTasks ? <p>当前账户只读。任务启停与恢复需要管理员或系统所有者权限。</p> : null}
       </section> : null}
+      </> : null}
       </details>
       </div>
       <ToastHost
