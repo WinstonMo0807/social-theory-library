@@ -72,7 +72,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 /** One content task at a time; preview uses the same public component and only local form input. */
 export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, presentation = "sections"}: Props) {
   const searchParams = useSearchParams();
-  const [active, setActive] = useState(initialSection || searchParams.get("section") || "identity");
+  const [active, setActive] = useState(initialSection || searchParams.get("section") || (objectType === "discipline" && presentation === "inline" ? "media" : "identity"));
   const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
   const [error, setError] = useState("");
   const [evidenceDirty, setEvidenceDirty] = useState(false);
