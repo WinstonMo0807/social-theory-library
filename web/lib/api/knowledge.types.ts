@@ -203,6 +203,7 @@ export type NormalizedTimelineEvent = {
 
 export type NormalizedReadingPathItem = {
   id: string;
+  stage?: string | null;
   stage_name: string;
   stage_description: string;
   node: string | null;

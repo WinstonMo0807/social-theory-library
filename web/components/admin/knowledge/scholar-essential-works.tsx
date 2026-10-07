@@ -23,6 +23,18 @@ export function loadScholarWorkOptions(query: string, page: number, signal?: Abo
   return apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?${params}`, { signal }, getServerSessionCredential());
 }
 
+export async function loadLibraryWorkPreview(id: string, signal?: AbortSignal) {
+  const credential = getServerSessionCredential();
+  const library = await apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?work_id=${encodeURIComponent(id)}`, { signal }, credential);
+  const row = library.results.find(item => item.id === id);
+  if (!row) throw new Error("当前文献不可用。");
+  const editionId = row.primary_edition?.id || row.edition_id;
+  if (!editionId) return { option: { id, title: row.title }, work: null };
+  const payload = await apiRequest<{ work: ApiWork }>(`/catalog/admin/page-preview/editions/${encodeURIComponent(editionId)}/`, { signal }, credential);
+  if (payload.work.id !== id) throw new Error("文献读取结果不完整。");
+  return { option: { id, title: row.title }, work: payload.work };
+}
+
 export function ScholarWorkPicker({ index, current, selected, suggestions, onSelect, onClose }: {
   index: number; current: string; selected: string[]; suggestions: Option[];
   onSelect: (option: Option) => void; onClose: () => void;
@@ -92,17 +104,10 @@ export function ScholarEssentialWorks({ selected, options, works, onChange, onRe
     const resolvedOptions: Option[] = [];
     void Promise.allSettled(ids.map(async id => {
       if (cache.current.has(id)) return cache.current.get(id)!;
-      const credential = getServerSessionCredential();
-      const library = await apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?work_id=${encodeURIComponent(id)}`, { signal: controller.signal }, credential);
-      const row = library.results.find(item => item.id === id);
-      if (!row) throw new Error("当前文献不可用。");
-      resolvedOptions.push({ id, title: row.title });
-      const editionId = row?.primary_edition?.id || row?.edition_id;
-      if (!editionId) { cache.current.set(id, null); return null; }
-      const payload = await apiRequest<{ work: ApiWork }>(`/catalog/admin/page-preview/editions/${encodeURIComponent(editionId)}/`, { signal: controller.signal }, credential);
-      if (payload.work.id !== id) throw new Error("重要文献读取结果不完整。");
-      cache.current.set(id, payload.work);
-      return payload.work;
+      const resolved = await loadLibraryWorkPreview(id, controller.signal);
+      resolvedOptions.push(resolved.option);
+      cache.current.set(id, resolved.work);
+      return resolved.work;
     })).then(results => {
       if (controller.signal.aborted) return;
       setKnownOptions(previous => [...new Map([...previous, ...resolvedOptions].map(option => [option.id, option])).values()]);

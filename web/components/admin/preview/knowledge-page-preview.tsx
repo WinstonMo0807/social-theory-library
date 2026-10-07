@@ -140,7 +140,7 @@ function PreviewContent({ payload, pageId, evidenceCuration }: { payload: Knowle
         : <TopicPublicView topic={item} footer={footer} />;
     }
     case "reading_path":
-      return <ReadingPathPublicView path={data as NormalizedReadingPath} footer={footer} />;
+      return <ReadingPathPublicView path={data as NormalizedReadingPath} footer={footer} previewStage={typeof (data as Record<string,unknown>).preview_active_stage === "number" ? Number((data as Record<string,unknown>).preview_active_stage) : undefined} />;
     case "theory":
     case "concept":
     case "debate":
