@@ -18,6 +18,7 @@ const { WorkDetailView } = await import("../components/work-detail-view.tsx");
 const { SubdisciplinePublicView } = await import("../components/public/subdiscipline-public-view.tsx");
 const { DisciplinePublicView } = await import("../components/public/discipline-public-view.tsx");
 const { KnowledgeNodePublicView } = await import("../components/public/knowledge-node-public-view.tsx");
+const { TheoryTimelinePublicList } = await import("../components/public/theory-timeline-public-view.tsx");
 
 test("preview headers cannot navigate or expose session controls, public headers remain active", () => {
   const render = preview => renderToStaticMarkup(React.createElement(PathnameContext.Provider, { value: "/explore" },
@@ -76,4 +77,32 @@ test("theory overview uses the edited summary and actual relations while unsuppo
   assert.match(html,/Actual Scholar/);
   assert.match(html,/核心概念/);
   assert.doesNotMatch(html,/不应替代简介的完整定义|不能冒充核心概念的主题|深入了解|architectural-image/);
+});
+
+test("relation references render the actual influence direction and keep unsupported follow-up content empty",()=>{
+  const relation={id:"saved-relation",source_node:"critical",target_node:"marx",source_name:"批判理论",target_name:"马克思主义",source_slug:"critical",target_slug:"marx",relation_type:"inherited_from",relation_label:"继承自",direction:"directed",description:"实际保存的关系说明",evidence_source:"实际保存的出处"};
+  const node={id:"critical",node_type:"theory_tradition",canonical_name_zh:"批判理论",canonical_name_en:"Critical Theory",slug:"critical",summary:"已保存简介",definition:"不能补入的定义",cover_url:"",primary_discipline:null,related_disciplines:[],core_questions:[],representative_scholars:[],work_groups:{},direct_relations:[relation]};
+  const html=renderToStaticMarkup(React.createElement(KnowledgeNodePublicView,{node,timeline:[],allPaths:[],slug:node.slug,footer:null,section:"relations",selectedRelationId:relation.id}));
+  const graph=html.slice(html.indexOf('class="reference-relation-diagram"'));
+  assert.ok(graph.indexOf("马克思主义")<graph.indexOf("批判理论"));
+  assert.match(graph,/思想来源/);
+  assert.match(graph,/aria-label="影响方向">→/);
+  assert.match(html,/data-relation-id="saved-relation" data-selected="true"/);
+  assert.match(html,/实际保存的关系说明/);
+  assert.match(html,/实际保存的出处/);
+  assert.match(html,/<h3>相关影响<\/h3><div><\/div>/);
+  assert.match(html,/<h3>相关争论<\/h3><div><\/div>/);
+  assert.doesNotMatch(html,/不能补入的定义/);
+});
+
+test("reference timelines show exact years and real source pages while legacy lists retain their decade grouping",()=>{
+  const events=[{id:"selected",start_year:1930,end_year:1931,date_label:"20世纪早期",title:"已保存事件",description:"已保存事件说明",event_type:"publication",source:"实际馆藏来源",reader_href:"/reader/actual-file?page=8",relations:[]},{id:"zero",start_year:0,end_year:null,date_label:"",title:"零年事件",description:"",source:"",reader_href:null,relations:[]}];
+  const html=renderToStaticMarkup(React.createElement(TheoryTimelinePublicList,{events,reference:true,selectedId:"selected",detailLinks:false}));
+  assert.match(html,/data-event-id="selected" data-selected="true"/);
+  assert.match(html,/<time data-edit-section="event-year">1930–1931<\/time>/);
+  assert.match(html,/<time data-edit-section="event-year">0<\/time>/);
+  assert.match(html,/href="\/reader\/actual-file\?page=8"/);
+  assert.equal((html.match(/查看原文页/g)||[]).length,1);
+  const legacy=renderToStaticMarkup(React.createElement(TheoryTimelinePublicList,{events,detailLinks:false}));
+  assert.match(legacy,/<time>1930s<\/time>/);
 });

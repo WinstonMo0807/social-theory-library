@@ -95,12 +95,12 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
-export function PreviewSurface({ payload, pageId, evidenceCuration }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration }) {
+export function PreviewSurface({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string }) {
   const path = payload.preview_routes?.published || (payload.object_type === "scholar" ? "/scholars" : payload.object_type === "topic" ? "/topics" : "/theories");
-  return <><SiteHeader preview previewPath={path}/><PreviewContent payload={payload} pageId={pageId} evidenceCuration={evidenceCuration}/></>;
+  return <><SiteHeader preview previewPath={path}/><PreviewContent payload={payload} pageId={pageId} evidenceCuration={evidenceCuration} selectedRelationId={selectedRelationId} selectedTimelineId={selectedTimelineId}/></>;
 }
 
-function PreviewContent({ payload, pageId, evidenceCuration }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration }) {
+function PreviewContent({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string }) {
   const data = payload.perspective.data;
   if (!data || typeof data !== "object") {
     return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
@@ -172,7 +172,7 @@ function PreviewContent({ payload, pageId, evidenceCuration }: { payload: Knowle
         return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><p className="eyebrow">局部关系浏览</p><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的规范关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
-        return <KnowledgeNodePublicView node={node} timeline={payload.secondary_preview?.timeline ?? []} allPaths={payload.secondary_preview?.reading_paths ?? []} slug={node.slug} footer={footer} section="timeline" />;
+        return <KnowledgeNodePublicView node={node} timeline={payload.secondary_preview?.timeline ?? []} allPaths={payload.secondary_preview?.reading_paths ?? []} slug={node.slug} footer={footer} section="timeline" selectedTimelineId={selectedTimelineId}/>;
       }
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];
@@ -191,6 +191,7 @@ function PreviewContent({ payload, pageId, evidenceCuration }: { payload: Knowle
         footer={footer}
         publicationStatusLabel={payload.active_perspective === "draft" ? "草稿预览" : "已审核并公开"}
         section={pageId}
+        selectedRelationId={selectedRelationId}
       />;
     }
     default:

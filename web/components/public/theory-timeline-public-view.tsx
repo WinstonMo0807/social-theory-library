@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, CalendarDays, ExternalLink } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { TheoryEmpty } from "@/components/theory-system-ui";
 import type { NormalizedTimelineEvent } from "@/lib/api/knowledge.types";
@@ -24,22 +24,25 @@ export function TheoryTimelinePublicList({
   events,
   pagination = null,
   detailLinks = true,
+  reference = false,
+  selectedId,
 }: {
   events: NormalizedTimelineEvent[];
   pagination?: ReactNode;
   detailLinks?: boolean;
+  reference?: boolean;
+  selectedId?: string;
 }) {
   return (
     <section className="theory-timeline-list" data-module-id="theory-development">
       {events.length ? events.map((event) => {
         const nodeNames = event.relations.filter((item) => item.type === "node").map((item) => item.name);
         const hasWork = event.relations.some((item) => item.type === "work");
-        return <article id={`timeline-event-${event.id}`} key={event.id}>
-          <time>{event.start_year ? `${Math.floor(event.start_year / 10) * 10}s` : event.date_label}</time>
+        return <article id={`timeline-event-${event.id}`} key={event.id} data-event-id={event.id} data-selected={event.id===selectedId}>
+          <time data-edit-section={reference ? "event-year" : undefined}>{reference ? event.start_year!==null ? `${event.start_year}${event.end_year!==null ? `–${event.end_year}` : ""}` : event.date_label : event.start_year ? `${Math.floor(event.start_year / 10) * 10}s` : event.date_label}</time>
           <span className="event-icon">{hasWork ? <BookOpen size={21} /> : <CalendarDays size={21} />}</span>
-          <div className="event-main"><small>{event.date_label || event.start_year}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>
-          <dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}{event.source ? <><dt>信息来源</dt><dd>{event.source}</dd></> : null}</dl>
-          {event.reader_href ? <CollectionLink href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></CollectionLink> : null}
+          <div className="event-main"><small>{event.date_label || event.start_year}</small><h2 data-edit-section={reference ? "event-title" : undefined}>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p data-edit-section={reference ? "event-description" : undefined}>{event.description}</p></div>
+          {reference ? <div className="theory-timeline-source" data-edit-section="event-source"><span>{event.source ? <><BookOpen size={24}/>{event.source}</> : null}</span>{event.reader_href ? <CollectionLink href={event.reader_href}>查看原文页<ArrowRight size={20}/></CollectionLink> : null}</div> : <><dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}{event.source ? <><dt>信息来源</dt><dd>{event.source}</dd></> : null}</dl>{event.reader_href ? <CollectionLink href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></CollectionLink> : null}</>}
         </article>;
       }) : <TheoryEmpty title="没有符合条件的公开事件" detail="调整筛选条件，或等待管理员审核并发布新的时间轴事件。" />}
       {pagination}

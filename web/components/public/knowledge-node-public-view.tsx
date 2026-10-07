@@ -51,6 +51,8 @@ export function KnowledgeNodePublicView({
   publicationStatusLabel = "已审核并公开",
   section = "overview",
   pagination,
+  selectedRelationId,
+  selectedTimelineId,
 }: {
   node: KnowledgeNodePayload;
   timeline: TimelinePayload;
@@ -60,6 +62,8 @@ export function KnowledgeNodePublicView({
   publicationStatusLabel?: string;
   section?: string;
   pagination?: ReactNode;
+  selectedRelationId?: string;
+  selectedTimelineId?: string;
 }) {
   const readingPaths = allPaths.filter((path) => path.items.some((item) => item.node_data?.id === node.id));
   const groupedWorks = Object.entries(node.work_groups).filter(([, rows]) => rows.length);
@@ -91,7 +95,7 @@ export function KnowledgeNodePublicView({
             {topics.length ? <div className="theory-discipline-pills" data-module-id="theory-topics" aria-label="规范研究主题">
               {topics.map((item) => <Link href={`/topics/${item.slug}`} key={`topic-${item.id}`}>{item.name}</Link>)}
             </div> : null}
-            {node.definition || node.summary ? <p className="definition" data-module-id="theory-definition">{node.definition || node.summary}</p> : null}
+            {(["relations","timeline"].includes(section) ? node.summary : node.definition || node.summary) ? <p className="definition" data-module-id="theory-definition">{["relations","timeline"].includes(section) ? node.summary : node.definition || node.summary}</p> : null}
             {node.core_questions.length ? <div className="theory-core-question" data-module-id="theory-core-questions"><strong>{node.node_type === "debate" ? "争论问题" : "核心问题"}</strong><p>{node.core_questions[0]}</p></div> : null}
             <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
           </div>
@@ -118,7 +122,7 @@ export function KnowledgeNodePublicView({
 
         {section === "timeline" && timeline.length ? <section className="theory-node-development" data-module-id="theory-development" data-edit-section="timeline">
           <TheorySectionHeading title="流派脉络" href={`/theories/timeline?node=${encodeURIComponent(slug)}`} action="查看完整时间轴" />
-          <TheoryTimelinePublicList events={timeline} />
+          <TheoryTimelinePublicList events={timeline} reference selectedId={selectedTimelineId}/>
         </section> : null}
 
         {["concepts", "relations"].includes(section) && node.direct_relations.length ? <section className="theory-node-relations" data-module-id="theory-relations" data-edit-section="relations">
@@ -126,7 +130,15 @@ export function KnowledgeNodePublicView({
           <div className="reference-theory-relations">{node.direct_relations.map((relation) => {
             const outgoing = relation.source_node === node.id;
             const target = outgoing ? { name: relation.target_name, slug: relation.target_slug } : { name: relation.source_name, slug: relation.source_slug };
-            return section === "relations" ? <article key={relation.id}><div className="reference-relation-diagram"><span>{relation.source_name}</span><div><b>{relation.relation_label}</b><i>{relation.direction === "undirected" ? "↔" : "→"}</i></div><span>{relation.target_name}</span></div><dl><dt>关系说明</dt><dd>{relation.description || "—"}</dd><dt>出处</dt><dd>{relation.evidence_source || "—"}</dd></dl>{target.slug ? <Link href={`/theories/nodes/${target.slug}`}>查看{target.name} <ArrowRight size={15}/></Link> : null}</article> : <Link href={`/theories/nodes/${target.slug}`} key={relation.id}><span className="relation-mark"><Network size={20} /></span><span><small>{relation.relation_label}</small><strong>{target.name}</strong><p>{relation.description}</p></span><ArrowRight size={18} /></Link>;
+            const reference=relation as typeof relation & {source_period?:string;target_period?:string;source_summary?:string;target_summary?:string};
+            const fromTarget=["inherited_from","branches_from","borrows_concept_from","influenced_by"].includes(relation.relation_type);
+            const first=fromTarget ? {name:relation.target_name,period:reference.target_period,summary:reference.target_summary,field:"target_node"} : {name:relation.source_name,period:reference.source_period,summary:reference.source_summary,field:"source_node"};
+            const second=fromTarget ? {name:relation.source_name,period:reference.source_period,summary:reference.source_summary,field:"source_node"} : {name:relation.target_name,period:reference.target_period,summary:reference.target_summary,field:"target_node"};
+            return section === "relations" ? <article key={relation.id} data-relation-id={relation.id} data-selected={relation.id===selectedRelationId}>
+              <div className="reference-relation-diagram"><div className="reference-relation-node" data-edit-section={first.field}><span><strong>{first.name}</strong><small>{first.period}</small></span><p>{first.summary}</p></div><div className="reference-relation-connector" data-edit-section="relation_type"><b>{relation.relation_type==="inherited_from" ? "思想来源" : relation.relation_label}</b><i aria-label={relation.direction==="undirected" ? "无方向关系" : "影响方向"}>{relation.direction==="undirected" ? "↔" : "→"}</i></div><div className="reference-relation-node" data-edit-section={second.field}><span><strong>{second.name}</strong><small>{second.period}</small></span><p>{second.summary}</p></div></div>
+              <dl><dt>关系说明</dt><dd data-edit-section="description">{relation.description}</dd><dt>出处</dt><dd data-edit-section="evidence_source">{relation.evidence_source}</dd></dl>
+              <div className="reference-relation-followup"><section><h3>相关影响</h3><div/></section><section><h3>相关争论</h3><div/></section></div>
+            </article> : <Link href={`/theories/nodes/${target.slug}`} key={relation.id}><span className="relation-mark"><Network size={20} /></span><span><small>{relation.relation_label}</small><strong>{target.name}</strong><p>{relation.description}</p></span><ArrowRight size={18} /></Link>;
           })}</div>
         </section> : null}
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   BookMarked,
+  ArrowLeft,
   CalendarCheck,
   FileText,
   GitFork,
@@ -109,6 +110,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [readingPathTitle, setReadingPathTitle] = useState("");
   const [theoryTitle, setTheoryTitle] = useState("");
   const [taxonomyTrail, setTaxonomyTrail] = useState<string[]>([]);
+  const [relationTitle, setRelationTitle] = useState("");
+  const [timelineTitle, setTimelineTitle] = useState("");
+  const [timelineNodeId, setTimelineNodeId] = useState("");
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -121,13 +125,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
       const detail = (event as CustomEvent).detail;
       setTaxonomyTrail(Array.isArray(detail) && detail.every(value => typeof value === "string") ? detail : []);
     };
+    const updateRelationTitle=(event:Event)=>setRelationTitle(typeof (event as CustomEvent).detail==="string" ? (event as CustomEvent<string>).detail : "");
+    const updateTimelineTitle=(event:Event)=>{
+      const detail=(event as CustomEvent<{name?:string;nodeId?:string}>).detail;
+      setTimelineTitle(typeof detail?.name==="string" ? detail.name : "");
+      setTimelineNodeId(typeof detail?.nodeId==="string" && /^[0-9a-f-]{36}$/i.test(detail.nodeId) ? detail.nodeId : "");
+    };
     window.addEventListener("admin-reading-path-title", updateTitle);
     window.addEventListener("admin-theory-title", updateTheoryTitle);
     window.addEventListener("admin-taxonomy-trail", updateTaxonomyTrail);
+    window.addEventListener("admin-relation-title",updateRelationTitle);
+    window.addEventListener("admin-timeline-title",updateTimelineTitle);
     return () => {
       window.removeEventListener("admin-reading-path-title", updateTitle);
       window.removeEventListener("admin-theory-title", updateTheoryTitle);
       window.removeEventListener("admin-taxonomy-trail", updateTaxonomyTrail);
+      window.removeEventListener("admin-relation-title",updateRelationTitle);
+      window.removeEventListener("admin-timeline-title",updateTimelineTitle);
     };
   }, []);
 
@@ -254,7 +268,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             const curationQueue = pathname === "/admin/review" && searchParams.get("workspace") === "curation";
             const active = curationQueue ? section.key === "work" : section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
             let Icon = theoryReferencePage ? section.Icon : standardNavigationIcons[section.key] ?? section.Icon;
-            const circularTheoryIcon = section.key === "theory" && (theoryReferencePage || pathname === "/admin/theories/reading-paths");
+            const circularTheoryIcon = section.key === "theory" && (theoryReferencePage || ["/admin/theories/reading-paths","/admin/theories/relations","/admin/theories/timeline"].includes(pathname));
             if (circularTheoryIcon) Icon = GitFork;
             if (section.key === "theory" && pathname === "/admin/theories/subdisciplines") Icon = LibraryBig;
             return <div className={`admin-nav-section ${active ? "active" : ""}`} key={section.key}>
@@ -287,7 +301,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => compactNavigation ? setOpen(true) : setDesktopNavigationCollapsed(current => !current)}
           ><Menu size={20} /></button>
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{theoryReferencePage ? "流派列表" : currentChild?.[1] || "编辑内容"}</span>{theoryReferencePage && theoryTitle ? <><b>›</b><span>{theoryTitle}</span></> : null}{["/admin/theories/disciplines", "/admin/theories/subdisciplines"].includes(pathname) ? taxonomyTrail.map((label, index) => <span className="admin-breadcrumb-part" key={`${index}:${label}`}><b>›</b><span>{label}</span></span>) : null}{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}</div>
+          {pathname==="/admin/theories/timeline" ? <Link className="timeline-reference-back" href={timelineNodeId ? `/admin/theories/${timelineNodeId}` : "/admin/theories"} aria-label="返回理论流派"><ArrowLeft size={18}/></Link> : null}
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{theoryReferencePage ? "流派列表" : currentChild?.[1] || "编辑内容"}</span>{theoryReferencePage && theoryTitle ? <><b>›</b><span>{theoryTitle}</span></> : null}{["/admin/theories/disciplines", "/admin/theories/subdisciplines"].includes(pathname) ? taxonomyTrail.map((label, index) => <span className="admin-breadcrumb-part" key={`${index}:${label}`}><b>›</b><span>{label}</span></span>) : null}{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}{pathname==="/admin/theories/relations" && relationTitle ? <><b>›</b><span>{relationTitle}</span></> : null}{pathname==="/admin/theories/timeline" ? <>{timelineTitle ? <><b>›</b><span>{timelineTitle}</span></> : null}<b>›</b><span>编辑事件</span></> : null}</div>
           <details className="admin-account-menu"><summary className="admin-user"><span>{user.display_name.slice(0, 1)}</span><strong>{user.display_name}</strong><ChevronDown size={13}/></summary><div><Link href="/account" prefetch={false}>我的账户</Link><button type="button" disabled={logoutPending} onClick={async () => { if (logoutPending) return; setLogoutPending(true); setLogoutError(""); try { await logoutCurrentSession(); } catch (error) { setLogoutError(error instanceof Error ? error.message : "退出失败，请重试。"); } finally { setLogoutPending(false); } }}>{logoutPending ? "正在退出…" : "退出登录"}</button>{logoutError ? <p role="alert">{logoutError}</p> : null}</div></details>
         </header> : null}
         <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>

@@ -107,8 +107,11 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
       }} data-active-section={activeSection} onClickCapture={event => {
         const target = event.target as Element;
         const row = target.closest<HTMLElement>("[data-edit-row]");
-        const rowHandled = row ? !window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow), cancelable:true })) : false;
-        const section = target.closest<HTMLElement>("[data-edit-section]");
+        const timelineRow=target.closest<HTMLElement>("[data-event-id]");
+        const timelineHandled=timelineRow ? !window.dispatchEvent(new CustomEvent("knowledge-timeline-select",{detail:{id:timelineRow.dataset.eventId,section:target.closest<HTMLElement>("[data-edit-section]")?.dataset.editSection},cancelable:true})) : false;
+        const rowHandled = timelineHandled || (row ? !window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow), cancelable:true })) : false);
+        let section = target.closest<HTMLElement>("[data-edit-section]");
+        while(section && !sections.some(item=>item.id===section?.dataset.editSection))section=section.parentElement?.closest<HTMLElement>("[data-edit-section]") || null;
         if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", !rowHandled); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div>}</PreviewViewport>
