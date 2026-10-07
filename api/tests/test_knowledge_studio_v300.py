@@ -441,6 +441,7 @@ def test_published_reading_path_explicit_semantics_publish_through_revision(
     _subdiscipline, reading_path, work, _edition = _integrated_studio_fixture()
     stage = reading_path.stages.get()
     item = reading_path.items.get()
+    original_item_id, original_item_created_at = item.id, item.created_at
     api_client.force_authenticate(user=admin_user)
 
     drafted = editorial_request(api_client, "patch",
@@ -491,6 +492,8 @@ def test_published_reading_path_explicit_semantics_publish_through_revision(
     assert published.status_code == 200
     reading_path.refresh_from_db()
     item = reading_path.items.get()
+    assert item.id == original_item_id
+    assert item.created_at == original_item_created_at
     assert reading_path.learning_goal == "比较组织制度理论的不同解释。"
     assert item.prerequisite == "先读组织社会学导论。"
     assert item.editorial_note == "仅后台可见的编辑说明。"

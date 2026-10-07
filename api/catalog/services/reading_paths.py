@@ -73,6 +73,8 @@ def normalize_reading_path_stage_groups(
         for value in path.stages.values_list("id", flat=True)
     }
     used_stage_ids: set[str] = set()
+    existing_item_ids = {str(value) for value in path.items.values_list("id", flat=True)}
+    used_item_ids: set[str] = set()
     work_ids: list[str] = []
     node_ids: list[str] = []
     normalized: list[dict[str, Any]] = []
@@ -102,6 +104,13 @@ def normalize_reading_path_stage_groups(
         for item_position, source_item in enumerate(source_items):
             if not isinstance(source_item, dict):
                 raise ReadingPathStructureError("阅读路径项目格式无效。")
+            item_id = _identifier(source_item.get("id"))
+            if item_id:
+                if item_id not in existing_item_ids:
+                    raise ReadingPathStructureError("书目已被其他编辑删除，或不属于当前阅读路径，请刷新后重试。")
+                if item_id in used_item_ids:
+                    raise ReadingPathStructureError("同一阅读书目不能重复。")
+                used_item_ids.add(item_id)
             node_id = _identifier(source_item.get("node"))
             work_id = _identifier(source_item.get("work"))
             if int(bool(node_id)) + int(bool(work_id)) != 1:
@@ -120,7 +129,7 @@ def normalize_reading_path_stage_groups(
                 raise ReadingPathStructureError("路径项目排序不能小于 0。")
             normalized_items.append(
                 {
-                    "id": _identifier(source_item.get("id")),
+                    "id": item_id,
                     "node": node_id or None,
                     "work": work_id or None,
                     "recommendation_reason": str(
@@ -150,13 +159,16 @@ def normalize_reading_path_stage_groups(
     return normalized
 
 
+@transaction.atomic
 def sync_reading_path_stage_groups(path: ReadingPath, groups) -> None:
+    ReadingPath.objects.select_for_update().get(pk=path.pk)
     normalized = normalize_reading_path_stage_groups(path, groups)
     existing_stages = {
         str(stage.id): stage
         for stage in path.stages.select_for_update()
     }
-    path.items.all().delete()
+    existing_items = {str(item.id): item for item in path.items.select_for_update()}
+    retained_item_ids = []
     retained_stage_ids = []
     reading_order = 0
     for group in normalized:
@@ -175,21 +187,19 @@ def sync_reading_path_stage_groups(path: ReadingPath, groups) -> None:
             stage.save(update_fields=["name", "description", "position", "updated_at"])
         retained_stage_ids.append(stage.id)
         for item in sorted(group["items"], key=lambda row: row["position"]):
-            ReadingPathItem.objects.create(
-                reading_path=path,
-                stage=stage,
-                stage_name=stage.name,
-                stage_description=stage.description,
-                node_id=item["node"],
-                work_id=item["work"],
-                recommendation_reason=item["recommendation_reason"],
-                prerequisite=item["prerequisite"],
-                position=item["position"],
-                reading_order=reading_order,
-                is_required=item["is_required"],
-                editorial_note=item["editorial_note"],
-            )
+            row = existing_items.get(item["id"]) or ReadingPathItem(reading_path=path)
+            row.stage = stage
+            row.stage_name = stage.name
+            row.stage_description = stage.description
+            for field in ("node", "work"):
+                setattr(row, f"{field}_id", item[field])
+            for field in ("recommendation_reason", "prerequisite", "position", "is_required", "editorial_note"):
+                setattr(row, field, item[field])
+            row.reading_order = reading_order
+            row.save()
+            retained_item_ids.append(row.id)
             reading_order += 1
+    path.items.exclude(pk__in=retained_item_ids).delete()
     path.stages.exclude(pk__in=retained_stage_ids).delete()
 
 

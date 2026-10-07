@@ -85,10 +85,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [compactNavigation, setCompactNavigation] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [readingPathTitle, setReadingPathTitle] = useState("");
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const updateTitle = (event: Event) => setReadingPathTitle(typeof (event as CustomEvent).detail === "string" ? (event as CustomEvent<string>).detail : "");
+    window.addEventListener("admin-reading-path-title", updateTitle);
+    return () => window.removeEventListener("admin-reading-path-title", updateTitle);
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
@@ -242,7 +249,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{currentChild?.[1] || "编辑内容"}</span></div>
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{currentChild?.[1] || "编辑内容"}</span>{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}</div>
           <details className="admin-account-menu"><summary className="admin-user"><span>{user.display_name.slice(0, 1)}</span><strong>{user.display_name}</strong><ChevronDown size={13}/></summary><div><Link href="/account" prefetch={false}>我的账户</Link><button type="button" disabled={logoutPending} onClick={async () => { if (logoutPending) return; setLogoutPending(true); setLogoutError(""); try { await logoutCurrentSession(); } catch (error) { setLogoutError(error instanceof Error ? error.message : "退出失败，请重试。"); } finally { setLogoutPending(false); } }}>{logoutPending ? "正在退出…" : "退出登录"}</button>{logoutError ? <p role="alert">{logoutError}</p> : null}</div></details>
         </header> : null}
         <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>

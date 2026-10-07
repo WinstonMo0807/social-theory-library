@@ -238,6 +238,10 @@ export function ReadingPathWorkbench() {
   const [paths, setPaths] = useState<ReadingPathRow[]>([]);
   const [editing, setEditing] = useState<ReadingPathRow | null>(null);
   const [draft, setDraft] = useState({ ...emptyPath });
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("admin-reading-path-title", {detail:editing ? draft.title : ""}));
+    return () => {window.dispatchEvent(new CustomEvent("admin-reading-path-title", {detail:""}));};
+  }, [editing, draft.title]);
   const [primaryDisciplineName, setPrimaryDisciplineName] = useState("");
   const [activeStage, setActiveStage] = useState(0);
   const [activeItem, setActiveItem] = useState(0);
@@ -519,7 +523,7 @@ export function ReadingPathWorkbench() {
           <p>保存这条路径的说明、全部阶段、书目顺序和推荐理由，不跳转。已公开路径的修改需另行发布。</p>
           <EditorialPrefillNotice state={prefills} />
           <fieldset disabled={Boolean(requestedPath && openedPath !== requestedPath) || pendingAction === "save-reading-path"} style={{ display: "contents" }}>
-          <header><div><h2>{editing ? `编辑 ${editing.title}` : "新建阅读路径"}</h2><p>{stages.length} 个阶段 · {itemCount} 个项目</p></div>{editing ? <div><Link href={`/admin/preview/knowledge/reading_path/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={12} /></Link><ActionButton type="button" state={pendingAction === `delete-reading-path:${editing.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-path:${editing.id}`} aria-label="删除阅读路径" onClick={() => void removePath()}><Trash2 size={14} /></ActionButton></div> : null}</header>
+          <header data-editor-section="identity"><div><h2>{editing ? `编辑 ${editing.title}` : "新建阅读路径"}</h2><p>{stages.length} 个阶段 · {itemCount} 个项目</p></div>{editing ? <div><Link href={`/admin/preview/knowledge/reading_path/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={12} /></Link><ActionButton type="button" state={pendingAction === `delete-reading-path:${editing.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-path:${editing.id}`} aria-label="删除阅读路径" onClick={() => void removePath()}><Trash2 size={14} /></ActionButton></div> : null}</header>
           <div className="inline-fields"><label><span>标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} /></label></div>
           <label data-editor-section="identity"><span>路径介绍</span><textarea rows={4} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label>
           <label><span>学习目标</span><textarea rows={3} value={draft.learning_goal} onChange={(event) => setDraft({ ...draft, learning_goal: event.target.value })} /></label>
