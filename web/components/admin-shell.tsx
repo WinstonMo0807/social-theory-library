@@ -5,6 +5,7 @@ import {
   BookMarked,
   CalendarCheck,
   FileText,
+  GitFork,
   House,
   Layers,
   LibraryBig,
@@ -253,11 +254,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
             const curationQueue = pathname === "/admin/review" && searchParams.get("workspace") === "curation";
             const active = curationQueue ? section.key === "work" : section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
             let Icon = theoryReferencePage ? section.Icon : standardNavigationIcons[section.key] ?? section.Icon;
-            if (section.key === "theory" && pathname === "/admin/theories/reading-paths") Icon = Network;
+            const circularTheoryIcon = section.key === "theory" && (theoryReferencePage || pathname === "/admin/theories/reading-paths");
+            if (circularTheoryIcon) Icon = GitFork;
             if (section.key === "theory" && pathname === "/admin/theories/subdisciplines") Icon = LibraryBig;
             return <div className={`admin-nav-section ${active ? "active" : ""}`} key={section.key}>
               <Link className="admin-nav-primary" aria-current={active ? "page" : undefined} href={primaryHref} prefetch={false} onClick={closeNavigation}>
-                <Icon size={17} />
+                <Icon size={17} className={circularTheoryIcon ? "theory-reference-nav-icon" : undefined} />
                 <span>{section.label}</span>
               </Link>
               {active ? <div className="admin-nav-children">

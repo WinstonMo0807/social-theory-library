@@ -173,11 +173,17 @@
   .admin-shell:has(.reading-path-v280-page) .admin-sidebar { width:188px; }
   .admin-shell:has(.reading-path-v280-page):not(.focus-mode) .admin-main { margin-left:188px; }
   .admin-shell:has(.reading-path-v280-page) .admin-topbar { min-height:50px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-logo { height:108px;padding:15px 24px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-logo { height:109px;padding:15px 24px; }
   .admin-shell:has(.reading-path-v280-page) .admin-logo .wordmark { font-size:21px;transform:scaleX(.85);transform-origin:left center; }
   .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-primary { padding-right:20px!important;padding-left:24px!important;font-size:16px!important;gap:6px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-nav-children { margin:6px 0 7px 40px;padding-left:0;border:0;gap:1px; }
-  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-children a { padding:5px 5px 5px 17px!important; }
+  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-primary { height:51.5px!important;min-height:51.5px!important; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-section:nth-child(-n+2) .admin-nav-primary { height:46px!important;min-height:46px!important; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-section.active .admin-nav-primary { height:40px!important;min-height:40px!important; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-section:first-child .admin-nav-primary>span,.admin-shell:has(.reading-path-v280-page) .admin-nav-section:first-child .admin-nav-primary>svg { translate:0 -4px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-section:nth-child(2) .admin-nav-primary>span,.admin-shell:has(.reading-path-v280-page) .admin-nav-section:nth-child(2) .admin-nav-primary>svg { translate:0 -5px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-section.active .admin-nav-primary>span,.admin-shell:has(.reading-path-v280-page) .admin-nav-section.active .admin-nav-primary>svg { translate:0 -2px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-nav-children { margin:6px 0 10px 40px;padding-left:0;border:0;gap:1px; }
+  .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-children a { height:36px!important;min-height:36px!important;padding:5px 5px 5px 17px!important; }
   .admin-shell:has(.reading-path-v280-page) .admin-sidebar nav .admin-nav-children a.active { border-left:2px solid var(--admin-v2-ink)!important;border-radius:0!important;background:var(--admin-v2-wash); }
 }
 @media(max-width:1200px) { .reading-path-v280-page .fixed-editor-preview { grid-template-columns:1fr; }.reading-path-v280-page .fixed-editor-preview-tools { grid-column:1;grid-row:2;margin-top:12px;flex-wrap:wrap; }.reading-path-v280-page .fixed-page-editor { grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); }.reading-path-reference-book { grid-template-columns:66px minmax(0,1fr);gap:12px; }.reading-path-reference-book>button { grid-column:2;justify-self:start; } }
@@ -190,5 +196,7 @@
 .reading-path-preview-location label { display:flex;align-items:center;gap:12px;font:12px/1.5 var(--stl-type-sans); }
 .admin-shell .reading-path-v280-page .reading-path-preview-location select { min-width:125px;min-height:28px;height:28px;padding:4px 10px;border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface);font:12px/18px var(--stl-type-sans); }
 .reading-path-v280-page .fixed-preview-canvas { grid-row:3;margin-top:10px;align-self:stretch;min-height:0; }
+.reading-path-v280-page .fixed-preview-canvas { background:var(--admin-v2-surface); }
+.admin-shell .reading-path-v280-page .fixed-editor-preview-tools>button { border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface); }
 @media(max-width:1200px) { .reading-path-v280-page .fixed-editor-preview { grid-template-rows:min-content min-content min-content minmax(0,1fr); }.admin-shell .reading-path-v280-page .fixed-editor-preview>header { grid-row:1; }.reading-path-preview-location { grid-column:1;grid-row:3; }.reading-path-v280-page .fixed-preview-canvas { grid-row:4; } }
 @media(max-width:650px) { .reading-path-current-step { position:static;display:block;font-size:13px;margin-top:12px; } }
