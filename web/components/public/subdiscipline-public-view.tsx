@@ -14,8 +14,8 @@ export function SubdisciplinePublicView({ item, footer }: { item: SubdisciplineP
   return <>
     <main className="page-shell subdiscipline-page subdiscipline-reference-page v307-knowledge">
       <nav className="taxonomy-public-breadcrumb" aria-label="当前位置"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><Link href={`/theories/disciplines/${item.discipline.slug}`}>{item.discipline.name}</Link><span>›</span><strong>{item.name}</strong></nav>
-      <section className="taxonomy-public-hero" data-edit-section="identity">
-        <div><h1>{item.name}</h1><p className="taxonomy-public-parent">隶属于：{item.discipline.name}</p><p data-edit-section="content">{item.description || item.research_object}</p></div>
+      <section className="taxonomy-public-hero">
+        <div><h1 data-edit-section="identity">{item.name}</h1><p className="taxonomy-public-parent">隶属于：{item.discipline.name}</p><p data-edit-section="content">{item.description}</p></div>
         <div className="taxonomy-public-image" data-edit-section="media" style={{backgroundImage:item.hero_image ? `url("${item.hero_image}")` : "none"}} aria-label={item.hero_image ? `${item.name}配图` : undefined}/>
       </section>
       <section className="taxonomy-public-questions" data-edit-section="questions"><h2>研究问题</h2>{item.core_questions.length ? <p>{item.core_questions.join(" ")}</p> : null}</section>

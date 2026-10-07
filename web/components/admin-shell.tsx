@@ -28,7 +28,7 @@ import { Wordmark } from "./site-header";
 const navigation = [
   { key: "work", primary: "/admin", label: "工作台", Icon: LayoutDashboard, match: ["/admin"], children: [["/admin", "今日工作"], ["/admin/review?workspace=curation", "待完成"], ["/admin/uploads", "最近上传"]] },
   { key: "library", primary: "/admin/uploads", label: "馆藏", Icon: BookOpen, match: ["/admin/library", "/admin/uploads", "/admin/review", "/admin/intake", "/admin/cataloging", "/admin/" + "media", "/admin/publication"], children: [["/admin/library", "馆藏列表"], ["/admin/uploads", "上传 PDF"], ["/admin/review", "待完成"], ["/admin/" + "media", "图片库"]] },
-  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: CircleDot, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "理论流派"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"]] },
+  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: CircleDot, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "流派列表"], ["/admin/theories/disciplines", "学科与子学科"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/reading-paths", "阅读路径"]] },
   { key: "scholars", primary: "/admin/scholars", label: "学者", Icon: UserRound, match: ["/admin/scholars", "/admin/" + "people"], children: [["/admin/scholars", "学者列表"], ["/admin/scholars/new", "新建学者"], ["/admin/scholars/people", "人物查重"]] },
   { key: "topics", primary: "/admin/topics", label: "主题", Icon: Tags, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"]] },
   { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: CalendarDays, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
@@ -170,7 +170,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const currentSection = navigation.find(section => pathname === "/admin/review" && searchParams.get("workspace") === "curation" ? section.key === "work" : section.match.some(match => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`))));
   const currentChild = currentSection?.children.find(([href]) => {
     const [path, query] = href.split("?");
-    return path === pathname && (query ? Array.from(new URLSearchParams(query)).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") && !searchParams.get("workspace"));
+    return (path === pathname || (path === "/admin/theories/disciplines" && pathname === "/admin/theories/subdisciplines")) && (query ? Array.from(new URLSearchParams(query)).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") && !searchParams.get("workspace"));
   });
   const embeddedPreview = searchParams.get("embed") === "1" && (pathname.startsWith("/admin/preview/") || pathname === "/admin/about/preview" || /^\/admin\/recommendations\/issues\/[^/]+\/preview$/.test(pathname));
   if (embeddedPreview) return <AdminSessionContext.Provider value={user}><div className="admin-embedded-preview">{children}</div></AdminSessionContext.Provider>;
@@ -223,7 +223,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   const childPath = childHref.split("?")[0];
                   const childQuery = childHref.includes("?") ? new URLSearchParams(childHref.split("?")[1]) : null;
                   const queryMatches = childQuery ? Array.from(childQuery.entries()).every(([key, value]) => searchParams.get(key) === value) : !section.children.some(([otherHref]) => otherHref.startsWith(`${childPath}?`) && Array.from(new URLSearchParams(otherHref.split("?")[1]).entries()).every(([key, value]) => searchParams.get(key) === value));
-                  const childActive = pathname === childPath && queryMatches;
+                  const childActive = (pathname === childPath || (childPath === "/admin/theories/disciplines" && pathname === "/admin/theories/subdisciplines")) && queryMatches;
                   return <Link className={childActive ? "active" : ""} aria-current={childActive ? "page" : undefined} href={childHref} key={childHref} prefetch={false} onClick={closeNavigation}>{childLabel}</Link>;
                 })}
               </div> : null}

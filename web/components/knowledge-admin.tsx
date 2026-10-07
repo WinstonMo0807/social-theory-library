@@ -57,8 +57,8 @@ function useResource<T>(path: string | null) {
   return { data: loadedPath === path ? data : null, error: loadedPath === path ? error : "", loading: Boolean(path) && (loading || loadedPath !== path), refresh };
 }
 
-function Frame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) {
-  return <div className="admin-page knowledge-admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
+function Frame({ eyebrow, title, description, children, className = "" }: { eyebrow: string; title: string; description: string; children: ReactNode; className?: string }) {
+  return <div className={`admin-page knowledge-admin-page ${className}`}><header className="admin-page-title"><div>{eyebrow ? <p>{eyebrow}</p> : null}<h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
 }
 
 function Notice({ children }: { children?: string }) {
@@ -162,6 +162,7 @@ export function DisciplinesAdmin() {
   const [image, setImage] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const children = useResource<Page<SubdisciplineRow>>(editorOpen && editing ? `/catalog/admin/subdisciplines/?discipline=${editing.id}&page_size=5` : null);
+  const publishedChildren = useResource<Page<Pick<SubdisciplineRow,"id" | "name" | "slug">>>(editorOpen && editing ? `/catalog/subdisciplines/?discipline=${editing.id}&page_size=5` : null);
   const directory = useResource<TheorySystemOverview>(editorOpen ? "/catalog/theory-system/overview/" : null);
   const editorRef = useRef<HTMLFormElement | null>(null);
   const dirty = useUnsavedForm({ draft, image: image?.name ?? null }, { draft: savedDraft, image: null });
@@ -216,15 +217,17 @@ export function DisciplinesAdmin() {
           method: editing ? "PATCH" : "POST",
           headers: editing ? editorialHeaders(editing) : undefined,
           body: JSON.stringify({
-            code: draft.code,
+            ...(!editing ? {
+              code: draft.code,
+              foreign_name: draft.foreign_name,
+              slug: draft.slug,
+              search_aliases: lineValues(draft.search_aliases),
+              introduction: draft.introduction,
+              sort_order: draft.sort_order,
+              curation_level: draft.curation_level,
+            } : {}),
             name: draft.name,
-            foreign_name: draft.foreign_name,
-            slug: draft.slug,
-            search_aliases: lineValues(draft.search_aliases),
             description: draft.description,
-            introduction: draft.introduction,
-            sort_order: draft.sort_order,
-            curation_level: draft.curation_level,
             editorial_status: draftOnly ? (editing?.editorial_status ?? "draft") : draft.editorial_status,
           }),
         },
@@ -259,7 +262,7 @@ export function DisciplinesAdmin() {
 
   const selected = resource.data?.results.find(row => row.id === selectedId) || resource.data?.results[0];
   return (
-    <Frame eyebrow="理论流派" title={editorOpen ? "编辑学科介绍" : "学科与子学科"} description={editorOpen ? "设置学科的名称、简介与封面图片，这些内容将展示在学科入口卡片和学科详情页。" : "选择学科，查看并编辑读者看到的介绍。"}>
+    <Frame className={editorOpen ? "taxonomy-admin-page discipline-admin-page" : ""} eyebrow={editorOpen ? "" : "理论流派"} title={editorOpen ? "编辑学科介绍" : "学科与子学科"} description={editorOpen ? "设置学科的名称、简介与封面图片，这些内容将展示在理论流派的学科入口卡片和学科详情页。" : "选择学科，查看并编辑读者看到的介绍。"}>
       <div className={editorOpen ? "discipline-reference-editor" : "knowledge-directory-reference"}>
         {!editorOpen ? <section className="admin-panel knowledge-admin-list">
           <header><h2>学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增学科</button></header>
@@ -275,15 +278,15 @@ export function DisciplinesAdmin() {
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} />
         </section> : null}
         {!editorOpen ? <CurationSelectionPreview key={selected?.id || "empty-discipline"} item={selected ? {object_type:"discipline",object_id:selected.id,title:selected.name,label:"学科",edit_url:`/admin/theories/disciplines?discipline=${selected.id}`,can_edit:true} : undefined} returnTo="/admin/theories/disciplines"/> : null}
-        {editorOpen ? <KnowledgeVisualEditor presentation="inline" objectType="discipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_directory:directory.data?.disciplines || [],preview_subdisciplines:children.data?.results || []}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
+        {editorOpen ? <KnowledgeVisualEditor presentation="inline" objectType="discipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_directory:directory.data?.disciplines || [],preview_subdisciplines:children.data?.results || [],preview_published_subdisciplines:publishedChildren.data?.results || []}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
         <form ref={editorRef} className="taxonomy-reference-form" onSubmit={(event) => void save(event, true)}>
           <fieldset disabled={Boolean(pendingAction) || Boolean(requestedId && openedId !== requestedId)} style={{display:"contents"}}>
             <header><h2>学科信息</h2></header>
-            <Notice>{requested.error || directory.error || children.error}</Notice>
+            <Notice>{requested.error || directory.error || children.error || publishedChildren.error}</Notice>
             <label data-editor-section="identity"><span>学科名称 <b aria-hidden="true">*</b></span><input autoComplete="off" required value={draft.name} onChange={event => setDraft({...draft,name:event.target.value})}/><small className="taxonomy-field-count">{Array.from(draft.name).length} / 20</small></label>
             <label data-editor-section="content"><span>简介 <b aria-hidden="true">*</b></span><textarea rows={5} value={draft.description} onChange={event => setDraft({...draft,description:event.target.value})}/><small className="taxonomy-field-count">{Array.from(draft.description).length} / 300</small></label>
             <TaxonomyCoverField data-editor-section="media" image={image} savedUrl={editing?.hero_image} onChange={setImage}/>
-            <section className="taxonomy-subdiscipline-selection" data-editor-section="relations"><span>子学科（选填）</span><small>在学科详情页中展示，最多显示 5 个。</small><div>{(children.data?.results || []).slice(0,5).map(row => <span key={row.id}>{row.name}<button type="button" disabled aria-label={`移除${row.name}`} title="关联在子学科管理中维护">×</button></span>)}<button type="button" disabled title="此处暂不支持选择子学科。">＋ 添加子学科</button></div></section>
+            <section className="taxonomy-subdiscipline-selection" data-editor-section="relations"><span>子学科（选填）</span><small>在学科详情页中展示，最多显示 5 个。</small><div>{(children.data?.results || []).slice(0,5).map(row => <span key={row.id}><a href={`/admin/theories/subdisciplines?subdiscipline=${row.id}`}>{row.name}</a><button type="button" disabled aria-label={`移除${row.name}`} title="关联在子学科管理中维护">×</button></span>)}<button type="button" disabled title="此处暂不支持选择子学科。">＋ 添加子学科</button></div></section>
             <Notice>{message}</Notice>
             <EditorialConflictHelp visible={editConflict} href={`/admin/theories/disciplines?discipline=${editing?.id}`}/>
             <footer className="taxonomy-form-actions"><button className="button secondary" type="submit">保存草稿</button></footer>
@@ -450,20 +453,22 @@ export function SubdisciplinesAdmin() {
           method: editing ? "PATCH" : "POST",
           headers: editing ? editorialHeaders(editing) : undefined,
           body: JSON.stringify({
+            ...(!editing ? {
+              foreign_name: draft.foreign_name,
+              slug: draft.slug,
+              search_aliases: lineValues(draft.search_aliases),
+              discipline: draft.discipline,
+              parent: draft.parent || null,
+              research_object: draft.research_object,
+              formation_period: draft.formation_period,
+              research_directions: lineValues(draft.research_directions),
+              methods: lineValues(draft.methods),
+              representative_issues: lineValues(draft.representative_issues),
+              curation_level: draft.curation_level,
+            } : {}),
             name: draft.name,
-            foreign_name: draft.foreign_name,
-            slug: draft.slug,
-            search_aliases: lineValues(draft.search_aliases),
             description: draft.description,
-            discipline: draft.discipline,
-            parent: draft.parent || null,
-            research_object: draft.research_object,
-            formation_period: draft.formation_period,
             core_questions: lineValues(draft.core_questions),
-            research_directions: lineValues(draft.research_directions),
-            methods: lineValues(draft.methods),
-            representative_issues: lineValues(draft.representative_issues),
-            curation_level: draft.curation_level,
             editorial_status: draftOnly ? (editing?.editorial_status ?? "draft") : draft.editorial_status,
           }),
         },
@@ -494,13 +499,12 @@ export function SubdisciplinesAdmin() {
 
   const disciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || "未归类";
   return (
-    <Frame eyebrow="理论流派" title="编辑子学科信息" description="完善子学科的简介与研究问题，这些内容将展示在前台页面。">
+    <Frame className="taxonomy-admin-page subdiscipline-admin-page" eyebrow="" title="编辑子学科信息" description="完善子学科的简介与研究问题，这些内容将展示在前台页面。">
       <div className="subdiscipline-reference-workspace">
         <aside className="subdiscipline-reference-tree admin-panel"><header><h2>学科与子学科</h2><form className="taxonomy-tree-search" onSubmit={event=>{event.preventDefault();setSubmittedTreeSearch(treeSearch.trim());paging.reset();}}><button type="submit" aria-label="查找学科或子学科"><Search size={15}/></button><input type="search" aria-label="搜索学科或子学科" placeholder="搜索学科或子学科…" value={treeSearch} onChange={event=>setTreeSearch(event.target.value)}/></form></header><Notice>{rows.error || disciplines.error}</Notice>{rows.loading ? <p role="status">正在读取子学科…</p> : null}
           {(disciplines.data?.results || []).filter(row=>!submittedTreeSearch || rows.data?.results.some(child=>child.discipline===row.id)).map(row => <details key={row.id} open={editing?.discipline===row.id || Boolean(submittedTreeSearch)}><summary>{row.name}</summary>{rows.data?.results.filter(child => child.discipline === row.id).map(child => <button type="button" key={child.id} aria-pressed={editing?.id === child.id} onClick={() => start(child)}>{child.name}</button>)}</details>)}
           {!rows.loading && submittedTreeSearch && !rows.data?.results.length ? <p>没有匹配的子学科。</p> : null}
-          <AdminListPages data={rows.data} paging={paging} loading={rows.loading}/>
-          <button className="taxonomy-add-subdiscipline" type="button" onClick={() => start()}><Plus size={15}/>新增子学科</button>
+          {(rows.data?.count ?? 0) > (rows.data?.results.length ?? 0) ? <AdminListPages data={rows.data} paging={paging} loading={rows.loading}/> : null}
         </aside>
         <KnowledgeVisualEditor presentation="inline" objectType="subdiscipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
         <form ref={editorRef} className="taxonomy-reference-form" onSubmit={(event) => void save(event, true)}>

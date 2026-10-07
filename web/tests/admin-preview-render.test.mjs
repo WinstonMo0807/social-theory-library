@@ -16,6 +16,7 @@ const { SiteHeader } = await import("../components/site-header.tsx");
 const { PublicSessionProvider } = await import("../components/public-session-provider.tsx");
 const { WorkDetailView } = await import("../components/work-detail-view.tsx");
 const { SubdisciplinePublicView } = await import("../components/public/subdiscipline-public-view.tsx");
+const { DisciplinePublicView } = await import("../components/public/discipline-public-view.tsx");
 
 test("preview headers cannot navigate or expose session controls, public headers remain active", () => {
   const render = preview => renderToStaticMarkup(React.createElement(PathnameContext.Provider, { value: "/explore" },
@@ -52,4 +53,14 @@ test("subdiscipline renders saved questions and real links while missing media s
   assert.match(html,/href="\/scholars\/related-scholar"/);
   assert.match(html,/background-image:none/);
   assert.doesNotMatch(html,/architectural-image|待考|待管理员补充/);
+});
+
+test("discipline scalar previews do not claim unloaded theory collections are empty", () => {
+  const payload={discipline:{id:"sociology",name:"社会学",slug:"sociology",description:"已保存简介",hero_image:""},counts:{theory_traditions:1,subdisciplines:1,scholars:0,works:5},nodes:[],lineage:[],reading_paths:[]};
+  const render=collectionsAvailable=>renderToStaticMarkup(React.createElement(DisciplinePublicView,{payload,activeType:"theory_tradition",slug:"sociology",footer:null,collectionsAvailable,subdisciplines:[{id:"history",name:"历史社会学",slug:"history"}]}));
+  const preview=render(false);
+  assert.match(preview,/已保存简介/);
+  assert.match(preview,/href="\/subdisciplines\/history"/);
+  assert.doesNotMatch(preview,/该分类尚无公开条目|theory-discipline-directory|理论系统快捷入口/);
+  assert.match(render(true),/该分类尚无公开条目/);
 });

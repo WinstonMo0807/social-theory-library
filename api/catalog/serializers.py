@@ -2199,10 +2199,10 @@ class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelS
 
     def _complete_identity(self, validated_data, instance=None):
         name = validated_data.get("name", instance.name if instance else "")
-        if not validated_data.get("slug"):
+        if not validated_data.get("slug", instance.slug if instance else ""):
             validated_data["slug"] = _available_slug(Discipline, name, instance)
-        if not validated_data.get("code"):
-            validated_data["code"] = validated_data["slug"][:80]
+        if not validated_data.get("code", instance.code if instance else ""):
+            validated_data["code"] = validated_data.get("slug", instance.slug if instance else "")[:80]
         return validated_data
 
     def create(self, validated_data):

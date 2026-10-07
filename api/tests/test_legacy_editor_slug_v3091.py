@@ -64,3 +64,36 @@ def test_legacy_address_does_not_bypass_revision_or_reader_permission(api_client
     assert api_client.patch(url, body, format="json", HTTP_IF_MATCH="*").status_code == 403
     row.refresh_from_db()
     assert row.slug == "w德斯科特" and getattr(row, field) == "旧内容"
+
+
+@pytest.mark.parametrize("published", [False, True])
+@pytest.mark.parametrize("kind", ["disciplines", "subdisciplines"])
+def test_reference_form_content_patch_preserves_hidden_metadata(api_client, admin_user, kind, published):
+    row, url, field, _target = object_editor(kind, published)
+    row.slug = "保留原地址"
+    row.foreign_name = "Original identity"
+    row.search_aliases = ["人工保留的别名"]
+    protected = ["slug", "foreign_name", "search_aliases"]
+    if kind == "disciplines":
+        row.code = "original-code"
+        row.introduction = "已有长介绍"
+        row.sort_order = 7
+        protected += ["code", "introduction", "sort_order"]
+    else:
+        row.research_object = "已有研究对象"
+        row.formation_period = "已有时期"
+        row.methods = ["已有方法"]
+        protected += ["discipline_id", "parent_id", "research_object", "formation_period", "methods"]
+    row.save()
+    before = {name: getattr(row, name) for name in protected}
+    api_client.force_authenticate(admin_user)
+    response = editorial_request(api_client, "patch", url, {field: "可见简介已修改"}, format="json")
+    assert response.status_code == (202 if published else 200), response.data
+    loaded = api_client.get(url)
+    assert loaded.data[field] == "可见简介已修改"
+    assert loaded.data["slug"] == before["slug"]
+    if published:
+        assert set(response.data["editorial_revision"]["changed_fields"]) == {field}
+    row.refresh_from_db()
+    assert {name: getattr(row, name) for name in protected} == before
+    assert getattr(row, field) == ("旧内容" if published else "可见简介已修改")

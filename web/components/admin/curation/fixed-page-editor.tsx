@@ -67,7 +67,7 @@ export type FixedEditorSection = { id: string; label: string; description?: stri
 export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar, hideFieldHeading = false, previewFooter }: {
   sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string) => void;
   navigationSections?: FixedEditorSection[];
-  fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode; hideFieldHeading?: boolean; previewFooter?: ReactNode;
+  fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode; hideFieldHeading?: boolean; previewFooter?: ReactNode | ((perspective:"draft" | "published") => ReactNode);
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -111,7 +111,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
         if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", true); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div>}</PreviewViewport>
-      {previewFooter}
+      {typeof previewFooter === "function" ? previewFooter(perspective) : previewFooter}
     </section>
     <dialog className="fixed-preview-dialog" ref={fullPreviewRef} onClose={() => setExpanded(false)}><header><strong>{perspective === "published" ? "当前线上内容" : dirty ? "当前输入 · 尚未保存" : "已保存内容预览"}</strong>{fullHref ? <a href={fullHref} target="_blank" rel="noopener">在新标签页打开已保存页面</a> : null}<button type="button" onClick={() => fullPreviewRef.current?.close()}>关闭预览</button></header>{expanded ? <PreviewViewport device={device}>{perspective === "published" ? publishedPreview ?? (publishedHref ? <iframe src={publishedHref} title="当前线上页面放大预览" style={{width:"100%",height:1000,border:0}}/> : null) : <div inert>{preview}</div>}</PreviewViewport> : null}</dialog>
   </div>;

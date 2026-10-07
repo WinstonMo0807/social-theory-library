@@ -110,7 +110,7 @@ function PreviewContent({ payload, pageId, evidenceCuration }: { payload: Knowle
   switch (payload.object_type) {
     case "discipline": {
       const item = data as Discipline & {preview_directory?:TheorySystemOverview["disciplines"];preview_subdisciplines?:{id:string;name:string;slug:string}[]};
-      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} directory={pageId === "directory" ? item.preview_directory : undefined} subdisciplines={item.preview_subdisciplines}/>;
+      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} directory={pageId === "directory" ? item.preview_directory : undefined} subdisciplines={item.preview_subdisciplines} collectionsAvailable={false}/>;
     }
     case "subdiscipline": {
       const item = data as Subdiscipline;
