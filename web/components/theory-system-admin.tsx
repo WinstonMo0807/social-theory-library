@@ -4,6 +4,7 @@ import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { buildTheoryNodePayload, theoryNodeToDraft as nodeToDraft, type TheoryNodeDraft } from "@/lib/theory-node-draft";
+import { buildRelationPayload, buildTimelinePayload, relationToDraft, timelineToDraft, emptyTimelineDraft, type TimelineDraft, type TimelineRecord } from "@/lib/relation-timeline-draft";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
 import { safeAdminHref } from "@/lib/admin-route-context";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
@@ -805,9 +806,6 @@ type KnowledgeRelation = {
 };
 
 const emptyRelationDraft = { source_node: "", target_node: "", relation_type: "criticizes", direction: "directed", description: "", evidence_source: "", confidence: 1, status: "pending" };
-function relationToDraft(row: KnowledgeRelation) {
-  return { source_node: row.source_node, target_node: row.target_node, relation_type: row.relation_type, direction: row.direction, description: row.description, evidence_source: row.evidence_source, confidence: row.confidence, status: row.status };
-}
 
 const workRelationOptions = [
   ["foundational_work", "奠基性原著"],
@@ -951,6 +949,8 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   async function saveRelation(event: FormEvent) {
     event.preventDefault();
     if (!relationDraft.source_node || !relationDraft.target_node) return;
+    const payload = buildRelationPayload(relationDraft, editingRelation);
+    if (!Object.keys(payload).length) { setMessage("当前内容已保存。"); setMessageState("success"); return; }
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = editingRelation ? `save-relation:${editingRelation.id}` : "create-relation";
@@ -962,7 +962,7 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
         editingRelation
           ? `/catalog/admin/theory-system/relations/${editingRelation.id}/`
           : "/catalog/admin/theory-system/relations/",
-        { method: editingRelation ? "PATCH" : "POST", headers: editingRelation ? editorialHeaders(editingRelation) : undefined, body: JSON.stringify(relationDraft) },
+        { method: editingRelation ? "PATCH" : "POST", headers: editingRelation ? editorialHeaders(editingRelation) : undefined, body: JSON.stringify(payload) },
         token,
       );
       setMessage(saved.editorial_revision ? "修改已保存，尚未公开。核对关系说明后，再确认发布。" : "关系已保存，尚未公开。选择准备公开并保存后，可确认发布。");
@@ -971,6 +971,7 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
       setRelationDraft(relationToDraft(saved));
       setEditConflict(false);
       relations.refresh();
+      if (saved.id !== requestedId) location.update({ relation: saved.id });
     } catch (reason) {
       setEditConflict(isEditorialConflict(reason));
       setMessage(reason instanceof Error ? reason.message : "关系保存失败");
@@ -1156,72 +1157,7 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   );
 }
 
-type TimelineRelation = {
-  id?: string;
-  relation_type: string;
-  node: string | null;
-  node_name?: string;
-  discipline: string | null;
-  discipline_name?: string;
-  scholar: string | null;
-  scholar_name?: string;
-  work: string | null;
-  work_title?: string;
-  evidence: string | null;
-  description: string;
-  sort_order: number;
-};
-
-type TimelineEvent = {
-  id: string;
-  title: string;
-  description: string;
-  event_type: string;
-  start_year: number | null;
-  end_year: number | null;
-  date_label: string;
-  orientation: string;
-  source: string;
-  evidence_asset: string | null;
-  evidence_file?: TimelineEvidenceFile | null;
-  evidence_page: number | null;
-  evidence_printed_label: string;
-  evidence_text: string;
-  confidence: number;
-  review_status: string;
-  display_order: number;
-  discipline: string | null;
-  theory_school: string | null;
-  subdiscipline: string | null;
-  scholar: string | null;
-  work: string | null;
-  relations: TimelineRelation[];
-  editorial_revision?: EditorialRevisionSummary;
-  public_status?: string;
-};
-
-type TimelineDraft = {
-  title: string;
-  description: string;
-  event_type: string;
-  start_year: string;
-  end_year: string;
-  date_label: string;
-  source: string;
-  source_work: string;
-  source_edition: string;
-  evidence_asset: string;
-  evidence_page: string;
-  evidence_printed_label: string;
-  evidence_text: string;
-  confidence: number;
-  review_status: string;
-  display_order: number;
-  nodes: string[];
-  disciplines: string[];
-  scholar: string;
-  work: string;
-};
+type TimelineEvent = TimelineRecord & { editorial_revision?: EditorialRevisionSummary; public_status?: string };
 
 const timelineTypes = [
   ["publication", "重要著作出版"],
@@ -1237,59 +1173,6 @@ const timelineTypes = [
   ["formation", "旧数据：形成"],
   ["development", "旧数据：发展"],
 ] as const;
-
-const emptyTimelineDraft: TimelineDraft = {
-  title: "",
-  description: "",
-  event_type: "publication",
-  start_year: "",
-  end_year: "",
-  date_label: "",
-  source: "",
-  source_work: "",
-  source_edition: "",
-  evidence_asset: "",
-  evidence_page: "",
-  evidence_printed_label: "",
-  evidence_text: "",
-  confidence: 1,
-  review_status: "suggested",
-  display_order: 0,
-  nodes: [],
-  disciplines: [],
-  scholar: "",
-  work: "",
-};
-
-function timelineToDraft(event: TimelineEvent): TimelineDraft {
-  return {
-    title: event.title,
-    description: event.description,
-    event_type: event.event_type,
-    start_year: event.start_year?.toString() ?? "",
-    end_year: event.end_year?.toString() ?? "",
-    date_label: event.date_label,
-    source: event.source,
-    source_work: event.evidence_file?.work_id ?? "",
-    source_edition: event.evidence_file?.edition_id ?? "",
-    evidence_asset: event.evidence_asset ?? "",
-    evidence_page: event.evidence_page?.toString() ?? "",
-    evidence_printed_label: event.evidence_printed_label,
-    evidence_text: event.evidence_text,
-    confidence: event.confidence,
-    review_status: event.review_status,
-    display_order: event.display_order,
-    nodes: event.relations.filter((item) => item.node).map((item) => item.node as string),
-    disciplines: event.relations.filter((item) => item.discipline).map((item) => item.discipline as string),
-    scholar: event.scholar ?? event.relations.find((item) => item.scholar)?.scholar ?? "",
-    work: event.work ?? event.relations.find((item) => item.work)?.work ?? "",
-  };
-}
-
-type TimelineEvidenceFile = {
-  id: string; work_id: string; work_title: string; edition_id: string; edition_label: string;
-  filename: string; version: number; page_count: number; reader_href: string | null; detail: string;
-};
 
 function TimelineEvidenceFields({ draft, saved, workName, onChange, onLabels }: {
   draft: TimelineDraft; saved: TimelineEvent | null; workName: string;
@@ -1428,43 +1311,14 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   async function saveEvent(event: FormEvent) {
     event.preventDefault();
     if (wrongNode || (nodeId && !selectedNode.data)) return;
+    if (editing && !Object.keys(buildTimelinePayload(draft, editing)).length) { setMessage("当前内容已保存。"); setMessageState("success"); return; }
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = editing ? `save-timeline-event:${editing.id}` : "create-timeline-event";
     if (!startAction(actionKey)) return;
     setMessage(editing ? "正在保存时间轴事件……" : "正在创建时间轴事件……");
     setMessageState("pending");
-    const relations: TimelineRelation[] = [
-      ...draft.nodes.map((node, index) => ({ relation_type: "subject", node, discipline: null, scholar: null, work: null, evidence: null, description: "", ...editing?.relations.find((row) => row.node === node), sort_order: index })),
-      ...draft.disciplines.map((discipline, index) => ({ relation_type: "context", node: null, discipline, scholar: null, work: null, evidence: null, description: "", ...editing?.relations.find((row) => row.discipline === discipline), sort_order: draft.nodes.length + index })),
-      ...(editing?.relations.filter((row) => !row.node && !row.discipline) ?? []),
-    ];
-    const payload = {
-      title: draft.title,
-      description: draft.description,
-      event_type: draft.event_type,
-      start_year: draft.start_year ? Number(draft.start_year) : null,
-      end_year: draft.end_year ? Number(draft.end_year) : null,
-      date_label: draft.date_label,
-      // Placement is not edited by this form. Keep it when changing text.
-      orientation: editing?.orientation ?? "neutral",
-      source: draft.source,
-      evidence_asset: draft.evidence_asset || null,
-      evidence_work_id: draft.source_work || null,
-      evidence_edition_id: draft.source_edition || null,
-      evidence_page: draft.evidence_page ? Number(draft.evidence_page) : null,
-      evidence_printed_label: draft.evidence_printed_label,
-      evidence_text: draft.evidence_text,
-      confidence: draft.confidence,
-      review_status: draft.review_status,
-      display_order: draft.display_order,
-      discipline: editing?.discipline ?? null,
-      theory_school: editing?.theory_school ?? null,
-      subdiscipline: editing?.subdiscipline ?? null,
-      scholar: draft.scholar || null,
-      work: draft.work || null,
-      relations,
-    };
+    const payload = buildTimelinePayload(draft, editing);
     try {
       const saved = await apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing ? `${editing.id}/` : ""}`, { method: editing ? "PATCH" : "POST", headers: editing ? editorialHeaders(editing) : undefined, body: JSON.stringify(payload) }, token);
       setEditing(saved);
@@ -1473,6 +1327,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       setEditConflict(false);
       setMessageState("success");
       events.refresh();
+      if (saved.id !== requestedId) location.update({ event: saved.id });
     } catch (reason) {
       setEditConflict(isEditorialConflict(reason));
       setMessage(reason instanceof Error ? reason.message : "事件保存失败");

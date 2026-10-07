@@ -2357,6 +2357,12 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
             except ValueError as error:
                 raise serializers.ValidationError({"evidence_asset": str(error)}) from error
         normalized_relations = attrs.get("normalized_relations")
+        if normalized_relations is not None:
+            from catalog.services.relation_editorial import normalized_timeline_relations
+            try:
+                attrs["normalized_relations"] = normalized_timeline_relations(self.instance, normalized_relations)
+            except ValueError as error:
+                raise serializers.ValidationError({"relations": str(error)}) from error
         has_existing_relations = bool(
             self.instance
             and normalized_relations is None
@@ -2393,9 +2399,8 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         return attrs
 
     def _sync_relations(self, event, rows):
-        event.normalized_relations.all().delete()
-        for row in rows:
-            TimelineEventRelation.objects.create(event=event, **row)
+        from catalog.services.relation_editorial import apply_timeline_relations
+        apply_timeline_relations(event, rows)
 
     @transaction.atomic
     def create(self, validated_data):

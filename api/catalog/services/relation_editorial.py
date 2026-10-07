@@ -3,6 +3,7 @@ from copy import copy
 
 from django.core.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.forms.models import model_to_dict
 
 from catalog.models import KnowledgeRelation, TheoryTimelineEvent, TimelineEventRelation
@@ -39,10 +40,10 @@ def validate_relation_patch(target, patch):
         serializer = AdminTimelineEventRelationSerializer(data=rows, many=True)
         if not serializer.is_valid():
             raise EditorialRevisionError(f"时间线关联无效：{serializer.errors}")
-        rows = patch["timeline_relations"] = [_json_value(model_to_dict(TimelineEventRelation(**values), fields=TIMELINE_RELATION_FIELDS)) for values in serializer.validated_data]
-        keys = [_relation_key(row) for row in rows]
-        if len(set(keys)) != len(keys):
-            raise EditorialRevisionError("同一对象的时间线关联不能重复。")
+        try:
+            rows = patch["timeline_relations"] = normalized_timeline_relations(target, serializer.validated_data)
+        except ValueError as error:
+            raise EditorialRevisionError(str(error)) from error
     preview = copy(target)
     for name, value in patch.items():
         if name == "timeline_relations":
@@ -80,8 +81,34 @@ def _model_values(row):
     return {TimelineEventRelation._meta.get_field(name).attname: value for name, value in row.items()}
 
 
+def normalized_timeline_relations(target, rows):
+    """Omitted association metadata inherits the existing manually edited values."""
+    from catalog.services.editorial_revision import _json_value
+    existing = timeline_relations_snapshot(target) if target is not None else []
+    by_key = {_relation_key(row): row for row in existing}
+    normalized, seen = [], set()
+    for raw in rows:
+        provided = _json_value(raw)
+        defaults = _json_value(model_to_dict(TimelineEventRelation(**_model_values(provided)), fields=TIMELINE_RELATION_FIELDS))
+        previous = by_key.get(_relation_key(defaults))
+        if previous is None and "evidence" not in provided:
+            candidates = [row for row in existing if _relation_key({**row, "evidence": None}) == _relation_key(defaults)]
+            if len(candidates) == 1:
+                previous = candidates[0]
+        values = {**(previous or defaults), **provided}
+        key = _relation_key(values)
+        if key in seen:
+            raise ValueError("同一对象的时间线关联不能重复。")
+        seen.add(key)
+        normalized.append(values)
+    return normalized
+
+
+@transaction.atomic
 def apply_timeline_relations(target, rows):
     # Retain stable existing relation IDs when the same association is edited.
+    TheoryTimelineEvent.objects.select_for_update().get(pk=target.pk)
+    rows = normalized_timeline_relations(target, rows)
     existing = {_relation_key(model_to_dict(row, fields=TIMELINE_RELATION_FIELDS)): row for row in target.normalized_relations.select_for_update()}
     retained = []
     for values in rows:
@@ -89,9 +116,11 @@ def apply_timeline_relations(target, rows):
         if row is None:
             row = TimelineEventRelation.objects.create(event=target, **_model_values(values))
         else:
-            for name, value in _model_values(values).items():
+            changes = {name: value for name, value in _model_values(values).items() if str(getattr(row, name)) != str(value)}
+            for name, value in changes.items():
                 setattr(row, name, value)
-            row.save()
+            if changes:
+                row.save(update_fields=[*changes, "updated_at"])
         retained.append(row.pk)
     target.normalized_relations.exclude(pk__in=retained).delete()
 
@@ -99,8 +128,15 @@ def apply_timeline_relations(target, rows):
 def serialize_timeline_draft(target, revision, context):
     from catalog.serializers import AdminTimelineEventRelationSerializer
     rows = revision.materialized_preview.get("timeline_relations", timeline_relations_snapshot(target))
+    identifiers = {_relation_key(model_to_dict(row, fields=TIMELINE_RELATION_FIELDS)): row.pk for row in target.normalized_relations.all()}
+    preview_rows = []
+    for values in rows:
+        row = TimelineEventRelation(event=target, **_model_values(values))
+        if _relation_key(values) in identifiers:
+            row.pk = identifiers[_relation_key(values)]
+        preview_rows.append(row)
     return list(AdminTimelineEventRelationSerializer(
-        [TimelineEventRelation(event=target, **_model_values(row)) for row in rows],
+        preview_rows,
         many=True, context=context,
     ).data)
 
