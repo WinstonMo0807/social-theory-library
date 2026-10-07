@@ -11,6 +11,7 @@ registerHooks({ load(url, context, nextLoad) {
 const { moveReadingPathEntry, readingPathStageGroups } = await import("../components/admin/curation/reading-path-workbench.tsx");
 const { loadLibraryWorkPreview } = await import("../components/admin/knowledge/scholar-essential-works.tsx");
 const { ReadingPathPublicView } = await import("../components/public/reading-path-public-view.tsx");
+const { WorkCompactCard } = await import("../components/theory-system-ui.tsx");
 const item = (id, work, reason = "已确认的推荐理由") => Object.freeze({ key:id, id, work, work_name:work || "", node:null, node_name:"", recommendation_reason:reason, prerequisite:"已确认前置要求", editorial_note:"私人编辑备注", is_required:true });
 
 test("reordering keeps all legacy items and their identity, evidence and private notes", () => {
@@ -66,9 +67,14 @@ test("same-named stages remain separate and only the chosen preview stage is hig
   const work={id:"work",title:"馆藏著作",author:"馆藏作者",publisher:"真实出版社",year:2006,cover_url:"",detail_href:"/works/real",reader_href:null};
   const path={title:"已保存阅读路径",slug:"path",introduction:"原路径说明",cover_url:"",audience:"后台保留的受众",estimated_reading:"后台保留的时长",items:[{id:"a",stage:"first",stage_name:"核心著作",stage_description:"阶段甲",work_data:work,recommendation_reason:"后台保留的理由",prerequisite:"后台保留的前置阅读",editorial_note:"禁止公开的备注"},{id:"b",stage:"second",stage_name:"核心著作",stage_description:"阶段乙",work_data:{...work,id:"work-b"}},{id:"c",stage:"second",stage_name:"核心著作",stage_description:"阶段乙",node_data:{canonical_name_zh:"已选理论",slug:""}}]};
   const render=previewStage=>renderToStaticMarkup(React.createElement(ReadingPathPublicView,{path,footer:null,previewStage}));
-  assert.equal((render(1).match(/<h2>/g)||[]).length,2);
+  assert.equal((render(1).match(/<h2>[一二]、核心著作<\/h2>/g)||[]).length,2);
   assert.equal((render(1).match(/data-preview-selected="true"/g)||[]).length,1);
   assert.doesNotMatch(render(),/data-preview-selected="true"|禁止公开的备注|后台保留的|architectural-image|href="\/theories\/nodes\/"/);
   assert.match(render(1),/真实出版社 · 2006 年版/);
   assert.match(render(1),/馆藏作者 著/);
+  assert.match(render(1),/相关主题/);
+  const unlinked=renderToStaticMarkup(React.createElement(WorkCompactCard,{work:{...work,detail_href:null,reader_href:null}}));
+  assert.match(unlinked,/<div class="theory-work-compact">/);
+  assert.doesNotMatch(unlinked,/href=|\/explore/);
+  assert.match(renderToStaticMarkup(React.createElement(WorkCompactCard,{work})),/href="\/works\/real"/);
 });

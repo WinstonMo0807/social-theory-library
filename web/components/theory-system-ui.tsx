@@ -125,9 +125,8 @@ export function ReadingPathCard({ path }: { path: NormalizedReadingPath }) {
 }
 
 export function WorkCompactCard({ work, role }: { work: TheoryWorkCompact; role?: string }) {
-  const href = work.detail_href || work.reader_href || "/explore";
-  return (
-    <CollectionLink className="theory-work-compact" href={href}>
+  const href = work.detail_href || work.reader_href;
+  const content = <>
       <span className={work.cover_url ? "work-cover has-image" : "work-cover"} style={work.cover_url ? { backgroundImage: `url("${work.cover_url}")` } : undefined}>
         {!work.cover_url ? <FileText size={24} /> : null}
       </span>
@@ -136,9 +135,9 @@ export function WorkCompactCard({ work, role }: { work: TheoryWorkCompact; role?
         <strong>{work.title}</strong>
         <em>{[work.author, work.year].filter(Boolean).join(" · ")}</em>
       </span>
-      <ArrowRight size={17} />
-    </CollectionLink>
-  );
+      {href ? <ArrowRight size={17} /> : null}
+    </>;
+  return href ? <CollectionLink className="theory-work-compact" href={href}>{content}</CollectionLink> : <div className="theory-work-compact">{content}</div>;
 }
 
 export function TheoryEmpty({ title, detail }: { title: string; detail: string }) {

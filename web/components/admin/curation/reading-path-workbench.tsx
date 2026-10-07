@@ -408,6 +408,7 @@ export function ReadingPathWorkbench() {
       const targets = stages.flatMap((stage,stageIndex) => stage.items.flatMap((item,itemIndex) => item.work || item.node ? [{stageIndex,itemIndex,key:item.key}] : []));
       const target = targets[index];
       if (!target) return;
+      event.preventDefault();
       setActiveStage(target.stageIndex); setActiveItem(target.itemIndex);
       window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>(`[data-reading-item="${CSS.escape(target.key)}"] textarea`)?.focus());
     };

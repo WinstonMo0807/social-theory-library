@@ -106,9 +106,9 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
       }} data-active-section={activeSection} onClickCapture={event => {
         const target = event.target as Element;
         const row = target.closest<HTMLElement>("[data-edit-row]");
-        if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow) }));
+        const rowHandled = row ? !window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow), cancelable:true })) : false;
         const section = target.closest<HTMLElement>("[data-edit-section]");
-        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", true); }
+        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", !rowHandled); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div>}</PreviewViewport>
       {typeof previewFooter === "function" ? previewFooter(perspective) : previewFooter}
