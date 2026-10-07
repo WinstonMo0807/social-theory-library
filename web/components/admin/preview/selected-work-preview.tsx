@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
-import { CoverImage } from "../workflow/edition-cover-editor";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { loadSavedCover } from "@/lib/saved-cover";
 import { Monitor, Smartphone, Maximize2 } from "lucide-react";
 import { AdminWorkPagePreview } from "./work-page-preview";
 import { PreviewViewport } from "../curation/fixed-page-editor";
@@ -35,8 +35,27 @@ export function SelectedWorkPreview({ editionId, title, publicHref = "", editHre
   </aside>;
 }
 
-export function SavedEditionCover({editionId,title}: {editionId?:string|null;title:string}) {
+export function SavedEditionCover({editionId,coverUrl,title}: {editionId?:string|null;coverUrl?:string;title:string}) {
   const token=getServerSessionCredential();
-  const resource=useApiResource<{edition_id:string;image_url:string}>(editionId ? `/catalog/admin/editions/${editionId}/cover/` : "",token);
-  return <span className="reference-saved-cover">{resource.data && resource.data.edition_id===editionId && resource.data.image_url ? <CoverImage url={resource.data.image_url} token={token} alt={title}/> : resource.error ? <small role="status">封面读取失败</small> : null}</span>;
+  // A single OCR detail can still read cover state; lists always supply their batched URL (including empty).
+  const resource=useApiResource<{edition_id:string;image_url:string}>(coverUrl === undefined && editionId ? `/catalog/admin/editions/${editionId}/cover/` : "",token);
+  const url=coverUrl ?? (resource.data && resource.data.edition_id===editionId ? resource.data.image_url : "");
+  const frame=useRef<HTMLSpanElement>(null);
+  const [image,setImage]=useState<{url:string;token:string|null;src:string;failed:boolean}|null>(null);
+  useEffect(()=>{
+    if(!url || !frame.current)return;
+    const controller=new AbortController();
+    let objectUrl="";
+    const load=()=>void loadSavedCover(url,token,controller.signal).then(blob=>{
+      if(controller.signal.aborted)return;
+      objectUrl=URL.createObjectURL(blob);setImage({url,token,src:objectUrl,failed:false});
+    }).catch(()=>{if(!controller.signal.aborted)setImage({url,token,src:"",failed:true});});
+    const observer=typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)){observer?.disconnect();load();}
+    });
+    if(observer)observer.observe(frame.current);else load();
+    return ()=>{controller.abort();observer?.disconnect();if(objectUrl)URL.revokeObjectURL(objectUrl);};
+  },[url,token]);
+  const current=image?.url===url && image.token===token ? image : null;
+  return <span ref={frame} className="reference-saved-cover">{current?.src ? <img src={current.src} alt={title}/> : current?.failed || resource.error ? <small role="status">封面读取失败</small> : null}</span>;
 }

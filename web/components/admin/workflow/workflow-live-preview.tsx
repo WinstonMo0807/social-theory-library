@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Maximize2, Monitor, Smartphone } from "lucide-react";
 import { apiBlob, apiRequest } from "@/lib/api";
 import { WorkDetailView } from "@/components/work-detail-view";
+import type { WorkDetailPresentation } from "@/components/work-detail-tabs";
 import type { Work } from "@/lib/data";
 import type { WorkflowStepKey } from "./workflow-state";
 import { asArray, asRecord, asString, type WorkflowDrafts, type WorkflowContext } from "./workflow-types";
@@ -10,9 +11,10 @@ import { WorkflowInspector } from "@/components/admin/inspector/workflow-inspect
 import { PreviewViewport } from "@/components/admin/curation/fixed-page-editor";
 import { SiteHeader } from "@/components/site-header";
 
-export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, returnHref, onLocate, reader = false, coverOverride = null }: {
+export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, returnHref, onLocate, reader = false, coverOverride = null, presentation = "bibliography" }: {
   drafts: WorkflowDrafts; context: WorkflowContext; token: string | null; savedAt: string; dirty: boolean;
   returnHref: string; onLocate: (step: WorkflowStepKey) => void; reader?: boolean; coverOverride?: string | null;
+  presentation?: WorkDetailPresentation;
 }) {
   const [cover, setCover] = useState("");
   const [coverError, setCoverError] = useState("");
@@ -45,6 +47,7 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
     year: asString(drafts.bibliography.publication_year) || String(drafts.bibliography.publication_year || "年份待补"),
     kind: ({ book:"图书", journal_article:"期刊论文", journal_issue:"整期期刊", thesis:"学位论文", report:"研究报告" } as Record<string, Work["kind"]>)[documentType] || "图书",
     school: asArray(drafts.classification.primary_disciplines).map(asRecord).map(row => asString(row.name)).join("、"),
+    categories: asArray(drafts.classification.primary_disciplines).map(asRecord).map(row => asString(row.name)).filter(Boolean),
     summary: asString(drafts.work.abstract), cover:"paper", coverImage:(coverOverride ?? cover) || undefined, coverAlt:title,
     pages: Number(currentAsset?.page_count || drafts.reader.page_count || 0), language:asString(drafts.work.language),
     authors:authorRows.map(row => ({name:asString(row.display_name || row.name)})),
@@ -60,8 +63,8 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
     {coverError ? <p role="status">{coverError}</p> : null}
     <div className="workflow-v307-preview-locate"><button type="button" onClick={() => onLocate("work")}>编辑书目与封面</button><button type="button" onClick={() => onLocate("contributors")}>编辑作者与分类</button></div>
     <div onClickCapture={event => { const target = event.target as HTMLElement; if (target.closest("a,button")) return; if (target.closest(".book-cover")) onLocate("work"); else if (target.closest(".work-author-link")) onLocate("contributors"); else if (target.closest(".work-hero h1,.work-summary,.work-body")) onLocate("work"); else if (target.closest("dl")) onLocate("bibliography"); }}>
-      <PreviewViewport device={device}><SiteHeader preview previewPath="/explore"/><WorkDetailView work={work} preview={{publicationState:"draft",pdfPreviewUrl:"",returnHref}} footer={null} /></PreviewViewport>
+      <PreviewViewport device={device}><SiteHeader preview previewPath={`/works/${work.slug}`}/><WorkDetailView work={work} presentation={presentation} preview={{publicationState:"draft",pdfPreviewUrl:"",returnHref}} footer={null} /></PreviewViewport>
     </div>
-    <dialog ref={fullPreview} className="fixed-preview-dialog" onClose={()=>setExpanded(false)}><header><strong>{dirty ? "当前输入 · 尚未保存" : "已保存内容"}</strong><button type="button" onClick={()=>fullPreview.current?.close()}>关闭预览</button></header>{expanded ? <PreviewViewport device={device}><SiteHeader preview previewPath="/explore"/><WorkDetailView work={work} preview={{publicationState:"draft",pdfPreviewUrl:"",returnHref}} footer={null}/></PreviewViewport> : null}</dialog>
+    <dialog ref={fullPreview} className="fixed-preview-dialog" onClose={()=>setExpanded(false)}><header><strong>{dirty ? "当前输入 · 尚未保存" : "已保存内容"}</strong><button type="button" onClick={()=>fullPreview.current?.close()}>关闭预览</button></header>{expanded ? <PreviewViewport device={device}><SiteHeader preview previewPath={`/works/${work.slug}`}/><WorkDetailView work={work} presentation={presentation} preview={{publicationState:"draft",pdfPreviewUrl:"",returnHref}} footer={null}/></PreviewViewport> : null}</dialog>
   </div>;
 }

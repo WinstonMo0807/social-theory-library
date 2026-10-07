@@ -121,6 +121,16 @@ def asset_row(asset):
             "source_asset_id": str(asset.source_asset_id) if asset.source_asset_id else None}
 
 
+def saved_cover_url(work):
+    """Only inspect the request's hydrated fields; never prepare a cover on list reads."""
+    draft = getattr(work, "_admin_editorial_draft", None)
+    preview = draft.materialized_preview if draft else {}
+    if not preview.get("cover", work.cover.name):
+        return ""
+    version = draft.updated_at if draft else work.updated_at
+    return f"/api/catalog/admin/works/{work.pk}/recommendation-image/?slot=cover&v={version.timestamp()}"
+
+
 def edition_summary(edition, *, user=None):
     fields = field_readiness(edition)
     publication = catalog_publication_state(edition)
@@ -200,6 +210,7 @@ def edition_summary(edition, *, user=None):
         "id": f"edition:{edition.pk}", "work_id": str(edition.work_id), "edition_id": str(edition.pk),
         "item_id": str(item.pk) if item else None, "session_id": str(session.pk) if session else None,
         "source_type": source, "title": edition.work.title, "source_filename": item.source_filename if item else "",
+        "cover_url": saved_cover_url(edition.work),
         "contributors": [row.person.preferred_name for row in sorted(edition.contributions.all(), key=lambda row: row.order) if row.approved],
         "publisher": edition.publisher, "publication_year": edition.publication_year, "version_label": edition.version_label,
         "document_type": edition.work.document_type, "workbench_url": workbench, "return_href": "/admin/review",
@@ -233,6 +244,7 @@ def edition_summary(edition, *, user=None):
 def unbound_upload_row(item):
     failed = item.status == "failed"
     return {"id": f"upload:{item.pk}", "item_id": str(item.pk), "work_id": None, "edition_id": None, "session_id": None,
+            "cover_url": "",
             "source_type": "upload", "title": item.source_filename, "source_filename": item.source_filename,
             "document_type": item.document_type_hint, "workbench_url": f"/admin/uploads?item={item.pk}", "return_href": "/admin/review",
             "publication": {"editorial_state": None, "public_state": "unpublished", "catalog_revision_active": False,
@@ -251,8 +263,12 @@ def attach_library_editions(works):
     grouped = defaultdict(list)
     for edition in load_admin_editions(Edition.objects.filter(work_id__in=[work.pk for work in works])):
         grouped[edition.work_id].append(edition)
+    drafts = {row.target_id: row for row in EditorialRevision.objects.filter(
+        target_type="work", target_id__in=[work.pk for work in works if not grouped[work.pk]], status="draft",
+    )}
     for work in works:
         work._admin_editions = grouped[work.pk]
+        work._admin_editorial_draft = drafts.get(work.pk)
     return works
 
 

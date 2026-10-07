@@ -51,6 +51,7 @@ function adaptPreviewWork(value: ApiWork): Work {
     year: String(value.edition?.publication_year ?? "出版年不详"),
     kind: ({ book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "研究报告" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
+    categories: [...new Set([...(value.disciplines ?? []), ...(value.subdisciplines ?? [])].map(row => row.name).filter(Boolean))],
     summary: value.abstract || "简介待编辑。",
     cover: coverStyles[0],
     coverImage: normalizePublicResourceUrl(value.cover || value.recommendation_image || "") || undefined,
@@ -58,7 +59,7 @@ function adaptPreviewWork(value: ApiWork): Work {
     coverAlt: (value.cover ? value.cover_media : value.recommendation_media)?.alt_text || undefined,
     pages: value.edition?.readable_asset?.page_count ?? 0,
     language: value.language,
-    authors: authors.map((row) => ({ name: row.person.preferred_name, slug: row.person.scholar_slug })),
+    authors: authors.map((row) => ({ name: row.person.preferred_name, slug: row.person.scholar_slug, originalName: row.person.original_name, biography: row.person.biography })),
     theories: value.theories,
     topics: value.topics,
     theoryAssociations: value.theory_associations ?? [],
@@ -133,9 +134,11 @@ export function AdminWorkPagePreview({
     );
   }
   const returnHref = safeAdminHref(routeParams.get("return_to"), payload.return_url);
-  const page = <><SiteHeader preview previewPath="/explore"/>
+  const isEmbedded = embedded || routeParams.get("embed") === "1";
+  const page = <><SiteHeader preview previewPath={`/works/${work.slug}`}/>
     <WorkDetailView
       work={work}
+      presentation={isEmbedded ? "contents" : "publication"}
       footer={footer}
       preview={{
         publicationState: payload.publication_state,
@@ -150,7 +153,7 @@ export function AdminWorkPagePreview({
           : null,
       }}
     /></>;
-  if (embedded || routeParams.get("embed") === "1") return embeddedView === "card" ? <div className={styles.cardPreview} inert><BookCard work={work} exploreActions/></div> : page;
+  if (isEmbedded) return embeddedView === "card" ? <div className={styles.cardPreview} inert><BookCard work={work} exploreActions/></div> : page;
   const fields = payload.editorial_revision?.changed_fields ?? [];
   const changes = [
     { title: "基本信息", step: "bibliography", fields: fields.filter(field => !/cover|abstract/.test(field)) },

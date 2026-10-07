@@ -58,10 +58,10 @@ test("admin preview keeps async server components outside the client module grap
 test("admin preview keeps reader, download, save and public links inactive", async () => {
   const view = await readFile(new URL("../components/work-detail-view.tsx", import.meta.url), "utf8");
 
-  assert.match(view, /preview \? \(/);
+  assert.match(view, /preview \? <>/);
   assert.match(view, /aria-disabled="true"[\s\S]*下载 PDF[\s\S]*aria-disabled="true"[\s\S]*加入书架/);
   assert.match(view, /preview \? association\.node\.name/);
-  assert.match(view, /!preview \? \(/);
+  assert.match(view, /primaryAuthor && !preview \?/);
   assert.match(view, /<AssetDownloadButton assetId=\{work\.downloadAssetId \|\| work\.id\}/);
   assert.match(view, /<SaveWorkButton workId=\{work\.workId\}/);
 });

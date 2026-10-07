@@ -34,6 +34,7 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
       report: "研究报告",
     } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
+    categories: [...new Set([...(value.disciplines ?? []), ...(value.subdisciplines ?? [])].map(row => row.name).filter(Boolean))],
     summary: value.abstract || "馆藏简介待补充。",
     cover: coverStyles[index % coverStyles.length],
     coverImage: value.cover || value.recommendation_image || undefined,
@@ -44,6 +45,8 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     authors: authorContributions.map((row) => ({
       name: row.person.preferred_name,
       slug: row.person.scholar_slug,
+      originalName: row.person.original_name,
+      biography: row.person.biography,
     })),
     theories: value.theories,
     topics: value.topics,

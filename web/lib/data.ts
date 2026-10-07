@@ -63,6 +63,7 @@ export type Work = {
   year: string;
   kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告";
   school: string;
+  categories?: string[];
   summary: string;
   cover: "dark" | "paper" | "cream" | "line";
   coverImage?: string;
@@ -70,7 +71,7 @@ export type Work = {
   coverAlt?: string;
   pages: number;
   language?: string;
-  authors?: { name: string; slug?: string | null }[];
+  authors?: { name: string; slug?: string | null; originalName?: string; biography?: string }[];
   theories?: { name: string; slug: string }[];
   topics?: { name: string; slug: string }[];
   theoryAssociations?: {

@@ -1104,7 +1104,7 @@ def work_library_queryset(*, query: str = "", view: str = "", ordering: str = "t
 
 
 def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
-    from catalog.services.admin_queue import edition_summary, load_admin_editions
+    from catalog.services.admin_queue import edition_summary, load_admin_editions, saved_cover_url
     from catalog.services.publication_eligibility import public_default_edition
 
     editions = work._admin_editions if hasattr(work, "_admin_editions") else load_admin_editions(work.editions.all())
@@ -1207,6 +1207,7 @@ def serialize_work_library_row(work: Work, *, user=None) -> dict[str, Any]:
         "row_type": "work", "work_id": str(work.id),
         "id": str(work.id),
         "title": work.title,
+        "cover_url": saved_cover_url(work),
         "document_type": work.document_type,
         "language": work.language,
         "contributors": contributors,

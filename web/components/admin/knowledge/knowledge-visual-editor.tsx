@@ -79,18 +79,6 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const canPublish = hasAdminCapability(useAdminSession(),"can_publish_authority");
   const [publishing,setPublishing] = useState(false);
   const [publicationMessage,setPublicationMessage] = useState("");
-  const [showPreviewHint, setShowPreviewHint] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const timer = window.setTimeout(() => {
-      setShowPreviewHint(window.sessionStorage.getItem("stl-admin-preview-click-tip-v1") !== "seen");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-  function dismissPreviewHint() {
-    window.sessionStorage.setItem("stl-admin-preview-click-tip-v1", "seen");
-    setShowPreviewHint(false);
-  }
   async function publishSaved() {
     if(!objectId || !savedRecord || dirty || publishing || !canPublish)return;
     const endpoint = ({scholar:"scholars",topic:"topics",discipline:"disciplines",subdiscipline:"subdisciplines",reading_path:"theory-system/reading-paths"} as Record<string,string>)[objectType] || "theory-system/nodes";
@@ -147,7 +135,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     publishedHref={payload?.perspectives.published.available ? payload.preview_routes.published || undefined : undefined}
     publishedPreview={payload?.perspectives.published.available ? <div inert><PreviewSurface payload={{...payload, active_perspective:"published", perspective:payload.perspectives.published}} pageId={page}/></div> : undefined}
     fields={form ? cloneElement(form,{},<fieldset disabled={disabled} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
-    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，保存后可重新打开预览。</p> : objectId && !payload ? <p role="status">正在读取当前对象的受控预览…</p> : <div className="knowledge-preview-pane"><div className="knowledge-preview-tip" hidden={!showPreviewHint} role="status"><div><strong>预览可以定位编辑项</strong><span>点击右侧预览中的文字或卡片，左侧会自动打开对应的管理控件。</span></div><button type="button" onClick={dismissPreviewHint}>知道了</button></div><div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) { dismissPreviewHint(); window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); } if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page}/></div></div>}/>
+    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，保存后可重新打开预览。</p> : objectId && !payload ? <p role="status">正在读取当前对象的受控预览…</p> : <div className="knowledge-preview-pane"><div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page}/></div></div>}/>
     <details className="knowledge-editor-support" hidden={!["publication","media","relations"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{selected === "publication" && objectId && savedRecord ? <section className="knowledge-publish-action"><button type="button" className="button" disabled={dirty || publishing || !canPublish} onClick={()=>void publishSaved()}>{publishing?"正在发布…":"发布已保存内容"}</button><p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账号没有正式发布权限。":"将已保存的当前对象内容发布给读者。"}</p>{publicationMessage?<p role="status">{publicationMessage}</p>:null}</section>:null}{rail}</details>
   </div>;
 }

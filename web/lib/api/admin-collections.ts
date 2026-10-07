@@ -13,6 +13,7 @@ export type CatalogPublication = {
 };
 
 export type WorkflowQueueItem = {
+  cover_url?: string;
   id: string;
   item_id: string | null;
   work_id: string | null;
@@ -70,6 +71,7 @@ export type EditionFile = {
 };
 
 export type WorkLibraryRow = {
+  cover_url?: string;
   row_type: "work" | "edition";
   issues?: Array<{field?:string;step?:string;code?:string;message:string}>;
   warnings?: Array<{field?:string;step?:string;code?:string;message:string}>;
