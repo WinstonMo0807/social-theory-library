@@ -52,8 +52,6 @@
 .admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools>button{border:1px solid var(--recommendation-line);border-radius:4px}
 .admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools button[aria-pressed=true]{color:#fff;background:var(--recommendation-ink)}
 .admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview .fixed-preview-canvas{border:1px solid var(--recommendation-line);border-radius:4px;height:724px;max-height:724px;background:var(--recommendation-surface);scrollbar-gutter:auto}
-.recommendation-calendar-v2 .recommendation-calendar-preview>.recommendation-v2-actions{margin:6px 0;padding:0}
-.recommendation-calendar-v2 .recommendation-calendar-preview>.recommendation-v2-actions .button{min-height:28px;padding:4px 8px;font-size:12px}
 .recommendation-calendar-v2 .recommendation-preview-dialog{width:min(1280px,94vw);height:90vh;padding:18px;border:1px solid var(--recommendation-line);background:var(--recommendation-surface)}
 .recommendation-calendar-v2 .recommendation-preview-dialog>header{display:flex;justify-content:space-between;gap:16px;margin-bottom:12px}
 .recommendation-calendar-v2 .recommendation-preview-dialog .fixed-preview-canvas{max-height:calc(90vh - 80px)}
@@ -339,6 +337,22 @@
   .admin-shell .recommendation-issue-step-1 .fixed-page-editor{grid-template-columns:minmax(0,506fr) minmax(0,778fr);gap:18px}
   .admin-shell .recommendation-issue-step-2 .fixed-page-editor{grid-template-columns:minmax(0,580fr) minmax(0,718fr);gap:14px}
   .admin-shell .recommendation-issue-step-3 .fixed-page-editor{grid-template-columns:minmax(0,582fr) minmax(0,700fr);gap:12px}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-1>.v307-editor-heading{height:65px;min-height:65px;grid-template-columns:minmax(0,1fr) minmax(0,37%)}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-1 .recommendation-issue-progress{transform:translateY(-18px)}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-1 .recommendation-issue-progress>p{margin-bottom:12px}
+  .admin-shell .recommendation-issue-step-1 .fixed-editor-panel{height:778px;display:flex;flex-direction:column}
+  .admin-shell .recommendation-issue-step-1 .fixed-editor-fields{min-height:0;overflow:auto}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2>.v307-editor-heading{height:72px;min-height:72px;grid-template-columns:minmax(0,1fr) minmax(0,56%)}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2 .recommendation-issue-progress>p{margin-bottom:16px}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2 .recommendation-issue-stepper{height:34px}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2 .recommendation-issue-stepper button{flex-direction:row;justify-content:flex-start;gap:12px}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2 .recommendation-issue-stepper button:after{left:calc(100% - 48px);right:14px}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-2 .recommendation-issue-stepper b{width:30px;height:30px;flex:none;font-size:18px}
+  .admin-shell .recommendation-issue-step-2 .fixed-editor-panel{height:837px;display:flex;flex-direction:column}
+  .admin-shell .recommendation-issue-step-2 .fixed-editor-fields{flex:1;min-height:0;overflow:auto}
+  .admin-shell .recommendation-issue-step-2 .recommendation-issue-actions{flex:none}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-3 .v307-editor-heading{grid-template-columns:minmax(0,1fr) minmax(0,54%)}
+  .admin-shell .recommendation-issue-editor-v2.recommendation-issue-step-3 .recommendation-issue-progress{padding-top:4px}
 }
 .admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{align-items:flex-start;padding:0 10px;margin:0 0 26px;min-height:67px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,48%);gap:20px}
 .admin-shell .recommendation-issue-editor-v2 .v307-editor-heading h1{font:600 28px/40px var(--stl-type-serif);margin:0 0 9px}
@@ -361,7 +375,7 @@
 .issue-required{font-size:14px;color:#b75035;margin-left:5px}
 .issue-identity-fields{display:grid;gap:16px}
 .issue-field-count{display:block;text-align:right;font:14px/21px var(--stl-type-sans);color:var(--recommendation-muted)}
-.issue-identity-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:6px}
+.issue-identity-pair{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:22px;margin-top:6px}
 .issue-cover-fields>h3{margin:0 0 8px;font:16px/24px var(--stl-type-serif)}
 .issue-cover-fields>div{display:grid;grid-template-columns:minmax(0,56%) minmax(0,1fr);gap:12px}
 .issue-cover-thumbnail{padding:5px;border:1px solid var(--recommendation-line);border-radius:3px;aspect-ratio:1.66;background:var(--recommendation-paper)}
@@ -372,7 +386,7 @@
 .recommendation-media-dialog{width:min(700px,94vw);max-height:88vh;overflow:auto;border:1px solid var(--recommendation-line);padding:20px;background:var(--recommendation-surface)}
 .recommendation-media-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
 .recommendation-media-dialog h2{font:22px var(--stl-type-serif);margin:0}
-.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview{position:relative;top:0;padding:14px 12px 0;height:778px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview{position:relative;top:0;padding:13px 12px 0;height:778px}
 .admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header{padding:0 12px 12px;border:0;height:49px}
 .admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header strong{font:600 21px/30px var(--stl-type-serif)}
 .admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header>span{position:absolute;right:26px;top:74px;font:12px/20px var(--stl-type-sans)}
@@ -387,6 +401,11 @@
 .admin-shell .recommendation-issue-step-2 .fixed-editor-sections{padding:12px 14px 0;gap:18px;background:none}
 .admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button{font:14px/22px var(--stl-type-sans);padding:6px 8px 12px;border:0;border-radius:0;white-space:nowrap}
 .admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button[aria-current]{background:none;border-bottom:2px solid var(--recommendation-ink)}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-preview{height:837px;padding:0}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-preview>header{height:52px;padding:14px 18px 8px}
+.admin-shell .recommendation-issue-step-2 .recommendation-preview-location{height:35px;padding:0 18px 8px}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-preview>header>span{top:61px}
+.admin-shell .recommendation-issue-step-2 .fixed-preview-canvas{height:calc(100% - 87px);border-width:1px 0 0;border-radius:0}
 .admin-shell .recommendation-issue-step-2 .v307-editor-heading h1{font-size:32px;line-height:44px}
 .admin-shell .recommendation-issue-step-2 .v307-editor-heading>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:20px}
 .admin-shell .recommendation-issue-step-2 .v307-editor-heading h1{width:100%}
@@ -419,14 +438,19 @@
 .admin-shell .issue-recommended-books article>label{grid-column:1/-1;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;margin-left:72px;font:12px var(--stl-type-sans)}
 .admin-shell .issue-recommended-books article>label>textarea{font:13px/21px var(--stl-type-sans);padding:6px 10px}
 .admin-shell .recommendation-issue-step-3>.v307-editor-heading{min-height:120px;margin-bottom:25px;padding:0 6px}
-.admin-shell .recommendation-issue-step-3 .v307-editor-heading h1{font-size:36px;line-height:50px}
-.admin-shell .recommendation-issue-step-3 .v307-editor-heading>div:first-child>p{font:600 26px/38px var(--stl-type-serif);color:var(--recommendation-ink);margin-bottom:5px}
+.admin-shell .recommendation-issue-step-3 .v307-editor-heading h1{font-size:36px;line-height:50px;margin-bottom:6px}
+.admin-shell .recommendation-issue-step-3 .v307-editor-heading>div:first-child>p{font:600 26px/38px var(--stl-type-serif);color:var(--recommendation-ink);margin-bottom:3px}
 .admin-shell .recommendation-issue-step-3 .fixed-editor-panel,.admin-shell .recommendation-issue-step-3 .fixed-editor-preview{min-height:724px;height:724px}
 .admin-shell .recommendation-issue-step-3 .fixed-editor-fields{padding:16px}
 .admin-shell .recommendation-issue-step-3 .fixed-editor-fields>h2{margin-bottom:12px}
-.recommendation-issue-schedule-v2>p{font:15px/24px var(--stl-type-sans);color:var(--recommendation-muted);max-width:450px;margin:0 0 24px}
+.admin-shell .recommendation-issue-step-3 .fixed-editor-preview{padding:10px 6px 0}
+.admin-shell .recommendation-issue-step-3 .fixed-editor-preview>header{height:46px;padding-inline:8px}
+.admin-shell .recommendation-issue-step-3 .recommendation-preview-location{height:43px;padding-inline:8px}
+.admin-shell .recommendation-issue-step-3 .fixed-preview-canvas{height:calc(100% - 89px)}
+.recommendation-issue-schedule-v2>p{font:15px/24px var(--stl-type-sans);color:var(--recommendation-muted);max-width:450px;margin:0 0 20px}
 .admin-shell .recommendation-issue-editor-v2 .recommendation-date-fields{margin:0 0 22px;gap:16px}
 .admin-shell .recommendation-issue-editor-v2 .recommendation-date-grid{margin:0;gap:7px}
+.admin-shell .recommendation-issue-step-3 .recommendation-date-grid{grid-template-columns:minmax(0,277fr) minmax(0,265fr)}
 .admin-shell .recommendation-issue-editor-v2 .recommendation-month,.admin-shell .recommendation-issue-editor-v2 .recommendation-upcoming{padding:16px 10px;min-height:314px}
 .admin-shell .recommendation-issue-editor-v2 .recommendation-month>header{font:600 18px/26px var(--stl-type-serif);margin-bottom:18px}
 .admin-shell .recommendation-issue-editor-v2 .recommendation-month-days{gap:7px 1px}
@@ -438,6 +462,7 @@
 .issue-reference-meta .issue-section-label{font:18px/1.5 var(--stl-type-serif);font-weight:400}
 .issue-reference-article .issue-introduction{font:25px/1.55 var(--stl-type-serif);margin:0 0 20px;color:var(--admin-v2-muted)}
 .issue-reference-article .issue-byline{padding:0;margin:0 0 22px;border:0;font:20px/1.5 var(--stl-type-serif);justify-content:flex-start}
+.issue-reference-article .issue-byline>time{margin-left:24px;color:var(--admin-v2-muted);font-family:var(--stl-type-sans)}
 .issue-reference-media{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
 .issue-reference-media.has-toc{grid-template-columns:minmax(0,1fr) 195px}
 .issue-reference-media .issue-reference-image{min-height:0;aspect-ratio:2.65}
@@ -456,6 +481,8 @@
 .issue-reference-article .issue-reference-books .issue-book-card>p{font:18px/1.5 var(--stl-type-serif);margin:4px 0}
 .fixed-preview-document .issue-reference-article>header[data-edit-active=true]{outline:none}
 .fixed-preview-document .issue-reference-article>header[data-edit-active=true]>h1,.fixed-preview-document .issue-reference-prose[data-edit-active=true]{outline:1px solid var(--admin-v2-focus);outline-offset:6px}
+.issue-editor-article.is-compact>header h1{font-size:50px;margin:16px 0 8px}
+.issue-editor-article.is-compact .issue-byline{font-size:20px;margin-bottom:22px}
 .daily-reading-home{padding:26px 36px 32px;color:var(--admin-v2-ink);font-family:var(--stl-type-serif)}
 .daily-reading-home>header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:14px}
 .daily-reading-home>header h2{font:600 42px/1.4 var(--stl-type-serif);margin:0 0 16px}
@@ -483,6 +510,105 @@
 .daily-reading-home .daily-reading-books .issue-book-card>h3,.daily-reading-home .daily-reading-books .issue-book-card>p,.daily-reading-home .daily-reading-books .issue-book-card>.text-link,.daily-reading-home .daily-reading-books .issue-book-card>.issue-awaiting{grid-column:2}
 .daily-reading-home .daily-reading-books .issue-book-card>.text-link,.daily-reading-home .daily-reading-books .issue-book-card>.issue-awaiting{font:11px/1.5 var(--stl-type-sans);margin-top:6px}
 .v307-home .home-current-issue{display:block;padding:0}
+
+/* Reference-specific reading layouts reuse saved issues and catalogue links. */
+@media(min-width:821px){
+  .site-header[data-reading-layout]{grid-template-columns:auto minmax(0,1fr) auto;gap:40px;background:var(--admin-v2-surface);border-bottom:1px solid var(--admin-v2-line);color:var(--admin-v2-ink)}
+  .site-header[data-reading-layout] .wordmark{font:900 26px/.86 "Arial Black",Arial,sans-serif;letter-spacing:-.04em}
+  .site-header[data-reading-layout] .desktop-nav{justify-content:center;gap:40px;font:18px/27px var(--stl-type-serif)}
+  .site-header[data-reading-layout=preview]{min-height:118px;padding:22px 24px;gap:36px}
+  .site-header[data-reading-layout=preview] .wordmark{font-size:29px}
+  .site-header[data-reading-layout=preview] .desktop-nav{font-size:21px;gap:52px}
+  .site-header[data-reading-layout=preview] .header-search>span,.site-header[data-reading-layout] .menu-button{display:none}
+  .site-header[data-reading-layout=preview] .header-search>svg{width:24px;height:24px}
+  .site-header[data-reading-layout=index]{min-height:96px;padding:18px clamp(24px,3.4vw,53px);border-bottom:0}
+  .site-header[data-reading-layout=article]{min-height:80px;padding:12px clamp(24px,5vw,76px);gap:30px}
+  .site-header[data-reading-layout=article] .wordmark{font-size:22px}
+  .site-header[data-reading-layout=article] .desktop-nav{justify-content:flex-start;gap:38px;padding-left:70px}
+  .site-header[data-reading-layout] .header-actions{gap:30px}
+}
+.site-header[data-reading-layout] a{color:inherit;text-decoration:none}
+.reading-header-search{display:flex;align-items:center;gap:8px;width:270px;height:34px;border:1px solid var(--admin-v2-line);border-radius:4px}
+.reading-header-search>button{display:grid;place-items:center;flex:none;width:32px;height:32px;border:0;padding:0;background:none;cursor:pointer;color:inherit}
+.reading-header-search>label{flex:1;min-width:0}
+.reading-header-search input{width:100%;min-width:0;border:0;background:none;padding:5px 8px 5px 0;font:13px/22px var(--stl-type-sans);color:inherit}
+.reading-header-reader{display:flex;align-items:center;gap:22px;white-space:nowrap;font:14px/21px var(--stl-type-sans)}
+.reading-header-reader>a+a{border-left:1px solid var(--admin-v2-line);padding-left:22px}
+.daily-reading-page{width:100%;padding:0 clamp(24px,3.4vw,53px) 0}
+.daily-reading-public-index{color:var(--admin-v2-ink);font-family:var(--stl-type-serif)}
+.daily-reading-public-index a{color:inherit;text-decoration:none}
+.daily-reading-public-index>header{display:flex;align-items:center;gap:34px;min-height:54px;border-bottom:1px solid var(--admin-v2-line);margin-bottom:17px}
+.daily-reading-public-index>header h1{font:600 28px/40px var(--stl-type-serif);margin:0}
+.daily-reading-public-index>header nav{display:flex;gap:12px;font:14px/21px var(--stl-type-serif)}
+.daily-reading-public-index>header nav>*{min-width:100px;height:34px;padding:6px 18px;border:0;border-radius:5px;background:var(--admin-v2-paper)}
+.daily-reading-public-index>header nav>a{min-width:66px;background:var(--admin-v2-ink);color:#fff;text-align:center}
+.daily-reading-public-lead{display:grid;grid-template-columns:minmax(0,860fr) minmax(0,535fr);gap:38px}
+.daily-reading-public-image{display:block;background:var(--admin-v2-paper);overflow:hidden}
+.daily-reading-public-image img{width:100%;height:100%;display:block;object-fit:cover}
+.daily-reading-public-lead>.daily-reading-public-image{height:362px}
+.daily-reading-public-lead>div{padding-top:14px;min-width:0}
+.daily-reading-public-category{min-height:28px;color:var(--admin-v2-muted);font:15px/24px var(--stl-type-serif)}
+.daily-reading-public-lead h2{font:600 48px/1.3 var(--stl-type-serif);margin:18px 0 14px}
+.daily-reading-public-lead>div>p{font:21px/1.6 var(--stl-type-serif);margin:0 0 24px}
+.daily-reading-public-byline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font:14px/22px var(--stl-type-sans);color:var(--admin-v2-muted)}
+.daily-reading-public-byline>time:before{content:"·";margin-right:10px}
+.daily-reading-public-lead .button{display:inline-flex;gap:16px;align-items:center;min-height:42px;margin-top:22px;padding:9px 28px;border-radius:0;font:16px/24px var(--stl-type-serif);color:#fff}
+.daily-reading-public-latest,.daily-reading-public-books{margin-top:22px}
+.daily-reading-public-latest>header,.daily-reading-public-books>header{display:flex;align-items:center;gap:24px;margin-bottom:17px}
+.daily-reading-public-latest>header:after,.daily-reading-public-books>header:after{content:"";height:1px;flex:1;background:var(--admin-v2-line);order:1}
+.daily-reading-public-latest>header h2,.daily-reading-public-books>header h2{font:600 21px/31px var(--stl-type-serif);margin:0}
+.daily-reading-public-latest>header>a,.daily-reading-public-books>header>a{display:inline-flex;align-items:center;gap:12px;font:14px/22px var(--stl-type-serif);order:2}
+.daily-reading-public-latest>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.daily-reading-public-latest article{display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);gap:24px;border-right:1px solid var(--admin-v2-line);padding-right:20px;min-width:0}
+.daily-reading-public-latest article:nth-child(3n){border:0;padding-right:0}
+.daily-reading-public-latest .daily-reading-public-image{height:170px}
+.daily-reading-public-latest .daily-reading-public-category{min-height:26px}
+.daily-reading-public-latest h3{font:600 22px/30px var(--stl-type-serif);margin:8px 0 10px}
+.daily-reading-public-latest article>div{display:flex;flex-direction:column;min-width:0}
+.daily-reading-public-latest article>div>p{font:15px/23px var(--stl-type-serif);color:var(--admin-v2-muted);margin:0 0 10px}
+.daily-reading-public-latest .daily-reading-public-byline{margin-top:auto;font-size:13px;gap:7px}
+.daily-reading-public-books>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,15%);gap:24px;align-items:start}
+.daily-reading-public-books .issue-book-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:0 18px;min-width:0;border:0;border-right:1px solid var(--admin-v2-line);border-radius:0;background:none;padding:0 20px 0 0;align-content:start}
+.daily-reading-public-books .issue-book-card>a:first-child,.daily-reading-public-books .issue-book-card>.issue-book-cover{grid-column:1;grid-row:1/span 8}
+.daily-reading-public-books .issue-book-cover{width:72px;height:112px;margin:0;object-fit:contain;filter:none}
+.daily-reading-public-books .issue-book-card>h3{font:600 16px/24px var(--stl-type-serif);margin:2px 0 4px}
+.daily-reading-public-books .issue-book-card>p{font:13px/21px var(--stl-type-serif);color:var(--admin-v2-muted);margin:0 0 8px}
+.daily-reading-public-books .issue-book-card>.issue-book-version,.daily-reading-public-books .issue-book-card>.text-link,.daily-reading-public-books .issue-book-card>.issue-item-status.available{display:none}
+.daily-reading-public-more{grid-column:5;grid-row:1;min-height:112px;background:var(--admin-v2-paper);padding:16px 25px;font:14px/22px var(--stl-type-serif);color:var(--admin-v2-muted)}
+.daily-reading-public-more>span{display:block;margin-bottom:8px}
+.daily-reading-public-more>strong{font-weight:400}
+.daily-reading-public-more>p{font-size:12px;margin:2px 0}
+.daily-reading-page>.daily-reading-search{margin-top:28px}
+.daily-reading-article-page{width:100%;padding:0}
+.issue-public-article{display:grid;grid-template-columns:minmax(0,834fr) minmax(0,492fr);gap:50px;max-width:none;padding:30px clamp(24px,3.4vw,53px) 60px clamp(24px,6.9vw,106px)}
+.issue-public-main{min-width:0}
+.issue-public-main .issue-reference-meta .issue-section-label{font:600 18px/27px var(--stl-type-serif);color:var(--admin-v2-focus)}
+.issue-public-main .issue-reference-category{height:28px;margin-top:12px}
+.issue-public-main>header h1{font:600 48px/1.3 var(--stl-type-serif);margin:16px 0 14px}
+.issue-public-main .issue-introduction{font:20px/29px var(--stl-type-serif);margin:0 0 16px}
+.issue-public-main .issue-byline{font:16px/24px var(--stl-type-sans);margin-bottom:16px}
+.issue-public-main>.issue-reference-image{aspect-ratio:3.05;min-height:0}
+.issue-public-main>.issue-reference-image img{width:100%;height:100%;max-height:none;object-fit:cover}
+.issue-public-main .issue-reference-prose{font:20px/28px var(--stl-type-serif);padding:28px 0 0;margin-top:16px}
+.issue-public-main .issue-reference-prose>h2{font:600 28px/40px var(--stl-type-serif);margin:20px 0 10px}
+.issue-public-aside{min-width:0;border:1px solid var(--admin-v2-line);border-radius:3px;align-self:start}
+.issue-public-aside h2{font:600 21px/30px var(--stl-type-serif);margin:0}
+.issue-mentioned-books{padding:18px 24px 0}
+.issue-mentioned-books>header,.issue-related-space>header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}
+.issue-mentioned-books>header>a,.issue-related-space>header>a{font:14px/22px var(--stl-type-serif);color:var(--admin-v2-muted)}
+.issue-mentioned-books .issue-book-card{display:grid;grid-template-columns:110px minmax(0,1fr);gap:0 26px;padding:0;margin:0 0 24px;border:0;border-radius:0;background:none;align-content:start}
+.issue-mentioned-books .issue-book-card>a:first-child,.issue-mentioned-books .issue-book-card>.issue-book-cover{grid-column:1;grid-row:1/span 8}
+.issue-mentioned-books .issue-book-cover{width:110px;height:147px;object-fit:contain;margin:0;filter:none}
+.issue-mentioned-books .issue-book-card>h3{font:600 22px/30px var(--stl-type-serif);margin:0 0 4px}
+.issue-mentioned-books .issue-book-card>p{font:16px/25px var(--stl-type-serif);margin:0 0 6px;color:var(--admin-v2-muted)}
+.issue-mentioned-books .issue-book-card>.text-link,.issue-mentioned-books .issue-book-card>.issue-item-status.available{display:none}
+.issue-public-aside>.issue-reference-toc{padding:18px 24px 28px;border:0;border-top:1px solid var(--admin-v2-line);margin:0}
+.issue-public-aside .issue-reference-toc>h2{margin-bottom:16px}
+.issue-public-aside .issue-reference-toc>a{display:block;border-left:2px solid var(--admin-v2-focus);padding:6px 0 6px 16px;font:16px/24px var(--stl-type-serif)}
+.issue-related-space{padding:18px 24px;border-top:1px solid var(--admin-v2-line)}
+.issue-related-space>div{min-height:170px}
+@media(min-width:821px) and (max-width:1250px){.site-header[data-reading-layout=article] .desktop-nav{gap:20px;padding-left:8px;font-size:16px}.site-header[data-reading-layout] .header-actions{gap:15px}.reading-header-search{width:210px}.reading-header-reader{gap:12px;font-size:13px}.reading-header-reader>a+a{padding-left:12px}.issue-public-article{gap:30px;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)}.issue-mentioned-books{padding-inline:16px}.issue-mentioned-books .issue-book-card{grid-template-columns:85px minmax(0,1fr);gap:16px}.issue-mentioned-books .issue-book-cover{width:85px;height:128px}}
+@media(max-width:820px){.reading-header-search,.reading-header-reader{display:none}.daily-reading-page{padding-inline:16px}.daily-reading-public-index>header{flex-wrap:wrap;gap:12px;padding-block:12px}.daily-reading-public-index>header nav{flex-wrap:wrap;gap:8px}.daily-reading-public-index>header nav>*{min-width:70px}.daily-reading-public-lead{grid-template-columns:1fr;gap:12px}.daily-reading-public-lead>.daily-reading-public-image{height:230px}.daily-reading-public-lead h2{font-size:32px}.daily-reading-public-lead>div>p{font-size:18px}.daily-reading-public-latest>div{grid-template-columns:1fr}.daily-reading-public-latest article{border:0;padding:0;gap:16px}.daily-reading-public-latest h3{font-size:21px}.daily-reading-public-latest>header,.daily-reading-public-books>header{gap:12px}.daily-reading-public-latest>header>a,.daily-reading-public-books>header>a{font-size:12px}.daily-reading-public-books>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.daily-reading-public-books .issue-book-card{grid-template-columns:52px minmax(0,1fr);gap:10px;padding:0;border:0}.daily-reading-public-books .issue-book-cover{width:52px;height:84px}.daily-reading-public-more{grid-column:auto;grid-row:auto}.issue-public-article{display:block;padding:24px 16px}.issue-public-main>header h1{font-size:32px}.issue-public-main .issue-introduction{font-size:18px;line-height:28px}.issue-public-main>.issue-reference-image{aspect-ratio:2}.issue-public-main .issue-reference-prose{font-size:18px;line-height:28px}.issue-public-main .issue-reference-prose>h2{font-size:25px;line-height:36px}.issue-public-aside{margin-top:24px}}
 @media(min-width:1201px){.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions{position:fixed;bottom:0;left:198px;right:0;z-index:10;background:var(--recommendation-surface);padding:11px 19px}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:nth-child(2){margin-left:auto}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:last-child{margin-left:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions{position:fixed;bottom:18px;left:218px;right:25px;z-index:10;border:0;background:var(--recommendation-paper);padding:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions>.button:last-child{margin-left:auto}}
 @media(max-width:1200px){.admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{grid-template-columns:1fr}.admin-shell .recommendation-issue-editor-v2 .fixed-page-editor{grid-template-columns:1fr}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview-tools{position:static;flex-wrap:wrap;padding:0 8px 12px}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header>span{position:static}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview{height:auto;min-height:0}.admin-shell .recommendation-issue-editor-v2 .fixed-preview-canvas{height:650px;max-height:65vh}.admin-shell .recommendation-issue-step-3 .fixed-editor-panel{height:auto;min-height:0}}
 @media(max-width:650px){.admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{padding:0}.admin-shell .recommendation-issue-editor-v2 .v307-editor-heading h1{font-size:26px;line-height:38px}.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper span{font-size:12px}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields{padding:16px 12px}.issue-identity-pair{grid-template-columns:1fr;gap:16px}.issue-cover-fields>div{grid-template-columns:1fr}.issue-rich-toolbar{gap:0;padding-inline:3px}.issue-rich-toolbar>button{width:23px}.admin-shell .recommendation-issue-editor-v2 .issue-rich-toolbar>select{width:70px;font-size:11px}.admin-shell .recommendation-issue-step-2 .fixed-editor-sections{gap:0;padding-inline:4px}.admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button{font-size:12px;padding-inline:8px}.admin-shell .issue-recommended-books article>label{margin-left:0}.issue-reference-article{padding:20px 16px}.issue-reference-article>header h1{font-size:30px}.issue-reference-article .issue-introduction{font-size:18px}.issue-reference-meta{font-size:13px;gap:16px}.issue-reference-meta .issue-section-label{font-size:14px}.issue-reference-media.has-toc{grid-template-columns:1fr}.issue-reference-article .issue-reference-prose{font-size:18px;padding-inline:0}.issue-reference-article .issue-reference-books>div{grid-template-columns:1fr}.daily-reading-home{padding:22px 16px}.daily-reading-home>header h2{font-size:28px}.daily-reading-home>header p{font-size:16px}.daily-reading-home>header>a{font-size:12px}.daily-reading-home .daily-reading-lead{grid-template-columns:1fr;gap:16px}.daily-reading-home .daily-reading-lead-image{height:220px}.daily-reading-home .daily-reading-lead-copy h2{font-size:28px}.daily-reading-home .daily-reading-lead-copy>p{font-size:18px}.daily-reading-home .daily-reading-grid{grid-template-columns:1fr}}

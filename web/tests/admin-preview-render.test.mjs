@@ -22,13 +22,26 @@ const { TheoryTimelinePublicList } = await import("../components/public/theory-t
 const { TopicQuestionsPublicView } = await import("../components/public/topic-public-view.tsx");
 const { TopicWorksEditor } = await import("../components/admin/knowledge/topic-works-editor.tsx");
 const { KnowledgeVisualEditor } = await import("../components/admin/knowledge/knowledge-visual-editor.tsx");
-const { DailyReadingContent, DailyReadingIndexView } = await import("../components/public/recommendation-issue-view.tsx");
+const { DailyReadingContent, DailyReadingIndexView, DailyReadingPublicIndexView, RecommendationIssueView } = await import("../components/public/recommendation-issue-view.tsx");
 
-test("the public article index renders every result on its page without duplicate recent cards",()=>{
+test("both reference index layouts keep every result on its page without duplicates",()=>{
   const issues=Array.from({length:12},(_,index)=>({id:`issue-${index}`,slug:`issue-${index}`,title:`公开文章${index}`,introduction:"已确认导语",public_byline:"已确认署名",cover_url:"",display_from:"2026-10-08T00:00:00Z",published_at:null,items:[],body_blocks:[]}));
-  const html=renderToStaticMarkup(React.createElement(DailyReadingIndexView,{lead:issues[0],cards:issues.slice(1)}));
-  for(let index=0;index<issues.length;index++)assert.equal((html.match(new RegExp(`公开文章${index}<`,"g")) || []).length,1,`article ${index} must remain reachable once`);
-  assert.doesNotMatch(html,/architectural-image/);
+  for(const View of [DailyReadingIndexView,DailyReadingPublicIndexView]){
+    const html=renderToStaticMarkup(React.createElement(View,{lead:issues[0],cards:issues.slice(1)}));
+    for(let index=0;index<issues.length;index++)assert.equal((html.match(new RegExp(`公开文章${index}<`,"g")) || []).length,1,`article ${index} must remain reachable once`);
+    assert.doesNotMatch(html,/architectural-image|城市与社会|思想与人物|制度与日常/);
+  }
+});
+
+test("the public article preserves its own books and exact heading anchors without inventing related catalogue data",()=>{
+  const issue={id:"issue",slug:"issue",title:"已确认文章",introduction:"已确认导语",public_byline:"已确认署名",issue_label:"",cover_url:"",display_from:"2026-10-09T16:15:00Z",published_at:null,body_blocks:[{type:"paragraph",text:"原正文"},{type:"heading",text:"准确章节"},{type:"quote",text:"示例本地功能说明",source:"本地操作记录"},{type:"link",text:"已有入口",url:"/recommendations"}],items:[{id:"book",kind:"catalog",title:"准确馆藏",authors:"已保存作者",version_note:"已选择版本",note:"已保存的推介说明",work_url:"/works/actual",reader_url:"",cover_url:""}]};
+  const html=renderToStaticMarkup(React.createElement(RecommendationIssueView,{issue}));
+  assert.match(html,/href="#issue-section-1"/);assert.match(html,/id="issue-section-1"/);
+  for(const value of ["原正文","准确章节","示例本地功能说明","本地操作记录","已选择版本","已保存的推介说明"])assert.ok(html.includes(value),value);
+  assert.match(html,/2026年10月10日/);
+  assert.equal((html.match(/已保存的推介说明/g)||[]).length,1);
+  assert.match(html,/href="\/works\/actual"/);
+  assert.doesNotMatch(html,/href="\/reader\/|IssueRelatedWorks|architectural-image/);
 });
 
 test("the shared home article keeps saved book notes and valid detail links without inventing reader links",()=>{
