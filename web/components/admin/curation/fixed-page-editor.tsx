@@ -106,6 +106,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
         });
       }} data-active-section={activeSection} onClickCapture={event => {
         const target = event.target as Element;
+        if (target.closest("[data-preview-control]")) return;
         const row = target.closest<HTMLElement>("[data-edit-row]");
         const timelineRow=target.closest<HTMLElement>("[data-event-id]");
         const timelineHandled=timelineRow ? !window.dispatchEvent(new CustomEvent("knowledge-timeline-select",{detail:{id:timelineRow.dataset.eventId,section:target.closest<HTMLElement>("[data-edit-section]")?.dataset.editSection},cancelable:true})) : false;

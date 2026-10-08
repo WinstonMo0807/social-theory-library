@@ -4,7 +4,7 @@ import { BookCard, ScholarCard } from "@/components/ui";
 import type { LibraryTopic } from "@/lib/api/topics.types";
 import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { CollectionLink } from "@/components/collection-link";
-import { EvidenceCurationView } from "@/components/public/evidence-curation-view";
+import { TopicEvidenceCollection } from "@/components/public/topic-evidence-collection";
 import { TopicQuestionsPublicView } from "@/components/public/topic-public-view";
 
 export const topicSectionTitles: Record<string, string> = {
@@ -23,7 +23,7 @@ export const topicSectionTitles: Record<string, string> = {
   passages: "主题相关原文",
 };
 
-export function TopicSectionPublicView({ topic, section }: { topic: LibraryTopic; section: string }) {
+export function TopicSectionPublicView({ topic, section, selectedEvidenceKey }: { topic: LibraryTopic; section: string; selectedEvidenceKey?: string }) {
   if (section === "questions") return <TopicQuestionsPublicView topic={topic}/>;
   const works = section === "recent"
     ? topic.curated.recentWorks.length ? topic.curated.recentWorks : topic.works
@@ -32,16 +32,16 @@ export function TopicSectionPublicView({ topic, section }: { topic: LibraryTopic
   const normalizedConcepts = topic.knowledgeNodes.filter((node) => node.node_type === "concept");
 
   return (
-    <main className="page-shell secondary-detail-page v307-knowledge knowledge-section-page" data-public-page={section}>
-      <Link className="back-link" href={`/topics/${topic.slug}`}><ArrowLeft size={15} />返回{topic.name}</Link>
-      {section === "passages" ? <><header className="topic-evidence-reference-hero"><div><h1>{topic.name}</h1><p>{topic.description}</p></div>{topic.heroImage ? <img src={topic.heroImage} alt=""/> : <span aria-hidden="true"/>}</header><nav className="reference-theory-tabs" aria-label="主题页面">{[["","主题导览"],["/passages","相关原文"],["/works","延伸阅读"],["/scholars","相关学者"]].map(([path,label])=><Link href={`/topics/${topic.slug}${path}`} key={path} aria-current={path==="/passages" ? "page" : undefined}>{label}</Link>)}</nav><h2>相关原文</h2></> : <header><p className="eyebrow">研究主题</p><h1>{topicSectionTitles[section]}</h1><p>{topic.description}</p></header>}
+    <main className={`page-shell secondary-detail-page v307-knowledge knowledge-section-page${section === "passages" ? " topic-reference-public topic-evidence-reference-public" : ""}`} data-public-page={section}>
+      {section !== "passages" ? <Link className="back-link" href={`/topics/${topic.slug}`}><ArrowLeft size={15} />返回{topic.name}</Link> : null}
+      {section === "passages" ? <><header className="topic-evidence-reference-hero"><div><h1>{topic.name}</h1><p>{topic.description}</p></div>{topic.heroImage ? <img src={topic.heroImage} alt=""/> : <span aria-hidden="true"/>}</header><nav className="reference-theory-tabs" aria-label="主题页面">{[["","主题导览"],["/passages","相关原文"],["/works","延伸阅读"],["/scholars","相关学者"]].map(([path,label])=><Link href={`/topics/${topic.slug}${path}`} key={path} aria-current={path==="/passages" ? "page" : undefined}>{label}</Link>)}<span aria-disabled="true">相关主题</span></nav>{!topic.evidenceCuration?.configured ? <h2>相关原文</h2> : null}</> : <header><p className="eyebrow">研究主题</p><h1>{topicSectionTitles[section]}</h1><p>{topic.description}</p></header>}
       {["questions", "dimensions", "methods"].includes(section) ? <section className="knowledge-detail-cards" data-edit-section={section}>
         {section === "questions" && topic.problemStatement ? <p>{topic.problemStatement}</p> : null}
         {(section === "questions" ? topic.coreQuestions : section === "dimensions" ? topic.researchDimensions : topic.methods).map((item, index) => <article className="panel" id={`item-${index + 1}`} key={`${index}-${item}`}><span className="eyebrow">{String(index + 1).padStart(2, "0")}</span><h2>{item}</h2><Link href={`/explore?q=${encodeURIComponent(item)}&topic=${encodeURIComponent(topic.slug)}`}>查找相关馆藏 <ArrowRight size={15}/></Link></article>)}
       </section> : null}
       {section === "history" ? <section data-edit-section="history"><p className="knowledge-long-copy">{topic.formationContext}</p><div className="panel timeline-detail-list">{topic.timeline.map(([year, label, text]) => <article key={`${year}-${label}`}><time>{year}</time><p><strong>{label}</strong><span>{text}</span></p></article>)}</div></section> : null}
       {section === "subdisciplines" ? <section className="knowledge-detail-cards">{topic.subdisciplines.map(row => <Link className="panel" href={`/subdisciplines/${row.slug}`} key={row.id}><h2>{row.name}</h2><p>{row.relation_label}</p><ArrowRight size={18}/></Link>)}</section> : null}
-      {section === "passages" ? <section className="knowledge-evidence-layout" data-module-id="topic-evidence" data-edit-section="passages">{topic.evidenceCuration?.configured ? <EvidenceCurationView items={topic.evidenceCuration.items} /> : <div className="knowledge-evidence-grid">{topic.passages.map(passage => <article className="panel" id={`passage-${passage.id}`} key={passage.id}><h2>{passage.title}</h2><small>{passage.printedLabel || `PDF 第 ${passage.pageIndex} 页`}</small><blockquote>{passage.snippet}</blockquote>{passage.id === topic.curated.featuredPassageId && topic.curated.featuredPassageReason ? <p>策展说明：{topic.curated.featuredPassageReason}</p> : null}<CollectionLink href={`/reader/${passage.assetId}?page=${passage.pageIndex}&passage=${encodeURIComponent(passage.id)}`}>阅读原文 <ArrowRight size={15}/></CollectionLink></article>)}{!topic.passages.length ? <p className="empty-state">尚未策展可公开的原文。</p> : null}</div>}<aside className="panel"><h2>阅读出处</h2><p>每则原文保留馆藏、版本与页面位置。策展说明与原文分开显示。</p><Link href={`/topics/${topic.slug}/works`}>查看相关文献 <ArrowRight size={15}/></Link></aside></section> : null}
+      {section === "passages" ? <section className="knowledge-evidence-layout" data-module-id="topic-evidence" data-edit-section="passages">{topic.evidenceCuration?.configured ? <TopicEvidenceCollection items={topic.evidenceCuration.items} works={[...topic.curated.foundationalWorks,...topic.works]} selectedKey={selectedEvidenceKey}/> : <div className="knowledge-evidence-grid">{topic.passages.map(passage => <article className="panel" id={`passage-${passage.id}`} key={passage.id}><h2>{passage.title}</h2><small>{passage.printedLabel || `PDF 第 ${passage.pageIndex} 页`}</small><blockquote>{passage.snippet}</blockquote>{passage.id === topic.curated.featuredPassageId && topic.curated.featuredPassageReason ? <p>策展说明：{topic.curated.featuredPassageReason}</p> : null}<CollectionLink href={`/reader/${passage.assetId}?page=${passage.pageIndex}&passage=${encodeURIComponent(passage.id)}`}>阅读原文 <ArrowRight size={15}/></CollectionLink></article>)}{!topic.passages.length ? <p className="empty-state">尚未策展可公开的原文。</p> : null}</div>}<aside className="panel"><h2>阅读出处</h2><p>每则原文保留馆藏、版本与页面位置。策展说明与原文分开显示。</p><Link href={`/topics/${topic.slug}/works`}>查看相关文献 <ArrowRight size={15}/></Link></aside></section> : null}
       {section === "passages" && !topic.evidenceCuration?.configured ? <CuratedClaimSections groups={topic.curatedClaims}/> : null}
       {["works", "recent"].includes(section) ? <section className="four-book-grid" data-module-id="topic-works">{works.map((work) => <BookCard work={work} key={work.id} />)}{!works.length ? <p className="empty-state">尚无已发布的关联文献。</p> : null}</section> : null}
       {section === "scholars" ? <section className="scholar-grid" data-module-id="topic-scholars">{topic.scholars.map((scholar) => <ScholarCard scholar={scholar} key={scholar.slug} />)}{!topic.scholars.length ? <p className="empty-state">尚无已确认的相关学者。</p> : null}</section> : null}

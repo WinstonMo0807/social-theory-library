@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from django.db.models.deletion import ProtectedError
@@ -105,6 +105,11 @@ def test_curation_sources_page_filters_exact_asset_before_pagination(api_client,
     assert response.data["count"] == 28
     assert len(response.data["results"]) == 4
     assert {row["asset_id"] for row in response.data["results"]} == {str(span.page.asset_id)}
+    assert all(str(UUID(row["id"])) == row["id"] for row in response.data["results"])
+    first = api_client.get(f"/api/catalog/admin/evidence-curation/sources/?asset={span.page.asset_id}&page=1")
+    assert first.status_code == 200
+    assert len(first.data["results"]) == 24
+    assert not {row["id"] for row in first.data["results"]} & {row["id"] for row in response.data["results"]}
 
 
 def test_passage_curation_does_not_follow_a_new_document_revision(api_client, admin_user):

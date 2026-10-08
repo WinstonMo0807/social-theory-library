@@ -49,3 +49,17 @@ export function evidenceCurationSavePayload(draft: EvidenceCurationDraft) {
     })),
   };
 }
+
+/** Recommendations never truncate existing annotations; required fields apply to topic curation. */
+export function topicEvidenceAnnotationProblem(items: EvidenceCurationItem[]) {
+  if (items.some(item => !item.group_title.trim())) return "请为每段原文填写分组名称。";
+  if (items.some(item => !item.reason.trim())) return "请为每段原文填写阅读说明。";
+  return "";
+}
+
+/** Display sorting retains the original editorial row index for preview-to-field navigation. */
+export function topicEvidenceRows(items: EvidenceCurationItem[], ordering: "book" | "editorial") {
+  const rows = items.map((item, index) => ({ item, index }));
+  if (ordering === "book") rows.sort((a, b) => a.item.source.work_title.localeCompare(b.item.source.work_title, "zh-CN") || a.item.source.work_id.localeCompare(b.item.source.work_id) || a.index - b.index);
+  return rows;
+}

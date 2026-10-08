@@ -95,12 +95,12 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
-export function PreviewSurface({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string }) {
+export function PreviewSurface({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId, selectedEvidenceKey }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string; selectedEvidenceKey?:string }) {
   const path = payload.preview_routes?.published || (payload.object_type === "scholar" ? "/scholars" : payload.object_type === "topic" ? "/topics" : "/theories");
-  return <><SiteHeader preview previewPath={path}/><PreviewContent payload={payload} pageId={pageId} evidenceCuration={evidenceCuration} selectedRelationId={selectedRelationId} selectedTimelineId={selectedTimelineId}/></>;
+  return <><SiteHeader preview previewPath={path}/><PreviewContent payload={payload} pageId={pageId} evidenceCuration={evidenceCuration} selectedRelationId={selectedRelationId} selectedTimelineId={selectedTimelineId} selectedEvidenceKey={selectedEvidenceKey}/></>;
 }
 
-function PreviewContent({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string }) {
+function PreviewContent({ payload, pageId, evidenceCuration, selectedRelationId, selectedTimelineId, selectedEvidenceKey }: { payload: KnowledgePreviewPayload; pageId: string; evidenceCuration?: PublishedEvidenceCuration; selectedRelationId?:string; selectedTimelineId?:string; selectedEvidenceKey?:string }) {
   const data = payload.perspective.data;
   if (!data || typeof data !== "object") {
     return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
@@ -136,7 +136,7 @@ function PreviewContent({ payload, pageId, evidenceCuration, selectedRelationId,
       const item = adaptApiTopic(raw);
       if (evidenceCuration) item.evidenceCuration = evidenceCuration;
       return pageId && pageId !== "overview"
-        ? <TopicSectionPublicView topic={item} section={pageId} />
+        ? <TopicSectionPublicView topic={item} section={pageId} selectedEvidenceKey={selectedEvidenceKey}/>
         : <TopicPublicView topic={item} footer={footer} />;
     }
     case "reading_path":

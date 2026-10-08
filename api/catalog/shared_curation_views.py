@@ -118,7 +118,9 @@ class CurationSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVie
         keys = lists[0].union(lists[1], all=True).order_by("page_order", "source_kind", "source_key")
         paginator = Paginator(keys, 24)
         page = paginator.get_page(request.query_params.get("page", 1))
-        selected = list(page.object_list)
+        # Cast(UUID) returns compact hex on SQLite and hyphenated text on PG.
+        # Normalize the paginated identities before the batched object lookup.
+        selected = [{**key, "source_key": str(service.identifier(key["source_key"]))} for key in page.object_list]
         found = {kind: {str(row.pk): row for row in service.sources(kind).filter(pk__in=[key["source_key"] for key in selected if key["source_kind"] == kind])} for kind in ("span", "passage")}
         def serialize(key):
             return service.source_payload(key["source_kind"], found[key["source_kind"]][key["source_key"]])
