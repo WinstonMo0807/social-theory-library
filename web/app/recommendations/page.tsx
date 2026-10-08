@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
-import { DailyReadingContent } from "@/components/public/recommendation-issue-view";
+import { DailyReadingIndexView } from "@/components/public/recommendation-issue-view";
 import { loadRecommendationIssues } from "@/lib/api/recommendation-issues.server";
 export const metadata = {title:"每日荐读"};
 export default async function Page({searchParams}: {searchParams:Promise<{q?:string;page?:string}>}) {
@@ -11,5 +11,5 @@ export default async function Page({searchParams}: {searchParams:Promise<{q?:str
   const href = (next:number) => `/recommendations?${new URLSearchParams({q:query.q || "",page:String(next)})}`;
   const lead = query.q || page > 1 ? data.results[0] || null : data.current || data.results[0] || null;
   const cards = data.results.filter(issue=>issue.id!==lead?.id);
-  return <><main className="page-shell daily-reading-page"><header className="daily-reading-header"><div><p className="eyebrow">Social Theory Library</p><h1>每日荐读</h1><p>沿着一篇文章走进具体的问题与馆藏。</p></div><form className="daily-reading-search"><label><span className="sr-only">搜索文章标题</span><input name="q" type="search" placeholder="搜索文章标题" defaultValue={query.q}/></label><button className="button" type="submit">搜索</button></form></header><div className="daily-reading-categories"><Link className="active" href="/recommendations">全部</Link></div><DailyReadingContent lead={lead} cards={cards}/><nav className="issue-pagination" aria-label="推荐文章分页">{data.previous ? <Link href={href(page-1)}>上一页</Link> : <span aria-disabled="true">上一页</span>}<span>共 {data.count} 期 · 第 {page} 页</span>{data.next ? <Link href={href(page+1)}>下一页</Link> : <span aria-disabled="true">下一页</span>}</nav></main><SiteFooter/></>;
+  return <><div className="page-shell daily-reading-page"><DailyReadingIndexView lead={lead} cards={cards}/><form className="daily-reading-search"><label><span className="sr-only">搜索文章标题</span><input name="q" type="search" placeholder="搜索文章标题" defaultValue={query.q}/></label><button className="button" type="submit">搜索</button></form><nav className="issue-pagination" aria-label="推荐文章分页">{data.previous ? <Link href={href(page-1)}>上一页</Link> : <span aria-disabled="true">上一页</span>}<span>共 {data.count} 期 · 第 {page} 页</span>{data.next ? <Link href={href(page+1)}>下一页</Link> : <span aria-disabled="true">下一页</span>}</nav></div><SiteFooter/></>;
 }

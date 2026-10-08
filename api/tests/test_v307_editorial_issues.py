@@ -24,9 +24,9 @@ def test_admin_calendar_filters_saved_dates_with_pagination_and_public_snapshot(
     day = "2026-10-04"
     selected = [service.create_issue({**issue_data(), "title": f"当天 {index}", "display_from": f"{day}T08:00:00+08:00"}, admin_user) for index in range(14)]
     service.create_issue({**issue_data(), "title": "未来", "display_from": "2026-10-05T00:00:00+08:00"}, admin_user)
-    previous = service.create_issue({**issue_data(), "title": "正式旧稿", "display_from": "2026-10-03T23:59:59+08:00"}, admin_user)
+    previous = service.create_issue({**issue_data(), "title": "正式旧稿", "public_byline": "已确认署名", "introduction": "已确认导语", "body_blocks": [{"type": "paragraph", "text": "已确认正文关键词"}], "display_from": "2026-10-03T23:59:59+08:00"}, admin_user)
     service.publish_issue(previous.pk, service.issue_payload(previous)["edit_version"], admin_user)
-    service.save_issue(previous.pk, {**service.issue_payload(previous), "title": "改期草稿", "display_from": "2026-10-05T08:00:00+08:00"}, admin_user)
+    service.save_issue(previous.pk, {**service.issue_payload(previous), "title": "改期草稿", "public_byline": "未确认署名", "introduction": "未确认导语", "body_blocks": [{"type": "paragraph", "text": "未确认正文关键词"}], "display_from": "2026-10-05T08:00:00+08:00"}, admin_user)
     api_client.force_authenticate(admin_user)
     first = api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=day")
     assert first.status_code == 200 and first.data["count"] == 14
@@ -42,6 +42,26 @@ def test_admin_calendar_filters_saved_dates_with_pagination_and_public_snapshot(
     assert upcoming_by_title["改期草稿"]["public_url"] == f"/recommendations/{previous.slug}"
     published = api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=published")
     assert published.data["count"] == 1 and published.data["results"][0]["title"] == "正式旧稿"
+    for bucket, query, expected_title in (("day", "当天 13", "当天 13"), ("upcoming", "改期草稿", "改期草稿"), ("published", "正式旧稿", "正式旧稿")):
+        matched = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": bucket, "q": query})
+        assert matched.status_code == 200 and matched.data["count"] == 1
+        assert matched.data["results"][0]["title"] == expected_title
+        missing = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": bucket, "q": "不存在的文章"})
+        assert missing.status_code == 200 and missing.data["results"] == []
+    # Published calendar search must not expose an unconfirmed draft title.
+    hidden = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": "published", "q": "改期草稿"})
+    assert hidden.status_code == 200 and hidden.data["results"] == []
+    for published_query, draft_query in (("已确认署名", "未确认署名"), ("已确认导语", "未确认导语"), ("已确认正文关键词", "未确认正文关键词")):
+        saved = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": "upcoming", "q": draft_query})
+        assert saved.status_code == 200 and saved.data["count"] == 1 and saved.data["results"][0]["title"] == "改期草稿"
+        approved = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": "published", "q": published_query})
+        assert approved.status_code == 200 and approved.data["count"] == 1 and approved.data["results"][0]["title"] == "正式旧稿"
+        concealed = api_client.get("/api/catalog/admin/recommendation-issues/", {"day": day, "bucket": "published", "q": draft_query})
+        assert concealed.status_code == 200 and concealed.data["results"] == []
+        public = api_client.get("/api/catalog/recommendation-issues/", {"q": draft_query})
+        assert public.status_code == 200 and public.data["results"] == []
+        public_match = api_client.get("/api/catalog/recommendation-issues/", {"q": published_query})
+        assert public_match.status_code == 200 and public_match.data["count"] == 1
     assert api_client.get("/api/catalog/admin/recommendation-issues/?day=2026-02-30").status_code == 400
     assert api_client.get(f"/api/catalog/admin/recommendation-issues/?day={day}&bucket=invalid").status_code == 400
     api_client.force_authenticate(None)

@@ -8,6 +8,92 @@
   --recommendation-focus: #766654;
 }
 
+/* Scene 28 uses the date board beside the real public article index. */
+@media(min-width:901px){
+  .admin-shell:has(.recommendation-calendar-v2):not(.admin-navigation-collapsed) .admin-sidebar{width:214px}
+  .admin-shell:has(.recommendation-calendar-v2):not(.admin-navigation-collapsed) .admin-main{margin-left:214px}
+  .admin-shell:has(.recommendation-calendar-v2) .admin-content{padding:26px 15px 32px}
+}
+.admin-shell .recommendation-calendar-v2>.v307-editor-heading{padding:0 12px 0 15px;margin:0 0 28px;min-height:90px;align-items:flex-start}
+.admin-shell .recommendation-calendar-v2>.v307-editor-heading h1{font:600 40px/56px var(--stl-type-serif);margin:0}
+.admin-shell .recommendation-calendar-v2>.v307-editor-heading p{font:18px/27px var(--stl-type-serif);color:var(--recommendation-muted);margin:4px 0 0}
+.admin-shell .recommendation-calendar-v2>.v307-editor-heading>div:last-child{gap:16px;padding-top:6px;flex-wrap:nowrap}
+.recommendation-calendar-v2>.v307-editor-heading .button{height:44px;padding:0 18px;display:flex;gap:10px;align-items:center;white-space:nowrap;font:14px var(--stl-type-sans)}
+.recommendation-calendar-search{display:flex;align-items:center;width:410px;height:44px;border:1px solid var(--recommendation-line);border-radius:4px;background:var(--recommendation-surface)}
+.recommendation-calendar-search>button{display:grid;place-items:center;width:36px;height:42px;flex:none;padding:0;border:0;background:none;color:var(--recommendation-ink);cursor:pointer}
+.admin-shell .recommendation-calendar-search>input{width:100%;min-width:0;min-height:0;height:42px;padding:0 10px 0 0;border:0;background:none;box-shadow:none;font:14px var(--stl-type-sans)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-layout{grid-template-columns:minmax(0,524fr) minmax(0,754fr);gap:15px;align-items:stretch}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-board{border:0;background:none;min-width:0;display:flex;flex-direction:column;height:800px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-date{justify-content:flex-start;gap:16px;height:57px;padding:0 14px;flex:none;border:1px solid var(--recommendation-line);border-radius:4px 4px 0 0;background:var(--recommendation-surface)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-date strong{font:18px/1.5 var(--stl-type-serif);letter-spacing:1px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-date button{display:grid;place-items:center;flex:none;background:none;border:0;width:36px;height:36px;cursor:pointer}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns{min-height:0;flex:1;gap:4px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns>div{min-width:0;padding:12px 5px 16px;border:1px solid var(--recommendation-line);border-radius:4px;background:var(--recommendation-surface);overflow:auto}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns h2{font:500 17px/26px var(--stl-type-serif);margin:0 8px 3px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns>div>small{display:block;font:14px/22px var(--stl-type-sans);margin:0 8px 0;color:var(--recommendation-muted)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-card{width:100%;text-align:left;padding:8px;gap:8px;min-height:0;margin-top:10px;border-radius:4px;cursor:pointer;background:var(--recommendation-surface)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-card.selected{border-color:var(--recommendation-focus)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-image{height:98px;border-radius:2px;background:var(--recommendation-paper)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-image img{filter:none}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-card h3{font:500 16px/24px var(--stl-type-serif);margin:4px 0 8px;overflow-wrap:anywhere}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-card p,.admin-shell .recommendation-calendar-v2 .recommendation-calendar-card time{font:14px/23px var(--stl-type-sans)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-status{font:12px/18px var(--stl-type-sans);gap:7px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-status:before{width:9px;height:9px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-empty{padding:16px 18px;margin-top:10px;border:1px solid var(--recommendation-line);border-radius:3px;color:var(--recommendation-muted);font:14px/1.6 var(--stl-type-sans)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-empty p{margin:8px 0}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-add{display:flex;align-items:center;gap:6px;margin:12px 0 0;padding:0 0 3px;width:auto;border:0;border-bottom:1px solid var(--recommendation-focus);font:14px/1.5 var(--stl-type-sans);cursor:pointer}
+.recommendation-calendar-more{display:block;text-align:center;margin:22px 8px 0;padding:8px 2px;border-radius:3px;background:var(--recommendation-paper);color:var(--recommendation-muted);font:12px/19px var(--stl-type-sans)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview{border-radius:0;border-color:var(--recommendation-focus);min-height:800px;display:flex;flex-direction:column;padding:0 16px 4px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview>header{padding:21px 6px 14px;border:0;gap:16px;align-items:center;min-height:70px}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview>header h2{font:500 22px/31px var(--stl-type-serif);margin:0;white-space:nowrap}
+.admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools{display:flex;flex-wrap:nowrap;gap:14px;align-items:center;font:13px var(--stl-type-sans)}
+.recommendation-calendar-v2 .recommendation-v2-view-tools>div{display:flex;border:1px solid var(--recommendation-line);border-radius:4px;overflow:hidden}
+.admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools button{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 12px;height:34px;border:0;background:none;color:var(--recommendation-muted);cursor:pointer;white-space:nowrap;font:13px var(--stl-type-sans)}
+.admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools>button{border:1px solid var(--recommendation-line);border-radius:4px}
+.admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools button[aria-pressed=true]{color:#fff;background:var(--recommendation-ink)}
+.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview .fixed-preview-canvas{border:1px solid var(--recommendation-line);border-radius:4px;height:724px;max-height:724px;background:var(--recommendation-surface);scrollbar-gutter:auto}
+.recommendation-calendar-v2 .recommendation-calendar-preview>.recommendation-v2-actions{margin:6px 0;padding:0}
+.recommendation-calendar-v2 .recommendation-calendar-preview>.recommendation-v2-actions .button{min-height:28px;padding:4px 8px;font-size:12px}
+.recommendation-calendar-v2 .recommendation-preview-dialog{width:min(1280px,94vw);height:90vh;padding:18px;border:1px solid var(--recommendation-line);background:var(--recommendation-surface)}
+.recommendation-calendar-v2 .recommendation-preview-dialog>header{display:flex;justify-content:space-between;gap:16px;margin-bottom:12px}
+.recommendation-calendar-v2 .recommendation-preview-dialog .fixed-preview-canvas{max-height:calc(90vh - 80px)}
+.admin-shell .recommendation-calendar-archive{margin:0}
+.admin-shell .recommendation-calendar-archive>div>article{display:grid;grid-template-columns:150px minmax(0,1fr) 100px auto;gap:16px;align-items:center;padding:16px 8px;border-bottom:1px solid var(--recommendation-line)}
+.admin-shell .recommendation-calendar-archive>div>article strong{font:500 20px/1.5 var(--stl-type-serif)}
+.daily-reading-index{padding:36px 24px 28px;color:var(--admin-v2-ink);font-family:var(--stl-type-serif);min-width:0}
+.daily-reading-index>header{margin-bottom:36px}
+.daily-reading-index>header h1{font:500 48px/1.4 var(--stl-type-serif);margin:0 0 10px}
+.daily-reading-index>header h1:after{content:"";display:block;width:40px;border-top:2px solid var(--admin-v2-focus);margin-top:4px}
+.daily-reading-index>header p{font:22px/1.5 var(--stl-type-serif);margin:10px 0 0}
+.daily-reading-index>header small{font:20px/1.5 var(--stl-type-serif);color:var(--admin-v2-muted)}
+.daily-reading-index-columns{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:28px;align-items:start}
+.daily-reading-index-image{display:block;overflow:hidden;background:var(--admin-v2-paper);aspect-ratio:2.4}
+.daily-reading-index-image img{display:block;width:100%;height:100%;object-fit:cover}
+.daily-reading-index-lead{min-width:0;padding:12px;border:1px solid var(--admin-v2-focus);border-radius:2px}
+.daily-reading-index time{display:block;color:var(--admin-v2-muted);font:18px/1.5 var(--stl-type-sans);margin-top:10px}
+.daily-reading-index-lead h2{font:500 36px/1.4 var(--stl-type-serif);margin:4px 0 10px}
+.daily-reading-index-lead>p{font:20px/1.6 var(--stl-type-serif);color:var(--admin-v2-muted);margin:8px 0}
+.daily-reading-index-lead>footer{display:flex;justify-content:space-between;gap:12px;font:18px/1.5 var(--stl-type-serif);margin-top:12px}
+.daily-reading-index a{color:inherit;text-decoration:none}
+.daily-reading-index-lead footer a,.daily-reading-index-recent article>div>a,.daily-reading-index-more>header>a{display:inline-flex;gap:10px;align-items:center;white-space:nowrap;border-bottom:1px solid var(--admin-v2-line)}
+.daily-reading-index-recent>h2,.daily-reading-index-more h2{font:500 28px/1.4 var(--stl-type-serif);border-bottom:1px solid var(--admin-v2-line);margin:0 0 20px;padding-bottom:5px}
+.daily-reading-index-recent>article{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:22px;border-bottom:1px solid var(--admin-v2-line);padding-bottom:24px;margin-bottom:20px}
+.daily-reading-index-recent .daily-reading-index-image{aspect-ratio:.8}
+.daily-reading-index-recent time{font-size:16px;margin-top:0}
+.daily-reading-index-recent h3{font:500 22px/1.45 var(--stl-type-serif);margin:6px 0}
+.daily-reading-index-recent p{font:16px/1.5 var(--stl-type-sans);color:var(--admin-v2-muted);margin:10px 0 14px}
+.daily-reading-index-recent article>div>a{font:18px/1.5 var(--stl-type-serif)}
+.daily-reading-index-more{margin-top:42px}
+.daily-reading-index-more>header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--admin-v2-line);margin-bottom:18px}
+.daily-reading-index-more h2{border:0;margin:0 0 6px;padding:0}
+.daily-reading-index-more>header>a{font:18px/1.5 var(--stl-type-serif)}
+.daily-reading-index-more>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.daily-reading-index-more .daily-reading-index-image{aspect-ratio:1.7}
+.daily-reading-index-more h3{font:500 22px/1.4 var(--stl-type-serif);margin:8px 0}
+.daily-reading-index-more article>p{font:16px/1.5 var(--stl-type-sans);color:var(--admin-v2-muted)}
+@media(max-width:1200px){.admin-shell .recommendation-calendar-v2>.v307-editor-heading>div:last-child{flex-wrap:wrap;justify-content:flex-end}.recommendation-calendar-search{width:300px}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-layout{grid-template-columns:minmax(0,1fr)}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-board{height:600px}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview{order:0}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview>header{flex-wrap:wrap}}
+@media(max-width:720px){.admin-shell .recommendation-calendar-v2>.v307-editor-heading{padding:0;display:block}.admin-shell .recommendation-calendar-v2>.v307-editor-heading h1{font-size:32px}.admin-shell .recommendation-calendar-v2>.v307-editor-heading>div:last-child{margin-top:16px;align-items:stretch}.recommendation-calendar-search{width:100%}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-board{height:auto}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns{grid-template-columns:1fr;gap:10px}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-columns>div{min-height:160px}.admin-shell .recommendation-calendar-v2 .recommendation-v2-view-tools{flex-wrap:wrap;gap:8px}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview{padding:0 10px 8px;min-height:0}.admin-shell .recommendation-calendar-v2 .recommendation-calendar-preview .fixed-preview-canvas{height:65vh;max-height:65vh}.admin-shell .recommendation-calendar-archive>div>article{grid-template-columns:minmax(0,1fr) auto}.daily-reading-index{padding:24px 16px}.daily-reading-index>header h1{font-size:32px}.daily-reading-index>header p{font-size:18px}.daily-reading-index>header small{font-size:16px}.daily-reading-index-columns{grid-template-columns:1fr}.daily-reading-index-lead h2{font-size:26px}.daily-reading-index-lead>p{font-size:16px}.daily-reading-index-lead>footer{font-size:14px}.daily-reading-index-recent>h2,.daily-reading-index-more h2{font-size:24px}.daily-reading-index-recent h3{font-size:20px}.daily-reading-index-more>div{grid-template-columns:repeat(2,minmax(0,1fr))}.daily-reading-index-more>header>a{font-size:14px}}
+
 .recommendation-issue-progress{width:55%;min-width:420px}
 .recommendation-issue-progress>p{margin:0 0 12px;font:600 17px/1.4 var(--stl-type-serif)}
 .recommendation-issue-stepper{display:flex;gap:0;align-items:center}
@@ -37,7 +123,7 @@
 .recommendation-month-days>button{border:0;background:none;border-radius:50%;aspect-ratio:1;cursor:pointer;padding:4px;font:14px/1 var(--stl-type-serif)}
 .recommendation-month-days>button[aria-pressed=true]{background:var(--recommendation-focus);color:#fff}
 .recommendation-upcoming>h3{font:16px/1.4 var(--stl-type-serif);margin:0 0 12px}
-.recommendation-upcoming>a{display:grid;gap:4px;padding:10px 8px;border-bottom:1px solid var(--recommendation-line);color:inherit;font:14px/1.5 var(--stl-type-serif)}
+.recommendation-upcoming>a,.recommendation-upcoming-row{display:grid;gap:4px;padding:10px 8px;border-bottom:1px solid var(--recommendation-line);color:inherit;font:14px/1.5 var(--stl-type-serif)}
 .recommendation-upcoming time,.recommendation-upcoming small{font-size:12px;color:var(--recommendation-muted)}
 .recommendation-issue-schedule-status{padding:18px;background:var(--recommendation-paper);margin-top:18px}
 .recommendation-issue-schedule-status p{font-size:13px;line-height:1.7;color:var(--recommendation-muted);margin:6px 0 0}
@@ -238,3 +324,165 @@
   .recommendation-v2-row-actions { grid-column: 3; }
   .recommendation-v2-actions { flex-direction: column; }
 }
+
+/* Scenes 29–31 retain the existing draft, media and publication commands. */
+@media(min-width:1201px){
+  .admin-shell:has(.recommendation-issue-step-1):not(.admin-navigation-collapsed) .admin-sidebar{width:198px}
+  .admin-shell:has(.recommendation-issue-step-1):not(.admin-navigation-collapsed) .admin-main{margin-left:198px}
+  .admin-shell:has(.recommendation-issue-step-2):not(.admin-navigation-collapsed) .admin-sidebar{width:174px}
+  .admin-shell:has(.recommendation-issue-step-2):not(.admin-navigation-collapsed) .admin-main{margin-left:174px}
+  .admin-shell:has(.recommendation-issue-step-3):not(.admin-navigation-collapsed) .admin-sidebar{width:192px}
+  .admin-shell:has(.recommendation-issue-step-3):not(.admin-navigation-collapsed) .admin-main{margin-left:192px}
+  .admin-shell:has(.recommendation-issue-editor-v2) .admin-content{padding:25px 18px 80px}
+  .admin-shell:has(.recommendation-issue-step-2) .admin-content{padding:25px 25px 18px 24px}
+  .admin-shell:has(.recommendation-issue-step-3) .admin-content{padding:25px 24px 80px 26px}
+  .admin-shell .recommendation-issue-step-1 .fixed-page-editor{grid-template-columns:minmax(0,506fr) minmax(0,778fr);gap:18px}
+  .admin-shell .recommendation-issue-step-2 .fixed-page-editor{grid-template-columns:minmax(0,580fr) minmax(0,718fr);gap:14px}
+  .admin-shell .recommendation-issue-step-3 .fixed-page-editor{grid-template-columns:minmax(0,582fr) minmax(0,700fr);gap:12px}
+}
+.admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{align-items:flex-start;padding:0 10px;margin:0 0 26px;min-height:67px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,48%);gap:20px}
+.admin-shell .recommendation-issue-editor-v2 .v307-editor-heading h1{font:600 28px/40px var(--stl-type-serif);margin:0 0 9px}
+.admin-shell .recommendation-issue-editor-v2 .v307-editor-heading p{font:14px/21px var(--stl-type-sans);color:var(--recommendation-muted);margin:0}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-progress{display:block;min-width:0;width:100%;padding:0}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-progress>p{font:600 16px/24px var(--stl-type-serif);color:var(--recommendation-ink);margin:0 0 16px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:56px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper button{padding:0;gap:6px;min-width:0;display:flex}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper button:after{top:17px;left:calc(50% + 24px);right:calc(-50% + 24px)}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper span{font:14px/21px var(--stl-type-serif);white-space:nowrap}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-sections:empty{display:none}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields{padding:18px 19px 24px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields>h2{font:600 21px/30px var(--stl-type-serif);margin:0 0 18px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields>p:empty{display:none}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields fieldset{display:block}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields label{margin:0;gap:7px;font:16px/24px var(--stl-type-serif)}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields input:not([type=checkbox]),.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields select,.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields textarea{padding:10px 14px;font:18px/27px var(--stl-type-serif);border-radius:3px;min-height:0}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields input:not([type=checkbox]),.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields select{height:46px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields input[type=date],.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields input[type=time]{font:16px/24px var(--stl-type-sans);height:40px}
+.issue-required{font-size:14px;color:#b75035;margin-left:5px}
+.issue-identity-fields{display:grid;gap:16px}
+.issue-field-count{display:block;text-align:right;font:14px/21px var(--stl-type-sans);color:var(--recommendation-muted)}
+.issue-identity-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:6px}
+.issue-cover-fields>h3{margin:0 0 8px;font:16px/24px var(--stl-type-serif)}
+.issue-cover-fields>div{display:grid;grid-template-columns:minmax(0,56%) minmax(0,1fr);gap:12px}
+.issue-cover-thumbnail{padding:5px;border:1px solid var(--recommendation-line);border-radius:3px;aspect-ratio:1.66;background:var(--recommendation-paper)}
+.admin-shell .issue-cover-thumbnail .recommendation-current-cover{width:100%;height:100%;max-width:none;object-fit:cover}
+.issue-cover-fields>div>div:last-child{padding:8px 10px;background:var(--recommendation-paper);border-radius:3px}
+.admin-shell .issue-cover-fields .button{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:7px 8px;margin:0;font:14px/20px var(--stl-type-sans)}
+.issue-cover-fields p{font:14px/22px var(--stl-type-sans);color:var(--recommendation-muted);margin:9px 0 0}
+.recommendation-media-dialog{width:min(700px,94vw);max-height:88vh;overflow:auto;border:1px solid var(--recommendation-line);padding:20px;background:var(--recommendation-surface)}
+.recommendation-media-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
+.recommendation-media-dialog h2{font:22px var(--stl-type-serif);margin:0}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview{position:relative;top:0;padding:14px 12px 0;height:778px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header{padding:0 12px 12px;border:0;height:49px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header strong{font:600 21px/30px var(--stl-type-serif)}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header>span{position:absolute;right:26px;top:74px;font:12px/20px var(--stl-type-sans)}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview-tools{position:absolute;right:12px;top:14px;padding:0;gap:14px;border:0}
+.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview-tools button{padding:7px 10px;font:13px/18px var(--stl-type-sans);white-space:nowrap}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-preview-location{padding:0 14px 12px;font:13px/20px var(--stl-type-serif);height:46px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-preview-location select{height:33px;min-height:0;padding:4px 10px;font:13px var(--stl-type-serif);min-width:0;width:55%;max-width:400px}
+.admin-shell .recommendation-issue-editor-v2 .fixed-preview-canvas{height:calc(100% - 95px);max-height:none;background:var(--recommendation-surface);border:1px solid var(--recommendation-line);border-radius:3px;scrollbar-gutter:auto}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-actions{padding:16px;gap:16px;font:14px var(--stl-type-sans);margin:0}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-actions .button{margin:0;padding:9px 16px;font:14px/20px var(--stl-type-sans)}
+.admin-shell .recommendation-issue-editor-v2 .v307-save-status{margin:0 0 12px;padding:8px 12px;font:13px/20px var(--stl-type-sans)}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-sections{padding:12px 14px 0;gap:18px;background:none}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button{font:14px/22px var(--stl-type-sans);padding:6px 8px 12px;border:0;border-radius:0;white-space:nowrap}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button[aria-current]{background:none;border-bottom:2px solid var(--recommendation-ink)}
+.admin-shell .recommendation-issue-step-2 .v307-editor-heading h1{font-size:32px;line-height:44px}
+.admin-shell .recommendation-issue-step-2 .v307-editor-heading>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:20px}
+.admin-shell .recommendation-issue-step-2 .v307-editor-heading h1{width:100%}
+.admin-shell .recommendation-issue-step-2 .v307-editor-heading>div:first-child>p{font:18px/27px var(--stl-type-serif);color:var(--recommendation-ink)}
+.recommendation-issue-editor-v2 .v307-editor-heading small{font:14px/21px var(--stl-type-sans);color:var(--recommendation-muted)}
+.admin-shell .recommendation-issue-step-2 .fixed-editor-fields h3{font:600 16px/24px var(--stl-type-serif);margin:0 0 12px}
+.issue-rich-toolbar{display:flex;align-items:center;gap:0;padding:4px 8px;background:var(--recommendation-paper);border:1px solid var(--recommendation-line);border-bottom:0;border-radius:3px 3px 0 0}
+.admin-shell .recommendation-issue-editor-v2 .issue-rich-toolbar>select{height:28px;width:90px;min-width:0;padding:0 4px;border:0;border-right:1px solid var(--recommendation-line);border-radius:0;background:none;font:13px var(--stl-type-sans)}
+.issue-rich-toolbar>button{display:grid;place-items:center;width:35px;height:29px;border:0;background:none;color:var(--recommendation-ink);cursor:pointer}
+.issue-rich-toolbar>button:disabled{opacity:.45;cursor:not-allowed}
+.issue-rich-toolbar>span{flex:1}
+.admin-shell .recommendation-issue-editor-v2 .issue-block-editor{position:relative;border:0;padding:0;margin:0 0 18px}
+.admin-shell .recommendation-issue-editor-v2 .issue-block-editor>textarea{border-radius:0 0 3px 3px;min-height:215px;padding-bottom:30px;display:block}
+.issue-block-editor>.issue-field-count{position:absolute;right:12px;top:230px;font-size:12px}
+.issue-recommended-books{margin-top:20px}
+.issue-recommended-books>header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.issue-recommended-books header h3{margin:0 0 6px}
+.issue-recommended-books header p{font:13px/21px var(--stl-type-sans);color:var(--recommendation-muted);margin:0 0 12px}
+.admin-shell .issue-recommended-books header .button{white-space:nowrap;padding:5px 9px;margin:0 0 8px;min-height:32px;display:flex;align-items:center;gap:6px}
+.issue-books-types{display:flex;gap:25px;font:13px/22px var(--stl-type-sans);padding:6px 8px 9px;border-bottom:1px solid var(--recommendation-line)}
+.issue-books-types>span:first-child{font-weight:600}
+.issue-recommended-books>div:last-child{border:1px solid var(--recommendation-line);border-radius:3px}
+.issue-recommended-books article{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px 12px;padding:14px 12px;border-bottom:1px solid var(--recommendation-line)}
+.issue-recommended-books article:last-child{border:0}
+.issue-book-summary{display:grid;grid-template-columns:56px minmax(0,1fr);gap:16px;padding:0;border:0;background:none;text-align:left;cursor:pointer}
+.issue-book-summary .reference-saved-cover{width:56px;height:78px;min-height:78px;grid-row:1 / span 2}
+.issue-book-summary strong{display:block;font:600 15px/24px var(--stl-type-serif)}
+.issue-book-summary small{display:block;font:12px/20px var(--stl-type-sans);color:var(--recommendation-muted);margin-top:5px}
+.issue-recommended-books article>button:last-of-type{align-self:start;border:0;border-left:1px solid var(--recommendation-line);padding:6px;background:none;color:var(--recommendation-muted);cursor:pointer}
+.admin-shell .issue-recommended-books article>label{grid-column:1/-1;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;margin-left:72px;font:12px var(--stl-type-sans)}
+.admin-shell .issue-recommended-books article>label>textarea{font:13px/21px var(--stl-type-sans);padding:6px 10px}
+.admin-shell .recommendation-issue-step-3>.v307-editor-heading{min-height:120px;margin-bottom:25px;padding:0 6px}
+.admin-shell .recommendation-issue-step-3 .v307-editor-heading h1{font-size:36px;line-height:50px}
+.admin-shell .recommendation-issue-step-3 .v307-editor-heading>div:first-child>p{font:600 26px/38px var(--stl-type-serif);color:var(--recommendation-ink);margin-bottom:5px}
+.admin-shell .recommendation-issue-step-3 .fixed-editor-panel,.admin-shell .recommendation-issue-step-3 .fixed-editor-preview{min-height:724px;height:724px}
+.admin-shell .recommendation-issue-step-3 .fixed-editor-fields{padding:16px}
+.admin-shell .recommendation-issue-step-3 .fixed-editor-fields>h2{margin-bottom:12px}
+.recommendation-issue-schedule-v2>p{font:15px/24px var(--stl-type-sans);color:var(--recommendation-muted);max-width:450px;margin:0 0 24px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-date-fields{margin:0 0 22px;gap:16px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-date-grid{margin:0;gap:7px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-month,.admin-shell .recommendation-issue-editor-v2 .recommendation-upcoming{padding:16px 10px;min-height:314px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-month>header{font:600 18px/26px var(--stl-type-serif);margin-bottom:18px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-month-days{gap:7px 1px}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-month-days>button{height:32px;width:32px;font:14px var(--stl-type-sans);padding:0;aspect-ratio:auto}
+.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-schedule-status{margin-top:18px;padding:18px 20px;font:14px/22px var(--stl-type-sans);border-radius:3px}
+.issue-reference-article{display:block;max-width:1380px;padding:30px 36px 50px;min-width:0}
+.issue-reference-article>header h1{font:600 58px/1.3 var(--stl-type-serif);margin:16px 0 12px}
+.issue-reference-meta{display:flex;align-items:center;gap:30px;font:18px/1.5 var(--stl-type-sans);color:var(--admin-v2-muted)}
+.issue-reference-meta .issue-section-label{font:18px/1.5 var(--stl-type-serif);font-weight:400}
+.issue-reference-article .issue-introduction{font:25px/1.55 var(--stl-type-serif);margin:0 0 20px;color:var(--admin-v2-muted)}
+.issue-reference-article .issue-byline{padding:0;margin:0 0 22px;border:0;font:20px/1.5 var(--stl-type-serif);justify-content:flex-start}
+.issue-reference-media{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
+.issue-reference-media.has-toc{grid-template-columns:minmax(0,1fr) 195px}
+.issue-reference-media .issue-reference-image{min-height:0;aspect-ratio:2.65}
+.issue-reference-media .issue-reference-image img{width:100%;height:100%;max-height:none;object-fit:cover}
+.issue-reference-media .issue-reference-toc{border-top:0;border-left:1px solid var(--admin-v2-line);padding:12px 0 0 26px;font-family:var(--stl-type-serif)}
+.issue-reference-toc h2{font:500 22px/1.5 var(--stl-type-serif);margin:0 0 14px}
+.issue-reference-media .issue-reference-toc>a{font:18px/1.5 var(--stl-type-serif);padding:9px 0 9px 18px;color:var(--admin-v2-muted);border-left:1px solid var(--admin-v2-line)}
+.issue-reference-article .issue-reference-prose{font:25px/1.75 var(--stl-type-serif);padding:22px 16px 0;margin-top:12px}
+.issue-reference-article .issue-reference-prose>h2{font:600 34px/1.5 var(--stl-type-serif)}
+.issue-reference-article .issue-reference-books{margin:20px 0}
+.issue-reference-article .issue-reference-books>header>h2{font:500 26px/1.5 var(--stl-type-serif);margin:0 0 8px}
+.issue-reference-article .issue-reference-books>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.issue-reference-article .issue-reference-books .issue-book-card{grid-template-columns:90px minmax(0,1fr);gap:0 20px;border:1px solid var(--admin-v2-line);border-radius:3px;padding:12px;margin:0}
+.issue-reference-article .issue-reference-books .issue-book-cover{width:90px;height:148px;grid-row:1/span 8}
+.issue-reference-article .issue-reference-books .issue-book-card>h3{font:600 20px/1.4 var(--stl-type-serif)}
+.issue-reference-article .issue-reference-books .issue-book-card>p{font:18px/1.5 var(--stl-type-serif);margin:4px 0}
+.fixed-preview-document .issue-reference-article>header[data-edit-active=true]{outline:none}
+.fixed-preview-document .issue-reference-article>header[data-edit-active=true]>h1,.fixed-preview-document .issue-reference-prose[data-edit-active=true]{outline:1px solid var(--admin-v2-focus);outline-offset:6px}
+.daily-reading-home{padding:26px 36px 32px;color:var(--admin-v2-ink);font-family:var(--stl-type-serif)}
+.daily-reading-home>header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:14px}
+.daily-reading-home>header h2{font:600 42px/1.4 var(--stl-type-serif);margin:0 0 16px}
+.daily-reading-home>header p{font:22px/1.5 var(--stl-type-serif);color:var(--admin-v2-muted);margin:0}
+.daily-reading-home>header>a{font:18px/1.5 var(--stl-type-serif);white-space:nowrap;display:flex;gap:8px;align-items:center;margin-top:18px}
+.daily-reading-home .daily-reading-lead{grid-template-columns:minmax(0,44%) minmax(0,1fr);gap:30px;border:1px solid var(--admin-v2-focus);padding:12px}
+.daily-reading-home .daily-reading-lead-image{height:360px;min-height:0;background:var(--admin-v2-paper)}
+.daily-reading-home .daily-reading-lead-copy{padding:8px 0 0}
+.daily-reading-home .daily-reading-lead-copy>time{font:20px/1.5 var(--stl-type-sans);color:var(--admin-v2-muted)}
+.daily-reading-home .daily-reading-lead-copy h2{font:600 42px/1.35 var(--stl-type-serif);margin:10px 0 8px}
+.daily-reading-home .daily-reading-lead-copy>p{font:21px/1.6 var(--stl-type-serif);margin:22px 0}
+.daily-reading-home .daily-reading-byline{font:20px/1.5 var(--stl-type-serif);margin:0}
+.daily-reading-home .daily-reading-lead-copy>.text-link{font:22px/1.5 var(--stl-type-serif);display:inline-flex;gap:14px;align-items:center}
+.daily-reading-home .daily-reading-section{margin-top:38px}
+.daily-reading-home .daily-reading-section>header{display:flex;justify-content:space-between;gap:16px;align-items:center}
+.daily-reading-home .daily-reading-section>header h2{font:500 28px/1.5 var(--stl-type-serif);margin:0 0 10px}
+.daily-reading-home .daily-reading-section>header>a{font:18px var(--stl-type-serif);display:flex;gap:10px;align-items:center}
+.daily-reading-home .daily-reading-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.daily-reading-home .daily-reading-grid img,.daily-reading-home .daily-reading-empty-image{height:120px}
+.daily-reading-home .daily-reading-grid h3{font:500 22px/1.4 var(--stl-type-serif);margin:5px 0}
+.daily-reading-home .daily-reading-grid time,.daily-reading-home .daily-reading-grid span{font:18px/1.5 var(--stl-type-serif)}
+.daily-reading-home .daily-reading-books .issue-book-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:0 12px;border-radius:0;background:none;align-content:start}
+.daily-reading-home .daily-reading-books .issue-book-card>a:first-child,.daily-reading-home .daily-reading-books .issue-book-card>.issue-book-cover{grid-column:1;grid-row:1/span 8}
+.daily-reading-home .daily-reading-books .issue-book-cover{width:48px;height:72px;object-fit:contain;margin:0;filter:none}
+.daily-reading-home .daily-reading-books .issue-book-card>h3,.daily-reading-home .daily-reading-books .issue-book-card>p,.daily-reading-home .daily-reading-books .issue-book-card>.text-link,.daily-reading-home .daily-reading-books .issue-book-card>.issue-awaiting{grid-column:2}
+.daily-reading-home .daily-reading-books .issue-book-card>.text-link,.daily-reading-home .daily-reading-books .issue-book-card>.issue-awaiting{font:11px/1.5 var(--stl-type-sans);margin-top:6px}
+.v307-home .home-current-issue{display:block;padding:0}
+@media(min-width:1201px){.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions{position:fixed;bottom:0;left:198px;right:0;z-index:10;background:var(--recommendation-surface);padding:11px 19px}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:nth-child(2){margin-left:auto}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:last-child{margin-left:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions{position:fixed;bottom:18px;left:218px;right:25px;z-index:10;border:0;background:var(--recommendation-paper);padding:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions>.button:last-child{margin-left:auto}}
+@media(max-width:1200px){.admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{grid-template-columns:1fr}.admin-shell .recommendation-issue-editor-v2 .fixed-page-editor{grid-template-columns:1fr}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview-tools{position:static;flex-wrap:wrap;padding:0 8px 12px}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview>header>span{position:static}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-preview{height:auto;min-height:0}.admin-shell .recommendation-issue-editor-v2 .fixed-preview-canvas{height:650px;max-height:65vh}.admin-shell .recommendation-issue-step-3 .fixed-editor-panel{height:auto;min-height:0}}
+@media(max-width:650px){.admin-shell .recommendation-issue-editor-v2>.v307-editor-heading{padding:0}.admin-shell .recommendation-issue-editor-v2 .v307-editor-heading h1{font-size:26px;line-height:38px}.admin-shell .recommendation-issue-editor-v2 .recommendation-issue-stepper span{font-size:12px}.admin-shell .recommendation-issue-editor-v2 .fixed-editor-fields{padding:16px 12px}.issue-identity-pair{grid-template-columns:1fr;gap:16px}.issue-cover-fields>div{grid-template-columns:1fr}.issue-rich-toolbar{gap:0;padding-inline:3px}.issue-rich-toolbar>button{width:23px}.admin-shell .recommendation-issue-editor-v2 .issue-rich-toolbar>select{width:70px;font-size:11px}.admin-shell .recommendation-issue-step-2 .fixed-editor-sections{gap:0;padding-inline:4px}.admin-shell .recommendation-issue-step-2 .fixed-editor-sections>button{font-size:12px;padding-inline:8px}.admin-shell .issue-recommended-books article>label{margin-left:0}.issue-reference-article{padding:20px 16px}.issue-reference-article>header h1{font-size:30px}.issue-reference-article .issue-introduction{font-size:18px}.issue-reference-meta{font-size:13px;gap:16px}.issue-reference-meta .issue-section-label{font-size:14px}.issue-reference-media.has-toc{grid-template-columns:1fr}.issue-reference-article .issue-reference-prose{font-size:18px;padding-inline:0}.issue-reference-article .issue-reference-books>div{grid-template-columns:1fr}.daily-reading-home{padding:22px 16px}.daily-reading-home>header h2{font-size:28px}.daily-reading-home>header p{font-size:16px}.daily-reading-home>header>a{font-size:12px}.daily-reading-home .daily-reading-lead{grid-template-columns:1fr;gap:16px}.daily-reading-home .daily-reading-lead-image{height:220px}.daily-reading-home .daily-reading-lead-copy h2{font-size:28px}.daily-reading-home .daily-reading-lead-copy>p{font-size:18px}.daily-reading-home .daily-reading-grid{grid-template-columns:1fr}}

@@ -3368,7 +3368,7 @@ export interface operations {
                 /** @description 编辑日历所选日期，按 Asia/Hong_Kong 时区分组。 */
                 day?: string;
                 page?: number;
-                /** @description 文章标题 */
+                /** @description 文章题名、署名、导语或正文关键词。已发布分区只查询公开快照。 */
                 q?: string;
             };
             header?: never;

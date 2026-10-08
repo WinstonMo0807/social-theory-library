@@ -22,6 +22,25 @@ const { TheoryTimelinePublicList } = await import("../components/public/theory-t
 const { TopicQuestionsPublicView } = await import("../components/public/topic-public-view.tsx");
 const { TopicWorksEditor } = await import("../components/admin/knowledge/topic-works-editor.tsx");
 const { KnowledgeVisualEditor } = await import("../components/admin/knowledge/knowledge-visual-editor.tsx");
+const { DailyReadingContent, DailyReadingIndexView } = await import("../components/public/recommendation-issue-view.tsx");
+
+test("the public article index renders every result on its page without duplicate recent cards",()=>{
+  const issues=Array.from({length:12},(_,index)=>({id:`issue-${index}`,slug:`issue-${index}`,title:`公开文章${index}`,introduction:"已确认导语",public_byline:"已确认署名",cover_url:"",display_from:"2026-10-08T00:00:00Z",published_at:null,items:[],body_blocks:[]}));
+  const html=renderToStaticMarkup(React.createElement(DailyReadingIndexView,{lead:issues[0],cards:issues.slice(1)}));
+  for(let index=0;index<issues.length;index++)assert.equal((html.match(new RegExp(`公开文章${index}<`,"g")) || []).length,1,`article ${index} must remain reachable once`);
+  assert.doesNotMatch(html,/architectural-image/);
+});
+
+test("the shared home article keeps saved book notes and valid detail links without inventing reader links",()=>{
+  const lead={id:"issue",slug:"issue",title:"已保存荐读",introduction:"导语",public_byline:"署名",cover_url:"",display_from:null,published_at:null,body_blocks:[],items:[{id:"book",kind:"catalog",title:"实际馆藏",authors:"实际作者",version_note:"准确版本",note:"保留的推介说明",work_url:"/works/actual",reader_url:"",cover_url:""},{id:"planned",kind:"planned",title:"未入藏书目",note:"保存的计划项说明",work_url:"",reader_url:"",cover_url:""}]};
+  const html=renderToStaticMarkup(React.createElement(DailyReadingContent,{lead,cards:[],preview:true}));
+  assert.match(html,/保留的推介说明/);
+  assert.match(html,/保存的计划项说明/);
+  assert.match(html,/href="\/works\/actual"/);
+  assert.match(html,/已入藏 · 书目信息/);
+  assert.match(html,/计划上架/);
+  assert.doesNotMatch(html,/href="\/reader\//);
+});
 
 test("topic reading remains a reachable second-step section in the composed editor", () => {
   const form=React.createElement("form",null,React.createElement(TopicWorksEditor,{"data-editor-section":"works",selected:[],suggestions:[],works:[],onChange:()=>{},onResolve:()=>{}}));

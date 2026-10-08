@@ -1,5 +1,6 @@
 """Issue articles and fixed site templates, with protected draft previews."""
 from datetime import datetime, time, timedelta
+from json import dumps
 from zoneinfo import ZoneInfo
 
 from django.core.paginator import Paginator
@@ -25,16 +26,29 @@ from catalog.editorial_issue_serializers import (RecommendationIssueSerializer, 
     AdminRecommendationIssueCollectionSerializer, EditorialPublishSerializer, PlannedItemLinkSerializer, SiteContentSerializer, SavedIssueListSerializer)
 
 
+def snapshot_search(prefix, query):
+    match = Q()
+    for field in ("title", "public_byline", "introduction", "body_blocks"):
+        match |= Q(**{f"{prefix}__{field}__icontains": query})
+    # SQLite keeps nested JSON strings escaped; PostgreSQL renders Unicode.
+    escaped = dumps(query, ensure_ascii=True)[1:-1]
+    if escaped != query:
+        match |= Q(**{f"{prefix}__body_blocks__icontains": escaped})
+    return match
+
+
 def collection(request, queryset, *, public=False, ordering=None):
     query = request.query_params.get("q", "").strip()
     if query:
         # Public searches only consult the already published snapshot.
         if public:
             due = Q(scheduled_revision__status="published", scheduled_for__lte=timezone.now())
-            queryset = queryset.filter((due & Q(scheduled_revision__materialized_preview__title__icontains=query)) |
-                                       (~due & Q(active_revision__materialized_preview__title__icontains=query)))
+            queryset = queryset.filter((due & snapshot_search("scheduled_revision__materialized_preview", query)) |
+                                       (~due & snapshot_search("active_revision__materialized_preview", query)))
         else:
-            queryset = queryset.filter(title__icontains=query)
+            latest = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk")).order_by("-revision")
+            queryset = queryset.annotate(search_snapshot=Subquery(latest.values("materialized_preview")[:1])).filter(
+                Q(title__icontains=query) | snapshot_search("search_snapshot", query))
     paginator = Paginator(queryset.order_by(ordering or ("-effective_display_from" if public else "-created_at"), "-created_at", "id"), 12)
     page = paginator.get_page(request.query_params.get("page", 1))
     def page_url(number):
@@ -100,7 +114,7 @@ class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
     @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer, parameters=[
         OpenApiParameter("day", OpenApiTypes.DATE, description="编辑日历所选日期，按 Asia/Hong_Kong 时区分组。"),
         OpenApiParameter("bucket", OpenApiTypes.STR, enum=["day", "upcoming", "published"], description="所选日期、之后的已保存排期、之前的公开版本。与 day 一起使用。"),
-        OpenApiParameter("q", OpenApiTypes.STR, description="文章标题"),
+        OpenApiParameter("q", OpenApiTypes.STR, description="文章题名、署名、导语或正文关键词。已发布分区只查询公开快照。"),
         OpenApiParameter("page", OpenApiTypes.INT),
     ])
     def get(self, request):

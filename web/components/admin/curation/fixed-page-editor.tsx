@@ -83,13 +83,14 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
       element.dataset.editActive = String(element.dataset.editSection === activeSection);
     });
   }, [activeSection, preview]);
-  function select(id: string, focus = false) {
+  function select(id: string, focus = false, field?: string) {
     if (!sections.some(section => section.id === id)) return;
     onSectionChange(id);
     if (focus) window.requestAnimationFrame(() => {
       const groups = Array.from(fieldRef.current?.querySelectorAll<HTMLElement>(`[data-field-section="${CSS.escape(id)}"]`) || []);
       const controls = groups.length ? groups.flatMap(group=>Array.from(group.querySelectorAll<HTMLElement>("input,textarea,select,button"))) : Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []);
-      controls.find(element => !element.closest("[hidden]") && element.offsetParent !== null)?.focus();
+      const named = field ? controls.find(element => element.dataset.previewField === field) : undefined;
+      (named || controls.find(element => !element.closest("[hidden]") && element.offsetParent !== null))?.focus();
     });
   }
   return <div className="fixed-page-editor">
@@ -108,12 +109,14 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
         const target = event.target as Element;
         if (target.closest("[data-preview-control]")) return;
         const row = target.closest<HTMLElement>("[data-edit-row]");
+        const item = target.closest<HTMLElement>("[data-edit-item]");
+        const itemHandled = item ? !window.dispatchEvent(new CustomEvent("knowledge-item-select",{detail:Number(item.dataset.editItem),cancelable:true})) : false;
         const timelineRow=target.closest<HTMLElement>("[data-event-id]");
         const timelineHandled=timelineRow ? !window.dispatchEvent(new CustomEvent("knowledge-timeline-select",{detail:{id:timelineRow.dataset.eventId,section:target.closest<HTMLElement>("[data-edit-section]")?.dataset.editSection},cancelable:true})) : false;
-        const rowHandled = timelineHandled || (row ? !window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow), cancelable:true })) : false);
+        const rowHandled = itemHandled || timelineHandled || (row ? !window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow), cancelable:true })) : false);
         let section = target.closest<HTMLElement>("[data-edit-section]");
         while(section && !sections.some(item=>item.id===section?.dataset.editSection))section=section.parentElement?.closest<HTMLElement>("[data-edit-section]") || null;
-        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", !rowHandled); }
+        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", !rowHandled, target.closest<HTMLElement>("[data-edit-field]")?.dataset.editField); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div>}</PreviewViewport>
       {typeof previewFooter === "function" ? previewFooter(perspective) : previewFooter}

@@ -1835,7 +1835,7 @@
                         "schema": {
                             "type": "string"
                         },
-                        "description": "文章标题"
+                        "description": "文章题名、署名、导语或正文关键词。已发布分区只查询公开快照。"
                     }
                 ],
                 "tags": [
