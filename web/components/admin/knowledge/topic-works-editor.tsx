@@ -10,6 +10,7 @@ type Option = { id: string; title?: string; name?: string };
 
 export function TopicWorksEditor({ selected, suggestions, works, onChange, onResolve }: {
   selected: string[]; suggestions: Option[]; works: ApiWork[];
+  "data-editor-section"?: "works";
   onChange: (ids: string[]) => void; onResolve: (works: ApiWork[]) => void;
 }) {
   const [editing, setEditing] = useState<number | null>(null);

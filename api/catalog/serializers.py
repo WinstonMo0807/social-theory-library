@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.urls import reverse
@@ -1490,7 +1492,16 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
         }
 
 
+def topic_image_url(topic, *, private=False):
+    if not topic.hero_image:
+        return ""
+    endpoint = "admin-topic-image" if private else "public-topic-image"
+    version = sha256(topic.hero_image.name.encode()).hexdigest()[:16]
+    return f'{reverse(endpoint, kwargs={"topic_id": topic.pk})}?v={version}'
+
+
 class TopicSerializer(serializers.ModelSerializer):
+    hero_image = serializers.SerializerMethodField()
     work_count = serializers.IntegerField(read_only=True)
     curated = serializers.SerializerMethodField()
     disciplines = serializers.SerializerMethodField()
@@ -1522,6 +1533,9 @@ class TopicSerializer(serializers.ModelSerializer):
             "curated",
             "curated_claims",
         )
+
+    def get_hero_image(self, obj):
+        return topic_image_url(obj, private=obj.editorial_status != "published")
 
     def get_disciplines(self, obj):
         return [
@@ -2869,6 +2883,11 @@ class AdminTopicSerializer(serializers.ModelSerializer):
                 for relation in obj.subdiscipline_relations.select_related("subdiscipline")
             ],
         }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["hero_image"] = topic_image_url(instance, private=True)
+        return data
 
     def get_work_count(self, obj):
         return obj.workknowledgerelation_set.filter(approved=True).values("work_id").distinct().count()

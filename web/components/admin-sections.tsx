@@ -745,7 +745,7 @@ export function TaxonomyAdmin({
             <StringListEditor label="研究维度" itemLabel="维度" value={editorLines(draft.researchDimensions)} onChange={(value) => setDraft({ ...draft, researchDimensions: value.join("\n") })} addLabel="添加维度" />
             <StringListEditor label="常用方法" itemLabel="方法" value={editorLines(draft.methods)} onChange={(value) => setDraft({ ...draft, methods: value.join("\n") })} addLabel="添加方法" />
           </div> : null}
-          <label className="knowledge-image-upload"><ImagePlus size={18} /><span>{heroFile?.name || "上传或替换主视觉图片"}</span><input type="file" accept="image/*" onChange={(event) => setHeroFile(event.target.files?.[0] ?? null)} /></label>
+          <label className="knowledge-image-upload"><ImagePlus size={18} /><span>{heroFile?.name || "上传或替换主视觉图片"}</span><input type="file" accept="image/*" disabled={draft.kind === "topic" && detail.data?.editorial_status === "published"} title={draft.kind === "topic" && detail.data?.editorial_status === "published" ? "已公开主题的图片替换尚无可保存的编辑草稿契约" : undefined} onChange={(event) => setHeroFile(event.target.files?.[0] ?? null)} /></label>
           <label><span>主视觉说明</span><input value={draft.heroCaption} onChange={(event) => setDraft({ ...draft, heroCaption: event.target.value })} placeholder="显示在主视觉图片下方" /></label>
           <StringListEditor label={draft.kind === "theory" ? "关键主题" : "关键概念"} itemLabel={draft.kind === "theory" ? "主题" : "概念"} value={editorLines(draft.terms)} onChange={(value) => setDraft({ ...draft, terms: value.join("\n") })} />
           {draft.kind === "theory" ? (
@@ -797,7 +797,7 @@ export function TaxonomyAdmin({
           <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
-            {draft.kind === "topic" ? <TopicWorksEditor key={draft.id || "new"} selected={draft.primaryWorkIds} suggestions={draft.suggestions.works ?? []} works={topicPreviewWorks} onChange={primaryWorkIds => setDraft({ ...draft, primaryWorkIds })} onResolve={setTopicPreviewWorks}/> : <CuratedSelector
+            {draft.kind === "topic" ? <TopicWorksEditor data-editor-section="works" key={draft.id || "new"} selected={draft.primaryWorkIds} suggestions={draft.suggestions.works ?? []} works={topicPreviewWorks} onChange={primaryWorkIds => setDraft({ ...draft, primaryWorkIds })} onResolve={setTopicPreviewWorks}/> : <CuratedSelector
               label="奠基文献"
               data-editor-section="works"
               options={draft.suggestions.works ?? []}

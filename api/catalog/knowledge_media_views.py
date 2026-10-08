@@ -1,4 +1,7 @@
-from django.core.exceptions import ValidationError
+import mimetypes
+
+from django.core.exceptions import SuspiciousFileOperation, ValidationError
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -9,10 +12,43 @@ from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.media_views import PublicCoverMediaSerializer
-from catalog.models import EditorialRevision, MediaAsset
+from catalog.models import EditorialRevision, MediaAsset, Topic
 from catalog.services.knowledge_media import TARGETS, image_fingerprint, image_media, image_selection, image_legacy_file, select_knowledge_image, validate_image_selection
 from catalog.theory_system_views import TheorySystemFeatureMixin
 from common.permissions import CanAccessBackOffice, IsKnowledgeEditor
+
+
+def legacy_knowledge_image_response(field, *, private):
+    content_type = mimetypes.guess_type(field.name)[0] if field else None
+    if not content_type or not content_type.startswith("image/"):
+        raise NotFound("当前没有可读取的主题图片。")
+    try:
+        handle = field.storage.open(field.name, "rb")
+    except (OSError, ValueError, SuspiciousFileOperation):
+        raise NotFound("当前主题图片不存在或无法读取。")
+    response = FileResponse(handle, content_type=content_type)
+    response["Cache-Control"] = "private, no-store" if private else "public, max-age=300"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response
+
+
+class AdminTopicImageView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(exclude=True)
+    def get(self, request, topic_id):
+        topic = get_object_or_404(Topic, pk=topic_id)
+        return legacy_knowledge_image_response(topic.hero_image, private=True)
+
+
+class PublicTopicImageView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(exclude=True)
+    def get(self, request, topic_id):
+        topic = get_object_or_404(Topic.objects.filter(editorial_status="published"), pk=topic_id)
+        return legacy_knowledge_image_response(topic.hero_image, private=False)
 
 
 class KnowledgeImageRequestSerializer(serializers.Serializer):

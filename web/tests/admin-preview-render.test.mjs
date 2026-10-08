@@ -3,7 +3,7 @@ import { registerHooks } from "node:module";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime.js";
+import { PathnameContext, SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime.js";
 
 // Node does not load stylesheet modules; the actual components still render.
 registerHooks({
@@ -21,6 +21,17 @@ const { KnowledgeNodePublicView } = await import("../components/public/knowledge
 const { TheoryTimelinePublicList } = await import("../components/public/theory-timeline-public-view.tsx");
 const { TopicQuestionsPublicView } = await import("../components/public/topic-public-view.tsx");
 const { TopicWorksEditor } = await import("../components/admin/knowledge/topic-works-editor.tsx");
+const { KnowledgeVisualEditor } = await import("../components/admin/knowledge/knowledge-visual-editor.tsx");
+
+test("topic reading remains a reachable second-step section in the composed editor", () => {
+  const form=React.createElement("form",null,React.createElement(TopicWorksEditor,{"data-editor-section":"works",selected:[],suggestions:[],works:[],onChange:()=>{},onResolve:()=>{}}));
+  const editor=React.createElement(KnowledgeVisualEditor,{objectType:"topic",presentation:"topic",draft:{name:"主题"},dirty:false},form);
+  const html=renderToStaticMarkup(React.createElement(SearchParamsContext.Provider,{value:new URLSearchParams("section=works")},editor));
+  assert.match(html,/aria-current="true"[^>]*>入门阅读/);
+  assert.match(html,/data-field-section="works"/);
+  assert.equal((html.match(/<h2>入门阅读<\/h2>/g)||[]).length,1);
+  assert.match(html,/添加入门文献/);
+});
 
 test("topic reading keeps every saved Work selection and exposes the shared library picker", () => {
   const selected=["one","two","three","four","legacy-five"];
