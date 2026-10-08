@@ -1,35 +1,69 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, BookOpen, CircleDot, Compass, Grid2X2, MessagesSquare, Users, Wrench } from "lucide-react";
-import type { ReactNode } from "react";
-import { AskLibraryLink } from "@/components/ask-library-link";
+import { ArrowRight } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { SaveTopicButton } from "@/components/save-topic-button";
-import { BookCard, ScholarPortrait, SectionHeading } from "@/components/ui";
+import { BookCard, ScholarPortrait } from "@/components/ui";
 import type { LibraryTopic } from "@/lib/api/topics.types";
+
+function TopicHero({ topic, questions = false }: { topic: LibraryTopic; questions?: boolean }) {
+  return <header className={"topic-reference-hero" + (questions ? " topic-question-hero" : "") + (topic.heroImage ? " has-image" : "")} data-edit-section="identity">
+    {topic.heroImage ? <img src={topic.heroImage} alt=""/> : null}
+    <div><h1>{topic.name}</h1><p>{topic.description}</p>
+      {!questions ? <dl className="topic-reference-facts"><div><dt>相关图书</dt><dd>{topic.workCount}</dd></div>
+        <div><dt>相关学者</dt><dd>{topic.scholars.length}</dd></div><div><dt>相关文章</dt><dd/></div></dl> : null}
+    </div>
+  </header>;
+}
 
 export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer?: ReactNode }) {
   const works = topic.curated.foundationalWorks.length ? topic.curated.foundationalWorks : topic.works;
   const scholars = topic.curated.relatedScholars.length ? topic.scholars.filter(row => topic.curated.relatedScholars.some(item => item.slug === row.slug)) : topic.scholars;
-  const href = (section: string) => `/topics/${topic.slug}/${section}`;
-  const knowledge = topic.knowledgeNodes.filter(row => ["concept", "debate", "theory_tradition", "research_problem"].includes(row.node_type));
-  const curatedEvidence = topic.evidenceCuration?.configured ? topic.evidenceCuration.items : null;
-  const hasEvidence = curatedEvidence ? curatedEvidence.length > 0 : topic.passages.length > 0;
-  return <><main className="page-shell v307-knowledge topic-v307">
-    <p className="breadcrumbs"><Link href="/topics">主题</Link><span>›</span>{topic.name}</p>
-    <section className="knowledge-hero" data-module-id="topic-identity" data-edit-section="identity"><div><p className="eyebrow">主题</p><h1>{topic.name}</h1><p>{topic.problemStatement || topic.description}</p><AskLibraryLink context="topics" ids={[topic.id]} label="向图书馆提问" /></div><div className="knowledge-hero-image" style={{ backgroundImage: topic.heroImage ? `url("${topic.heroImage}")` : "none", backgroundColor: topic.heroImage ? undefined : "transparent" }} /></section>
-    <div className="knowledge-facts"><span>相关学科 <strong>{topic.disciplines.map(row => row.name).join("、") || "跨学科"}</strong></span><span>关联馆藏 <strong>{topic.workCount} 部</strong></span><span>关联学者 <strong>{scholars.length} 位</strong></span><SaveTopicButton topicId={topic.id} /></div>
-    <section className="topic-module-grid">
-      {topic.coreQuestions.length || topic.problemStatement ? <article data-module-id="topic-framework" data-edit-section="questions"><MessagesSquare size={21}/><SectionHeading title="研究对象与核心问题"/><p>{topic.problemStatement}</p><ul>{topic.coreQuestions.slice(0, 4).map(item => <li key={item}>{item}</li>)}</ul><Link href={href("questions")}>深入了解 <ArrowRight size={15}/></Link></article> : null}
-      {topic.formationContext || topic.timeline.length ? <article data-module-id="topic-history" data-edit-section="history"><CircleDot size={21}/><SectionHeading title="形成与发展"/><p>{topic.formationContext}</p>{topic.timeline.slice(0, 2).map(([year, title]) => <p key={`${year}-${title}`}><time>{year}</time> {title}</p>)}<Link href={href("history")}>查看时间线 <ArrowRight size={15}/></Link></article> : null}
-      {works.length ? <article className="topic-intro-works" data-module-id="topic-works" data-edit-section="works"><BookOpen size={21}/><SectionHeading title="入门阅读"/>{works.slice(0, 3).map(work => <BookCard work={work} dense key={work.id}/>)}<Link href={href("works")}>查看全部 <ArrowRight size={15}/></Link></article> : null}
-      {topic.researchDimensions.length ? <article data-edit-section="dimensions"><Grid2X2 size={21}/><SectionHeading title="主要研究维度"/>{topic.researchDimensions.slice(0, 6).map((item, index) => <Link className="knowledge-list-link" href={`${href("dimensions")}#item-${index + 1}`} key={item}>{item}<ArrowRight size={14}/></Link>)}</article> : null}
-      {topic.methods.length ? <article data-edit-section="methods"><Wrench size={21}/><SectionHeading title="研究方法 / 工具"/>{topic.methods.slice(0, 6).map((item, index) => <Link className="knowledge-list-link" href={`${href("methods")}#item-${index + 1}`} key={item}>{item}<ArrowRight size={14}/></Link>)}</article> : null}
-      {knowledge.length || topic.concepts.length || topic.theories.length ? <article data-module-id="topic-theories" data-edit-section="concepts"><SectionHeading title="理论、概念与争论"/><div className="knowledge-chip-grid">{knowledge.map(row => <Link href={`/theories/nodes/${row.slug}`} key={row.id}>{row.name}</Link>)}{!knowledge.length ? topic.concepts.map(item => <Link href={href("concepts")} key={item}>{item}</Link>) : null}{!knowledge.length ? topic.theories.slice(0, 3).map(row => <Link href={`/theory-schools/${row.slug}`} key={row.slug}>{row.name}</Link>) : null}</div><Link href={href("concepts")}>查看全部 <ArrowRight size={15}/></Link></article> : null}
-      {topic.subdisciplines.length ? <article data-module-id="topic-subdisciplines" data-edit-section="relations"><Compass size={21}/><SectionHeading title="相关子学科"/>{topic.subdisciplines.slice(0, 6).map(row => <Link className="knowledge-list-link" href={`/subdisciplines/${row.slug}`} key={row.id}>{row.name}<ArrowRight size={14}/></Link>)}</article> : null}
-      {scholars.length ? <article data-module-id="topic-scholars" data-edit-section="relations"><Users size={21}/><SectionHeading title="代表学者"/>{scholars.slice(0, 3).map(row => <Link className="knowledge-person-row" href={`/scholars/${row.slug}`} key={row.slug}><ScholarPortrait scholar={row}/><span><strong>{row.name}</strong><small>{row.years}</small></span><ArrowRight size={14}/></Link>)}<Link href={href("scholars")}>查看全部学者 <ArrowRight size={15}/></Link></article> : null}
-    </section>
-    {topic.curated.readingPaths.length || hasEvidence ? <section className="topic-bottom-grid">
-      {topic.curated.readingPaths.length ? <article data-module-id="topic-reading-paths" data-edit-section="paths"><SectionHeading title="策展阅读路径" href={href("reading-paths")}/><div className="knowledge-path-steps">{topic.curated.readingPaths.slice(0, 4).map((path, index) => <Link href={`${href("reading-paths")}#path-${index + 1}`} key={`${path.title}-${index}`}><b>{String(index + 1).padStart(2, "0")}</b><span><strong>{path.title}</strong><small>{path.description}</small></span></Link>)}</div></article> : null}
-      {hasEvidence ? <article data-module-id="topic-evidence" data-edit-section="passages"><SectionHeading title="主题相关原文" href={href("passages")}/>{curatedEvidence ? curatedEvidence.slice(0, 4).map(row => <Link className="knowledge-list-link" href={`${href("passages")}#curated-${row.id || row.source_id}`} key={row.id || row.source_id}>{row.group_title || row.source.work_title}<ArrowRight size={14}/></Link>) : topic.passages.slice(0, 4).map(row => <Link className="knowledge-list-link" href={`${href("passages")}#passage-${row.id}`} key={row.id}>{row.title}<ArrowRight size={14}/></Link>)}</article> : null}
-    </section> : null}
+  const href = (section: string) => "/topics/" + topic.slug + "/" + section;
+  return <><main className="page-shell topic-reference-public topic-reference-overview">
+    <TopicHero topic={topic}/>
+    <div className="topic-reference-bookmark"><SaveTopicButton topicId={topic.id}/></div>
+    <div className="topic-reference-overview-grid">
+      <section data-edit-section="questions"><header><h2>研究问题</h2><Link href={href("questions")}>更多 <ArrowRight size={17}/></Link></header>
+        <ul className="topic-reference-question-summary">{topic.coreQuestions.map((question,index)=><li key={index}><Link href={href("questions") + "#item-" + (index+1)}>{question}</Link></li>)}</ul>
+      </section>
+      <section data-edit-section="works"><header><h2>入门阅读</h2><Link href={href("works")}>更多 <ArrowRight size={17}/></Link></header>
+        <div className="topic-reference-books">{works.slice(0,4).map(work=><BookCard work={work} dense key={work.id}/>)}</div>
+      </section>
+      <section className="topic-reference-representatives" data-edit-section="relations"><header><h2>代表学者</h2><Link href={href("scholars")}>更多 <ArrowRight size={17}/></Link></header>
+        <div>{scholars.slice(0,4).map(scholar=><Link href={"/scholars/" + scholar.slug} key={scholar.slug}><ScholarPortrait scholar={scholar}/><span><strong>{scholar.name}</strong><small>{scholar.concerns.join("、")}</small></span></Link>)}</div>
+      </section>
+    </div>
   </main>{footer}</>;
+}
+
+export function TopicQuestionsPublicView({ topic }: { topic: LibraryTopic }) {
+  const [selected, setSelected] = useState(0);
+  const works = topic.curated.foundationalWorks.length ? topic.curated.foundationalWorks : topic.works;
+  useEffect(()=>{
+    const select = (event: Event) => {
+      const index = (event as CustomEvent<unknown>).detail;
+      if (typeof index === "number" && Number.isInteger(index)) setSelected(index);
+    };
+    window.addEventListener("topic-question-focus", select);
+    return ()=>window.removeEventListener("topic-question-focus", select);
+  },[]);
+  return <main className="page-shell topic-reference-public topic-reference-question-page" data-public-page="questions">
+    <TopicHero topic={topic} questions/>
+    <div className="topic-reference-question-layout">
+      <section className="topic-reference-question-content" data-edit-section="questions">
+        <header><h2>研究对象与核心问题</h2><p>{topic.problemStatement}</p></header>
+        <div>{topic.coreQuestions.map((question,index)=><article id={"item-" + (index+1)} key={index} data-edit-row={index} data-selected={selected===index || undefined}>
+          <span>{index+1}</span><div><h3>{question}</h3><p className="topic-reference-question-explanation"/></div>
+          <Link aria-label={"查找与" + question + "相关的馆藏"} href={"/explore?q=" + encodeURIComponent(question) + "&topic=" + encodeURIComponent(topic.slug)}><ArrowRight size={20}/></Link>
+        </article>)}</div>
+      </section>
+      <aside><section><h2>形成与发展</h2><nav aria-label="主题相关内容">
+        <Link href={"/topics/" + topic.slug + "/history"}>历史脉络 <ArrowRight size={18}/></Link>
+        <Link href={"/topics/" + topic.slug + "/theory-schools"}>主要理论视角 <ArrowRight size={18}/></Link>
+        <span aria-disabled="true">当代议题与新挑战 <ArrowRight size={18}/></span>
+      </nav></section><section data-edit-section="works"><h2>入门阅读</h2>{works.slice(0,1).map(work=><BookCard work={work} dense key={work.id}/>)}</section></aside>
+    </div>
+  </main>;
 }

@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
+import { buildTopicSavePayload } from "@/lib/topic-draft";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -40,6 +41,7 @@ import { CurationSelectionPreview } from "@/components/admin/curation/curation-d
 import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-panel";
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
+import { TopicQuestionsEditor } from "@/components/admin/knowledge/topic-questions-editor";
 import { ScholarEssentialWorks } from "@/components/admin/knowledge/scholar-essential-works";
 import { SavedEditionCover } from "@/components/admin/preview/selected-work-preview";
 import directoryStyles from "./admin/knowledge/directory-lists.module.css";
@@ -320,6 +322,11 @@ export function TaxonomyAdmin({
   );
   const [selectedTopicId, setSelectedTopicId] = useState("");
   const selectedTopic = topics.data?.results.find(item => item.id === selectedTopicId) ?? topics.data?.results[0];
+  useEffect(() => {
+    if (mode !== "topic" || editorOnly) return;
+    window.dispatchEvent(new CustomEvent("admin-taxonomy-trail", { detail: selectedTopic ? [selectedTopic.name] : [] }));
+    return () => { window.dispatchEvent(new CustomEvent("admin-taxonomy-trail", { detail: [] })); };
+  }, [mode, editorOnly, selectedTopic]);
   const detailBase = mode === "topic"
     ? "/catalog/admin/topics"
     : "/catalog/admin/theory-schools";
@@ -333,6 +340,7 @@ export function TaxonomyAdmin({
     kind: mode === "topic" ? "topic" : "theory",
     name: createName,
   });
+  const topicBaseline = useRef<TaxonomyDraft | null>(null);
   const [message, setMessage] = useState("");
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const unsaved = useRef(false);
@@ -390,7 +398,7 @@ export function TaxonomyAdmin({
 
   function editTopic(item: AdminTopic) {
     const curation = item.curation ?? {};
-    setDraftState({
+    const next: TaxonomyDraft = {
       id: item.id,
       edit_version: item.edit_version,
       kind: "topic",
@@ -434,7 +442,9 @@ export function TaxonomyAdmin({
       baseCuration: curation,
       suggestions: item.suggestions ?? {},
       status: item.editorial_status,
-    });
+    };
+    topicBaseline.current = next;
+    setDraftState(next);
   }
 
   useEffect(() => {
@@ -537,14 +547,26 @@ export function TaxonomyAdmin({
           curation,
           editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
         };
+    const payload = draft.kind === "topic" ? buildTopicSavePayload(body, draft,
+      draft.id && topicBaseline.current?.id === draft.id ? topicBaseline.current : null) : body;
+    if (draft.id && draft.kind === "topic" && !Object.keys(payload).length && !heroFile) {
+      unsaved.current = false;
+      setHasUnsaved(false);
+      prefills.clear();
+      finishAction("save-taxonomy");
+      return true;
+    }
     let metadataSaved = false;
     try {
       let saved = await apiRequest<AdminTheory | AdminTopic>(
         `${base}/${draft.id ? `${draft.id}/` : ""}`,
-        { method: draft.id ? "PATCH" : "POST", headers: draft.id && draft.kind === "topic" ? editorialHeaders(draft) : undefined, body: JSON.stringify(body) },
+        { method: draft.id ? "PATCH" : "POST", headers: draft.id && draft.kind === "topic" ? editorialHeaders(draft) : undefined, body: JSON.stringify(payload) },
         token,
       );
       metadataSaved = true;
+      if (draft.kind === "topic") topicBaseline.current = { ...draft, id: saved.id,
+        edit_version: saved.edit_version, slug: saved.slug, baseCuration: saved.curation ?? draft.baseCuration,
+        status: saved.editorial_status };
       // Preserve the successful write before a separate image request. A retry
       // must update this object with its latest version, never create it again.
       setDraftState((current) => ({ ...current, id: saved.id, edit_version: saved.edit_version, slug: saved.slug,
@@ -598,7 +620,7 @@ export function TaxonomyAdmin({
     </AdminPageFrame>;
   }
 
-  if (!editorOnly && mode === "topic") return <div className={`${directoryStyles.page} ${directoryStyles.topics}`}>
+  if (!editorOnly && mode === "topic") return <div className={`${directoryStyles.page} ${directoryStyles.topics} topic-directory-reference`}>
     <section className={directoryStyles.listColumn}>
       <header className={directoryStyles.topicHeading}><div><h1>主题管理</h1><Link className={directoryStyles.create} href="/admin/topics/new"><Plus size={16}/>新建主题</Link></div>
         <div><h2>选择要编辑的研究主题</h2><form className={directoryStyles.topicSearch} role="search" onSubmit={event=>{
@@ -611,7 +633,7 @@ export function TaxonomyAdmin({
       <TopicDirectoryTable topics={topics.data?.results ?? []} selectedId={selectedTopic?.id} onSelect={setSelectedTopicId}/>
       <AdminListPages data={topics.data} paging={topicPaging} loading={topics.loading} filters={{q:topicQuery}} label="主题列表分页"/>
     </section>
-    <div className={directoryStyles.preview}><CurationSelectionPreview key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type:"topic",object_id:selectedTopic.id,title:selectedTopic.name,label:"主题",edit_url:`/admin/topics/${selectedTopic.id}`,can_edit:true } : undefined} returnTo={`/admin/topics${searchParams.size ? `?${searchParams}` : ""}`}/></div>
+    <div className={directoryStyles.preview}><CurationSelectionPreview presentation="topic" key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type:"topic",object_id:selectedTopic.id,title:selectedTopic.name,label:"主题",edit_url:`/admin/topics/${selectedTopic.id}`,can_edit:true } : undefined} returnTo={`/admin/topics${searchParams.size ? `?${searchParams}` : ""}`}/></div>
   </div>;
 
   return (
@@ -670,10 +692,10 @@ export function TaxonomyAdmin({
           ) : null}
         </section> : null}
         {!editorOnly && mode === "topic" ? <CurationSelectionPreview key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type: "topic", object_id: selectedTopic.id, title: selectedTopic.name, label: "主题", edit_url: `/admin/topics/${selectedTopic.id}`, can_edit: true } : undefined} returnTo="/admin/topics"/> : null}
-        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
-          <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
+        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} presentation={draft.kind === "topic" ? "topic" : "sections"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form id={draft.kind === "topic" ? "topic-reference-form" : undefined} className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
+          {draft.kind !== "topic" ? <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p> : null}
           <EditorialPrefillNotice state={prefills} />
-          <header>
+          <header data-editor-section={draft.kind === "topic" ? "publication" : undefined}>
             <div>
               <Link href={draft.kind === "theory" ? "/admin/theories" : "/admin/topics"}>返回列表</Link>
               <h2>{draft.id ? "编辑" : "新建"}{draft.kind === "theory" ? "理论流派" : "主题"}</h2>{draft.id ? <RecycleControl kind={draft.kind === "theory" ? "theory-school" : "topic"} id={draft.id} name={draft.name} onDeleted={() => window.location.assign(draft.kind === "theory" ? "/admin/theories" : "/admin/topics")} /> : null}
@@ -713,10 +735,10 @@ export function TaxonomyAdmin({
             </div>
           </> : null}
           {draft.kind === "topic" ? <>
-            <label><span>问题陈述</span><textarea rows={4} value={draft.problemStatement} onChange={(event) => setDraft({ ...draft, problemStatement: event.target.value })} placeholder="说明读者从什么研究问题进入" /></label>
+            <label data-editor-section="identity"><span>问题陈述</span><textarea rows={4} value={draft.problemStatement} onChange={(event) => setDraft({ ...draft, problemStatement: event.target.value })} placeholder="说明读者从什么研究问题进入" /></label>
             <label><span>形成背景</span><textarea rows={3} value={draft.formationContext} onChange={(event) => setDraft({ ...draft, formationContext: event.target.value })} /></label>
           </> : null}
-          <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.coreQuestions)} onChange={(value) => setDraft({ ...draft, coreQuestions: value.join("\n") })} addLabel="添加问题" />
+          {draft.kind === "topic" ? <TopicQuestionsEditor data-editor-section="questions" value={editorLines(draft.coreQuestions)} onChange={value => setDraft({ ...draft, coreQuestions: value.join("\n") })} /> : <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.coreQuestions)} onChange={(value) => setDraft({ ...draft, coreQuestions: value.join("\n") })} addLabel="添加问题" />}
           {draft.kind === "topic" ? <div className="structured-editor-pair">
             <StringListEditor label="研究维度" itemLabel="维度" value={editorLines(draft.researchDimensions)} onChange={(value) => setDraft({ ...draft, researchDimensions: value.join("\n") })} addLabel="添加维度" />
             <StringListEditor label="常用方法" itemLabel="方法" value={editorLines(draft.methods)} onChange={(value) => setDraft({ ...draft, methods: value.join("\n") })} addLabel="添加方法" />
@@ -774,13 +796,15 @@ export function TaxonomyAdmin({
             <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
             <CuratedSelector
-              label="奠基文献"
+              label={draft.kind === "topic" ? "入门阅读" : "奠基文献"}
+              data-editor-section="works"
               options={draft.suggestions.works ?? []}
               selected={draft.primaryWorkIds}
               onChange={(primaryWorkIds) => setDraft({ ...draft, primaryWorkIds })}
             />
             <CuratedSelector
               label={draft.kind === "theory" ? "人工推荐书目" : "最近入库"}
+              data-editor-section={draft.kind === "topic" ? "unmatched" : "works"}
               options={draft.suggestions.works ?? []}
               selected={draft.secondaryWorkIds}
               onChange={(secondaryWorkIds) => setDraft({ ...draft, secondaryWorkIds })}
@@ -922,7 +946,7 @@ export function TaxonomyAdmin({
             </fieldset>
           ) : null}
           <label><span>编辑状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
-          <button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{pendingAction ? "正在保存…" : "保存主题草稿"}</button>
+          <button className={draft.kind === "topic" ? "button secondary topic-reference-save" : "button"} form={draft.kind === "topic" ? "topic-reference-form" : undefined} type="submit" disabled={Boolean(pendingAction)}>{draft.kind !== "topic" ? <Save size={15} /> : null}{pendingAction ? "正在保存…" : draft.kind === "topic" ? "保存草稿" : "保存主题草稿"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
           <EditorialConflictHelp visible={editConflict} href={draft.kind === "topic" ? `/admin/topics/${draft.id}` : `/admin/theories?legacy_id=${draft.id}`} />
           {draft.id ? <EntityLifecycleActions
@@ -2460,6 +2484,7 @@ function CuratedSelector({
   selected: string[];
   single?: boolean;
   onChange: (value: string[]) => void;
+  "data-editor-section"?: string;
 }) {
   return (
     <div className="curated-selector">

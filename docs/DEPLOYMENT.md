@@ -1,5 +1,11 @@
 # 部署说明
 
+## 2026-10-08 6e906ce当前实际隔离候选
+
+6e906ce11bea1a6a499bbed440928582c67315e2/tree 0e97593ad2f9936c6a7af2abe70bfc18c5bda7f3已推送开发分支并实际刷新。归档1416文件/4840542字节/源码16527106字节，实际NAS SHA256 ffaecc9231789bbdba2de56bca7ebd2664ae665c852cdc5773b630d54cf89bb4；API 216a59ef81e26174c7c40f1345cedb6a0ed1da618f8d2bded1c464ad4185f1de、Web 1caabf2ca94bce49fc6857a2bd03c643fc7ffed5cffbe2e15f2b2a39deb916aa，实际标签同commit/重启0。166项PG、迁移/nginx/刷新退出0，启动一次502后就绪；仅CSS/文档，无schema变更，main/生产未切换。既有候选本地阅读环境标志、隔离数据和旧候选回退入口保留。
+
+普通UI登录及22/23桌面/390px/放大往返已实际运行，证据web/output/playwright/6e906ce。23年份残留旧样式和25/26后续重排尚待，59图完整验收和正式公网3.0.9.1未完成，不以候选刷新替代生产发布。
+
 ## 2026-10-08 4f8cf20实际隔离候选及本地来源阅读
 
 候选4f8cf20a7efc91d0723b898c111492dd38eadd0f，tree e07c696de7c6ba14b1eb54e883e200d5e4b66323，开发分支已推送。源码1416文件/压缩4836317字节/源码16517427字节，归档SHA256 8093aa274b37f1815385017065cc5c331fedc0274a029545cadd6feb7897ec6f。API ba80fb30ea18119e0c529ae938179540ac2115a44572e7e762e6892ad464e830，Web bf70cf5017e2806bcdfe247622a98354be284d004fa30955101ec9a029826bbb。166项PG、迁移/nginx/刷新退出0，初次4f刷新无启动502；无schema改动，main/生产未切换。

@@ -19,6 +19,20 @@ const { SubdisciplinePublicView } = await import("../components/public/subdiscip
 const { DisciplinePublicView } = await import("../components/public/discipline-public-view.tsx");
 const { KnowledgeNodePublicView } = await import("../components/public/knowledge-node-public-view.tsx");
 const { TheoryTimelinePublicList } = await import("../components/public/theory-timeline-public-view.tsx");
+const { TopicQuestionsPublicView } = await import("../components/public/topic-public-view.tsx");
+
+test("topic questions retain all legacy titles and use real destinations without inventing explanations", () => {
+  const topic={id:"topic",slug:"institutions",name:"制度主题",description:"保存的简介",problemStatement:"保存的问题陈述",heroImage:"",coreQuestions:["问题一？","问题二？","问题三？","旧问题四？"],works:[],curated:{foundationalWorks:[]}};
+  const html=renderToStaticMarkup(React.createElement(TopicQuestionsPublicView,{topic}));
+  assert.equal((html.match(/data-edit-row=/g)||[]).length,4);
+  assert.match(html,/旧问题四？/);
+  assert.match(html,/保存的问题陈述/);
+  assert.match(html,/href="\/topics\/institutions\/history"/);
+  assert.match(html,/href="\/topics\/institutions\/theory-schools"/);
+  assert.match(html,/topic-reference-question-explanation"><\/p>/);
+  assert.match(html,/aria-disabled="true">当代议题与新挑战/);
+  assert.doesNotMatch(html,/<img|\/topics\/institutions\/challenges|向图书馆提问/);
+});
 
 test("preview headers cannot navigate or expose session controls, public headers remain active", () => {
   const render = preview => renderToStaticMarkup(React.createElement(PathnameContext.Provider, { value: "/explore" },

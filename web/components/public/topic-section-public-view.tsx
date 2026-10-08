@@ -5,6 +5,7 @@ import type { LibraryTopic } from "@/lib/api/topics.types";
 import { CuratedClaimSections } from "@/components/curated-claim-sections";
 import { CollectionLink } from "@/components/collection-link";
 import { EvidenceCurationView } from "@/components/public/evidence-curation-view";
+import { TopicQuestionsPublicView } from "@/components/public/topic-public-view";
 
 export const topicSectionTitles: Record<string, string> = {
   works: "奠基文献",
@@ -23,6 +24,7 @@ export const topicSectionTitles: Record<string, string> = {
 };
 
 export function TopicSectionPublicView({ topic, section }: { topic: LibraryTopic; section: string }) {
+  if (section === "questions") return <TopicQuestionsPublicView topic={topic}/>;
   const works = section === "recent"
     ? topic.curated.recentWorks.length ? topic.curated.recentWorks : topic.works
     : topic.curated.foundationalWorks.length ? topic.curated.foundationalWorks : topic.works;

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw, Monitor, Smartphone, Maximize2 } from "lucide-react";
+import { RefreshCw, Monitor, Smartphone, Maximize2, ArrowLeft } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { adminListHref, adminPageNumber, safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
 import { Pagination } from "@/components/ui/pagination";
 import type { RecommendationIssue } from "@/lib/api/recommendation-issues.types";
-import type { KnowledgePreviewPayload } from "../preview/knowledge-page-preview";
+import { PreviewSurface, type KnowledgePreviewPayload } from "../preview/knowledge-page-preview";
 import { PreviewViewport } from "./fixed-page-editor";
 import { curationPreviewChanges } from "./curation-preview-changes";
 import { CurationPreviewComparison } from "./curation-preview-comparison";
@@ -66,30 +66,32 @@ export function CurationDraftQueue() {
 
 const previewTypes: Record<string, string> = { scholar_profile: "scholar", topic: "topic", knowledge_node: "theory", discipline: "discipline", subdiscipline: "subdiscipline", reading_path: "reading_path" };
 
-export function CurationSelectionPreview({ item, returnTo }: { item?: Pick<CurationDraft, "object_type" | "object_id" | "title" | "label" | "edit_url" | "can_edit"> & Partial<Pick<CurationDraft, "changed_fields">>; returnTo: string }) {
+export function CurationSelectionPreview({ item, returnTo, presentation }: { item?: Pick<CurationDraft, "object_type" | "object_id" | "title" | "label" | "edit_url" | "can_edit"> & Partial<Pick<CurationDraft, "changed_fields">>; returnTo: string; presentation?: "topic" }) {
+  const topicReference = presentation === "topic";
   const type = item && previewTypes[item.object_type];
   const resource = useApiResource<KnowledgePreviewPayload>(type && item ? `/catalog/admin/knowledge-preview/${type}/${item.object_id}/` : "", getServerSessionCredential());
   const issue = useApiResource<RecommendationIssue>(item?.object_type==="recommendation_issue" ? `/catalog/admin/recommendation-issues/${item.object_id}/` : "",getServerSessionCredential());
   const [perspective, setPerspective] = useState<"draft" | "published">("draft");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [moduleId, setModuleId] = useState("");
+  const [previewPage, setPreviewPage] = useState("overview");
   const data = resource.data;
   const changes = useMemo(() => data ? curationPreviewChanges(data, item?.changed_fields || []) : [], [data, item?.changed_fields]);
   const selectedChange = changes.find(change => change.module_id === moduleId) || changes[0];
   const surface = data?.perspectives[perspective];
-  const anchorQuery = selectedChange ? `?${new URLSearchParams({ page: selectedChange.pageId, module: selectedChange.preview_anchor || selectedChange.module_id })}` : "";
+  const anchorQuery = topicReference ? `?${new URLSearchParams({page:previewPage})}` : selectedChange ? `?${new URLSearchParams({ page: selectedChange.pageId, module: selectedChange.preview_anchor || selectedChange.module_id })}` : "";
   const href = perspective === "published" ? (data?.perspectives.published.available ? data.preview_routes.published : "") || (issue.data?.public_url?.startsWith("/recommendations/") ? issue.data.public_url : "") || (item?.object_type === "site_content" ? "/about" : "") : type && item ? `/admin/preview/knowledge/${type}/${item.object_id}${anchorQuery}` : item?.object_type === "recommendation_issue" ? `/admin/recommendations/issues/${item.object_id}/preview` : item?.object_type === "site_content" ? "/admin/about/preview" : "";
   const frameHref = !type && href ? href.startsWith("/admin/") ? `${href}?embed=1` : href : "";
   const edit = item && safeAdminHref(item.edit_url, "");
   return <aside className="selected-work-preview curation-selection-preview" aria-label="选中内容的读者预览">
-    <header><h2>选中内容的读者预览</h2><p>对比修改后的效果，确认无误后继续编辑。</p></header>
-    <div className="selected-preview-tools"><div role="group" aria-label="预览内容">{(["draft", "published"] as const).map(value => <button type="button" key={value} aria-pressed={perspective === value} onClick={() => setPerspective(value)}>{value === "draft" ? "修改后" : "当前线上"}</button>)}</div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div>{href ? <Link href={href} target="_blank"><Maximize2 size={15}/>放大查看</Link> : null}</div>
-    <div className={`selected-preview-caption ${comparisonStyles.caption}`}><span>{item ? `当前查看：${item.label} › ${item.title}` : "选择待发布的页面修改"}</span>{selectedChange ? <><span>›</span>{changes.length > 1 ? <select aria-label="查看修改区域" value={selectedChange.module_id} onChange={event => setModuleId(event.target.value)}>{changes.map(change => <option value={change.module_id} key={change.module_id}>{change.display_name}</option>)}</select> : <span>{selectedChange.display_name}</span>}</> : null}{item ? <small>{perspective === "draft" ? "已保存草稿 · 尚未发布" : "当前线上内容"}</small> : null}</div>
+    <header><h2>{topicReference ? "已保存内容预览" : "选中内容的读者预览"}</h2><p>{topicReference ? "这是读者会看到的主题页面效果。" : "对比修改后的效果，确认无误后继续编辑。"}</p>{topicReference ? <Link className="topic-preview-return button secondary" href={returnTo}><ArrowLeft size={15}/>返回主题列表</Link> : null}</header>
+    <div className="selected-preview-tools">{topicReference ? <strong>读者会看到什么</strong> : null}<div role="group" aria-label="预览内容">{(["draft", "published"] as const).map(value => <button type="button" key={value} aria-pressed={perspective === value} disabled={topicReference && value === "published" && !data?.perspectives.published.available} onClick={() => setPerspective(value)}>{value === "draft" ? "修改后" : "当前线上"}</button>)}</div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div>{href ? <Link href={href} target="_blank"><Maximize2 size={15}/>放大查看</Link> : null}</div>
+    <div className={`selected-preview-caption ${comparisonStyles.caption}`}>{topicReference ? <label>当前预览：<select aria-label="主题预览位置" value={previewPage} onChange={event=>setPreviewPage(event.target.value)}>{[["overview","主题首页"],["questions","研究问题"],["works","入门阅读"],["scholars","代表学者"]].map(([value,label])=><option value={value} key={value}>{label}{item ? `（${item.title}）` : ""}</option>)}</select></label> : <><span>{item ? `当前查看：${item.label} › ${item.title}` : "选择待发布的页面修改"}</span>{selectedChange ? <><span>›</span>{changes.length > 1 ? <select aria-label="查看修改区域" value={selectedChange.module_id} onChange={event => setModuleId(event.target.value)}>{changes.map(change => <option value={change.module_id} key={change.module_id}>{change.display_name}</option>)}</select> : <span>{selectedChange.display_name}</span>}</> : null}{item ? <small>{perspective === "draft" ? "已保存草稿 · 尚未发布" : "当前线上内容"}</small> : null}</>}</div>
     {issue.error ? <p role="alert">{issue.error}<button type="button" onClick={issue.retry}>重新读取文章公开状态</button></p> : null}
     {resource.error ? <p role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取预览</button></p> : null}
     <div className={`selected-preview-viewport ${device}`}>
-      {type && resource.loading ? <p role="status">正在读取已保存内容…</p> : data && surface?.available ? <><PreviewViewport device={device}><CurationPreviewComparison payload={data} change={selectedChange} perspective={perspective}/></PreviewViewport>{surface.unsupported_preview_fields?.length ? <p role="status">以下内容尚未提供预览：{surface.unsupported_preview_fields.join("、")}</p> : null}</> : frameHref ? <PreviewViewport device={device}><iframe src={frameHref} title={`${item?.title || "选中页面"}预览`} style={{ width: "100%", height: 1100, border: 0 }}/></PreviewViewport> : <p className="empty-state">—</p>}
+      {type && resource.loading ? <p role="status">正在读取已保存内容…</p> : data && surface?.available ? <><PreviewViewport device={device}>{topicReference ? <div inert><PreviewSurface payload={{...data,active_perspective:perspective,perspective:surface}} pageId={previewPage}/></div> : <CurationPreviewComparison payload={data} change={selectedChange} perspective={perspective}/>}</PreviewViewport>{surface.unsupported_preview_fields?.length ? <p role="status">以下内容尚未提供预览：{surface.unsupported_preview_fields.join("、")}</p> : null}</> : frameHref ? <PreviewViewport device={device}><iframe src={frameHref} title={`${item?.title || "选中页面"}预览`} style={{ width: "100%", height: 1100, border: 0 }}/></PreviewViewport> : <p className="empty-state">—</p>}
     </div>
-    {item?.can_edit && edit ? <footer><Link className="button" href={withAdminReturn(edit, returnTo)}>打开该页面继续编辑</Link></footer> : null}
+    {!topicReference && item?.can_edit && edit ? <footer><Link className="button" href={withAdminReturn(edit, returnTo)}>打开该页面继续编辑</Link></footer> : null}
   </aside>;
 }
