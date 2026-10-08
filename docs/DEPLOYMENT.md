@@ -1,5 +1,13 @@
 # 部署说明
 
+## 2026-10-08 4f8cf20实际隔离候选及本地来源阅读
+
+候选4f8cf20a7efc91d0723b898c111492dd38eadd0f，tree e07c696de7c6ba14b1eb54e883e200d5e4b66323，开发分支已推送。源码1416文件/压缩4836317字节/源码16517427字节，归档SHA256 8093aa274b37f1815385017065cc5c331fedc0274a029545cadd6feb7897ec6f。API ba80fb30ea18119e0c529ae938179540ac2115a44572e7e762e6892ad464e830，Web bf70cf5017e2806bcdfe247622a98354be284d004fa30955101ec9a029826bbb。166项PG、迁移/nginx/刷新退出0，初次4f刷新无启动502；无schema改动，main/生产未切换。
+
+真实来源PDF的本地交付仅在19091隔离候选修正：确认数据库library_v3091_rehearsal/主机stl-v3091-release-restore，非公网发布/不强制云存储；只启用browser-api.env的ALLOW_LOCAL_PUBLIC_ASSET_ACCESS。原环境600权限备份browser-api-before-local-reader-4f8cf20a7e.env、原API回退容器stl-v3091-ui-api-before-local-reader-4f8cf20a7e，均在既有候选记录范围。先运行tests/test_asset_content_access_v301.py的12项PG检查（4访问状态×匿名/读者/管理员）通过，再只重建同镜像候选API；此API重启一次启动502后就绪，Web/Edge未变。
+
+资产8f63cf91-a335-4ca3-bcf2-e34c65cb1884，24294772字节，SHA256 0efa66cdb87a82d26525c46e9a39218a54eeafb97819340ba94d9214be1354d9前后一致。文件、生产数据库/配置/云交付和既有权限过滤未改。普通浏览器access200/PDF200及Range206/worker200，第8页485×715画布渲染结束、无错误并查看像素截图；原生文字层空，OCR文字层待核实。日志browser-reader-before/after/permissions/ready-4f8cf20a7e位于既有deploy-record；普通UI证据web/output/playwright/4f8cf20/23-reader-completion-evidence.txt及截图。59图最终验收和正式公网3.0.9.1仍待，发布前需新鲜备份/保护摘要/索引队列和回退确认。
+
 ## 2026-10-08 f3b8540隔离运行与图22/23保存往返已核
 
 f3b8540b634538630b4ba9c778282e680beacd45已推送/准确NAS构建；166项PG（72+72+22通过符号）、迁移检查/nginx/刷新退出0，启动一次502后就绪。API c1b5a0199b2408ddecfa4a38d2937e2b00a2be84cc56a64421a98cf8c8d5c930，Web 9249807fa9f3af2d57c044f08b2e4dead9060a9eba7a3656c6cb07b425cba4d8，源包SHA匹配a297b769b2e07e8b8884ad3b510dd3fe5a0ef2cc8e7bd40a67df0fb640fc2bb8，重启0。普通Edge浏览器重新登录成功；首登录脚本动态import不受CLI虚拟机支持，改为普通表单填写并清理瞬时凭据副本，未注入会话或直接调用登录API。
