@@ -1936,7 +1936,7 @@ class TopicDetailView(generics.RetrieveAPIView):
             many=True,
             context={"request": request},
         ).data
-        authenticated = bool(request.user.is_authenticated)
+        authenticated = bool(request and request.user.is_authenticated)
         staff = bool(
             authenticated
             and (

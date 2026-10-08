@@ -20,6 +20,18 @@ const { DisciplinePublicView } = await import("../components/public/discipline-p
 const { KnowledgeNodePublicView } = await import("../components/public/knowledge-node-public-view.tsx");
 const { TheoryTimelinePublicList } = await import("../components/public/theory-timeline-public-view.tsx");
 const { TopicQuestionsPublicView } = await import("../components/public/topic-public-view.tsx");
+const { TopicWorksEditor } = await import("../components/admin/knowledge/topic-works-editor.tsx");
+
+test("topic reading keeps every saved Work selection and exposes the shared library picker", () => {
+  const selected=["one","two","three","four","legacy-five"];
+  const suggestions=selected.map(id=>({id,title:`已保存文献 ${id}`}));
+  const html=renderToStaticMarkup(React.createElement(TopicWorksEditor,{selected,suggestions,works:[],onChange:()=>{},onResolve:()=>{}}));
+  assert.equal((html.match(/data-work-id=/g)||[]).length,5);
+  assert.match(html,/已保存文献 legacy-five/);
+  assert.match(html,/选择第 5 本入门文献/);
+  assert.match(html,/添加入门文献/);
+  assert.doesNotMatch(html,/建立 PDF 关联|重要文献|推荐说明/);
+});
 
 test("topic questions retain all legacy titles and use real destinations without inventing explanations", () => {
   const topic={id:"topic",slug:"institutions",name:"制度主题",description:"保存的简介",problemStatement:"保存的问题陈述",heroImage:"",coreQuestions:["问题一？","问题二？","问题三？","旧问题四？"],works:[],curated:{foundationalWorks:[]}};

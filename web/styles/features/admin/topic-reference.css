@@ -24,11 +24,11 @@
 .is-topic-reference-editor .fixed-editor-sections>button+button::before { content:"";position:absolute;left:0;top:14px;height:18px;border-left:1px solid var(--admin-v2-line); }
 .is-topic-reference-editor .fixed-editor-sections>button[aria-current] { color:var(--admin-v2-ink);font-weight:600; }
 .is-topic-reference-editor .fixed-editor-sections>button[aria-current]::after { content:"";position:absolute;bottom:0;left:4px;right:20px;height:2px;background:var(--admin-v2-ink); }
-.is-topic-reference-editor .fixed-editor-fields { flex:1;padding:18px 15px 6px;min-width:0; }
+.is-topic-reference-editor .fixed-editor-fields { flex:1;padding:18px 15px 4px;min-width:0; }
 .is-topic-reference-editor .fixed-editor-fields form { display:block; }
-.topic-reference-questions>h2 { margin:0;font:600 20px/28px var(--stl-type-serif); }
-.topic-reference-questions>p { margin:3px 0 16px;color:var(--admin-v2-muted);font:14px/22px var(--stl-type-serif); }
-.topic-reference-question-list { display:grid;gap:14px; }
+.admin-shell .is-topic-reference-editor .topic-reference-questions>h2 { margin:0;font:600 20px/28px var(--stl-type-serif); }
+.topic-reference-questions>p { margin:3px 0 15px;color:var(--admin-v2-muted);font:14px/22px var(--stl-type-serif); }
+.topic-reference-question-list { display:grid;gap:13px; }
 .topic-reference-question { border:1px solid var(--admin-v2-line);border-radius:2px;background:var(--admin-v2-surface); }
 .topic-reference-question>header { display:flex;align-items:center;gap:9px;min-height:41px;padding:0 12px;background:var(--admin-v2-wash); }
 .topic-reference-question>header strong { font:600 16px/24px var(--stl-type-serif); }
@@ -40,10 +40,28 @@
 .is-topic-reference-editor .topic-reference-question label:last-of-type { margin-bottom:0; }
 .topic-reference-question label b { color:#b74432;font-weight:400; }
 .is-topic-reference-editor .topic-reference-question input { min-height:37px;height:37px;border-radius:2px;padding:7px 11px;font:15px/22px var(--stl-type-serif); }
-.is-topic-reference-editor .topic-reference-question textarea { min-height:89px;height:89px;border-radius:2px;padding:9px 11px;font:15px/22px var(--stl-type-serif);opacity:1; }
+.is-topic-reference-editor .topic-reference-question textarea { min-height:88px;height:88px;border-radius:2px;padding:9px 11px;font:15px/22px var(--stl-type-serif);opacity:1; }
 .topic-question-count { display:block;height:16px;text-align:right;color:var(--admin-v2-muted);font:11px/16px var(--stl-type-serif); }
 .topic-reference-questions>.topic-question-add { display:flex;align-items:center;gap:6px;min-height:29px;margin-top:12px;padding:3px 10px;border:1px solid var(--admin-v2-line);border-radius:2px;background:var(--admin-v2-surface);font:13px/20px var(--stl-type-serif); }
 .topic-question-add span { color:var(--admin-v2-muted);font-size:12px; }
+.admin-shell .is-topic-reference-editor .topic-reference-works>h2 { margin:0;font:600 20px/28px var(--stl-type-serif); }
+.topic-reference-works>p { margin:3px 0 15px;color:var(--admin-v2-muted);font:14px/22px var(--stl-type-serif); }
+.topic-reference-works>ol { list-style:none;margin:0;padding:0;display:grid;gap:13px; }
+.topic-reference-works li { border:1px solid var(--admin-v2-line);border-radius:2px;background:var(--admin-v2-surface);min-width:0; }
+.topic-reference-works li>header { display:flex;align-items:center;gap:9px;min-height:41px;padding:0 12px;background:var(--admin-v2-wash); }
+.topic-reference-works li>header strong { font:600 16px/24px var(--stl-type-serif); }
+.topic-reference-works li>header button { display:flex;padding:0;border:0;border-radius:0;background:none;color:var(--admin-v2-muted);font:12px/20px var(--stl-type-serif); }
+.topic-reference-works li>header button[draggable] { cursor:grab; }
+.topic-reference-works li>header button:last-child { margin-left:auto; }
+.topic-reference-work-book { display:flex;gap:14px;padding:14px;min-width:0; }
+.topic-reference-work-book>span { width:70px;height:105px;flex:none;background:var(--admin-v2-wash); }
+.topic-reference-work-book img { width:100%;height:100%;object-fit:cover; }
+.topic-reference-work-book>div { min-width:0; }
+.topic-reference-work-book button { padding:0;border:0;border-radius:0;background:none;text-align:left;font:600 16px/24px var(--stl-type-serif);overflow-wrap:anywhere; }
+.topic-reference-work-book p { margin:4px 0 0;color:var(--admin-v2-muted);font:13px/20px var(--stl-type-serif); }
+.topic-reference-works .workflow-entity-picker { margin:0 14px 14px;min-width:0; }
+.topic-reference-works .workflow-entity-picker select { width:100%;min-width:0; }
+.topic-reference-works>.topic-work-add { display:flex;align-items:center;gap:6px;min-height:29px;margin-top:12px;padding:3px 10px;border:1px solid var(--admin-v2-line);border-radius:2px;background:var(--admin-v2-surface);font:13px/20px var(--stl-type-serif); }
 .is-topic-reference-editor .knowledge-reference-step-actions { display:flex;align-items:center;gap:14px;flex-wrap:nowrap;margin-top:auto;padding:12px 16px 14px;border-top:1px solid var(--admin-v2-line); }
 .is-topic-reference-editor .knowledge-reference-step-actions>.button { min-height:37px;margin:0;padding:7px 16px;border-radius:2px;font:15px/21px var(--stl-type-serif);white-space:nowrap; }
 .is-topic-reference-editor .knowledge-reference-step-actions>.topic-reference-save { margin-left:auto; }
@@ -133,7 +151,7 @@
 .topic-reference-question-layout aside .book-meta .eyebrow { display:none; }
 .topic-reference-question-layout aside .book-meta h3 { font:20px/28px var(--stl-type-serif); }
 .topic-reference-question-layout aside .book-author,.topic-reference-question-layout aside .muted-row { font:18px/27px var(--stl-type-serif); }
-.fixed-preview-document .topic-reference-public { margin:0;max-width:none; }
+.fixed-preview-document[data-ui-scope="editorial-v2"] .topic-reference-public.page-shell { width:100%;margin:0;max-width:none;padding:0; }
 .fixed-preview-document .topic-reference-bookmark { display:none; }
 .fixed-preview-document .topic-reference-public [data-edit-active=true] { outline:none; }
 .fixed-preview-document .topic-reference-question-content[data-edit-active=true] article[data-selected=true] { border-color:var(--admin-v2-focus); }

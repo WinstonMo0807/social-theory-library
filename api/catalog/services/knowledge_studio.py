@@ -877,14 +877,12 @@ class KnowledgeObjectEditorAdapter:
             # The real Topic endpoint adds approved works, scholars and
             # passages after its base serializer. Reuse that same producer,
             # rather than reporting a registered but empty preview module.
-            from django.contrib.auth.models import AnonymousUser
-            from django.test import RequestFactory
             from catalog.views import TopicDetailView
-            request = RequestFactory().get(f"/api/catalog/topics/{target.slug}/")
-            request.user = AnonymousUser()
             view = TopicDetailView()
-            view.request, view.format_kwarg, view.kwargs = request, None, {}
-            serialized = dict(view.public_payload(target, request))
+            # Internal serialization has no HTTP host. Keep media URLs relative
+            # and apply the same anonymous access rules as the public producer.
+            view.request, view.format_kwarg, view.kwargs = None, None, {}
+            serialized = dict(view.public_payload(target, None))
         else:
             serialized = dict(serializer_class(target, context={}).data)
         if object_type == "theory":

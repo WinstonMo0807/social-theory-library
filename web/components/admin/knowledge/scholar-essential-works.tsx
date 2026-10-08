@@ -35,8 +35,9 @@ export async function loadLibraryWorkPreview(id: string, signal?: AbortSignal) {
   return { option: { id, title: row.title }, work: payload.work };
 }
 
-export function ScholarWorkPicker({ index, current, selected, suggestions, onSelect, onClose }: {
+export function ScholarWorkPicker({ index, current, selected, suggestions, itemLabel = "重要文献", onSelect, onClose }: {
   index: number; current: string; selected: string[]; suggestions: Option[];
+  itemLabel?: string;
   onSelect: (option: Option) => void; onClose: () => void;
 }) {
   const inputId = useId();
@@ -64,9 +65,9 @@ export function ScholarWorkPicker({ index, current, selected, suggestions, onSel
   const available = (option: Option) => option.id === current || !selected.includes(option.id);
   const suggested = suggestions.filter(available);
   const rows = (data?.results ?? []).filter(available);
-  return <div className="workflow-entity-picker" role="group" aria-label={`选择第 ${index + 1} 本重要文献`} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
+  return <div className="workflow-entity-picker" role="group" aria-label={`选择第 ${index + 1} 本${itemLabel}`} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
     <label htmlFor={inputId}>搜索馆藏</label><input ref={input} id={inputId} type="search" value={search.query} placeholder="书名、作者或 ISBN" onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} onChange={event => setSearch({ query: event.target.value, page: 1 })}/>
-    <select aria-label={`第 ${index + 1} 本重要文献搜索结果`} value="" onChange={event => {
+    <select aria-label={`第 ${index + 1} 本${itemLabel}搜索结果`} value="" onChange={event => {
       const option = [...suggested, ...rows].find(row => row.id === event.target.value);
       if (option) onSelect(option);
     }}><option value="">选择馆藏文献</option>{suggested.length ? <optgroup label="建议馆藏">{suggested.map(row => <option key={row.id} value={row.id}>{row.title || row.name}</option>)}</optgroup> : null}

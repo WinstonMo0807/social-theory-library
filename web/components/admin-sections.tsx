@@ -42,6 +42,7 @@ import { ScholarPortraitPanel } from "@/components/admin/media/scholar-portrait-
 import { PromptRegistryAdmin } from "@/components/prompt-registry-admin";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { TopicQuestionsEditor } from "@/components/admin/knowledge/topic-questions-editor";
+import { TopicWorksEditor } from "@/components/admin/knowledge/topic-works-editor";
 import { ScholarEssentialWorks } from "@/components/admin/knowledge/scholar-essential-works";
 import { SavedEditionCover } from "@/components/admin/preview/selected-work-preview";
 import directoryStyles from "./admin/knowledge/directory-lists.module.css";
@@ -341,6 +342,7 @@ export function TaxonomyAdmin({
     name: createName,
   });
   const topicBaseline = useRef<TaxonomyDraft | null>(null);
+  const [topicPreviewWorks, setTopicPreviewWorks] = useState<ApiWork[]>([]);
   const [message, setMessage] = useState("");
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const unsaved = useRef(false);
@@ -692,7 +694,7 @@ export function TaxonomyAdmin({
           ) : null}
         </section> : null}
         {!editorOnly && mode === "topic" ? <CurationSelectionPreview key={selectedTopic?.id || "empty-topic"} item={selectedTopic ? { object_type: "topic", object_id: selectedTopic.id, title: selectedTopic.name, label: "主题", edit_url: `/admin/topics/${selectedTopic.id}`, can_edit: true } : undefined} returnTo="/admin/topics"/> : null}
-        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} presentation={draft.kind === "topic" ? "topic" : "sections"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form id={draft.kind === "topic" ? "topic-reference-form" : undefined} className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
+        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} presentation={draft.kind === "topic" ? "topic" : "sections"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft.kind === "topic" ? { ...draft, previewWorks: topicPreviewWorks } : draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form id={draft.kind === "topic" ? "topic-reference-form" : undefined} className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
           {draft.kind !== "topic" ? <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p> : null}
           <EditorialPrefillNotice state={prefills} />
           <header data-editor-section={draft.kind === "topic" ? "publication" : undefined}>
@@ -795,13 +797,13 @@ export function TaxonomyAdmin({
           <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
-            <CuratedSelector
-              label={draft.kind === "topic" ? "入门阅读" : "奠基文献"}
+            {draft.kind === "topic" ? <TopicWorksEditor key={draft.id || "new"} selected={draft.primaryWorkIds} suggestions={draft.suggestions.works ?? []} works={topicPreviewWorks} onChange={primaryWorkIds => setDraft({ ...draft, primaryWorkIds })} onResolve={setTopicPreviewWorks}/> : <CuratedSelector
+              label="奠基文献"
               data-editor-section="works"
               options={draft.suggestions.works ?? []}
               selected={draft.primaryWorkIds}
               onChange={(primaryWorkIds) => setDraft({ ...draft, primaryWorkIds })}
-            />
+            />}
             <CuratedSelector
               label={draft.kind === "theory" ? "人工推荐书目" : "最近入库"}
               data-editor-section={draft.kind === "topic" ? "unmatched" : "works"}
@@ -856,7 +858,7 @@ export function TaxonomyAdmin({
             onChange={(value) => setDraft({ ...draft, mapLines: formatEditorRows(value, ["source", "target", "relation", "description"]) })}
           /> : null}
           {draft.kind === "topic" ? (
-            <fieldset className="reading-path-editor">
+            <fieldset className="reading-path-editor" data-editor-section="unmatched">
               <legend>人工编排的阅读路径</legend>
               <p>每条路径独立选择文献，不再自动复用奠基文献。</p>
               {draft.readingPaths.map((path, index) => (

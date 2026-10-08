@@ -1,5 +1,17 @@
 # 部署说明
 
+## 2026-10-08 3ffa087准确隔离运行，主题测试草稿201
+
+3ffa08763dbf1bd238e6dca5e547a9cf6ce95a35/tree b62f2915dd71bf6f5846a47f53ac1fa8066a5e5b已NAS准确构建/刷新；166项PG（72+72+22）、迁移/nginx/刷新退出0，本次无启动502。API b33ed53398f6c9020d5b33ae6636abfaf31d4569cfdc185de4ca0d5e51a7e9c3、Web 58b0f9ed6092c2dcedbaafe08f71e1d4557d0b56518ca76bf7713710dd80d6ee，准确commit标签且重启0；源码包NAS摘要与本地一致。main/生产未切换。
+
+普通UI从主题列表新建自己的d72e3ceb-5524-4647-b690-b9fa8825b19f，名称隔离主题界面验收（完成后回收），返回201/draft并进入实际对象地址；slug item-4429965801433690721。仅输入明确隔离说明/问题陈述，未公开，正在问题编辑/排序/刷新/预览验证。该主题与原有自己的1关系/2事件均待普通UI清理；52待核实/7部分核实/严格验收0。证据web/output/playwright/3ffa087/26-create-evidence.txt。
+
+## 2026-10-08 3ffa087冻结推送，隔离构建中
+
+源码3ffa08763dbf1bd238e6dca5e547a9cf6ce95a35/tree b62f2915dd71bf6f5846a47f53ac1fa8066a5e5b已冻结并推送开发分支；首次GitHub TLS握手失败，重新核对远端仍6e906ce后重试成功。18文件暂存源码/敏感内容扫描和diff检查退出0，最后Web构建再次退出0。准确归档1420文件/4853007字节/源码16575482字节，SHA256 21b5eebea9ee00baa5d684444d646602dd3712cdea569c952d6b03f0f97125aa，NAS安装后实际摘要一致。
+
+NAS隔离构建已启动；浏览器候选仍6e906ce，166项PG、迁移/nginx/刷新和25/26普通UI待本轮实测。生产/main未切换，自己的1关系/2事件仍待UI清理。59图52待核实/7部分核实/完整验收0。下一步按准确镜像验证并正常UI新建、保存/排序/刷新/390px/回收自己的主题草稿，同时复核23年份。
+
 ## 2026-10-08 6e906ce当前实际隔离候选
 
 6e906ce11bea1a6a499bbed440928582c67315e2/tree 0e97593ad2f9936c6a7af2abe70bfc18c5bda7f3已推送开发分支并实际刷新。归档1416文件/4840542字节/源码16527106字节，实际NAS SHA256 ffaecc9231789bbdba2de56bca7ebd2664ae665c852cdc5773b630d54cf89bb4；API 216a59ef81e26174c7c40f1345cedb6a0ed1da618f8d2bded1c464ad4185f1de、Web 1caabf2ca94bce49fc6857a2bd03c643fc7ffed5cffbe2e15f2b2a39deb916aa，实际标签同commit/重启0。166项PG、迁移/nginx/刷新退出0，启动一次502后就绪；仅CSS/文档，无schema变更，main/生产未切换。既有候选本地阅读环境标志、隔离数据和旧候选回退入口保留。
