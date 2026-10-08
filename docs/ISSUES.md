@@ -1,5 +1,11 @@
 # 当前问题
 
+## 2026-10-08 主题图片测试响应重复关闭修正，待准确PG复核
+
+2c7cb8195a的准确NAS构建退出0，但168项PG中的两项新图片检查失败，刷新退出1且未切换容器。已核对实际API/Web仍5aba156cd839ccc60e80ea9074bf8f51f647ff2d、tree 8360d43724b79f11ee13e42a5e76d320d8116923、重启0；迁移检查退出0。日志在图片响应读取后的knowledge-workspace查询报PostgreSQL connection is closed。
+
+已核对Django ClientHandler/closing_iterator_wrapper：完整消费streaming_content会自动关闭响应并在关闭期间保护测试事务，之后手动再次close却会重复发出request_finished并关闭PG事务连接。只修正这三处测试用法，增加响应已关闭断言；全部图片实际字节、权限、公开过滤、替换地址/原图保留和公开图片409保护断言保留。两项独立内存SQLite检查退出0，日志.codex-deploy-temp/v3091-topic-image-lifecycle-check.log；Web产品源码未变化，沿用2c7cb81的39项前端/类型/lint（2提示）/构建验证。准确新PG和普通UI图片解码、入门阅读保存与25/26桌面/390px/放大仍待，自己的4条未公开记录待UI清理。无schema变更，59图52待核实/7部分核实/严格验收0，main/生产保持3.0.9。
+
 ## 2026-10-08 5aba156准确运行，主题图片404与文献页签修复待冻结
 
 5aba156cd839ccc60e80ea9074bf8f51f647ff2d/tree 8360d43724b79f11ee13e42a5e76d320d8116923已NAS准确构建刷新，168项PG（72+72+24）、迁移检查/nginx/刷新退出0。API 69e4227db3885474ad82b1a90bce8c0da6729359201f90d82d57ef648b65d81b，Web 325e41f7b40899a4da7c10426043dae40617d88f157cd489135318ba296ac4de，准确标签/重启0。main/生产未切换。

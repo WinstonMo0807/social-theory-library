@@ -42,7 +42,9 @@ def test_topic_image_preview_has_no_synthetic_host_and_preserves_public_access(
     assert private_image["Content-Type"] == "image/png"
     assert private_image["Cache-Control"] == "private, no-store"
     assert b"".join(private_image.streaming_content) == image.getvalue()
-    private_image.close()
+    # APIClient closes streaming responses on exhaustion while preserving its
+    # test transaction; closing again emits a second request_finished signal.
+    assert private_image.closed
     workspace = api_client.get(
         "/api/catalog/admin/knowledge-workspace/",
         {"object_type": "topic", "selected_type": "topic", "selected_id": str(topic.pk)},
@@ -63,7 +65,7 @@ def test_topic_image_preview_has_no_synthetic_host_and_preserves_public_access(
     assert public_image.status_code == (200 if status == "published" else 404)
     if status == "published":
         assert b"".join(public_image.streaming_content) == image.getvalue()
-        public_image.close()
+        assert public_image.closed
     api_client.force_authenticate(user=admin_user)
     detail = api_client.get(f"/api/catalog/admin/topics/{topic.pk}/", HTTP_HOST="library.test")
     before_url = detail.data["hero_image"]
@@ -83,6 +85,6 @@ def test_topic_image_preview_has_no_synthetic_host_and_preserves_public_access(
         changed_image = api_client.get(replaced.data["hero_image"], HTTP_HOST="library.test")
         assert changed_image.status_code == 200
         assert b"".join(changed_image.streaming_content) == updated.getvalue()
-        changed_image.close()
+        assert changed_image.closed
     else:
         assert (topic.hero_image.name, topic.editorial_status, topic.core_questions) == before
