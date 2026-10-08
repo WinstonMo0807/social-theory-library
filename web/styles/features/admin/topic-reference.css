@@ -167,6 +167,8 @@
 .fixed-preview-document:has(.topic-reference-public) .site-header .header-search span { display:none; }
 
 /* Reference 27: the source is immutable; only editorial annotations are fields. */
+[data-ui-scope="editorial-v2"] .topic-evidence-reference-public.page-shell { display:block;min-height:0; }
+.fixed-preview-document[data-ui-scope="editorial-v2"] .topic-evidence-reference-public.page-shell { display:block;min-height:0; }
 .admin-content:has(.is-topic-evidence-reference) .admin-page-title { display:none; }
 .admin-content:has(.is-topic-evidence-reference) .taxonomy-layout.editor-only { display:block;max-width:none;margin:0; }
 .admin-content:has(.is-topic-evidence-reference) .knowledge-visual-editor { max-width:none;margin:0;padding:0; }

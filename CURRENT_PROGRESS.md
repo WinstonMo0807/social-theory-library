@@ -1,5 +1,19 @@
 # Social Theory Library 当前进度
 
+## 2026-10-08 ec908a9准确运行，图27高度反馈待修正候选
+
+ec908a96158c39d3387954c6b174bfca2926613b/tree f9eb93663f2d5d36153d349ac8790e38d2cc54b8准确NAS构建/刷新退出0，176项PG（72+72+32）、迁移/nginx退出0。API 34038a9f525c24a8e9fb6f5cc3be6956c27ff9c231b1fbe7d216db3c7480610b，Web 9604fcb4deaf3e4d59ec4dc8ce1fdaf847979f3b6b4e6c362824beb183fd5f71，准确commit/tree/源码摘要标签且重启0；源码包SHA与NAS一致。
+
+新27普通UI必填分组已阻止提交；首脚本定位了两个同文提示而失败，改为status后发现原文卡始终不稳定，保存未执行。实测iframe高度789146→789170、页面最小高度789068→789092，两帧又加24px，原文卡y526128→526144；旧secondary-detail-page视口最小高度加102px导航与自动内容高度反馈。源码仅为27公开/预览根改为内容流display:block/min-height:0，Web样式构建退出0（.codex-deploy-temp/v3091-evidence-height-build.log/.exit），即将冻结准确CSS候选，新浏览器验证仍待。自己的说明已由普通UI恢复原值，保存按钮禁用后离开不稳定页，没有写入此次测试说明。失败证据web/output/playwright/ec908a9/27-edit-save-responsive-final-evidence.txt和27-unstable.png保留。
+
+图27仍部分核实，49待核实/10部分核实/严格验收0。自己的未公开主题及其策展待回收，三条关系/事件已清理；main/生产仍3.0.9。下一项准确CSS候选、27稳定高度/预览定位/编辑保存/刷新/390px/放大、25右栏，然后继续28–31。
+
+## 2026-10-08 ec908a9冻结推送，图27候选构建中
+
+ec908a96158c39d3387954c6b174bfca2926613b/tree f9eb93663f2d5d36153d349ac8790e38d2cc54b8已推送开发分支。17文件暂存源码扫描/diff退出0，最终27项前端、8项独立SQLite、TypeScript/lint（1既有提示）/Web构建退出0。源码包1424文件/4892026字节/源码16700985字节，SHA256 ad90edf8b1ffa1e16a00ed1860c0617f440395aba2df00c2cd01540998a70501，NAS安装后摘要一致；隔离镜像构建中，浏览器实际仍cb81f37。
+
+新刷新工具已保留旧入口并安装LF版，原168项加8项策展保护共176，准确PG/迁移/nginx/图27新界面及25右栏实测尚待。自己的关系与两事件已清理，仅自己的未公开主题及其原文策展待本轮验证后回收；49待核实/10部分核实/严格验收0，main/生产仍3.0.9。
+
 ## 2026-10-08 图27原文保存刷新已核，参考重排与翻页修正待准确候选
 
 cb81f37普通UI选择真实弱者的武器Work/2011版本/508页normalized文件，原文查询200/244段，第8页馆内摘录保存PUT200，刷新GET200。请求仅edit_version/items及引用、分组、说明、顺序；原文724字、文件/版本/页码/文档修订身份和说明保留。自己的策展项61e7a13e/source 0d98a0cc，仍未公开；来源public_eligible=false、发布及线上预览禁用。原组合脚本被beforeunload中断，未标成完整通过；另用真实请求日志、只读响应及普通UI核实，证据web/output/playwright/cb81f37/27-source-readback-proof.json。图27改为部分核实，现59图49待核实/10部分核实（15/19/20/21/22/23/24/25/26/27）/严格验收0。
