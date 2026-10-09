@@ -40,7 +40,7 @@ export function Wordmark({ config: suppliedConfig }: { config?: SiteConfig }) {
   );
 }
 
-export function SiteHeader({ config: suppliedConfig, preview = false, previewPath, readingLayout }: { config?: SiteConfig; preview?: boolean; previewPath?: string; readingLayout?: "preview" }) {
+export function SiteHeader({ config: suppliedConfig, preview = false, previewPath, readingLayout, editablePreview = false }: { config?: SiteConfig; preview?: boolean; previewPath?: string; readingLayout?: "preview"; editablePreview?: boolean }) {
   const sharedConfig = use(SiteConfigContext);
   const config = suppliedConfig ?? sharedConfig;
   const currentPath = usePathname();
@@ -95,17 +95,17 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
 
   return (
     <header
-      inert={preview || undefined}
+      inert={(preview && !editablePreview) || undefined}
       data-edit-section={preview ? "brand" : undefined}
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
       data-reading-layout={readingContext || undefined}
     >
-      <Link className="logo-link" href="/" prefetch={false}>
+      <Link className="logo-link" href="/" prefetch={false} data-edit-field={preview ? "wordmark_lines" : undefined}>
         <Wordmark config={config} />
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
-        {navigation.map(([href, label]) => {
+        {navigation.map(([href, label], index) => {
           const active = href === "/"
             ? pathname === "/"
             : href === "/theories"
@@ -113,6 +113,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
               : pathname.startsWith(href);
           return (
             <Link
+              data-edit-field={preview ? ["home", "explore", "theory_schools", "scholars", "topics"][index] : undefined}
               aria-current={active ? "page" : undefined}
               className={active || (readingContext === "index" && href === "/") ? "active" : ""}
               href={href}

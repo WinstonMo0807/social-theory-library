@@ -20,6 +20,7 @@ import "../styles/features/admin/theory-reference.css";
 import "../styles/features/admin/relation-timeline-reference.css";
 import "../styles/features/admin/topic-reference.css";
 import "../styles/features/admin/site-system-reference.css";
+import "../styles/features/admin/site-content-reference.css";
 import "../styles/features/admin/processing-reference.css";
 import { SiteHeader, SiteConfigProvider } from "@/components/site-header";
 import { loadSiteConfig } from "@/lib/api/site.server";

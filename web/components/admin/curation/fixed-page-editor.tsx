@@ -65,7 +65,7 @@ export function PreviewViewport({ children, device }: { children: ReactNode; dev
 
 export type FixedEditorSection = { id: string; label: string; description?: string };
 export function FixedPageEditor({ sections, navigationSections = sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, publishedPreview, publishedHref, toolbar, previewToolbar, hideFieldHeading = false, previewFooter, fieldHeader, fieldHeading, expandIcon }: {
-  sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string) => void;
+  sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string, field?: string) => void;
   navigationSections?: FixedEditorSection[];
   fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; publishedPreview?: ReactNode; publishedHref?: string; toolbar?: ReactNode; previewToolbar?: ReactNode; hideFieldHeading?: boolean; previewFooter?: ReactNode | ((perspective:"draft" | "published") => ReactNode);
   fieldHeader?: ReactNode; fieldHeading?: string; expandIcon?: ReactNode;
@@ -85,7 +85,7 @@ export function FixedPageEditor({ sections, navigationSections = sections, activ
   }, [activeSection, preview]);
   function select(id: string, focus = false, field?: string) {
     if (!sections.some(section => section.id === id)) return;
-    onSectionChange(id);
+    onSectionChange(id, field);
     if (focus) window.requestAnimationFrame(() => {
       const groups = Array.from(fieldRef.current?.querySelectorAll<HTMLElement>(`[data-field-section="${CSS.escape(id)}"]`) || []);
       const controls = groups.length ? groups.flatMap(group=>Array.from(group.querySelectorAll<HTMLElement>("input,textarea,select,button"))) : Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []);
