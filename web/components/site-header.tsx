@@ -114,7 +114,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
           return (
             <Link
               aria-current={active ? "page" : undefined}
-              className={active ? "active" : ""}
+              className={active || (readingContext === "index" && href === "/") ? "active" : ""}
               href={href}
               key={href}
               prefetch={false}
