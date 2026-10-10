@@ -157,6 +157,31 @@
 @media(max-width:1150px){.dashboard-reference{grid-template-columns:1fr}.selected-preview-paper .selected-preview-viewport{max-height:660px}}
 @media(max-width:600px){.selected-preview-paper{padding:12px 8px}.selected-preview-location{flex-wrap:wrap}.selected-preview-paper .selected-preview-tools{gap:5px}.selected-preview-heading{padding:0;grid-template-columns:minmax(0,1fr)}.selected-preview-progress{min-width:0}.selected-preview-progress .reference-preview-steps li{font-size:11px}.selected-work-preview:has(.selected-preview-paper)>footer>.button{width:100%;min-width:0}}
 @media(max-width:1150px){.review-reference{grid-template-columns:1fr}}
+.library-reference .selected-work-preview[data-compact=true] { padding:12px 16px; border:0; border-left:1px solid var(--admin-v2-line); border-radius:0; }
+.library-reference .selected-preview-paper,.edition-reference .selected-preview-paper { padding:0; border:0; background:transparent; }
+.library-reference .selected-preview-paper-heading { padding:0 8px; }
+.library-reference .selected-preview-location { margin:8px 0 11px; }
+.library-reference .selected-preview-paper .selected-preview-viewport { height:810px; max-height:none; min-height:0; }
+.edition-reference .selected-work-preview[data-compact=true] { padding:14px; top:66px; }
+.edition-reference .selected-preview-paper-heading { flex-wrap:wrap; gap:12px; }
+.admin-shell .edition-reference .selected-preview-paper-heading h2 { font-size:20px; line-height:1.4; }
+.edition-reference .selected-preview-paper .selected-preview-viewport { height:688px; max-height:none; min-height:0; }
+.admin-shell .edition-reference > .admin-page-title { min-height:82px; margin:0 0 18px; padding:0 16px; border:0; }
+.admin-shell .edition-reference > .admin-page-title h1 { margin:0; font-size:36px; line-height:1.3; }
+.admin-shell .edition-reference > .admin-page-title span { display:block; margin-top:4px; font-size:16px; line-height:1.7; }
+@media(min-width:1160px) {
+  .dashboard-reference { grid-template-columns:minmax(0,.57fr) minmax(0,1fr); gap:20px; }
+  .library-reference { grid-template-columns:minmax(0,.8fr) minmax(0,1.18fr); gap:22px; }
+  .admin-shell:has(.library-reference) { --stl-container-admin-sidebar:199px; }
+  .admin-shell:has(.edition-reference) { --stl-container-admin-sidebar:188px; }
+  .admin-shell:has(:is(.library-reference,.edition-reference)) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(:is(.library-reference,.edition-reference)) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.library-reference) .admin-content { padding:22px 16px 30px 24px; }
+  .admin-shell:has(.edition-reference) .admin-content { padding:26px 12px 30px; }
+  .edition-reference-columns { grid-template-columns:minmax(0,.79fr) minmax(0,.82fr) minmax(0,1.5fr); gap:12px; }
+  .edition-reference-columns > .admin-panel { min-height:837px; padding:14px; }
+}
+@media(max-width:650px) { .library-reference .selected-work-preview[data-compact=true] { padding:12px 8px; border-left:0; } .library-reference .selected-preview-paper .selected-preview-viewport,.edition-reference .selected-preview-paper .selected-preview-viewport { height:600px; max-height:75vh; } .admin-shell .edition-reference > .admin-page-title { min-height:0; padding:0; } .admin-shell .edition-reference > .admin-page-title h1 { font-size:30px; } }
 @media(max-width:650px){.library-reference .work-library-row{grid-template-columns:minmax(0,1fr) auto;gap:14px}.reference-reader-actions{grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap}.reference-reader-actions strong{width:100%}.reference-library-actions{grid-column:2;grid-row:1}.review-reference .admin-v307-review-table>header{display:none}.review-reference .admin-v307-review-table>article{grid-template-columns:minmax(0,1fr) auto}.review-reference .reference-book-heading{grid-column:1/-1}.review-reference .reference-queue-issue{grid-column:1}.review-reference .reference-queue-actions{grid-column:2;grid-row:2/4}.reference-preview-steps{gap:8px}.reference-preview-steps li{font-size:11px}}
 
 @media(max-width:650px){.curation-reference .admin-v307-review-table>header{display:none}.curation-reference .admin-v307-review-table>article{grid-template-columns:minmax(0,1fr) 96px}.curation-reference .admin-v307-review-table>article>div:nth-child(3){grid-column:1}.curation-reference .admin-v307-review-table>article>div:last-child{grid-column:2;grid-row:1/3}.curation-reference .admin-v307-review-table>article>div:nth-child(2){grid-column:1}.curation-reference .admin-v307-review-table .reference-select-title{font-size:18px}}

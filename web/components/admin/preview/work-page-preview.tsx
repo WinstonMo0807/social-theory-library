@@ -9,6 +9,7 @@ import { PreviewViewport } from "../curation/fixed-page-editor";
 import styles from "./work-preview.module.css";
 import { ActionButton, AsyncStatus } from "@/components/action-feedback";
 import { WorkDetailView } from "@/components/work-detail-view";
+import type { WorkDetailPresentation } from "@/components/work-detail-tabs";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import type { Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
@@ -74,11 +75,13 @@ export function AdminWorkPagePreview({
   footer,
   embedded = false,
   embeddedView = "details",
+  embeddedPresentation = "contents",
 }: {
   editionId: string;
   footer: ReactNode;
   embedded?: boolean;
   embeddedView?: "details" | "card";
+  embeddedPresentation?: WorkDetailPresentation;
 }) {
   const routeParams = useSearchParams();
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
@@ -138,7 +141,7 @@ export function AdminWorkPagePreview({
   const page = <><SiteHeader preview previewPath={`/works/${work.slug}`}/>
     <WorkDetailView
       work={work}
-      presentation={isEmbedded ? "contents" : "publication"}
+      presentation={isEmbedded ? embeddedPresentation : "publication"}
       footer={footer}
       preview={{
         publicationState: payload.publication_state,

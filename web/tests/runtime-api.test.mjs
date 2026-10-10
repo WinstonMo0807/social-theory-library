@@ -9,6 +9,7 @@ import {
 } from "../lib/runtime-api.ts";
 import { GET as redirectTheorySchoolDetail } from "../app/admin/theory-schools/[entityId]/route.ts";
 import { GET as redirectTheorySchools } from "../app/admin/theory-schools/route.ts";
+import { apiBlob } from "../lib/api.ts";
 
 const lanLocation = {
   protocol: "http:",
@@ -16,6 +17,35 @@ const lanLocation = {
   port: "18080",
   origin: "http://192.168.5.6:18080",
 };
+
+test("protected PDF and image URLs retain exactly one API prefix and cookie authentication", async () => {
+  const previousWindow = globalThis.window;
+  const previousFetch = globalThis.fetch;
+  globalThis.window = { location: lanLocation };
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, credentials: options.credentials, authorization: options.headers.get("Authorization") });
+    return new Response("%PDF-unit-fixture", { headers: { "Content-Type": "application/pdf" } });
+  };
+  try {
+    for (const url of [
+      "/api/distribution/admin/assets/exact-asset/preview/",
+      "/distribution/admin/assets/exact-asset/preview/",
+      "https://192.168.5.6/api/distribution/admin/assets/exact-asset/preview/",
+    ]) {
+      const blob = await apiBlob(url, "cookie-session");
+      assert.equal(blob.type, "application/pdf");
+    }
+    assert.deepEqual(calls, Array.from({ length: 3 }, () => ({
+      url: "/api/distribution/admin/assets/exact-asset/preview/",
+      credentials: "include",
+      authorization: null,
+    })));
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow;
+  }
+});
 
 test("DX4600 LAN ports keep authentication and API traffic on the edge origin", () => {
   assert.equal(inferBrowserApiBase(lanLocation), "/api");

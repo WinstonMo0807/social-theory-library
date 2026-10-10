@@ -384,7 +384,7 @@ export async function apiBlob(
   if (token && token !== COOKIE_SESSION) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  const url = /^https?:\/\//i.test(pathOrUrl)
+  const url = pathOrUrl.startsWith("/api/") || /^https?:\/\//i.test(pathOrUrl)
     ? normalizePublicResourceUrl(pathOrUrl)
     : apiEndpoint(pathOrUrl);
   let response: Response;
