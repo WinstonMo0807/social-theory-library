@@ -73,6 +73,7 @@
 .uploadDialog h2 { margin:0; font:600 24px var(--stl-type-serif); }
 .uploadDialog header>button { padding:6px 10px; background:none; border:1px solid var(--admin-v2-line); border-radius:3px; }
 @media(min-width:901px) {
+  .layout>.inspector { max-height:799px; overflow:auto; }
   :global(.admin-shell):has(.page) :global(.admin-sidebar) { width:212px; }
   :global(.admin-shell):has(.page) :global(.admin-main) { margin-left:212px; }
   :global(.admin-shell):has(.page) :global(.admin-content) { padding:16px 24px 24px; }

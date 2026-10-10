@@ -72,7 +72,7 @@
 .site-reference-home .fixed-editor-fields { border:1px solid var(--site-reference-line); border-radius:4px; background:var(--surface); }
 .site-reference-home .site-other-modules { border:1px solid var(--site-reference-line); margin-top:-1px; border-radius:0 0 4px 4px; background:var(--surface); }
 .site-reference-home .fixed-editor-panel>.site-editor-actions { padding-inline:5px; }
-.site-reference-about .v307-editor-heading { padding:0 9px 24px; min-height:100px; }
+.site-reference-about .v307-editor-heading { padding:0 9px 20px; min-height:100px; }
 .site-reference-about .fixed-page-editor { grid-template-columns:540px minmax(0,1fr); gap:9px; }
 .site-reference-about .fixed-editor-panel { display:grid; grid-template-columns:115px minmax(0,1fr); }
 .site-chapter-heading { grid-column:1/-1; padding:17px 16px 0; }
@@ -106,7 +106,7 @@
 .site-reference-about .fixed-editor-preview>header>span { top:48px; left:17px; right:auto; }
 .site-reference-about .fixed-preview-canvas { margin:0; max-height:720px; }
 .site-reference-brand { position:relative; }
-.site-reference-brand>.v307-editor-heading { width:480px; min-height:223px; display:block; padding:31px 0 18px; }
+.site-reference-brand>.v307-editor-heading { width:480px; min-height:223px; display:block; padding:31px 0 14px; }
 .site-reference-brand .v307-editor-heading>.site-editor-progress { padding:0; border:0; margin-top:34px; display:flex; flex-direction:column-reverse; gap:15px; }
 .site-reference-brand .site-editor-progress>p { margin:0; font:15px var(--stl-type-serif); }
 .site-reference-brand .site-editor-progress nav { gap:12px; }

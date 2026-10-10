@@ -287,7 +287,8 @@ def select_work_cover(edition_id, media_id, *, actor):
 def media_reference_inventory(media_id):
     """Read persisted current/draft/history references without opening files."""
     from django.db.models import Q
-    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, RecommendationIssue
+    from catalog.models import CatalogPublicationMedia, EditorialRevision, EditorialRevisionMedia, Work, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, RecommendationIssue, SiteSetting
+    from catalog.services.editorial_issues import published_issues, public_issue_revision, issue_payload
     from catalog.services.publication_commands import catalog_publication_state
 
     references = []
@@ -302,6 +303,24 @@ def media_reference_inventory(media_id):
                            "editor_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
                            "public_url": publication["public_url"] if current else ""})
     drafts = list(EditorialRevisionMedia.objects.filter(rendition__media_id=media_id).select_related("editorial_revision").order_by("-created_at", "pk"))
+    public_editorial = {}
+    issue_ids = [row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == "recommendation_issue"]
+    for issue in published_issues().filter(pk__in=issue_ids):
+        revision = public_issue_revision(issue)
+        payload = issue_payload(issue, public=True)
+        rendition_ids = [payload.get("cover_rendition_id"), *[item.get("cover_rendition_id") for item in payload.get("items", []) if item.get("cover_url")]]
+        for identifier in filter(None, rendition_ids):
+            public_editorial[(str(revision.pk), str(identifier))] = (payload["title"], f"/recommendations/{issue.slug}")
+    media_renditions = {str(value) for value in MediaRendition.objects.filter(media_id=media_id).values_list("pk", flat=True)}
+    for setting in SiteSetting.objects.filter(key="site_config", public=True):
+        identifier = str(setting.value.get("home_hero_rendition_id") or "")
+        if identifier not in media_renditions:
+            continue
+        revision = EditorialRevision.objects.filter(target_type="site_content", target_id=setting.pk, status="published").order_by("-revision").first()
+        if revision and str((revision.materialized_preview.get("config") or {}).get("home_hero_rendition_id")) == identifier and any(str(row.editorial_revision_id) == str(revision.pk) and str(row.rendition_id) == identifier for row in drafts):
+            public_editorial[(str(revision.pk), identifier)] = ("网站首页", "/")
+        else:
+            references.append({"id": f"site:{setting.pk}", "kind": "current_public", "label": "网站首页", "detail": "当前已公开的网站配图", "editor_url": "/admin/about", "public_url": "/"})
     target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue}
     labels = {}
     for kind, model in target_models.items():
@@ -320,9 +339,10 @@ def media_reference_inventory(media_id):
         elif kind == "site_content":
             route = "/admin/about"
             labels[(kind, target_id)] = "网站与关于书库"
-        references.append({"id": str(row.pk), "kind": "draft" if revision.status == "draft" else "history",
-                           "label": labels.get((kind, target_id), "原对象或其历史记录"),
-                           "detail": f"编辑修订 {revision.revision} · {revision.status}", "editor_url": route, "public_url": ""})
+        public = public_editorial.get((str(revision.pk), str(row.rendition_id)))
+        references.append({"id": str(row.pk), "kind": "current_public" if public else "draft" if revision.status == "draft" else "history",
+                           "label": public[0] if public else labels.get((kind, target_id), "原对象或其历史记录"),
+                           "detail": f"编辑修订 {revision.revision} · {revision.get_status_display()}", "editor_url": route, "public_url": public[1] if public else ""})
     # Canonical choices are not labelled public: Work public snapshots can
     # deliberately still refer to the previous image while a change is pending.
     for work in Work.objects.filter(Q(cover_rendition__media_id=media_id) | Q(recommendation_rendition__media_id=media_id)).order_by("pk"):

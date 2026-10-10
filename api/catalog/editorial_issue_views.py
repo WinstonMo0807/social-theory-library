@@ -219,8 +219,9 @@ class PublicEditorialMediaView(APIView):
     def get(self, request, rendition_id):
         from django.http import Http404
         key = str(rendition_id)
-        published = service.published_issues().filter(Q(active_revision__materialized_preview__cover_rendition_id=key) |
-            Q(scheduled_for__lte=timezone.now(), scheduled_revision__materialized_preview__cover_rendition_id=key)).exists()
+        due = Q(scheduled_revision__status="published", scheduled_for__lte=timezone.now())
+        published = service.published_issues().filter((due & Q(scheduled_revision__materialized_preview__cover_rendition_id=key)) |
+            (~due & Q(active_revision__materialized_preview__cover_rendition_id=key))).exists()
         published = published or SiteSetting.objects.filter(key="site_config", public=True, value__home_hero_rendition_id=key).exists()
         if not published:
             raise Http404

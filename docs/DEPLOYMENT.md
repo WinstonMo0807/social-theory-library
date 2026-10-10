@@ -1,5 +1,9 @@
 # 部署说明
 
+## 2026-10-10 9506f74准确隔离候选已运行，生产未切换
+
+commit 9506f74547b0e2e0eafb87038b1f5e8d0fe2f739、tree 22d69cabd2ce7b7c30345c6719b503d96aa655f2、源码包SHA256 954604a5e743d53117ec2dff004ddb7bfefc60e8977c8d000386cfbc445b240a已冻结传输并核对；NAS构建/隔离刷新退出0。API镜像30dd4c1ac0883b96d53bc6daef32032627a887d9e4527cd837c798f4bfe367b8、Web镜像855fc861f314dffe59c61aa6ea699a16dbc0fbbb1cbb53b5c24c09fa5e23dab4，三项标签匹配且重启0。176项PG、迁移/nginx通过，192.168.5.6:19091/api/ready/数据库/schema通过。32–35只读UI退出0不能替代59图完整验收；旧隔离候选与生产保持，公网/新生产备份恢复/切换待完成。GitHub推送按用户指示暂缓。
+
 ## 2026-10-10 76741ff准确隔离候选已运行，生产未切换
 
 commit 76741ffc233cf14c12f2c7690bd89cb246b79764、tree 2f7d5f020ba523a1bccabc86cedb9e10e3f7ec38、源码包SHA256 8f10d185cee423c1070fe811b9b4fb35f05ddc8344bb79a233b5b0bad3d5e0b1与NAS一致，构建/刷新退出0，176项PG（72+72+32）、迁移/nginx退出0。API d0230f8e7754296530360a8ad05c65036682b9501ee2e2ad9a160a2985074c71、Web fb15aabdd953c33be6879103019cb6c4c3310602f4337afe2cc0ef20511f03b2，镜像revision/tree/归档标签一致且重启0。只刷新19091隔离入口。
