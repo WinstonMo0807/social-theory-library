@@ -125,7 +125,7 @@ export function QueryLexiconWorkspace() {
   }
 
   return (
-    <div className={`admin-v2-ops-split ${styles.layout}`}>
+    <div className={`admin-v2-ops-split lexicon-reference-page ${styles.layout}`}>
       <div className="admin-page">
       <header className="admin-page-title">
         <div><p>处理中心 / 检索用语</p><h1>检索用语检查</h1><span>查看不同写法是否找到同一内容。用语来自学者、理论、学科和主题，修改请前往对应编辑页。</span></div>

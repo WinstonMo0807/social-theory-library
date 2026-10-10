@@ -60,9 +60,9 @@
 
 /* Scenes 36–40 retain the actual processing, source and model records. */
 .admin-shell .processing-reference-page > .admin-page-title,
-.admin-shell .processing-settings-page > .admin-page-title { min-height:0;padding:0 0 20px;align-items:flex-start; }
+.admin-shell .processing-settings-page > .admin-page-title { min-height:0;margin:0;padding:0 0 20px;border:0;align-items:flex-start; }
 .admin-shell .processing-reference-page > .admin-page-title h1,
-.admin-shell .processing-settings-page > .admin-page-title h1 { font-size:40px;line-height:1.2;letter-spacing:-.025em; }
+.admin-shell .processing-settings-page > .admin-page-title h1 { margin:0;font-size:40px;line-height:1.2;letter-spacing:-.025em; }
 .admin-shell .processing-reference-page > .admin-page-title > div:first-child > span,
 .admin-shell .processing-settings-page > .admin-page-title > div:first-child > span { display:block;font-size:16px;line-height:1.45;margin-top:6px; }
 .admin-shell .processing-reference-page > .admin-page-title .processing-reference-priority { margin-top:0; }
@@ -154,17 +154,60 @@
 .processing-settings-navigation { margin-top:18px;border:1px solid var(--admin-v2-line);border-radius:4px;padding:14px 18px; }
 .processing-settings-navigation > summary { cursor:pointer; }
 .processing-settings-navigation .settings-section-tabs { margin:16px 0 0; }
+.processing-settings-ocr .settings-primary-navigation { border:1px solid var(--admin-v2-line);border-bottom:0;border-radius:4px 4px 0 0;background:var(--admin-v2-wash); }
+.processing-settings-ocr .settings-primary-navigation .settings-section-tabs { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0; }
+.processing-settings-ocr .settings-primary-navigation button { min-height:42px;padding:10px 20px;border:0;border-bottom:1px solid var(--admin-v2-line);background:transparent;font:600 16px/1.4 var(--stl-type-sans);cursor:pointer; }
+.processing-settings-ocr .settings-primary-navigation button[aria-selected=true] { background:var(--admin-v2-surface);border-bottom-color:var(--admin-v2-surface);box-shadow:inset 0 2px var(--admin-v2-ink); }
+.admin-shell .processing-settings-ocr .settings-grid > form { border-top:0;border-radius:0 0 4px 4px;padding:20px 14px; }
+.admin-shell .processing-settings-ocr .settings-grid > form > header { margin:0;padding:0;border:0; }
+.admin-shell .processing-settings-ocr .settings-grid > form > header h2 { font-size:23px;line-height:1.4;margin:0 0 8px; }
+.admin-shell .processing-settings-ocr .switch-row { display:flex;align-items:center;gap:12px;padding:16px 0; }
+.admin-shell .processing-settings-ocr .switch-row input,.admin-shell .processing-settings-ocr .settings-reference-languages input { flex:none;width:19px;height:19px;min-height:0;padding:0;margin:0;accent-color:var(--admin-v2-ink); }
+.admin-shell .processing-settings-ocr .settings-reference-languages { gap:14px;margin:18px 0 12px; }
+.admin-shell .processing-settings-ocr .settings-reference-languages label { flex-direction:row;justify-content:start;font-size:14px;font-weight:400; }
+.admin-shell .processing-settings-ocr .settings-reference-note { margin:0;padding:14px 16px;font-size:14px;line-height:1.7;border-radius:4px; }
+.admin-shell .processing-settings-ocr .settings-reference-section h3 { font-size:23px;line-height:1.4; }
+.admin-shell .processing-settings-ocr .settings-reference-check { padding:14px;gap:14px;align-items:center;border-radius:4px; }
+.admin-shell .processing-settings-ocr .settings-reference-check dl > div { display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;font-size:13px;line-height:1.7; }
+.admin-shell .processing-settings-ocr .settings-reference-footer { gap:20px; }
+.processing-settings-ocr .admin-v2-public-preview { position:static;padding:14px; }
+.admin-shell .processing-search-reference { padding:0; }
+.admin-shell .processing-search-reference > .admin-page-title { min-height:0;padding:0 10px 18px;border:0;margin:0; }
+.admin-shell .processing-search-reference > .admin-page-title h1,.admin-shell .lexicon-reference-page .admin-page-title h1 { font:700 32px/1.4 var(--stl-type-serif);margin:0 0 4px;letter-spacing:0; }
+.admin-shell .processing-search-reference > .admin-page-title p { font-size:14px;line-height:1.7;margin:0; }
+.processing-search-reference > nav { margin-top:24px;border-top:1px solid var(--admin-v2-line); }
+.processing-search-reference[data-surface=evaluation] .reference-step-strip { margin:0 0 18px; }
+.admin-shell .lexicon-reference-page .admin-page-title { min-height:0;padding:0 0 12px;border:0;margin:0; }
+.lexicon-reference-page .admin-page-title > div > p { display:none; }
+.lexicon-reference-page .admin-title-actions { gap:8px;flex-wrap:wrap; }
 @media(min-width:1151px) {
+  .admin-shell:has(.processing-search-reference[data-surface=index]) { --stl-container-admin-sidebar:195px; }
+  .admin-shell:has(.processing-search-reference[data-surface=evaluation]) { --stl-container-admin-sidebar:209px; }
+  .admin-shell:has(.lexicon-reference-page) { --stl-container-admin-sidebar:197px; }
+  .admin-shell:has(.processing-search-reference) .admin-sidebar,.admin-shell:has(.lexicon-reference-page) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.processing-search-reference) .admin-main,.admin-shell:has(.lexicon-reference-page) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.processing-search-reference[data-surface=index]) .admin-content { padding:26px 22px 24px 21px; }
+  .admin-shell:has(.processing-search-reference[data-surface=evaluation]) .admin-content { padding:18px 24px 24px 27px; }
+  .processing-search-reference[data-surface=index] > div { grid-template-columns:469px minmax(0,1fr);gap:20px; }
+  .processing-search-reference[data-surface=evaluation] > div { grid-template-columns:376px minmax(0,1fr);gap:6px; }
+  .admin-shell:has(.lexicon-reference-page) .admin-content { padding:23px 24px 24px 25px; }
+  .admin-shell .lexicon-reference-page { grid-template-columns:510px minmax(0,1fr);gap:20px; }
   .admin-shell:has(.processing-reference-page[data-surface=overview]) { --stl-container-admin-sidebar:206px; }
   .admin-shell:has(.processing-reference-page[data-document-detail=true]) { --stl-container-admin-sidebar:190px; }
   .admin-shell:has(.processing-reference-page[data-surface=workers]),.admin-shell:has(.processing-settings-page) { --stl-container-admin-sidebar:192px; }
   .admin-shell:has(.processing-reference-page[data-surface=research-sources]) { --stl-container-admin-sidebar:232px; }
+  .admin-shell:has(.processing-settings-ocr) { --stl-container-admin-sidebar:218px; }
+  .admin-shell:has(.processing-reference-page) .admin-sidebar,.admin-shell:has(.processing-settings-page) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.processing-reference-page) .admin-main,.admin-shell:has(.processing-settings-page) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
   .admin-shell:has(.processing-reference-page[data-document-detail=true]) .admin-content { padding-inline:32px 24px; }
   .admin-shell:has(.processing-reference-page[data-surface=workers]) .admin-content { padding-inline:17px; }
   .admin-shell:has(.processing-reference-page[data-surface=research-sources]) .admin-content { padding-inline:25px 21px; }
   .admin-shell:has(.processing-settings-page) .admin-content { padding:27px 28px 24px; }
   .processing-settings-page > .admin-page-title { padding-bottom:24px; }
   .processing-settings-page .admin-v2-ops-split { grid-template-columns:587px minmax(0,1fr);gap:10px; }
+  .admin-shell:has(.processing-settings-ocr) .admin-content { padding:27px 20px 24px 23px; }
+  .admin-shell .processing-settings-ocr > .admin-page-title { padding:0 8px 8px; }
+  .processing-settings-ocr .admin-v2-ops-split { grid-template-columns:479px minmax(0,1fr);gap:14px; }
   .processing-reference-page .processing-reference-tasks,.processing-reference-page .selected-work-preview { min-height:611px; }
   .processing-reference-page[data-document-detail=true] .processing-reference-columns { grid-template-columns:minmax(0,.925fr) minmax(0,1fr); }
   .processing-reference-review-columns { grid-template-columns:268px minmax(0,.75fr) minmax(0,1fr); }

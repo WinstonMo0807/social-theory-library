@@ -5,6 +5,7 @@
     map {path} {library_frame_options} {library_frame_ancestors} {
         default DENY "'none'"
         ~^/(?:$|(?:about|explore|recommendations)/?$|recommendations/[^/]+/?$) SAMEORIGIN "'self'"
+        ~^/explore/original/?$ SAMEORIGIN "'self'"
         ~^/(?:works|reader|subdisciplines)/[^/]+/?$ SAMEORIGIN "'self'"
         ~^/(?:scholars|topics|theory-schools)/[^/]+(?:/[^/]+)?/?$ SAMEORIGIN "'self'"
         ~^/theories/(?:nodes|disciplines|reading-paths)/[^/]+(?:/[^/]+)?/?$ SAMEORIGIN "'self'"

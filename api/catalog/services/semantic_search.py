@@ -536,7 +536,7 @@ def _base_queryset(filters: dict):
         asset__edition__is_primary=True,
         asset__kind="normalized",
         asset__status="ready",
-    ).select_related("asset__edition__work")
+    ).select_related("asset__edition__work", "asset__edition__active_catalog_revision")
     queryset = queryset.filter(
         asset__access_status__in=(
             filters.get("_allowed_access_statuses")
@@ -561,12 +561,13 @@ def _keyword_candidates(query: str, terms: list[str], filters: dict, limit: int 
     candidates = list(queryset.filter(lexical)[:800]) if lexical else list(queryset.order_by("-updated_at")[:300])
     query_grams = _ngrams(query)
     rows = []
+    edition_titles = {}
     for chunk in candidates:
-        snapshot = active_catalog_snapshot(
-            chunk.asset.edition,
-            require_fulltext=True,
-        )
-        snapshot_title = str((snapshot.get("work") or {}).get("title") or "未题名")
+        edition = chunk.asset.edition
+        if edition.pk not in edition_titles:
+            snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+            edition_titles[edition.pk] = str((snapshot.get("work") or {}).get("title") or "未题名")
+        snapshot_title = edition_titles[edition.pk]
         coverage = sum(1 for term in terms if term in chunk.normalized_text) / max(1, len(terms))
         cosine = _cosine(query_grams, _ngrams(chunk.normalized_text))
         phrase = SequenceMatcher(None, query[:600], chunk.normalized_text[:1400]).ratio()
@@ -589,7 +590,7 @@ def _passage_base_queryset(filters: dict):
         page__asset__edition__is_primary=True,
         page__asset__kind="normalized",
         page__asset__status="ready",
-    ).select_related("page__asset__edition__work")
+    ).select_related("page__asset__edition__work", "page__asset__edition__active_catalog_revision")
     queryset = queryset.filter(
         page__asset__access_status__in=(
             filters.get("_allowed_access_statuses")
@@ -615,12 +616,13 @@ def _passage_keyword_candidates(query: str, terms: list[str], filters: dict, lim
     candidates = list(queryset.filter(lexical)[:800]) if lexical else []
     query_grams = _ngrams(query)
     rows = []
+    edition_titles = {}
     for passage in candidates:
-        snapshot = active_catalog_snapshot(
-            passage.page.asset.edition,
-            require_fulltext=True,
-        )
-        snapshot_title = str((snapshot.get("work") or {}).get("title") or "未题名")
+        edition = passage.page.asset.edition
+        if edition.pk not in edition_titles:
+            snapshot = active_catalog_snapshot(edition, require_fulltext=True)
+            edition_titles[edition.pk] = str((snapshot.get("work") or {}).get("title") or "未题名")
+        snapshot_title = edition_titles[edition.pk]
         normalized = passage.normalized_text or normalize_search_text(passage.text)
         coverage = sum(1 for term in terms if term in normalized) / max(1, len(terms))
         cosine = _cosine(query_grams, _ngrams(normalized))

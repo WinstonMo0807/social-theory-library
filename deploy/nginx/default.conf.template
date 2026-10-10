@@ -42,6 +42,7 @@ map $library_lan_http $library_forwarded_proto {
 map $uri $library_preview_frame {
     default 0;
     ~^/(?:$|(?:about|explore|recommendations)/?$|recommendations/[^/]+/?$) 1;
+    ~^/explore/original/?$ 1;
     ~^/(?:works|reader|subdisciplines)/[^/]+/?$ 1;
     ~^/(?:scholars|topics|theory-schools)/[^/]+(?:/[^/]+)?/?$ 1;
     ~^/theories/(?:nodes|disciplines|reading-paths)/[^/]+(?:/[^/]+)?/?$ 1;

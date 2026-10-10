@@ -35,7 +35,7 @@ test("gateways admit the actual same-origin previews without framing login, API 
   // These are the iframe targets of AdminPublicPreviewFrame, FixedPageEditor,
   // SelectedWorkPreview, curation queues and WorkflowInspector.
   const previews = [
-    "/", "/about", "/explore?q=韦伯", "/recommendations", "/recommendations/daily-reading",
+    "/", "/about", "/explore?q=韦伯", "/explore/original?type=scholar&q=韦伯", "/recommendations", "/recommendations/daily-reading",
     "/works/book-slug", "/reader/asset-id", "/scholars/weber", "/scholars/weber/network",
     "/scholars/weber/evidence", "/topics/modernity", "/topics/modernity/passages",
     "/theory-schools/critical-theory", "/theory-schools/critical-theory/evidence",
@@ -57,7 +57,7 @@ test("gateways admit the actual same-origin previews without framing login, API 
     "/admin/users", "/admin/preview", "/admin/preview/not-a-page/id",
     "/admin/about", "/admin/recommendations/issues/id", "/api/auth/login/",
     "/api/catalog/admin/page-preview/editions/id/", "/media/private/file",
-    "/works/id/extra", "/admin/preview/works/id/edit", "/login?next=/admin/preview/works/id",
+    "/works/id/extra", "/explore/original/edit?embed=1", "/explore/original/../../login", "/admin/preview/works/id/edit", "/login?next=/admin/preview/works/id",
     "/admin/preview/works/../../users", "/recommendations/id/../../login",
   ]) assert.equal(accepts(path), false, path);
   assert.match(nginx, /map \$uri \$library_preview_frame/);

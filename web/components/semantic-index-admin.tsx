@@ -450,9 +450,8 @@ export function SemanticIndexAdmin() {
             ))}
           </div>
 </>);
-  return <div className={styles.page}>
+  return <div className={`${styles.page} processing-search-reference`} data-surface={surface}>
     <header className="admin-page-title"><div><h1>{surface==="index" ? "搜索内容更新" : "检查搜索结果"}</h1><p>{surface==="index" ? "检查搜索内容的更新进度，确认失败项目。" : "选择问题、检查实际返回的段落，再保存判断。"}</p></div><button type="button" className="button secondary" disabled={Boolean(busy)} onClick={()=>void refresh()}><RefreshCw size={16}/>重新检查</button></header>
-    <nav className={styles.switcher} aria-label="搜索维护"><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="index"} onClick={()=>setSurface("index")}>搜索内容更新</button><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="evaluation"} onClick={()=>setSurface("evaluation")}>检查搜索结果</button></nav>
     {error ? <p role="alert">{error}</p> : null}
     {surface==="evaluation" ? <ol className="reference-step-strip">{["输入问题","检查结果","保存评价"].map((label,index)=><li key={label} aria-current={step===index+1 ? "step" : undefined}><button type="button" disabled={Boolean(busy) || (index>0 && !testResult)} onClick={()=>setStep(index+1)}><b>{index+1}</b>{label}</button></li>)}</ol> : null}
     <div className={styles.layout}><div>
@@ -670,6 +669,7 @@ export function SemanticIndexAdmin() {
     {surface==="index" ? <AdminPublicPreviewFrame title="搜索结果预览" src={previewQuery ? `/explore?mode=semantic&q=${encodeURIComponent(previewQuery)}` : null} emptyMessage="输入查询后检查当前公开搜索"><div className={styles.switcher}><button type="button" disabled title="缺少候选索引的交互预览接口">修改后</button><span>当前线上</span></div><form onSubmit={event=>{event.preventDefault();setPreviewQuery(query.trim());}}><label>查询<input value={query} onChange={event=>setQuery(event.target.value)}/></label><button className="button" disabled={!query.trim()}>搜索</button></form></AdminPublicPreviewFrame> : <section className={styles.results}><h2>本次查询结果</h2><p>以下判断对应测试接口返回的原文段落。候选索引需另行运行评估。</p>{testResult ? <><h3>“{testResult.testedQuery}”的搜索结果</h3><p>返回 {testResult.count} 条</p>{resultList}</> : <p>—</p>}</section>}
     </div></div>
     {surface==="evaluation" ? <footer className={styles.actions}><button className="button secondary" type="button" disabled={Boolean(busy) || step===1} onClick={()=>setStep(value=>value-1)}>上一步</button>{step<3 ? <button className="button" type="button" disabled={Boolean(busy) || !testResult} onClick={()=>setStep(3)}>保存本次评价</button> : null}<p role="status">{evaluationMessage}</p></footer> : null}
+    <nav className={styles.switcher} aria-label="搜索维护"><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="index"} onClick={()=>{setSurface("index");window.scrollTo({top:0});}}>搜索内容更新</button><button type="button" disabled={Boolean(busy)} aria-pressed={surface==="evaluation"} onClick={()=>{setSurface("evaluation");window.scrollTo({top:0});}}>检查搜索结果</button></nav>
       <ConfirmDialog
         open={Boolean(activateTarget)}
         title="验证并切换生产语义索引"

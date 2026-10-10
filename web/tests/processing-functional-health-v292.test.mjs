@@ -6,7 +6,7 @@ import { readStyleSource } from "../scripts/style-source.mjs";
 const panelUrl = new URL("../components/functional-health-panel.tsx", import.meta.url);
 const processingUrl = new URL("../components/processing-center.tsx", import.meta.url);
 
-test("processing center leads with persisted functional health", async () => {
+test("processing center keeps persisted health in its dedicated surfaces", async () => {
   const [panel, processing] = await Promise.all([
     readFile(panelUrl, "utf8"),
     readFile(processingUrl, "utf8"),
@@ -18,11 +18,11 @@ test("processing center leads with persisted functional health", async () => {
   assert.match(panel, /不会在打开页面时调用外部服务/);
   assert.match(
     processing,
-    /<FunctionalHealthPanel revision=\{revision\} surface=\{healthSurface\} \/>/,
+    /healthSurface \? <FunctionalHealthPanel revision=\{revision \+ panelRevision\} surface=\{healthSurface\} \/> : null/,
   );
-  assert.ok(
-    processing.indexOf("<FunctionalHealthPanel") < processing.indexOf('<section className="processing-summary"'),
-    "functional health should appear before queue totals",
+  assert.match(
+    processing,
+    /activeSurface === "ai-models" \|\| activeSurface === "projections" \|\| activeSurface === "faults" \? activeSurface : null/,
   );
 });
 

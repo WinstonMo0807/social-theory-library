@@ -2139,12 +2139,16 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     });
   }
 
-  const sectionTabs = <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>;
+  const readerSettings = scope === "processing" && ["ocr", "submissions"].includes(activeSection);
+  const primarySections = readerSettings ? sections.filter(([key]) => key === "ocr" || key === "submissions").sort(([a], [b]) => Number(b === "ocr") - Number(a === "ocr")) : [];
+  const otherSections = sections.filter(([key]) => !primarySections.some(([primary]) => primary === key));
+  const renderSectionTabs = (tabSections: readonly (readonly [string, string])[], label = "设置栏目") => <div className="settings-section-tabs" role="tablist" aria-label={label}>{tabSections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=tabSections.findIndex(([value])=>value===key);const next=tabSections[event.key==='Home'?0:event.key==='End'?tabSections.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabSections.length)%tabSections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);window.requestAnimationFrame(()=>document.getElementById(`settings-tab-${next}`)?.focus());}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{scope === "processing" && key === "submissions" ? "读者提交" : label}</button>)}</div>;
   return (
-    <AdminPageFrame className={scope === "processing" ? "processing-settings-page" : undefined} eyebrow={scope === "processing" ? "" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? activeSection==="ai" ? "辅助填写设置" : activeSection==="ocr" ? "文字识别设置" : "处理服务设置" : "设置兼容入口"} description={activeSection==="ai" ? "配置 AI 辅助服务，帮助编辑完善馆藏内容。所有建议均需人工审核后保存。" : activeSection==="ocr" ? "配置 OCR 服务，管理全库文字识别功能。" : "查看已保存的配置与真实记录。各部分明确保存。"}>
-      {scope === "processing" ? null : sectionTabs}
+    <AdminPageFrame className={scope === "processing" ? `processing-settings-page${readerSettings ? " processing-settings-ocr" : ""}` : undefined} eyebrow={scope === "processing" ? "" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? activeSection==="ai" ? "辅助填写设置" : activeSection==="ocr" ? "文字识别设置" : activeSection==="submissions" ? "读者提交设置" : "处理服务设置" : "设置兼容入口"} description={activeSection==="ai" ? "配置 AI 辅助服务，帮助编辑完善馆藏内容。所有建议均需人工审核后保存。" : activeSection==="ocr" ? "配置 OCR 服务，管理全库文字识别功能。" : activeSection==="submissions" ? "设置读者荐书与资料提交的联系邮箱。" : "查看已保存的配置与真实记录。各部分明确保存。"}>
+      {scope === "processing" ? null : renderSectionTabs(sections)}
       <div className={scope === "processing" ? "admin-v2-ops-split" : undefined}>
       <section className="settings-grid settings-tabbed">
+        {readerSettings ? <div className="settings-primary-navigation">{renderSectionTabs(primarySections, "文字识别与读者提交")}</div> : null}
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
           <header><h2>品牌与首页</h2></header>
           <label><span>网站名称</span><input value={config.site_name} onChange={(event) => updateConfig({ site_name: event.target.value })} /></label>
@@ -2354,7 +2358,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
       </section>
       {scope === "processing" ? activeSection === "ocr" ? <AdminReaderPreview /> : activeSection==="ai" ? <AdminReaderPreview kind="book"/> : <AdminPublicPreviewFrame title="读者预览" emptyMessage="当前设置没有可预览的内容" /> : null}
       </div>
-      {scope === "processing" ? <details className="processing-settings-navigation"><summary>其他处理服务</summary>{sectionTabs}</details> : null}
+      {scope === "processing" ? <details className="processing-settings-navigation"><summary>其他处理服务</summary>{renderSectionTabs(otherSections)}</details> : null}
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
     </AdminPageFrame>
   );
