@@ -2,14 +2,13 @@ import { loadWorks } from "@/lib/api/catalog.server";
 import { loadRecommendedScholars, loadRecommendations, recommendationWorks, recommendationSlugs } from "@/lib/api/recommendations.server";
 import { loadRecommendationIssues } from "@/lib/api/recommendation-issues.server";
 import { loadSiteConfig } from "@/lib/api/site.server";
-import { loadHotSearches } from "@/lib/api/search.server";
 import { loadTopic, loadTopics } from "@/lib/api/topics.server";
 import { loadScholars } from "@/lib/api/people.server";
 
 export async function loadHomeViewData() {
   const recommendationsPromise = loadRecommendations();
-  const [works, topics, config, recommendations, hotSearches, selectedScholars, scholars, issues] = await Promise.all([
-    loadWorks(), loadTopics(), loadSiteConfig(), recommendationsPromise, loadHotSearches(),
+  const [works, topics, config, recommendations, selectedScholars, scholars, issues] = await Promise.all([
+    loadWorks(), loadTopics(), loadSiteConfig(), recommendationsPromise,
     recommendationsPromise.then(bundle => loadRecommendedScholars(bundle, 6)), loadScholars(), loadRecommendationIssues(),
   ]);
   const selectedTopics = recommendationSlugs(recommendations, "home_topics", "topic");
@@ -20,5 +19,5 @@ export async function loadHomeViewData() {
   const shownTopics = resolvedTopics.filter((topic): topic is NonNullable<typeof topic> => topic !== null);
   const random = recommendationWorks(recommendations, "home_random");
   const scholarPool = [...selectedScholars, ...scholars.filter(scholar => !selectedScholars.some(selected => selected.slug === scholar.slug))];
-  return { config, works, topics: shownTopics, scholars: scholarPool, randomWorks: random.length ? random : works, issue: issues.current, hotSearches };
+  return { config, works, topics: shownTopics, scholars: scholarPool, randomWorks: random.length ? random : works, issue: issues.current };
 }

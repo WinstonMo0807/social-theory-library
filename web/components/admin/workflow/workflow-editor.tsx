@@ -427,7 +427,7 @@ function WorkBody(props: BodyProps) {
       <fieldset disabled={!canEdit}><EntityPicker label="译自作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={translationId ? [{ id: translationId, name: translationName }] : []} onChange={(next) => update("work", "translation_of", next.at(-1)?.id ?? null)} /><small className="workflow-field-assistant-hint hint-manual">人工确认关联</small></fieldset>
       {render("abstract", documentType === "journal_article" ? "论文摘要" : documentType === "journal_issue" ? "本期简介" : "馆藏简介", { multiline: true, rows: 6, help: "建议先填入此处，核对或修改后再保存；不会自动发布。" })}
     </div>
-    <details className="workflow-recommendation-image"><summary>为推荐卡片另选图片（可选，不影响封面）</summary><RecommendationImageEditor workId={asString(props.context.work_id)} editionId={asString(props.context.edition_id)} documentType={documentType} disabled={!canEdit} beforeAction={props.beforeFieldAction} onUpdated={props.research.onUpdated} onMessage={props.message} mediaLibraryUrl={`/admin/media?edition=${encodeURIComponent(asString(props.context.edition_id))}&slot=recommendation`} /></details>
+    <details className="workflow-recommendation-image"><summary>为推荐卡片另选图片（可选，不影响封面）</summary><RecommendationImageEditor workId={asString(props.context.work_id)} editionId={asString(props.context.edition_id)} documentType={documentType} disabled={!canEdit} beforeAction={props.beforeFieldAction} onUpdated={props.research.onUpdated} onMessage={props.message} mediaLibraryUrl={`/admin/media?edition=${encodeURIComponent(asString(props.context.edition_id))}&slot=recommendation&return_to=${encodeURIComponent(`/admin/library/works/${asString(props.context.work_id)}?edition=${asString(props.context.edition_id)}#work`)}`} /></details>
   </>;
 }
 

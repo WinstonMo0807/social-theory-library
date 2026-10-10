@@ -45,6 +45,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
   const config = suppliedConfig ?? sharedConfig;
   const currentPath = usePathname();
   const pathname = preview && previewPath ? previewPath : currentPath;
+  const siteContentPage = !readingLayout && (pathname === "/" ? "home" : pathname === "/about" ? "about" : "");
   const readingContext = readingLayout || (!preview && pathname.startsWith("/recommendations/") ? "article" : !preview && pathname === "/recommendations" ? "index" : "");
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
@@ -100,6 +101,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
       data-reading-layout={readingContext || undefined}
+      data-site-content-page={siteContentPage || undefined}
     >
       <Link className="logo-link" href="/" prefetch={false} data-edit-field={preview ? "wordmark_lines" : undefined}>
         <Wordmark config={config} />
@@ -127,11 +129,11 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
         {readingContext === "article" ? <Link href="/recommendations" className="active" aria-current="page" prefetch={false}>每日荐读</Link> : null}
       </nav>
       <div className="header-actions">
-        {readingContext === "index" || readingContext === "article" ? <form className="reading-header-search" action="/explore" role="search" aria-label="站内搜索"><button type="submit" aria-label="搜索馆藏"><Search size={18} strokeWidth={1.7}/></button><label><span className="sr-only">搜索书名、作者或主题</span><input name="q" type="search" placeholder="搜索书名、作者或主题"/></label></form> : <Link className="header-search" href="/explore" prefetch={false}>
+        {readingContext === "index" || readingContext === "article" || siteContentPage === "home" ? <form className="reading-header-search" action="/explore" role="search" aria-label="站内搜索"><button type="submit" aria-label="搜索馆藏"><Search size={18} strokeWidth={1.7}/></button><label><span className="sr-only">搜索书名、作者或主题</span><input name="q" type="search" placeholder="搜索书名、作者或主题"/></label></form> : <Link className="header-search" href="/explore" prefetch={false}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>}
-        {readingContext === "article" ? <nav className="reading-header-reader" aria-label="读者导航"><Link href="/about">关于我们</Link><Link href={user ? "/account" : "/login"}>{user ? "读者中心" : "登录"}</Link></nav> : null}
+        {readingContext === "article" || siteContentPage === "home" ? <nav className="reading-header-reader" aria-label="读者导航"><Link href="/about">{config.about_label}</Link><Link href={user && !preview ? "/account" : "/login"}>{user && !preview ? "读者中心" : "登录"}</Link></nav> : null}
         <IconButton
           ref={menuButtonRef}
           className="icon-button menu-button"

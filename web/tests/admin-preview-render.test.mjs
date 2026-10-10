@@ -23,6 +23,35 @@ const { TopicQuestionsPublicView } = await import("../components/public/topic-pu
 const { TopicWorksEditor } = await import("../components/admin/knowledge/topic-works-editor.tsx");
 const { KnowledgeVisualEditor } = await import("../components/admin/knowledge/knowledge-visual-editor.tsx");
 const { DailyReadingContent, DailyReadingIndexView, DailyReadingPublicIndexView, RecommendationIssueView } = await import("../components/public/recommendation-issue-view.tsx");
+const { HomePublicView } = await import("../components/public/home-public-view.tsx");
+const { defaultSiteConfig } = await import("../lib/site-config.ts");
+
+test("the website home uses saved title and media without modifying legacy config or duplicating article books", () => {
+  const config = {...defaultSiteConfig, home_title_left_lines:["已保存主标题","已保存第二行"], home_title_right_lines:["保留的旧标题"], intro_lines:["第一行导语","第二行导语","保留的旧导语"], home_hero_image:"/media/saved-home.webp", home_hero_alt:"已确认配图"};
+  const original = structuredClone(config);
+  const issue = {id:"issue",slug:"saved-issue",title:"实际公开文章",introduction:"已确认导语",public_byline:"已确认署名",cover_url:"",display_from:null,published_at:null,body_blocks:[],items:[{id:"book",kind:"catalog",title:"本文独立书目",work_url:"/works/exact-book",reader_url:"",cover_url:""}]};
+  const html = renderToStaticMarkup(React.createElement(HomePublicView,{config,works:[],scholars:[],topics:[],randomWorks:[],issue}));
+  for (const value of ["已保存主标题","已保存第二行","第一行导语","第二行导语","保留的旧导语","/media/saved-home.webp","已确认配图"]) assert.ok(html.includes(value), value);
+  assert.match(html,/href="\/recommendations\/saved-issue"/);
+  assert.doesNotMatch(html,/保留的旧标题|daily-reading-books|本文独立书目|v307-hot-searches|<form/);
+  assert.deepEqual(config,original);
+});
+
+test("home and about headers retain normal navigation and home search in public and protected previews", () => {
+  const render = (pathname, preview) => renderToStaticMarkup(React.createElement(PathnameContext.Provider,{value:pathname},React.createElement(PublicSessionProvider,null,React.createElement(SiteHeader,{preview,previewPath:pathname,config:defaultSiteConfig}))));
+  for (const preview of [false,true]) {
+    const home = render("/",preview);
+    assert.match(home,/<form(?=[^>]*action="\/explore")(?=[^>]*role="search")[^>]*>/);
+    assert.match(home,/name="q"/);
+    assert.match(home,/href="\/about"/);
+    assert.match(home,/href="\/login"/);
+    assert.match(home,/data-site-content-page="home"/);
+    assert.equal(/<header[^>]*inert=""/.test(home),preview);
+    const about = render("/about",preview);
+    assert.match(about,/data-site-content-page="about"/);
+    assert.match(about,/class="header-search"[^>]*href="\/explore"/);
+  }
+});
 
 test("both reference index layouts keep every result on its page without duplicates",()=>{
   const issues=Array.from({length:12},(_,index)=>({id:`issue-${index}`,slug:`issue-${index}`,title:`公开文章${index}`,introduction:"已确认导语",public_byline:"已确认署名",cover_url:"",display_from:"2026-10-08T00:00:00Z",published_at:null,items:[],body_blocks:[]}));

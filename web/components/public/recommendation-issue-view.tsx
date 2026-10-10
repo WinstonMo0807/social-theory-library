@@ -36,12 +36,12 @@ export function RecommendationIssueView({ issue, preview = false, compact = fals
   </article>;
 }
 
-export function DailyReadingContent({lead,cards,preview=false}: {lead:RecommendationIssue|null;cards:RecommendationIssue[];preview?:boolean}) {
+export function DailyReadingContent({lead,cards,preview=false,showBooks=true}: {lead:RecommendationIssue|null;cards:RecommendationIssue[];preview?:boolean;showBooks?:boolean}) {
   const issueLink = (issue:RecommendationIssue) => `/recommendations/${issue.slug}`;
   return <div className="daily-reading-content daily-reading-home"><header><div><h2>每日荐读</h2><p>从社会视角，阅读问题与世界。</p></div><Link href="/recommendations">查看全部文章 <ArrowRight size={16}/></Link></header>
     {lead ? <section className="daily-reading-lead" data-edit-section="schedule"><Link className="daily-reading-lead-image" href={issueLink(lead)}>{lead.cover_url ? <img src={lead.cover_url} alt=""/> : null}</Link><div className="daily-reading-lead-copy">{lead.display_from || lead.published_at ? <time>{new Date((lead.display_from || lead.published_at)!).toLocaleDateString("zh-CN",{timeZone:"Asia/Hong_Kong"})}</time> : null}<h2><Link href={issueLink(lead)}>{lead.title}</Link></h2><div className="daily-reading-byline"><span>{lead.public_byline}</span></div><p>{lead.introduction}</p><Link className="text-link" href={issueLink(lead)}>阅读文章 <ArrowRight size={16}/></Link></div></section> : <p className="empty-state">当前没有匹配文章。</p>}
     {cards.length ? <section className="daily-reading-section"><header><h2>本周推荐</h2><Link href="/recommendations">查看全部 <ArrowRight size={16}/></Link></header><div className="daily-reading-grid">{cards.map(issue => <article key={issue.id}><Link href={issueLink(issue)}>{issue.cover_url ? <img src={issue.cover_url} alt="" loading="lazy"/> : <div className="daily-reading-empty-image"/>}{issue.display_from || issue.published_at ? <time>{new Date((issue.display_from || issue.published_at)!).toLocaleDateString("zh-CN",{timeZone:"Asia/Hong_Kong"})}</time> : null}<h3>{issue.title}</h3><span>{issue.public_byline}</span></Link></article>)}</div></section> : null}
-    {lead?.items.length ? <section className="daily-reading-books" data-edit-section="items"><header><h2>从馆藏继续阅读</h2>{!preview ? <Link href="/explore">探索更多相关书籍 →</Link> : null}</header><div>{lead.items.map((item,index) => <IssueItemCard item={item} editIndex={preview ? index : undefined} key={item.id || index}/>)}</div></section> : null}
+    {showBooks && lead?.items.length ? <section className="daily-reading-books" data-edit-section="items"><header><h2>从馆藏继续阅读</h2>{!preview ? <Link href="/explore">探索更多相关书籍 →</Link> : null}</header><div>{lead.items.map((item,index) => <IssueItemCard item={item} editIndex={preview ? index : undefined} key={item.id || index}/>)}</div></section> : null}
   </div>;
 }
 
