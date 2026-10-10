@@ -11,8 +11,8 @@ import { PreviewViewport } from "../curation/fixed-page-editor";
 import { WORKFLOW_GROUPS } from "../workflow/file-presentation";
 
 /** Uses the protected saved-edition preview; selection never saves or publishes. */
-export function SelectedWorkPreview({ editionId, title, publicHref = "", editHref = "", currentStep, heading, subtitle }: {
-  editionId?: string | null; title?: string; publicHref?: string; editHref?: string; currentStep?: string; heading?: string; subtitle?: string;
+export function SelectedWorkPreview({ editionId, title, publicHref = "", editHref = "", currentStep, heading, subtitle, compact = false }: {
+  editionId?: string | null; title?: string; publicHref?: string; editHref?: string; currentStep?: string; heading?: string; subtitle?: string; compact?: boolean;
 }) {
   const [perspective, setPerspective] = useState<"draft" | "published">("draft");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
@@ -20,8 +20,8 @@ export function SelectedWorkPreview({ editionId, title, publicHref = "", editHre
   const stepIndex = WORKFLOW_GROUPS.findIndex(group => group.steps.some(step => step === currentStep));
   const href = perspective === "published" ? publicHref : editionId ? `/admin/preview/works/${encodeURIComponent(editionId)}` : "";
   return <aside className="selected-work-preview" aria-label="已保存内容预览">
-    <header className="selected-preview-heading"><div><h2>{heading || (title ? `正在处理：${title}` : "读者会看到什么")}</h2><p>{subtitle || ""}</p></div>{stepIndex >= 0 ? <div className="selected-preview-progress"><strong>当前：第 {stepIndex + 1} / 4 步</strong><ol className="reference-preview-steps" aria-label="当前整理进度">{WORKFLOW_GROUPS.map((group,index)=><li key={group.label} aria-current={index === stepIndex ? "step" : undefined}><b>{index+1}</b><span>{group.label}</span></li>)}</ol></div> : null}</header>
-    <section className="selected-preview-paper"><div className="selected-preview-paper-heading"><div><h2>已保存内容预览</h2><p>这里在网站上的实际显示效果。</p></div>
+    {compact ? null : <header className="selected-preview-heading"><div><h2>{heading || (title ? `正在处理：${title}` : "读者会看到什么")}</h2><p>{subtitle || ""}</p></div>{stepIndex >= 0 ? <div className="selected-preview-progress"><strong>当前：第 {stepIndex + 1} / 4 步</strong><ol className="reference-preview-steps" aria-label="当前整理进度">{WORKFLOW_GROUPS.map((group,index)=><li key={group.label} aria-current={index === stepIndex ? "step" : undefined}><b>{index+1}</b><span>{group.label}</span></li>)}</ol></div> : null}</header>}
+    <section className="selected-preview-paper"><div className="selected-preview-paper-heading"><div><h2>{compact ? "读者会看到什么" : "已保存内容预览"}</h2><p>这里在网站上的实际显示效果。</p></div>
     <div className="selected-preview-tools">
       <div role="group" aria-label="预览内容"><button type="button" aria-pressed={perspective === "draft"} onClick={() => setPerspective("draft")}>修改后</button><button type="button" aria-pressed={perspective === "published"} onClick={() => setPerspective("published")}>当前线上</button></div>
       <div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={15}/>手机</button></div>

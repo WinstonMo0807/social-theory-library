@@ -2139,9 +2139,10 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     });
   }
 
+  const sectionTabs = <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>;
   return (
-    <AdminPageFrame eyebrow={scope === "processing" ? "处理中心" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? activeSection==="ai" ? "辅助填写设置" : activeSection==="ocr" ? "文字识别设置" : "处理服务设置" : "设置兼容入口"} description={activeSection==="ai" ? "配置 AI 辅助服务，帮助编辑完善馆藏内容。所有建议均需人工审核后保存。" : activeSection==="ocr" ? "配置 OCR 服务，管理全库文字识别功能。" : "查看已保存的配置与真实记录。各部分明确保存。"}>
-      <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
+    <AdminPageFrame className={scope === "processing" ? "processing-settings-page" : undefined} eyebrow={scope === "processing" ? "" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? activeSection==="ai" ? "辅助填写设置" : activeSection==="ocr" ? "文字识别设置" : "处理服务设置" : "设置兼容入口"} description={activeSection==="ai" ? "配置 AI 辅助服务，帮助编辑完善馆藏内容。所有建议均需人工审核后保存。" : activeSection==="ocr" ? "配置 OCR 服务，管理全库文字识别功能。" : "查看已保存的配置与真实记录。各部分明确保存。"}>
+      {scope === "processing" ? null : sectionTabs}
       <div className={scope === "processing" ? "admin-v2-ops-split" : undefined}>
       <section className="settings-grid settings-tabbed">
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
@@ -2228,9 +2229,9 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <header><h2>服务设置</h2></header><p>选择需要启用的辅助填写服务，并检查模型连接状态。</p>
           <fieldset className="settings-reference-purpose"><legend>服务用途</legend><label><input type="radio" name="ai-capability" checked={aiCapability==="metadata_extraction"} onChange={()=>setAiCapability("metadata_extraction")}/><span>书目信息补全<small>根据书籍资料，提供待人工核对的书目信息。</small></span></label><label><input type="radio" name="ai-capability" disabled checked={false} readOnly/><span>摘要建议<small>独立摘要服务暂未接入。</small></span></label><label><input type="radio" name="ai-capability" checked={aiCapability==="library_qa"} onChange={()=>setAiCapability("library_qa")}/><span>馆内问答<small>基于馆藏内容回答问题。</small></span></label></fieldset>
           {aiRuntime ? <>
-            <h3>已配置的模型</h3>{aiRuntime.profiles.filter(profile=>profile.capability===aiCapability).map((profile) => (
-              <fieldset key={profile.key}>
-                <legend>{profile.model || "尚未填写模型"}</legend>
+            <h3>已配置的模型</h3>{aiRuntime.profiles.filter(profile=>profile.capability===aiCapability).sort((a,b)=>Number(b.key===aiRuntime.active[aiCapability])-Number(a.key===aiRuntime.active[aiCapability])).map((profile,index) => (
+              <details key={profile.key} className="settings-reference-profile" open={profile.key===aiRuntime.active[aiCapability] || (!aiRuntime.active[aiCapability] && index===0)}>
+                <summary>{profile.model || "尚未填写模型"}<small>{profile.key===aiRuntime.active[aiCapability] ? "当前使用" : profile.key}</small></summary><fieldset>
                 <div className="settings-reference-model"><strong>{aiChecks[profile.key] ? aiChecks[profile.key].available ? "连接正常" : "连接不可用" : "尚未检查"}</strong><div><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={()=>void testAiRuntime(profile.key)}>检查连接</button><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={()=>void testAiRuntime(profile.key)}>重试</button></div><small>上次检查：{aiChecks[profile.key] ? new Date(aiChecks[profile.key].checkedAt).toLocaleString("zh-CN") : "—"}（服务器已保存配置）</small>{aiChecks[profile.key] ? <p>{aiChecks[profile.key].detail}</p> : null}</div>
                 {aiCapabilityGuidance[profile.capability] ? <p className="admin-help">{aiCapabilityGuidance[profile.capability]}</p> : null}
                 <label className="switch-row">
@@ -2255,7 +2256,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
                 </dl>
                 <ActionButton className="button secondary" type="button" state={pendingAction === `test-ai-runtime:${profile.key}` ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== `test-ai-runtime:${profile.key}`} onClick={() => void testAiRuntime(profile.key)}>测试配置</ActionButton>
                 </fieldset></details>
-              </fieldset>
+              </fieldset></details>
             ))}
             {!aiRuntime.profiles.some(profile=>profile.capability===aiCapability) ? <p className="empty-state">该服务尚无模型配置。</p> : null}
             <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存设置" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存设置</ActionButton>
@@ -2353,13 +2354,14 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
       </section>
       {scope === "processing" ? activeSection === "ocr" ? <AdminReaderPreview /> : activeSection==="ai" ? <AdminReaderPreview kind="book"/> : <AdminPublicPreviewFrame title="读者预览" emptyMessage="当前设置没有可预览的内容" /> : null}
       </div>
+      {scope === "processing" ? <details className="processing-settings-navigation"><summary>其他处理服务</summary>{sectionTabs}</details> : null}
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
     </AdminPageFrame>
   );
 }
 
-function AdminPageFrame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
-  return <div className="admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
+function AdminPageFrame({ eyebrow, title, description, children, className = "" }: { eyebrow: string; title: string; description: string; children: React.ReactNode; className?: string }) {
+  return <div className={`admin-page ${className}`}><header className="admin-page-title"><div>{eyebrow ? <p>{eyebrow}</p> : null}<h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
 }
 
 function StatusCard({ icon: Icon, title, value, description }: { icon: typeof Cloud; title: string; value: string; description: string }) {

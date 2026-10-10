@@ -87,12 +87,14 @@ test("Research Source Registry supports safe config tests and Chinese provider b
   assert.match(sourceRegistry, /method: "POST"/);
   assert.match(sourceRegistry, /endpoint_alias/);
   assert.match(sourceRegistry, /credential_alias/);
-  assert.match(sourceRegistry, /只有 System Owner 可以修改/);
+  assert.match(sourceRegistry, /payload\.permissions\.can_edit_sensitive_aliases \?/);
+  assert.match(sourceRegistry, /当前账户不能修改技术地址或访问凭据/);
   assert.match(sourceRegistry, /中文公共来源扩展/);
   assert.match(sourceRegistry, /中文授权来源/);
-  assert.match(sourceRegistry, /密钥始终留在服务器环境中/);
+  assert.match(sourceRegistry, /secret_values_exposed: false/);
+  assert.match(sourceRegistry, /type="password" autoComplete="new-password"/);
   assert.match(sourceRegistry, /credential_updated_at/);
   assert.match(sourceRegistry, /credential_last_tested_at/);
-  assert.match(sourceRegistry, /凭据更新/);
-  assert.match(sourceRegistry, /凭据测试/);
+  assert.match(sourceRegistry, /credentialTimeLabel\(source\.credential_last_tested_at/);
+  assert.match(sourceRegistry, /加密保存凭据/);
 });

@@ -133,7 +133,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>}
-        {readingContext === "article" || siteContentPage === "home" ? <nav className="reading-header-reader" aria-label="读者导航"><Link href="/about">{config.about_label}</Link><Link href={user && !preview ? "/account" : "/login"}>{user && !preview ? "读者中心" : "登录"}</Link></nav> : null}
+        {readingContext === "article" || siteContentPage === "home" ? <nav className="reading-header-reader" aria-label="读者导航"><Link href="/about" prefetch={false}>{config.about_label}</Link><Link href={user && !preview ? "/account" : "/login"} prefetch={false}>{user && !preview ? "读者中心" : "登录"}</Link></nav> : null}
         <IconButton
           ref={menuButtonRef}
           className="icon-button menu-button"

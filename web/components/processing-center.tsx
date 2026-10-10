@@ -710,10 +710,10 @@ export function ProcessingCenter() {
   const problemItems = items.filter(item => problemType === "all" || (problemType === "file" ? item.document_stages?.file?.status === "failed" || item.status === "failed" && !item.document_stages?.ocr?.error && !item.document_stages?.index?.error : ["failed", "paused", "pending", "running"].includes(item.document_stages?.[problemType as "ocr" | "index"]?.status || "")));
 
   return (
-    <div className="admin-page processing-center-page processing-reference-page" aria-busy={loading || Boolean(pendingOperation)}>
+    <div className="admin-page processing-center-page processing-reference-page" data-surface={activeSurface} data-document-detail={documentDetail} aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><h1>{documentDetail ? "查看这本书的处理情况" : activeSurface === "research-sources" ? "资料来源" : activeSurface === "workers" ? "人工核对" : activeSurface === "documents" ? "文字识别" : "处理中心"}</h1><span>{documentDetail ? "了解文件处理进度、当前问题与下一步操作" : activeSurface === "research-sources" ? "用于查找书目信息的来源" : "处理文件和搜索问题，确保读者能够正常浏览、阅读和检索。"}</span></div>
-        <div className="admin-action-row">
+        <div><h1>{documentDetail ? "查看这本书的处理情况" : activeSurface === "research-sources" ? "资料来源" : activeSurface === "workers" ? "人工核对" : activeSurface === "documents" ? "文字识别" : "处理中心"}</h1><span>{documentDetail ? "了解文件处理进度、当前问题与下一步操作" : activeSurface === "research-sources" ? "用于查找书目信息的来源" : "处理文件和搜索问题，确保读者能够正常浏览、阅读和检索。"}</span>{activeSurface === "overview" && !documentDetail ? <span className="processing-reference-priority">请优先处理影响读者的问题，其他任务可稍后处理。</span> : null}</div>
+        <div className="admin-action-row processing-reference-heading-actions">
           <ActionLink className="button secondary" href="/admin/processing/status">查看系统运行状态 <ChevronRight size={15} /></ActionLink>
           <ActionButton
             className="button secondary"
@@ -750,7 +750,7 @@ export function ProcessingCenter() {
             {!loading && !problemItems.length ? <p className="admin-list-state">当前页没有符合条件的待处理记录。</p> : null}
             {itemMeta ? <TaskPagination label="上传记录翻页" page={itemPage} pages={Math.max(1, Math.ceil(itemMeta.count / 24))} count={itemMeta.count} busy={loading} onChange={page => { setItemPage(page); setSelectedDocumentId(""); }}/> : null}
           </section>}
-          <SelectedWorkPreview key={selectedDocument?.id || "empty"} editionId={selectedDocument?.edition} publicHref={publicationPublicHref(selectedDocument?.review_data?.publication)}/>
+          <SelectedWorkPreview compact key={selectedDocument?.id || "empty"} editionId={selectedDocument?.edition} publicHref={publicationPublicHref(selectedDocument?.review_data?.publication)}/>
         </div>
         <section className="processing-reference-services"><h2>系统运行状态</h2><div>{[["后台任务", queueHealth?.worker_online], ["文件存储", null], ["文字识别服务", queueHealth?.ocr.reachable], ["搜索服务", queueHealth?.search.reachable]].map(([label, state]) => <article key={String(label)}><i className={state === true ? "healthy" : state === false ? "failed" : "unknown"}/><div><strong>{label}</strong><span>{state === true ? "可连接" : state === false ? "不可连接" : "待核实"}</span><small>上次检查：{timeLabel(queueHealth?.checked_at ?? null)}{queueHealth?.stale ? "（已过期）" : ""}</small></div></article>)}<Link className="button secondary" href="/admin/processing/status">运行检查详情 →</Link></div></section>
       </> : null}
