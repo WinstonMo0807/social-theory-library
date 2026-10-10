@@ -122,7 +122,7 @@ function EditionOcrControlState({ editionId, workId, fullPage }: { editionId: st
   return <section className={`catalog-ocr-control ${fullPage ? "ocr-reference-page" : ""}`} aria-label="馆藏 PDF 文字识别">
     {fullPage ? <header className="ocr-reference-book"><SavedEditionCover editionId={editionId} title={current?.title || ""}/><div><h1>{current?.title || "识别书中文字"}</h1><p>{current?.edition_label}</p></div><Link className="button secondary" href="/admin/library">← 返回馆藏列表</Link></header> : null}
     <div className={fullPage ? "ocr-reference-grid" : undefined}><div className={fullPage ? "admin-panel ocr-reference-progress" : undefined}>
-    {fullPage ? <><header><h2>识别进度</h2><span>当前：第 {stage} / 3 步</span></header><ol className="reference-step-strip">{["检查文件","识别文字","整理阅读文件"].map((label,index)=><li key={label} aria-current={stage===index+1 ? "step" : undefined}><b>{stage>index+1 ? "✓" : index+1}</b><span>{label}</span></li>)}</ol></> : null}
+    {fullPage ? <><header><h2>识别进度</h2><span>当前：第 {stage} / 3 步</span></header><ol className="reference-step-strip">{["检查文件","识别文字","整理阅读文件"].map((label,index)=><li key={label} aria-current={stage===index+1 ? "step" : undefined} data-complete={stage>index+1 || undefined}><b>{stage>index+1 ? "✓" : index+1}</b><span>{label}</span><small>{stage>index+1 ? "已完成" : stage===index+1 ? latest?.phase_label || "待开始" : "等待中"}</small></li>)}</ol></> : null}
     <details className="ocr-reference-start" open={!latest || !fullPage}><summary>选择文件与识别设置</summary>
     <h3>重新识别 PDF 文字</h3>
     <p>对当前出版版本的 PDF 重新进行全文 OCR。书目信息和人工确认内容不变，原文件、旧页标识及读者笔记保留。</p>

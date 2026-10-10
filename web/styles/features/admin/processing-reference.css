@@ -90,8 +90,26 @@
 .admin-shell .ocr-reference-text {min-height:660px;padding:25px;background:#fff}
 .admin-shell .ocr-reference-text pre {white-space:pre-wrap;font:19px/1.9 var(--stl-type-serif);overflow-wrap:anywhere}
 .admin-shell .ocr-reference-selection {margin-bottom:14px}
+.admin-shell .ocr-reference-picker {position:relative;padding:0;border:0;background:transparent}
+.admin-shell .ocr-reference-picker .ocr-reference-page {padding:0;border:0;background:transparent}
+.admin-shell .ocr-reference-selection:not([open]) {position:absolute;top:0;right:0;margin:0;font-size:12px;z-index:1}
+.admin-shell .ocr-reference-page > .ocr-reference-book {padding:0 0 16px;min-height:184px}
+.admin-shell .ocr-reference-page > .ocr-reference-book .reference-saved-cover {width:124px;height:168px}
+.admin-shell .ocr-reference-grid > .admin-panel > header h2 {font:600 23px/1.5 var(--stl-type-serif)}
+.admin-shell .ocr-reference-progress .reference-step-strip {display:flex;list-style:none;gap:0;padding:0;margin:20px 0 24px}
+.admin-shell .ocr-reference-progress .reference-step-strip > li {position:relative;flex:1;min-width:0;display:grid;justify-items:center;align-content:start;gap:8px;text-align:center}
+.admin-shell .ocr-reference-progress .reference-step-strip > li:not(:last-child)::after {content:"";position:absolute;top:18px;left:calc(50% + 22px);width:calc(100% - 44px);height:1px;background:var(--admin-v2-line)}
+.admin-shell .ocr-reference-progress .reference-step-strip b {display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--admin-v2-line);border-radius:50%;font:18px/1 var(--stl-type-serif)}
+.admin-shell .ocr-reference-progress .reference-step-strip [aria-current=step] b {background:var(--admin-v2-ink);color:var(--admin-v2-surface)}
+.admin-shell .ocr-reference-progress .reference-step-strip [data-complete] b {background:var(--admin-v2-accent);color:var(--admin-v2-surface)}
+.admin-shell .ocr-reference-progress .reference-step-strip small {font-size:12px;line-height:1.5;color:var(--admin-v2-muted);overflow-wrap:anywhere}
+.admin-shell .ocr-reference-progress progress::-webkit-progress-bar {background:#d9d5cd}
+.admin-shell .ocr-reference-progress progress::-webkit-progress-value {background:var(--admin-v2-accent)}
+.admin-shell .ocr-reference-preview .ocr-reference-page-controls label {display:inline-flex;align-items:center;gap:6px;margin:0;white-space:nowrap}
+.admin-shell .ocr-reference-preview .ocr-reference-page-controls button {width:30px;min-height:30px;padding:4px}
 @media(max-width:1150px){.admin-shell .ocr-reference-grid{grid-template-columns:1fr}.admin-shell .ocr-reference-book h1{font-size:28px}}
 @media(max-width:620px){.admin-shell .ocr-reference-book{flex-wrap:wrap}.admin-shell .ocr-reference-book .reference-saved-cover{width:72px;height:100px}.admin-shell .ocr-reference-book>.button{margin-left:0}.admin-shell .ocr-reference-grid header{flex-wrap:wrap}}
+@media(max-width:620px){.admin-shell .ocr-reference-selection:not([open]){position:static;margin-bottom:14px}.admin-shell .ocr-reference-page>.ocr-reference-book{min-height:0}}
 
 /* Scenes 36–40 retain the actual processing, source and model records. */
 .admin-shell .processing-reference-page > .admin-page-title,

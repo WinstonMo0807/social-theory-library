@@ -3,8 +3,9 @@ import { EvidenceCurationEditor } from "@/components/admin/curation/evidence-cur
 import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
 export const metadata = { title: "原文策展私有预览", robots: { index: false, follow: false } };
-export default async function EvidencePreviewPage({ params }: { params: Promise<{ objectType: string; objectId: string }> }) {
+export default async function EvidencePreviewPage({ params, searchParams }: { params: Promise<{ objectType: string; objectId: string }>; searchParams: Promise<{ perspective?: string }> }) {
   const { objectType, objectId } = await params;
+  const { perspective } = await searchParams;
   if (!["topic", "scholar", "node"].includes(objectType)) notFound();
-  return <EvidenceCurationEditor key={`${objectType}:${objectId}`} objectType={objectType as EvidenceCurationType} objectId={objectId} fullPreview />;
+  return <EvidenceCurationEditor key={`${objectType}:${objectId}`} objectType={objectType as EvidenceCurationType} objectId={objectId} fullPreview previewPerspective={perspective === "published" ? "published" : "draft"} />;
 }

@@ -8,9 +8,10 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from accounts.models import User
-from catalog.models import (Discipline, EditorialRevision, KnowledgeNode, LegacyKnowledgeMapping, Person,
+from catalog.models import (Discipline, EditorialRevision, EvidenceCuration, KnowledgeNode, LegacyKnowledgeMapping, Person,
                             ReadingPath, ScholarProfile, SiteSetting, Subdiscipline, TheorySchool, Topic)
 from catalog.services import editorial_issues as issues
+from catalog.services.recycle import recycle_object, restore_object
 
 pytestmark = pytest.mark.django_db
 
@@ -118,3 +119,54 @@ def test_legacy_theory_redirect_only_uses_verified_public_identity(api_client):
     node.canonical_name_zh = "另一个身份"
     node.save(update_fields=["status", "canonical_name_zh"])
     assert api_client.get(url).data["canonical_node_url"] == ""
+
+
+@pytest.mark.parametrize("owner_type", ["topic", "scholar", "node", "scholar_person"])
+def test_evidence_draft_queue_tracks_owner_recycle_without_losing_history(api_client, admin_user, owner_type):
+    if owner_type == "topic":
+        owner = Topic.objects.create(name="原文所属主题", slug="evidence-owner")
+    elif owner_type in {"scholar", "scholar_person"}:
+        owner = ScholarProfile.objects.create(person=Person.objects.create(preferred_name="原文所属人物"), slug="evidence-owner")
+    else:
+        owner = KnowledgeNode.objects.create(canonical_name_zh="原文所属节点", node_type="theory_tradition", slug="evidence-owner")
+    evidence_type = "scholar" if owner_type == "scholar_person" else owner_type
+    curation = EvidenceCuration.objects.create(object_type=evidence_type, object_id=owner.pk)
+    revision = draft("evidence_curation", curation, title="应保留的原文草稿", references=[{"label": "人工整理记录"}])
+    api_client.force_authenticate(admin_user)
+
+    def queue():
+        response = api_client.get("/api/catalog/admin/curation-drafts/")
+        assert response.status_code == 200
+        return response.data
+
+    before = queue()
+    assert str(curation.pk) in {row["object_id"] for row in before["results"]}
+    recycled_owner = owner.person if owner_type == "scholar_person" else owner
+    entry = recycle_object(recycled_owner, actor=admin_user, kind=evidence_type, name="原文所属对象")
+    hidden = queue()
+    assert str(curation.pk) not in {row["object_id"] for row in hidden["results"]}
+    assert hidden["counts"]["all"] == before["counts"]["all"] - 2
+    assert EvidenceCuration.all_objects.filter(pk=curation.pk, object_id=owner.pk).exists()
+    revision.refresh_from_db()
+    assert revision.status == "draft"
+    assert revision.materialized_preview["references"] == [{"label": "人工整理记录"}]
+
+    restore_object(entry.pk, actor=admin_user)
+    restored = queue()
+    row = next(row for row in restored["results"] if row["object_id"] == str(curation.pk))
+    assert row["title"] == "应保留的原文草稿"
+    assert row["edit_url"].endswith(f"/{owner.pk}?section=passages")
+    assert restored["counts"] == before["counts"]
+
+
+@pytest.mark.parametrize("owner_type", ["topic", "scholar", "node"])
+def test_evidence_draft_without_owner_stays_in_history_and_out_of_queue(api_client, admin_user, owner_type):
+    curation = EvidenceCuration.objects.create(object_type=owner_type, object_id=uuid4())
+    revision = draft("evidence_curation", curation, title="失效对象的历史草稿")
+    api_client.force_authenticate(admin_user)
+    response = api_client.get("/api/catalog/admin/curation-drafts/")
+    assert response.status_code == 200
+    assert str(curation.pk) not in {row["object_id"] for row in response.data["results"]}
+    assert response.data["counts"]["all"] == 0
+    assert EvidenceCuration.all_objects.filter(pk=curation.pk).exists()
+    assert EditorialRevision.objects.filter(pk=revision.pk, status="draft").exists()

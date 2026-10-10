@@ -103,7 +103,11 @@ def _draft_sources(user, *, query=""):
             _objects(models.ReadingPath.objects.all(), "reading_path", "阅读路径", F("title"), "title", "status", "/admin/theories/reading-paths?path=", query=query),
             _objects(models.TheoryTimelineEvent.objects.all(), "timeline_event", "时间线事件", F("title"), "title", "review_status", "/admin/theories/timeline?event=", query=query),
             _objects(models.ScholarRelation.objects.all(), "scholar_relation", "学者关系", Concat("source_scholar__person__preferred_name", Value(" → "), "target_scholar__person__preferred_name"), None, "status", "", query=query, url_expression=Concat(Value("/admin/scholars/"), _uuid_text("source_scholar_id"), Value("/relations?relation="), _uuid_text("pk"))),
-            _objects(models.EvidenceCuration.objects.all(), "evidence_curation", "原文策展", Value("原文策展"), "title", None, "", query=query, url_expression=Concat(
+            _objects(models.EvidenceCuration.objects.filter(
+                Q(object_type="topic", object_id__in=models.Topic.objects.values("pk"))
+                | Q(object_type="scholar", object_id__in=models.ScholarProfile.objects.values("pk"))
+                | Q(object_type="node", object_id__in=models.KnowledgeNode.objects.values("pk"))
+            ), "evidence_curation", "原文策展", Value("原文策展"), "title", None, "", query=query, url_expression=Concat(
                 Case(When(object_type="topic", then=Value("/admin/topics/")), When(object_type="scholar", then=Value("/admin/scholars/")), default=Value("/admin/theories/"), output_field=CharField()),
                 _uuid_text("object_id"), Value("?section=passages"))),
         ]

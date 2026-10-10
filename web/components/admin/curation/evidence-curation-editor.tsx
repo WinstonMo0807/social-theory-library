@@ -13,11 +13,11 @@ import { useApiResource } from "@/lib/api/use-api-resource";
 import { FixedPageEditor, type FixedEditorSection } from "./fixed-page-editor";
 import { DraftConflict } from "./draft-conflict";
 import { TopicEvidenceFields } from "./topic-evidence-fields";
-import { evidenceCurationSavePayload, topicEvidenceAnnotationProblem, type EvidenceCurationDraft, type EvidenceCurationSource, type EvidenceCurationType } from "@/lib/api/evidence-curation.types";
+import { evidenceCurationSavePayload, topicEvidenceAnnotationProblem, type EvidenceCurationDraft, type EvidenceCurationSource, type EvidenceCurationType, type PublishedEvidenceCuration } from "@/lib/api/evidence-curation.types";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
 
 type SourcePage = { count: number; next: string | null; previous: string | null; results: EvidenceCurationSource[] };
-type Props = { objectType: EvidenceCurationType; objectId: string; sections?: FixedEditorSection[]; onSectionChange?: (id: string) => void; onDirtyChange?: (dirty: boolean) => void; fullPreview?: boolean };
+type Props = { objectType: EvidenceCurationType; objectId: string; sections?: FixedEditorSection[]; onSectionChange?: (id: string) => void; onDirtyChange?: (dirty: boolean) => void; fullPreview?: boolean; previewPerspective?: "draft" | "published" };
 
 function SourceCard({ source }: { source: EvidenceCurationSource }) {
   return <div className="evidence-curation-source"><EvidenceEnvelopeCard evidence={{ text: source.text, source: { work_title: source.work_title, asset_id: source.asset_id }, locator: { page: source.page_start, printed_page_label: source.printed_label }, reader_url: source.reader_url }} />
@@ -27,7 +27,7 @@ function SourceCard({ source }: { source: EvidenceCurationSource }) {
   </div>;
 }
 
-export function EvidenceCurationEditor({ objectType, objectId, sections = [{ id: "passages", label: "原文策展" }], onSectionChange = () => {}, onDirtyChange, fullPreview = false }: Props) {
+export function EvidenceCurationEditor({ objectType, objectId, sections = [{ id: "passages", label: "原文策展" }], onSectionChange = () => {}, onDirtyChange, fullPreview = false, previewPerspective = "draft" }: Props) {
   const endpoint = `/catalog/admin/evidence-curation/${objectType}/${objectId}/`;
   const topicReference = objectType === "topic";
   const [activeSourceKey, setActiveSourceKey] = useState("");
@@ -47,6 +47,8 @@ export function EvidenceCurationEditor({ objectType, objectId, sections = [{ id:
   const node = useApiResource<{node_type:string}>(objectType==="node" ? `/catalog/admin/theory-system/nodes/${objectId}/` : "",getServerSessionCredential());
   const previewType = objectType==="node" ? node.data?.node_type === "theory_tradition" ? "theory" : node.data?.node_type : objectType;
   const knowledge = useApiResource<KnowledgePreviewPayload>(previewType ? `/catalog/admin/knowledge-preview/${previewType}/${objectId}/` : "",getServerSessionCredential());
+  const publishedPreview = fullPreview && previewPerspective === "published";
+  const publishedCuration = useApiResource<PublishedEvidenceCuration>(publishedPreview ? `/catalog/evidence-curation/${objectType}/${objectId}/` : "", null);
   const visibleDraft = useMemo(() => draft ? { ...draft, configured: true, items: [...draft.items, ...(selected && !draft.items.some(item => item.source_id === selected.id && item.source_type === selected.source_type) ? [{source_type:selected.source_type,source_id:selected.id,source:selected,group_title:topicReference ? groupTitle : groupTitle.trim(),reason:topicReference ? reason : reason.trim(),order:draft.items.length}] : [])] } : null, [draft, selected, groupTitle, reason, topicReference]);
   const selection = draft && visibleDraft && visibleDraft.items.length > draft.items.length ? visibleDraft.items.at(-1) : null;
   const topicItem = selection || draft?.items.find(item => `${item.source_type}:${item.source_id}` === activeSourceKey) || draft?.items[0] || null;
@@ -112,8 +114,11 @@ export function EvidenceCurationEditor({ objectType, objectId, sections = [{ id:
     finally { finishAction(action); }
   }
   if (!draft) return <section className="admin-panel"><p role={initialError ? "alert" : "status"}>{initialError || "正在读取原文策展…"}</p>{initialError ? <button type="button" className="button secondary" onClick={() => { setInitialError(""); setLoadAttempt(value => value + 1); }}>重试读取</button> : null}</section>;
-  const preview = knowledge.data && visibleDraft ? <PreviewSurface payload={knowledge.data} pageId={topicReference ? "passages" : "evidence"} evidenceCuration={visibleDraft} selectedEvidenceKey={topicReference && topicItem ? `${topicItem.source_type}:${topicItem.source_id}` : undefined}/> : <p role={knowledge.error || node.error ? "alert" : "status"}>{knowledge.error || node.error || "正在读取页面预览…"}</p>;
-  if (fullPreview) return <div className="evidence-curation-full-preview"><p>管理员草稿预览 · 未发布内容仅登录管理账号可见</p>{preview}</div>;
+  const previewPayload = knowledge.data && publishedPreview ? { ...knowledge.data, active_perspective: "published" as const, perspective: knowledge.data.perspectives.published } : knowledge.data;
+  const previewCuration = publishedPreview ? publishedCuration.data : visibleDraft;
+  const previewError = knowledge.error || node.error || (publishedPreview ? publishedCuration.error : initialError);
+  const preview = previewError ? <p role="alert">{previewError}</p> : publishedPreview && previewPayload && !previewPayload.perspective.available ? <p className="empty-state">当前尚无已发布内容。</p> : previewPayload && previewCuration ? <PreviewSurface payload={previewPayload} pageId={topicReference ? "passages" : "evidence"} evidenceCuration={previewCuration} selectedEvidenceKey={!publishedPreview && topicReference && topicItem ? `${topicItem.source_type}:${topicItem.source_id}` : undefined}/> : <p role="status">正在读取页面预览…</p>;
+  if (fullPreview) return <div className="evidence-curation-full-preview"><p>{publishedPreview ? "当前线上原文策展" : "管理员草稿预览 · 未发布内容仅登录管理账号可见"}</p>{preview}</div>;
   const busy = Boolean(pendingAction);
   const files = editions.find(row => row.id === editionId)?.assets || [];
   function move(index: number, delta: number) {

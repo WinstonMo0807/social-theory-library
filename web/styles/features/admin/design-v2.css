@@ -7,6 +7,7 @@
   --admin-v2-muted: #68655d;
   --admin-v2-line: #d6d1c7;
   --admin-v2-focus: #766654;
+  --admin-v2-accent: var(--admin-v2-focus);
 }
 
 html:has(.admin-shell) { background: var(--admin-v2-paper); }

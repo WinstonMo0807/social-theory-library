@@ -15,6 +15,8 @@
 .editor :global(.workflow-v307-live-preview),.editor>:global(.workflow-inspector) { grid-column:2; grid-row:3/span 2; position:sticky; top:64px; max-height:calc(100vh - 80px); overflow:auto; min-width:0; border:1px solid var(--admin-v2-line); border-radius:4px; background:var(--admin-v2-surface); padding:18px; }
 .editor :global(.workflow-field-grid) { grid-template-columns:1fr!important; }
 .editor :global(.workflow-v307-live-preview .fixed-preview-canvas) { max-height:none; }
+.editor :global(.workflow-v307-live-preview .workflow-inspector) { position:static; inset:auto; z-index:auto; width:100%; height:auto; max-height:none; transform:none; box-shadow:none; border:0; padding:0; }
+.editor :global(.workflow-v307-live-preview .workflow-inspector-pdf iframe) { width:100%; height:min(660px,65vh); border:0; }
 .editor :global(.workflow-section-heading) { background:transparent; }
 .conflict { padding:26px; border:1px solid var(--admin-v2-line); border-radius:4px; background:var(--admin-v2-surface); font-family:var(--stl-type-serif); }
 .conflict h2 { margin:0 0 10px; font-size:28px; }
