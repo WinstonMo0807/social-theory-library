@@ -7,7 +7,7 @@ import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 
-type Page<T> = { count: number; results: T[] };
+type Page<T> = { count: number; results: T[]; next?: string | null; previous?: string | null };
 type StorageSnapshot = {
   generated_at: string;
   storage: {
@@ -100,15 +100,21 @@ export function BackupRestoreAdmin() {
   const user = useAdminSession();
   const credential = getServerSessionCredential();
   const canRunBackup = hasAdminCapability(user, "can_run_backup");
-  const backups = useApiResource<Page<Backup>>(canRunBackup ? "/distribution/backups/" : "", credential);
-  const [selectedId, setSelectedId] = useState("");
-  const selected = backups.data?.results.find((row) => row.id === selectedId) ?? backups.data?.results.find((row) => row.status === "completed");
+  const [page, setPage] = useState(1);
+  const backups = useApiResource<Page<Backup>>(canRunBackup ? `/distribution/backups/?page=${page}` : "", credential);
+  const [chosen, setChosen] = useState<Backup | null>(null);
+  const selected = chosen ? backups.data?.results.find(row => row.id === chosen.id) ?? chosen : backups.data?.results.find(row => row.status === "completed");
   const [target, setTarget] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [backupPath, setBackupPath] = useState("/data/backups");
   const [includeOriginals, setIncludeOriginals] = useState(true);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+
+  function changePage(next: number) {
+    if (selected) setChosen(selected);
+    setPage(next);
+  }
 
   async function createBackup(event: FormEvent) {
     event.preventDefault();
@@ -134,7 +140,9 @@ export function BackupRestoreAdmin() {
     <div className="backup-restore-grid">
       <section className="admin-panel backup-selection"><header><h2>已选择的备份</h2><button type="button" className="text-button" onClick={backups.retry} disabled={!canRunBackup}>刷新备份</button></header>
         <article className="backup-selected"><header><Database size={31} /><div><h3>{selected ? backupLabel(selected) : "尚未选择备份"}</h3><p>{selected ? selected.include_originals ? "包含数据库与原始文件" : "包含数据库" : "从下方已有备份中选择"}</p></div></header><dl><div><dt>备份范围</dt><dd>{selected ? selected.include_originals ? "数据库与原始文件" : "数据库" : "—"}</dd></div><div><dt>完成时间</dt><dd>{dateTime(selected?.completed_at)}</dd></div><div><dt>校验时间</dt><dd>—</dd></div><div><dt>校验结果</dt><dd>{selected?.checksum ? "已生成校验值，恢复待验证" : "—"}</dd></div><div><dt>状态</dt><dd>{selected ? backupStates[selected.status] : "—"}</dd></div></dl>{selected?.error_message ? <p className="attempt-error">{selected.error_message}</p> : null}</article>
-        <h3>其他可用备份（共 {backups.data?.count ?? 0} 条）</h3><div className="backup-list">{backups.data?.results.map((row) => <button type="button" key={row.id} className={selected?.id === row.id ? "selected" : ""} disabled={row.status !== "completed"} onClick={() => { setSelectedId(row.id); setAcknowledged(false); }}><Database size={28} /><span><strong>{backupLabel(row)}</strong><small>完成 {dateTime(row.completed_at)}</small></span><span className="storage-state"><i className={row.status === "completed" ? "ok" : row.status === "failed" ? "failed" : ""} />{backupStates[row.status]}</span></button>)}</div>{canRunBackup && !backups.loading && !backups.data?.results.length ? <p className="empty-state">尚无备份记录。</p> : null}
+        <h3>已有备份（共 {backups.data?.count ?? 0} 条）</h3><div className="backup-list">{backups.data?.results.map((row) => <button type="button" key={row.id} className={selected?.id === row.id ? "selected" : ""} disabled={row.status !== "completed"} onClick={() => { setChosen(row); setAcknowledged(false); }}><Database size={28} /><span><strong>{backupLabel(row)}</strong><small>完成 {dateTime(row.completed_at)}</small></span><span className="storage-state"><i className={row.status === "completed" ? "ok" : row.status === "failed" ? "failed" : ""} />{backupStates[row.status]}</span></button>)}</div>{canRunBackup && !backups.loading && !backups.data?.results.length ? <p className="empty-state">尚无备份记录。</p> : null}
+        {backups.loading && canRunBackup ? <p role="status">正在读取备份记录…</p> : null}
+        {backups.data ? <nav className="backup-pagination" aria-label="备份分页"><button type="button" className="button secondary" disabled={pending || !backups.data.previous} onClick={() => changePage(page - 1)}>上一页</button><span>第 {page} 页 · 共 {backups.data.count} 条</span><button type="button" className="button secondary" disabled={pending || !backups.data.next} onClick={() => changePage(page + 1)}>下一页</button></nav> : null}
         {canRunBackup ? <details className="backup-create"><summary>创建手动备份</summary><form onSubmit={(event) => void createBackup(event)}><label><span>容器内备份目录</span><input value={backupPath} onChange={(event) => setBackupPath(event.target.value)} required /></label><label className="backup-checkbox"><input type="checkbox" checked={includeOriginals} onChange={(event) => setIncludeOriginals(event.target.checked)} />同时备份原始文件</label><button type="submit" className="button secondary" disabled={pending}>{pending ? "正在提交备份…" : "立即创建备份"}</button></form></details> : null}
         {message ? <p className="form-message" role="status">{message}</p> : null}
       </section>

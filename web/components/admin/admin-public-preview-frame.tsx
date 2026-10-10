@@ -9,14 +9,24 @@ export function AdminPublicPreviewFrame({
   src,
   emptyMessage = "选择内容后预览",
   children,
+  footer,
+  height = 670,
+  device: controlledDevice,
+  onDeviceChange,
 }: {
   title: string;
   description?: string;
   src?: string | null;
   emptyMessage?: string;
   children?: ReactNode;
+  footer?: ReactNode;
+  height?: number;
+  device?: "desktop" | "mobile";
+  onDeviceChange?: (device: "desktop" | "mobile") => void;
 }) {
-  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [localDevice, setLocalDevice] = useState<"desktop" | "mobile">("desktop");
+  const device = controlledDevice ?? localDevice;
+  const setDevice = onDeviceChange ?? setLocalDevice;
   const [availableWidth, setAvailableWidth] = useState(600);
   const viewport = useRef<HTMLDivElement>(null);
   const width = device === "desktop" ? 1280 : 390;
@@ -45,8 +55,9 @@ export function AdminPublicPreviewFrame({
       {description ? <p>{description}</p> : null}
       {children ? <div className="admin-v2-preview-controls">{children}</div> : null}
       <div className="admin-v2-preview-viewport" ref={viewport} data-device={device}>
-        {src ? <div className="admin-v2-preview-page" style={{ width: width * scale, height: 670 }}><iframe src={src} title={`${title}（${device === "desktop" ? "电脑" : "手机"}）`} loading="lazy" style={{ width, height: 670 / scale, transform: `scale(${scale})` }} /></div> : <p className="admin-v2-preview-empty">{emptyMessage}</p>}
+        {src ? <div className="admin-v2-preview-page" style={{ width: width * scale, height }}><iframe src={src} title={`${title}（${device === "desktop" ? "电脑" : "手机"}）`} loading="lazy" style={{ width, height: height / scale, transform: `scale(${scale})` }} /></div> : <p className="admin-v2-preview-empty">{emptyMessage}</p>}
       </div>
+      {footer ? <footer className="admin-v2-preview-footer">{footer}</footer> : null}
     </aside>
   );
 }

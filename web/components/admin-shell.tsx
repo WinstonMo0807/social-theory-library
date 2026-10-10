@@ -73,6 +73,15 @@ const routeCapabilities: Record<string, string[]> = {
   "/admin/settings": ["can_manage_ai", "can_manage_search_runtime"],
 };
 
+const processingHealthPages: Record<string, string> = {
+  "/admin/processing/health": "系统检查",
+  "/admin/processing/health/knowledge": "为什么修改还没显示",
+  "/admin/processing/health/candidates": "核对填写建议",
+  "/admin/system-health": "系统检查",
+  "/admin/system-health/knowledge": "为什么修改还没显示",
+  "/admin/system-health/candidates": "核对填写建议",
+};
+
 // Keep the route-level list explicit even though the server remains the
 // authority for every permission check.  It gives older session payloads a
 // safe, predictable fallback while newer payloads use the capability snapshot.
@@ -221,6 +230,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   const user = session.user;
+  const healthPageTitle = processingHealthPages[pathname];
   const currentSection = navigation.find(section => pathname === "/admin/review" && searchParams.get("workspace") === "curation" ? section.key === "work" : section.match.some(match => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`))));
   const currentChild = currentSection?.children.find(([href]) => {
     const [path, query] = href.split("?");
@@ -282,7 +292,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   const childPath = childHref.split("?")[0];
                   const childQuery = childHref.includes("?") ? new URLSearchParams(childHref.split("?")[1]) : null;
                   const queryMatches = childQuery ? Array.from(childQuery.entries()).every(([key, value]) => searchParams.get(key) === value) : !section.children.some(([otherHref]) => otherHref.startsWith(`${childPath}?`) && Array.from(new URLSearchParams(otherHref.split("?")[1]).entries()).every(([key, value]) => searchParams.get(key) === value));
-                  const childActive = (pathname === childPath || (childPath === "/admin/theories/disciplines" && pathname === "/admin/theories/subdisciplines")) && queryMatches;
+                  const childActive = (pathname === childPath || (childPath === "/admin/processing/status" && Boolean(healthPageTitle)) || (childPath === "/admin/theories/disciplines" && pathname === "/admin/theories/subdisciplines")) && queryMatches;
                   return <Link className={childActive ? "active" : ""} aria-current={childActive ? "page" : undefined} href={childHref} key={childHref} prefetch={false} onClick={closeNavigation}>{childLabel}</Link>;
                 })}
               </div> : null}
@@ -303,7 +313,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             onClick={() => compactNavigation ? setOpen(true) : setDesktopNavigationCollapsed(current => !current)}
           ><Menu size={20} /></button>
           {pathname==="/admin/theories/timeline" ? <Link className="timeline-reference-back" href={timelineNodeId ? `/admin/theories/${timelineNodeId}` : "/admin/theories"} aria-label="返回理论流派"><ArrowLeft size={18}/></Link> : null}
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{pathname.startsWith("/admin/topics/") ? "编辑主题" : theoryReferencePage ? "流派列表" : currentChild?.[1] || "编辑内容"}</span>{theoryReferencePage && theoryTitle ? <><b>›</b><span>{theoryTitle}</span></> : null}{(["/admin/theories/disciplines", "/admin/theories/subdisciplines", "/admin/topics"].includes(pathname) || pathname.startsWith("/admin/topics/")) ? taxonomyTrail.map((label, index) => <span className="admin-breadcrumb-part" key={`${index}:${label}`}><b>›</b><span>{label}</span></span>) : null}{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}{pathname==="/admin/theories/relations" && relationTitle ? <><b>›</b><span>{relationTitle}</span></> : null}{pathname==="/admin/theories/timeline" ? <>{timelineTitle ? <><b>›</b><span>{timelineTitle}</span></> : null}<b>›</b><span>编辑事件</span></> : null}</div>
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><strong>{currentSection?.label || scope.title}</strong><b>›</b><span>{healthPageTitle ? "运行检查" : pathname.startsWith("/admin/topics/") ? "编辑主题" : theoryReferencePage ? "流派列表" : currentChild?.[1] || "编辑内容"}</span>{healthPageTitle ? <><b>›</b><span>{healthPageTitle}</span></> : null}{theoryReferencePage && theoryTitle ? <><b>›</b><span>{theoryTitle}</span></> : null}{(["/admin/theories/disciplines", "/admin/theories/subdisciplines", "/admin/topics"].includes(pathname) || pathname.startsWith("/admin/topics/")) ? taxonomyTrail.map((label, index) => <span className="admin-breadcrumb-part" key={`${index}:${label}`}><b>›</b><span>{label}</span></span>) : null}{pathname === "/admin/theories/reading-paths" && readingPathTitle ? <><b>›</b><span>{readingPathTitle}</span></> : null}{pathname==="/admin/theories/relations" && relationTitle ? <><b>›</b><span>{relationTitle}</span></> : null}{pathname==="/admin/theories/timeline" ? <>{timelineTitle ? <><b>›</b><span>{timelineTitle}</span></> : null}<b>›</b><span>编辑事件</span></> : null}</div>
           <details className="admin-account-menu"><summary className="admin-user"><span>{user.display_name.slice(0, 1)}</span><strong>{user.display_name}</strong><ChevronDown size={13}/></summary><div><Link href="/account" prefetch={false}>我的账户</Link><button type="button" disabled={logoutPending} onClick={async () => { if (logoutPending) return; setLogoutPending(true); setLogoutError(""); try { await logoutCurrentSession(); } catch (error) { setLogoutError(error instanceof Error ? error.message : "退出失败，请重试。"); } finally { setLogoutPending(false); } }}>{logoutPending ? "正在退出…" : "退出登录"}</button>{logoutError ? <p role="alert">{logoutError}</p> : null}</div></details>
         </header> : null}
         <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>
