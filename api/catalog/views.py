@@ -3104,7 +3104,7 @@ class AdminUsageAnalyticsView(APIView):
             event_type=AnonymousUsageEvent.EventType.SEARCH_SUBMIT,
             result_count=0,
         ).count()
-        top_works = (
+        top_works = list(
             events.filter(
                 event_type=AnonymousUsageEvent.EventType.READER_OPEN,
                 work__isnull=False,
@@ -3113,6 +3113,18 @@ class AdminUsageAnalyticsView(APIView):
             .annotate(opens=Count("id"), unique_sessions=Count("session_hash", distinct=True))
             .order_by("-opens")[:20]
         )
+        public_urls = {
+            work_id: f"/works/{slug}"
+            for work_id, slug in Edition.objects.filter(
+                public_edition_q(),
+                is_primary=True,
+                work_id__in=[row["work_id"] for row in top_works],
+            ).filter(
+                work_id__in=public_works().values("id"),
+            ).exclude(public_slug="").values_list("work_id", "public_slug")
+        }
+        for row in top_works:
+            row["public_url"] = public_urls.get(row["work_id"])
         aggregate_since = timezone.localdate() - timedelta(days=days - 1)
         top_queries = list(
             SearchQueryAggregate.objects.filter(

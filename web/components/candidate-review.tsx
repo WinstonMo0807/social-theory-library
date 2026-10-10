@@ -230,7 +230,7 @@ function CandidateReviewWorkspace({candidate,busy,onDirty,onDecision}: {candidat
   const source=(candidate.evidence_records || []).filter(row=>row.is_current!==false);
   const pdf=source.find(row=>row.pdf_url);
   const edition=candidate.edition_id || (candidate.target_type==="edition" ? candidate.target_id : candidate.target_entity_type==="edition" ? candidate.target_entity_id : "");
-  const fieldNames:Record<string,string>={publisher:"出版社",publication_year:"出版年份",title:"书名",original_title:"原文书名",abstract:"简介",language:"语言",isbn:"ISBN"};
+  const fieldNames:Record<string,string>={publisher:"出版社",publication_year:"出版年份",title:"书名",original_title:"原文书名",abstract:"简介",language:"语言",isbn:"ISBN",external_identifier:"外部资料标识"};
   const heading=fieldNames[candidate.field_name || ""] || candidate.field_name || candidate.candidate_type || "建议内容";
   async function confirm() {
     if (!choice || !valid || disabled) return;

@@ -32,6 +32,41 @@
 .candidate-reference-columns { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;align-items:start; }.candidate-reference-form h2 small { font:400 13px/1.5 var(--stl-type-sans);padding:5px 10px;background:#efe0c4;margin-left:16px; }.candidate-reference-form fieldset { border:0;padding:0;display:grid;gap:14px; }.candidate-reference-form legend { font-size:18px;margin:18px 0; }.candidate-reference-values { border:1px solid var(--admin-v2-line);padding:16px;display:grid;gap:20px; }.candidate-reference-values label,.candidate-reference-form fieldset>label { display:grid;gap:10px; }.candidate-reference-form .candidate-reference-option { display:flex;align-items:center;gap:12px; }.candidate-reference-option input { width:18px;height:18px;accent-color:var(--admin-v2-focus); }.candidate-reference-option small { display:block;font-size:12px;margin-top:7px;color:var(--admin-v2-muted); }.candidate-reference-form textarea { min-height:45px;height:auto;resize:vertical;padding:10px;border:1px solid var(--admin-v2-line);background:var(--admin-v2-surface);font:inherit; }.candidate-reference-values textarea:first-of-type { background:var(--admin-v2-wash); }.candidate-reference-form footer { display:flex;gap:15px;justify-content:space-between;padding-top:24px;border-top:1px solid var(--admin-v2-line);margin-top:24px; }.candidate-reference-form pre { white-space:pre-wrap;overflow-wrap:anywhere; }.candidate-reference-directory { margin:20px 0; }.candidate-reference-directory summary { cursor:pointer; }.candidate-reference-index { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px; }.candidate-reference-index button { padding:15px;text-align:left;border:1px solid var(--admin-v2-line);background:var(--admin-v2-surface);cursor:pointer; }.candidate-reference-index button[aria-pressed=true] { background:var(--admin-v2-wash); }.candidate-reference-index small { display:block;margin-top:7px; }.candidate-reference-evidence .workflow-inspector { width:100%;position:static; }.candidate-reference-evidence .workflow-inspector-pdf iframe { width:100%;height:520px;border:0; }
 @media(max-width:1150px) { .diagnostics-reference-columns,.candidate-reference-columns { grid-template-columns:1fr; } }
 @media(max-width:650px) { .diagnostics-comparison,.candidate-reference-index { grid-template-columns:1fr; }.diagnostics-preview>header,.candidate-reference-form footer { flex-wrap:wrap; } }
+.admin-shell .diagnostics-reference > .admin-page-title { min-height:82px; margin:0; padding:0; border:0; }
+.admin-shell .diagnostics-reference > .admin-page-title h1 { margin:0; font-size:40px; line-height:1.3; }
+.admin-shell .diagnostics-reference > .admin-page-title > div > span { display:block; margin-top:5px; font-size:16px; line-height:1.5; }
+.diagnostics-reference .knowledge-reference-steps { margin:18px 0 24px; padding:8px 0; }
+.diagnostics-reference-columns { grid-template-columns:minmax(0,.618fr) minmax(0,1fr); gap:12px; }
+.admin-shell .diagnostics-reference-columns > .admin-panel { padding:16px; }
+.admin-shell .diagnostics-preview > header { min-height:32px; padding:0; border:0; }
+.admin-shell .diagnostics-preview > header h2 { font-size:23px; line-height:1.4; margin:0; }
+.diagnostics-comparison .fixed-preview-canvas { max-height:460px; overflow:auto; overscroll-behavior:contain; }
+.admin-shell .candidate-reference > .admin-section-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; min-height:82px; padding:0 10px 16px; margin:0; }
+.admin-shell .candidate-reference > .admin-section-heading h1 { margin:0; font-size:36px; line-height:1.3; }
+.admin-shell .candidate-reference > .admin-section-heading span { display:block; margin-top:4px; font-size:14px; line-height:1.6; }
+.candidate-reference-directory { margin:8px 0; font-size:13px; }
+.candidate-reference-index { max-height:360px; overflow:auto; overscroll-behavior:contain; }
+.candidate-reference .knowledge-reference-steps { margin:0 0 16px; padding:12px 0; }
+.candidate-reference-columns { grid-template-columns:minmax(0,.927fr) minmax(0,1fr); gap:8px; }
+.admin-shell .candidate-reference-columns > .admin-panel { padding:16px; min-height:650px; }
+.admin-shell .candidate-reference .candidate-reference-option input { min-height:0; width:18px; height:18px; }
+.candidate-reference-evidence .reference-tabs { padding:0 0 12px; border-bottom:1px solid var(--admin-v2-line); margin-bottom:12px; }
+.candidate-reference-evidence .reference-tabs button { padding:8px 12px; border:1px solid var(--admin-v2-line); background:var(--admin-v2-surface); }
+.candidate-reference-evidence .reference-tabs button[aria-pressed=true] { color:#fff; background:var(--admin-v2-ink); }
+@media(min-width:1160px) {
+  .admin-shell:has(.diagnostics-reference) { --stl-container-admin-sidebar:187px; }
+  .admin-shell:has(.candidate-reference) { --stl-container-admin-sidebar:204px; }
+  .admin-shell:is(:has(.diagnostics-reference),:has(.candidate-reference)) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:is(:has(.diagnostics-reference),:has(.candidate-reference)) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.diagnostics-reference) .admin-content { padding:26px 24px 30px 31px; }
+  .admin-shell:has(.candidate-reference) .admin-content { padding:24px 18px 30px 16px; }
+}
+@media(max-width:1150px) { .diagnostics-reference-columns,.candidate-reference-columns { grid-template-columns:1fr; } }
+@media(max-width:650px) {
+  .admin-shell .diagnostics-reference > .admin-page-title h1,.admin-shell .candidate-reference > .admin-section-heading h1 { font-size:30px; }
+  .admin-shell .candidate-reference > .admin-section-heading { flex-wrap:wrap; padding-inline:0; }
+  .admin-shell .candidate-reference-columns > .admin-panel { min-height:0; }
+}
 .admin-shell .ocr-reference-book {display:flex;align-items:center;gap:24px;padding:20px 0 28px}
 .admin-shell .ocr-reference-book .reference-saved-cover {width:118px;height:160px;flex-shrink:0}
 .admin-shell .ocr-reference-book h1 {font:36px/1.35 var(--stl-type-serif);margin:0 0 12px}

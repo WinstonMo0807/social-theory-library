@@ -46,7 +46,8 @@ test("storage and backup pages keep real API boundaries visible", async () => {
   assert.match(backupPage, /BackupRestoreAdmin/);
   assert.match(component, /\/catalog\/admin\/system-status\//);
   assert.match(component, /\/ingestion\/system-health\//);
-  assert.match(component, /\/ingestion\/items\/\?page_size=5&ordering=-created_at/);
+  assert.match(component, /\/ingestion\/items\/\?ordering=-created_at/);
+  assert.match(component, /files\.data\?\.results\.slice\(0, 5\)/);
   assert.match(component, /\/distribution\/backups\//);
   assert.match(component, /恢复执行暂未接入/);
   assert.match(component, /尚未提供 NAS 配置保存接口/);

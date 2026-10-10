@@ -115,8 +115,8 @@
 .system-health-v2-steps li.complete > span { background:transparent; border-color:var(--admin-v2-focus); color:var(--admin-v2-ink); }
 .system-health-v2-layout { display:grid; grid-template-columns:minmax(0,.735fr) minmax(0,1fr); gap:8px; align-items:start; }
 .system-health-v2-results { min-width:0; min-height:725px; padding:20px; }
-.system-health-v2-results > header { padding:0 0 24px; border-bottom:1px solid var(--admin-v2-line); }
-.system-health-v2-results > header h2 { margin:0 0 6px; font-size:23px; line-height:1.4; }
+.admin-shell .system-health-page .system-health-v2-results > header { display:block; padding:0 0 24px; border-bottom:1px solid var(--admin-v2-line); }
+.admin-shell .system-health-page .system-health-v2-results > header h2 { margin:0 0 6px; font-size:23px; line-height:1.4; }
 .system-health-v2-results > header p { margin:0; color:var(--admin-v2-muted); font-size:13px; line-height:1.6; }
 .system-health-result { border-bottom:1px solid var(--admin-v2-line); }
 .system-health-result summary { display:grid; grid-template-columns:24px minmax(0,1fr) auto 16px; align-items:center; gap:16px; min-height:86px; padding:17px 0; list-style:none; cursor:pointer; }

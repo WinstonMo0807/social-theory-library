@@ -39,8 +39,8 @@ const navigation = [
   { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: Network, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "流派列表"], ["/admin/theories/disciplines", "学科与子学科"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/reading-paths", "阅读路径"]] },
   { key: "scholars", primary: "/admin/scholars", label: "学者", Icon: UserRound, match: ["/admin/scholars", "/admin/" + "people"], children: [["/admin/scholars", "学者列表"], ["/admin/scholars/new", "新建学者"], ["/admin/scholars/people", "人物查重"]] },
   { key: "topics", primary: "/admin/topics", label: "主题", Icon: Tag, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"], ["/admin/topics/new", "新建主题"]] },
-  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: Newspaper, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
-  { key: "site", primary: "/admin/about", label: "网站内容", Icon: PanelsTopLeft, match: ["/admin/about"], children: [["/admin/about", "首页与关于书库"], ["/admin/about?section=brand", "品牌与页脚"]] },
+  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: Newspaper, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"]] },
+  { key: "site", primary: "/admin/about", label: "网站内容", Icon: PanelsTopLeft, match: ["/admin/about"], children: [["/admin/about", "首页与关于书库"], ["/admin/recommendations?view=home", "首页推荐"], ["/admin/about?section=brand", "品牌与页脚"]] },
   { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: SquareCheckBig, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?surface=documents", "文字识别"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/query-lexicon", "检索用语"], ["/admin/processing/status", "运行检查"]] },
   { key: "system", primary: "/admin/storage", label: "系统管理", Icon: Settings, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
 ] as const;
@@ -231,7 +231,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const user = session.user;
   const healthPageTitle = processingHealthPages[pathname];
-  const currentSection = navigation.find(section => pathname === "/admin/review" && searchParams.get("workspace") === "curation" ? section.key === "work" : section.match.some(match => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`))));
+  const homeCuration = pathname === "/admin/recommendations" && searchParams.get("view") === "home";
+  const currentSection = navigation.find(section => homeCuration ? section.key === "site" : pathname === "/admin/review" && searchParams.get("workspace") === "curation" ? section.key === "work" : section.match.some(match => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`))));
   const currentChild = currentSection?.children.find(([href]) => {
     const [path, query] = href.split("?");
     return (path === pathname || (path === "/admin/theories/disciplines" && pathname === "/admin/theories/subdisciplines")) && (query ? Array.from(new URLSearchParams(query)).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") && !searchParams.get("workspace"));
@@ -276,7 +277,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           {navigation.filter(section => section.children.some(([href]) => canViewRoute(href))).map(section => {
             const primaryHref = canViewRoute(section.primary) ? section.primary : section.children.find(([href]) => canViewRoute(href))![0];
             const curationQueue = pathname === "/admin/review" && searchParams.get("workspace") === "curation";
-            const active = curationQueue ? section.key === "work" : section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
+            const active = homeCuration ? section.key === "site" : curationQueue ? section.key === "work" : section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
             let Icon = theoryReferencePage ? section.Icon : standardNavigationIcons[section.key] ?? section.Icon;
             const circularTheoryIcon = section.key === "theory" && (theoryReferencePage || ["/admin/theories/reading-paths","/admin/theories/relations","/admin/theories/timeline"].includes(pathname));
             if (circularTheoryIcon) Icon = GitFork;

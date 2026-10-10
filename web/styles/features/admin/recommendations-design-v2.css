@@ -237,10 +237,13 @@
 .recommendation-v2-heading h1 { margin: 0; font-size: 34px; font-weight: 500; }
 .recommendation-v2-heading p { color: var(--recommendation-muted); }
 .recommendation-v2-state { padding-top: 30px; color: var(--recommendation-muted); font-size: 14px; white-space: nowrap; }
-.recommendation-v2-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: 16px; border-top: 1px solid var(--recommendation-line); border-bottom: 1px solid var(--recommendation-line); }
-.recommendation-v2-steps span { position: relative; padding: 13px 12px; color: var(--recommendation-muted); text-align: center; font-size: 14px; }
-.recommendation-v2-steps span + span::before { position: absolute; left: 0; top: 20px; width: 25%; border-top: 1px solid var(--recommendation-line); content: ""; }
-.recommendation-v2-steps .active { color: var(--recommendation-ink); font-weight: 700; border-bottom: 2px solid var(--recommendation-ink); }
+.recommendation-v2-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:16px; align-items:center; margin:0 0 18px; }
+.recommendation-v2-steps span { position:relative; display:flex; align-items:center; gap:10px; color:var(--recommendation-muted); font-size:15px; white-space:nowrap; }
+.recommendation-v2-steps span b { display:grid; place-items:center; flex:none; width:32px; height:32px; border:1px solid currentColor; border-radius:50%; font-weight:400; }
+.recommendation-v2-steps span:not(:nth-child(3))::after { content:""; height:1px; background:var(--recommendation-line); flex:1; margin:0 4px; }
+.recommendation-v2-steps .active { color:var(--recommendation-ink); font-weight:600; }
+.recommendation-v2-steps .active b { background:var(--recommendation-ink); color:white; }
+.recommendation-v2-steps .done b { background:var(--recommendation-focus); border-color:var(--recommendation-focus); color:white; }
 .recommendation-v2-steps .done { color: var(--recommendation-focus); }
 .recommendation-v2-grid { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(560px, 1.1fr); gap: 16px; align-items: start; }
 .recommendation-v2-control, .recommendation-v2-reader { padding: 16px; }
@@ -301,6 +304,32 @@
 .recommendation-v2-preview-note, .recommendation-v2-message, .recommendation-v2-alert { color: var(--recommendation-muted); font-size: 12px; }
 .recommendation-v2-alert { padding: 9px 12px; border: 1px solid var(--recommendation-line); }
 .recommendation-v2-alert button { margin-left: 8px; text-decoration: underline; }
+.admin-shell .recommendation-curation-v2 { font-family:var(--stl-type-sans); }
+.admin-shell .recommendation-curation-v2 > .recommendation-v2-heading { margin:0 0 16px; }
+.admin-shell .recommendation-curation-v2 .recommendation-v2-heading h1 { font-size:32px; line-height:1.3; }
+.recommendation-curation-v2 .recommendation-v2-heading p { margin:8px 0 0; font-size:15px; line-height:1.6; }
+.recommendation-curation-v2 .recommendation-v2-state { padding:0; font-size:14px; }
+.recommendation-curation-v2 .recommendation-v2-grid { grid-template-columns:minmax(0,.75fr) minmax(0,1fr); gap:16px; }
+.recommendation-curation-v2 .recommendation-v2-control { min-height:730px; }
+.recommendation-curation-v2 .recommendation-v2-selected article { min-height:86px; grid-template-columns:24px 64px minmax(0,1fr) auto; gap:12px; border-radius:4px; }
+.recommendation-curation-v2 .recommendation-v2-selected img,.recommendation-curation-v2 .recommendation-v2-image-empty { width:64px; height:68px; }
+.recommendation-curation-v2 .recommendation-v2-selected strong { font-size:18px; }
+.recommendation-curation-v2 .recommendation-v2-selected small { display:block; margin-top:6px; font-size:13px; }
+.recommendation-curation-v2 .recommendation-v2-row-actions button { min-width:36px; min-height:36px; font-size:12px; }
+.recommendation-curation-v2 .recommendation-v2-candidate-picker { margin-top:18px; padding-top:12px; border-top:1px solid var(--recommendation-line); }
+.recommendation-curation-v2 .recommendation-v2-candidate-picker > summary { cursor:pointer; font-size:13px; color:var(--recommendation-muted); }
+.recommendation-curation-v2 .recommendation-v2-candidates input[type=checkbox] { width:17px; height:17px; min-height:0; flex:none; accent-color:var(--recommendation-focus); }
+.recommendation-curation-v2 .recommendation-v2-reader > .fixed-preview-canvas { height:688px; max-height:688px; overflow:auto; }
+.recommendation-curation-v2 .recommendation-v2-reader > header { align-items:center; }
+.recommendation-curation-v2 .recommendation-v2-view-tools button { min-height:32px; padding:6px 10px; font-size:12px; }
+@media(min-width:1160px) {
+  .admin-shell:has(.recommendation-curation-v2) { --stl-container-admin-sidebar:192px; }
+  .admin-shell:has(.recommendation-curation-v2) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.recommendation-curation-v2) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.recommendation-curation-v2) .admin-content { padding:24px 24px 30px 26px; }
+}
+@media(max-width:1120px) { .recommendation-curation-v2 .recommendation-v2-grid { grid-template-columns:1fr; } }
+@media(max-width:720px) { .recommendation-curation-v2 .recommendation-v2-steps { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; } .recommendation-curation-v2 .recommendation-v2-steps span { white-space:normal; font-size:12px; } .recommendation-curation-v2 .recommendation-v2-steps span::after { display:none; } .recommendation-curation-v2 .recommendation-v2-state { grid-column:1/-1; } .recommendation-curation-v2 .recommendation-v2-selected article { grid-template-columns:24px 48px minmax(0,1fr); } .recommendation-curation-v2 .recommendation-v2-selected img,.recommendation-curation-v2 .recommendation-v2-image-empty { width:48px; height:56px; } .recommendation-curation-v2 .recommendation-v2-reader > header { flex-wrap:wrap; } .recommendation-curation-v2 .recommendation-v2-control { min-height:0; } }
 
 @media (max-width: 1120px) {
   .recommendation-calendar-layout, .recommendation-v2-grid { grid-template-columns: 1fr; }
