@@ -1,5 +1,33 @@
 # Social Theory Library 当前进度
 
+## 2026-10-10 41真实Reader完整通过，45有界读取及43保存修正准备冻结
+
+41-real-reader-third-b83f418.exit=0/proof.passed=true：准确Weak读者资产8f63cf91-a335-4ca3-bcf2-e34c65cb1884、公开PDF 200/206、实际canvas485×705、页码切换并返回初始1，候选自己的progress回执201与历史请求单独记录，没有配置写入。218px侧栏、479px左栏、页签对比16.81/键盘及未提交暂停恢复、390px无溢出已核。两轮检查漏Reader正常写入和误要求200的失败保留；不是应用保存失败。OCR执行和配置保存仍待。
+
+健康新测试在原镜像失败66实例而需求2，修正版overlay完整迁移50项PG（最新记录、权限/调度/分层及原评估组含混合来源保存）退出0。同一237453条历史的独立READ ONLY快照退出0，返回26个probe/10类能力、7.157秒、独立进程峰值128.89MiB、91916字节，历史数不变/live_probes=false；首轮脚本读取权限失败保留。这是只读源码挂载结果，不是当前b83 API已修。
+
+43原400仅因passage:标识被当UUID，已经改复用chunk_document_id，原UUID仍chunk_id，未创建额外语义行。58前端、类型、目标lint和最后health-evaluation-final-build均退出0。准备冻结归档及下一准确候选50项PG/176刷新、43实际保存回读停用和45真实GET/probe；当前b83运行仍保留45原502。矩阵29/30/0，生产未切/推送暂缓。
+
+## 2026-10-10 b83f418实际保存400与运行检查502根因已定位
+
+43普通UI全部7条radio正常18px且评价框不越行；提交含5条passage:前缀原文与2条SemanticChunk UUID，前端一律chunk_id导致400，没有评估集创建。已改用既有chunk_document_id保存前缀原文，UUID仍原chunk_id，不新建语义行；混合来源/0判断/精确回读/停用历史检查已加入原后端评估组，真实UI待下一候选。
+
+45首次GET返回502、probe POST为0；准确API日志工作进程SIGKILL。独立只读计数HealthCheckRun=237453、incident=21，_latest_runs原代码把全部历史和details实例化再取最新。新独立测试在原b83镜像实际复现66行实例化而需求2（baseline退出1）；源码改数据库相关子查询只加载每probe最新，保留全部历史、诊断及权限，不提高内存限额。完整迁移的overlay健康/权限/评估回归正在进行，36项原健康门槛已退出0，准确新API运行待冻结。
+
+41真实PDF/canvas（485×705）/页面切换恢复、218px側栏、479px左栏、页签对比16.81及键盘/未提交暂停恢复和390px均已取得；最终脚本因漏记共享Reader正常私人progress/history请求退出1，不能记整轮通过，配置写入0。修正检查范围后独立重跑，保留首轮。原目录及读者接口未改。29/30/0，生产未切/推送暂缓。
+
+## 2026-10-10 b83f418准确隔离运行，43保存与健康权限门槛进行中
+
+nas-refresh-b83f418.exit=0，176项PG/迁移检查/nginx已通过，首次ready 502后重试就绪保留。独立运行容器image核对API b4f15b943109a17978b843853a03d5f1f26750a77a972c5e85cf5bd6fe107616、Web b328a79adbb35f9f438e65e606599489acb087e0e1b75414ec98e05dc15d46eb、原edge6769dc3a703c719c1d2756bda113659be28ae16cf0da58dd5fd823d6b9a050ea，三容器重启0。ready=3.0.9.1/database=true/migrations0，基础设施门槛不代表逐图通过。43普通UI保存与独立测试库完整迁移的健康权限/调度/分层回归正在进行；完成前不启动第二个Edge档案流程。41实际Reader和45实际probe下一项，29/30/0，生产未切/推送暂缓。
+
+## 2026-10-10 b83f418 NAS构建通过，隔离刷新门槛进行中
+
+nas-build-b83f418.exit=0/BUILD_PASSED。API镜像sha256:b4f15b943109a17978b843853a03d5f1f26750a77a972c5e85cf5bd6fe107616，Web sha256:b328a79adbb35f9f438e65e606599489acb087e0e1b75414ec98e05dc15d46eb；独立读取commit/tree/archive三标签准确对应b83f418冻结身份。nas-refresh-b83f418正在执行隔离PG/迁移门槛，成功才刷新UI；浏览器当前仍75e61ad。41预览/43持久化/45检查待准确运行，29/30/0，生产未切、GitHub暂缓。
+
+## 2026-10-10 b83f418已冻结，隔离构建进行中
+
+本地提交b83f418e958ab3e6262942f01d1b448ccc8362e9/tree 02c0c49d9a32829005d91434d9688bd29cfb7902，10文件暂存扫描/diff退出0。1430源码文件/4999119归档字节，SHA256 9aa32d0db69aeeefe28f20da0d00b0b07ac7a5317ff5c57c43af08fd2bc36d54已在NAS准确核对。nas-build-b83f418运行中，未刷新UI；浏览器仍75e61ad。准确新镜像/隔离176项门槛/41 Reader及栏目/43普通选择保存回读/45真实检查待核。29/30/0，生产未切，GitHub暂缓。
+
 ## 2026-10-10 最新交接：准备冻结41/43/45修正
 
 只在C:/Users/12297/.codex/worktrees/v3091-admin-design/书库开发3、codex/v3.0.9.1-admin-design开发。NAS准确运行75e61ad157055b9babe15c966272bffa0bbacb5b/tree 790f762914c42311029bfe80193968462e9c4738，归档SHA256 55756a5d2c8a7be69ea4b6c7333e3c98c271d4f946051d01578a58da442e1f02。生产未切，GitHub按用户安排暂缓，严格NAS SSH信任继续保留。下方较早段落是历史，不能取代本段身份和最后动作。

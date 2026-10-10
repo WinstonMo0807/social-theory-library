@@ -1,5 +1,11 @@
 # 部署说明
 
+## 2026-10-10 b83f418运行身份与下一健康/评价修正边界
+
+准确运行b83f418e958ab3e6262942f01d1b448ccc8362e9/tree 02c0c49d9a32829005d91434d9688bd29cfb7902，归档SHA256 9aa32d0db69aeeefe28f20da0d00b0b07ac7a5317ff5c57c43af08fd2bc36d54。API b4f15b943109a17978b843853a03d5f1f26750a77a972c5e85cf5bd6fe107616、Web b328a79adbb35f9f438e65e606599489acb087e0e1b75414ec98e05dc15d46eb，三标签准确/容器重启0。构建/176 PG/迁移/nginx/隔离刷新退出0，首次ready502后就绪保留，生产未切。
+
+41准确浏览器PDF/栏目已核；45首次健康GET工作进程OOM和43保存400仍在该候选复现。下一源码只优化历史读取及按现有标识保存评价，没有schema/权限/诊断删除或内存限额变化。overlay完整迁移50项PG与READ ONLY237453历史快照通过，不代替新冻结镜像。最终发布仍需新备份/恢复和全部安全门槛，GitHub暂缓。
+
 ## 2026-10-10 75e61ad准确隔离运行，41/43/45源码待冻结
 
 运行commit 75e61ad157055b9babe15c966272bffa0bbacb5b/tree 790f762914c42311029bfe80193968462e9c4738，归档SHA256 55756a5d2c8a7be69ea4b6c7333e3c98c271d4f946051d01578a58da442e1f02。API镜像sha256:f2428b19f0134ca46780d3f82821d795afa81edda542314b3dbd91539b262763，Web sha256:f48bb60d978ec8cccfb8698b8f53465182043cc5b393d44a0dc4be320c4c27d2。nas-build、retrieval-exact（40项完整迁移PG）和nas-refresh（176项PG/迁移/nginx）退出0，运行三标签一致/重启0；首次ready 502后重试就绪保留。

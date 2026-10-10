@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, transaction
-from django.db.models import F, Q
+from django.db.models import F, OuterRef, Q, Subquery
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -779,10 +779,14 @@ def run_due_health_probes(*, limit: int = 12) -> dict[str, Any]:
 
 
 def _latest_runs() -> dict[str, HealthCheckRun]:
-    output: dict[str, HealthCheckRun] = {}
-    for row in HealthCheckRun.objects.order_by("probe_key", "-started_at"):
-        output.setdefault(row.probe_key, row)
-    return output
+    newest_id = HealthCheckRun.objects.filter(
+        probe_key=OuterRef("probe_key"),
+    ).order_by("-started_at", "-id").values("id")[:1]
+    # Filter in the database before loading potentially large historical details.
+    return {
+        row.probe_key: row
+        for row in HealthCheckRun.objects.filter(id=Subquery(newest_id)).order_by("probe_key")
+    }
 
 
 STATUS_RANK = {

@@ -302,7 +302,7 @@ export function SemanticIndexAdmin() {
     event.preventDefault();
     const token = getServerSessionCredential();
     const judgments = Object.entries(evaluationJudgments).map(([chunkId, relevance]) => ({
-      chunk_id: chunkId,
+      ...(chunkId.startsWith("passage:") ? { chunk_document_id: chunkId } : { chunk_id: chunkId }),
       relevance,
     }));
     if (!token || !testResult || testResult.testedQuery !== query.trim() || actionPending.current) return;

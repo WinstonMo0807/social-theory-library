@@ -549,3 +549,37 @@ def test_benchmark_command_executes_each_declared_variant(
         if version_name == "v2" and profile == "precision" and rerank_top_k
     } == {8, 12, 16, 24, 32}
     assert all(row["status"] == "completed" for row in payload["variants"])
+def test_admin_preserves_fallback_and_chunk_judgments_in_one_saved_query(api_client, admin_user):
+    _existing, _version, chunks = make_search_fixture(admin_user)
+    api_client.force_authenticate(admin_user)
+    fallback_id = f"passage:{uuid4()}"
+    before_chunks = SemanticChunk.objects.count()
+    response = api_client.post(
+        "/api/catalog/admin/search-evaluations/sets/",
+        {
+            "name": "混合来源保存验收",
+            "queries": [{
+                "query_text": "社会行动如何形成",
+                "judgments": [
+                    {"chunk_document_id": fallback_id, "relevance": 0},
+                    {"chunk_id": str(chunks[0].pk), "relevance": 0},
+                ],
+            }],
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    detail_url = f"/api/catalog/admin/search-evaluations/sets/{response.data['id']}/"
+    read_back = api_client.get(detail_url)
+    assert read_back.status_code == 200
+    judgments = read_back.data["queries"][0]["judgments"]
+    assert {row["chunk_document_id"] for row in judgments} == {
+        fallback_id, chunks[0].document_id,
+    }
+    assert next(row for row in judgments if row["chunk_document_id"] == fallback_id)["chunk_id"] is None
+    assert next(row for row in judgments if row["chunk_document_id"] == chunks[0].document_id)["chunk_id"] == str(chunks[0].pk)
+    assert all(row["relevance"] == 0 for row in judgments)
+    assert SemanticChunk.objects.count() == before_chunks
+    disabled = api_client.patch(detail_url, {"is_active": False}, format="json")
+    assert disabled.status_code == 200 and disabled.data["is_active"] is False
+    assert api_client.get(detail_url).data["queries"][0]["judgments"] == judgments
