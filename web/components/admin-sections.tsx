@@ -1839,6 +1839,22 @@ type AIRuntimeDocument = {
   deployment_fields: string[];
 };
 
+const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
+  metadata_extraction: "元数据提取",
+  library_qa: "书库问答默认服务（可选）",
+  field_enrichment_optional: "联网补全可选判断",
+  entity_reasoning: "实体核对",
+  claim_extraction: "观点提取",
+  claim_attribution: "观点归属",
+  claim_stance: "观点立场",
+  rerank: "检索结果重排",
+  theory_reasoning: "理论核对",
+  knowledge_relation_reasoning: "知识关系核对",
+  debate_discovery: "争论线索",
+  reading_path_generation: "阅读路径建议",
+  curation_reasoning: "策展建议",
+};
+
 const aiCapabilityGuidance: Partial<Record<AIRuntimeCapability, string>> = {
   claim_extraction: "默认以 shadow task 运行。服务暂不可用时保持等待，不阻断出版。",
   claim_attribution: "必须返回绑定 EvidenceSpan 的结构化判断，不能用模型常识补足原文。",
@@ -2232,6 +2248,11 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
         <form className="admin-panel ai-runtime-settings" hidden={activeSection!=='ai'} role="tabpanel" aria-labelledby="settings-tab-ai" id="ai" onSubmit={saveAiRuntime}>
           <header><h2>服务设置</h2></header><p>选择需要启用的辅助填写服务，并检查模型连接状态。</p>
           <fieldset className="settings-reference-purpose"><legend>服务用途</legend><label><input type="radio" name="ai-capability" checked={aiCapability==="metadata_extraction"} onChange={()=>setAiCapability("metadata_extraction")}/><span>书目信息补全<small>根据书籍资料，提供待人工核对的书目信息。</small></span></label><label><input type="radio" name="ai-capability" disabled checked={false} readOnly/><span>摘要建议<small>独立摘要服务暂未接入。</small></span></label><label><input type="radio" name="ai-capability" checked={aiCapability==="library_qa"} onChange={()=>setAiCapability("library_qa")}/><span>馆内问答<small>基于馆藏内容回答问题。</small></span></label></fieldset>
+          <details className="settings-reference-more-purpose" open={aiCapability!=="metadata_extraction" && aiCapability!=="library_qa" || undefined}>
+            <summary>更多服务用途</summary>
+            <label><span>服务用途</span><select value={aiCapability==="metadata_extraction" || aiCapability==="library_qa" ? "" : aiCapability} onChange={event=>{if(event.target.value) setAiCapability(event.target.value as AIRuntimeCapability);}}><option value="">选择需要配置的服务</option>{(Object.entries(aiCapabilityLabels) as Array<[AIRuntimeCapability,string]>).filter(([capability])=>capability!=="metadata_extraction" && capability!=="library_qa").map(([capability,label])=><option value={capability} key={capability}>{label}</option>)}</select></label>
+          </details>
+          <p className="admin-help">密钥和实际 endpoint 只由服务器环境提供；这里仅填写配置别名。</p>
           {aiRuntime ? <>
             <h3>已配置的模型</h3>{aiRuntime.profiles.filter(profile=>profile.capability===aiCapability).sort((a,b)=>Number(b.key===aiRuntime.active[aiCapability])-Number(a.key===aiRuntime.active[aiCapability])).map((profile,index) => (
               <details key={profile.key} className="settings-reference-profile" open={profile.key===aiRuntime.active[aiCapability] || (!aiRuntime.active[aiCapability] && index===0)}>

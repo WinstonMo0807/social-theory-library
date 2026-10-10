@@ -31,35 +31,33 @@ test("global styles are explicit, responsibility-named imports in the original c
   }
 });
 
-test("style extraction stays parseable and unrelated cascade semantics remain unchanged during authorized layout repairs", () => {
+test("style extraction stays parseable and unrelated cascade semantics remain unchanged during the 59-reference redesign", () => {
   const source = readStyleSource(globalStylesPath, { exclude: [overlaysPath] });
   // The 3.0.5 monolith-equivalence hash described a formatting-only split.
-  // 3.0.6 intentionally fixes these actual reader, detail and admin layouts. All other extracted
-  // files must still match the verified 3.0.7 starting checkout (bb81c73), preserving prior 3.0.6 repairs.
-  // Admin sidebar scrolling is verified with all groups expanded and every
-  // control keyboard-focused in admin-usability-v306.spec.ts at five widths.
-  const repaired=new Set(["layout/admin-shell.css","features/admin/theory-system.css","features/knowledge/detail-pages.css","features/knowledge/theory-system.css","features/reader/chrome.css","features/reader/document.css","features/reader/responsive.css","features/reader/selection-and-records.css"]);
+  // The authorized 3.0.9.1 reference families change these admin surfaces and their shared
+  // public previews (cards, topic overview and home). Keep this explicit: all other extracted
+  // files, including Reader styles and the base/layout cascade, must match bb81c73 exactly.
+  const redesigned=new Set([
+    "components/book-card.css", "components/confirm-dialog.css", "components/scholar-card.css",
+    "features/admin/collections-v2.css", "features/admin/design-v2.css",
+    "features/admin/evidence-curation.css", "features/admin/fixed-page-editor.css",
+    "features/admin/knowledge-reference.css", "features/admin/operations-v2.css",
+    "features/admin/processing-and-curation.css", "features/admin/processing-reference.css",
+    "features/admin/recommendations-design-v2.css", "features/admin/relation-timeline-reference.css",
+    "features/admin/site-content-reference.css", "features/admin/site-system-reference.css",
+    "features/admin/storage-backups.css", "features/admin/taxonomy-reference.css",
+    "features/admin/theory-reference.css", "features/admin/topic-reference.css",
+    "features/admin/workspace-v307.css", "features/home/home-v307.css",
+    "features/knowledge/detail-pages.css", "knowledge-v307.css", "tokens/design.css",
+  ]);
   const whole=styleSemanticSnapshot(source,{resolveTokens:true});
   assert.ok(whole.rules>0 && whole.declarations>0);
   for(const {file} of baseline.sections){
-    const before=execFileSync("git",["show",`bb81c73:web/styles/${file}`],{cwd:webRoot,encoding:"utf8"});
     const after=readFileSync(resolve(webRoot,"styles",file),"utf8");
-    if(file === "features/admin/relation-preview-and-publication.css") {
-      // A31 real-browser long-content geometry now covers the timeline preview.
-      // Only its layout and the two relation child-sizing rules may change;
-      // publication/processing rules sharing this file still match the baseline.
-      const unaffected = (css) => {
-        const root = postcss.parse(css);
-        root.walkRules((rule) => {
-          if (rule.selector.includes(".timeline-draft-preview") || rule.selector === ".admin-relation-preview-body > *,\n.relation-preview-spokes > div > *") rule.remove();
-        });
-        root.walkAtRules((rule) => { if (rule.nodes && !rule.nodes.length) rule.remove(); });
-        return styleSemanticSnapshot(root.toString());
-      };
-      assert.deepEqual(unaffected(after), unaffected(before), file);
-      continue;
-    }
-    if(!repaired.has(file)) assert.deepEqual(styleSemanticSnapshot(after),styleSemanticSnapshot(before),file);
+    postcss.parse(after, {from:file});
+    if(redesigned.has(file)) continue;
+    const before=execFileSync("git",["show",`bb81c73:web/styles/${file}`],{cwd:webRoot,encoding:"utf8"});
+    assert.deepEqual(styleSemanticSnapshot(after),styleSemanticSnapshot(before),file);
   }
 });
 

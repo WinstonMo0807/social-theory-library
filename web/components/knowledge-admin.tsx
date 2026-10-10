@@ -23,6 +23,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import { KnowledgeImagePanel } from "@/components/admin/media/knowledge-image-panel";
+import { ResearchEntityPicker } from "@/components/admin/research/research-entity-picker";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { createRequestKey } from "@/lib/request-key";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
@@ -397,6 +398,8 @@ export function SubdisciplinesAdmin() {
   const [editing, setEditing] = useState<SubdisciplineRow | null>(null);
   const [draft, setDraft] = useState<SubdisciplineDraft>(emptySubdiscipline());
   const [savedDraft, setSavedDraft] = useState<SubdisciplineDraft>(emptySubdiscipline());
+  const [selectedLabels, setSelectedLabels] = useState<Record<string,string>>({});
+  const parent = useResource<SubdisciplineRow>(draft.parent ? `/catalog/admin/subdisciplines/${encodeURIComponent(draft.parent)}/` : null);
   const [image, setImage] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const editorRef = useRef<HTMLFormElement | null>(null);
@@ -453,7 +456,6 @@ export function SubdisciplinesAdmin() {
           method: editing ? "PATCH" : "POST",
           headers: editing ? editorialHeaders(editing) : undefined,
           body: JSON.stringify({
-            ...(!editing ? {
               foreign_name: draft.foreign_name,
               slug: draft.slug,
               search_aliases: lineValues(draft.search_aliases),
@@ -465,7 +467,6 @@ export function SubdisciplinesAdmin() {
               methods: lineValues(draft.methods),
               representative_issues: lineValues(draft.representative_issues),
               curation_level: draft.curation_level,
-            } : {}),
             name: draft.name,
             description: draft.description,
             core_questions: lineValues(draft.core_questions),
@@ -509,11 +510,24 @@ export function SubdisciplinesAdmin() {
         <KnowledgeVisualEditor presentation="inline" objectType="subdiscipline" objectId={editing?.id} savedRecord={editing} onPublished={() => {requested.refresh();setEditConflict(true);setMessage("发布操作已提交，请重新打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}} mediaFile={image} dirty={dirty || Boolean(image)} refreshKey={message}>
         <form ref={editorRef} className="taxonomy-reference-form" onSubmit={(event) => void save(event, true)}>
           <fieldset disabled={Boolean(pendingAction) || Boolean(requestedSubdiscipline && openedId !== requestedSubdiscipline)} style={{display:"contents"}}>
-            <header><h2>{draft.name || "新增子学科"}</h2>{editing ? <p>隶属于：{disciplineName(draft.discipline)}</p> : <label><span>隶属于</span><select required value={draft.discipline} onChange={event => setDraft({...draft,discipline:event.target.value})}><option value="">选择学科</option>{disciplines.data?.results.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}</header>
+            <header><h2>{draft.name || "新增子学科"}</h2><p>隶属于：{disciplineName(draft.discipline) || "尚未选择所属学科"}</p></header>
             <Notice>{requested.error}</Notice>
             <label data-editor-section="identity"><span>名称</span><input autoComplete="off" required value={draft.name} onChange={event => setDraft({...draft,name:event.target.value})}/><small className="taxonomy-field-count">{Array.from(draft.name).length} / 50</small></label>
             <label data-editor-section="content"><span>简介</span><textarea rows={4} value={draft.description} onChange={event => setDraft({...draft,description:event.target.value})}/><small className="taxonomy-field-count">{Array.from(draft.description).length} / 300</small></label>
             <label data-editor-section="questions"><span>研究问题</span><textarea rows={4} value={draft.core_questions} onChange={event => setDraft({...draft,core_questions:event.target.value})}/><small className="taxonomy-field-count">{Array.from(draft.core_questions).length} / 300</small></label>
+            <details className="taxonomy-secondary-fields" open={!editing || undefined}><summary>更多子学科信息</summary><div className="workflow-field-grid">
+              <ResearchEntityPicker label="所属学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_subdisciplines" field="discipline" values={draft.discipline ? [{id:draft.discipline,name:selectedLabels[draft.discipline] || disciplineName(draft.discipline)}] : []} onChange={next=>{setSelectedLabels(current=>({...current,...Object.fromEntries(next.map(row=>[row.id,row.name]))}));setDraft({...draft,discipline:next.at(-1)?.id || "",parent:""});}}/>
+              <ResearchEntityPicker label="上级子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="maintenance_subdisciplines" field="parent" values={draft.parent ? [{id:draft.parent,name:selectedLabels[draft.parent] || parent.data?.name || "已选上级子学科"}] : []} onChange={next=>{if(next.at(-1)?.id===editing?.id)return;setSelectedLabels(current=>({...current,...Object.fromEntries(next.map(row=>[row.id,row.name]))}));setDraft({...draft,parent:next.at(-1)?.id || ""});}}/>
+              <Notice>{parent.error}</Notice>
+              <label><span>外文名称</span><input value={draft.foreign_name} onChange={event=>setDraft({...draft,foreign_name:event.target.value})}/></label>
+              <label><span>固定链接</span><input value={draft.slug} onChange={event=>setDraft({...draft,slug:event.target.value})} placeholder="留空自动生成"/></label>
+              <label><span>检索别名（每行一个）</span><textarea rows={3} value={draft.search_aliases} onChange={event=>setDraft({...draft,search_aliases:event.target.value})}/></label>
+              <label><span>研究对象</span><textarea rows={3} value={draft.research_object} onChange={event=>setDraft({...draft,research_object:event.target.value})}/></label>
+              <label><span>形成时期</span><input value={draft.formation_period} onChange={event=>setDraft({...draft,formation_period:event.target.value})}/></label>
+              <label><span>研究方向（每行一个）</span><textarea rows={3} value={draft.research_directions} onChange={event=>setDraft({...draft,research_directions:event.target.value})}/></label>
+              <label><span>研究方法（每行一个）</span><textarea rows={3} value={draft.methods} onChange={event=>setDraft({...draft,methods:event.target.value})}/></label>
+              <label><span>代表议题（每行一个）</span><textarea rows={3} value={draft.representative_issues} onChange={event=>setDraft({...draft,representative_issues:event.target.value})}/></label>
+            </div></details>
             <p className="taxonomy-unsaved-note" role="status">{dirty ? "当前输入 · 尚未保存" : "已保存内容"}{dirty ? <small>切换页面或离开将失去未保存的修改。</small> : null}</p>
             <Notice>{message}</Notice>
             <EditorialConflictHelp visible={editConflict} href={`/admin/theories/subdisciplines?subdiscipline=${editing?.id}`}/>

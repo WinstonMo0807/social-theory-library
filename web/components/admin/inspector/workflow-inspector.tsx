@@ -3,6 +3,7 @@
 import { ExternalLink, FileSearch, PanelRightClose } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiBlob } from "@/lib/api";
+import { PdfCanvas } from "@/components/pdf-canvas";
 import { type CandidateActionDescriptor } from "../research/candidate-action-contract";
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
 import { EvidenceEnvelopeCard } from "../research/evidence-envelope-card";
@@ -68,6 +69,8 @@ export function WorkflowInspector({
 }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewError, setPreviewError] = useState("");
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewPages, setPreviewPages] = useState(0);
   const [acting, setActing] = useState("");
 
   const decide = async (candidate: WorkflowCandidate, descriptor: CandidateActionDescriptor, editedValue?: unknown) => {
@@ -97,6 +100,8 @@ export function WorkflowInspector({
       if (!active) return;
       setPreviewUrl("");
       setPreviewError("");
+      setPreviewPage(1);
+      setPreviewPages(0);
       void apiBlob(selection.pdfUrl!, token)
         .then((blob) => {
           objectUrl = URL.createObjectURL(blob);
@@ -132,7 +137,7 @@ export function WorkflowInspector({
       </header>
       {selection.kind === "pdf" ? (
         <div className="workflow-inspector-pdf">
-          {previewUrl ? <iframe title={selection.title} src={previewUrl} /> : previewError ? <ErrorState>{previewError}</ErrorState> : <Skeleton>正在准备 PDF 预览……</Skeleton>}
+          {previewUrl ? <><div className="admin-protected-pdf-controls"><button type="button" disabled={previewPage<=1} onClick={()=>setPreviewPage(page=>page-1)} aria-label="上一页">‹</button><label>第 <input type="number" min={1} max={previewPages || 1} value={previewPage} onChange={event=>{const next=Number(event.target.value);if(Number.isInteger(next)&&next>0&&next<=previewPages)setPreviewPage(next);}}/> / {previewPages || "—"} 页</label><button type="button" disabled={!previewPages || previewPage>=previewPages} onClick={()=>setPreviewPage(page=>page+1)} aria-label="下一页">›</button><a href={previewUrl} target="_blank" rel="noreferrer">直接打开 PDF</a></div><div className="admin-protected-pdf-document"><PdfCanvas url={previewUrl} page={previewPage} zoom={100} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={setPreviewPages}/></div></> : previewError ? <ErrorState>{previewError}</ErrorState> : <Skeleton>正在准备 PDF 预览……</Skeleton>}
         </div>
       ) : selection.kind === "page_preview" && selection.previewUrl ? (
         <div className="workflow-inspector-page-preview">

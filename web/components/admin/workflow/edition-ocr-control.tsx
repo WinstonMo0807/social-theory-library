@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiBlob, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { createRequestKey } from "@/lib/request-key";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PdfCanvas } from "@/components/pdf-canvas";
 import { EntityPicker, type EntityValue } from "../forms/workflow-fields";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
 import { SavedEditionCover } from "../preview/selected-work-preview";
@@ -165,6 +166,8 @@ function EditionOcrControlState({ editionId, workId, fullPage }: { editionId: st
 
 function OcrContentPreview({assetId,page,pages,textPreview,onPage,token}: {assetId:string;page:number;pages:number;textPreview:OcrTextPreview|null;onPage:(page:number)=>void;token:string|null}) {
   const [tab,setTab]=useState("pdf"),[url,setUrl]=useState(""),[error,setError]=useState("");
+  const [pdfPages,setPdfPages]=useState(0);
+  const pageLimit=pdfPages || pages;
   const [attempt,setAttempt]=useState(0);
   useEffect(()=>{
     if(!assetId || !token)return;
@@ -173,8 +176,8 @@ function OcrContentPreview({assetId,page,pages,textPreview,onPage,token}: {asset
     return ()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};
   },[assetId,token,attempt]);
   return <section className="admin-panel ocr-reference-preview"><header><h2>识别内容预览</h2><nav aria-label="识别预览内容"><button type="button" aria-pressed={tab==="pdf"} onClick={()=>setTab("pdf")}>原 PDF 页面</button><button type="button" aria-pressed={tab==="text"} onClick={()=>setTab("text")}>提取的文字</button></nav></header>
-    <div className="ocr-reference-page-controls"><button type="button" disabled={page<=1} onClick={()=>onPage(page-1)}>‹</button><label>第 <input type="number" min={1} max={pages} value={page} onChange={event=>{const next=Number(event.target.value);if(Number.isInteger(next)&&next>0&&next<=pages)onPage(next);}}/> / {pages} 页</label><button type="button" disabled={page>=pages} onClick={()=>onPage(page+1)}>›</button></div>
-    {tab==="pdf" ? error ? <p role="alert">{error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>重试</button></p> : url ? <iframe title={`原 PDF 第 ${page} 页`} src={`${url}#page=${page}&view=FitH`}/> : <p role="status">{assetId ? "正在读取原 PDF…" : "尚未选择可预览的 PDF。"}</p> : textPreview?.saved ? <div className="ocr-reference-text"><small>本次任务已保存的文字{textPreview.updated_at ? ` · ${new Date(textPreview.updated_at).toLocaleString("zh-CN")}` : ""}</small><pre>{textPreview.text || "本页识别结果为空。"}</pre></div> : <p className="empty-state">本次任务尚无这一页的已保存文字。</p>}
+    <div className="ocr-reference-page-controls"><button type="button" disabled={page<=1} onClick={()=>onPage(page-1)}>‹</button><label>第 <input type="number" min={1} max={pageLimit} value={page} onChange={event=>{const next=Number(event.target.value);if(Number.isInteger(next)&&next>0&&next<=pageLimit)onPage(next);}}/> / {pageLimit} 页</label><button type="button" disabled={page>=pageLimit} onClick={()=>onPage(page+1)}>›</button></div>
+    {tab==="pdf" ? error ? <p role="alert">{error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>重试</button></p> : url ? <div className="admin-protected-pdf-document"><PdfCanvas url={url} page={page} zoom={100} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={setPdfPages}/></div> : <p role="status">{assetId ? "正在读取原 PDF…" : "尚未选择可预览的 PDF。"}</p> : textPreview?.saved ? <div className="ocr-reference-text"><small>本次任务已保存的文字{textPreview.updated_at ? ` · ${new Date(textPreview.updated_at).toLocaleString("zh-CN")}` : ""}</small><pre>{textPreview.text || "本页识别结果为空。"}</pre></div> : <p className="empty-state">本次任务尚无这一页的已保存文字。</p>}
   </section>;
 }
 

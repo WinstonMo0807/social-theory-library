@@ -224,8 +224,8 @@ test("active knowledge maintenance routes use universal discovery for every enti
   assert.match(theoryAdmin, /field="related_disciplines" multiple values=/);
   assert.match(theoryAdmin, /field="nodes" multiple values=/);
   assert.match(theoryAdmin, /field="disciplines" multiple values=/);
-  assert.doesNotMatch(theoryAdmin, /draft\.nodes\.includes\(/);
-  assert.doesNotMatch(theoryAdmin, /draft\.disciplines\.includes\(/);
+  assert.doesNotMatch(theoryAdmin, /type="checkbox"[^>]*checked=\{draft\.nodes\.includes\(/);
+  assert.doesNotMatch(theoryAdmin, /type="checkbox"[^>]*checked=\{draft\.disciplines\.includes\(/);
   assert.doesNotMatch(theoryAdmin, /<span>源理论<\/span><select/);
   assert.doesNotMatch(theoryAdmin, /<span>目标理论<\/span><select/);
   assert.doesNotMatch(theoryAdmin, /<span>关联学者<\/span><select/);
@@ -233,9 +233,13 @@ test("active knowledge maintenance routes use universal discovery for every enti
 
   assert.match(theoryAdmin, /candidate_node: candidateNode \|\| null/);
   assert.match(theoryAdmin, /primary_discipline: newNodeDiscipline \|\| null/);
-  assert.match(theoryAdmin, /source_node: picked\?\.id \?\? ""/);
-  assert.match(theoryAdmin, /scholar: draft\.scholar \|\| null/);
-  assert.match(theoryAdmin, /work: draft\.work \|\| null/);
+  assert.match(theoryAdmin, /source_node:\s*picked\?\.id\s*\|\| ""/);
+  assert.match(theoryAdmin, /buildTimelinePayload\(draft, editing\)/);
+  const { buildTimelinePayload, emptyTimelineDraft } = await import("../lib/relation-timeline-draft.ts");
+  assert.equal(buildTimelinePayload({...emptyTimelineDraft,scholar:"selected-scholar",work:"selected-work"},null).scholar,"selected-scholar");
+  assert.equal(buildTimelinePayload({...emptyTimelineDraft,scholar:"selected-scholar",work:"selected-work"},null).work,"selected-work");
+  assert.equal(buildTimelinePayload(emptyTimelineDraft,null).scholar,null);
+  assert.equal(buildTimelinePayload(emptyTimelineDraft,null).work,null);
   assert.match(css, /theory-node-editor:has\(\.workflow-research-entity-picker input\[aria-expanded="true"\]\)/);
   assert.match(css, /normalized-timeline-list:has\(\.workflow-research-entity-picker input\[aria-expanded="true"\]\)/);
   assert.match(css, /theory-review-editor \.workflow-universal-entity-popover[\s\S]*?right: 0;[\s\S]*?left: auto;/);
@@ -248,7 +252,7 @@ test("maintenance editor pins the exact Edition across load, save and publicatio
   assert.match(page, /query\.edition/);
   assert.match(page, /editionId=\{editionId\}/);
   assert.match(library, /safeAdminHref\(work\.workbench_url, ""\)/);
-  assert.match(library, /withAdminReturn\(destination, returnTo, "file"\)/);
+  assert.match(library, /withAdminReturn\(destination,\s*returnTo,\s*"file"\)/);
   assert.match(editor, /requestedEditionId \|\| asString\(payload\?\.context\.edition_id\)/);
   assert.match(editor, /const scopedEndpoint = mode === "maintenance"/);
   assert.match(editor, /library\/works\/\$\{payload\.context\.work_id\}\/edits\//);

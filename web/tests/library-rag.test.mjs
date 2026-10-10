@@ -58,6 +58,11 @@ test("Admin settings expose capability aliases but never a secret value input", 
     source.indexOf('<form className="admin-panel semantic-runtime-settings"'),
   );
   assert.match(section, /Credential alias/);
+  assert.match(section, /更多服务用途/);
+  assert.match(section, /Object\.entries\(aiCapabilityLabels\)/);
+  assert.match(section, /setAiCapability\(event\.target\.value as AIRuntimeCapability\)/);
+  assert.match(section, /profiles\.filter\(profile=>profile\.capability===aiCapability\)/);
+  assert.match(section, /disabled=\{!canManagePrompts \|\| Boolean\(pendingAction\)\}/);
   assert.match(section, /profile\.credential_alias/);
   assert.doesNotMatch(section, /<input[^>]*type=["']password["']/i);
   assert.doesNotMatch(section, /profile\.(?:api_?key|secret|credential_value)/i);

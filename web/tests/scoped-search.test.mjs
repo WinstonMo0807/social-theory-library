@@ -46,8 +46,8 @@ test("scoped search API failures reject instead of becoming empty results", asyn
 
 
 test("major public pages declare their real search context", async () => {
-  const [home, explore, scholars, topics, subdisciplines, theories, legacyTheories] = await Promise.all([
-    readFile(new URL("../components/public/home-public-view.tsx", import.meta.url), "utf8"),
+  const [header, explore, scholars, topics, subdisciplines, theories, legacyTheories] = await Promise.all([
+    readFile(new URL("../components/site-header.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/explore/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/scholars/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8"),
@@ -56,7 +56,8 @@ test("major public pages declare their real search context", async () => {
     readFile(new URL("../app/theory-schools/page.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(home, /name="context" value="global"/);
+  assert.match(header, /siteContentPage === "home" \? <form[^>]*action="\/explore"/);
+  assert.match(header, /name="context" value="global"/);
   assert.match(explore, /name="context" value="global"/);
   assert.match(scholars, /name="context" value="scholars"/);
   assert.match(topics, /name="context" value="topics"/);

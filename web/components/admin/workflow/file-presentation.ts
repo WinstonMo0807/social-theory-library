@@ -1,3 +1,5 @@
+import { asArray, asRecord, asString } from "./workflow-types";
+
 export function pdfValidationPresentation(value: unknown) {
   if (value === "valid") return { state: "valid", label: "已通过", tone: "success", detail: "文件已完成 PDF 校验。" };
   if (value === "invalid") return { state: "invalid", label: "未通过", tone: "error", detail: "文件未通过校验，请查看具体原因并恢复处理；不能将它作为合格阅读文件发布。" };
@@ -7,6 +9,20 @@ export function pdfValidationPresentation(value: unknown) {
 export function fileDraftFromWorkspace(value: Record<string, unknown>) {
   const legacyItem = value.item && typeof value.item === "object" && !Array.isArray(value.item) ? value.item as Record<string, unknown> : {};
   return {...value, ...legacyItem, assets:Array.isArray(value.assets) ? value.assets : []};
+}
+
+/** Use the shared public Reader only for the exact file bound to the active public revision. */
+export function publicReaderPreviewHref(context: Record<string, unknown>, file: Record<string, unknown>, reader: Record<string, unknown>) {
+  const publication = asRecord(context.publication);
+  const revisionId = asString(publication.active_revision_id);
+  const assetId = asString(file.current_reader_asset_id);
+  const pdf = asArray(asRecord(reader.availability).capabilities).map(asRecord).find(row => row.key === "pdf");
+  const source = asRecord(pdf?.source);
+  const asset = asArray(reader.assets).map(asRecord).find(row => row.id === assetId);
+  return assetId && revisionId && publication.public_state === "published" && publication.catalog_revision_active === true && reader.readable === true
+    && source.catalog_revision_id === revisionId && source.asset_id === assetId
+    && asset?.kind === "normalized" && asset.status === "ready" && asset.validation_status === "valid"
+    ? `/reader/${encodeURIComponent(assetId)}` : "";
 }
 
 export const WORKFLOW_GROUPS = [

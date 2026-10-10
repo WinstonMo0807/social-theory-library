@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { SaveTopicButton } from "@/components/save-topic-button";
+import { AskLibraryLink } from "@/components/ask-library-link";
 import { BookCard, ScholarPortrait } from "@/components/ui";
 import type { LibraryTopic } from "@/lib/api/topics.types";
 
@@ -20,10 +21,12 @@ function TopicHero({ topic, questions = false }: { topic: LibraryTopic; question
 export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer?: ReactNode }) {
   const works = topic.curated.foundationalWorks.length ? topic.curated.foundationalWorks : topic.works;
   const scholars = topic.curated.relatedScholars.length ? topic.scholars.filter(row => topic.curated.relatedScholars.some(item => item.slug === row.slug)) : topic.scholars;
+  const normalizedTheories = topic.knowledgeNodes.filter(row => row.node_type === "theory_tradition");
+  const normalizedConcepts = topic.knowledgeNodes.filter(row => ["concept", "debate", "research_problem"].includes(row.node_type));
   const href = (section: string) => "/topics/" + topic.slug + "/" + section;
   return <><main className="page-shell topic-reference-public topic-reference-overview">
     <TopicHero topic={topic}/>
-    <div className="topic-reference-bookmark"><SaveTopicButton topicId={topic.id}/></div>
+    <div className="topic-reference-bookmark"><AskLibraryLink context="topics" ids={[topic.id]} label="向图书馆提问"/><SaveTopicButton topicId={topic.id}/></div>
     <div className="topic-reference-overview-grid">
       <section data-edit-section="questions"><header><h2>研究问题</h2><Link href={href("questions")}>更多 <ArrowRight size={17}/></Link></header>
         <ul className="topic-reference-question-summary">{topic.coreQuestions.map((question,index)=><li key={index}><Link href={href("questions") + "#item-" + (index+1)}>{question}</Link></li>)}</ul>
@@ -34,6 +37,12 @@ export function TopicPublicView({ topic, footer }: { topic: LibraryTopic; footer
       <section className="topic-reference-representatives" data-edit-section="relations"><header><h2>代表学者</h2><Link href={href("scholars")}>更多 <ArrowRight size={17}/></Link></header>
         <div>{scholars.slice(0,4).map(scholar=><Link href={"/scholars/" + scholar.slug} key={scholar.slug}><ScholarPortrait scholar={scholar}/><span><strong>{scholar.name}</strong><small>{scholar.concerns.join("、")}</small></span></Link>)}</div>
       </section>
+      {normalizedTheories.length || topic.theories.length ? <section data-module-id="topic-theories" data-edit-section="relations"><header><h2>相关理论流派</h2><Link href={href("theory-schools")}>更多 <ArrowRight size={17}/></Link></header><div className="topic-reference-related-list">
+        {normalizedTheories.length ? normalizedTheories.slice(0,4).map(row => <Link href={`/theories/nodes/${row.slug}`} key={row.id}><strong>{row.name}</strong><p>{row.relation_label || row.summary}</p></Link>) : topic.theories.slice(0,4).map(row => <Link href={`/theory-schools/${row.slug}`} key={row.slug}><strong>{row.name}</strong><p>{row.description}</p></Link>)}
+      </div></section> : null}
+      {normalizedConcepts.length || topic.concepts.length ? <section data-module-id="topic-concepts" data-edit-section="concepts"><header><h2>关键概念</h2><Link href={href("concepts")}>更多 <ArrowRight size={17}/></Link></header><div className="topic-reference-related-list">
+        {normalizedConcepts.length ? normalizedConcepts.slice(0,6).map(row => <Link href={`/theories/nodes/${row.slug}`} key={row.id}><strong>{row.name}</strong><p>{row.relation_label || row.summary}</p></Link>) : topic.concepts.slice(0,6).map(name => <span key={name}>{name}</span>)}
+      </div></section> : null}
     </div>
   </main>{footer}</>;
 }

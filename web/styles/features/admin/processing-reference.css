@@ -85,13 +85,19 @@
 .admin-shell .ocr-reference-preview nav button {padding:10px;border:0;border-bottom:2px solid transparent;background:none;white-space:nowrap}
 .admin-shell .ocr-reference-preview nav button[aria-pressed=true] {border-color:#766654;color:#4e4439}
 .admin-shell .ocr-reference-preview iframe {display:block;width:100%;height:660px;border:0;background:#666}
+.admin-shell .admin-protected-pdf-document {display:flex;justify-content:center;align-items:flex-start;min-width:0;height:660px;overflow:auto;background:var(--admin-v2-wash)}
+.admin-shell .admin-protected-pdf-document .pdf-canvas-stage {flex:none;max-width:100%}
+.admin-shell .admin-protected-pdf-controls {display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:8px;background:var(--admin-v2-wash);font-size:12px}
+.admin-shell .admin-protected-pdf-controls label {display:flex;align-items:center;gap:5px;margin:0;white-space:nowrap}
+.admin-shell .admin-protected-pdf-controls input {width:64px;min-height:30px;padding:4px}
+.admin-shell .admin-protected-pdf-controls button {width:30px;min-height:30px;padding:4px}
 .admin-shell .ocr-reference-page-controls {display:flex;align-items:center;justify-content:center;gap:16px;background:#eeeae2;padding:10px}
 .admin-shell .ocr-reference-page-controls input {width:70px;min-height:30px;text-align:center;padding:4px}
 .admin-shell .ocr-reference-text {min-height:660px;padding:25px;background:#fff}
 .admin-shell .ocr-reference-text pre {white-space:pre-wrap;font:19px/1.9 var(--stl-type-serif);overflow-wrap:anywhere}
 .admin-shell .ocr-reference-selection {margin-bottom:14px}
 .admin-shell .ocr-reference-picker {position:relative;padding:0;border:0;background:transparent}
-.admin-shell .ocr-reference-picker .ocr-reference-page {padding:0;border:0;background:transparent}
+.admin-shell .ocr-reference-picker .ocr-reference-page {padding:0;border:0;background:transparent;gap:0}
 .admin-shell .ocr-reference-selection:not([open]) {position:absolute;top:0;right:0;margin:0;font-size:12px;z-index:1}
 .admin-shell .ocr-reference-page > .ocr-reference-book {padding:0 0 16px;min-height:184px}
 .admin-shell .ocr-reference-page > .ocr-reference-book .reference-saved-cover {width:124px;height:168px}
@@ -196,6 +202,9 @@
 .admin-shell .processing-settings-page .settings-reference-purpose label { display:flex;flex-direction:row;align-items:start;justify-content:start;gap:12px;margin:0; }
 .admin-shell .processing-settings-page .settings-reference-purpose input { flex:none;width:18px;height:18px;min-height:0;padding:0;margin:4px 0 0; }
 .admin-shell .processing-settings-page .settings-reference-purpose small { font-size:13px;line-height:1.6;font-weight:400; }
+.admin-shell .processing-settings-page .settings-reference-more-purpose { margin:12px 0 18px; }
+.admin-shell .processing-settings-page .settings-reference-more-purpose > summary { font-size:13px;cursor:pointer; }
+.admin-shell .processing-settings-page .settings-reference-more-purpose > label { margin-top:14px; }
 .admin-shell .processing-settings-page .settings-reference-profile { margin:12px 0;padding:0;border:1px solid var(--admin-v2-line);border-radius:4px; }
 .admin-shell .processing-settings-page .settings-reference-profile > summary { padding:14px 16px;background:var(--admin-v2-wash);cursor:pointer;font-size:18px;font-weight:600; }
 .admin-shell .processing-settings-page .settings-reference-profile > summary small { margin-left:18px;font-size:12px;font-weight:400;color:var(--admin-v2-muted); }

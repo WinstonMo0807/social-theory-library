@@ -46,7 +46,9 @@ test("retired Knowledge Studio preserves specialist object editing destinations"
   assert.match(nodeEditor, /search\.get\("node"\)/);
   assert.match(nodeEditor, /已从 知识管理 打开这个理论或概念资料/);
   assert.match(taxonomyEditor, /searchParams\.get\("subdiscipline"\)/);
-  assert.match(taxonomyEditor, /已打开所选子学科/);
+  assert.match(taxonomyEditor, /encodeURIComponent\(requestedSubdiscipline\)/);
+  assert.match(taxonomyEditor, /requested\.data\.id !== requestedSubdiscipline/);
+  assert.match(taxonomyEditor, /requestedSubdiscipline && openedId !== requestedSubdiscipline/);
   assert.match(readingPathEditor, /searchParams\.get\("path"\)/);
   assert.match(readingPathEditor, /encodeURIComponent\(requestedPath\)/);
 });
@@ -115,7 +117,8 @@ test("professional diagnostics retain identity and source checks without a paral
   assert.match(diagnostics, /source_revision/);
   assert.match(diagnostics, /projected_revision/);
   assert.match(diagnostics, /EvidenceEnvelopeCard/);
-  assert.match(diagnostics, /返回当前对象工作台/);
+  assert.match(diagnostics, /const returnUrl = selected\?\.editor_url/);
+  assert.match(diagnostics, /<Link[^>]*href=\{returnUrl\}>回到页面继续处理/);
   assert.match(diagnostics, /无法找到指定对象，没有显示其他对象的结果/);
   assert.doesNotMatch(diagnostics, /apiRequest\(|CandidateDecisionBar|async function publishRevision|async function decideCandidate/);
   assert.doesNotMatch(diagnostics, /id="studio-canonical"|id="studio-preview"/);

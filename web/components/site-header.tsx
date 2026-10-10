@@ -129,7 +129,7 @@ export function SiteHeader({ config: suppliedConfig, preview = false, previewPat
         {readingContext === "article" ? <Link href="/recommendations" className="active" aria-current="page" prefetch={false}>每日荐读</Link> : null}
       </nav>
       <div className="header-actions">
-        {readingContext === "index" || readingContext === "article" || siteContentPage === "home" ? <form className="reading-header-search" action="/explore" role="search" aria-label="站内搜索"><button type="submit" aria-label="搜索馆藏"><Search size={18} strokeWidth={1.7}/></button><label><span className="sr-only">搜索书名、作者或主题</span><input name="q" type="search" placeholder="搜索书名、作者或主题"/></label></form> : <Link className="header-search" href="/explore" prefetch={false}>
+        {readingContext === "index" || readingContext === "article" || siteContentPage === "home" ? <form className="reading-header-search" action="/explore" role="search" aria-label="站内搜索"><input type="hidden" name="context" value="global"/><button type="submit" aria-label="搜索馆藏"><Search size={18} strokeWidth={1.7}/></button><label><span className="sr-only">搜索书名、作者或主题</span><input name="q" type="search" placeholder="搜索书名、作者或主题"/></label></form> : <Link className="header-search" href="/explore" prefetch={false}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>}

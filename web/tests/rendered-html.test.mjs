@@ -165,6 +165,10 @@ function fixturePayload(pathname, query = new URLSearchParams()) {
   if (pathname === "/api/catalog/theory-system/nodes/" && query.get("q") === "directory-fixture") return {count:49,next:"?page=3",previous:"?page=1",results:[{id:"directory-node",slug:"directory-concept",node_type:"concept",canonical_name_zh:"目录分页测试概念",summary:"由测试 API 返回的第二页条目。",related_disciplines:[],representative_scholars:[],work_count:1}]};
   if (pathname === "/api/catalog/topics/") return paginated([sampleTopic]);
   if (pathname === "/api/catalog/topics/surveillance-and-society/") return sampleTopic;
+  if (pathname === "/api/catalog/topics/normalized-topic-fixture/") return {
+    ...sampleTopic, id: "normalized-topic-id", slug: "normalized-topic-fixture",
+    knowledge_nodes: [{ id: "normalized-topic-node", slug: "canonical-topic-theory", name: "规范主题理论", node_type: "theory_tradition", summary: "规范关系说明", relation_label: "理论视角" }],
+  };
   if (pathname === "/api/catalog/topics/recommended-topic-outside-first-page/") return { ...sampleTopic, id: "recommended-topic-fixture", slug: "recommended-topic-outside-first-page", name: "目录页外精选主题" };
   if (pathname === "/api/catalog/topics/cleared-evidence/") return { ...sampleTopic, id: "topic-cleared", slug: "cleared-evidence", passages: [{ id: "retired-passage", title: "旧摘录不应复活", text: "旧摘录不应复活", snippet: "旧摘录不应复活", page_index: 1, asset_id: "asset-old" }] };
   const curationMatch = pathname.match(/^\/api\/catalog\/evidence-curation\/(scholar|topic|node)\/([^/]+)\/$/);
@@ -269,6 +273,13 @@ function fixturePayload(pathname, query = new URLSearchParams()) {
     disciplines: [], browse: {}, reading_paths: [],
     recent: { nodes: [], timeline_events: [], work_relations: [] },
   };
+  if (["/api/catalog/theory-system/reading-paths/canonical-path-fixture/", "/api/catalog/theory-system/reading-paths/legacy-path-fixture/"].includes(pathname)) return {
+    id: "path-public-semantics", slug: pathname.split("/").at(-2), title: "公开阅读路径测试",
+    learning_goal: pathname.includes("canonical-path") ? "明确的学习目标" : "", introduction: "兼容旧路径介绍",
+    cover_url: "", status: "published", items: [{ id: "path-item-semantics", stage: "first-stage", stage_name: "开始阅读", stage_description: "",
+      node_data: { id: "normalized-topic-node", slug: "canonical-topic-theory", canonical_name_zh: "规范主题理论" }, work_data: null,
+      prerequisite: "先阅读本书导言", editorial_note: "管理员私人编辑说明不可公开", reading_order: 1 }],
+  };
   if (pathname === "/api/catalog/theory-system/disciplines/sociology/") return {
     discipline: { id: "discipline-fixture", code: "SOC", name: "社会学", foreign_name: "Sociology", slug: "sociology", description: "社会关系研究", hero_image: "" },
     counts: {}, active_type: "theory_tradition", nodes: [], lineage: [], reading_paths: [],
@@ -333,9 +344,10 @@ test("server-renders the Chinese public home without starter artifacts", async (
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<html[^>]*lang="zh-CN"/i);
-  assert.match(html, /社会理论如何被感知/);
-  assert.match(html, /阅读就是方法/);
-  assert.match(html, /<h2>本期书库推荐<\/h2>/);
+  assert.match(html, /<h1[^>]*data-edit-field="home_title_left_lines"[^>]*><span>社会理论<\/span><span>如何被感知<\/span><\/h1>/);
+  assert.match(html, /class="hero-intro"/);
+  for (const line of defaultSiteConfig.intro_lines) assert.ok(html.includes(line), line);
+  assert.match(html, /<h2>每日荐读<\/h2>/);
   assert.doesNotMatch(html, /<h2[^>]*>精选馆藏/);
   assert.match(html, /理论流派/);
   assert.match(html, /推荐页外学者/);
@@ -351,6 +363,33 @@ test("legacy browser favicon fallback is a valid static icon", async () => {
   assert.equal(icon.readUInt16LE(2), 1);
   assert.equal(icon.readUInt16LE(4), 1);
   assert.equal(icon.readUInt32LE(18), 22);
+});
+
+test("topic overview preserves scoped Ask and canonical theory relations", async () => {
+  const response = await render("/topics/normalized-topic-fixture");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /href="\/explore\?mode=ask&amp;context=topics&amp;id=normalized-topic-id"/);
+  const theories = html.match(/data-module-id="topic-theories"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(theories, "the overview must keep its theory relation section");
+  assert.match(theories, /href="\/theories\/nodes\/canonical-topic-theory"/);
+  assert.doesNotMatch(theories, /href="\/theory-schools\/practice-theory"/, "canonical relations take precedence over the legacy theory list");
+});
+
+test("reading path keeps learning goals, introduction fallback and public prerequisites", async () => {
+  for (const slug of ["canonical-path-fixture", "legacy-path-fixture"]) {
+    const response = await render(`/theories/reading-paths/${slug}`);
+    assert.equal(response.status, 200, slug);
+    const html = await response.text();
+    const main = html.match(/<main\b[\s\S]*?<\/main>/)?.[0];
+    assert.ok(main, "the public path must have a rendered main element");
+    assert.match(main, /兼容旧路径介绍/, slug);
+    assert.equal((main.match(/兼容旧路径介绍/g) ?? []).length, 1, "the introduction should render once");
+    if (slug === "canonical-path-fixture") assert.match(main, /明确的学习目标/);
+    assert.match(main, /先修条件/);
+    assert.match(main, /先阅读本书导言/);
+    assert.doesNotMatch(main, /管理员私人编辑说明不可公开/);
+  }
 });
 
 test("server-renders all reference families as real routes", async () => {

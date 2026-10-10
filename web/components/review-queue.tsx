@@ -43,7 +43,7 @@ export function ReviewQueue() {
     event.preventDefault();
     change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
-  return <div className="admin-page review-queue-page">
+  return <div className="admin-page review-queue-page" data-workspace={curation ? "curation" : "catalog"}>
     <PageHeader title={curation ? "待发布的页面修改" : "馆藏待完成"} description={curation ? "从尚未发布的修改继续编辑，完成后，可发布到网站。" : "继续上次的整理，完成后即可进入下一步。"} />
     <nav className="v307-admin-tabs" aria-label="待办工作区"><Link aria-current={!curation ? "page" : undefined} href={adminListHref(pathname, search.toString(), { workspace: null, ordering: null, page: 1 })}>馆藏待办</Link><Link aria-current={curation ? "page" : undefined} href={adminListHref(pathname, search.toString(), { workspace: "curation", ordering: "-updated_at", page: 1 })}>策展草稿</Link></nav>
     {curation ? <CurationDraftQueue /> : <div className="admin-reference-split review-reference"><div className="admin-reference-list">

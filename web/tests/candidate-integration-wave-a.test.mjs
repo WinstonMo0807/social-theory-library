@@ -93,13 +93,19 @@ test("Wave A consumers share decisions and evidence while Admin Shell narrows no
     readFile(new URL("../components/candidate-review.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/admin-shell.tsx", import.meta.url), "utf8"),
   ]);
-  for (const source of [panel, inspector, review]) assert.match(source, /CandidateDecisionBar/);
+  for (const source of [panel, inspector]) assert.match(source, /CandidateDecisionBar/);
+  // The three-step review form shares the decision contract and adds a final confirmation.
+  for (const contract of ["resolveCandidateActionDescriptors", "buildCandidateActionBody", "parseCandidateEditableValue"]) assert.match(review, new RegExp(contract));
+  assert.match(review, /if \(actionPending\.current \|\| descriptor\.disabled\) return false/);
+  assert.match(review, /if \(!choice \|\| !valid \|\| disabled\) return/);
+  assert.match(review, /step===2 && choice/);
   for (const source of [inspector, review]) assert.match(source, /EvidenceEnvelopeCard/);
   assert.match(panel, /decision_descriptor/);
   assert.match(inspector, /edited_value/);
   assert.match(shell, /const staffRoles = \["admin", "editor"\]/);
   assert.match(shell, /"\/admin\/processing": \["can_view_system_status"\]/);
-  assert.match(shell, /\["\/admin\/theories",/);
+  assert.match(shell, /primary: "\/admin\/theories"/);
+  assert.doesNotMatch(shell, /primary: "\/admin\/subdisciplines"/);
   assert.doesNotMatch(shell, /\["\/admin\/subdisciplines",/);
   assert.doesNotMatch(shell, /\["系统高级",/);
   assert.doesNotMatch(shell, /\["\/admin\/query-lexicon", Search, "QueryLexicon"\]/);

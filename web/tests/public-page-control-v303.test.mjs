@@ -37,7 +37,8 @@ test("Scholar Theory and Topic public routes remain registered and previewable",
   assert.match(preview, /ScholarSectionPublicView/);
   assert.match(preview, /TopicSectionPublicView/);
   assert.match(preview, /TheoryGraphExplorer/);
-  assert.match(preview, /TheoryTimelinePublicList/);
+  assert.match(preview, /KnowledgeNodePublicView/);
+  assert.match(preview, /timeline=\{payload\.secondary_preview\?\.timeline \?\? \[\]\}[\s\S]*?section="timeline"/);
   assert.match(preview, /secondary_preview/);
   assert.match(preview, /legacy_theory_schools/);
   assert.match(preview, /publicationStatusLabel/);
@@ -51,15 +52,19 @@ test("Scholar Theory and Topic public routes remain registered and previewable",
 });
 
 test("public evidence entry points preserve a Reader highlight locator", async () => {
-  const [topic, viewpoint, explore, ask, modeSwitch] = await Promise.all([
+  const [topic, viewpoint, discovery, explore, ask, modeSwitch] = await Promise.all([
     read("../components/public/topic-section-public-view.tsx"),
     read("../app/explore/opinions/page.tsx"),
+    read("../components/discovery-search-workspace.tsx"),
     read("../app/explore/page.tsx"),
     read("../components/explore-ask-client.tsx"),
     read("../components/search-mode-switch.tsx"),
   ]);
   assert.match(topic, /passage=\$\{encodeURIComponent\(passage\.id\)\}/);
-  assert.match(viewpoint, /阅读原文/);
+  assert.match(viewpoint, /DiscoverySearchWorkspace[\s\S]*?initialQuery=\{query\} initialFilters=\{filters\}/);
+  assert.match(discovery, /const reader = internalHref\(item\.reader_url\)/);
+  assert.match(discovery, /<CollectionLink className="button secondary" href=\{reader\}>阅读原文/);
+  assert.match(discovery, /href=\{context\.reader_url\}/);
   assert.match(explore, /passage=\$\{encodeURIComponent\(passage\.id\)\}/);
   assert.match(ask, /source\.reader_url/);
   assert.match(ask, /SearchModeSwitch mode="ask"/);

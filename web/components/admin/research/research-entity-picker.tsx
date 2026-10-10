@@ -176,6 +176,7 @@ export function ResearchEntityPicker({
   step = "contributors",
   queryHint = "",
   disabled = false,
+  ariaRequired = false,
   textValue = "",
   onUseValue,
   multiple = false,
@@ -196,6 +197,7 @@ export function ResearchEntityPicker({
   step?: string;
   queryHint?: string;
   disabled?: boolean;
+  ariaRequired?: boolean;
   textValue?: string;
   onUseValue?: (value: string, candidate: WorkflowCandidate) => void;
   multiple?: boolean;
@@ -536,6 +538,7 @@ export function ResearchEntityPicker({
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={open}
+          aria-required={ariaRequired || undefined}
           aria-controls={listboxId}
           aria-describedby={liveId}
           aria-activedescendant={open && orderedCandidates.length ? `${listboxId}-option-${activeIndex}` : undefined}
