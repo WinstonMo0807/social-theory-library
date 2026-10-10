@@ -98,7 +98,7 @@ type HealthRecovery = {
   finished_at: string | null;
 };
 
-type FunctionalHealthPayload = {
+export type FunctionalHealthPayload = {
   layers?: { key: string; label: string; status: HealthStatus; checks: { key: string; label: string; status: HealthStatus; summary: string; critical: boolean }[] }[];
   version: string;
   generated_at: string;
@@ -111,7 +111,7 @@ type FunctionalHealthPayload = {
   diagnostics?: ProcessingDiagnosticsPayload;
 };
 
-type RunProbeResponse = {
+export type RunProbeResponse = {
   id: string;
   probe_key: string;
   status: HealthStatus;

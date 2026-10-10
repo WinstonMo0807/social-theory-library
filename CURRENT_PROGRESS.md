@@ -1,5 +1,51 @@
 # Social Theory Library 当前进度
 
+## 2026-10-10 最新交接：准备冻结41/43/45修正
+
+只在C:/Users/12297/.codex/worktrees/v3091-admin-design/书库开发3、codex/v3.0.9.1-admin-design开发。NAS准确运行75e61ad157055b9babe15c966272bffa0bbacb5b/tree 790f762914c42311029bfe80193968462e9c4738，归档SHA256 55756a5d2c8a7be69ea4b6c7333e3c98c271d4f946051d01578a58da442e1f02。生产未切，GitHub按用户安排暂缓，严格NAS SSH信任继续保留。下方较早段落是历史，不能取代本段身份和最后动作。
+
+75e61ad的36–40-layout-readonly-second退出1：36–39量测/390px checkpoint已保存，资料写入0；40操作完成后等待动画失败。独立动画诊断确认pending的filter过渡；40-layout-readonly-third只重跑40，先绘制再等待可见有限动画，退出0。13配置、用途/高级折叠未提交输入保持并恢复、键盘栏目、18px控件/16px文字、192px侧栏与390px已核。原组合失败与中断记录保留。
+
+43-persist-evaluation退出1：第二条不相关input被下一行legend遮住，只有测试查询POST，未创建评估集。43-radio-diagnostic实际量测短行106.875px、绝对定位框195.594px，radio还继承40px高度。源码改正常两列网格撑高、18pxradio，并修横向步骤、查询表单与8px结果字。新候选须普通选择/保存/精确回读/只停用自建评估集；不启用索引。
+
+45源码复用functional-health的六类实际能力、最新观察、影响和按probe检查，原技术状态折叠且懒加载。GET不自动探测；权限仍can_retry_jobs与can_view_system_status，增加方向键/Home/End和手机时间显示。41的218px准确选择器、活动栏目文字和表单间距也已修。最终node tsc --noEmit、目标eslint退出0；58项前端与最后准确system-search-final-build退出0。下一步暂存扫描/提交/归档、NAS构建及隔离刷新、41真实Reader/43保存/45探测。矩阵29待核实/30部分核实/严格完整验收0。
+
+## 2026-10-10 41–45只读与查询组合通过，36–40量测继续
+
+75e61ad的41–45-layout-final退出0：设置未提交输入保持/恢复、五页390px、真实版本/任务、43测试200/9386ms/7段与本地判断/保存步骤、44真实0词空结果、45原10技术状态相符均核实。只有测试查询POST，无配置或评估集写入。首轮隐藏行错误保留。41-cascade-readonly退出0，实际构建将workers/settings宽度规则合成:is，最高选择器优先级覆盖OCR218为192；源码已增加准确OCR组合条件、修正活动页签白色文字和顶部多余padding/form margin，下一候选待核。
+
+45既有健康接口接线和布局在本地，58项前端/类型/lint通过；最终build通过后又细调41CSS，需最后准确构建。36–40新量测运行中；43持久化评价和41真实Reader预览将继续。29待核实/30部分核实（43加入部分核实），严格验收0，GitHub暂缓/生产未切。
+
+## 2026-10-10 图44真实用语、公开卡片和同源边界完整通过
+
+75e61ad的44-alias-preview-second退出0。杜尔凯姆5个实际用语逐条200/count1/同一人物，普通iframe显示准确公开学者卡片，实际/explore/original响应200/SAMEORIGIN/frame-ancestors self；登录页仍DENY/frame-ancestors none，390px无溢出。资料写入0，单独记录1条正常搜索usage-events。首轮新候选仅因检查把正常统计事件当资料写入而末尾失败，保留；第二轮准确区分后完整重跑通过。证据web/output/playwright/75e61ad/44-alias-preview-second-proof.json。
+
+43同一“社会”查询200/7段约9.9秒已核，整批41–45的44空结果驱动修正待重跑；36–40新量测继续。41CSS实际侧栏优先级正在只读检查，45本地未冻结源码58前端/类型/lint通过但未运行。30待核实/29部分核实/严格验收0，GitHub暂缓、生产未切。
+
+## 2026-10-10 75e61ad真实查询恢复200，44完整公开预览继续
+
+41–45-readonly-query组合退出1，失败位置是44首选人物真实0词，检查脚本误等闭合技术表的隐藏行。43实际测试POST已200，9939ms、keyword_fallback/回退true、7段全部渲染；相关/待判断本地切换及第3步保存入口已核，未创建评估集。不能把该组合记通过。已按准确当前词表行数修正空结果检查，待重跑；44独立五用语与真实公开卡片预览正在新候选验证。
+
+41未提交输入保持/语言禁用与390px、42真实版本与390px已再次取得证据。41实际侧栏仍192px而目标218px，待核后续CSS优先级；42/43新侧栏195/209已生效。45本地58项前端、类型及lint退出0，仍不属于75e61ad。矩阵30/29/0，GitHub暂缓、生产未切。
+
+## 2026-10-10 75e61ad准确隔离运行，41–45普通UI验证进行中
+
+nas-build-75e61ad、retrieval-exact-75e61ad、nas-refresh-75e61ad均退出0；准确镜像40项完整迁移PG与176项刷新PG（72+72+32）、迁移/nginx通过。刷新第一次ready为502后正常就绪，保留首次记录。运行API镜像f2428b19f0134ca46780d3f82821d795afa81edda542314b3dbd91539b262763与Web f48bb60d978ec8cccfb8698b8f53465182043cc5b393d44a0dc4be320c4c27d2对应准确commit/tree/archive标签，API/Web/edge重启0；ready=3.0.9.1/database=true/migrations0。41–45-readonly-query普通UI正在核对设置/新43实际查询，结果未出前不启动第二个Edge档案流程。
+
+45本地未提交源码已接既有functional-health的六类实际能力、最近观察和影响/按probe手工重检，复用导出类型及can_retry_jobs/can_view_system_status；页面读取GET不触发探测，技术快照折叠后才读取，全历史/耗时差仍无契约。此45源码不属于75e61ad，类型和目标lint退出0，真实浏览器/最终构建待下一候选。矩阵30/29/0，GitHub暂缓，生产未切。
+
+## 2026-10-10 75e61ad精确镜像40项PG通过，176项刷新门槛进行中
+
+retrieval-exact-75e61ad.exit=0，准确镜像内新增/检索/公开快照40项完整迁移PG通过，无源码挂载；日志与NAS独立exit保留。nas-refresh-75e61ad正在运行176项PG/迁移门槛，成功后才替换隔离API/Web/edge。当前仍486a679，不重复刷新或普通UI验证。36–44新布局、43实际查询与44公开iframe待新候选；45将复用既有持久化健康探测，完整历史保持待核。矩阵30/29/0，推送暂缓，生产未切。
+
+## 2026-10-10 75e61ad NAS构建通过，精确检索PG门槛进行中
+
+nas-build-75e61ad.exit=0/BUILD_PASSED，新API/Web镜像三项commit/tree/archive标签独立读取一致。API f2428b19f0134ca46780d3f82821d795afa81edda542314b3dbd91539b262763、Web f48bb60d978ec8cccfb8698b8f53465182043cc5b393d44a0dc4be320c4c27d2；本次记录的首写API标识有误，已按实际inspect输出纠正，首写不作为证据。精确75e61ad镜像的40项完整迁移检索关联PG正在运行，通过后再执行176项隔离刷新门槛。浏览器当前仍486a679，生产未切换/推送暂缓。构建后图45继续核对已有functional-health契约，独立源码改动不属于75e61ad归档。
+
+## 2026-10-10 75e61ad已冻结，搜索与预览修正隔离构建进行中
+
+75e61ad157055b9babe15c966272bffa0bbacb5b/tree 790f762914c42311029bfe80193968462e9c4738本地已提交16文件，暂存扫描/diff退出0。最终58项前端、类型、lint（0错误/2提示）和Vinext构建均退出0。源码1430文件/4988144字节，SHA256 55756a5d2c8a7be69ea4b6c7333e3c98c271d4f946051d01578a58da442e1f02已在NAS核对一致，rebuild-candidate隔离构建进行中。实际浏览器仍486a679；准确新镜像40项检索关联PG/176项刷新门槛、新43真实查询与44同源公开预览、36–44布局待核。矩阵30待核实/29部分核实/严格验收0，GitHub暂缓、生产未切。
+
 ## 2026-10-10 搜索重复快照已通过40项PG，公开预览路径遗漏已定位
 
 486a679的43普通UI测试查询实际500，Gunicorn约31秒终止工作进程，调用栈停在每段重复读取公开分类快照。新增两项查询数量检查在原镜像复现1段2次/32段33次；源码只预取活动修订并在单次候选计算内按Edition复用批准题名，未删除公开过滤。只读挂载修正版的两个新检查退出0；启用完整迁移后的40项PG（新增、opinion_search_v2、viewpoint_snapshot_boundary_v305）退出0。此前/data权限及--nomigrations缺词典种子的失败保留；测试使用一次性tmpfs，不挂载候选或生产媒体。真实500修正待准确新候选。

@@ -1,5 +1,11 @@
 # 部署说明
 
+## 2026-10-10 75e61ad准确隔离运行，41/43/45源码待冻结
+
+运行commit 75e61ad157055b9babe15c966272bffa0bbacb5b/tree 790f762914c42311029bfe80193968462e9c4738，归档SHA256 55756a5d2c8a7be69ea4b6c7333e3c98c271d4f946051d01578a58da442e1f02。API镜像sha256:f2428b19f0134ca46780d3f82821d795afa81edda542314b3dbd91539b262763，Web sha256:f48bb60d978ec8cccfb8698b8f53465182043cc5b393d44a0dc4be320c4c27d2。nas-build、retrieval-exact（40项完整迁移PG）和nas-refresh（176项PG/迁移/nginx）退出0，运行三标签一致/重启0；首次ready 502后重试就绪保留。
+
+实际公开iframe与杜尔凯姆5词同人卡片/SAMEORIGIN/self已通过，登录仍DENY/none；43原查询200/7段并准确显示关键词回退。41/43/45新源码不属于75e61ad，不能用本地构建代替运行验收。生产未切、GitHub暂缓；最终切换仍须新备份及对应隔离恢复、逐图安全门槛。
+
 ## 2026-10-10 486a679隔离运行，新检索修正和预览白名单待冻结
 
 准确486a679候选的构建/176项PG/迁移/nginx/刷新已通过，镜像身份见CURRENT_PROGRESS.md；生产未切换。新源码对Nginx与Caddy同源预览白名单仅增加/explore/original准确可选尾斜线路径，匹配normalized path，查询参数不能扩大白名单；登录/API/普通编辑页及该路径的子路径继续禁止嵌入。58项前端含两网关规则一致及拒绝路径检查通过，新网关实际响应头/iframe仍待新候选。

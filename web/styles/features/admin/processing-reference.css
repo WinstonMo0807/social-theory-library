@@ -154,13 +154,14 @@
 .processing-settings-navigation { margin-top:18px;border:1px solid var(--admin-v2-line);border-radius:4px;padding:14px 18px; }
 .processing-settings-navigation > summary { cursor:pointer; }
 .processing-settings-navigation .settings-section-tabs { margin:16px 0 0; }
-.processing-settings-ocr .settings-primary-navigation { border:1px solid var(--admin-v2-line);border-bottom:0;border-radius:4px 4px 0 0;background:var(--admin-v2-wash); }
-.processing-settings-ocr .settings-primary-navigation .settings-section-tabs { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0; }
-.processing-settings-ocr .settings-primary-navigation button { min-height:42px;padding:10px 20px;border:0;border-bottom:1px solid var(--admin-v2-line);background:transparent;font:600 16px/1.4 var(--stl-type-sans);cursor:pointer; }
-.processing-settings-ocr .settings-primary-navigation button[aria-selected=true] { background:var(--admin-v2-surface);border-bottom-color:var(--admin-v2-surface);box-shadow:inset 0 2px var(--admin-v2-ink); }
-.admin-shell .processing-settings-ocr .settings-grid > form { border-top:0;border-radius:0 0 4px 4px;padding:20px 14px; }
+.admin-shell .processing-settings-ocr .settings-primary-navigation { padding:0;border:0;background:transparent; }
+.admin-shell .processing-settings-ocr .settings-primary-navigation .settings-section-tabs { display:flex;gap:4px;margin:0;padding:0; }
+.admin-shell .processing-settings-ocr .settings-primary-navigation button { min-width:130px;min-height:42px;padding:10px 20px;border:1px solid var(--admin-v2-line);border-bottom:0;border-radius:3px 3px 0 0;background:var(--admin-v2-wash);color:var(--admin-v2-ink);font:600 16px/1.4 var(--stl-type-sans);cursor:pointer; }
+.admin-shell .processing-settings-ocr .settings-primary-navigation button[aria-selected=true] { background:var(--admin-v2-surface);color:var(--admin-v2-ink);box-shadow:none; }
+.admin-shell .processing-settings-ocr .settings-grid > form { margin:0;border-top:0;border-radius:0 0 4px 4px;padding:20px 14px; }
 .admin-shell .processing-settings-ocr .settings-grid > form > header { margin:0;padding:0;border:0; }
 .admin-shell .processing-settings-ocr .settings-grid > form > header h2 { font-size:23px;line-height:1.4;margin:0 0 8px; }
+.admin-shell .processing-settings-ocr .ocr-runtime-settings > header .admin-help { font-size:13px;line-height:1.6; }
 .admin-shell .processing-settings-ocr .switch-row { display:flex;align-items:center;gap:12px;padding:16px 0; }
 .admin-shell .processing-settings-ocr .switch-row input,.admin-shell .processing-settings-ocr .settings-reference-languages input { flex:none;width:19px;height:19px;min-height:0;padding:0;margin:0;accent-color:var(--admin-v2-ink); }
 .admin-shell .processing-settings-ocr .settings-reference-languages { gap:14px;margin:18px 0 12px; }
@@ -176,11 +177,64 @@
 .admin-shell .processing-search-reference > .admin-page-title h1,.admin-shell .lexicon-reference-page .admin-page-title h1 { font:700 32px/1.4 var(--stl-type-serif);margin:0 0 4px;letter-spacing:0; }
 .admin-shell .processing-search-reference > .admin-page-title p { font-size:14px;line-height:1.7;margin:0; }
 .processing-search-reference > nav { margin-top:24px;border-top:1px solid var(--admin-v2-line); }
-.processing-search-reference[data-surface=evaluation] .reference-step-strip { margin:0 0 18px; }
+.processing-search-reference[data-surface=evaluation] .reference-step-strip { position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));list-style:none;margin:0 0 18px;padding:8px 0 18px; }
+.processing-search-reference .reference-step-strip::before { content:"";position:absolute;top:23px;left:16.666%;right:16.666%;border-top:1px solid var(--admin-v2-line); }
+.processing-search-reference .reference-step-strip button { position:relative;display:grid;justify-items:center;gap:10px;width:100%;padding:0 8px;border:0;background:transparent;color:var(--admin-v2-ink);font:14px/1.5 var(--stl-type-sans);cursor:pointer; }
+.processing-search-reference .reference-step-strip button:disabled { color:var(--admin-v2-muted);cursor:default; }
+.processing-search-reference .reference-step-strip b { display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--admin-v2-line);border-radius:50%;background:var(--admin-v2-surface);font-weight:600; }
+.processing-search-reference .reference-step-strip [aria-current=step] b { border-color:var(--admin-v2-ink);background:var(--admin-v2-ink);color:#fff; }
+.processing-search-reference .semantic-index-test > label { display:grid;gap:12px;padding:18px;font-size:14px; }
+.processing-search-reference .semantic-index-test textarea { width:100%;min-height:120px;padding:12px;font:16px/1.6 var(--stl-type-sans);resize:vertical; }
+.processing-search-reference .semantic-index-test > .button { margin:0 18px 18px; }
+.processing-search-reference .search-evaluation-editor > p,.processing-search-reference .evaluation-empty,.processing-search-reference .evaluation-set-list article p { font-size:13px;line-height:1.7; }
+.processing-search-reference .search-evaluation-editor label,.processing-search-reference .evaluation-index-picker label { font-size:14px;line-height:1.6; }
 .admin-shell .lexicon-reference-page .admin-page-title { min-height:0;padding:0 0 12px;border:0;margin:0; }
 .lexicon-reference-page .admin-page-title > div > p { display:none; }
 .lexicon-reference-page .admin-title-actions { gap:8px;flex-wrap:wrap; }
+.admin-shell .system-status-reference > .admin-page-title { min-height:0;padding:0 0 24px;border:0;margin:0; }
+.admin-shell .system-status-reference > .admin-page-title h1 { font:700 36px/1.4 var(--stl-type-serif);margin:0 0 4px;letter-spacing:0; }
+.system-status-reference .admin-title-actions { gap:24px;align-items:center;flex-wrap:wrap; }
+.system-status-reference .admin-title-actions > span { font-size:14px; }
+.system-status-reference .system-status-v2-list,.system-status-reference .system-status-recent { padding:18px; }
+.system-status-reference .system-status-v2-list > header,.system-status-recent > header { padding:0 0 16px;border:0; }
+.system-status-reference-columns { display:grid;grid-template-columns:144px 112px minmax(0,1fr) 70px;gap:0;padding:8px 0 12px;border-bottom:1px solid var(--admin-v2-line);font-size:14px;color:var(--admin-v2-muted); }
+.system-status-reference .system-status-v2-list [role=option] { grid-template-columns:22px 108px 102px minmax(0,1fr) 66px;gap:8px;min-height:49px;padding:12px 0;font-size:16px; }
+.system-status-reference .system-status-v2-list [role=option].selected { box-shadow:none;border-radius:3px; }
+.system-status-reference .system-status-v2-list [role=option] > strong { font-weight:400; }
+.system-status-reference .system-status-v2-list [role=option] > span { display:flex;align-items:center;gap:8px;font-size:14px; }
+.system-status-reference .system-status-v2-list [role=option] > time { font-size:12px;overflow-wrap:anywhere; }
+.system-status-reference .system-status-v2-dot { display:inline-block;flex:none;width:10px;height:10px; }
+.system-status-reference [data-status=healthy] > .system-status-v2-dot,.system-status-reference .system-status-v2-dot[data-status=healthy] { background:#348442; }
+.system-status-reference .system-status-recent { margin-top:18px; }
+.system-status-recent h2 { margin:0;font:600 23px/1.4 var(--stl-type-serif); }
+.system-status-recent table { width:100%;border-collapse:collapse;text-align:left; }
+.system-status-recent th,.system-status-recent td { padding:12px 0;border-bottom:1px solid var(--admin-v2-line);font-size:13px;line-height:1.7;vertical-align:top; }
+.system-status-recent th { font-weight:400;color:var(--admin-v2-muted); }
+.system-status-recent td:first-child { width:34%;padding-right:10px; }
+.system-status-recent td:nth-child(2) { width:18%;padding-right:10px; }
+.system-status-recent td p { margin:4px 0 0; }
+.system-status-reference details > summary { cursor:pointer;padding:16px 0;font-weight:600; }
+.system-status-reference .system-status-v2-detail { position:static;min-height:786px;padding:24px; }
+.system-status-reference .system-status-v2-detail[data-status=degraded],.system-status-reference .system-status-v2-detail[data-status=failed] { border-color:var(--admin-v2-focus); }
+.system-status-reference .system-status-v2-detail > header { display:flex;justify-content:space-between;align-items:center;gap:20px;border:0;padding:0 0 20px; }
+.system-status-reference .system-status-v2-detail > header h2 { font:700 34px/1.4 var(--stl-type-serif);margin:8px 0; }
+.system-status-reference .system-status-v2-detail > header p { font-size:15px;line-height:1.7;margin:0; }
+.system-status-reference .system-status-v2-detail .system-status-v2-state { display:flex;align-items:center;gap:8px;font-size:14px; }
+.system-status-impact { padding:20px 24px;margin:10px 0 22px;background:var(--admin-v2-wash);border-radius:4px; }
+.system-status-impact h3 { display:flex;align-items:center;gap:10px;font:600 21px/1.5 var(--stl-type-serif);margin:0 0 14px; }
+.system-status-impact h3:not(:first-child) { margin-top:20px; }
+.system-status-impact p,.system-status-impact li { font-size:15px;line-height:1.8; }
+.system-status-check-details,.system-status-v2-detail > details:last-child { border-top:1px solid var(--admin-v2-line); }
+.system-status-check-details > section { padding:16px 24px;margin:0 0 16px;border:1px solid var(--admin-v2-line);border-radius:4px; }
+.system-status-check-details h3 { font-size:17px; }
+.system-status-reference .system-status-v2-detail dt,.system-status-reference .system-status-v2-detail dd { padding:7px 0;border:0;font-size:14px;line-height:1.7; }
+.system-status-technical { margin-top:22px;border-top:1px solid var(--admin-v2-line); }
 @media(min-width:1151px) {
+  .admin-shell:has(.system-status-reference) { --stl-container-admin-sidebar:213px; }
+  .admin-shell:has(.system-status-reference) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.system-status-reference) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
+  .admin-shell:has(.system-status-reference) .admin-content { padding:43px 24px 24px 26px; }
+  .system-status-reference .system-status-v2 { grid-template-columns:570px minmax(0,1fr);gap:18px; }
   .admin-shell:has(.processing-search-reference[data-surface=index]) { --stl-container-admin-sidebar:195px; }
   .admin-shell:has(.processing-search-reference[data-surface=evaluation]) { --stl-container-admin-sidebar:209px; }
   .admin-shell:has(.lexicon-reference-page) { --stl-container-admin-sidebar:197px; }
@@ -196,7 +250,7 @@
   .admin-shell:has(.processing-reference-page[data-document-detail=true]) { --stl-container-admin-sidebar:190px; }
   .admin-shell:has(.processing-reference-page[data-surface=workers]),.admin-shell:has(.processing-settings-page) { --stl-container-admin-sidebar:192px; }
   .admin-shell:has(.processing-reference-page[data-surface=research-sources]) { --stl-container-admin-sidebar:232px; }
-  .admin-shell:has(.processing-settings-ocr) { --stl-container-admin-sidebar:218px; }
+  .admin-shell:has(.processing-settings-page.processing-settings-ocr) { --stl-container-admin-sidebar:218px; }
   .admin-shell:has(.processing-reference-page) .admin-sidebar,.admin-shell:has(.processing-settings-page) .admin-sidebar { width:var(--stl-container-admin-sidebar); }
   .admin-shell:has(.processing-reference-page) .admin-main,.admin-shell:has(.processing-settings-page) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
   .admin-shell:has(.processing-reference-page[data-document-detail=true]) .admin-content { padding-inline:32px 24px; }
@@ -206,17 +260,27 @@
   .processing-settings-page > .admin-page-title { padding-bottom:24px; }
   .processing-settings-page .admin-v2-ops-split { grid-template-columns:587px minmax(0,1fr);gap:10px; }
   .admin-shell:has(.processing-settings-ocr) .admin-content { padding:27px 20px 24px 23px; }
-  .admin-shell .processing-settings-ocr > .admin-page-title { padding:0 8px 8px; }
+  .admin-shell .processing-settings-ocr > .admin-page-title { padding:0 8px 17px; }
   .processing-settings-ocr .admin-v2-ops-split { grid-template-columns:479px minmax(0,1fr);gap:14px; }
   .processing-reference-page .processing-reference-tasks,.processing-reference-page .selected-work-preview { min-height:611px; }
   .processing-reference-page[data-document-detail=true] .processing-reference-columns { grid-template-columns:minmax(0,.925fr) minmax(0,1fr); }
   .processing-reference-review-columns { grid-template-columns:268px minmax(0,.75fr) minmax(0,1fr); }
 }
 @media(max-width:1150px) {
+  .system-status-reference .system-status-v2 { grid-template-columns:minmax(0,1fr); }
   .processing-reference-columns,.source-reference-columns,.source-reference-intro { grid-template-columns:minmax(0,1fr); }
   .source-reference-status > div { grid-template-columns:minmax(0,1fr);gap:16px; }
 }
 @media(max-width:700px) {
+  .system-status-reference-columns { display:none; }
+  .system-status-reference .system-status-v2-list [role=option] { grid-template-columns:22px minmax(0,1fr) auto;gap:10px; }
+  .system-status-reference .system-status-v2-list [role=option] > time { display:block;grid-column:2; }
+  .system-status-reference .system-status-v2-list [role=option] > em { display:block;grid-column:3;grid-row:2; }
+  .admin-shell .system-status-reference > .admin-page-title { flex-wrap:wrap; }
+  .system-status-reference .system-status-v2-detail { min-height:0;padding:18px; }
+  .system-status-reference .system-status-v2-detail > header { flex-wrap:wrap; }
+  .system-status-impact,.system-status-check-details > section { padding:16px; }
+  .system-status-reference .system-status-v2-detail dl { grid-template-columns:minmax(80px,.4fr) minmax(0,1fr); }
   .admin-shell .processing-reference-page > .admin-page-title,.admin-shell .processing-settings-page > .admin-page-title { flex-wrap:wrap;gap:18px; }
   .admin-shell .processing-reference-page > .admin-page-title h1,.admin-shell .processing-settings-page > .admin-page-title h1 { font-size:30px; }
   .processing-reference-heading-actions { flex-direction:row;flex-wrap:wrap;align-items:center; }
