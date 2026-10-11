@@ -46,7 +46,7 @@ map $uri $library_preview_frame {
     ~^/(?:works|reader|subdisciplines)/[^/]+/?$ 1;
     ~^/(?:scholars|topics|theory-schools)/[^/]+(?:/[^/]+)?/?$ 1;
     ~^/theories/(?:nodes|disciplines|reading-paths)/[^/]+(?:/[^/]+)?/?$ 1;
-    ~^/admin/(?:preview/works/[^/]+|preview/(?:knowledge|evidence)/[^/]+/[^/]+|about/preview|recommendations/issues/[^/]+/preview)/?$ 1;
+    ~^/admin/(?:preview/works/[^/]+|preview/recycle/[0-9a-fA-F-]+|preview/(?:knowledge|evidence)/[^/]+/[^/]+|about/preview|recommendations/issues/[^/]+/preview)/?$ 1;
 }
 
 map $library_preview_frame $library_frame_options {

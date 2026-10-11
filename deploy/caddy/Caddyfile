@@ -9,7 +9,7 @@
         ~^/(?:works|reader|subdisciplines)/[^/]+/?$ SAMEORIGIN "'self'"
         ~^/(?:scholars|topics|theory-schools)/[^/]+(?:/[^/]+)?/?$ SAMEORIGIN "'self'"
         ~^/theories/(?:nodes|disciplines|reading-paths)/[^/]+(?:/[^/]+)?/?$ SAMEORIGIN "'self'"
-        ~^/admin/(?:preview/works/[^/]+|preview/(?:knowledge|evidence)/[^/]+/[^/]+|about/preview|recommendations/issues/[^/]+/preview)/?$ SAMEORIGIN "'self'"
+        ~^/admin/(?:preview/works/[^/]+|preview/recycle/[0-9a-fA-F-]+|preview/(?:knowledge|evidence)/[^/]+/[^/]+|about/preview|recommendations/issues/[^/]+/preview)/?$ SAMEORIGIN "'self'"
     }
 
     header {

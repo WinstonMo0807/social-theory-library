@@ -1,5 +1,7 @@
 # Social Theory Library 架构
 
+恢复效果预览沿用Nginx/Caddy同源页面名单，仅/admin/preview/recycle/<回收Entry标识>嵌入可见；两个网关默认仍DENY/none，实际内容GET仍需EDIT_METADATA且仅未恢复Entry/private no-store。
+
 ## 2026-10-11 3.0.9.1回收站恢复预览与批量候选（未上线）
 
 回收站保留原RecycleEntry与before JSON、原文件及引用。删除原因写入原JSON而不迁移schema；分类数从真实活动回收记录聚合。恢复预览只在EDIT_METADATA及准确未恢复Entry边界内读取all_objects，复用既有公共serializer与页面组件，不放宽普通或公开API过滤、不执行恢复。批量最多50条唯一ID，同一事务/稳定Entry锁及父项优先，逐项调用原restore_object，失败整批回滚；恢复不重新公开或启动任务。生产尚未使用该候选。

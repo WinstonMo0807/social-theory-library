@@ -1,5 +1,29 @@
 # 当前问题
 
+## 2026-10-11 53新原因与计数已运行，恢复预览网关缺项定位并修复源码
+
+53-own-batch-d42f21c退出1保留。普通馆藏列表仅对既有未公开Work509c30dd执行一次自身delete POST200，300字原生输入接通，原before JSON原因回读正确；实际回收计数从8到9、各类型和等于总数，旧学者原因空/界面未记录正确。准确自身Entry b94fea3d-83fd-4ac1-b3fd-2ad2d75ddf7a。没有批量恢复或第二次删除，checkpoint=work-recycled，原正式写请求仅1项。
+
+实际截图显示新恢复预览iframe被浏览器拦截。独立HEAD显示新/admin/preview/recycle/<UUID>为200但X-Frame-Options DENY/frame-ancestors none，而既有works预览为SAMEORIGIN/self；新私有API尚未请求，失败不能记预览通过。根因是原Nginx与Caddy同源预览名单漏新路径，AdminShell路径虽已正确不能替代网关名单。
+
+仅在两网关原同一预览规则中补preview/recycle/[0-9a-fA-F-]+，保留默认DENY/none，不允许编辑页、登录、API、非法路径或任意跨站嵌入。新限定framing检查旧规则失败/修改后1通过，red1/green0；旧网关全套和API13/栏目5/176/83/337及已过UI沿用不重跑。源码仅网关两行与新检查，不改API或应用组件。待准确归档/镜像和实际配置nginx-t/新路径HEAD门槛，再从已完成原因与计数检查点只继续首次预览及批量两项往返。生产未切/GitHub暂缓，新生产备份及对应隔离恢复、其余真实缺项继续。
+
+## 2026-10-11 d42f21c准确回收站候选运行，仅新增13项PostgreSQL通过
+
+准确源码d42f21cdf5874b29b7c1c94c3c50d289db1ef0ed/tree64d32809507d9d36aba478740cac458e1b3a14e0、归档SHA2561e8bf7fd5062370bc7b6983ad1d79ee0fc39c5db7e1532778f414b2e3ce63a1e的NAS rebuild实际退出0/BUILD_PASSED。API sha256:dee8bf8e6b438c7b90caa92add61d2dc984fdf755d2dbde11a497d9e317ad5d2、Web sha256:389c0aa13171806701914e9622de1151158dc31e783f6a072de32567cd545c0f的三个来源标签逐项相符。实际/app内容和权限仅九项回收站源码/合同/新测试差异，661项旧文件与权限、40依赖底层和执行配置不变，不将有新源码的API冒称全部等同。
+
+nas-pg-recycle-d42f21c退出0，仅新增test_v3091_recycle_gaps.py十三项、真实隔离PostgreSQL、完整迁移、/data临时卷。原十三点日志独立取回，并与原6106栏目五项日志hash、API九项差异hash及精确imageID一起作为唯一刷新脚本门槛，未重跑旧176/83/337或栏目五项。隔离刷新退出0，独立三容器准确imageID/Running=true/Restart=0、ready3.0.9.1/数据库true/待迁移0/v3091隔离全部通过。启动初期一次502保留，最终ready与独立检查成功。
+
+下一只补53新增删除原因、受保护保留内容预览、真实计数及两个已存在自有对象的批量恢复往返。Work509c30dd与已回收Scholar da92a013沿用，不新建资料，不重跑已完成的单条恢复、页面/搜索/分页/设备或旧UI。09未确认的作者关系仍受原公共serializer approved边界控制，不为预览绕过人工确认。生产未切，GitHub依用户安排暂缓；新生产备份及对应隔离恢复、29图片说明/49传输/50执行等真实缺项继续。59图首轮未核0，最终仍保守部分核实59。
+
+## 2026-10-11 d42f21c回收站新增缺项源码冻结并上传，NAS构建中
+
+25文件准确扫描/diff退出0，本地提交d42f21cdf5874b29b7c1c94c3c50d289db1ef0ed/tree64d32809507d9d36aba478740cac458e1b3a14e0。1445文件5194595字节准确源码归档，SHA2561e8bf7fd5062370bc7b6983ad1d79ee0fc39c5db7e1532778f414b2e3ce63a1e，NAS独立匹配并受保护上传。config.schema_urls原只选已验证URL名；已将admin-recycle/admin-recycle-preview加入既有真实URLPattern登记，明确search/kind/offset合同，真实OpenAPI增加291行/生成TS155行，登记后的生成/--check均退出0。未建立另一组业务路由。
+
+首次本地扫描误用根tools路径，退出2保留；实际扫描器是.codex-deploy-temp/v3091-release/tools/scan-staged.py，纠正后25项扫描退出0。首次误直接以REBUILD确认词调用build.sh被其BUILD_V3091门槛拒绝，nas-build-d42f21c退出1保留，尚无构建/候选或生产变更；已按实读rebuild-candidate.sh入口启动nas-build-d42f21c-rebuild（会话55267），该入口核对归档hash、旧备份和全新STAGE后再调用原构建器。没有绕过守卫或将原失败改为通过。
+
+新API静态差异准确九文件：删除原因两个调用点、回收站view/服务/新私有预览服务、urls、合同登记及OpenAPI、新13项测试；栏目源文件和原五项测试未变。下一独立镜像差异核对、隔离PostgreSQL完整迁移仅新13项，再通过日志hash/精确imageID门槛更新隔离浏览器。真实浏览器仍6106ddf，旧栏目5项和176/83/337及已核UI全部沿用，不重跑。53仅已有自有Work509c30dd和回收学者da92a013的新原因/预览/两项批量往返，生产未切/GitHub依用户安排暂缓，新的生产备份及对应隔离恢复与其他59图缺项待。
+
 ## 2026-10-11 53真实计数/原因/恢复预览/批量源码就绪，等待准确候选
 
 回收站复用既有RecycleEntry、before JSON、restore_object和权限/审计，无模型或数据库迁移。普通删除增加选填300字原因，存入原before JSON，旧记录留空并显示未记录，不捏造旧原因。GET从真实未恢复记录统计全站类型数量及当前筛选数。批量最多50个唯一ID、同一事务/稳定锁顺序，先恢复选中的作品或人物父项再恢复版本或学者子项；任何阻止使整批回滚，原单条接口保留。
