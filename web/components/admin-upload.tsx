@@ -1212,7 +1212,7 @@ export function AdminUpload() {
           </div>
         ) : null}
         {files.length ? files.map((item, index) => (
-          <div key={item.token}>
+          <div className="upload-file-row" key={item.token}>
             <FileText size={18} />
             <p>
               <strong>{item.file.name}</strong>
@@ -1243,7 +1243,7 @@ export function AdminUpload() {
               </span>
             ) : null}
             {item.status === "failed" ? <button type="button" className="button secondary" disabled={pending} onClick={() => void upload(item.token)}><RefreshCw size={14} />重试此文件</button> : null}
-            <button type="button" aria-label={`移除待上传文件 ${item.file.name}`} disabled={pending} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={16} /></button>
+            <button className="upload-file-remove" type="button" aria-label={`移除待上传文件 ${item.file.name}`} disabled={pending} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={16} /></button>
           </div>
         )) : <p className="empty-row">尚未选择文件。</p>}
         <footer>

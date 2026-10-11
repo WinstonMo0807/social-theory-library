@@ -136,6 +136,19 @@
   border-bottom: 1px solid var(--line);
 }
 
+.upload-reference .upload-queue > .upload-file-row {
+  grid-template-columns: 18px minmax(0, 1fr) 30px;
+  align-items: start;
+  padding: 12px 0;
+}
+
+.upload-reference .upload-file-row > svg { grid-column: 1; grid-row: 1; }
+.upload-reference .upload-file-row > p { grid-column: 2; grid-row: 1; }
+.upload-reference .upload-file-row > .upload-file-remove { grid-column: 3; grid-row: 1; }
+.upload-reference .upload-file-row > .upload-file-status { grid-column: 2 / -1; }
+.upload-reference .upload-queue > .upload-file-row > .upload-file-progress { grid-column: 2 / -1; width: 100%; }
+.upload-reference .upload-file-row > .button.secondary { grid-column: 2 / -1; width: fit-content; }
+
 .upload-queue > .upload-metadata-pairing {
   display: grid;
   grid-template-columns: minmax(180px, 0.6fr) minmax(0, 1.4fr);
