@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from accounts.models import User
 from catalog.models import (
     CatalogFieldDecision, Contribution, Edition, EditorialRevision, KnowledgePublicationEvent, Page,
-    Person, PersonMergeRecord, PersonNameVariant, ResearchRun, ScholarProfile, TheoryTimelineEvent, Work,
+    Person, PersonMergeRecord, PersonNameVariant, ResearchRun, ScholarProfile, ScholarRelation, TheoryTimelineEvent, Work,
 )
 from catalog.services.person_merges import merge_people, prepare_person_merge, rollback_person_merge, rollback_preview
 from catalog.services.query_lexicon.sync import ensure_query_lexicon_state
@@ -83,6 +83,40 @@ def test_person_merge_moves_references_without_deleting_rows_and_can_reverse(mer
     assert author.person_id == variant.person_id == unreviewed.person_id == profile.person_id == source.pk
     assert record.rolled_back_at is not None
     assert profile.short_description == "保留档案原文"
+
+
+@pytest.mark.parametrize("field", ["source_scholar", "target_scholar"])
+def test_scholar_relation_changes_block_stale_merge_and_rollback(merge_owner, field):
+    source, target = pair()
+    source_profile = ScholarProfile.objects.create(person=source, slug="merged-relation-profile")
+    peer = Person.objects.create(preferred_name="独立关系人物", authority_status="verified")
+    peer_profile = ScholarProfile.objects.create(person=peer, slug="unchanged-peer-profile")
+    other_field = "target_scholar" if field == "source_scholar" else "source_scholar"
+    relation = ScholarRelation.objects.create(**{
+        field: source_profile, other_field: peer_profile,
+        "relation_type": "influence", "summary": "合并前关系", "status": "draft",
+    })
+    preview = prepare_person_merge(source, target)
+    ScholarRelation.objects.filter(pk=relation.pk).update(summary="预览后人工修改")
+    with pytest.raises(ValueError, match="变化"):
+        merge_people(source.pk, target.pk, actor=merge_owner, confirmed=True,
+                     expected_fingerprint=preview["fingerprint"], idempotency_key="stale-scholar-relation")
+    assert not PersonMergeRecord.objects.exists()
+    record = apply(source, target, merge_owner, key="scholar-relation-state")
+    source_profile.refresh_from_db()
+    relation.refresh_from_db()
+    assert source_profile.person_id == target.pk
+    assert getattr(relation, f"{field}_id") == source_profile.pk
+    assert getattr(relation, f"{other_field}_id") == peer_profile.pk
+    assert relation.summary == "预览后人工修改" and relation.status == "draft"
+    reversal = rollback_preview(record)
+    assert reversal["can_rollback"]
+    ScholarRelation.objects.filter(pk=relation.pk).update(summary="合并后人工修改")
+    assert not rollback_preview(record)["can_rollback"]
+    with pytest.raises(ValueError):
+        rollback_person_merge(record.pk, actor=merge_owner, confirmed=True, expected_fingerprint=reversal["fingerprint"])
+    relation.refresh_from_db()
+    assert relation.summary == "合并后人工修改"
 
 
 @pytest.mark.parametrize("blocked", ["identity", "profiles", "relation", "unverified", "draft"])

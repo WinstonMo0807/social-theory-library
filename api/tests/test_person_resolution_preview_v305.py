@@ -6,7 +6,7 @@ from accounts.models import User
 from catalog.models import (
     Contribution, Edition, EditorialRevision, Person, PersonNameVariant,
     QueryLexiconEntry, QueryLexiconGeneration, QueryLexiconState,
-    ScholarProfile, TheoryTimelineEvent, Work,
+    ScholarProfile, ScholarRelation, TheoryTimelineEvent, Work,
 )
 from catalog.services import person_resolution
 from catalog.services.person_resolution import duplicate_people, person_merge_preview
@@ -107,8 +107,8 @@ def test_preview_is_read_only_and_covers_direct_profile_and_publication_referenc
     assert all(not row["sql"].lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER")) for row in captured)
     assert preview["coverage"]["person_fk_types"] == 11
     assert preview["coverage"]["preserved_audit_fk_types"] == 2
-    assert preview["coverage"]["profile_fk_types"] == 5
-    assert len(preview["references"]) == 14
+    assert preview["coverage"]["profile_fk_types"] == 7
+    assert len(preview["references"]) == 16
     contributions = next(row for row in preview["references"] if row["model"] == "catalog.Contribution")
     assert contributions["source_count"] == contributions["target_count"] == 1
     assert contributions["collisions"][0]["source_id"] == str(relation.pk)
@@ -126,6 +126,33 @@ def test_preview_is_read_only_and_covers_direct_profile_and_publication_referenc
     source.refresh_from_db()
     assert relation.person_id == source.pk and relation.approved
     assert source.merged_into_id is None
+
+
+@pytest.mark.parametrize("field", ["source_scholar", "target_scholar"])
+def test_preview_inventories_both_scholar_relation_ends_without_writing(field):
+    source, target = person("关系来源人物"), person("关系保留人物")
+    source_profile = ScholarProfile.objects.create(person=source, slug="relation-source-profile")
+    target_profile = ScholarProfile.objects.create(person=target, slug="relation-target-profile")
+    other_field = "target_scholar" if field == "source_scholar" else "source_scholar"
+    relation = ScholarRelation.objects.create(**{
+        field: source_profile, other_field: target_profile,
+        "relation_type": "influence", "summary": "人工核对关系", "source": "原始来源", "status": "draft",
+    })
+    ensure_query_lexicon_state()
+    with CaptureQueriesContext(connection) as queries:
+        preview = person_merge_preview(source, target)
+    assert all(not row["sql"].lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE")) for row in queries)
+    groups = {row["field"]: row for row in preview["references"] if row["model"] == "catalog.ScholarRelation"}
+    assert set(groups) == {"source_scholar", "target_scholar"}
+    assert groups[field]["source_rows"][0]["id"] == str(relation.pk)
+    assert groups[other_field]["target_rows"][0]["id"] == str(relation.pk)
+    assert "two_scholar_profiles" in {row["code"] for row in preview["review_issues"]}
+    assert not preview["merge_execution_available"]
+    relation.refresh_from_db()
+    assert getattr(relation, f"{field}_id") == source_profile.pk
+    assert relation.summary == "人工核对关系" and relation.status == "draft"
+    ScholarRelation.objects.filter(pk=relation.pk).update(summary="预览后的人工修改")
+    assert person_merge_preview(source, target)["fingerprint"] != preview["fingerprint"]
 
 
 def lexicon_entry(generation, person, term):
