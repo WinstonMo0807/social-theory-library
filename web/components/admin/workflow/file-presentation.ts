@@ -22,7 +22,7 @@ export function publicReaderPreviewHref(context: Record<string, unknown>, file: 
   return assetId && revisionId && publication.public_state === "published" && publication.catalog_revision_active === true && reader.readable === true
     && source.catalog_revision_id === revisionId && source.asset_id === assetId
     && asset?.kind === "normalized" && asset.status === "ready" && asset.validation_status === "valid"
-    ? `/reader/${encodeURIComponent(assetId)}` : "";
+    ? `/reader/${encodeURIComponent(assetId)}?preview=1` : "";
 }
 
 export const WORKFLOW_GROUPS = [

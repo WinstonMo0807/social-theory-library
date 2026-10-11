@@ -65,6 +65,7 @@ export function ReaderShell({
   initialFocus,
   initialPassage,
   initialEvidence,
+  readOnlyPreview = false,
   outline = [],
   relatedScholars = [],
   relatedTheories = [],
@@ -76,13 +77,14 @@ export function ReaderShell({
   initialFocus: string;
   initialPassage: string;
   initialEvidence: string;
+  readOnlyPreview?: boolean;
   outline?: { index: number; printed_label: string; chapter_title: string }[];
   relatedScholars?: { name: string; slug: string; years: string }[];
   relatedTheories?: { name: string; slug: string }[];
   relatedTopics?: { name: string; slug: string }[];
 }) {
   const { state: readerSession } = useSessionBootstrap();
-  const readerAuthenticated = readerSession.status === "authenticated";
+  const readerAuthenticated = readerSession.status === "authenticated" && !readOnlyPreview;
   const [dark, setDark] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -184,8 +186,8 @@ export function ReaderShell({
   }
 
   return (
-    <div className={`reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}>
-      <UsageTracker eventType="reader_open" assetId={work.id} workId={work.workId} source="reader" />
+    <div className={`reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`} data-read-only-preview={readOnlyPreview || undefined}>
+      {!readOnlyPreview ? <UsageTracker eventType="reader_open" assetId={work.id} workId={work.workId} source="reader" /> : null}
       <header className="reader-toolbar" aria-label="阅读工具栏">
         <Link className="reader-logo" href="/" aria-label="返回书库"><span>SOCIAL</span><span>THEORY</span><span>LIBRARY</span></Link>
         <div className="toolbar-group page-control">
@@ -290,7 +292,7 @@ export function ReaderShell({
             label="问这本书"
             className="reader-ask-library"
           />
-          {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={trackDownload}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
+          {access ? <a href={access.download_url || access.url} download={access.download_filename} title={access.download_rendition === "ocr_pdf" ? "下载可搜索 OCR 版" : "下载原始 PDF"} onClick={readOnlyPreview ? undefined : trackDownload}><Download size={18} /><span>{access.download_rendition === "ocr_pdf" ? "下载 OCR 版" : "下载"}</span></a> : <button type="button" disabled><Download size={18} /><span>下载</span></button>}
           <button type="button" aria-label="添加批注" onClick={() => protectedAction("批注")}><Highlighter size={18} /><span>批注</span></button>
           <ActionButton className={bookmarkedPage ? "active" : ""} type="button" aria-label={bookmarkedPage ? "取消当前页书签" : "收藏当前页书签"} state={pendingAction?.startsWith("toggle-bookmark:") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.startsWith("toggle-bookmark:")} pressed={bookmarkedPage} onClick={() => protectedAction("书签")}><Bookmark size={18} fill={bookmarkedPage ? "currentColor" : "none"} /><span>书签</span></ActionButton>
         </div>

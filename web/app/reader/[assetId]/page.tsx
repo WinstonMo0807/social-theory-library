@@ -13,7 +13,7 @@ export default async function ReaderPage({
   searchParams,
 }: {
   params: Promise<{ assetId: string }>;
-  searchParams: Promise<{ page?: string; q?: string; focus?: string; passage?: string; evidence?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; focus?: string; passage?: string; evidence?: string; preview?: string }>;
 }) {
   const [{ assetId }, query] = await Promise.all([params, searchParams]);
   const result = await loadReaderManifestResult(assetId);
@@ -29,6 +29,7 @@ export default async function ReaderPage({
       initialFocus={query.focus ?? ""}
       initialPassage={query.passage ?? ""}
       initialEvidence={query.evidence ?? ""}
+      readOnlyPreview={query.preview === "1"}
       outline={manifest.outline}
       relatedScholars={manifest.scholars}
       relatedTheories={manifest.theories}

@@ -58,13 +58,13 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
   };
   const readerHref = reader ? publicReaderPreviewHref(context, drafts.file, drafts.reader) : "";
   const previewContent = reader
-    ? readerHref ? <><SiteHeader preview previewPath={readerHref}/><iframe title={`${title}在线阅读预览`} src={readerHref} style={{width:"100%",height:980,border:0}}/></>
+    ? readerHref ? <iframe title={`${title}在线阅读预览`} src={readerHref} style={{width:"100%",height:980,border:0}}/>
       : pdfUrl ? <WorkflowInspector key={pdfUrl} selection={{kind:"pdf",title,pdfUrl}} token={token} onClose={()=>onLocate("work")}/> : <p className="empty-state">当前文件暂无可用预览。请先核对文件是否上传并验证完成。</p>
     : <><SiteHeader preview previewPath={`/works/${work.slug}`}/><WorkDetailView work={work} presentation={presentation} preview={{publicationState:"draft",pdfPreviewUrl:"",returnHref}} footer={null}/></>;
   return <div className="workflow-v307-live-preview">
     <header><h2>读者会看到什么</h2></header>
     <div className="selected-preview-tools"><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device==="desktop"} onClick={()=>setDevice("desktop")}><Monitor size={15}/>电脑</button><button type="button" aria-pressed={device==="mobile"} onClick={()=>setDevice("mobile")}><Smartphone size={15}/>手机</button></div><button type="button" onClick={()=>{setExpanded(true);fullPreview.current?.showModal();}}><Maximize2 size={15}/>放大查看</button></div>
-    <p className="workflow-v307-preview-state" role="status">{reader ? readerHref ? "当前公开版本的阅读文件" : "当前文件内容预览" : dirty ? "有未保存修改 · 当前输入实时预览" : "当前已保存草稿 · 尚需明确发布"}</p>
+    <p className="workflow-v307-preview-state" role="status">{reader ? readerHref ? "当前公开阅读文件的访客预览 · 不记录阅读进度和笔记" : "当前文件内容预览" : dirty ? "有未保存修改 · 当前输入实时预览" : "当前已保存草稿 · 尚需明确发布"}</p>
     {!reader && coverError ? <p role="status">{coverError}</p> : null}
     {!reader ? <div className="workflow-v307-preview-locate"><button type="button" onClick={() => onLocate("work")}>编辑书目与封面</button><button type="button" onClick={() => onLocate("contributors")}>编辑作者与分类</button></div> : null}
     <div onClickCapture={event => { const target = event.target as HTMLElement; if (target.closest("a,button")) return; if (target.closest(".book-cover")) onLocate("work"); else if (target.closest(".work-author-link")) onLocate("contributors"); else if (target.closest(".work-hero h1,.work-summary,.work-body")) onLocate("work"); else if (target.closest("dl")) onLocate("bibliography"); }}>

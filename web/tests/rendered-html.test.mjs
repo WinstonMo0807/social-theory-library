@@ -400,6 +400,7 @@ test("server-renders all reference families as real routes", async () => {
     ["/topics/surveillance-and-society", /监控与社会/],
     ["/reader/asset-discipline?page=34", /文档内搜索/],
     ["/reader/asset-discipline?page=34", /连续阅读/],
+    ["/reader/asset-discipline?preview=1", /data-read-only-preview="true"/],
     ["/admin", /正在验证管理权限/],
     ["/login", /登录读者账户/],
   ];
