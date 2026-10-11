@@ -588,6 +588,9 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
             "subdiscipline_links",
             "topic_links",
             "definition",
+            "core_concepts",
+            "keywords",
+            "summary_source",
             "basic_propositions",
             "theoretical_boundary",
             "direct_relations",
@@ -673,6 +676,9 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
     }
     edit_version = serializers.CharField(read_only=True)
     slug = PreservedSlugField(required=False, allow_blank=True)
+    core_concepts = serializers.ListField(child=serializers.CharField(max_length=120), max_length=30, required=False)
+    keywords = serializers.ListField(child=serializers.CharField(max_length=80), max_length=20, required=False)
+    summary_source = serializers.CharField(max_length=1000, allow_blank=True, required=False)
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)
     subdiscipline_links = KnowledgeNodeSubdisciplineSerializer(
@@ -697,6 +703,9 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             "slug",
             "summary",
             "definition",
+            "core_concepts",
+            "keywords",
+            "summary_source",
             "core_questions",
             "basic_propositions",
             "theoretical_boundary",

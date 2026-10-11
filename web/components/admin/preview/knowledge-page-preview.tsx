@@ -81,6 +81,7 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
       slug: data.slug,
       description: data.description || data.introduction,
       hero_image: data.hero_image,
+      display_subdisciplines: data.display_subdisciplines,
     },
     counts: {
       theory_traditions: data.theory_count,
@@ -110,7 +111,7 @@ function PreviewContent({ payload, pageId, evidenceCuration, selectedRelationId,
   switch (payload.object_type) {
     case "discipline": {
       const item = data as Discipline & {preview_directory?:TheorySystemOverview["disciplines"];preview_subdisciplines?:{id:string;name:string;slug:string}[]};
-      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} directory={pageId === "directory" ? item.preview_directory : undefined} subdisciplines={item.preview_subdisciplines} collectionsAvailable={false}/>;
+      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} directory={pageId === "directory" ? item.preview_directory : undefined} subdisciplines={item.preview_subdisciplines ?? item.display_subdisciplines} collectionsAvailable={false}/>;
     }
     case "subdiscipline": {
       const item = data as Subdiscipline;

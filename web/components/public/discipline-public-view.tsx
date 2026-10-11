@@ -19,7 +19,7 @@ export function DisciplinePublicView({
   slug,
   footer,
   directory,
-  subdisciplines = [],
+  subdisciplines,
   collectionsAvailable = true,
 }: {
   payload: DisciplinePagePayload;
@@ -31,13 +31,14 @@ export function DisciplinePublicView({
   collectionsAvailable?: boolean;
 }) {
   const { discipline, counts } = payload;
+  const displayedSubdisciplines = subdisciplines ?? payload.display_subdisciplines ?? discipline.display_subdisciplines ?? [];
   const contextCards = directory ? [{...discipline,counts},...directory.filter(row=>row.id!==discipline.id)].slice(0,3) : [];
 
   return (
     <>
       <main className="page-shell theory-system-page theory-discipline-page v307-knowledge discipline-v307 discipline-reference-page">
         {directory ? <section className="discipline-reference-directory"><header><h1>理论流派</h1><p>从不同学科视角，探索社会世界的多重面向。</p></header><div className="discipline-reference-cards" data-edit-section="media">{contextCards.map(row=><div key={row.id} className={row.id===discipline.id ? "selected" : ""}><DisciplineCard discipline={row} counts={row.counts}/></div>)}</div></section> : <nav className="taxonomy-public-breadcrumb"><Link href="/theories">理论流派</Link><span>›</span><strong>{discipline.name}</strong></nav>}
-        <section className="discipline-reference-overview" id="overview"><header><h1 data-edit-section="identity">{discipline.name}</h1><nav aria-label="学科详情栏目"><a href="#overview" aria-current="page">概述</a><button type="button" disabled>主要议题</button><button type="button" disabled>代表学者</button><Link href={`/explore?discipline=${encodeURIComponent(slug)}`}>相关书籍</Link></nav></header><p data-edit-section="content">{discipline.description}</p>{subdisciplines.length ? <div data-edit-section="relations"><span>主要子学科</span><div>{subdisciplines.slice(0,5).map(row=><Link key={row.id} href={`/subdisciplines/${row.slug}`}>{row.name}</Link>)}</div></div> : null}</section>
+        <section className="discipline-reference-overview" id="overview"><header><h1 data-edit-section="identity">{discipline.name}</h1><nav aria-label="学科详情栏目"><a href="#overview" aria-current="page">概述</a><button type="button" disabled>主要议题</button><button type="button" disabled>代表学者</button><Link href={`/explore?discipline=${encodeURIComponent(slug)}`}>相关书籍</Link></nav></header><p data-edit-section="content">{discipline.description}</p>{displayedSubdisciplines.length ? <div data-edit-section="relations"><span>主要子学科</span><div>{displayedSubdisciplines.slice(0,5).map(row=><Link key={row.id} href={`/subdisciplines/${row.slug}`}>{row.name}</Link>)}</div></div> : null}</section>
 
         {collectionsAvailable ? <><section className="theory-discipline-directory panel" data-edit-section="content">
           <nav className="theory-tab-list" aria-label="学科内容分类">

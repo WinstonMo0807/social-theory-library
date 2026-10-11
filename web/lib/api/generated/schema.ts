@@ -1753,6 +1753,9 @@ export interface components {
             volume?: string;
             issue?: string;
             page_range?: string;
+            degree_institution?: string;
+            degree_type?: string;
+            report_institution?: string;
             isbn?: string;
             isbn10?: string;
             isbn13?: string;

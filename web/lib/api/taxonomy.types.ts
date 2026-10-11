@@ -2,6 +2,7 @@
 import type { ApiWork } from "./public-catalog";
 
 export type Discipline = {
+  display_subdisciplines?: { id: string; name: string; slug: string }[];
   id: string;
   code: string;
   name: string;

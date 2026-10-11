@@ -219,6 +219,8 @@ def _fields_for_context(context: SearchContext) -> tuple[tuple[str, ...], tuple[
         SearchContext.THEORIES: (
             "summary",
             "definition",
+            "core_concepts",
+            "keywords",
             "aliases__alias",
             "aliases__normalized_alias",
         ),

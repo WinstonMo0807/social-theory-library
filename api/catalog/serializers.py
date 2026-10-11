@@ -484,6 +484,9 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "volume",
             "issue",
             "page_range",
+            "degree_institution",
+            "degree_type",
+            "report_institution",
             "isbn",
             "isbn10",
             "isbn13",
@@ -563,6 +566,9 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "volume",
             "issue",
             "page_range",
+            "degree_institution",
+            "degree_type",
+            "report_institution",
             "isbn",
             "isbn10",
             "isbn13",
@@ -575,6 +581,10 @@ class EditionCompactSerializer(serializers.ModelSerializer):
                 data[field_name] = values[field_name]
         if "publisher_authority_id" in values:
             data["publisher_authority"] = values["publisher_authority_id"]
+        for field_name in ("degree_institution", "degree_type", "report_institution"):
+            # Older active snapshots did not capture these fields. A newer
+            # canonical edit must not leak into that published version.
+            data[field_name] = values.get(field_name, "")
         data["edition_statement"] = data.get("version_label", "")
         data["publisher_verbatim"] = data.get("publisher", "")
         data["publication_place_verbatim"] = data.get("publication_place", "")
@@ -1693,6 +1703,8 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             public_work_queryset(),
             curation.get("essential_work_ids", []),
         )
+        notes = curation.get("essential_work_notes", {})
+        notes = notes if isinstance(notes, dict) else {}
         frequent = _ordered_objects(
             public_scholar_queryset(),
             curation.get("frequently_read_scholar_ids", []),
@@ -1731,6 +1743,11 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             )
         return {
             "essential_works": WorkCardSerializer(works, many=True, context=self.context).data,
+            "essential_work_notes": {
+                str(work.pk): notes[str(work.pk)]
+                for work in works
+                if isinstance(notes.get(str(work.pk)), str) and notes[str(work.pk)].strip()
+            },
             "key_concepts": curation.get("key_concepts", []),
             "concept_map": curation.get("concept_map", []),
             "network": network,
@@ -1832,6 +1849,7 @@ class TaxonomyImageSerializerMixin:
 
 
 class DisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
+    display_subdisciplines = serializers.SerializerMethodField()
     theory_count = serializers.SerializerMethodField()
     subdiscipline_count = serializers.SerializerMethodField()
     topic_count = serializers.SerializerMethodField()
@@ -1848,6 +1866,7 @@ class DisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerial
             "slug",
             "description",
             "introduction",
+            "display_subdisciplines",
             "hero_image",
             "sort_order",
             "theory_count",
@@ -1865,6 +1884,19 @@ class DisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerial
 
     def get_subdiscipline_count(self, obj):
         return obj.subdisciplines.filter(editorial_status="published").count()
+
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
+    def get_display_subdisciplines(self, obj):
+        ids = obj.display_subdiscipline_ids
+        rows = obj.subdisciplines.all()
+        if ids is None or not self.context.get("include_unpublished_items"):
+            rows = rows.filter(editorial_status="published")
+        if ids is None:
+            selected = rows.order_by("name")[:5]
+        else:
+            found = {str(row.pk): row for row in rows.filter(pk__in=ids)}
+            selected = [found[identifier] for identifier in ids if identifier in found]
+        return [{"id": str(row.pk), "name": row.name, "slug": row.slug} for row in selected]
 
     def get_topic_count(self, obj):
         return obj.topic_relations.filter(
@@ -2162,6 +2194,8 @@ class AboutPageBlockSerializer(serializers.ModelSerializer):
 
 
 class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
+    display_subdiscipline_ids = serializers.ListField(child=serializers.UUIDField(), max_length=5, allow_null=True, required=False)
+    display_subdisciplines = serializers.SerializerMethodField()
     edit_version = serializers.CharField(read_only=True)
     slug = PreservedSlugField(required=False, allow_blank=True)
     code = serializers.SlugField(required=False, allow_blank=True)
@@ -2179,6 +2213,8 @@ class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelS
             "search_aliases",
             "description",
             "introduction",
+            "display_subdiscipline_ids",
+            "display_subdisciplines",
             "hero_image",
             "sort_order",
             "curation_level",
@@ -2198,6 +2234,21 @@ class AdminDisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelS
             "works": public["work_count"],
             "scholars": public["scholar_count"],
         }
+
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
+    def get_display_subdisciplines(self, obj):
+        return DisciplineSerializer(obj, context={**self.context, "include_unpublished_items": True}).get_display_subdisciplines(obj)
+
+    def validate_display_subdiscipline_ids(self, value):
+        if value is None:
+            return None
+        identifiers = [str(identifier) for identifier in value]
+        if len(set(identifiers)) != len(identifiers):
+            raise serializers.ValidationError("不能重复选择同一个子学科。")
+        selection = {"display_subdiscipline_ids": identifiers}
+        eligible = Subdiscipline.objects.filter(discipline=self.instance) if self.instance else Subdiscipline.objects.none()
+        _validate_reference_list(selection, "display_subdiscipline_ids", eligible, "本学科展示的子学科")
+        return identifiers
 
     def validate_editorial_status(self, value):
         request = self.context.get("request")
@@ -3064,6 +3115,15 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     def validate_curation(self, value):
         value = value if isinstance(value, dict) else {}
         _validate_reference_list(value, "essential_work_ids", Work.objects.all(), "重要文献")
+        notes = value.get("essential_work_notes", {})
+        selected = set(value.get("essential_work_ids", []))
+        if not isinstance(notes, dict) or any(
+            key not in selected or not isinstance(note, str) or len(note) > 500
+            for key, note in notes.items()
+        ):
+            raise serializers.ValidationError({"essential_work_notes": ["推荐说明须对应已选择的文献，每项不超过500字。"]})
+        if "essential_work_notes" in value:
+            value["essential_work_notes"] = {key: note.strip() for key, note in notes.items() if note.strip()}
         _validate_reference_list(
             value,
             "frequently_read_scholar_ids",

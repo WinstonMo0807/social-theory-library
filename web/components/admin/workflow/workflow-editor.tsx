@@ -570,8 +570,14 @@ function PublicationBody({ draft, context, permissions, goToIssue, saveDraft, pr
   const canPublish = permissions.can_manage_publication !== false && permissions.can_publish === true;
   const canWithdraw = permissions.can_withdraw === true;
   const publicationState = asString(draft.publication_state ?? draft.state ?? context.publication_state, "draft");
+  const changes = preparation?.changes.filter(row => row.change !== "unchanged") ?? [];
   return <div className="workflow-publication">
     <div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{stateLabel}</span></article><article><strong>阅读文件</strong><span>{draft.reader_state === "ready" ? "可以阅读" : draft.reader_state === "not_applicable" ? "纯书目，无 PDF" : "等待验证或处理"}</span></article></div>
+    {preparation ? <section className={styles.publicationChanges} aria-label="本次修改摘要">
+      <h3>本次修改的内容 <small>{changes.length} 项</small></h3>
+      {changes.length ? <ul>{changes.map(row => <li key={row.field}><div><strong>{row.label}</strong><small>{row.change === "added" ? "新增" : row.change === "removed" ? "移除" : "已修改"}</small></div><p title={row.after_display}>{row.after_display || (row.change === "removed" ? "准备移除" : "未填写")}</p></li>)}</ul> : <p>没有字段变化。</p>}
+      <details className={styles.publicationDetails}><summary>核对完整发布差异</summary><PublicationDiff value={preparation} showChecks={false} /></details>
+    </section> : null}
     <div className="workflow-preflight-groups"><section className="blockers"><h3>发布前确认</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>{preparation ? "检查已完成，可以发布。请核对下方内容变化，再点击发布。" : "先点击发布前检查，再核对本次要公开的内容。"}</p> : null}</section>
       <details className="workflow-optional-checks"><summary>其他提醒与处理详情{warnings.length ? `（${warnings.length} 项提醒）` : ""}</summary>
         {warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}
@@ -580,7 +586,6 @@ function PublicationBody({ draft, context, permissions, goToIssue, saveDraft, pr
         {tasks.length ? <><h3>仍在处理的功能</h3><p>书目、PDF 阅读和正文搜索分别检查；某项功能未就绪，不代表其他功能不可用。</p>{tasks.map((task,index) => <p key={index}>{typeof task === "string" ? task : asString(asRecord(task).message ?? asRecord(task).detail ?? asRecord(task).label,"处理事项待核对")}</p>)}</> : null}
         {newEntities.length ? <p>本次还会公开 {newEntities.length} 项已确认的关联资料，请一并核对。</p> : null}
       </details></div>
-    {preparation ? <PublicationDiff value={preparation} showChecks={false} /> : null}
     <div className="workflow-publication-actions">
       <ActionButton className="button secondary" disabled={Boolean(busy)} onClick={saveDraft}><Save size={14} />保存草稿</ActionButton><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={preview}><Eye size={14} />预览</ActionButton>
       <ActionButton className="button secondary" state={busy === "preflight" ? "pending" : "idle"} pendingLabel="正在检查" disabled={Boolean(busy)} onClick={runPreflight}><FileCheck2 size={14} />发布前检查</ActionButton>
@@ -1446,6 +1451,7 @@ function WorkflowEditorSession({ mode, itemId, workId, editionId: requestedEditi
       <main className="workflow-editor-main">
         {saveConflict ? <WorkflowSaveConflict key={asString(saveConflict.payload.editing?.edit_version)} title={asString(drafts.work.title, "未命名馆藏")} savedAt={asString(saveConflict.payload.editing?.saved_at)} fields={saveConflict.fields} onResolve={resolveSaveConflict} onCancel={() => { setSaveConflict(null); setMessage("已保留当前输入和原保存版本。再次保存时仍会检查冲突。"); }} /> : <>
 
+        {activeGroup === 3 ? <section className={styles.publicationSaved} aria-label="草稿保存状态"><span aria-hidden="true">{currentDirtyCount ? <Save size={20} /> : <Check size={20} />}</span><div><h2>{currentDirtyCount ? "本页还有修改未保存" : "已保存的内容"}</h2><p>最近保存：{savedAt && Number.isFinite(Date.parse(savedAt)) ? <time dateTime={savedAt}>{new Date(savedAt).toLocaleString("zh-CN", { hour12: false })}</time> : "保存时间待读取"}</p></div></section> : null}
         {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
         {active === "publication" ? <CatalogHealth value={payload.health} /> : null}
         {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}

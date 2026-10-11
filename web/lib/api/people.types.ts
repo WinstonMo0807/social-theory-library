@@ -30,6 +30,7 @@ export type ApiScholar = {
   curated_claims?: PublicCuratedClaimGroups;
   curated?: {
     essential_works: ApiWork[];
+    essential_work_notes?: Record<string, string>;
     key_concepts: Array<{
       name?: string;
       description?: string;

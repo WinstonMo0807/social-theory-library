@@ -52,7 +52,7 @@ export function adminLoginHref(pathname: string, search: string, hash = "") {
 
 export function adminTaskScope(pathname: string) {
   if (/^\/admin\/(uploads|review|publication|cataloging|intake)(?:\/|$)/.test(pathname) || pathname === "/admin") return { title: "待办与上架", detail: "上传来源、作品与出版版本分别保留。保存草稿、确认发布和公开结果各自核验；不会仅凭任务已接收显示完成。" };
-  if (/^\/admin\/(library|media)(?:\/|$)/.test(pathname)) return { title: "馆藏", detail: "文件和阅读操作以当前出版版本为准。原件、历史文件、人工确认和读者私人记录保留；媒体上传不自动公开。" };
+  if (/^\/admin\/(library|media|preview\/works)(?:\/|$)/.test(pathname)) return { title: "馆藏", detail: "文件和阅读操作以当前出版版本为准。原件、历史文件、人工确认和读者私人记录保留；媒体上传不自动公开。" };
   if (/^\/admin\/(reading-paths|recommendations|about)(?:\/|$)/.test(pathname)) return { title: pathname.startsWith("/admin/about") ? "网站与关于书库" : "推荐与策展", detail: "保存草稿、实时预览与正式发布分别处理。" };
   if (/^\/admin\/(processing|status|system-health|query-lexicon|semantic-index)(?:\/|$)/.test(pathname)) return { title: "处理与服务", detail: "检测结果有自己的检查时间与适用范围。重试和恢复以接口权限及原任务记录为准，服务可连接不等于当前对象已处理正确。" };
   if (/^\/admin\/(settings|distribution|storage|backups|users|analytics)(?:\/|$)/.test(pathname)) return { title: "系统管理", detail: "设置、备份、用户和审计各有权限与作用范围。敏感操作仍限Owner；任务完成不替代结果核验，备份存在不替代恢复演练。" };

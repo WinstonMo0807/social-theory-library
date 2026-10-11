@@ -158,6 +158,9 @@ type KnowledgeNode = {
   slug: string;
   summary: string;
   definition: string;
+  core_concepts: string[];
+  keywords: string[];
+  summary_source: string;
   core_questions: string[];
   basic_propositions: string[];
   theoretical_boundary: string;
@@ -329,6 +332,9 @@ const emptyNodeDraft: NodeDraft = {
   aliases: [],
   summary: "",
   definition: "",
+  core_concepts: "",
+  keywords: "",
+  summary_source: "",
   core_questions: "",
   basic_propositions: "",
   theoretical_boundary: "",
@@ -665,6 +671,8 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           <div className="theory-reference-discipline" data-editor-section="primary-discipline"><ResearchEntityPicker label="所属学科" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="primary_discipline" ariaRequired values={onePickerValue(draft.primary_discipline, disciplineName(draft.primary_discipline))} onChange={(next) => { const selected=next.at(-1);setEntityLabels((current)=>({...current,...pickerLabels(next)}));setDraft({...draft,primary_discipline:selected?.id??"",related_disciplines:draft.related_disciplines.filter(id=>id!==selected?.id)}); }}/></div>
           <label className="theory-reference-summary" data-editor-section="summary"><span>简介 <b aria-hidden="true">*</b></span><textarea aria-required="true" maxLength={500} rows={6} value={draft.summary} onChange={(event)=>setDraft({...draft,summary:event.target.value})}/><small>{draft.summary.length} / 500</small></label>
           <details className="theory-reference-other" data-editor-section="identity"><summary>其他信息（别名、关键词、简介来源等）</summary>
+          <StringListEditor label="关键词" itemLabel="关键词" value={editorLines(draft.keywords)} onChange={value => setDraft({ ...draft, keywords: value.join("\n") })} addLabel="添加关键词" />
+          <label><span>简介来源</span><textarea rows={2} maxLength={1000} value={draft.summary_source} onChange={event => setDraft({ ...draft, summary_source: event.target.value })} placeholder="填写用于编写简介的资料或文献出处" /></label>
           <label><span>资料类型</span><select value={draft.node_type} onChange={(event)=>setDraft({...draft,node_type:event.target.value})}>{editableNodeTypeEntries.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
           <label><span>固定链接</span><input value={draft.slug} onChange={(event)=>setDraft({...draft,slug:event.target.value})}/></label>
           <label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event)=>setDraft({...draft,sort_order:Number(event.target.value)})}/></label>
@@ -716,6 +724,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           </details>
           <label><span>完整定义</span><textarea rows={5} value={draft.definition} onChange={(event) => setDraft({ ...draft, definition: event.target.value })} /></label>
           <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.core_questions)} onChange={(value) => setDraft({ ...draft, core_questions: value.join("\n") })} addLabel="添加问题" />
+          <StringListEditor label="核心概念" itemLabel="概念" value={editorLines(draft.core_concepts)} onChange={value => setDraft({ ...draft, core_concepts: value.join("\n") })} addLabel="添加核心概念" />
           <StringListEditor label="基本命题" itemLabel="命题" value={editorLines(draft.basic_propositions)} onChange={(value) => setDraft({ ...draft, basic_propositions: value.join("\n") })} addLabel="添加命题" />
           <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
           <div className="inline-fields three" data-editor-section="content"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>

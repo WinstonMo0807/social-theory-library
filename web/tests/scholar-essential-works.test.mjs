@@ -19,18 +19,21 @@ test("scholar book reordering preserves every existing choice and never mutates 
   assert.equal(moveScholarWork(saved, "c", 4), saved);
 });
 
-test("scholar cards render saved order and real bibliographic fields, unsupported reasons stay empty", () => {
+test("scholar cards retain saved order and each work's own recommendation note", () => {
   const works = [
     { id: "a", title: "甲书", original_title: "Original A", cover: "/api/protected-cover/a", edition: { publisher: "甲出版社", publication_year: 2001, contributors: [{ role: "author", person: { preferred_name: "作者甲" } }] } },
     { id: "b", title: "乙书", original_title: "", cover: "", edition: null },
   ];
-  const html = renderToStaticMarkup(React.createElement(ScholarEssentialWorks, { selected: ["b", "a"], options: works, works, onChange() {}, onResolve() {} }));
+  const html = renderToStaticMarkup(React.createElement(ScholarEssentialWorks, { selected: ["b", "a"], options: works, works, notes: {a:"甲书推荐说明",b:"乙书推荐说明"}, onNote() {}, onChange() {}, onResolve() {} }));
   assert.ok(html.indexOf('data-work-id="b"') < html.indexOf('data-work-id="a"'));
   assert.equal((html.match(/<img /g) || []).length, 1);
   assert.match(html, /Original A/);
   assert.match(html, /作者甲 著/);
   assert.match(html, /甲出版社 · 2001 年版/);
-  assert.equal((html.match(/<textarea[^>]*disabled=""[^>]*><\/textarea>/g) || []).length, 3);
+  assert.equal((html.match(/<textarea[^>]*disabled=""[^>]*><\/textarea>/g) || []).length, 1);
+  const notes = [...html.matchAll(/<textarea[^>]*>(.*?)<\/textarea>/g)];
+  assert.deepEqual(notes.map(match => match[1]), ["乙书推荐说明", "甲书推荐说明", ""]);
+  assert.equal(notes.filter(match => /maxlength="500"/i.test(match[0])).length, 3);
   assert.equal((html.match(/draggable="true"/g) || []).length, 2);
   assert.match(html, /当前位置 1/);
   assert.doesNotMatch(html, /经济与社会|新教伦理|mock|placeholder-cover/);

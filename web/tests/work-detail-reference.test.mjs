@@ -12,6 +12,7 @@ registerHooks({ load(url, context, nextLoad) {
 const { WorkDetailView } = await import("../components/work-detail-view.tsx");
 const { PublicSessionProvider } = await import("../components/public-session-provider.tsx");
 const { adaptApiWork } = await import("../lib/public-data-adapters.ts");
+const { adaptPreviewWork, previewChangeSections } = await import("../components/admin/preview/work-page-preview.tsx");
 const work = {
   id: "reading-asset", workId: "work", editionId: "edition", downloadAssetId: "download-asset", readerHref: "/reader/default-reader",
   title: "测试题名", originalTitle: "Original title", slug: "sample", author: "已确认作者", year: "2026", publisher: "已确认出版社",
@@ -76,4 +77,37 @@ test("public API author biography mapping preserves missing values without new r
   assert.deepEqual(mapped.categories, ["社会学", "社会理论"]);
   delete value.edition.contributors[0].person.biography;
   assert.equal(adaptApiWork(value).authors[0].biography, undefined);
+});
+
+test("nonbook public and saved preview show the corresponding bibliographic fields without borrowing another edition", () => {
+  for (const [document_type, kind, expected] of [
+    ["journal_article", "期刊论文", ["已确认期刊", "原卷", "原期", "10–20", "10.0000/saved"]],
+    ["journal_issue", "整期期刊", ["已确认期刊", "原卷", "原期", "10–20"]],
+    ["thesis", "学位论文", ["已确认大学", "博士"]],
+    ["report", "研究报告", ["已确认责任机构"]],
+  ]) {
+    const value = {id:"work",title:"已保存非图书",document_type,theories:[],topics:[],edition:{
+      id:"selected-edition", contributors:[], journal_title:"已确认期刊",volume:"原卷",issue:"原期",page_range:"10–20",doi:"10.0000/saved",
+      degree_institution:"已确认大学",degree_type:"博士",report_institution:"已确认责任机构",
+    }, reader_edition:{id:"different-reader",readable_asset:{id:"other-file",page_count:99}}};
+    const preview = adaptPreviewWork(value);
+    assert.equal(preview.editionId,"selected-edition");
+    assert.equal(preview.pages,0);
+    for (const adapted of [preview,adaptApiWork(value)]) {
+      assert.equal(adapted.kind,kind);
+      const html = render("publication",true,adapted);
+      for (const field of expected) assert.ok(html.includes(field),`${document_type}: ${field}`);
+      assert.doesNotMatch(html,/<dt>ISBN<\/dt>|关于本书/);
+    }
+    if (document_type === "journal_issue") assert.equal(preview.author,"期刊编辑部");
+  }
+});
+
+test("preview changes link each saved section back to its corresponding workbench step",()=>{
+  const fields=["title","bibliography","recommendation_image","abstract","contributors","classification","knowledge","reader"];
+  const changes=previewChangeSections(fields,"研究报告");
+  const located=Object.fromEntries(changes.flatMap(section=>section.fields.map(field=>[field,section.step])));
+  assert.deepEqual(located,{title:"work",bibliography:"bibliography",recommendation_image:"work",abstract:"work",contributors:"contributors",classification:"classification",knowledge:"curation",reader:"reader"});
+  assert.equal(changes.flatMap(section=>section.fields).length,fields.length);
+  assert.ok(changes.some(section=>section.title === "文献封面"));
 });

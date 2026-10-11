@@ -134,6 +134,9 @@ TARGET_POLICIES = {
                 "slug",
                 "summary",
                 "definition",
+                "core_concepts",
+                "keywords",
+                "summary_source",
                 "core_questions",
                 "basic_propositions",
                 "theoretical_boundary",
@@ -181,6 +184,7 @@ TARGET_POLICIES = {
                 "search_aliases",
                 "description",
                 "introduction",
+                "display_subdiscipline_ids",
                 "image_selection",
                 "sort_order",
                 "curation_level",
@@ -844,6 +848,25 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
+    # Direct draft commands and publication use the same new-field validation.
+    from rest_framework.exceptions import ValidationError as SerializerValidationError
+    try:
+        if isinstance(target, KnowledgeNode):
+            from catalog.theory_serializers import AdminKnowledgeNodeSerializer
+            serializer = AdminKnowledgeNodeSerializer(instance=target)
+            for field_name in ("core_concepts", "keywords", "summary_source"):
+                if field_name in patch:
+                    patch[field_name] = serializer.fields[field_name].run_validation(patch[field_name])
+        if isinstance(target, Discipline) and "display_subdiscipline_ids" in patch:
+            from catalog.serializers import AdminDisciplineSerializer
+            serializer = AdminDisciplineSerializer(instance=target)
+            value = serializer.fields["display_subdiscipline_ids"].run_validation(patch["display_subdiscipline_ids"])
+            patch["display_subdiscipline_ids"] = serializer.validate_display_subdiscipline_ids(value)
+        if isinstance(target, ScholarProfile) and isinstance(patch.get("curation"), dict) and "essential_work_notes" in patch["curation"]:
+            from catalog.serializers import AdminScholarSerializer
+            patch["curation"] = AdminScholarSerializer(instance=target).validate_curation(patch["curation"])
+    except SerializerValidationError as error:
+        raise EditorialRevisionError(f"展示资料无效：{error.detail}") from error
     if isinstance(target, (KnowledgeRelation, TheoryTimelineEvent)):
         from catalog.services.relation_editorial import validate_relation_patch
         validate_relation_patch(target, patch)

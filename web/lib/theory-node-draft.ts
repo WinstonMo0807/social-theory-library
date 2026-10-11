@@ -2,13 +2,15 @@ export type TheoryNodeDraft = {
   node_type: string; canonical_name_zh: string; canonical_name_en: string; slug: string;
   aliases: Array<{alias: string; language: string; alias_type: string}>;
   summary: string; definition: string; core_questions: string; basic_propositions: string; theoretical_boundary: string;
+  core_concepts: string; keywords: string; summary_source: string;
   start_year: string; end_year: string; period_label: string; parent: string; primary_discipline: string;
   related_disciplines: string[]; subdisciplines: string[]; topics: string[]; status: string; sort_order: number;
 };
 type DisciplineLink = {discipline: {id:string}; relation_type:string; discipline_specific_summary:string; sort_order:number; status:string};
 type SubdisciplineLink = {subdiscipline: {id:string}; is_primary:boolean; relation_role:string; source:string; confidence:number; sort_order:number; status:string};
 type TopicLink = {topic: {id:string}; relation_label:string; source:string; confidence:number; sort_order:number; status:string};
-export type TheoryNodeRecord = Omit<TheoryNodeDraft,"core_questions"|"basic_propositions"|"start_year"|"end_year"|"parent"|"primary_discipline"|"related_disciplines"|"subdisciplines"|"topics"> & {
+export type TheoryNodeRecord = Omit<TheoryNodeDraft,"core_concepts"|"keywords"|"core_questions"|"basic_propositions"|"start_year"|"end_year"|"parent"|"primary_discipline"|"related_disciplines"|"subdisciplines"|"topics"> & {
+  core_concepts:string[]; keywords:string[];
   core_questions:string[]; basic_propositions:string[]; start_year:number|null; end_year:number|null; parent:string|null; primary_discipline:string|null;
   discipline_links:DisciplineLink[]; subdiscipline_links:SubdisciplineLink[]; topic_links:TopicLink[];
 };
@@ -19,6 +21,7 @@ export function theoryNodeToDraft(node:TheoryNodeRecord):TheoryNodeDraft {
   return {node_type:node.node_type,canonical_name_zh:node.canonical_name_zh,canonical_name_en:node.canonical_name_en,slug:node.slug,
     aliases:node.aliases.map(row=>({alias:row.alias,language:row.language||"zh-CN",alias_type:row.alias_type||"alias"})),
     summary:node.summary,definition:node.definition,core_questions:node.core_questions.join("\n"),basic_propositions:node.basic_propositions.join("\n"),theoretical_boundary:node.theoretical_boundary,
+    core_concepts:(node.core_concepts || []).join("\n"),keywords:(node.keywords || []).join("\n"),summary_source:node.summary_source || "",
     start_year:node.start_year?.toString()??"",end_year:node.end_year?.toString()??"",period_label:node.period_label,parent:node.parent??"",primary_discipline:node.primary_discipline??"",
     related_disciplines:node.discipline_links.filter(row=>row.relation_type!=="primary").map(row=>row.discipline.id),subdisciplines:(node.subdiscipline_links||[]).map(row=>row.subdiscipline.id),topics:(node.topic_links||[]).map(row=>row.topic.id),status:node.status,sort_order:node.sort_order};
 }
@@ -26,11 +29,11 @@ export function theoryNodeToDraft(node:TheoryNodeRecord):TheoryNodeDraft {
 export function buildTheoryNodePayload(draft:TheoryNodeDraft, saved:TheoryNodeRecord|null, draftOnly=true):Record<string,unknown> {
   const before=saved?theoryNodeToDraft(saved):null;
   const payload:Record<string,unknown>={};
-  const scalarKeys=["node_type","canonical_name_zh","canonical_name_en","slug","summary","definition","core_questions","basic_propositions","theoretical_boundary","start_year","end_year","period_label","parent","primary_discipline","sort_order"] as const;
+  const scalarKeys=["node_type","canonical_name_zh","canonical_name_en","slug","summary","definition","core_concepts","keywords","summary_source","core_questions","basic_propositions","theoretical_boundary","start_year","end_year","period_label","parent","primary_discipline","sort_order"] as const;
   for(const key of scalarKeys) {
     if(before&&same(draft[key],before[key]))continue;
     if(key==="slug"&&!saved&&!draft.slug.trim())continue;
-    payload[key]=key==="core_questions"||key==="basic_propositions"?lines(draft[key]):key==="start_year"||key==="end_year"?draft[key]?Number(draft[key]):null:key==="parent"||key==="primary_discipline"?draft[key]||null:draft[key];
+    payload[key]=key==="core_questions"||key==="basic_propositions"||key==="core_concepts"||key==="keywords"?lines(draft[key]):key==="start_year"||key==="end_year"?draft[key]?Number(draft[key]):null:key==="parent"||key==="primary_discipline"?draft[key]||null:draft[key];
   }
   if(!before||!same(draft.aliases,before.aliases))payload.aliases=draft.aliases.map(row=>({alias:row.alias.trim(),language:row.language||"zh-CN",alias_type:row.alias_type||"alias"})).filter(row=>row.alias);
   if(!before||!same(draft.related_disciplines,before.related_disciplines)) {

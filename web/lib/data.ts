@@ -58,6 +58,14 @@ export type Work = {
   isbn?: string;
   originalLanguage?: string;
   versionLabel?: string;
+  journalTitle?: string;
+  volume?: string;
+  issue?: string;
+  pageRange?: string;
+  doi?: string;
+  degreeInstitution?: string;
+  degreeType?: string;
+  reportInstitution?: string;
   translators?: {name:string;slug?:string|null}[];
   author: string;
   year: string;
@@ -65,6 +73,7 @@ export type Work = {
   school: string;
   categories?: string[];
   summary: string;
+  recommendationReason?: string;
   cover: "dark" | "paper" | "cream" | "line";
   coverImage?: string;
   coverSources?: { url: string; width: number; height: number }[];

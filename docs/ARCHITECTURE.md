@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-12 最后功能源码收口，统一增量验收待执行
+
+ScholarProfile.curation新增essential_work_notes按入选Work ID保存，公开只返回公开入选文献说明。KnowledgeNode新增core_concepts、keywords、summary_source，复用编辑草稿/公开预览/版本历史和范围检索。Discipline新增nullable display_subdiscipline_ids，仅配置展示顺序，不改变归属；null沿用前五个公开子学科，空列表明确不展示，显式最多五个本学科对象，发布重验归属，公开过滤未发布对象。四列采用0067迁移，尚未应用。
+
+Work详情及保护预览继续共用现有视图。Edition既有degree_institution/degree_type/report_institution纳入公开合同和活动版本快照；旧活动快照未记录时保持空，避免canonical编辑泄漏。其他类型字段取选定Edition。没有技术栈、存储、OCR实现或权限变化。
+
 ## 2026-10-12 3.0.9.1账号新建与固定Owner名称候选（未上线）
 
 在原users路由新增鉴权POST，复用User/ReaderProfile、原注册密码规则和邮箱唯一约束，不增加模型或迁移。账号、画像与原无密码审计同事务；普通管理员只新建读者，后台角色仍仅由配置Owner身份指定，额外权限字段拒绝，不设置Django staff/superuser。不发送通知或验证码。Owner显示名保持配置权威，个人与管理编辑共享拒绝无效改名，两处界面只读说明，既有其他账号方法和权限源不变。原auth四条路由由DRF生成真实请求/响应合同，私有响应no-store；原角色兼容读取仍映射旧reviewer为editor，但不能再分配。生产尚未使用该候选。

@@ -33,6 +33,28 @@ type PreviewPayload = {
 
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 
+export function previewChangeSections(fields: string[], kind: Work["kind"]) {
+  const sections = [
+    { title: "基本信息", step: "work", fields: [] as string[] },
+    { title: kind === "图书" ? "图书封面" : "文献封面", step: "work", fields: [] as string[] },
+    { title: "内容简介", step: "work", fields: [] as string[] },
+    { title: "版本信息", step: "bibliography", fields: [] as string[] },
+    { title: "作者与译者", step: "contributors", fields: [] as string[] },
+    { title: "学科与子学科", step: "classification", fields: [] as string[] },
+    { title: "理论与主题", step: "curation", fields: [] as string[] },
+    { title: "阅读与定位", step: "reader", fields: [] as string[] },
+  ];
+  for (const field of fields) {
+    const root = field.split(".")[0];
+    const index = /^(cover|recommendation_image|recommendation_rendition|cover_rendition)$/.test(root) ? 1
+      : root === "abstract" ? 2 : root === "bibliography" ? 3 : root === "contributors" ? 4
+      : root === "classification" ? 5 : root === "knowledge" || root === "curation" ? 6
+      : root === "reader" ? 7 : 0;
+    sections[index].fields.push(field);
+  }
+  return sections.filter((section, index) => index < 3 || section.fields.length > 0);
+}
+
 export function adaptPreviewWork(value: ApiWork): Work {
   const authors = value.edition?.contributors.filter((row) => row.role === "author") ?? [];
   return {
@@ -47,8 +69,16 @@ export function adaptPreviewWork(value: ApiWork): Work {
     isbn: value.edition?.isbn13 || value.edition?.isbn10 || value.edition?.isbn || undefined,
     originalLanguage: value.original_language || undefined,
     versionLabel: value.edition?.version_label || undefined,
+    journalTitle: value.edition?.journal_title || undefined,
+    volume: value.edition?.volume || undefined,
+    issue: value.edition?.issue || undefined,
+    pageRange: value.edition?.page_range || undefined,
+    doi: value.edition?.doi || undefined,
+    degreeInstitution: value.edition?.degree_institution || undefined,
+    degreeType: value.edition?.degree_type || undefined,
+    reportInstitution: value.edition?.report_institution || undefined,
     translators: value.edition?.contributors.filter(row=>row.role==="translator").map(row=>({name:row.person.preferred_name,slug:row.person.scholar_slug})),
-    author: authors.map((row) => row.person.preferred_name).join("、") || "作者待确认",
+    author: authors.map((row) => row.person.preferred_name).join("、") || (value.document_type === "journal_issue" ? "期刊编辑部" : "作者待确认"),
     year: String(value.edition?.publication_year ?? "出版年不详"),
     kind: ({ book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "研究报告" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
@@ -158,14 +188,10 @@ export function AdminWorkPagePreview({
     /></>;
   if (isEmbedded) return embeddedView === "card" ? <div className={styles.cardPreview} inert><BookCard work={work} exploreActions/></div> : page;
   const fields = payload.editorial_revision?.changed_fields ?? [];
-  const changes = [
-    { title: "基本信息", step: "bibliography", fields: fields.filter(field => !/cover|abstract/.test(field)) },
-    { title: "图书封面", step: "work", fields: fields.filter(field => /cover/.test(field)) },
-    { title: "内容简介", step: "work", fields: fields.filter(field => /abstract/.test(field)) },
-  ];
+  const changes = previewChangeSections(fields, work.kind);
   return <div className={styles.page}><header><h1>查看发布后的样子 <small>仅管理员可见</small></h1><strong>已保存的内容 · 发布前预览</strong><p>确认页面效果后，可进入发布检查。</p></header>
     <div className={styles.layout}><section className={styles.canvas} aria-label="已保存内容预览"><nav className={styles.tools} aria-label="预览内容">
-      <div>{[{id:"details",label:"图书详情"},{id:"card",label:"搜索卡片"},{id:"topics",label:"相关主题"}].map(item=><button type="button" key={item.id} aria-pressed={tab===item.id} onClick={()=>setTab(item.id)}>{item.label}</button>)}</div>
+      <div>{[{id:"details",label:`${work.kind}详情`},{id:"card",label:"搜索卡片"},{id:"topics",label:"相关主题"}].map(item=><button type="button" key={item.id} aria-pressed={tab===item.id} onClick={()=>setTab(item.id)}>{item.label}</button>)}</div>
       <div>{(["desktop","mobile"] as const).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)}>{item==="desktop" ? <Monitor size={16}/> : <Smartphone size={16}/>} {item==="desktop" ? "电脑" : "手机"}</button>)}</div>
     </nav><PreviewViewport device={device}>{tab==="details" ? page : <div className={styles.cardPreview} inert>{tab==="card" ? <BookCard work={work} exploreActions/> : <><h2>相关主题</h2><TagList items={(work.topics??[]).map(row=>row.name)}/></>}</div>}</PreviewViewport></section>
     <aside className={styles.checks}><h2>本次改动与检查</h2>{changes.map((change,index)=><section key={change.title}><h3><span>{index+1}</span>{change.title}<small>{change.fields.length ? "已修改" : "—"}</small></h3>{change.fields.length ? <p>{change.fields.length} 项已保存改动</p> : null}<Link href={`${returnHref.split("#")[0]}#${change.step}`}>查看详情 ›</Link></section>)}

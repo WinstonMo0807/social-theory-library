@@ -450,6 +450,7 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, slug):
+        from catalog.serializers import DisciplineSerializer
         discipline = get_object_or_404(
             Discipline,
             slug=slug,
@@ -505,6 +506,7 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
                     context={"request": request},
                 ).data,
                 "counts": {key: value for key, value in counts.items() if value > 0},
+                "display_subdisciplines": DisciplineSerializer(discipline, context={"request": request}).get_display_subdisciplines(discipline),
                 "active_type": node_type,
                 "nodes": KnowledgeNodeListSerializer(
                     displayed,

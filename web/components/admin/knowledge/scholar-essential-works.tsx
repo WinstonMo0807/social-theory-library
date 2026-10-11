@@ -88,8 +88,9 @@ export function moveScholarWork(ids: string[], id: string, target: number) {
   return next;
 }
 
-export function ScholarEssentialWorks({ selected, options, works, onChange, onResolve }: {
+export function ScholarEssentialWorks({ selected, options, works, notes, onNote, onChange, onResolve }: {
   selected: string[]; options: Option[]; works: ApiWork[];
+  notes: Record<string, string>; onNote: (id: string, note: string) => void;
   onChange: (ids: string[]) => void; onResolve: (works: ApiWork[]) => void;
 }) {
   const [editing, setEditing] = useState<number | null>(null);
@@ -152,7 +153,7 @@ export function ScholarEssentialWorks({ selected, options, works, onChange, onRe
             }} onDragEnd={() => { dragging.current = ""; }} onKeyDown={event => { if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return; event.preventDefault(); onChange(moveScholarWork(selected, id, index + (event.key === "ArrowUp" ? -1 : 1))); }}><GripVertical size={18}/></button> : null}
           </div>
           {editing === index ? <><ScholarWorkPicker key={index} index={index} current={id} selected={selected} suggestions={options} onSelect={option => choose(index, option.id, option)} onClose={() => setEditing(null)}/>{id ? <button type="button" onClick={() => choose(index, "")}>移除选择</button> : null}</> : null}
-          <label className={styles.reason}><span>推荐说明</span><textarea aria-label={`第 ${index + 1} 本文献的推荐说明`} disabled value="" readOnly rows={3} title="此项尚无可保存并公开的对应字段"/></label>
+          <label className={styles.reason}><span>推荐说明</span><textarea aria-label={`第 ${index + 1} 本文献的推荐说明`} disabled={!id} value={notes[id] || ""} maxLength={500} rows={3} onChange={event => onNote(id, event.target.value)} placeholder={id ? "说明这份文献为什么值得阅读" : "先选择馆藏文献"}/></label>
         </div>
       </article>;
     })}</div>

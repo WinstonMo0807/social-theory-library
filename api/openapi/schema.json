@@ -6384,6 +6384,18 @@
                         "type": "string",
                         "maxLength": 80
                     },
+                    "degree_institution": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "degree_type": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "report_institution": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
                     "isbn": {
                         "type": "string",
                         "maxLength": 32

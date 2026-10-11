@@ -1028,6 +1028,7 @@ type ScholarDraft = {
   keyConcepts: string;
   conceptMap: string;
   essentialWorkIds: string[];
+  essentialWorkNotes: Record<string, string>;
   networkScholarIds: string[];
   networkRelations: Record<string, RelationMetadata>;
   frequentScholarIds: string[];
@@ -1056,6 +1057,7 @@ const emptyScholar: ScholarDraft = {
   keyConcepts: "",
   conceptMap: "",
   essentialWorkIds: [],
+  essentialWorkNotes: {},
   networkScholarIds: [],
   networkRelations: {},
   frequentScholarIds: [],
@@ -1148,6 +1150,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         "description",
       ),
       essentialWorkIds: stringArray(curation.essential_work_ids),
+      essentialWorkNotes: Object.fromEntries(Object.entries(curation.essential_work_notes && typeof curation.essential_work_notes === "object" ? curation.essential_work_notes : {}).filter(([, value]) => typeof value === "string")) as Record<string, string>,
       networkScholarIds: network.flatMap((item) => (
         item && typeof item === "object" && "scholar_id" in item
           ? [String((item as Record<string, unknown>).scholar_id)]
@@ -1190,6 +1193,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       // Suggestions only persist together with this explicit form save.
       ...draft.baseCuration,
       essential_work_ids: draft.essentialWorkIds,
+      essential_work_notes: Object.fromEntries(draft.essentialWorkIds.filter(id => draft.essentialWorkNotes[id]?.trim()).map(id => [id, draft.essentialWorkNotes[id].trim()])),
       key_concepts: parseStructuredLines(
         draft.keyConcepts,
         ["name", "description", "source"],
@@ -1435,6 +1439,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               options={draft.suggestions.works ?? []}
               selected={draft.essentialWorkIds}
               works={essentialWorks}
+              notes={draft.essentialWorkNotes}
+              onNote={(id, note) => setDraft(current => ({ ...current, essentialWorkNotes: { ...current.essentialWorkNotes, [id]: note } }))}
               onResolve={setEssentialWorks}
               onChange={(essentialWorkIds) => setDraft({ ...draft, essentialWorkIds })}
             />

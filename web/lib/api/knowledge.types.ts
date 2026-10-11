@@ -2,6 +2,7 @@
 import type { components } from "./generated/schema";
 
 export type TheoryDisciplineCompact = {
+  display_subdisciplines?: { id: string; name: string; slug: string }[];
   id: string;
   code: string;
   name: string;
@@ -119,6 +120,9 @@ export type NormalizedKnowledgeRelation = {
 };
 
 export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
+  core_concepts?: string[];
+  keywords?: string[];
+  summary_source?: string;
   evidenceCuration?: import("./evidence-curation.types").PublishedEvidenceCuration;
   aliases: { id: string; alias: string; language: string; alias_type: string; normalized_alias: string }[];
   discipline_links: {
@@ -253,6 +257,7 @@ export type TheorySystemOverview = {
 };
 
 export type TheoryDisciplinePage = {
+  display_subdisciplines?: { id: string; name: string; slug: string }[];
   discipline: TheoryDisciplineCompact;
   counts: Partial<Record<"theory_traditions" | "subdisciplines" | "debates" | "scholars" | "works", number>>;
   active_type: string;

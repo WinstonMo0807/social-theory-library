@@ -4,6 +4,7 @@
 .admin-content .taxonomy-admin-page>.admin-page-title h1 { margin:0 0 4px;font:700 32px/1.4 var(--stl-type-serif);letter-spacing:0; }
 .admin-content .taxonomy-admin-page>.admin-page-title span { display:block;font:18px/1.5 var(--stl-type-sans); }
 .admin-content .discipline-admin-page>.admin-page-title>div { padding-left:6px; }
+.admin-content .discipline-admin-page>.admin-page-title { margin-bottom:9px; }
 .taxonomy-admin-page .discipline-reference-editor { margin-top:0; }
 .is-inline-taxonomy .fixed-page-editor { grid-template-columns:minmax(360px,40.7%) minmax(0,1fr);gap:8px; }
 .is-inline-taxonomy .fixed-editor-panel { border-radius:3px; }
@@ -32,6 +33,12 @@
 .taxonomy-subdiscipline-selection>div { display:flex;flex-wrap:wrap;gap:8px; }
 .taxonomy-subdiscipline-selection>div>span,.taxonomy-subdiscipline-selection>div>button { border:1px solid var(--admin-v2-line);border-radius:3px;padding:6px 12px;background:var(--admin-v2-surface);font-size:13px; }
 .taxonomy-subdiscipline-selection span button { margin-left:14px;background:none;border:0;color:#7b7872; }
+.taxonomy-subdiscipline-selection>details { margin-top:10px; }
+.taxonomy-subdiscipline-selection>details>summary { width:max-content;cursor:pointer;border:1px solid var(--admin-v2-line);border-radius:3px;padding:6px 12px;background:var(--admin-v2-surface);font-size:13px; }
+.taxonomy-subdiscipline-selection>details[open] { border:1px solid var(--admin-v2-line);border-radius:3px;padding:12px;background:var(--admin-v2-wash); }
+.is-inline-taxonomy .taxonomy-subdiscipline-selection>details>label { margin:12px 0 10px; }
+.taxonomy-subdiscipline-selection>details>select { width:100%;min-height:40px;border:1px solid var(--admin-v2-line);border-radius:3px;padding:7px;background:var(--admin-v2-surface);font:14px var(--stl-type-sans); }
+.taxonomy-subdiscipline-selection>details>button { margin:10px 8px 0 0;border:1px solid var(--admin-v2-line);border-radius:3px;padding:6px 12px;background:var(--admin-v2-surface); }
 .is-inline-taxonomy .taxonomy-form-actions { display:flex;justify-content:flex-end;gap:8px;padding-top:25px;margin-top:20px; }
 .is-inline-taxonomy [data-field-section=publication]:has(.taxonomy-form-actions) { margin-top:auto; }
 .is-inline-taxonomy .taxonomy-form-actions .button { margin:0;min-width:116px;min-height:40px;border-radius:3px;padding:9px 18px;font-size:14px; }

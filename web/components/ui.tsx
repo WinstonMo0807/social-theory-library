@@ -74,6 +74,7 @@ export function BookCard({
   showSummary?: boolean;
   exploreActions?: boolean;
 }) {
+  const summary = work.recommendationReason || work.summary;
   return (
     <article className={`book-card ${dense ? "dense" : ""} ${exploreActions ? "explore-result-card" : ""}`}>
       <div className="book-card-main">
@@ -95,7 +96,7 @@ export function BookCard({
           </p>
         </div>
       </div>
-      {showSummary && work.summary ? <details className="book-summary-expand"><summary><span className="book-summary">{work.summary}</span><span className="book-summary-toggle">展开 / 收起简介</span></summary><p>{work.summary}</p></details> : null}
+      {showSummary && summary ? <details className="book-summary-expand"><summary><span className="book-summary">{summary}</span><span className="book-summary-toggle">展开 / 收起{work.recommendationReason ? "推荐说明" : "简介"}</span></summary><p>{summary}</p></details> : null}
       {!dense ? (
         <div className="book-actions">
           {exploreActions ? (

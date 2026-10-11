@@ -1903,6 +1903,7 @@ class Discipline(NamedKnowledgeObject):
     introduction = models.TextField(blank=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
     curation_level = models.PositiveSmallIntegerField(default=0)
+    display_subdiscipline_ids = models.JSONField(default=None, null=True, blank=True)
 
     class Meta(NamedKnowledgeObject.Meta):
         ordering = ["sort_order", "name"]
@@ -2620,6 +2621,9 @@ class KnowledgeNode(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     canonical_name_en = models.CharField(max_length=240, blank=True)
     slug = models.SlugField(max_length=180, unique=True)
     summary = models.TextField(blank=True)
+    summary_source = models.TextField(blank=True)
+    core_concepts = models.JSONField(default=list, blank=True)
+    keywords = models.JSONField(default=list, blank=True)
     definition = models.TextField(blank=True)
     core_questions = models.JSONField(default=list, blank=True)
     basic_propositions = models.JSONField(default=list, blank=True)

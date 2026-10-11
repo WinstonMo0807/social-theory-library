@@ -29,12 +29,13 @@ function TheoryOverview({node,footer,pagination}:{node:KnowledgeNodePayload;foot
         <p className="theory-reference-original-name" data-edit-section="original-name">{node.canonical_name_en}</p>
         <div className="theory-reference-primary" data-edit-section="primary-discipline">{node.primary_discipline?node.primary_discipline.slug?<Link href={`/theories/disciplines/${node.primary_discipline.slug}`}>{node.primary_discipline.name}</Link>:<span>{node.primary_discipline.name}</span>:null}</div>
         <p className="theory-reference-description" data-edit-section="summary">{node.summary}</p>
+        {node.summary_source ? <small className="muted-row" data-edit-section="identity">简介来源：{node.summary_source}</small> : null}
       </div>
     </section>
     <nav className="theory-reference-overview-tabs" aria-label="理论页面">{[["overview","概览"],["questions","主要问题"],["concepts","核心概念"],["scholars","代表人物"],["works","相关原文"]].map(([id,label])=><Link href={`#${id}`} key={id} aria-current={id==="overview"?"page":undefined}>{label}</Link>)}</nav>
     <div className="theory-reference-overview-grid" id="overview">
       <section id="questions" data-edit-section="questions"><h2>主要问题</h2><ul>{node.core_questions.map((question,index)=><li key={`${index}-${question}`}>{question}</li>)}</ul></section>
-      <section id="concepts"><h2>核心概念</h2><div className="theory-reference-concepts-space"/></section>
+      <section id="concepts" data-edit-section="concepts"><h2>核心概念</h2><div className="theory-reference-concepts-space"><ul>{(node.core_concepts || []).map((concept, index) => <li key={`${index}-${concept}`}>{concept}</li>)}</ul></div></section>
       <section id="scholars" data-edit-section="relations"><h2>代表人物</h2><div className="theory-reference-people">{node.representative_scholars.map(person=><article key={person.id}><span className="theory-reference-person-image">{person.portrait_url?<img src={person.portrait_url} alt={person.name}/>:null}</span>{person.scholar_slug?<Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link>:<strong>{person.name}</strong>}{person.original_name?<small>{person.original_name}</small>:null}</article>)}</div></section>
       <section id="works" data-edit-section="works"><h2>相关原文</h2><div className="theory-reference-evidence">{works.map(work=><WorkCompactCard key={work.id} work={work}/>)}</div></section>
     </div>

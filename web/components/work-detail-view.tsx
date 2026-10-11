@@ -35,6 +35,12 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer, prese
   const tags = [...(work.theories ?? []).map(item => item.name), ...(work.topics ?? []).map(item => item.name)];
   const languageLabel = languages[work.language || ""] || work.language || "—";
   const publication = [work.publisher, work.year, work.versionLabel].filter(Boolean).join(" · ");
+  const typeDetails = work.kind === "图书" ? [["ISBN", work.isbn]]
+    : work.kind === "期刊论文" || work.kind === "整期期刊" ? [
+      ["期刊名称", work.journalTitle], ["卷", work.volume], ["期", work.issue], ["页码", work.pageRange], ["DOI", work.doi],
+    ] : work.kind === "学位论文" ? [
+      ["学位授予单位", work.degreeInstitution], ["学位类型", work.degreeType], ["DOI", work.doi],
+    ] : [["责任机构", work.reportInstitution], ["DOI", work.doi]];
   const readerHref = work.readerHref || `/reader/${work.id}`;
   const renderTags = (items: string[]) => preview ? <div inert><TagList items={items}/></div> : <TagList items={items}/>;
   const actions = <div className={styles.actions}>{preview ? <>
@@ -48,14 +54,15 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer, prese
   </>}</div>;
   const metadata = presentation === "contents" ? [
     ["主题", (work.topics ?? []).map(item => item.name).join(" · ")],
-    ["ISBN", work.isbn], ["分类", work.categories?.join(" · ")], ["出版时间", work.year], ["页数", work.pages || ""],
+    ...typeDetails, ["分类", work.categories?.join(" · ")], ["出版时间", work.year], ["页数", work.pages || ""],
   ] : presentation === "reading" ? [
     ["作者", work.author], ["译者", work.translators?.map(item => item.name).join("、")],
     ["出版社", work.publisher], ["出版年", work.year], ["页数", work.pages || ""], ["分类", work.categories?.join(" · ")],
+    ...(work.kind === "图书" ? [] : typeDetails),
   ] : [
     ["出版信息", publication], ["原作语言", languages[work.originalLanguage || ""] || work.originalLanguage],
     ["主题", (work.topics ?? []).map(item => item.name).join(" · ")],
-    ["所属流派", (work.theories ?? []).map(item => item.name).join(" · ")], ["ISBN", work.isbn],
+    ["所属流派", (work.theories ?? []).map(item => item.name).join(" · ")], ...typeDetails,
   ];
   const authorIntroduction = <><h2>作者介绍</h2>{work.authors?.filter(author => author.biography?.trim()).map((author, index) => <article key={`${author.name}-${index}`}><h3>{author.name}</h3><p>{author.biography}</p></article>)}</>;
   const outline = <><h2>{work.kind === "整期期刊" ? "本期目录与论文" : "目录"}</h2>
@@ -70,7 +77,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer, prese
     ...(presentation === "contents" ? [{ id: "authors", label: "作者介绍", content: authorIntroduction }] : []),
     { id: "outline", label: "目录", content: outline },
     ...(presentation === "reading" ? [{ id: "authors", label: "作者简介", content: authorIntroduction }] : []),
-    { id: "edition", label: "版本信息", content: <><dl className={styles.metadata}>{[["出版信息", publication], ["文献类型", work.kind], ["语言", languageLabel], ["ISBN", work.isbn], ["页数", work.pages || ""]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}</dl>{!preview && work.editionId ? <WorkCitationPanel editionId={work.editionId}/> : null}</> },
+    { id: "edition", label: "版本信息", content: <><dl className={styles.metadata}>{[["出版信息", publication], ["文献类型", work.kind], ["语言", languageLabel], ...typeDetails, ["页数", work.pages || ""]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}</dl>{!preview && work.editionId ? <WorkCitationPanel editionId={work.editionId}/> : null}</> },
     { id: "related", label: presentation === "contents" || presentation === "reading" ? "相关图书" : presentation === "bibliography" ? "相关推荐" : "相关书目", content: preview ? null : <div className="four-book-grid">{relatedWorks.slice(0, 4).map(item => <BookCard work={item} key={item.id}/>)}{!relatedWorks.length ? <p className="empty-state">尚无依据已确认流派或主题关联的其他公开馆藏。</p> : null}</div> },
     ...(presentation === "publication" ? [{ id: "topics", label: "相关主题", content: renderTags((work.topics ?? []).map(item => item.name)) }] : []),
   ];
@@ -87,7 +94,7 @@ export function WorkDetailView({ work, relatedWorks = [], preview, footer, prese
           {preview ? <>首页 / 馆藏 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
         </p> : null}
         <WorkDetailTabs presentation={presentation} panels={panels}
-          aside={presentation === "publication" ? <><h2>关于本书</h2><WorkDetailSummary summary={work.summary}/><h2>相关主题</h2>{renderTags(tags)}</> : presentation === "reading" ? <><h2>在本馆阅读</h2>{actions}</> : undefined}
+          aside={presentation === "publication" ? <><h2>{work.kind === "图书" ? "关于本书" : work.kind === "整期期刊" ? "关于本期" : "关于本文献"}</h2><WorkDetailSummary summary={work.summary}/><h2>相关主题</h2>{renderTags(tags)}</> : presentation === "reading" ? <><h2>在本馆阅读</h2>{actions}</> : undefined}
           introduction={presentation === "reading" ? <><h2>简介</h2><p className="work-summary">{work.summary}</p></> : undefined}>
           <section className={`work-hero ${styles.hero}`}>
             <div className={styles.cover}>{work.coverImage ? <BookCover work={work} size="large"/> : <div className={styles.emptyCover} aria-label="封面待补"/>}</div>
