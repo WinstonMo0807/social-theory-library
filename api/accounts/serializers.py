@@ -3,6 +3,7 @@ import secrets
 from datetime import timedelta
 
 from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import transaction
@@ -302,6 +303,8 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("邮箱或密码不正确。")
         refresh = RefreshToken.for_user(authenticated)
         refresh["token_version"] = authenticated.token_version
+        if api_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, authenticated)
         return {
             "access": str(refresh.access_token),
             "refresh": str(refresh),

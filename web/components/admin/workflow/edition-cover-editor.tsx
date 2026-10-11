@@ -114,7 +114,7 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
     </div>
     <div hidden={tab!=="upload"} className={styles.upload}><label>上传封面图片<input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={locked} onChange={event=>{setFile(event.target.files?.[0] ?? null);retry.current=null;}}/></label><p>支持 JPEG、PNG、WebP，最多12 MB。</p><Link href={`/admin/media?edition=${encodeURIComponent(editionId)}&slot=cover&return_to=${encodeURIComponent(`/admin/library/works/${workId}?edition=${editionId}#bibliography`)}`}>从图片库选择</Link></div>
     <div hidden={tab!=="default"}><p>按题名显示，不设置封面图片。已保存的原图与历史仍保留。</p></div>
-    <p className={styles.message}>此操作只保存封面，不会修改其他步骤的书目信息。其他未保存输入仍保留。</p>
+    <p className={styles.message}>封面保存在作品上，同一作品的出版版本共用。已有公开版本会在正式发布后更新。此操作只保存封面，其他步骤的未保存输入仍保留。</p>
     <footer className={styles.actions}><button type="button" disabled={Boolean(busy)} onClick={()=>{if((file || chosen || (tab==="default" && data && !data.is_default)) && !window.confirm("封面选择尚未保存，放弃并返回吗？"))return;onDone?.();}}>上一步</button><button type="button" disabled={locked || (tab==="pdf" ? !chosen : tab==="upload" ? !file : false)} onClick={()=>void command(tab==="pdf" ? "select" : tab==="upload" ? "upload" : "default",chosen || undefined)}>{busy ? "正在保存…" : "保存封面并返回 →"}</button></footer>
   </section>;
 }
