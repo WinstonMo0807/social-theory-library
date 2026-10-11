@@ -2928,6 +2928,62 @@
                 }
             }
         },
+        "/api/catalog/admin/usage-analytics/": {
+            "get": {
+                "operationId": "catalog_admin_usage_analytics_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "现有滚动范围，1至365天。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "end_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "description": "包含结束日期，不能晚于今天。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "start_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "description": "书库时区的开始日期，须与end_date同时提供。"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUsageAnalytics"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
             "get": {
                 "operationId": "catalog_admin_works_recommendation_image_metadata_retrieve",
@@ -3534,6 +3590,55 @@
                 }
             }
         },
+        "/api/catalog/usage-events/": {
+            "post": {
+                "operationId": "catalog_usage_events_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicUsageEventRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicUsageEventRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicUsageEventRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicUsageEventResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/works/": {
             "get": {
                 "operationId": "catalog_works_list",
@@ -4097,6 +4202,77 @@
                     "results",
                     "summary",
                     "upcoming"
+                ]
+            },
+            "AdminUsageAnalytics": {
+                "type": "object",
+                "properties": {
+                    "period_days": {
+                        "type": "integer",
+                        "maximum": 365,
+                        "minimum": 1
+                    },
+                    "anonymous_sessions": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "events": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    "zero_result_searches": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "range": {
+                        "$ref": "#/components/schemas/UsageRange"
+                    },
+                    "trend": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UsageTrendDay"
+                        }
+                    },
+                    "comparisons": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/UsageComparison"
+                        }
+                    },
+                    "coverage": {
+                        "$ref": "#/components/schemas/UsageCoverage"
+                    },
+                    "top_works": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UsageTopWork"
+                        }
+                    },
+                    "top_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UsageTopQuery"
+                        }
+                    },
+                    "privacy": {
+                        "$ref": "#/components/schemas/UsagePrivacy"
+                    }
+                },
+                "required": [
+                    "anonymous_sessions",
+                    "comparisons",
+                    "coverage",
+                    "events",
+                    "period_days",
+                    "privacy",
+                    "range",
+                    "top_queries",
+                    "top_works",
+                    "trend",
+                    "zero_result_searches"
                 ]
             },
             "ApiError": {
@@ -5684,6 +5860,17 @@
                 "required": [
                     "edit_version"
                 ]
+            },
+            "EventTypeEnum": {
+                "enum": [
+                    "page_view",
+                    "reader_open",
+                    "search_submit",
+                    "search_result_click",
+                    "download"
+                ],
+                "type": "string",
+                "description": "* `page_view` - 浏览公开页面\n* `reader_open` - 打开阅读器\n* `search_submit` - 提交检索\n* `search_result_click` - 点击检索结果\n* `download` - 下载"
             },
             "EvidenceCuration": {
                 "type": "object",
@@ -7538,6 +7725,60 @@
                     "type"
                 ]
             },
+            "PublicUsageEventRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "result_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "source": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "scope": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "page_view只允许公开页面类别，不接受路径或查询；其他事件沿用原范围。",
+                        "maxLength": 80
+                    }
+                },
+                "required": [
+                    "event_type"
+                ]
+            },
+            "PublicUsageEventResponse": {
+                "type": "object",
+                "properties": {
+                    "accepted": {
+                        "type": "boolean"
+                    },
+                    "event_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "accepted",
+                    "event_id"
+                ]
+            },
             "PublicationFieldDiff": {
                 "type": "object",
                 "properties": {
@@ -9356,6 +9597,245 @@
                 ],
                 "type": "string",
                 "description": "* `paragraph` - paragraph\n* `heading` - heading\n* `quote` - quote\n* `link` - link"
+            },
+            "UsageComparison": {
+                "type": "object",
+                "properties": {
+                    "current": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "previous": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "change_percent": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/UsageComparisonStatusEnum"
+                    }
+                },
+                "required": [
+                    "change_percent",
+                    "current",
+                    "previous",
+                    "status"
+                ]
+            },
+            "UsageComparisonStatusEnum": {
+                "enum": [
+                    "available",
+                    "outside_retention",
+                    "page_view_history_incomplete",
+                    "no_previous_records"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `outside_retention` - outside_retention\n* `page_view_history_incomplete` - page_view_history_incomplete\n* `no_previous_records` - no_previous_records"
+            },
+            "UsageCoverage": {
+                "type": "object",
+                "properties": {
+                    "retention_days": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "retained_since": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "page_views_first_recorded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "range_within_retention": {
+                        "type": "boolean"
+                    },
+                    "comparison_within_retention": {
+                        "type": "boolean"
+                    },
+                    "page_views_backfilled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "comparison_within_retention",
+                    "page_views_backfilled",
+                    "page_views_first_recorded_at",
+                    "range_within_retention",
+                    "retained_since",
+                    "retention_days"
+                ]
+            },
+            "UsagePrivacy": {
+                "type": "object",
+                "properties": {
+                    "stores_ip_identity": {
+                        "type": "boolean"
+                    },
+                    "links_registered_user": {
+                        "type": "boolean"
+                    },
+                    "retention_days": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "links_registered_user",
+                    "retention_days",
+                    "stores_ip_identity"
+                ]
+            },
+            "UsageRange": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "end": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "previous_start": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "previous_end": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "timezone": {
+                        "type": "string"
+                    },
+                    "custom_dates": {
+                        "type": "boolean"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "checked_at",
+                    "custom_dates",
+                    "end",
+                    "end_date",
+                    "previous_end",
+                    "previous_start",
+                    "start",
+                    "start_date",
+                    "timezone"
+                ]
+            },
+            "UsageTopQuery": {
+                "type": "object",
+                "properties": {
+                    "normalized_query": {
+                        "type": "string"
+                    },
+                    "search_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "unique_sessions": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "click_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "zero_result_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "click_through_rate": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "click_count",
+                    "click_through_rate",
+                    "normalized_query",
+                    "search_count",
+                    "unique_sessions",
+                    "zero_result_count"
+                ]
+            },
+            "UsageTopWork": {
+                "type": "object",
+                "properties": {
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work__title": {
+                        "type": "string"
+                    },
+                    "opens": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "unique_sessions": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "public_url": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "opens",
+                    "public_url",
+                    "unique_sessions",
+                    "work__title",
+                    "work_id"
+                ]
+            },
+            "UsageTrendDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "page_views": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "searches": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "reader_opens": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "date",
+                    "page_views",
+                    "reader_opens",
+                    "searches"
+                ]
             },
             "WidthEnum": {
                 "enum": [

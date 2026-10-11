@@ -720,6 +720,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/usage-analytics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_usage_analytics_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
         parameters: {
             query?: never;
@@ -928,6 +944,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/usage-events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_usage_events_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/works/": {
         parameters: {
             query?: never;
@@ -1085,6 +1117,23 @@ export interface components {
             selected_category?: string;
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
+        };
+        AdminUsageAnalytics: {
+            period_days: number;
+            anonymous_sessions: number;
+            events: {
+                [key: string]: number;
+            };
+            zero_result_searches: number;
+            range: components["schemas"]["UsageRange"];
+            trend: components["schemas"]["UsageTrendDay"][];
+            comparisons: {
+                [key: string]: components["schemas"]["UsageComparison"];
+            };
+            coverage: components["schemas"]["UsageCoverage"];
+            top_works: components["schemas"]["UsageTopWork"][];
+            top_queries: components["schemas"]["UsageTopQuery"][];
+            privacy: components["schemas"]["UsagePrivacy"];
         };
         ApiError: {
             code: string;
@@ -1577,6 +1626,15 @@ export interface components {
         EditorialPublishRequest: {
             edit_version: string;
         };
+        /**
+         * @description * `page_view` - 浏览公开页面
+         *     * `reader_open` - 打开阅读器
+         *     * `search_submit` - 提交检索
+         *     * `search_result_click` - 点击检索结果
+         *     * `download` - 下载
+         * @enum {string}
+         */
+        EventTypeEnum: "page_view" | "reader_open" | "search_submit" | "search_result_click" | "download";
         EvidenceCuration: {
             /** Format: uuid */
             readonly id: string | null;
@@ -2123,6 +2181,23 @@ export interface components {
             foreign_name: string;
             type: string;
         };
+        PublicUsageEventRequestRequest: {
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: uuid */
+            work_id?: string;
+            /** Format: uuid */
+            asset_id?: string;
+            query?: string;
+            result_count?: number;
+            source?: string;
+            /** @description page_view只允许公开页面类别，不接受路径或查询；其他事件沿用原范围。 */
+            scope?: string;
+        };
+        PublicUsageEventResponse: {
+            accepted: boolean;
+            /** Format: uuid */
+            event_id: string | null;
+        };
         PublicationFieldDiff: {
             field: string;
             label: string;
@@ -2618,6 +2693,78 @@ export interface components {
          * @enum {string}
          */
         TypeEnum: "paragraph" | "heading" | "quote" | "link";
+        UsageComparison: {
+            current: number;
+            previous: number;
+            /** Format: double */
+            change_percent: number | null;
+            status: components["schemas"]["UsageComparisonStatusEnum"];
+        };
+        /**
+         * @description * `available` - available
+         *     * `outside_retention` - outside_retention
+         *     * `page_view_history_incomplete` - page_view_history_incomplete
+         *     * `no_previous_records` - no_previous_records
+         * @enum {string}
+         */
+        UsageComparisonStatusEnum: "available" | "outside_retention" | "page_view_history_incomplete" | "no_previous_records";
+        UsageCoverage: {
+            retention_days: number;
+            /** Format: date-time */
+            retained_since: string;
+            /** Format: date-time */
+            page_views_first_recorded_at: string | null;
+            range_within_retention: boolean;
+            comparison_within_retention: boolean;
+            page_views_backfilled: boolean;
+        };
+        UsagePrivacy: {
+            stores_ip_identity: boolean;
+            links_registered_user: boolean;
+            retention_days: number;
+        };
+        UsageRange: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+            /** Format: date-time */
+            previous_start: string;
+            /** Format: date-time */
+            previous_end: string;
+            timezone: string;
+            custom_dates: boolean;
+            /** Format: date-time */
+            checked_at: string;
+        };
+        UsageTopQuery: {
+            normalized_query: string;
+            search_count: number;
+            unique_sessions: number;
+            click_count: number;
+            zero_result_count: number;
+            /** Format: double */
+            click_through_rate: number;
+        };
+        UsageTopWork: {
+            /** Format: uuid */
+            work_id: string;
+            work__title: string;
+            opens: number;
+            unique_sessions: number;
+            public_url: string | null;
+        };
+        UsageTrendDay: {
+            /** Format: date */
+            date: string;
+            page_views: number | null;
+            searches: number | null;
+            reader_opens: number | null;
+        };
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -4173,6 +4320,32 @@ export interface operations {
             };
         };
     };
+    catalog_admin_usage_analytics_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 现有滚动范围，1至365天。 */
+                days?: number;
+                /** @description 包含结束日期，不能晚于今天。 */
+                end_date?: string;
+                /** @description 书库时区的开始日期，须与end_date同时提供。 */
+                start_date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsageAnalytics"];
+                };
+            };
+        };
+    };
     catalog_admin_works_recommendation_image_metadata_retrieve: {
         parameters: {
             query?: {
@@ -4469,6 +4642,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationPage"];
+                };
+            };
+        };
+    };
+    catalog_usage_events_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicUsageEventRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicUsageEventRequestRequest"];
+                "multipart/form-data": components["schemas"]["PublicUsageEventRequestRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUsageEventResponse"];
                 };
             };
         };

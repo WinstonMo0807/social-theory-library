@@ -5453,6 +5453,7 @@ class PublicationEvent(UUIDTimeStampedModel):
 
 class AnonymousUsageEvent(UUIDTimeStampedModel):
     class EventType(models.TextChoices):
+        PAGE_VIEW = "page_view", "浏览公开页面"
         READER_OPEN = "reader_open", "打开阅读器"
         SEARCH_SUBMIT = "search_submit", "提交检索"
         SEARCH_RESULT_CLICK = "search_result_click", "点击检索结果"

@@ -26,6 +26,7 @@ import { SiteHeader, SiteConfigProvider } from "@/components/site-header";
 import { loadSiteConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
+import { PublicPageUsageTracker } from "@/components/usage-tracker";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await loadSiteConfig();
@@ -65,6 +66,7 @@ export default async function RootLayout({
       </head>
       <body>
         <PublicSessionProvider>
+          <PublicPageUsageTracker />
           <a className="skip-link" href="#main-content">
             跳到主要内容
           </a>

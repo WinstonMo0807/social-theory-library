@@ -1,9 +1,26 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { publicUsageScope } from "@/lib/public-usage-scope";
 
 type UsageEvent = "reader_open" | "search_submit" | "search_result_click" | "download";
+
+export function PublicPageUsageTracker() {
+  const pathname = usePathname();
+  const lastPath = useRef<string | null>(null);
+  useEffect(() => {
+    const scope = publicUsageScope(pathname);
+    if (!scope || window.top !== window.self || new URLSearchParams(window.location.search).get("embed") === "1" || lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    void apiRequest("/catalog/usage-events/", {
+      method: "POST",
+      body: JSON.stringify({ event_type: "page_view", source: "public", scope }),
+    }).catch(() => undefined);
+  }, [pathname]);
+  return null;
+}
 
 export function UsageTracker({
   eventType,

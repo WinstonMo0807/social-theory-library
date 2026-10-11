@@ -18,7 +18,9 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from .analytics_serializers import AdminUsageAnalyticsSerializer, PublicUsageEventRequestSerializer, PublicUsageEventResponseSerializer
 from .public_response_serializers import ReaderPageContentSerializer
 from .serializers import ReaderManifestSerializer
 from urllib.parse import urlparse
@@ -80,7 +82,7 @@ from .services.covers import (
 from .services.search_geometry import search_highlights
 from .services.search_backend import external_passage_ids
 from .services.page_labels import apply_page_label_segment, infer_page_labels
-from .services.analytics import SESSION_COOKIE, record_usage_event, session_identity
+from .services.analytics import PAGE_VIEW_SCOPES, SESSION_COOKIE, record_usage_event, session_identity, usage_analytics_period, usage_analytics_trends
 from .services.semantic_search import (
     SEMANTIC_ENGINES,
     SEMANTIC_PROVIDERS,
@@ -2984,6 +2986,7 @@ class PublicUsageEventView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "public_usage_event"
 
+    @extend_schema(request=PublicUsageEventRequestSerializer, responses={202: PublicUsageEventResponseSerializer})
     def post(self, request):
         event_type = str(request.data.get("event_type") or "").strip()
         if event_type not in AnonymousUsageEvent.EventType.values:
@@ -2991,6 +2994,13 @@ class PublicUsageEventView(APIView):
         query = str(request.data.get("query") or "").strip()
         if event_type == AnonymousUsageEvent.EventType.SEARCH_SUBMIT and not query:
             return Response({"query": ["提交检索事件时必须包含查询。"]}, status=400)
+        page_view = event_type == AnonymousUsageEvent.EventType.PAGE_VIEW
+        scope = str(request.data.get("scope") or "")[:80]
+        if page_view:
+            if scope not in PAGE_VIEW_SCOPES:
+                return Response({"scope": ["只能记录已支持的公开页面类别。"]}, status=400)
+            if any(request.data.get(name) not in (None, "") for name in ("query", "work_id", "asset_id", "result_count")):
+                return Response({"detail": "公开页面浏览只记录页面类别，不接受地址、查询或馆藏身份。"}, status=400)
         work = None
         asset = None
         work_id = request.data.get("work_id")
@@ -3022,8 +3032,8 @@ class PublicUsageEventView(APIView):
             query=query,
             result_count=result_count,
             metadata={
-                "source": str(request.data.get("source") or "public")[:80],
-                "scope": str(request.data.get("scope") or "")[:80],
+                "source": "public" if page_view else str(request.data.get("source") or "public")[:80],
+                "scope": scope,
             },
         )
         response = Response(
@@ -3085,16 +3095,22 @@ class HotSearchView(APIView):
         )
 
 
-class AdminUsageAnalyticsView(APIView):
+class AdminUsageAnalyticsView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryAdmin]
 
+    @extend_schema(responses=AdminUsageAnalyticsSerializer, parameters=[
+        OpenApiParameter("days", int, description="现有滚动范围，1至365天。"),
+        OpenApiParameter("start_date", OpenApiTypes.DATE, description="书库时区的开始日期，须与end_date同时提供。"),
+        OpenApiParameter("end_date", OpenApiTypes.DATE, description="包含结束日期，不能晚于今天。"),
+    ])
     def get(self, request):
+        now = timezone.now()
         try:
-            days = min(365, max(1, int(request.query_params.get("days", "30"))))
-        except ValueError:
-            return Response({"days": ["统计天数必须是整数。"]}, status=400)
-        since = timezone.now() - timedelta(days=days)
-        events = AnonymousUsageEvent.objects.filter(created_at__gte=since)
+            period = usage_analytics_period(request.query_params, now=now)
+        except ValueError as exc:
+            return Response({"period": [str(exc)]}, status=400)
+        days, since, until = period["days"], period["since"], period["until"]
+        events = AnonymousUsageEvent.objects.filter(created_at__gte=since, created_at__lt=until)
         counts = {
             value: events.filter(event_type=value).count()
             for value in AnonymousUsageEvent.EventType.values
@@ -3125,11 +3141,12 @@ class AdminUsageAnalyticsView(APIView):
         }
         for row in top_works:
             row["public_url"] = public_urls.get(row["work_id"])
-        aggregate_since = timezone.localdate() - timedelta(days=days - 1)
+        aggregate_since = timezone.localtime(since).date() if request.query_params.get("start_date") else timezone.localdate() - timedelta(days=days - 1)
         top_queries = list(
             SearchQueryAggregate.objects.filter(
                 period="day",
                 period_start__gte=aggregate_since,
+                period_start__lte=timezone.localtime(until - timedelta(microseconds=1)).date(),
                 excluded=False,
             )
             .values("normalized_query")
@@ -3154,6 +3171,7 @@ class AdminUsageAnalyticsView(APIView):
                 "zero_result_searches": zero_result,
                 "top_works": list(top_works),
                 "top_queries": top_queries,
+                **usage_analytics_trends(period=period, counts=counts, sessions=sessions, now=now),
                 "privacy": {
                     "stores_ip_identity": False,
                     "links_registered_user": False,
