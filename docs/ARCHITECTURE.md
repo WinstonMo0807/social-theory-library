@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-11 3.0.9.1首页推荐选择独立草稿候选（未上线）
+
+首页选择顺序归原EditorialRevision的recommendation_policy修订，目标仍原RecommendationPolicy。保存仅修订与审计，不改公开snapshot或policy；原行锁/编辑版本/公开状态和snapshot门槛保护保存。发布继续原签名预览/幂等收据，可携准确草稿版本防止跨编辑覆盖；同一选择修订随确认published，已被当前输入替代则superseded。0065只记录该枚举选项，无新增表或物理字段。原草稿队列返回原首页推荐编辑位置，没有另建发布系统。
+
 ## 2026-10-11 3.0.9.1图片说明与回收缩略图候选职责（未上线）
 
 荐读cover_caption归原不可变修订JSON，alt归准确rendition元数据快照。上传原名归原media.upload审计，不新增实体或schema；只在管理payload返回，不伪造未记录历史值。回收图片只经准确活动Entry、原编辑能力/private no-store读取保留文件，遵从已保存图片草稿及明确移除，恢复后不能沿用此URL。普通/public对象过滤和原文件保持既有边界，无生产数据库或存储写入。

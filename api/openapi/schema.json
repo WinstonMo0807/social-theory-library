@@ -2132,6 +2132,100 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendations/{placement}/draft/": {
+            "get": {
+                "operationId": "catalog_admin_recommendations_draft_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "placement",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationSelectionDraft"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_recommendations_draft_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "placement",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveRecommendationSelectionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveRecommendationSelectionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveRecommendationSelectionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationSelectionDraft"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recycle/": {
             "get": {
                 "operationId": "catalog_admin_recycle_retrieve",
@@ -7905,6 +7999,92 @@
                     "title"
                 ]
             },
+            "RecommendationSelectionDraft": {
+                "type": "object",
+                "properties": {
+                    "policy_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expected_snapshot_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecommendationSelectionItem"
+                        }
+                    },
+                    "public_unchanged": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "edit_version",
+                    "exists",
+                    "expected_snapshot_id",
+                    "expected_updated_at",
+                    "items",
+                    "policy_id",
+                    "public_unchanged"
+                ]
+            },
+            "RecommendationSelectionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_type": {
+                        "$ref": "#/components/schemas/TargetTypeEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "target_type"
+                ]
+            },
+            "RecommendationSelectionItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_type": {
+                        "$ref": "#/components/schemas/TargetTypeEnum"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "image_url": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "available",
+                    "id",
+                    "image_url",
+                    "name",
+                    "target_type"
+                ]
+            },
             "RecycleCollection": {
                 "type": "object",
                 "properties": {
@@ -8106,6 +8286,42 @@
                 ],
                 "type": "string",
                 "description": "* `teaching` - teaching\n* `cooperation` - cooperation\n* `influence` - influence\n* `criticism` - criticism\n* `comparative_reading` - comparative_reading\n* `other` - other"
+            },
+            "SaveRecommendationSelectionRequest": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecommendationSelectionInputRequest"
+                        }
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expected_snapshot_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "edit_version",
+                    "expected_snapshot_id",
+                    "expected_updated_at",
+                    "items",
+                    "request_key"
+                ]
             },
             "SavedIssueList": {
                 "type": "object",
@@ -8837,6 +9053,15 @@
                 ],
                 "type": "string",
                 "description": "* `drafting` - 编目中\n* `reviewing` - 核对中\n* `ready` - 准备发布\n* `publishing` - 发布中\n* `published` - 已发布\n* `abandoned` - 已结束编辑"
+            },
+            "TargetTypeEnum": {
+                "enum": [
+                    "work",
+                    "topic",
+                    "scholar"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `topic` - topic\n* `scholar` - scholar"
             },
             "TextSourceEnum": {
                 "enum": [

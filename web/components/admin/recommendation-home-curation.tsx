@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, RefreshCw, Search } from "lucide-react";
+import { Check, GripVertical, RefreshCw, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -15,10 +15,12 @@ import { adaptApiScholar, adaptApiTopic, adaptRecommendationWork } from "@/lib/p
 import type { ApiScholar } from "@/lib/api/people.types";
 import type { ApiTopic } from "@/lib/api/topics.types";
 import type { ApiWork } from "@/lib/api/public-catalog";
+import type { components } from "@/lib/api/generated/schema";
 
 type TargetType = "work" | "topic" | "scholar";
 type Candidate = { id: string; slug?: string; title?: string; name?: string; preferred_name?: string; description?: string; short_description?: string; hero_image?: string; portrait?: string; cover?: string; cover_image?: string; public_eligible?: boolean; person?: {preferred_name: string; portrait?: string} };
 type Preview = { placement: string; source: string; preview_token: string; expected_updated_at: string; expected_snapshot_id: string | null; items: Array<{ id: string; name: string; target_type: string; target: ApiWork | ApiTopic | ApiScholar | null }> };
+type SavedSelection = components["schemas"]["RecommendationSelectionDraft"];
 
 const tabs: Array<{ placement: string; label: string; target: TargetType; description: string }> = [
   { placement: "home_scholars", label: "学者聚焦", target: "scholar", description: "首页展示的学者顺序" },
@@ -44,6 +46,7 @@ export function RecommendationHomeCuration({ initialPlacement = "home_scholars",
   const credential = getServerSessionCredential();
   const policies = useApiResource<RecommendationPlacement[]>("/catalog/admin/recommendations/", credential);
   const [placement, setPlacement] = useState(() => tabs.some(tab => tab.placement === initialPlacement) ? initialPlacement : "home_scholars");
+  const selectionDraft = useApiResource<SavedSelection>(`/catalog/admin/recommendations/${placement}/draft/`, credential, placement);
   const [searchDraft, setSearchDraft] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -61,10 +64,14 @@ export function RecommendationHomeCuration({ initialPlacement = "home_scholars",
   const enlarged = useRef<HTMLDialogElement>(null);
   const busyRef = useRef(false);
   const retryRequest = useRef<{ signature: string; body: Record<string, unknown> } | null>(null);
+  const draftRetryRequest = useRef<{ signature: string; body: Record<string, unknown> } | null>(null);
+  const moving = useRef<string | null>(null);
   const tab = tabs.find(item => item.placement === placement) || tabs[0];
   const policy = policies.data?.find(item => item.placement === placement) || null;
   const currentIds = policy?.current?.items.filter(item => placement !== "home_scholars" || policy.current?.source !== "manual" || item.reason === "管理员策展").map(item => item.target.id) || [];
-  const selected = selectedByPolicy[policy?.id || ""] ?? currentIds;
+  const savedIds = selectionDraft.data?.exists ? selectionDraft.data.items.map(item => item.id) : currentIds;
+  const selected = selectedByPolicy[policy?.id || ""] ?? savedIds;
+  const selectionDirty = JSON.stringify(selected) !== JSON.stringify(savedIds);
   const selectedSet = new Set(selected);
   const candidateQuery = new URLSearchParams({ editorial_status: "published", page: String(page) });
   if (query) candidateQuery.set("search", query);
@@ -74,19 +81,37 @@ export function RecommendationHomeCuration({ initialPlacement = "home_scholars",
 
   function updateSelected(updater: (value: string[]) => string[]) {
     if (!policy || busyRef.current) return;
-    setPreview(null); retryRequest.current = null; setMessage("");
-    setSelectedByPolicy(value => ({ ...value, [policy.id]: updater(value[policy.id] ?? currentIds) }));
+    setPreview(null); retryRequest.current = null; draftRetryRequest.current = null; setMessage("");
+    setSelectedByPolicy(value => ({ ...value, [policy.id]: updater(value[policy.id] ?? savedIds) }));
   }
   function selectPlacement(value: string) {
     if (busyRef.current) return;
-    setPlacement(value); setPage(1); setQuery(""); setSearchDraft(""); setPreview(null); setMessage(""); setReplacing(null); retryRequest.current = null;
+    setPlacement(value); setPage(1); setQuery(""); setSearchDraft(""); setPreview(null); setMessage(""); setReplacing(null); retryRequest.current = null; draftRetryRequest.current = null; moving.current = null;
   }
   function submitSearch(event: FormEvent) { event.preventDefault(); setPage(1); setQuery(searchDraft.trim()); }
   function move(index: number, offset: -1 | 1) {
     updateSelected(value => { const target = index + offset; if (target < 0 || target >= value.length) return value; const next = [...value]; [next[index], next[target]] = [next[target], next[index]]; return next; });
   }
-  function selectedLabel(id: string): string { return String(labels[id] || (candidateById.get(id) ? labelOf(candidateById.get(id)!) : null) || (currentById.get(id) ? linkedLabel(currentById.get(id)!) : null) || id); }
-  function selectedImage(id: string) { return images[id] || imageOf(candidateById.get(id) || currentById.get(id) as Candidate || { id }, tab.target); }
+  function selectedLabel(id: string): string { return String(labels[id] || selectionDraft.data?.items.find(item => item.id === id)?.name || (candidateById.get(id) ? labelOf(candidateById.get(id)!) : null) || (currentById.get(id) ? linkedLabel(currentById.get(id)!) : null) || id); }
+  function selectedImage(id: string) { return images[id] || normalizePublicResourceUrl(selectionDraft.data?.items.find(item => item.id === id)?.image_url || "") || imageOf(candidateById.get(id) || currentById.get(id) as Candidate || { id }, tab.target); }
+  function dropAt(id: string) {
+    const source = moving.current; moving.current = null;
+    if (!source || source === id) return;
+    updateSelected(value => { const from = value.indexOf(source), to = value.indexOf(id); if (from < 0 || to < 0) return value; const next = [...value]; next.splice(from, 1); next.splice(to, 0, source); return next; });
+  }
+  async function saveSelection() {
+    if (!policy || !selectionDraft.data || !selectionDirty || busyRef.current) return;
+    busyRef.current = true; setBusy(true); setMessage("");
+    const items = selected.map(id => ({ target_type: tab.target, id }));
+    const signature = JSON.stringify({ placement, items, version: selectionDraft.data.edit_version });
+    if (draftRetryRequest.current?.signature !== signature) draftRetryRequest.current = { signature, body: { items, request_key: createRequestKey(), edit_version: selectionDraft.data.edit_version, expected_updated_at: policy.updated_at, expected_snapshot_id: policy.current?.id ?? null } };
+    try {
+      await apiRequest<SavedSelection>(`/catalog/admin/recommendations/${placement}/draft/`, { method: "PUT", body: JSON.stringify(draftRetryRequest.current.body) }, credential);
+      draftRetryRequest.current = null; retryRequest.current = null; selectionDraft.retry();
+      setMessage("选择与顺序已保存为草稿，首页尚未改变。可稍后继续预览和确认发布。");
+    } catch (error) { setMessage(error instanceof ApiRequestError && error.status === 409 ? "草稿或当前推荐已变化。当前选择已保留，请重新读取后核对，再决定是否保存。" : error instanceof Error ? error.message : "保存结果尚未确认，请重试读取草稿并核对。"); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
   function toggle(candidate: Candidate) {
     const id = candidate.id; const checked = selectedSet.has(id);
     setLabels(value => ({ ...value, [id]: labelOf(candidate) })); setImages(value => ({ ...value, [id]: imageOf(candidate, tab.target) }));
@@ -112,11 +137,11 @@ export function RecommendationHomeCuration({ initialPlacement = "home_scholars",
     if (!window.confirm("确认发布当前预览的首页推荐？确认后读者页面才会更新。")) return;
     busyRef.current = true; setBusy(true); setMessage("");
     const items = preview.items.map(({ target_type, id }) => ({ target_type, id }));
-    const signature = JSON.stringify({ placement, items, token: preview.preview_token });
-    if (retryRequest.current?.signature !== signature) retryRequest.current = { signature, body: { confirm: true, request_key: createRequestKey(), expected_snapshot_id: preview.expected_snapshot_id, expected_updated_at: preview.expected_updated_at, preview_token: preview.preview_token, items } };
+    const signature = JSON.stringify({ placement, items, token: preview.preview_token, draftVersion: selectionDraft.data?.edit_version });
+    if (retryRequest.current?.signature !== signature) retryRequest.current = { signature, body: { confirm: true, request_key: createRequestKey(), expected_snapshot_id: preview.expected_snapshot_id, expected_updated_at: preview.expected_updated_at, preview_token: preview.preview_token, items, draft_version: selectionDraft.data?.edit_version } };
     try {
       const result = await apiRequest<RecommendationPlacement & { publication_effective: boolean }>(`/catalog/admin/recommendations/${placement}/refresh/`, { method: "POST", body: JSON.stringify(retryRequest.current.body) }, credential);
-      retryRequest.current = null; setPreview(null); setSelectedByPolicy(value => { const next = { ...value }; delete next[policy.id]; return next; }); setMessage(result.publication_effective ? "首页推荐已发布，读者现在可以看到。" : "命令已接受，但推荐状态已有变化，请重新读取后核对。"); policies.retry(); router.refresh();
+      retryRequest.current = null; setPreview(null); setSelectedByPolicy(value => { const next = { ...value }; delete next[policy.id]; return next; }); setMessage(result.publication_effective ? "首页推荐已发布，读者现在可以看到。" : "命令已接受，但推荐状态已有变化，请重新读取后核对。"); policies.retry(); selectionDraft.retry(); router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500) { retryRequest.current = null; setPreview(null); policies.retry(); }
       setMessage(error instanceof Error ? error.message : "暂时未能确认发布结果；可重试同一操作。");
@@ -133,18 +158,18 @@ export function RecommendationHomeCuration({ initialPlacement = "home_scholars",
   return <div className="recommendation-curation-v2">
     <header className="recommendation-v2-heading"><div><h1>首页推荐 · 学者、主题与随机</h1><p>保留首页的学者聚焦、精选主题和随机馆藏，先选择与排序，再预览确认。</p></div></header>
     <div className="recommendation-v2-steps" aria-label="首页推荐步骤"><span className="done"><b><Check size={15}/></b>选择展示位置</span><span className={preview ? "done" : "active"} aria-current={!preview ? "step" : undefined}><b>{preview ? <Check size={15}/> : 2}</b>选择与排序</span><span className={preview ? "active" : ""} aria-current={preview ? "step" : undefined}><b>3</b>预览确认</span><small className="recommendation-v2-state">当前：第 {preview ? 3 : 2} / 3 步</small></div>
-    {policies.error || candidateResource.error ? <p className="recommendation-v2-alert" role="alert">{policies.error || candidateResource.error}<button type="button" onClick={() => { policies.retry(); candidateResource.retry(); }}>重新读取</button></p> : null}
+    {policies.error || candidateResource.error || selectionDraft.error ? <p className="recommendation-v2-alert" role="alert">{policies.error || candidateResource.error || selectionDraft.error}<button type="button" onClick={() => { policies.retry(); candidateResource.retry(); selectionDraft.retry(); }}>重新读取</button></p> : null}
     <div className="recommendation-v2-grid">
       <section className="recommendation-v2-control">
         <nav className="recommendation-v2-tabs" aria-label="选择首页展示位置">{tabs.map(item => <button type="button" key={item.placement} disabled={busy} className={item.placement === placement ? "active" : ""} onClick={() => selectPlacement(item.placement)}>{item.label}</button>)}</nav>
         <h2>选择内容并调整顺序</h2><p className="recommendation-v2-help">首页将展示 {policy?.item_count || 4} 项。手动选择的内容优先，不足时按已设置的候选规则补足。</p>
-        <div className="recommendation-v2-selected">{displayItems.map((item, index) => <article key={item.id}><span className="recommendation-v2-order">{index + 1}</span>{item.image ? <img src={item.image} alt="" /> : <span className="recommendation-v2-image-empty" /> }<div><strong>{item.label}</strong><small>{tab.description}</small></div><div className="recommendation-v2-row-actions"><button type="button" aria-label={`上移${item.label}`} disabled={busy || index === 0} onClick={() => move(index, -1)}>上移</button><button type="button" aria-label={`下移${item.label}`} disabled={busy || index === displayItems.length - 1} onClick={() => move(index, 1)}>下移</button><button type="button" aria-label={`替换${item.label}`} disabled={busy} onClick={() => { setReplacing(item.id); }}>替换</button></div></article>)}{!displayItems.length ? <p className="recommendation-v2-empty">尚未选择内容。</p> : null}</div>
+        <div className="recommendation-v2-selected">{displayItems.map((item, index) => <article key={item.id} data-selection-id={item.id} onDragOver={event => { if (moving.current && !busy) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }} onDrop={event => { if (moving.current && !busy) { event.preventDefault(); dropAt(item.id); } }}><button type="button" className="recommendation-v2-drag" draggable={!busy} disabled={busy} aria-label={`拖动排序${item.label}`} title="拖动调整顺序，也可按 Alt 与上下方向键" onDragStart={event => { moving.current = item.id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", item.id); }} onDragEnd={() => { moving.current = null; }} onKeyDown={event => { if (event.altKey && ["ArrowUp", "ArrowDown"].includes(event.key)) { event.preventDefault(); move(index, event.key === "ArrowUp" ? -1 : 1); } }}><GripVertical size={16}/></button><span className="recommendation-v2-order">{index + 1}</span>{item.image ? <img src={item.image} alt="" /> : <span className="recommendation-v2-image-empty" /> }<div><strong>{item.label}</strong><small>{tab.description}</small></div><div className="recommendation-v2-row-actions"><button type="button" aria-label={`上移${item.label}`} disabled={busy || index === 0} onClick={() => move(index, -1)}>上移</button><button type="button" aria-label={`下移${item.label}`} disabled={busy || index === displayItems.length - 1} onClick={() => move(index, 1)}>下移</button><button type="button" aria-label={`替换${item.label}`} disabled={busy} onClick={() => { setReplacing(item.id); }}>替换</button></div></article>)}{!displayItems.length ? <p className="recommendation-v2-empty">尚未选择内容。</p> : null}</div>
         <details className="recommendation-v2-candidate-picker" open={Boolean(replacing) || !displayItems.length}><summary>选择公开候选</summary><form id="recommendation-candidate-search" className="recommendation-v2-search" onSubmit={submitSearch}><label><Search size={16}/><input ref={searchInput} type="search" aria-label="搜索推荐候选" value={searchDraft} onChange={event => setSearchDraft(event.target.value)} placeholder={tab.target === "scholar" ? "搜索公开学者" : tab.target === "topic" ? "搜索公开主题" : "搜索公开馆藏"} /></label><button type="submit">查找</button></form>
         {replacing ? <p className="recommendation-v2-help">选择一项替换“{selectedLabel(replacing)}” <button type="button" onClick={() => setReplacing(null)}>取消替换</button></p> : null}
         {candidateResource.loading ? <p role="status">正在读取公开候选…</p> : null}<div className="recommendation-v2-candidates">{(candidateResource.data?.results || []).map(candidate => { const checked = selectedSet.has(candidate.id); return <label key={candidate.id} className={checked ? "selected" : ""}><input type="checkbox" checked={checked} disabled={busy || Boolean(replacing && checked && candidate.id !== replacing) || (!replacing && !checked && selected.length >= (policy?.item_count || 4))} onChange={() => toggle(candidate)} /><span>{labelOf(candidate)}</span>{checked ? <Check size={14}/> : null}</label>; })}</div>
         <nav className="recommendation-v2-pagination" aria-label="首页推荐候选分页"><button type="button" disabled={!candidateResource.data?.previous || page <= 1} onClick={() => setPage(value => Math.max(1, value - 1))}>上一页</button><span>第 {page} 页 · 共 {candidateResource.data?.count ?? 0} 项</span><button type="button" disabled={!candidateResource.data?.next} onClick={() => setPage(value => value + 1)}>下一页</button></nav>
         </details><div className="recommendation-v2-rule"><strong>自动补足规则（简要）</strong><p>手动选择的内容优先；不足时按已设置的候选规则补足。先预览名单，再确认展示。</p></div>
-        <footer className="recommendation-v2-actions"><button type="button" className="button secondary" disabled={busy || !policy} onClick={() => void previewSelection()}><RefreshCw size={15}/>预览名单</button><button type="button" className="button" disabled={busy || !preview || preview.expected_updated_at !== policy?.updated_at} onClick={() => void publish()}>保存选择并确认发布 →</button></footer>
+        <p className="recommendation-v2-draft-state" role="status">{selectionDraft.loading ? "正在读取已保存选择…" : selectionDirty ? "当前选择尚未保存" : selectionDraft.data?.exists ? "已保存选择草稿，首页尚未改变" : "当前线上名单"}</p><footer className="recommendation-v2-actions"><button type="button" className="button secondary" disabled={busy || !policy || !selectionDraft.data || !selectionDirty} onClick={() => void saveSelection()}>保存选择</button><button type="button" className="button secondary" disabled={busy || !policy || !selectionDraft.data} onClick={() => void previewSelection()}><RefreshCw size={15}/>预览名单</button><button type="button" className="button" disabled={busy || !preview || preview.expected_updated_at !== policy?.updated_at} onClick={() => void publish()}>确认发布 →</button></footer>
       </section>
       <section className="recommendation-v2-reader"><header><div><h2>读者会看到什么</h2><p>首页推荐 · {mode === "draft" ? "当前选择" : "当前线上"}</p></div><div className="recommendation-v2-view-tools"><button type="button" className={mode === "draft" ? "active" : ""} aria-pressed={mode === "draft"} onClick={() => setMode("draft")}>修改后</button><button type="button" className={mode === "live" ? "active" : ""} aria-pressed={mode === "live"} onClick={() => setMode("live")}>当前线上</button><button type="button" className={device === "desktop" ? "active" : ""} aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}>电脑</button><button type="button" className={device === "mobile" ? "active" : ""} aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}>手机</button><button type="button" onClick={() => enlarged.current?.showModal()}>放大查看</button></div></header><PreviewViewport device={device}>{mode === "live" ? <iframe title="当前公开首页" src="/" className="recommendation-live-frame" style={{display:"block",width:"100%",height:1200,border:0}} /> : draftPreview}</PreviewViewport><p className="recommendation-v2-preview-note">{mode === "live" ? "当前公开页面" : preview ? "完整预览名单已生成 · 读者页面尚未改变" : "当前输入 · 尚未生成发布预览"}</p></section>
       <dialog ref={enlarged} className="recommendation-preview-dialog"><header><strong>{mode === "live" ? "当前线上" : "当前选择的首页推荐"}</strong><button type="button" onClick={() => enlarged.current?.close()}>关闭</button></header><PreviewViewport device={device}>{mode === "live" ? <iframe title="当前公开首页放大预览" src="/" className="recommendation-live-frame" style={{display:"block",width:"100%",height:1200,border:0}} /> : draftPreview}</PreviewViewport></dialog>

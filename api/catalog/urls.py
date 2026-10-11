@@ -56,6 +56,7 @@ from .knowledge_views import (
 )
 from .lifecycle_views import AdminEntityLifecycleView
 from .recycle_views import AdminRecycleView, AdminRecyclePreviewView, AdminRecycleImageView
+from .recommendation_draft_views import AdminRecommendationSelectionDraftView
 from .topic_merge_views import AdminTopicMergePreviewView, AdminTopicMergeView
 from .knowledge_publication_views import AdminKnowledgePublicationStatusView, AdminKnowledgePublicationRetryView
 from .editorial_revision_views import (
@@ -568,6 +569,7 @@ urlpatterns = [
     path("admin/recommendations/<str:placement>/", AdminRecommendationPolicyView.as_view(), name="admin-recommendation-policy"),
     path("admin/recommendations/<str:placement>/refresh/", AdminRecommendationRefreshView.as_view(), name="admin-recommendation-refresh"),
     path("admin/recommendations/<str:placement>/preview/", AdminRecommendationPreviewView.as_view(), name="admin-recommendation-preview"),
+    path("admin/recommendations/<str:placement>/draft/", AdminRecommendationSelectionDraftView.as_view(), name="admin-recommendation-selection-draft"),
     path("admin/about-blocks/", AdminAboutPageBlockListView.as_view(), name="admin-about-page-block-list"),
     path("admin/about-blocks/<uuid:pk>/", AdminAboutPageBlockDetailView.as_view(), name="admin-about-page-block-detail"),
     path("admin/knowledge-relations/<str:kind>/", AdminKnowledgeRelationListCreateView.as_view(), name="admin-knowledge-relation-list"),

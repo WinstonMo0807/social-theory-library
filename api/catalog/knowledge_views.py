@@ -786,6 +786,7 @@ class AdminRecommendationRefreshView(APIView):
             "preview_token": request.data.get("preview_token", ""),
             "expected_snapshot_id": request.data["expected_snapshot_id"],
             "expected_updated_at": expected_updated_at.isoformat(),
+            **({"draft_version": request.data["draft_version"]} if "draft_version" in request.data else {}),
         }, sort_keys=True).encode()).hexdigest()
         receipt = AuditEvent.objects.filter(
             action="catalog.recommendations_published", object_type="catalog.RecommendationPolicy",
@@ -799,6 +800,13 @@ class AdminRecommendationRefreshView(APIView):
         current_id = str(current.pk) if current else None
         if request.data["expected_snapshot_id"] != current_id or expected_updated_at != policy.updated_at:
             return Response({"detail": "推荐或更新规则已被其他操作修改。请刷新核对，再决定是否发布。"}, status=409)
+        selection_draft = None
+        if "draft_version" in request.data:
+            from .services.recommendation_drafts import latest_selection_revision, selection_version
+            latest = latest_selection_revision(policy)
+            if request.data["draft_version"] != selection_version(latest):
+                return Response({"detail": "已保存选择草稿已变化，请重新读取并预览后决定是否发布。"}, status=409)
+            selection_draft = latest if latest and latest.status == "draft" else None
         preview = None
         if request.data.get("preview_token"):
             try:
@@ -837,6 +845,14 @@ class AdminRecommendationRefreshView(APIView):
             snapshot = generate_snapshot(policy, actor=request.user, selected_targets=selected, source=source, previewed=preview is not None)
         except ValueError as error:
             return Response({"detail": str(error)}, status=409)
+        if selection_draft:
+            selected_items = selection_draft.materialized_preview.get("items", [])
+            matches = raw_items is not None and raw_items[:len(selected_items)] == selected_items
+            selection_draft.status = "published" if matches else "superseded"
+            if matches:
+                selection_draft.published_by = request.user
+                selection_draft.published_at = timezone.now()
+            selection_draft.save(update_fields=["status", "published_by", "published_at", "updated_at"])
         receipt = AuditEvent.objects.create(
             actor=request.user, object_type="catalog.RecommendationPolicy", object_id=str(policy.pk),
             action="catalog.recommendations_published",

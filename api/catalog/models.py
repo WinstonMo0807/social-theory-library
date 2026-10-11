@@ -3505,6 +3505,7 @@ class EditorialRevision(UUIDTimeStampedModel):
         KNOWLEDGE_RELATION = "knowledge_relation", "理论关系"
         TIMELINE_EVENT = "timeline_event", "时间线事件"
         RECOMMENDATION_ISSUE = "recommendation_issue", "书库推荐期"
+        RECOMMENDATION_POLICY = "recommendation_policy", "首页推荐选择"
         SITE_CONTENT = "site_content", "网站与关于书库"
         EVIDENCE_CURATION = "evidence_curation", "原文策展"
         SCHOLAR_RELATION = "scholar_relation", "学者关系"

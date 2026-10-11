@@ -544,6 +544,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendations/{placement}/draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendations_draft_retrieve"];
+        put: operations["catalog_admin_recommendations_draft_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recycle/": {
         parameters: {
             query?: never;
@@ -2229,6 +2245,31 @@ export interface components {
             items?: components["schemas"]["IssueItemRequest"][];
             edit_version?: string;
         };
+        RecommendationSelectionDraft: {
+            /** Format: uuid */
+            policy_id: string;
+            exists: boolean;
+            edit_version: string;
+            /** Format: date-time */
+            expected_updated_at: string;
+            /** Format: uuid */
+            expected_snapshot_id: string | null;
+            items: components["schemas"]["RecommendationSelectionItem"][];
+            public_unchanged: boolean;
+        };
+        RecommendationSelectionInputRequest: {
+            /** Format: uuid */
+            id: string;
+            target_type: components["schemas"]["TargetTypeEnum"];
+        };
+        RecommendationSelectionItem: {
+            /** Format: uuid */
+            id: string;
+            target_type: components["schemas"]["TargetTypeEnum"];
+            name: string;
+            image_url: string;
+            available: boolean;
+        };
         RecycleCollection: {
             count: number;
             total_count: number;
@@ -2296,6 +2337,16 @@ export interface components {
          * @enum {string}
          */
         RelationTypeEnum: "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+        SaveRecommendationSelectionRequest: {
+            items: components["schemas"]["RecommendationSelectionInputRequest"][];
+            edit_version: string;
+            /** Format: date-time */
+            expected_updated_at: string;
+            /** Format: uuid */
+            expected_snapshot_id: string | null;
+            /** Format: uuid */
+            request_key: string;
+        };
         SavedIssueList: {
             /** Format: uuid */
             id: string;
@@ -2476,6 +2527,13 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "drafting" | "reviewing" | "ready" | "publishing" | "published" | "abandoned";
+        /**
+         * @description * `work` - work
+         *     * `topic` - topic
+         *     * `scholar` - scholar
+         * @enum {string}
+         */
+        TargetTypeEnum: "work" | "topic" | "scholar";
         /**
          * @description * `none` - 尚无文字
          *     * `embedded` - PDF 原生文本
@@ -3636,6 +3694,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendations_draft_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationSelectionDraft"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendations_draft_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRecommendationSelectionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SaveRecommendationSelectionRequest"];
+                "multipart/form-data": components["schemas"]["SaveRecommendationSelectionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationSelectionDraft"];
                 };
             };
         };

@@ -16,7 +16,7 @@ import type { HomeViewData } from "@/components/public/home-public-view";
 function dateKey(value: string) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)); }
 function dateLabel(value?: string | null) { return value ? new Date(value).toLocaleDateString("zh-CN", { timeZone: "Asia/Hong_Kong" }) : "尚未安排"; }
 function issueDate(issue: RecommendationIssue) { return issue.display_from || issue.published_at; }
-export function RecommendationIssueList({ initialTab = "calendar", home }: { initialTab?: "issues" | "calendar" | "placements"; home: HomeViewData }) {
+export function RecommendationIssueList({ initialTab = "calendar", initialPlacement = "home_scholars", home }: { initialTab?: "issues" | "calendar" | "placements"; initialPlacement?: string; home: HomeViewData }) {
   const { startAction, finishAction } = useActionGuard();
   const tab = initialTab;
   const [query, setQuery] = useState(""), [page, setPage] = useState(1), [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
@@ -58,7 +58,7 @@ export function RecommendationIssueList({ initialTab = "calendar", home }: { ini
   const tools = <div className="recommendation-v2-view-tools"><div role="group" aria-label="预览内容"><button type="button" aria-pressed={mode === "draft"} onClick={() => setMode("draft")}>修改后</button><button type="button" aria-pressed={mode === "live"} onClick={() => setMode("live")}>当前线上</button></div><div role="group" aria-label="预览尺寸"><button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor size={16}/>电脑</button><button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")}><Smartphone size={16}/>手机</button></div><button type="button" onClick={() => enlarged.current?.showModal()}><Search size={16}/>放大查看</button></div>;
   const shiftedDay = (offset:number) => { const date = new Date(`${day}T12:00:00+08:00`); date.setUTCDate(date.getUTCDate()+offset); return dateKey(date.toISOString()); };
   const rangeDate = (value:string) => new Intl.DateTimeFormat("zh-CN",{month:"long",day:"numeric",timeZone:"Asia/Hong_Kong"}).format(new Date(`${value}T12:00:00+08:00`));
-  if(tab === "placements") return <RecommendationHomeCuration home={home} initialPlacement="home_scholars" />;
+  if(tab === "placements") return <RecommendationHomeCuration home={home} initialPlacement={initialPlacement} />;
   return <div className="v307-admin-editor recommendation-calendar-v2">
     <header className="v307-editor-heading"><div><h1>{tab === "calendar" ? "编辑日历" : "文章列表"}</h1><p>{tab === "calendar" ? "按日期安排每日荐读文章" : "管理每日荐读文章与已保存的草稿"}</p></div><div><button className="button" onClick={create} disabled={busy}><Plus size={19}/>新建荐读文章</button><form className="recommendation-calendar-search" onSubmit={event => { event.preventDefault(); setQuery(String(new FormData(event.currentTarget).get("q") || "").trim()); setPage(1); setDayPage(1); setUpcomingPage(1); setPublishedPage(1); setSelectedId(null); }}><button type="submit" aria-label="查找推荐期"><Search size={18}/></button><input name="q" aria-label="搜索文章标题、作者或关键词" placeholder="搜索文章标题、作者或关键词"/></form></div></header>
     {message ? <p role="alert">{message}</p> : null}

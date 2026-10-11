@@ -9,6 +9,7 @@ from distribution.urls import urlpatterns as distribution_patterns
 
 
 VERIFIED_NAMES = {
+    "admin-recommendation-selection-draft",
     "admin-discovery-index",
     "discovery-search", "discovery-search-detail", "discovery-search-expand", "discovery-search-cancel", "discovery-search-context",
     "admin-curation-sources", "admin-evidence-curation", "admin-evidence-curation-publish", "public-evidence-curation",

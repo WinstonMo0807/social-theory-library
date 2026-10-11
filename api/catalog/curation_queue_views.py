@@ -95,6 +95,7 @@ def _draft_sources(user, *, query=""):
         _objects(models.Discipline.objects.all(), "discipline", "学科", F("name"), "name", "editorial_status", "/admin/theories/disciplines?discipline=", can_edit=staff, query=query),
         _objects(models.Subdiscipline.objects.all(), "subdiscipline", "子学科", F("name"), "name", "editorial_status", "/admin/theories/subdisciplines?subdiscipline=", can_edit=staff, query=query),
         _objects(models.RecommendationIssue.objects.all(), "recommendation_issue", "推荐期", F("title"), "title", None, "/admin/recommendations/issues/", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query),
+        _objects(models.RecommendationPolicy.objects.all(), "recommendation_policy", "首页推荐选择", F("title"), None, None, "", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query, url_expression=Concat(Value("/admin/recommendations?view=home&placement="), F("placement"))),
     ]
     if knowledge:
         rows += [
@@ -119,7 +120,7 @@ def _draft_sources(user, *, query=""):
 DRAFT_GROUPS = {
     "theories": {"knowledge_node", "discipline", "subdiscipline", "knowledge_relation", "reading_path", "timeline_event", "evidence_curation"},
     "scholars": {"scholar_profile", "scholar_relation"}, "topics": {"topic"},
-    "recommendations": {"recommendation_issue"}, "site": {"site_content"},
+    "recommendations": {"recommendation_issue"}, "site": {"site_content", "recommendation_policy"},
 }
 
 

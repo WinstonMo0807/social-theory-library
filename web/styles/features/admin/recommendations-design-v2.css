@@ -663,3 +663,11 @@
 .issue-cover-caption{display:flex;flex-direction:column;gap:6px;margin-top:16px}
 .issue-cover-figure{margin:0;min-width:0}
 .issue-cover-figure>figcaption{padding:6px 0 0;color:var(--stl-ink-muted);font:13px/20px var(--stl-type-sans);overflow-wrap:anywhere}
+
+.recommendation-curation-v2 .recommendation-v2-selected article{grid-template-columns:16px 20px 64px minmax(0,1fr) auto;gap:9px}
+.recommendation-v2-drag{display:flex;align-items:center;justify-content:center;width:16px;height:32px;padding:0;border:0;background:transparent;color:var(--recommendation-muted);cursor:grab}
+.recommendation-v2-drag:active{cursor:grabbing}
+.recommendation-v2-drag:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.recommendation-v2-draft-state{margin:12px 0 0;color:var(--recommendation-muted);font:12px/18px var(--stl-type-sans)}
+.recommendation-curation-v2 .recommendation-v2-actions{flex-wrap:wrap}
+@media(max-width:720px){.recommendation-curation-v2 .recommendation-v2-selected article{grid-template-columns:16px 20px 48px minmax(0,1fr)}.recommendation-curation-v2 .recommendation-v2-row-actions{grid-column:3/-1}}
