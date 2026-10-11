@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
+import { createRequestKey } from "@/lib/request-key";
 
 type CheckableBackup = { id: string; checksum: string; status: string; created_at: string; include_originals: boolean };
 type Operation = "verify" | "restore_rehearsal";
@@ -37,9 +38,9 @@ export function useBackupCheck(backup: CheckableBackup | undefined | null, allow
   async function run(operation: Operation) {
     if (!backup || !allowed || !credential || busy) return false;
     const signature = `${backup.id}:${backup.checksum}:${operation}`;
-    if (retry.current?.signature !== signature) retry.current = { signature, key: crypto.randomUUID() };
     setPending(operation); setError("");
     try {
+      if (retry.current?.signature !== signature) retry.current = { signature, key: createRequestKey() };
       const result = await apiRequest<CheckState>(`/distribution/backups/${backup.id}/check/`, {
         method: "POST", body: JSON.stringify({ operation, expected_checksum: backup.checksum,
           request_key: retry.current.key, confirm_isolated: operation === "restore_rehearsal" }),
