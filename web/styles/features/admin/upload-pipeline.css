@@ -148,6 +148,7 @@
 .upload-reference .upload-file-row > .upload-file-status { grid-column: 2 / -1; }
 .upload-reference .upload-queue > .upload-file-row > .upload-file-progress { grid-column: 2 / -1; width: 100%; }
 .upload-reference .upload-file-row > .button.secondary { grid-column: 2 / -1; width: fit-content; }
+.upload-reference .upload-queue > footer > .button { flex-shrink: 0; white-space: nowrap; width: auto; }
 
 .upload-queue > .upload-metadata-pairing {
   display: grid;
