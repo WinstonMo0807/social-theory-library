@@ -40,6 +40,7 @@ class RecommendationIssueSerializer(serializers.Serializer):
     slug = serializers.CharField(required=False)
     title = serializers.CharField()
     issue_label = serializers.CharField(required=False, allow_blank=True)
+    category = serializers.CharField(required=False, allow_blank=True, max_length=80)
     introduction = serializers.CharField(required=False, allow_blank=True)
     public_byline = serializers.CharField(required=False, allow_blank=True)
     body_blocks = IssueBodyBlockSerializer(many=True, required=False)
@@ -60,6 +61,8 @@ class RecommendationIssueCollectionSerializer(serializers.Serializer):
     previous = serializers.CharField(allow_null=True)
     current = RecommendationIssueSerializer(allow_null=True)
     results = RecommendationIssueSerializer(many=True)
+    categories = serializers.ListField(child=serializers.CharField(max_length=80), required=False)
+    selected_category = serializers.CharField(required=False, allow_blank=True, max_length=80)
 
 
 class AdminIssueSummarySerializer(serializers.Serializer):

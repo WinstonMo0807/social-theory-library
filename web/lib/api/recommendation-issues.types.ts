@@ -10,10 +10,10 @@ export type IssueItem = {
   linked_edition_id?: string | null;
 };
 export type RecommendationIssue = {
-  id: string; slug: string; title: string; issue_label: string; introduction: string;
+  id: string; slug: string; title: string; issue_label: string; category?: string; introduction: string;
   body_blocks: IssueBlock[]; public_byline: string; cover_url: string; display_from: string | null;
   published_at: string | null; items: IssueItem[]; edit_version: string; draft_revision_id?: string | null;
   has_unpublished_changes?: boolean; status?: string; public_url?: string;
 };
-export type IssuePage = { count: number; next: string | null; previous: string | null; results: RecommendationIssue[]; current: RecommendationIssue | null; summary?: { total: number; published: number; drafts: number; scheduled: number }; upcoming?: RecommendationIssue[] };
+export type IssuePage = { count: number; next: string | null; previous: string | null; results: RecommendationIssue[]; current: RecommendationIssue | null; categories?: string[]; selected_category?: string; summary?: { total: number; published: number; drafts: number; scheduled: number }; upcoming?: RecommendationIssue[] };
 export type SiteContentDraft = { config: SiteConfig; about_blocks: AboutPageBlock[]; edit_version: string; has_unpublished_changes: boolean };

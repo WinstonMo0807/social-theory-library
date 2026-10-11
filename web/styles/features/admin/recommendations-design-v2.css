@@ -567,17 +567,17 @@
 .route-content-transition>.page-shell.daily-reading-page{width:100%;max-width:none;margin:0;padding:0 clamp(24px,3.45vw,53px)}
 .daily-reading-public-index{color:var(--admin-v2-ink);font-family:var(--stl-type-serif)}
 .daily-reading-public-index a{color:inherit;text-decoration:none}
-.daily-reading-public-index>header{display:flex;align-items:center;gap:34px;min-height:54px;border-bottom:1px solid var(--admin-v2-line);margin-bottom:17px}
+.daily-reading-public-index>header{display:flex;flex-wrap:wrap;align-items:center;gap:34px;min-height:54px;border-bottom:1px solid var(--admin-v2-line);margin-bottom:17px}
 .daily-reading-public-index>header h1{font:600 28px/40px var(--stl-type-serif);margin:0}
-.daily-reading-public-index>header nav{display:flex;gap:12px;font:14px/21px var(--stl-type-serif)}
-.daily-reading-public-index>header nav>*{min-width:100px;height:34px;padding:6px 18px;border:0;border-radius:5px;background:var(--admin-v2-paper)}
-.daily-reading-public-index>header nav>a{min-width:66px;background:var(--admin-v2-ink);color:#fff;text-align:center}
+.daily-reading-public-index>header nav{display:flex;flex-wrap:wrap;gap:12px;font:14px/21px var(--stl-type-serif)}
+.daily-reading-public-index>header nav>a{min-width:66px;min-height:34px;max-width:320px;padding:6px 18px;border:0;border-radius:5px;background:var(--admin-v2-paper);text-align:center;overflow-wrap:anywhere}
+.daily-reading-public-index>header nav>a[aria-current=page]{background:var(--admin-v2-ink);color:#fff}
 .daily-reading-public-lead{display:grid;grid-template-columns:minmax(0,860fr) minmax(0,532fr);gap:38px}
 .daily-reading-public-image{display:block;background:var(--admin-v2-paper);overflow:hidden}
 .daily-reading-public-image img{width:100%;height:100%;display:block;object-fit:cover}
 .daily-reading-public-lead>.daily-reading-public-image{height:362px}
 .daily-reading-public-lead>div{padding-top:14px;min-width:0}
-.daily-reading-public-category{min-height:28px;color:var(--admin-v2-muted);font:15px/24px var(--stl-type-serif)}
+.daily-reading-public-category{min-height:28px;margin:0;color:var(--admin-v2-muted);font:15px/24px var(--stl-type-serif);overflow-wrap:anywhere}
 .daily-reading-public-lead h2{font:600 48px/1.3 var(--stl-type-serif);margin:18px 0 14px}
 .daily-reading-public-lead>div>p{font:21px/1.6 var(--stl-type-serif);margin:0 0 24px}
 .daily-reading-public-byline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font:14px/22px var(--stl-type-sans);color:var(--admin-v2-muted)}
@@ -617,7 +617,8 @@
 .issue-public-article{display:grid;grid-template-columns:minmax(0,834fr) minmax(0,492fr);gap:50px;max-width:none;padding:39px clamp(24px,3.45vw,53px) 60px clamp(24px,6.9vw,106px)}
 .issue-public-main{min-width:0}
 .issue-public-main .issue-reference-meta .issue-section-label{font:600 18px/27px var(--stl-type-serif);color:var(--admin-v2-focus)}
-.issue-public-main .issue-reference-category{height:28px;margin-top:12px}
+.issue-reference-category{display:block;font:14px/22px var(--stl-type-sans);color:var(--admin-v2-muted);overflow-wrap:anywhere}
+.issue-public-main .issue-reference-category{min-height:28px;margin-top:12px}
 .issue-public-main>header h1{font:600 48px/1.3 var(--stl-type-serif);margin:16px 0 11px}
 .issue-public-main .issue-introduction{font:20px/29px var(--stl-type-serif);margin:0 0 8px}
 .issue-public-main .issue-byline{font:16px/24px var(--stl-type-sans);margin-bottom:8px}
@@ -643,7 +644,7 @@
 .issue-reading-list{display:grid;gap:12px}
 .issue-related-space .book-card{padding:0 0 12px;min-width:0}
 .issue-related-space .book-card:last-child{padding-bottom:0;border-bottom:0}
-.issue-related-space .book-card-main{grid-template-columns:64px minmax(0,1fr);gap:16px}
+.issue-related-space .book-card.dense .book-card-main{grid-template-columns:64px minmax(0,1fr);gap:16px}
 .issue-related-space .book-cover.small{width:64px;height:96px}
 .issue-related-space .book-meta h3{font:600 18px/26px var(--stl-type-serif);margin:0 0 4px;overflow-wrap:anywhere}
 .issue-related-space .book-meta p{font-size:14px;line-height:22px;margin:0 0 4px}

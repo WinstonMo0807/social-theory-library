@@ -3087,6 +3087,31 @@
         "/api/catalog/recommendation-issues/": {
             "get": {
                 "operationId": "catalog_recommendation_issues_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "已公开修订的栏目名称，最多80字。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "已公开文章的关键词。"
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -3639,6 +3664,17 @@
                         "items": {
                             "$ref": "#/components/schemas/RecommendationIssue"
                         }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 80
+                        }
+                    },
+                    "selected_category": {
+                        "type": "string",
+                        "maxLength": 80
                     },
                     "summary": {
                         "$ref": "#/components/schemas/AdminIssueSummary"
@@ -7461,6 +7497,10 @@
                     "issue_label": {
                         "type": "string"
                     },
+                    "category": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
                     "introduction": {
                         "type": "string"
                     },
@@ -7552,6 +7592,17 @@
                         "items": {
                             "$ref": "#/components/schemas/RecommendationIssue"
                         }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 80
+                        }
+                    },
+                    "selected_category": {
+                        "type": "string",
+                        "maxLength": 80
                     }
                 },
                 "required": [
@@ -7575,6 +7626,10 @@
                     },
                     "issue_label": {
                         "type": "string"
+                    },
+                    "category": {
+                        "type": "string",
+                        "maxLength": 80
                     },
                     "introduction": {
                         "type": "string"

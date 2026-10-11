@@ -1001,6 +1001,8 @@ export interface components {
             previous: string | null;
             current: components["schemas"]["RecommendationIssue"] | null;
             results: components["schemas"]["RecommendationIssue"][];
+            categories?: string[];
+            selected_category?: string;
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
         };
@@ -2122,6 +2124,7 @@ export interface components {
             slug?: string;
             title: string;
             issue_label?: string;
+            category?: string;
             introduction?: string;
             public_byline?: string;
             body_blocks?: components["schemas"]["IssueBodyBlock"][];
@@ -2145,11 +2148,14 @@ export interface components {
             previous: string | null;
             current: components["schemas"]["RecommendationIssue"] | null;
             results: components["schemas"]["RecommendationIssue"][];
+            categories?: string[];
+            selected_category?: string;
         };
         RecommendationIssueRequest: {
             slug?: string;
             title: string;
             issue_label?: string;
+            category?: string;
             introduction?: string;
             public_byline?: string;
             body_blocks?: components["schemas"]["IssueBodyBlockRequest"][];
@@ -3994,7 +4000,13 @@ export interface operations {
     };
     catalog_recommendation_issues_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 已公开修订的栏目名称，最多80字。 */
+                category?: string;
+                page?: number;
+                /** @description 已公开文章的关键词。 */
+                q?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

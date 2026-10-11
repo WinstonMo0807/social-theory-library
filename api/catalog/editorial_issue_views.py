@@ -39,6 +39,13 @@ def snapshot_search(prefix, query):
 
 def collection(request, queryset, *, public=False, ordering=None):
     query = request.query_params.get("q", "").strip()
+    category = request.query_params.get("category", "").strip() if public else ""
+    if len(category) > 80:
+        raise ValidationError({"category": "栏目名称不能超过80字。"})
+    categories = list(service.published_issues().exclude(effective_category="").order_by("effective_category")
+                      .values_list("effective_category", flat=True).distinct()) if public else []
+    if category:
+        queryset = queryset.filter(effective_category=category)
     if query:
         # Public searches only consult the already published snapshot.
         if public:
@@ -55,16 +62,23 @@ def collection(request, queryset, *, public=False, ordering=None):
         params = request.query_params.copy()
         params["page"] = number
         return f"{request.path}?{params.urlencode()}"
-    current = service.published_issues().order_by("-effective_display_from", "-created_at").first()
-    return {"count": paginator.count, "next": page_url(page.next_page_number()) if page.has_next() else None,
+    current = (queryset if category else service.published_issues()).order_by("-effective_display_from", "-created_at").first()
+    payload = {"count": paginator.count, "next": page_url(page.next_page_number()) if page.has_next() else None,
             "previous": page_url(page.previous_page_number()) if page.has_previous() else None,
             "results": [service.issue_payload(row, public=public) for row in page.object_list],
             "current": service.issue_payload(current, public=True) if current else None}
+    if public:
+        payload.update(categories=categories, selected_category=category)
+    return payload
 
 
 class PublicIssueListView(APIView):
     permission_classes = [AllowAny]
-    @extend_schema(operation_id="catalog_recommendation_issues_list", responses=RecommendationIssueCollectionSerializer)
+    @extend_schema(operation_id="catalog_recommendation_issues_list", responses=RecommendationIssueCollectionSerializer, parameters=[
+        OpenApiParameter("q", OpenApiTypes.STR, description="已公开文章的关键词。"),
+        OpenApiParameter("category", OpenApiTypes.STR, description="已公开修订的栏目名称，最多80字。"),
+        OpenApiParameter("page", OpenApiTypes.INT),
+    ])
     def get(self, request):
         return Response(collection(request, service.published_issues(), public=True))
 

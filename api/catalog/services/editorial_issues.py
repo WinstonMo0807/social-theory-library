@@ -8,7 +8,9 @@ from uuid import UUID, uuid4
 from urllib.parse import unquote, urlsplit
 
 from django.db import transaction
-from django.db.models import Case, DateTimeField, F, Max, Q, When
+from django.db.models import Case, CharField, DateTimeField, F, Max, Q, Value, When
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.text import slugify
@@ -126,7 +128,7 @@ def issue_draft_payload(issue):
     revision = _latest("recommendation_issue", issue.pk)
     if revision:
         return deepcopy(revision.materialized_preview)
-    return {"slug": issue.slug, "title": issue.title, "issue_label": "", "introduction": "", "body_blocks": [],
+    return {"slug": issue.slug, "title": issue.title, "issue_label": "", "category": "", "introduction": "", "body_blocks": [],
             "public_byline": "", "cover_url": "", "cover_rendition_id": None, "display_from": None, "items": []}
 
 
@@ -149,6 +151,7 @@ def save_issue(identifier, data, actor):
     values = {**previous, **data}
     payload = {name: _text(values.get(name) or "", limit) for name, limit in (
         ("title", 600), ("issue_label", 120), ("introduction", 3000), ("public_byline", 240))}
+    payload["category"] = _text(values.get("category", ""), 80)
     if not payload["title"]:
         raise ValidationError({"title": "请填写本期标题。"})
     # Once a URL exists its identity remains stable across corrections.
@@ -286,7 +289,13 @@ def published_issues():
     return RecommendationIssue.objects.filter(Q(active_revision__status="published", display_from__lte=now) |
         Q(scheduled_revision__status="published", scheduled_for__lte=now)).select_related("active_revision", "scheduled_revision").annotate(
             effective_display_from=Case(When(scheduled_revision__status="published", scheduled_for__lte=now, then=F("scheduled_for")),
-                                        default=F("display_from"), output_field=DateTimeField()))
+                                        default=F("display_from"), output_field=DateTimeField()),
+            effective_category=Coalesce(Case(
+                When(scheduled_revision__status="published", scheduled_for__lte=now,
+                     then=KeyTextTransform("category", "scheduled_revision__materialized_preview")),
+                default=KeyTextTransform("category", "active_revision__materialized_preview"),
+                output_field=CharField(),
+            ), Value(""), output_field=CharField()))
 
 
 def public_issue_revision(issue):
@@ -298,6 +307,7 @@ def public_issue_revision(issue):
 def issue_payload(issue, *, public=False, include_cover_storage=False, revision=None):
     revision = public_issue_revision(issue) if public else revision
     payload = deepcopy(revision.materialized_preview) if revision else issue_draft_payload(issue)
+    payload.setdefault("category", "")
     published_at = revision.published_at if revision else issue.published_at
     payload.update(id=str(issue.pk), slug=issue.slug, published_at=published_at.isoformat() if published_at else None)
     now = timezone.now()
