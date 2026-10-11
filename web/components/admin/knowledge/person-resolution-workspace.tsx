@@ -80,7 +80,7 @@ function History({ sourceId, credential }: { sourceId: string; credential: strin
 
 function SourceWorkspace({ sourceId, targetId, allowed, credential }: { sourceId: string; targetId: string; allowed: boolean; credential: string }) {
   const { data, error, loading, retry } = useApiResource<PersonDuplicates>(personApi.duplicates(sourceId), credential);
-  if(targetId && allowed)return <><Link prefetch={false} href={personPage(sourceId)}>← 重新比较人物</Link><PreviewLoader key={`${sourceId}:${targetId}`} sourceId={sourceId} targetId={targetId} credential={credential}/><details><summary>查看合并记录与恢复入口</summary><History sourceId={sourceId} credential={credential}/></details></>;
+  if(targetId && allowed)return <><PreviewLoader key={`${sourceId}:${targetId}`} sourceId={sourceId} targetId={targetId} credential={credential}/><Link prefetch={false} href={personPage(sourceId)}>← 重新比较人物</Link><details><summary>查看合并记录与恢复入口</summary><History sourceId={sourceId} credential={credential}/></details></>;
   return <>
     <Link prefetch={false} href={personPage()}>重新选择来源人物</Link>
     {error ? <Failure message={error} retry={retry} /> : loading ? <p role="status">正在检查疑似重复…</p> : data ? <>
@@ -169,10 +169,13 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
       setConfirm(false);
     } finally { sending.current = false; if (active.current) setBusy(false); }
   }
-  return <>
-    <p className={styles.notice}>仅网站所有者可执行合并。请先核对同一人物和关联内容，合并记录保留，符合条件时可回退。</p>
-    <ol className="reference-step-strip">{steps.map((item,index)=><li key={item.id} aria-current={step===item.id ? "step" : undefined}><button type="button" disabled={busy || uncertain} onClick={()=>setStep(item.id)}><b>{index+1}</b>{item.label}</button></li>)}</ol>
-    <FixedPageEditor dirty={false} sections={steps} navigationSections={[]} activeSection={step} onSectionChange={setStep} preview={scholarPreview.data ? <><p className={styles.notice}>这是现有档案页面。合并后的引用展示尚无独立预览，以下不作为合并完成结果。</p><PreviewSurface payload={scholarPreview.data} pageId="works"/></> : <p role={scholarPreview.error ? "alert" : "status"}>{scholarPreview.error || (profileId ? "正在读取学者页面…" : "—")}</p>} publishedHref={scholarPreview.data?.preview_routes.published || undefined} previewHref={typeof profileId==="string" ? `/admin/preview/knowledge/scholar/${profileId}` : undefined} toolbar={<footer className={styles.actions}><button className="button secondary" type="button" disabled={stepIndex===0 || busy || uncertain} onClick={()=>setStep(steps[stepIndex-1].id)}>上一步</button>{stepIndex<2 ? <button className="button" type="button" disabled={busy || uncertain} onClick={()=>setStep(steps[stepIndex+1].id)}>下一步：{steps[stepIndex+1].label}</button> : null}</footer>} fields={<div className={styles.panel}>
+  return <div className={styles.review}>
+    <header className={styles.reviewHeader}>
+      <div className={styles.reviewTitle}><h1>人物查重</h1><p>当前第 {stepIndex+1} 步，共 3 步</p></div>
+      <ol className={`reference-step-strip ${styles.steps}`} aria-label="人物查重步骤">{steps.map((item,index)=><li key={item.id} aria-current={step===item.id ? "step" : undefined}><button type="button" disabled={busy || uncertain} onClick={()=>setStep(item.id)}><b>{index+1}</b><span>{item.label}</span></button></li>)}</ol>
+      <p className={styles.ownerNotice}>仅网站所有者可执行合并。请先核对同一人物和关联内容，合并记录保留，符合条件时可回退。</p>
+    </header>
+    <FixedPageEditor hideFieldHeading dirty={false} sections={steps} navigationSections={[]} activeSection={step} onSectionChange={setStep} preview={scholarPreview.data ? <><p className={styles.notice}>这是现有档案页面。合并后的引用展示尚无独立预览，以下不作为合并完成结果。</p><PreviewSurface payload={scholarPreview.data} pageId="works"/></> : <p role={scholarPreview.error ? "alert" : "status"}>{scholarPreview.error || (profileId ? "正在读取学者页面…" : "—")}</p>} publishedHref={scholarPreview.data?.preview_routes.published || undefined} previewHref={typeof profileId==="string" ? `/admin/preview/knowledge/scholar/${profileId}` : undefined} toolbar={<footer className={styles.actions}><button className="button secondary" type="button" disabled={stepIndex===0 || busy || uncertain} onClick={()=>setStep(steps[stepIndex-1].id)}>上一步</button>{stepIndex<2 ? <button className="button" type="button" disabled={busy || uncertain} onClick={()=>setStep(steps[stepIndex+1].id)}>下一步：{steps[stepIndex+1].label}</button> : null}</footer>} fields={<div className={styles.panel}>
     <h2>{step==="confirm" ? "确认人物与保留方向" : "待合并的两个人物记录"}</h2><PreviewFacts preview={preview} showImpact={step!=="compare"}/>
     {step==="compare" ? <Link prefetch={false} className="button secondary" href={personPage(targetId,sourceId)}>交换保留方向并重新核对影响</Link> : null}
     {preview.review_issues.length ? <div className={styles.notice} role="alert"><h3>需要先处理</h3><ul>{preview.review_issues.map((issue, i) => <li key={i}>{textValue(asRecord(issue).detail)}</li>)}</ul></div> : null}
@@ -182,7 +185,7 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
     <p>保留人物的基础资料不自动改写。原文件、来源记录、历史公开内容和读者私人笔记保留。合并后检索及公开书目仍需等待处理完成。</p>
     </div>}/>
     <ConfirmDialog open={confirm} title="确认合并人物" description={`将「${textValue(asRecord(preview.source).preferred_name)}」的无冲突引用归入「${textValue(asRecord(preview.target).preferred_name)}」。请确认这是同一人物，且保留方向正确。`} confirmLabel={busy ? "正在合并…" : "确认是同一人物并合并"} pending={busy} details={["目标人物基础资料保持原值，来源资料不删除。", "若后续有人修改相关资料，撤回可能被阻止。"]} onCancel={() => setConfirm(false)} onConfirm={submit} />
-  </>;
+  </div>;
 }
 
 function RecordWorkspace({ recordId, credential }: { recordId: string; credential: string }) {

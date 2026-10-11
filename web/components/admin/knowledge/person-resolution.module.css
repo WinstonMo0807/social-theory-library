@@ -2,6 +2,23 @@
 .content { display: grid; gap: 20px; }
 .mergeWorkspace {min-width:0}
 .mergeWorkspace .panel {padding:0}
+.workspace:has(.review) > :global(.admin-page-title) { display: none; }
+.review { display: grid; gap: 20px; min-width: 0; }
+.reviewHeader { display: grid; grid-template-columns: minmax(180px, .5fr) minmax(0, 1fr) minmax(240px, .7fr); align-items: start; gap: 20px; min-height: 98px; }
+.reviewTitle h1 { margin: 4px 0 8px; font: 700 28px/38px var(--stl-type-serif); }
+.reviewTitle p { margin: 0; font: 13px/20px var(--stl-type-sans); color: var(--muted); }
+.ownerNotice { margin: 4px 0 0; font: 13px/22px var(--stl-type-sans); color: var(--muted); }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 28px 0 0; list-style: none; }
+.steps li { position: relative; min-width: 0; }
+.steps li:not(:last-child)::after { content: ""; position: absolute; top: 17px; left: calc(50% + 26px); right: calc(-50% + 26px); height: 1px; background: var(--line); }
+.steps button { display: grid; justify-items: center; gap: 10px; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); font: 14px/21px var(--stl-type-sans); cursor: pointer; }
+.steps b { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); font: 500 20px/1 var(--stl-type-sans); }
+.steps [aria-current="step"] button { color: var(--ink); }
+.steps [aria-current="step"] b { border-color: var(--ink); background: var(--ink); color: var(--surface); }
+.steps button:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.steps button:disabled { cursor: default; opacity: .55; }
+.review :global(.fixed-page-editor) { grid-template-columns: minmax(0, 44.6%) minmax(0, 1fr); gap: 12px; }
+.review :global(.fixed-editor-preview) { top: 66px; }
 .panel { display: grid; gap: 16px; padding: 24px; min-width: 0; font-size: 1rem; line-height: 1.65; }
 .panel h2, .panel h3, .panel h4, .panel p { margin: 0; }
 .panel h2 { font-size: 1.3rem; }
@@ -32,3 +49,4 @@
 .panel summary { cursor: pointer; overflow-wrap: anywhere; min-height: 32px; }
 .panel button, .panel a { overflow-wrap: anywhere; }
 @media (max-width: 760px) { .comparison { grid-template-columns: 1fr; } .panel { padding: 16px; } .fields > div { grid-template-columns: 1fr; gap: 4px; } }
+@media (max-width: 1000px) { .reviewHeader { grid-template-columns: 1fr; gap: 16px; min-height: 0; }.steps { padding-top: 0; }.ownerNotice { margin: 0; }.review :global(.fixed-page-editor) { grid-template-columns: minmax(0, 1fr); }.review :global(.fixed-editor-preview) { position: static; } }
