@@ -102,8 +102,12 @@ def test_nonbook_saved_preview_uses_selected_edition_and_public_metadata_uses_ac
     assert preview["edition"]["degree_institution"] == "Saved Draft University"
     edition.refresh_from_db()
     assert edition.degree_institution == "Canonical University"
-    revision.snapshot["edition"] = {}
-    revision.save(update_fields=["snapshot"])
-    edition.refresh_from_db()
-    old = EditionCompactSerializer(edition).data
+    legacy = Edition.objects.create(work=work, state="published", degree_institution="Later Canonical University", degree_type="Later Canonical Degree")
+    legacy.active_catalog_revision = CatalogPublicationRevision.objects.create(
+        edition=legacy, revision=1, status="active", metadata_ready=True,
+        snapshot={"work": {"id": str(work.pk), "title": work.title}, "edition": {}},
+        content_fingerprint="e" * 64,
+    )
+    legacy.save(update_fields=["active_catalog_revision"])
+    old = EditionCompactSerializer(legacy).data
     assert old["degree_institution"] == "" and old["degree_type"] == ""

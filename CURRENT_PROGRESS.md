@@ -1,5 +1,11 @@
 # Social Theory Library 当前进度
 
+## 2026-10-12 ab37ff9准确NAS镜像构建完成，新增PG前三项通过，第四项测试夹具已修正
+
+本批准确commit ab37ff99494749a6705d64405eb4e0ffc7f8be30/tree4461afb1712c0f867b103fc2a563d1596b4bcb42/archiveSHA256 b84f2c019e439f1800c4681acd402ed751b5ef4fe44f20fc21a73c1eff1fe639，NAS API及Linux Web构建/镜像标签门槛退出0；未重复本地构建。4个新增完整迁移PostgreSQL案例实际3通过/1失败：理论字段发布与检索、子学科展示/归属保护、推荐说明验证通过。第四项旧快照兼容夹具试图改写不可变正式修订，被既有保护正确拒绝；只改测试为独立旧版本，不改业务保护或功能代码。接下来仅续核该项，不重跑前三项和已过前端检查。
+
+只读候选边界确认专用PG/Redis和独立browser-data挂载，Meili localhost，不连接生产索引；上传队列ingestion尚未被原worker消费、OCR服务尚未配置。正在给隔离候选接入自己的入库队列，并经无存储无凭据的私有转发使用原PaddleOCR服务；API/worker保持私有网络，测试仅自有文件。生产仍未切，49跳过。初次SFTP路径不支持、SSH脚本末行CRLF失败日志保留，SCP旧协议及LF传输后构建0，未绕过SSH信任。
+
 ## 2026-10-12 统一验收静态部分通过，准备准确NAS候选
 
 generate-api-contracts.mjs生成并验证、tsc --noEmit、所有相关改动TS/TSX目标ESLint、makemigrations --check --dry-run均退出0，lint0错误/8条原提示。仅运行本批3个前端案例（学者说明按文献保留、四类非图书与选定版本、改动回对应步骤），3通过/0失败；没有重跑旧全量用例。日志为忽略的recovery-20261009/final-unified-*。迁移文件一致不等于已应用或数据库测试通过。
