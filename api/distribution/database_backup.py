@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import hashlib
+import json
 import os
 import re
 import shutil
 import subprocess
+import tarfile
+import tempfile
 
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
@@ -322,3 +325,55 @@ def applied_migration_heads(database_connection=connection) -> list[str]:
         if not same_app_child_applied:
             heads.append(f"{node[0]}.{node[1]}")
     return heads
+
+
+def extract_backup_database(archive: Path, destination: Path) -> tuple[dict, Path]:
+    """Extract only the regular database artifact named by its checked manifest."""
+    with tarfile.open(archive, "r:gz") as bundle:
+        manifests = [member for member in bundle.getmembers() if member.name == "manifest.json"]
+        if len(manifests) != 1 or not manifests[0].isfile():
+            raise DatabaseBackupError("Backup archive needs one regular manifest.json.")
+        with bundle.extractfile(manifests[0]) as handle:
+            manifest = json.load(handle)
+        database_name = str(manifest.get("database") or "")
+        database_path = PurePosixPath(database_name)
+        if not database_name or database_path.is_absolute() or ".." in database_path.parts or len(database_path.parts) != 1:
+            raise DatabaseBackupError("Backup archive database path is unsafe.")
+        artifacts = [member for member in bundle.getmembers() if member.name == database_name]
+        if len(artifacts) != 1 or not artifacts[0].isfile():
+            raise DatabaseBackupError("Backup archive needs one regular database artifact.")
+        target = destination / database_path.name
+        with bundle.extractfile(artifacts[0]) as handle, target.open("wb") as output:
+            shutil.copyfileobj(handle, output)
+    expected = str(manifest.get("database_sha256") or "")
+    if not expected or file_sha256(target) != expected:
+        raise DatabaseBackupError("Backup archive database checksum mismatch.")
+    return manifest, target
+
+
+def rehearse_database_archive(archive: Path, database_connection=connection, *, confirmation: str) -> dict:
+    """The CLI and queued rehearsal share the same empty-target and checksum gates."""
+    if database_connection.vendor != "postgresql":
+        raise DatabaseBackupError("Restore rehearsal requires PostgreSQL.")
+    with database_connection.cursor() as cursor:
+        cursor.execute("SELECT current_database()")
+        database_name = str(cursor.fetchone()[0])
+        cursor.execute("SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")
+        table_count = int(cursor.fetchone()[0])
+    if confirmation != database_name:
+        raise DatabaseBackupError("Disposable database confirmation does not match target.")
+    if not any(marker in database_name.casefold() for marker in ("disposable", "evaluation", "rehearsal", "restore", "test")):
+        raise DatabaseBackupError("Target database name does not identify a disposable restore database.")
+    if table_count:
+        raise DatabaseBackupError(f"Disposable restore database must be empty; found {table_count} tables.")
+    with tempfile.TemporaryDirectory(prefix="library-restore-") as temporary:
+        manifest, dump = extract_backup_database(archive, Path(temporary))
+        metadata = manifest.get("database_metadata") or {}
+        runtime = restore_database_dump(dump, database_connection, dump_client_major=metadata.get("pg_dump_major"))
+        return {
+            "status": "restored", "archive_filename": archive.name, "archive_sha256": file_sha256(archive),
+            "database": database_name, "database_dump_sha256": file_sha256(dump),
+            "source_server_version": metadata.get("server_version"), "source_pg_dump_version": metadata.get("pg_dump_version"),
+            "target_server_version": runtime["server_version"], "pg_restore_version": runtime["pg_restore_version"],
+            "migration_heads": manifest.get("migration_heads") or [],
+        }

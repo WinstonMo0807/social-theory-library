@@ -3780,6 +3780,119 @@
                     }
                 }
             }
+        },
+        "/api/distribution/backups/{id}/check/": {
+            "get": {
+                "operationId": "distribution_backups_check_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BackupCheckState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "distribution_backups_check_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BackupCheckInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BackupCheckInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BackupCheckInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BackupCheckState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BackupCheckState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -4081,6 +4194,159 @@
                 "type": "string",
                 "description": "* `original` - 原始文件\n* `normalized` - 规范阅读文件\n* `ocr_pdf` - OCR 阅读文件\n* `web_derivative` - 网页阅读派生文件"
             },
+            "BackupCheckHistory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupCheckRecord"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next_page",
+                    "page",
+                    "previous_page",
+                    "results"
+                ]
+            },
+            "BackupCheckInputRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/OperationEnum"
+                    },
+                    "expected_checksum": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirm_isolated": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "expected_checksum",
+                    "operation",
+                    "request_key"
+                ]
+            },
+            "BackupCheckRecord": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/BackupCheckRecordStatusEnum"
+                    },
+                    "requested_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "archive_checksum": {
+                        "type": "string"
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "result": {}
+                },
+                "required": [
+                    "archive_checksum",
+                    "checked_at",
+                    "error_message",
+                    "operation",
+                    "request_key",
+                    "requested_at",
+                    "result",
+                    "started_at",
+                    "status"
+                ]
+            },
+            "BackupCheckRecordStatusEnum": {
+                "enum": [
+                    "queued",
+                    "running",
+                    "completed",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `running` - running\n* `completed` - completed\n* `failed` - failed"
+            },
+            "BackupCheckState": {
+                "type": "object",
+                "properties": {
+                    "backup_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "verification": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/BackupCheckRecord"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "rehearsal": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/BackupCheckRecord"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/BackupCheckHistory"
+                    },
+                    "replay": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "backup_id",
+                    "history",
+                    "rehearsal",
+                    "replay",
+                    "verification"
+                ]
+            },
             "BibliographicLookupRequest": {
                 "type": "object",
                 "properties": {
@@ -4211,7 +4477,7 @@
                     "status": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/StatusEnum"
+                                "$ref": "#/components/schemas/CatalogingSessionStatusEnum"
                             }
                         ],
                         "readOnly": true
@@ -4369,6 +4635,18 @@
                 "required": [
                     "results"
                 ]
+            },
+            "CatalogingSessionStatusEnum": {
+                "enum": [
+                    "drafting",
+                    "reviewing",
+                    "ready",
+                    "publishing",
+                    "published",
+                    "abandoned"
+                ],
+                "type": "string",
+                "description": "* `drafting` - 编目中\n* `reviewing` - 核对中\n* `ready` - 准备发布\n* `publishing` - 发布中\n* `published` - 已发布\n* `abandoned` - 已结束编辑"
             },
             "CatalogingSourceTypeEnum": {
                 "enum": [
@@ -6289,6 +6567,14 @@
                 ],
                 "type": "string",
                 "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline"
+            },
+            "OperationEnum": {
+                "enum": [
+                    "verify",
+                    "restore_rehearsal"
+                ],
+                "type": "string",
+                "description": "* `verify` - verify\n* `restore_rehearsal` - restore_rehearsal"
             },
             "PaginatedWorkCardList": {
                 "type": "object",
@@ -9041,18 +9327,6 @@
                 ],
                 "type": "string",
                 "description": "* `draft` - draft\n* `changes_pending` - changes_pending"
-            },
-            "StatusEnum": {
-                "enum": [
-                    "drafting",
-                    "reviewing",
-                    "ready",
-                    "publishing",
-                    "published",
-                    "abandoned"
-                ],
-                "type": "string",
-                "description": "* `drafting` - 编目中\n* `reviewing` - 核对中\n* `ready` - 准备发布\n* `publishing` - 发布中\n* `published` - 已发布\n* `abandoned` - 已结束编辑"
             },
             "TargetTypeEnum": {
                 "enum": [

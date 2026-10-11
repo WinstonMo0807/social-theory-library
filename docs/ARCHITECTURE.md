@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-11 3.0.9.1备份校验与隔离恢复候选（未上线）
+
+备份检查复用原BackupJob、其manifest派生状态、原AuditEvent历史及Celery，不增实体或数据库迁移。Owner按准确归档checksum/请求标识提交，任务对实际归档/dump/所含可用原件校验；排队、运行、完成或失败及实际时间分别保存。原CLI与异步恢复共用PostgreSQL空白目标/准确确认/版本和dump校验，演练仅新建请求UUID对应的隔离库，已存在拒绝，核对后只清理本任务创建的新库；default库、当前馆藏与原件不覆盖。候选浏览器采用私有临时Redis及独立worker，不消费生产队列。生产恢复仍走已批准维护发布流程，前端只提供恢复计划核对，没有开放任意目标库或生产覆盖接口。
+
 ## 2026-10-11 3.0.9.1首页推荐选择独立草稿候选（未上线）
 
 首页选择顺序归原EditorialRevision的recommendation_policy修订，目标仍原RecommendationPolicy。保存仅修订与审计，不改公开snapshot或policy；原行锁/编辑版本/公开状态和snapshot门槛保护保存。发布继续原签名预览/幂等收据，可携准确草稿版本防止跨编辑覆盖；同一选择修订随确认published，已被当前输入替代则superseded。0065只记录该枚举选项，无新增表或物理字段。原草稿队列返回原首页推荐编辑位置，没有另建发布系统。

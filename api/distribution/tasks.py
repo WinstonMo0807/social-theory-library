@@ -19,6 +19,12 @@ from .database_backup import (
 from .services import sync_asset_to_cloud
 
 
+@shared_task(ignore_result=True)
+def run_backup_check(job_id, operation, request_key):
+    from .backup_checks import perform_check
+    perform_check(job_id, operation, request_key)
+
+
 @shared_task(
     bind=True,
     ignore_result=True,

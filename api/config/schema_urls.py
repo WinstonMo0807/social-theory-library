@@ -38,5 +38,5 @@ VERIFIED_NAMES = {
 }
 urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
-    path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name == "asset-access"])),
+    path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {"asset-access", "backup-job-check"}])),
 ]

@@ -1008,6 +1008,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/backups/{id}/check/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_backups_check_retrieve"];
+        put?: never;
+        post: operations["distribution_backups_check_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1102,6 +1118,52 @@ export interface components {
          * @enum {string}
          */
         AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
+        BackupCheckHistory: {
+            count: number;
+            page: number;
+            next_page: number | null;
+            previous_page: number | null;
+            results: components["schemas"]["BackupCheckRecord"][];
+        };
+        BackupCheckInputRequest: {
+            operation: components["schemas"]["OperationEnum"];
+            expected_checksum: string;
+            /** Format: uuid */
+            request_key: string;
+            /** @default false */
+            confirm_isolated: boolean;
+        };
+        BackupCheckRecord: {
+            operation: string;
+            /** Format: uuid */
+            request_key: string;
+            status: components["schemas"]["BackupCheckRecordStatusEnum"];
+            /** Format: date-time */
+            requested_at: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            checked_at: string | null;
+            archive_checksum: string;
+            error_message: string;
+            result: unknown;
+        };
+        /**
+         * @description * `queued` - queued
+         *     * `running` - running
+         *     * `completed` - completed
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        BackupCheckRecordStatusEnum: "queued" | "running" | "completed" | "failed";
+        BackupCheckState: {
+            /** Format: uuid */
+            backup_id: string;
+            verification: components["schemas"]["BackupCheckRecord"] | null;
+            rehearsal: components["schemas"]["BackupCheckRecord"] | null;
+            history: components["schemas"]["BackupCheckHistory"];
+            replay: boolean;
+        };
         BibliographicLookupRequest: {
             /** Format: uuid */
             edition_id: string;
@@ -1154,7 +1216,7 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             readonly source_type: components["schemas"]["CatalogingSourceTypeEnum"];
-            readonly status: components["schemas"]["StatusEnum"];
+            readonly status: components["schemas"]["CatalogingSessionStatusEnum"];
             /** Format: uuid */
             readonly edition_id: string | null;
             /** Format: uuid */
@@ -1195,6 +1257,16 @@ export interface components {
         CatalogingSessionList: {
             results: components["schemas"]["CatalogingSession"][];
         };
+        /**
+         * @description * `drafting` - 编目中
+         *     * `reviewing` - 核对中
+         *     * `ready` - 准备发布
+         *     * `publishing` - 发布中
+         *     * `published` - 已发布
+         *     * `abandoned` - 已结束编辑
+         * @enum {string}
+         */
+        CatalogingSessionStatusEnum: "drafting" | "reviewing" | "ready" | "publishing" | "published" | "abandoned";
         /**
          * @description * `upload` - 上传文献
          *     * `manual` - 手工编目
@@ -1773,6 +1845,12 @@ export interface components {
          * @enum {string}
          */
         ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline";
+        /**
+         * @description * `verify` - verify
+         *     * `restore_rehearsal` - restore_rehearsal
+         * @enum {string}
+         */
+        OperationEnum: "verify" | "restore_rehearsal";
         PaginatedWorkCardList: {
             /** @example 123 */
             count: number;
@@ -2517,16 +2595,6 @@ export interface components {
          * @enum {string}
          */
         StateEnum: "draft" | "changes_pending";
-        /**
-         * @description * `drafting` - 编目中
-         *     * `reviewing` - 核对中
-         *     * `ready` - 准备发布
-         *     * `publishing` - 发布中
-         *     * `published` - 已发布
-         *     * `abandoned` - 已结束编辑
-         * @enum {string}
-         */
-        StatusEnum: "drafting" | "reviewing" | "ready" | "publishing" | "published" | "abandoned";
         /**
          * @description * `work` - work
          *     * `topic` - topic
@@ -4523,6 +4591,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReaderAssetAccess"];
+                };
+            };
+        };
+    };
+    distribution_backups_check_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupCheckState"];
+                };
+            };
+        };
+    };
+    distribution_backups_check_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackupCheckInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BackupCheckInputRequest"];
+                "multipart/form-data": components["schemas"]["BackupCheckInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupCheckState"];
+                };
+            };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupCheckState"];
                 };
             };
         };

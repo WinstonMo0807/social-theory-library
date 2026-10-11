@@ -1,4 +1,5 @@
 from django.urls import path
+from .backup_check_views import BackupCheckView
 
 from .views import (
     AdminAssetPreviewView,
@@ -18,4 +19,5 @@ urlpatterns = [
     path("providers/<uuid:pk>/", CloudProviderDetailView.as_view(), name="cloud-provider-detail"),
     path("providers/<uuid:provider_id>/usage/", CloudUsageListView.as_view(), name="cloud-usage-list"),
     path("backups/", BackupJobListView.as_view(), name="backup-job-list"),
+    path("backups/<uuid:pk>/check/", BackupCheckView.as_view(), name="backup-job-check"),
 ]
