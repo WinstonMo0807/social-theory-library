@@ -221,9 +221,11 @@ export function withDirtyField(
   dirty: DirtyFields,
   step: WorkflowStepKey,
   field: string,
+  changed = true,
 ): DirtyFields {
   const next = new Set(dirty[step] ?? []);
-  next.add(field);
+  if (changed) next.add(field);
+  else next.delete(field);
   return { ...dirty, [step]: [...next] };
 }
 

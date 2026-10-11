@@ -138,6 +138,16 @@ test("draft title changes invalidate dependent bibliographic research without hi
   assert.ok(!invalidated.has("primary_disciplines"));
 });
 
+test("restoring a field clears its unsaved state and preserves other edits", () => {
+  const initial = { work: ["title", "subtitle"], bibliography: ["publisher"] };
+  const cleared = withDirtyField(initial, "work", "title", false);
+  assert.deepEqual(cleared, { work: ["subtitle"], bibliography: ["publisher"] });
+  assert.equal(dirtyFieldCount(cleared), 2);
+  assert.deepEqual(initial.work, ["title", "subtitle"]);
+  assert.deepEqual(withDirtyField(cleared, "work", "title", true).work, ["subtitle", "title"]);
+  assert.deepEqual(withDirtyField(cleared, "work", "title", false), cleared);
+});
+
 test("concurrent refresh requires a choice for overlapping edits and preserves unrelated remote updates", () => {
   const base = Object.fromEntries(steps.map(({ key }) => [key, {}]));
   base.work = { title: "原题名", abstract: "原简介", language: "zh-CN" };
@@ -164,7 +174,7 @@ test("concurrent refresh requires a choice for overlapping edits and preserves u
   assert.equal(resolved.drafts.bibliography.publisher, "新出版社");
   assert.deepEqual(resolved.dirty, { ...Object.fromEntries(steps.map(({ key }) => [key, []])), work: ["title", "abstract"] });
   assert.equal(JSON.stringify({ local, remote, dirty, base }), before);
-  // A rejected save must explicitly rebase even edits that were disjoint.
+  // Without a recorded base, each differing input still needs an explicit choice.
   assert.equal(workflowFieldConflicts(local, remote, dirty).length, 3);
   assert.equal(workflowFieldConflicts(remote, remote, dirty, base).length, 0);
 });

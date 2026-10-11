@@ -706,7 +706,7 @@ function WorkflowEditorSession({ mode, itemId, workId, editionId: requestedEditi
     const nextPayload = normalizePayload(raw, mode, itemId, workId);
     const remoteDrafts = draftsFromPayload(nextPayload);
     const local = draftsRef.current;
-    const fields = preserveDirty && local ? workflowFieldConflicts(local, remoteDrafts, dirtyRef.current, forceConflict ? null : baseDraftsRef.current) : [];
+    const fields = preserveDirty && local ? workflowFieldConflicts(local, remoteDrafts, dirtyRef.current, baseDraftsRef.current) : [];
     if (forceConflict || fields.length) {
       setMobileView("edit");
       setSaveConflict({ payload: nextPayload, fields });
@@ -851,7 +851,8 @@ function WorkflowEditorSession({ mode, itemId, workId, editionId: requestedEditi
     const current = draftsRef.current;
     if (!current) return;
     draftsRef.current = { ...current, [step]: { ...current[step], [field]: value } };
-    dirtyRef.current = withDirtyField(dirtyRef.current, step, field);
+    dirtyRef.current = withDirtyField(dirtyRef.current, step, field,
+      JSON.stringify(value) !== JSON.stringify(baseDraftsRef.current?.[step][field]) || Boolean(pendingFills.current[field]));
     setDrafts(draftsRef.current);
     setDirty(dirtyRef.current);
     setResearchSuggestions((current) => ({ ...current, [step]: [] }));
@@ -902,9 +903,9 @@ function WorkflowEditorSession({ mode, itemId, workId, editionId: requestedEditi
       return;
     }
     const step = field in ASSISTED_WORK_FIELDS ? "work" : "bibliography";
+    delete pendingFills.current[field];
     update(step, field, beforeFills.current[field] ?? "");
     if (field === "publisher") update("bibliography", "publisher_authority_id", beforeFills.current.publisher_authority_id ?? null);
-    delete pendingFills.current[field];
     setPendingFillFields(Object.keys(pendingFills.current));
     delete beforeFills.current[field];
     setMessage("已撤销这次填入，恢复填入前的内容。没有记录为采用，也没有改动服务器上的书目。");
