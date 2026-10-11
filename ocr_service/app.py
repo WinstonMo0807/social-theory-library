@@ -30,6 +30,16 @@ MAX_PAGES = int(os.getenv("OCR_MAX_PAGES", "2000"))
 ENABLE_STRUCTURE = os.getenv("OCR_ENABLE_STRUCTURE", "false").lower() in {"1", "true", "yes"}
 REQUIRE_FALLBACK = os.getenv("OCR_REQUIRE_FALLBACK", "false").lower() in {"1", "true", "yes"}
 REQUIRE_STRUCTURE = os.getenv("OCR_REQUIRE_STRUCTURE", "false").lower() in {"1", "true", "yes"}
+# Bound CPU detection and batches on the NAS. Recognition keeps the original
+# rendered crops, and detector boxes are mapped back to original pixel coordinates.
+CPU_INFERENCE_OPTIONS = {
+    "enable_mkldnn": False,
+    "cpu_threads": 2,
+    "text_det_limit_side_len": 960,
+    "text_det_limit_type": "max",
+    "text_recognition_batch_size": 1,
+    "textline_orientation_batch_size": 1,
+}
 MODEL_LOCK = threading.Lock()
 PROCESS_POOL_LOCK = threading.Lock()
 OCR_PROCESS_POOL = None
@@ -189,6 +199,7 @@ def engine(language: str):
     try:
         instance = PaddleOCR(
             lang=language,
+            **CPU_INFERENCE_OPTIONS,
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=True,
@@ -203,13 +214,13 @@ def engine(language: str):
 @lru_cache(maxsize=1)
 def structure_engine():
     options = {
+        **CPU_INFERENCE_OPTIONS,
         "use_doc_orientation_classify": False,
         "use_doc_unwarping": False,
         "use_textline_orientation": True,
         "use_seal_recognition": False,
         "use_table_recognition": False,
         "use_formula_recognition": False,
-        "cpu_threads": 4,
     }
     state = MODEL_STATUS["structure"]
     try:
@@ -217,6 +228,7 @@ def structure_engine():
             instance = PPStructureV3(**options)
         except TypeError:
             instance = PPStructureV3(
+                **CPU_INFERENCE_OPTIONS,
                 use_doc_orientation_classify=False,
                 use_doc_unwarping=False,
                 use_textline_orientation=True,

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-12 统一增量与NAS OCR受控修正
+
+0067已在专用候选和新鲜生产备份的独立恢复数据前向验证，实际生产仍0064。API/Web准确9a719af的功能及合同保持，后续部署使用单独冻结的OCR组件。NAS earlyoom实际终止识别进程；Paddle模型、既有ProcessPool/请求去重/任务和文件版本保护继续复用，只对CPU检测最长边960/max、方向及识别批量1、2线程/OMP1限制峰值。检测框使用既有坐标映射，原始PDF和180dpi的识别裁图保持。整页实际识别12段文字已通过，同一任务控制流程仍在收尾。系统内存保护及其他NAS服务不修改，没有新增技术栈、第二套书库或重复OCR流程。
+
 ## 2026-10-12 最后功能源码收口，统一增量验收待执行
 
 ScholarProfile.curation新增essential_work_notes按入选Work ID保存，公开只返回公开入选文献说明。KnowledgeNode新增core_concepts、keywords、summary_source，复用编辑草稿/公开预览/版本历史和范围检索。Discipline新增nullable display_subdiscipline_ids，仅配置展示顺序，不改变归属；null沿用前五个公开子学科，空列表明确不展示，显式最多五个本学科对象，发布重验归属，公开过滤未发布对象。四列采用0067迁移，尚未应用。
