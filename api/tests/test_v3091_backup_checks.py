@@ -231,6 +231,10 @@ def test_actual_postgres_backup_restore_and_disposal_preserve_source(api_client,
     assert result['result']['row_counts'] == before and result['result']['original_files_restored'] is False
     assert response.data['history']['count'] == 1 and response.data['history']['results'][0]['status'] == 'completed'
     assert Path(job.archive_path).read_bytes() == archive_before
+    from django.db import connections
+    from django.utils.connection import ConnectionDoesNotExist
+    with pytest.raises(ConnectionDoesNotExist):
+        connections['stl_restore_rehearsal_' + UUID(body['request_key']).hex]
     with connection.cursor() as cursor:
         cursor.execute('SELECT current_database()'); assert cursor.fetchone()[0] == source
         cursor.execute('SELECT 1 FROM pg_database WHERE datname = %s', ['stl_restore_rehearsal_' + UUID(body['request_key']).hex])

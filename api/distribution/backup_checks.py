@@ -8,6 +8,7 @@ import tempfile
 
 from django.conf import settings
 from django.db import connection, connections, transaction
+from django.utils.connection import ConnectionDoesNotExist
 from django.utils import timezone
 from rest_framework.exceptions import APIException, ValidationError
 from common.capabilities import Capability, has_capability
@@ -151,9 +152,16 @@ def restore_isolated(job, request_key):
     name = 'stl_restore_rehearsal_' + UUID(request_key).hex
     source = str(connection.settings_dict['NAME'])
     assert name != source and name.startswith('stl_restore_rehearsal_') and len(name) < 63
+    try:
+        connections[name]
+    except ConnectionDoesNotExist:
+        pass
+    else:
+        raise DatabaseBackupError("Disposable rehearsal connection already exists; it will not be reused.")
     configuration = deepcopy(connection.settings_dict)
     configuration.update(NAME=name, CONN_MAX_AGE=0, ATOMIC_REQUESTS=False)
     target = connections['default'].__class__(configuration, alias=name)
+    connections[name] = target
     created = False
     try:
         with connection.cursor() as cursor:
@@ -176,6 +184,7 @@ def restore_isolated(job, request_key):
             'isolated_database_removed': True, 'original_files_restored': False}
     finally:
         target.close()
+        del connections[name]
         if created:
             assert name == 'stl_restore_rehearsal_' + UUID(request_key).hex and name != source
             with connection.cursor() as cursor:
