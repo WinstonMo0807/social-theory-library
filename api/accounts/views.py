@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -6,6 +7,9 @@ from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
+from catalog.editorial_read import AdminPrivateResponseMixin
 
 from common.permissions import CanManageUsers
 from common.capabilities import capability_snapshot
@@ -15,6 +19,8 @@ from .models import User
 from .ownership import is_library_owner, is_library_owner_identity
 from .serializers import (
     AdminSetPasswordSerializer,
+    AdminSetPasswordResultSerializer,
+    AdminUserCreateSerializer,
     AdminUserSerializer,
     AdminUserUpdateSerializer,
     LoginSerializer,
@@ -78,12 +84,14 @@ class LogoutView(APIView):
         return response
 
 
-class CurrentUserView(APIView):
+class CurrentUserView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses=UserSerializer)
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
+    @extend_schema(request=UserSerializer, responses=UserSerializer)
     def patch(self, request):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -125,9 +133,10 @@ class PasswordResetConfirmView(APIView):
         return response
 
 
-class AdminSetPasswordView(APIView):
+class AdminSetPasswordView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanManageUsers]
 
+    @extend_schema(request=AdminSetPasswordSerializer, responses=AdminSetPasswordResultSerializer)
     def post(self, request, user_id):
         target = get_object_or_404(User, pk=user_id)
         if (
@@ -156,11 +165,32 @@ class AdminSetPasswordView(APIView):
         return Response({"detail": "新密码已设置。旧密码从未以可读取形式保存。"})
 
 
-class AdminUserListView(generics.ListAPIView):
+class AdminUserListView(AdminPrivateResponseMixin, generics.ListAPIView):
     permission_classes = [CanManageUsers]
     serializer_class = AdminUserSerializer
     search_fields = ("email", "display_name")
     ordering_fields = ("date_joined", "last_login", "email")
+
+    @extend_schema(request=AdminUserCreateSerializer, responses={201: AdminUserSerializer})
+    def post(self, request):
+        serializer = AdminUserCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+                from ingestion.models import AuditEvent
+
+                AuditEvent.objects.create(
+                    actor=request.user, action="admin_create_user", object_type="User", object_id=str(user.id),
+                    after={"email": user.email, "display_name": user.display_name, "role": user.role, "is_active": user.is_active},
+                    request_ip=request.META.get("REMOTE_ADDR"),
+                )
+                result = AdminUserSerializer(self.get_queryset().get(pk=user.pk), context={"request": request}).data
+        except IntegrityError:
+            if User.objects.filter(email__iexact=serializer.validated_data["email"]).exists():
+                raise ValidationError({"email": "该邮箱已注册，请在用户列表中选择现有账号。"}) from None
+            raise
+        return Response(result, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         return User.objects.annotate(
@@ -170,7 +200,7 @@ class AdminUserListView(generics.ListAPIView):
         ).order_by("-date_joined")
 
 
-class AdminUserDetailView(generics.RetrieveUpdateAPIView):
+class AdminUserDetailView(AdminPrivateResponseMixin, generics.RetrieveUpdateAPIView):
     permission_classes = [CanManageUsers]
     serializer_class = AdminUserUpdateSerializer
     queryset = User.objects.all()

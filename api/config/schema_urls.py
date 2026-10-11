@@ -6,6 +6,7 @@ preserve their real /api/catalog prefix and original permission-protected view.
 from django.urls import include, path
 from catalog.urls import urlpatterns as catalog_patterns
 from distribution.urls import urlpatterns as distribution_patterns
+from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
@@ -40,4 +41,5 @@ VERIFIED_NAMES = {
 urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {"asset-access", "backup-job-check"}])),
+    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"current-user", "admin-user-list", "admin-user-detail", "admin-set-password"}])),
 ]

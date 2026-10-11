@@ -24,7 +24,17 @@ from .ownership import (
 from common.capabilities import capability_snapshot
 
 
+ACCOUNT_ROLES = tuple(choice for choice in User.Role.choices if choice[0] != User.Role.REVIEWER)
+
+
+def validate_display_name(instance, value):
+    if instance and is_library_owner_identity(instance) and value != library_owner_display_name():
+        raise serializers.ValidationError("系统所有者显示名由部署配置确定，不能在账户页修改。")
+    return value
+
+
 class UserSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=ACCOUNT_ROLES, read_only=True)
     reading_preferences = serializers.JSONField(required=False)
     is_library_owner = serializers.SerializerMethodField()
     access_level = serializers.SerializerMethodField()
@@ -58,16 +68,19 @@ class UserSerializer(serializers.ModelSerializer):
                 )
         return attrs
 
-    def get_is_library_owner(self, instance):
+    def validate_display_name(self, value):
+        return validate_display_name(self.instance, value)
+
+    def get_is_library_owner(self, instance) -> bool:
         return is_library_owner_identity(instance)
 
-    def get_access_level(self, instance):
+    def get_access_level(self, instance) -> str:
         return capability_snapshot(instance).access_level
 
-    def get_capabilities(self, instance):
+    def get_capabilities(self, instance) -> list[str]:
         return list(capability_snapshot(instance).capabilities)
 
-    def get_system_owner_label(self, instance):
+    def get_system_owner_label(self, instance) -> str:
         return library_owner_display_name() if is_library_owner_identity(instance) else ""
 
     def validate_reading_preferences(self, value):
@@ -113,6 +126,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=ACCOUNT_ROLES, read_only=True)
     annotation_count = serializers.IntegerField(read_only=True)
     bookmark_count = serializers.IntegerField(read_only=True)
     saved_count = serializers.IntegerField(read_only=True)
@@ -139,14 +153,14 @@ class AdminUserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_is_library_owner(self, instance):
+    def get_is_library_owner(self, instance) -> bool:
         return is_library_owner_identity(instance)
 
-    def get_can_manage_admin_role(self, instance):
+    def get_can_manage_admin_role(self, instance) -> bool:
         request = self.context.get("request")
         return bool(request and is_library_owner(request.user))
 
-    def get_system_owner_label(self, instance):
+    def get_system_owner_label(self, instance) -> str:
         return library_owner_display_name() if is_library_owner_identity(instance) else ""
 
     def to_representation(self, instance):
@@ -159,6 +173,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=ACCOUNT_ROLES, required=False)
     is_library_owner = serializers.SerializerMethodField()
     system_owner_label = serializers.SerializerMethodField()
 
@@ -175,10 +190,10 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "email", "is_library_owner", "system_owner_label")
 
-    def get_is_library_owner(self, instance):
+    def get_is_library_owner(self, instance) -> bool:
         return is_library_owner_identity(instance)
 
-    def get_system_owner_label(self, instance):
+    def get_system_owner_label(self, instance) -> str:
         return library_owner_display_name() if is_library_owner_identity(instance) else ""
 
     def to_representation(self, instance):
@@ -193,6 +208,9 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         if value == User.Role.REVIEWER:
             raise serializers.ValidationError("Reviewer 仅用于旧账号兼容，不能再分配。")
         return value
+
+    def validate_display_name(self, value):
+        return validate_display_name(self.instance, value)
 
     def validate(self, attrs):
         if self.instance is not None and "email" in self.initial_data:
@@ -236,6 +254,35 @@ class RegisterSerializer(serializers.Serializer):
             display_name=validated_data["display_name"],
             password=validated_data["password"],
         )
+
+
+class AdminUserCreateSerializer(RegisterSerializer):
+    role = serializers.ChoiceField(choices=ACCOUNT_ROLES, default=User.Role.READER)
+    is_active = serializers.BooleanField(default=True)
+
+    def validate(self, attrs):
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("新建账号只接受显示名、邮箱、初始密码、角色和状态。")
+        request = self.context.get("request")
+        if attrs["role"] != User.Role.READER and not (request and is_library_owner(request.user)):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("只有系统所有者可以为新账号指定后台角色。")
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        role = validated_data.pop("role")
+        active = validated_data.pop("is_active")
+        user = super().create(validated_data)
+        if role != user.role or active != user.is_active:
+            user.role, user.is_active = role, active
+            user.save(update_fields=["role", "is_active"])
+        return user
+
+
+class AdminSetPasswordResultSerializer(serializers.Serializer):
+    detail = serializers.CharField()
 
 
 class LoginSerializer(serializers.Serializer):

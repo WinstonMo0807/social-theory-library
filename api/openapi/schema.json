@@ -6,6 +6,388 @@
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
+        "/api/auth/me/": {
+            "get": {
+                "operationId": "auth_me_retrieve",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "auth_me_partial_update",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedUserRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedUserRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedUserRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/": {
+            "get": {
+                "operationId": "auth_users_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminUserList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "auth_users_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUser"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/{user_id}/": {
+            "get": {
+                "operationId": "auth_users_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserUpdate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "auth_users_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserUpdate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "auth_users_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminUserUpdateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminUserUpdateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminUserUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserUpdate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/{user_id}/set-password/": {
+            "post": {
+                "operationId": "auth_users_set_password_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminSetPasswordRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminSetPasswordRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminSetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminSetPasswordResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/bibliographic-candidates/": {
             "post": {
                 "operationId": "catalog_admin_bibliographic_candidates_create",
@@ -4204,6 +4586,30 @@
                     "upcoming"
                 ]
             },
+            "AdminSetPasswordRequest": {
+                "type": "object",
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "new_password"
+                ]
+            },
+            "AdminSetPasswordResult": {
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail"
+                ]
+            },
             "AdminUsageAnalytics": {
                 "type": "object",
                 "properties": {
@@ -4274,6 +4680,189 @@
                     "trend",
                     "zero_result_searches"
                 ]
+            },
+            "AdminUser": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "title": "邮箱"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "显示名称"
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "有效",
+                        "description": "指明用户是否被认为是活跃的。以反选代替删除帐号。"
+                    },
+                    "date_joined": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "加入日期"
+                    },
+                    "last_login": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "上次登录"
+                    },
+                    "annotation_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "bookmark_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "saved_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "is_library_owner": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "can_manage_admin_role": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "system_owner_label": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "annotation_count",
+                    "bookmark_count",
+                    "can_manage_admin_role",
+                    "date_joined",
+                    "display_name",
+                    "email",
+                    "id",
+                    "is_active",
+                    "is_library_owner",
+                    "last_login",
+                    "role",
+                    "saved_count",
+                    "system_owner_label"
+                ]
+            },
+            "AdminUserCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RoleEnum"
+                            }
+                        ],
+                        "default": "reader"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "required": [
+                    "display_name",
+                    "email",
+                    "password"
+                ]
+            },
+            "AdminUserUpdate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "title": "邮箱"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "有效",
+                        "description": "指明用户是否被认为是活跃的。以反选代替删除帐号。"
+                    },
+                    "is_library_owner": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "system_owner_label": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "is_library_owner",
+                    "system_owner_label"
+                ]
+            },
+            "AdminUserUpdateRequest": {
+                "type": "object",
+                "properties": {
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "有效",
+                        "description": "指明用户是否被认为是活跃的。以反选代替删除帐号。"
+                    }
+                }
             },
             "ApiError": {
                 "type": "object",
@@ -6763,6 +7352,37 @@
                 "type": "string",
                 "description": "* `verify` - verify\n* `restore_rehearsal` - restore_rehearsal"
             },
+            "PaginatedAdminUserList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminUser"
+                        }
+                    }
+                }
+            },
             "PaginatedWorkCardList": {
                 "type": "object",
                 "required": [
@@ -6791,6 +7411,24 @@
                         "items": {
                             "$ref": "#/components/schemas/WorkCard"
                         }
+                    }
+                }
+            },
+            "PatchedAdminUserUpdateRequest": {
+                "type": "object",
+                "properties": {
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "有效",
+                        "description": "指明用户是否被认为是活跃的。以反选代替删除帐号。"
                     }
                 }
             },
@@ -6849,6 +7487,23 @@
                         "maximum": 1,
                         "minimum": 0
                     }
+                }
+            },
+            "PatchedUserRequest": {
+                "type": "object",
+                "properties": {
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "locale": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "界面语言",
+                        "maxLength": 16
+                    },
+                    "reading_preferences": {}
                 }
             },
             "PersonDuplicateCandidate": {
@@ -8814,6 +9469,15 @@
                 "type": "string",
                 "description": "* `teaching` - teaching\n* `cooperation` - cooperation\n* `influence` - influence\n* `criticism` - criticism\n* `comparative_reading` - comparative_reading\n* `other` - other"
             },
+            "RoleEnum": {
+                "enum": [
+                    "admin",
+                    "editor",
+                    "reader"
+                ],
+                "type": "string",
+                "description": "* `admin` - 管理员\n* `editor` - 编辑\n* `reader` - 读者"
+            },
             "SaveRecommendationSelectionRequest": {
                 "type": "object",
                 "properties": {
@@ -9835,6 +10499,76 @@
                     "page_views",
                     "reader_opens",
                     "searches"
+                ]
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "title": "邮箱"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "locale": {
+                        "type": "string",
+                        "title": "界面语言",
+                        "maxLength": 16
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "邮箱验证时间"
+                    },
+                    "reading_preferences": {},
+                    "is_library_owner": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "access_level": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "system_owner_label": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "access_level",
+                    "capabilities",
+                    "email",
+                    "email_verified_at",
+                    "id",
+                    "is_library_owner",
+                    "role",
+                    "system_owner_label"
                 ]
             },
             "WidthEnum": {

@@ -442,7 +442,7 @@ export function ReaderCenter() {
   async function updateProfile(event: FormEvent) {
     event.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || session.user?.is_library_owner) return;
     const actionKey = "update-profile";
     if (!beginReaderAction(actionKey, "正在保存显示名称……")) return;
     try {
@@ -716,7 +716,8 @@ export function ReaderCenter() {
         {active === "账户设置" ? (
           <DataPanel title="账户与数据">
             <article className="reader-data-row"><Settings size={17} /><div><strong>{user.display_name}</strong><p>{user.email}</p></div></article>
-            <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "update-profile"}>保存名称</ActionButton></form>
+            <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} readOnly={session.user?.is_library_owner} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={session.user?.is_library_owner || (Boolean(pendingAction) && pendingAction !== "update-profile")}>保存名称</ActionButton></form>
+            {session.user?.is_library_owner ? <p>系统所有者显示名由部署配置确定，此处仅供查看。</p> : null}
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>
             <ActionButton className="button secondary" type="button" state={pendingAction === "export-reader-data" ? "pending" : "idle"} pendingLabel="正在导出" disabled={Boolean(pendingAction) && pendingAction !== "export-reader-data"} onClick={() => void exportReaderData()}><Download size={16} /> 导出个人数据</ActionButton>

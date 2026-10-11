@@ -1,5 +1,69 @@
 /** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
+    "/api/auth/me/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["auth_me_partial_update"];
+        trace?: never;
+    };
+    "/api/auth/users/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_list"];
+        put?: never;
+        post: operations["auth_users_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/{user_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_retrieve"];
+        put: operations["auth_users_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["auth_users_partial_update"];
+        trace?: never;
+    };
+    "/api/auth/users/{user_id}/set-password/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_users_set_password_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/bibliographic-candidates/": {
         parameters: {
             query?: never;
@@ -1118,6 +1182,12 @@ export interface components {
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
         };
+        AdminSetPasswordRequest: {
+            new_password: string;
+        };
+        AdminSetPasswordResult: {
+            detail: string;
+        };
         AdminUsageAnalytics: {
             period_days: number;
             anonymous_sessions: number;
@@ -1134,6 +1204,76 @@ export interface components {
             top_works: components["schemas"]["UsageTopWork"][];
             top_queries: components["schemas"]["UsageTopQuery"][];
             privacy: components["schemas"]["UsagePrivacy"];
+        };
+        AdminUser: {
+            readonly id: number;
+            /**
+             * 邮箱
+             * Format: email
+             */
+            readonly email: string;
+            /** 显示名称 */
+            readonly display_name: string;
+            readonly role: components["schemas"]["RoleEnum"];
+            /**
+             * 有效
+             * @description 指明用户是否被认为是活跃的。以反选代替删除帐号。
+             */
+            readonly is_active: boolean;
+            /**
+             * 加入日期
+             * Format: date-time
+             */
+            readonly date_joined: string;
+            /**
+             * 上次登录
+             * Format: date-time
+             */
+            readonly last_login: string | null;
+            readonly annotation_count: number;
+            readonly bookmark_count: number;
+            readonly saved_count: number;
+            readonly is_library_owner: boolean;
+            readonly can_manage_admin_role: boolean;
+            readonly system_owner_label: string;
+        };
+        AdminUserCreateRequest: {
+            /** Format: email */
+            email: string;
+            display_name: string;
+            password: string;
+            /** @default reader */
+            role: components["schemas"]["RoleEnum"];
+            /** @default true */
+            is_active: boolean;
+        };
+        AdminUserUpdate: {
+            readonly id: number;
+            /**
+             * 邮箱
+             * Format: email
+             */
+            readonly email: string;
+            /** 显示名称 */
+            display_name?: string;
+            role?: components["schemas"]["RoleEnum"];
+            /**
+             * 有效
+             * @description 指明用户是否被认为是活跃的。以反选代替删除帐号。
+             */
+            is_active?: boolean;
+            readonly is_library_owner: boolean;
+            readonly system_owner_label: string;
+        };
+        AdminUserUpdateRequest: {
+            /** 显示名称 */
+            display_name?: string;
+            role?: components["schemas"]["RoleEnum"];
+            /**
+             * 有效
+             * @description 指明用户是否被认为是活跃的。以反选代替删除帐号。
+             */
+            is_active?: boolean;
         };
         ApiError: {
             code: string;
@@ -1909,6 +2049,21 @@ export interface components {
          * @enum {string}
          */
         OperationEnum: "verify" | "restore_rehearsal";
+        PaginatedAdminUserList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminUser"][];
+        };
         PaginatedWorkCardList: {
             /** @example 123 */
             count: number;
@@ -1924,6 +2079,16 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["WorkCard"][];
         };
+        PatchedAdminUserUpdateRequest: {
+            /** 显示名称 */
+            display_name?: string;
+            role?: components["schemas"]["RoleEnum"];
+            /**
+             * 有效
+             * @description 指明用户是否被认为是活跃的。以反选代替删除帐号。
+             */
+            is_active?: boolean;
+        };
         PatchedMediaMetadataRequest: {
             /** Format: date-time */
             expected_updated_at?: string;
@@ -1938,6 +2103,13 @@ export interface components {
             focal_x?: number;
             /** Format: double */
             focal_y?: number;
+        };
+        PatchedUserRequest: {
+            /** 显示名称 */
+            display_name?: string;
+            /** 界面语言 */
+            locale?: string;
+            reading_preferences?: unknown;
         };
         PersonDuplicateCandidate: {
             person: components["schemas"]["PersonResolutionSummary"];
@@ -2490,6 +2662,13 @@ export interface components {
          * @enum {string}
          */
         RelationTypeEnum: "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+        /**
+         * @description * `admin` - 管理员
+         *     * `editor` - 编辑
+         *     * `reader` - 读者
+         * @enum {string}
+         */
+        RoleEnum: "admin" | "editor" | "reader";
         SaveRecommendationSelectionRequest: {
             items: components["schemas"]["RecommendationSelectionInputRequest"][];
             edit_version: string;
@@ -2765,6 +2944,29 @@ export interface components {
             searches: number | null;
             reader_opens: number | null;
         };
+        User: {
+            readonly id: number;
+            /**
+             * 邮箱
+             * Format: email
+             */
+            readonly email: string;
+            /** 显示名称 */
+            display_name?: string;
+            readonly role: components["schemas"]["RoleEnum"];
+            /** 界面语言 */
+            locale?: string;
+            /**
+             * 邮箱验证时间
+             * Format: date-time
+             */
+            readonly email_verified_at: string | null;
+            reading_preferences?: unknown;
+            readonly is_library_owner: boolean;
+            readonly access_level: string;
+            readonly capabilities: string[];
+            readonly system_owner_label: string;
+        };
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -2842,6 +3044,203 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    auth_me_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    auth_me_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedUserRequest"];
+                "multipart/form-data": components["schemas"]["PatchedUserRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    auth_users_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminUserList"];
+                };
+            };
+        };
+    };
+    auth_users_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminUserCreateRequest"];
+                "multipart/form-data": components["schemas"]["AdminUserCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+        };
+    };
+    auth_users_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserUpdate"];
+                };
+            };
+        };
+    };
+    auth_users_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminUserUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminUserUpdateRequest"];
+                "multipart/form-data": components["schemas"]["AdminUserUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserUpdate"];
+                };
+            };
+        };
+    };
+    auth_users_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAdminUserUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminUserUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAdminUserUpdateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserUpdate"];
+                };
+            };
+        };
+    };
+    auth_users_set_password_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminSetPasswordRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminSetPasswordRequest"];
+                "multipart/form-data": components["schemas"]["AdminSetPasswordRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSetPasswordResult"];
+                };
+            };
+        };
+    };
     catalog_admin_bibliographic_candidates_create: {
         parameters: {
             query?: never;

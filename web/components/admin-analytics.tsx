@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen, CalendarDays, FileText, Users, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminPublicPreviewFrame } from "@/components/admin/admin-public-preview-frame";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
@@ -21,9 +21,18 @@ function comparisonText(comparison?: Comparison) {
 }
 
 function TrendChart({ rows }: { rows: TrendDay[] }) {
+  const chart = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(680);
+  useEffect(() => {
+    const element = chart.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setWidth(Math.max(160, element.clientWidth)));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const maximum = Math.max(4, ...rows.flatMap(row => [row.page_views ?? 0, row.searches ?? 0]));
   const top = Math.ceil(maximum / 4) * 4;
-  const x = (index: number) => 48 + (rows.length > 1 ? index * 612 / (rows.length - 1) : 306);
+  const x = (index: number) => 48 + (rows.length > 1 ? index * (width - 68) / (rows.length - 1) : (width - 68) / 2);
   const y = (value: number) => 160 - value * 128 / top;
   const line = (key: "page_views" | "searches") => {
     let connected = false;
@@ -35,10 +44,11 @@ function TrendChart({ rows }: { rows: TrendDay[] }) {
       return segment;
     }).join(" ");
   };
-  const ticks = [...new Set(Array.from({ length: Math.min(7, rows.length) }, (_, index) => Math.round(index * (rows.length - 1) / Math.max(1, Math.min(7, rows.length) - 1))))];
-  return <div className="analytics-reference-chart">
-    <svg viewBox="0 0 680 194" role="img" aria-label="按书库时区显示已保留的页面浏览量与搜索次数；缺失历史留空">
-      {[0, 1, 2, 3, 4].map(index => <g key={index}><line className="analytics-chart-grid" x1="48" x2="660" y1={y(top * index / 4)} y2={y(top * index / 4)} /><text x="38" y={y(top * index / 4) + 4} textAnchor="end">{(top * index / 4).toLocaleString("zh-CN")}</text></g>)}
+  const tickCount = Math.min(width < 500 ? 3 : 7, rows.length);
+  const ticks = [...new Set(Array.from({ length: tickCount }, (_, index) => Math.round(index * (rows.length - 1) / Math.max(1, tickCount - 1))))];
+  return <div ref={chart} className="analytics-reference-chart">
+    <svg viewBox={`0 0 ${width} 194`} role="img" aria-label="按书库时区显示已保留的页面浏览量与搜索次数；缺失历史留空">
+      {[0, 1, 2, 3, 4].map(index => <g key={index}><line className="analytics-chart-grid" x1="48" x2={width - 20} y1={y(top * index / 4)} y2={y(top * index / 4)} /><text x="38" y={y(top * index / 4) + 4} textAnchor="end">{(top * index / 4).toLocaleString("zh-CN")}</text></g>)}
       {ticks.map((index, position) => <g key={index}><line className="analytics-chart-grid" x1={x(index)} x2={x(index)} y1="32" y2="160" /><text data-middle={position > 0 && position < ticks.length - 1 && position !== Math.floor(ticks.length / 2)} x={x(index)} y="184" textAnchor={position === 0 ? "start" : position === ticks.length - 1 ? "end" : "middle"}>{Number(rows[index].date.slice(5, 7))}月{Number(rows[index].date.slice(8))}日</text></g>)}
       <path className="analytics-chart-views" d={line("page_views")} />
       <path className="analytics-chart-searches" d={line("searches")} />
