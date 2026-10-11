@@ -1304,32 +1304,26 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   </div>;
 
   return (
-    <AdminPageFrame eyebrow="人物资料" title="学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
+    <AdminPageFrame className="scholar-reference-page" eyebrow="人物资料" title="编辑学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
       <div className="admin-master-detail editor-only">
         {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={{...draft, previewWorks:essentialWorks}} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
-          <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
-          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div></header>
+          <header><div><Link href="/admin/scholars">返回学者列表</Link>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div></header>
           <ResourceState loading={detail.loading} error={detail.error} empty={false} />
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
           <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
-          <CurationFieldAssistant
-            label="学者姓名"
-            scopeId={draft.id || "new"}
-            affectedFields={["主要显示名", "原名"]}
-            authorityType="person"
-            query={draft.originalName.trim() || draft.name}
-            onApply={(_value, suggestion) => {
-              if (!suggestion) return;
-              prefills.fill("", (current) => ({ ...current, name: suggestion.label || current.name,
-                originalName: suggestion.originalName || current.originalName }));
-            }}
-          />
           <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
-          <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
-          <p>肖像在右侧媒体面板中选择。新建学者请先保存资料。</p>
-          <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
+          <div data-editor-section="identity" className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
+          <section data-editor-section="media" className="scholar-portrait-field">{draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => setPortraitRevision((value) => value + 1)} /> : <p>先保存这位学者，再从媒体库选择肖像。</p>}</section>
           <label><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
+          <details data-editor-section="identity" className="scholar-secondary-fields"><summary>其他名称与检索建议</summary>
+            <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
+            <CurationFieldAssistant label="学者姓名" scopeId={draft.id || "new"} affectedFields={["主要显示名", "原名"]} authorityType="person" query={draft.originalName.trim() || draft.name} onApply={(_value, suggestion) => {
+              if (!suggestion) return;
+              prefills.fill("", (current) => ({ ...current, name: suggestion.label || current.name, originalName: suggestion.originalName || current.originalName }));
+            }} />
+            <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。</p>
+          </details>
           <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
           <CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="译名或别名"
@@ -1486,7 +1480,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace("/admin/scholars")}
           /> : null}
-        </form><div className="knowledge-object-editor-rail">{draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => setPortraitRevision((value) => value + 1)} /> : null}<KnowledgeObjectContextPanel
+        </form><div className="knowledge-object-editor-rail"><KnowledgeObjectContextPanel
           objectType="scholar"
           hasUnsavedChanges={hasUnsaved}
           objectId={draft.id}

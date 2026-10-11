@@ -1,4 +1,19 @@
 .theory-reference-editor .fixed-page-editor { grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:20px;align-items:stretch; }
+.admin-content .theory-directory-page>.admin-page-title { min-height:0;margin:0 0 18px;padding:0;border:0;align-items:center;gap:20px; }
+.theory-directory-page>.admin-page-title>div>p { display:none; }
+.theory-directory-page>.admin-page-title h1 { margin:0 0 4px;font:600 34px/1.35 var(--stl-type-serif); }
+.theory-directory-page>.admin-page-title span { font:15px/1.6 var(--stl-type-sans);color:var(--admin-v2-muted); }
+.theory-directory-page .theory-admin-title-actions { flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:10px; }
+.theory-directory-page .theory-directory-toolbar { margin:0;gap:8px;align-items:center;flex-wrap:wrap; }
+.theory-directory-page .theory-directory-toolbar>label { min-width:0;width:260px; }
+.theory-directory-page .theory-directory-toolbar>select { min-width:100px; }
+.theory-directory-page .theory-directory-toolbar>.button { padding-inline:12px; }
+.theory-directory-page .knowledge-directory-reference { grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:12px; }
+.theory-directory-page .theory-directory-reference>section { min-height:calc(100vh - 184px); }
+.theory-directory-page .theory-directory-table th { background:var(--admin-v2-wash); }
+.theory-directory-page .theory-directory-table td,.theory-directory-page .theory-directory-table th { padding:15px 12px; }
+@media(max-width:1200px) { .theory-directory-page>.admin-page-title { flex-wrap:wrap; }.theory-directory-page .theory-admin-title-actions { justify-content:flex-start; }.theory-directory-page .knowledge-directory-reference { grid-template-columns:minmax(0,1fr); }.theory-directory-page .theory-directory-reference>section { min-height:0; } }
+@media(max-width:650px) { .theory-directory-page .theory-directory-toolbar { width:100%; }.theory-directory-page .theory-directory-toolbar>label { width:100%; }.theory-directory-page .theory-directory-table td,.theory-directory-page .theory-directory-table th { padding:12px 6px;font-size:12px; }.theory-directory-page .theory-directory-table .reference-select-title { font-size:17px; }.theory-directory-page .theory-directory-table .button { padding:7px 10px; } }
 .theory-reference-editor .fixed-editor-panel { display:flex;flex-direction:column;border:0;border-right:1px solid var(--admin-v2-line);border-radius:0;background:none;padding:0 22px 0 6px; }
 .theory-reference-editor-heading { display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 20px; }
 .theory-reference-editor-heading h1 { margin:0;font:600 28px/1.4 var(--stl-type-serif); }

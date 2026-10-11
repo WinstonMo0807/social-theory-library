@@ -366,13 +366,13 @@ function TheoryNodesDirectory() {
   const [selectedId, setSelectedId] = useState("");
   const selected = nodes.data?.results.find(node => node.id === selectedId) || nodes.data?.results[0];
   const returnTo = location.href({});
-  return <AdminFrame eyebrow="理论流派" title="理论流派管理" description="选择流派或概念继续编辑" actions={<Link className="button secondary" href="/admin/theories?create=1">新建流派或概念</Link>}>
+  return <AdminFrame className="theory-directory-page" eyebrow="理论流派" title="理论流派管理" description="选择流派或概念继续编辑" actions={<>
     <form className="theory-directory-toolbar" onSubmit={event => { event.preventDefault(); location.update({ page: 1, q: String(new FormData(event.currentTarget).get("q") || "").trim() }); }}>
       <label><Search size={17}/><input key={query} type="search" name="q" defaultValue={query} aria-label="搜索流派名称、原名或关键词" placeholder="搜索流派名称、原名或关键词"/></label>
       <select aria-label="资料类型" value={type} onChange={event => location.update({ page: 1, node_type: event.target.value })}><option value="">全部类型</option>{editableNodeTypeEntries.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
       <button type="submit" className="button secondary">搜索</button>
       <details className="theory-directory-more-filters"><summary>更多筛选{discipline ? " · 已选学科" : ""}</summary><div><ResearchEntityPicker label="学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="filter_discipline" values={onePickerValue(discipline,filterDiscipline.data?.name || "已选择学科")} onChange={values=>location.update({page:1,discipline:values.at(-1)?.id || ""})}/><ErrorNotice message={filterDiscipline.error} retry={filterDiscipline.refresh}/></div></details>
-    </form>
+    </form><Link className="button secondary" href="/admin/theories?create=1">新建流派或概念</Link></>}>
     <div className="knowledge-directory-reference theory-directory-reference"><section className="admin-panel">
       <ErrorNotice message={nodes.error} retry={nodes.refresh}/>
       {nodes.loading ? <p role="status">正在读取流派与概念…</p> : null}

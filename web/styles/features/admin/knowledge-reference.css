@@ -200,3 +200,36 @@
 .admin-shell .reading-path-v280-page .fixed-editor-preview-tools>button { border:1px solid var(--admin-v2-line);border-radius:3px;background:var(--admin-v2-surface); }
 @media(max-width:1200px) { .reading-path-v280-page .fixed-editor-preview { grid-template-rows:min-content min-content min-content minmax(0,1fr); }.admin-shell .reading-path-v280-page .fixed-editor-preview>header { grid-row:1; }.reading-path-preview-location { grid-column:1;grid-row:3; }.reading-path-v280-page .fixed-preview-canvas { grid-row:4; } }
 @media(max-width:650px) { .reading-path-current-step { position:static;display:block;font-size:13px;margin-top:12px; } }
+
+.admin-content .scholar-reference-page>.admin-page-title { display:none; }
+.scholar-reference-heading { display:flex;align-items:center;justify-content:space-between;gap:20px;margin:0 0 14px; }
+.scholar-reference-heading h1 { margin:0;font:600 34px/1.35 var(--stl-type-serif); }
+.scholar-reference-heading>span { font:14px/1.5 var(--stl-type-sans);white-space:nowrap; }
+.scholar-reference-page .knowledge-reference-steps { padding:8px 0 20px;gap:16px; }
+.scholar-reference-page .knowledge-reference-steps>button>span { width:36px;height:36px;font-size:18px; }
+.scholar-reference-page .fixed-page-editor { grid-template-columns:minmax(0,43.6%) minmax(0,1fr);gap:12px; }
+.scholar-reference-page .fixed-editor-fields { padding:16px 20px 20px; }
+.scholar-reference-page .scholar-editor { padding:0;border:0;background:none; }
+.scholar-reference-page .scholar-editor>fieldset>div>header { margin:0 0 16px; }
+.scholar-reference-page .scholar-editor>fieldset>div>header>div { justify-content:space-between;gap:12px; }
+.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label { display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 12px;align-items:start;margin:0 0 10px; }
+.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label>span { padding-top:10px;font:500 15px/1.4 var(--stl-type-sans);color:var(--admin-v2-ink); }
+.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label>small { grid-column:2;font-size:12px;line-height:1.6; }
+.scholar-reference-page .fixed-editor-fields .inline-fields { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px; }
+.scholar-reference-page .fixed-editor-fields .inline-fields label { margin:0; }
+.scholar-reference-page .scholar-portrait-field { margin:14px 0; }
+.scholar-reference-page .scholar-portrait-field>[aria-label="学者肖像"] { display:grid;grid-template-columns:92px minmax(0,1fr) minmax(110px,1fr);gap:8px 12px;border:0;padding:0;background:none; }
+.scholar-reference-page .scholar-portrait-field h3 { grid-column:1;grid-row:1;font:500 15px/1.4 var(--stl-type-sans); }
+.scholar-reference-page .scholar-portrait-field picture { grid-column:2;grid-row:1/5; }
+.scholar-reference-page .scholar-portrait-field img { width:150px;max-width:100%;height:180px;object-fit:contain;margin:0; }
+.scholar-reference-page .scholar-portrait-field .button { grid-column:3;margin:0;font-size:12px;min-height:34px; }
+.scholar-reference-page .scholar-portrait-field p { grid-column:2/-1;font-size:12px;line-height:1.6;color:var(--admin-v2-muted); }
+.scholar-reference-page .scholar-portrait-field picture~p { grid-column:3; }
+.scholar-reference-page .scholar-portrait-field dialog { grid-column:1/-1; }
+.scholar-reference-page .scholar-secondary-fields { margin:20px 0;padding:14px 16px;border:1px solid var(--admin-v2-line);border-radius:3px; }
+.scholar-secondary-fields>summary { cursor:pointer;font-size:14px; }
+.scholar-secondary-fields>p { font-size:12px;line-height:1.6;color:var(--admin-v2-muted); }
+.scholar-reference-page .fixed-editor-preview { position:static; }
+.scholar-reference-page .knowledge-reference-step-actions { margin-top:0;padding:16px 20px;border-top:1px solid var(--admin-v2-line); }
+@media(max-width:1000px) { .scholar-reference-page .fixed-page-editor { grid-template-columns:minmax(0,1fr); }.scholar-reference-page .knowledge-reference-steps { flex-wrap:wrap;gap:12px; }.scholar-reference-page .knowledge-reference-steps>button { flex:1 1 40%; }.scholar-reference-page .knowledge-reference-steps>button>strong { white-space:normal; } }
+@media(max-width:650px) { .scholar-reference-heading { flex-wrap:wrap;gap:8px; }.scholar-reference-heading h1 { font-size:28px; }.scholar-reference-page .fixed-editor-fields { padding:16px; }.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label { grid-template-columns:minmax(0,1fr); }.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label>span { padding-top:0; }.scholar-reference-page .fixed-editor-fields [data-field-section=identity]>label>small { grid-column:1; }.scholar-reference-page .scholar-portrait-field>[aria-label="学者肖像"] { grid-template-columns:minmax(0,1fr) minmax(110px,1fr); }.scholar-reference-page .scholar-portrait-field h3 { grid-column:1/-1;grid-row:auto; }.scholar-reference-page .scholar-portrait-field picture { grid-column:1;grid-row:2/6; }.scholar-reference-page .scholar-portrait-field .button,.scholar-reference-page .scholar-portrait-field picture~p { grid-column:2; }.scholar-reference-page .scholar-portrait-field p { grid-column:1/-1; } }
