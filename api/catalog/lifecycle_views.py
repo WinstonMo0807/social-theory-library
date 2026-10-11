@@ -307,7 +307,7 @@ class AdminEntityLifecycleView(APIView):
                     status=400,
                 )
             from .services.recycle import recycle_object
-            entry = recycle_object(obj, actor=request.user, kind=kind, name=snapshot["name"])
+            entry = recycle_object(obj, actor=request.user, kind=kind, name=snapshot["name"], reason=request.data.get("reason", ""))
             return Response({"deleted": True, "recoverable": True, "recycle_id": str(entry.pk)})
 
         return Response({"action": ["请选择 archive、restore 或 delete。"]}, status=400)

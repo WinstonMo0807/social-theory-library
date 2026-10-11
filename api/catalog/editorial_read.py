@@ -86,7 +86,7 @@ class AdminEditorialDraftReadMixin(AdminPrivateResponseMixin):
             target = self.get_object()
             for kind, config in LIFECYCLE_MODELS.items():
                 if isinstance(target, config.model):
-                    recycle_object(target, actor=request.user, kind=kind, name=_name(target, config.name_field))
+                    recycle_object(target, actor=request.user, kind=kind, name=_name(target, config.name_field), reason=request.data.get("reason", ""))
                     return Response(status=204)
             return super(AdminEditorialDraftReadMixin, self).delete(request, *args, **kwargs)
         return self._guarded_edit(command, request, *args, **kwargs)

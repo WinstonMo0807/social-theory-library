@@ -544,6 +544,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recycle/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recycle_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recycle_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recycle/{entry_id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recycle_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-relations/": {
         parameters: {
             query?: never;
@@ -1875,6 +1907,14 @@ export interface components {
             edition_id: string;
             confirm_version: boolean;
         };
+        /**
+         * @description * `work` - work
+         *     * `knowledge` - knowledge
+         *     * `issue` - issue
+         *     * `record` - record
+         * @enum {string}
+         */
+        PreviewKindEnum: "work" | "knowledge" | "issue" | "record";
         PublicClassificationLink: {
             /** Format: uuid */
             id: string | null;
@@ -2166,6 +2206,49 @@ export interface components {
             display_from?: string | null;
             items?: components["schemas"]["IssueItemRequest"][];
             edit_version?: string;
+        };
+        RecycleCollection: {
+            count: number;
+            total_count: number;
+            kind_counts: {
+                [key: string]: number;
+            };
+            results: components["schemas"]["RecycleEntry"][];
+        };
+        RecycleEntry: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            name: string;
+            /** Format: date-time */
+            deleted_at: string;
+            reason: string;
+        };
+        RecyclePreview: {
+            entry: components["schemas"]["RecycleEntry"];
+            can_restore: boolean;
+            blocked_reason: string;
+            preview_kind: components["schemas"]["PreviewKindEnum"];
+            preview: unknown;
+            detail: string;
+        };
+        RecycleRestoreRequestRequest: {
+            /** Format: uuid */
+            id?: string;
+            ids?: string[];
+        };
+        RecycleRestoreResult: {
+            restored: boolean;
+            kind?: string;
+            /** Format: uuid */
+            id?: string;
+            count?: number;
+            results?: {
+                [key: string]: unknown;
+            }[];
+            detail: string;
         };
         /**
          * @description * `teaching` - teaching
@@ -3517,6 +3600,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recycle_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 逗号分隔的回收内容类型 */
+                kind?: string;
+                /** @description 50条分页的起始偏移 */
+                offset?: number;
+                /** @description 按已删除内容名称筛选 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecycleCollection"];
+                };
+            };
+        };
+    };
+    catalog_admin_recycle_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RecycleRestoreRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecycleRestoreRequestRequest"];
+                "multipart/form-data": components["schemas"]["RecycleRestoreRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecycleRestoreResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_recycle_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecyclePreview"];
                 };
             };
         };

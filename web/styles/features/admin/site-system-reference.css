@@ -117,7 +117,10 @@
 .recycle-reference .admin-action-row { gap:10px; margin-bottom:12px; }
 .recycle-reference .admin-action-row input { min-width:0; flex:1; }
 .recycle-reference table { min-width:570px; }
-.admin-shell .recycle-reference input[type=radio] { width:18px; height:18px; min-height:0; margin:0; appearance:auto; }
+.admin-shell .recycle-reference input:is([type=radio],[type=checkbox]) { width:18px; height:18px; min-height:0; margin:0; appearance:auto; accent-color:#25241f; }
+.recycle-selection-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:0 0 12px; }
+.recycle-reference td:nth-child(5) { overflow-wrap:anywhere; max-width:180px; }
+.recycle-page-preview > .admin-page-preview-banner { margin:0; padding:14px 24px; background:var(--admin-v2-wash); font:14px/1.6 var(--stl-type-sans); }
 .recycle-reference .reference-select-title { font:17px/1.5 var(--stl-type-serif); text-align:left; padding:0; border:0; background:none; }
 .recycle-reference td:nth-child(2) { min-width:190px; }
 .recycle-reference td:nth-child(3) { white-space:nowrap; }

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-11 3.0.9.1回收站恢复预览与批量候选（未上线）
+
+回收站保留原RecycleEntry与before JSON、原文件及引用。删除原因写入原JSON而不迁移schema；分类数从真实活动回收记录聚合。恢复预览只在EDIT_METADATA及准确未恢复Entry边界内读取all_objects，复用既有公共serializer与页面组件，不放宽普通或公开API过滤、不执行恢复。批量最多50条唯一ID，同一事务/稳定Entry锁及父项优先，逐项调用原restore_object，失败整批回滚；恢复不重新公开或启动任务。生产尚未使用该候选。
+
 ## 2026-10-03 3.0.9 管理端增量
 
 管理端继续使用同一 Django、PostgreSQL、Redis、Celery、Meilisearch、PaddleOCR 和公开 API。工作台状态、上传批次回收、字段定位、候选书目、作者/译者关联、封面保存、人物重复处理、发布阻断与学者卡片不建立第二套状态或静态数据源。新增 `Work.reader_default_edition` 与 `Work.download_default_edition` 两个可空受保护外键；管理员通过 `/api/catalog/admin/works/<work_id>/edition-defaults/` 在明确确认后分别设置在线阅读和下载入口。公开 WorkCard 的 `edition` 仍是列表主版本，新增只读 `reader_edition` 和 `download_edition`；撤回、文件验证失败或无活动公开修订时均回退到有效主版本。该增量需要 catalog 0064，发布前必须完成备份恢复演练、迁移兼容、公开入口和回退检查。

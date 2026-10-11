@@ -2132,6 +2132,144 @@
                 }
             }
         },
+        "/api/catalog/admin/recycle/": {
+            "get": {
+                "operationId": "catalog_admin_recycle_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "逗号分隔的回收内容类型"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "50条分页的起始偏移"
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "按已删除内容名称筛选"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecycleCollection"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recycle_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecycleRestoreRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecycleRestoreRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecycleRestoreRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecycleRestoreResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recycle/{entry_id}/preview/": {
+            "get": {
+                "operationId": "catalog_admin_recycle_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "entry_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecyclePreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholar-relations/": {
             "get": {
                 "operationId": "catalog_admin_scholar_relations_list",
@@ -6599,6 +6737,16 @@
                     "work_id"
                 ]
             },
+            "PreviewKindEnum": {
+                "enum": [
+                    "work",
+                    "knowledge",
+                    "issue",
+                    "record"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `knowledge` - knowledge\n* `issue` - issue\n* `record` - record"
+            },
             "PublicClassificationLink": {
                 "type": "object",
                 "properties": {
@@ -7669,6 +7817,149 @@
                 },
                 "required": [
                     "title"
+                ]
+            },
+            "RecycleCollection": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_count": {
+                        "type": "integer"
+                    },
+                    "kind_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecycleEntry"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "kind_counts",
+                    "results",
+                    "total_count"
+                ]
+            },
+            "RecycleEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 300
+                    }
+                },
+                "required": [
+                    "deleted_at",
+                    "id",
+                    "kind",
+                    "name",
+                    "object_id",
+                    "reason"
+                ]
+            },
+            "RecyclePreview": {
+                "type": "object",
+                "properties": {
+                    "entry": {
+                        "$ref": "#/components/schemas/RecycleEntry"
+                    },
+                    "can_restore": {
+                        "type": "boolean"
+                    },
+                    "blocked_reason": {
+                        "type": "string"
+                    },
+                    "preview_kind": {
+                        "$ref": "#/components/schemas/PreviewKindEnum"
+                    },
+                    "preview": {},
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blocked_reason",
+                    "can_restore",
+                    "detail",
+                    "entry",
+                    "preview",
+                    "preview_kind"
+                ]
+            },
+            "RecycleRestoreRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50,
+                        "minItems": 1
+                    }
+                }
+            },
+            "RecycleRestoreResult": {
+                "type": "object",
+                "properties": {
+                    "restored": {
+                        "type": "boolean"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "restored"
                 ]
             },
             "RelationTypeEnum": {

@@ -16,8 +16,11 @@ def require_editor(actor):
 
 
 @transaction.atomic
-def recycle_object(obj, *, actor, kind, name):
+def recycle_object(obj, *, actor, kind, name, reason=""):
     require_editor(actor)
+    if not isinstance(reason, str) or len(reason.strip()) > 300:
+        raise ValidationError({"reason": "删除原因须为300字以内的文字。"})
+    reason = reason.strip()
     label = obj._meta.label_lower
     if label not in RECYCLE_MODELS:
         raise ValidationError("该对象不支持移入回收站。")
@@ -99,6 +102,7 @@ def recycle_object(obj, *, actor, kind, name):
         ids = [edition.pk for edition in editions]
         ProcessingJob.objects.filter(edition_id__in=ids, status__in=["pending", "running", "paused"]).update(
             status="canceled", task_id="", finished_at=timezone.now(), updated_at=timezone.now(), error_code="record_recycled")
+    before["delete_reason"] = reason
     defaults = {"kind": kind, "name": name[:600], "before": before, "deleted_by": actor, "restored_at": None}
     entry, _ = RecycleEntry.objects.update_or_create(model_label=label, object_id=obj.pk, defaults=defaults)
     AuditEvent.objects.create(actor=actor, action="record.recycle", object_type=label, object_id=str(obj.pk), before=before,
@@ -120,9 +124,9 @@ def restore_object(entry_id, *, actor):
     obj = model.all_objects.select_for_update().get(pk=entry.object_id)
     if entry.restored_at:
         return obj
-    parent = getattr(obj, "work_id", None) if isinstance(obj, Edition) else getattr(obj, "person_id", None) if isinstance(obj, ScholarProfile) else None
-    if parent and RecycleEntry.objects.filter(object_id=parent, restored_at__isnull=True).exists():
-        raise ValidationError("请先恢复所属作品或人物，再恢复本条记录。")
+    blocker = restore_blocker(obj)
+    if blocker:
+        raise ValidationError(blocker)
     entry.restored_at = timezone.now()
     entry.save(update_fields=["restored_at", "updated_at"])
     fields = []
@@ -142,3 +146,25 @@ def restore_object(entry_id, *, actor):
         obj.save(update_fields=[*fields, "updated_at"])
     AuditEvent.objects.create(actor=actor, action="record.restore", object_type=entry.model_label, object_id=str(obj.pk), after={"public_restored": False})
     return obj
+
+
+def restore_blocker(obj):
+    parent = ("catalog.work", obj.work_id) if isinstance(obj, Edition) else ("catalog.person", obj.person_id) if isinstance(obj, ScholarProfile) else None
+    if parent and RecycleEntry.objects.filter(model_label=parent[0], object_id=parent[1], restored_at__isnull=True).exists():
+        return "请先恢复所属作品或人物，再恢复本条记录。"
+    return ""
+
+
+@transaction.atomic
+def restore_objects(entry_ids, *, actor):
+    """One bounded transaction; reuse the original restore guards and audit."""
+    require_editor(actor)
+    entries = list(RecycleEntry.objects.select_for_update().filter(pk__in=entry_ids).order_by("pk"))
+    if len(entries) != len(entry_ids):
+        raise ValidationError("有记录已不存在，请刷新回收站后重新选择。")
+    # Lock every selected entry in a stable order, then restore parents before
+    # their Edition/Profile children. A blocked item rolls back the whole batch.
+    ordered = sorted(entries, key=lambda row: (row.model_label not in {"catalog.work", "catalog.person"}, str(row.pk)))
+    for entry in ordered:
+        restore_object(entry.pk, actor=actor)
+    return entries

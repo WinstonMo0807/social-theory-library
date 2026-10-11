@@ -13,13 +13,13 @@ export function RecycleControl({ kind, id, name, onDeleted, disabled = false }: 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [deleted, setDeleted] = useState(false);
-  async function remove() {
+  async function remove(reason: string) {
     if (busy) return;
     setBusy(true);
     setMessage("");
     try {
       await apiRequest(`/catalog/admin/lifecycle/${kind}/${id}/`, {
-        method: "POST", body: JSON.stringify({ action: "delete", confirmed: true }),
+        method: "POST", body: JSON.stringify({ action: "delete", confirmed: true, reason }),
       }, getServerSessionCredential());
       setDeleted(true); setOpen(false); onDeleted?.();
     } catch (error) { setMessage(error instanceof Error ? error.message : "删除失败，请重试。"); }
@@ -30,6 +30,6 @@ export function RecycleControl({ kind, id, name, onDeleted, disabled = false }: 
     <ConfirmDialog open={open} title={`删除“${name}”`} description={kind === "upload"
       ? "从上传、待办和处理列表移除，可在回收站恢复。保留原文件、已建立的馆藏与历史记录。未保存的输入不会提交。"
       : "移入回收站并停止公开展示，可恢复。原文件、历史与关联记录保留；恢复后需要重新检查并发布。未保存的输入不会提交。"}
-      details={message ? [message] : []} confirmLabel="移入回收站" tone="danger" pending={busy} onCancel={() => setOpen(false)} onConfirm={() => void remove()} />
+      details={message ? [message] : []} reasonLabel="删除原因（选填，最多300字）" reasonMaxLength={300} confirmLabel="移入回收站" tone="danger" pending={busy} onCancel={() => setOpen(false)} onConfirm={(reason) => void remove(reason)} />
   </span>;
 }

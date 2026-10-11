@@ -33,7 +33,7 @@ type PreviewPayload = {
 
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 
-function adaptPreviewWork(value: ApiWork): Work {
+export function adaptPreviewWork(value: ApiWork): Work {
   const authors = value.edition?.contributors.filter((row) => row.role === "author") ?? [];
   return {
     id: value.edition?.readable_asset?.id ?? value.id,

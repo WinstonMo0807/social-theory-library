@@ -17,6 +17,7 @@ type ConfirmDialogProps = {
   reasonLabel?: string;
   reasonDefault?: string;
   reasonRequired?: boolean;
+  reasonMaxLength?: number;
   onCancel: () => void;
   onConfirm: (reason: string) => void | Promise<void>;
 };
@@ -33,6 +34,7 @@ export function ConfirmDialog({
   reasonLabel,
   reasonDefault = "",
   reasonRequired = false,
+  reasonMaxLength,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -61,7 +63,7 @@ export function ConfirmDialog({
         {reasonLabel ? (
           <label>
             <span>{reasonLabel}</span>
-            <Textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} />
+            <Textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={reasonMaxLength} />
           </label>
         ) : null}
         <footer>
