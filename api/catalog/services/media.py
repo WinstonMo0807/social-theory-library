@@ -86,8 +86,22 @@ def ingest_image(uploaded, *, actor, metadata=None):
         row.file.storage.delete(row.file.name)
         raise
     AuditEvent.objects.create(actor=actor, action="media.upload", object_type="MediaAsset", object_id=str(row.pk),
-                              after={"checksum": checksum, "width": width, "height": height})
+                              after={"checksum": checksum, "width": width, "height": height,
+                                     "original_filename": Path(str(uploaded.name).replace("\\", "/")).name})
     return row, True
+
+
+def original_media_filenames(media_ids):
+    """Private upload provenance; old unrecorded names stay unknown."""
+    identifiers = {str(identifier) for identifier in media_ids}
+    if not identifiers:
+        return {}
+    result = {}
+    for row in AuditEvent.objects.filter(action="media.upload", object_type="MediaAsset", object_id__in=identifiers).order_by("created_at", "pk").values("object_id", "after"):
+        if row["object_id"] not in result:
+            value = (row["after"] or {}).get("original_filename", "")
+            result[row["object_id"]] = value if isinstance(value, str) else ""
+    return result
 
 
 @transaction.atomic

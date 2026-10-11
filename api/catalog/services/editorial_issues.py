@@ -160,6 +160,8 @@ def save_issue(identifier, data, actor):
     rendition = _rendition(values.get("cover_rendition_id"))
     payload["cover_rendition_id"] = str(rendition.pk) if rendition else None
     payload["cover_url"] = "" if rendition else safe_image_url(values.get("cover_url"))
+    payload["cover_caption"] = _text(values.get("cover_caption", ""), 500)
+    payload["cover_alt_text"] = str((rendition.metadata_snapshot or {}).get("alt_text") or "") if rendition else ""
     display = values.get("display_from")
     parsed = parse_datetime(str(display)) if display else None
     if display and parsed is None:
@@ -308,6 +310,7 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     revision = public_issue_revision(issue) if public else revision
     payload = deepcopy(revision.materialized_preview) if revision else issue_draft_payload(issue)
     payload.setdefault("category", "")
+    payload.setdefault("cover_caption", "")
     published_at = revision.published_at if revision else issue.published_at
     payload.update(id=str(issue.pk), slug=issue.slug, published_at=published_at.isoformat() if published_at else None)
     now = timezone.now()
@@ -319,6 +322,16 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     if payload.get("cover_rendition_id"):
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"
+        rendition = _rendition(rid)
+        payload.setdefault("cover_alt_text", str((rendition.metadata_snapshot or {}).get("alt_text") or ""))
+        if not public:
+            from catalog.services.media import original_media_filenames
+            payload["cover_original_filename"] = original_media_filenames([rendition.media_id]).get(str(rendition.media_id), "")
+    payload.setdefault("cover_alt_text", "")
+    if public:
+        payload.pop("cover_original_filename", None)
+    else:
+        payload.setdefault("cover_original_filename", "")
     records = {str(row.pk): row for row in issue.items.select_related("cataloging_session")}
     if public:
         # Immutable issue text retains history. Recovery makes an item editable,

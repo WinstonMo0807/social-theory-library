@@ -11,7 +11,8 @@ export type IssueItem = {
 };
 export type RecommendationIssue = {
   id: string; slug: string; title: string; issue_label: string; category?: string; introduction: string;
-  body_blocks: IssueBlock[]; public_byline: string; cover_url: string; display_from: string | null;
+  body_blocks: IssueBlock[]; public_byline: string; cover_url: string; cover_caption?: string; cover_alt_text?: string;
+  cover_original_filename?: string; display_from: string | null;
   published_at: string | null; items: IssueItem[]; edit_version: string; draft_revision_id?: string | null;
   has_unpublished_changes?: boolean; status?: string; public_url?: string;
 };

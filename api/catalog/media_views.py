@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema, extend_schema_field
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import Edition, MediaAsset, MediaRendition
-from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_image, update_media_metadata, media_reference_inventory
+from catalog.services.media import MEDIA_SOURCE_TYPES, build_rendition, ingest_image, select_work_image, update_media_metadata, media_reference_inventory, original_media_filenames
 from common.permissions import CanAccessBackOffice, CanEditMetadata
 
 
@@ -25,13 +25,28 @@ class MediaRenditionSerializer(serializers.ModelSerializer):
         return f"/api/catalog/admin/media/renditions/{obj.pk}/file/"
 
 
+class MediaAssetListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        rows = list(data.all() if hasattr(data, "all") else data)
+        self.child._original_names = original_media_filenames(row.pk for row in rows)
+        return super().to_representation(rows)
+
+
 class MediaAssetSerializer(serializers.ModelSerializer):
     renditions = MediaRenditionSerializer(many=True, read_only=True)
+    original_filename = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_original_filename(self, obj):
+        if not hasattr(self, "_original_names"):
+            self._original_names = original_media_filenames([obj.pk])
+        return self._original_names.get(str(obj.pk), "")
 
     class Meta:
         model = MediaAsset
+        list_serializer_class = MediaAssetListSerializer
         fields = ("id", "media_type", "source_type", "source_url", "source_label", "rights", "license", "credit", "alt_text",
-                  "width", "height", "checksum", "byte_size", "focal_x", "focal_y", "created_at", "updated_at", "renditions")
+                  "width", "height", "checksum", "byte_size", "focal_x", "focal_y", "created_at", "updated_at", "renditions", "original_filename")
 
 
 class MediaMetadataSerializer(serializers.Serializer):

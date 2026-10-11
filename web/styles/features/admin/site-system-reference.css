@@ -123,6 +123,14 @@
 .recycle-page-preview > .admin-page-preview-banner { margin:0; padding:14px 24px; background:var(--admin-v2-wash); font:14px/1.6 var(--stl-type-sans); }
 .recycle-reference .reference-select-title { font:17px/1.5 var(--stl-type-serif); text-align:left; padding:0; border:0; background:none; }
 .recycle-reference td:nth-child(2) { min-width:190px; }
+.recycle-reference .admin-table-scroll { max-height:580px; overflow:auto; }
+.recycle-record-identity { display:grid; grid-template-columns:48px minmax(0,1fr); gap:12px; align-items:start; }
+.recycle-record-thumbnail { display:flex; align-items:center; justify-content:center; width:48px; height:66px; background:var(--admin-v2-wash); }
+.recycle-record-thumbnail img { width:48px; height:66px; object-fit:cover; }
+.recycle-record-thumbnail small { font:11px/16px var(--stl-type-sans); padding:3px; color:var(--stl-ink-muted); }
+.recycle-record-identity .reference-select-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.recycle-record-subtitle { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin-top:3px; font:12px/18px var(--stl-type-sans); color:var(--stl-ink-muted); }
+.recycle-record-warning { display:block; margin-top:4px; font:12px/18px var(--stl-type-sans); color:var(--stl-ink-muted); }
 .recycle-reference td:nth-child(3) { white-space:nowrap; }
 .admin-shell .recycle-reference td:last-child .button { min-width:68px; min-height:36px; padding:6px 10px; white-space:nowrap; }
 .admin-shell .recycle-reference .admin-v2-public-preview > header { min-height:50px; padding:0 4px 12px; }

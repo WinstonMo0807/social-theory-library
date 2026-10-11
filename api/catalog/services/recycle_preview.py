@@ -36,10 +36,16 @@ def recycle_preview_payload(entry, *, actor, request):
         if not editorial_draft_applies_to_edition(revision, edition):
             revision = None
         work = Work.all_objects.get(pk=edition.work_id)
-        result.update(preview_kind="work", preview={"work": AdminWorkPagePreviewSerializer(work, context={
+        value = AdminWorkPagePreviewSerializer(work, context={
             "request": request, "preview_edition": edition,
             "editorial_preview": revision.materialized_preview if revision else None,
-        }).data})
+        }).data
+        # A retained legacy cover must not re-enter the ordinary Work.objects
+        # endpoint, which correctly excludes recycled works. Keep its bytes
+        # behind this active Entry and the existing editor capability instead.
+        if not value.get("cover_media") and value.get("cover"):
+            value["cover"] = f"/api/catalog/admin/recycle/{entry.pk}/image/"
+        result.update(preview_kind="work", preview={"work": value})
         return result
     if entry.model_label == "catalog.recommendationissue":
         from catalog.services.editorial_issues import issue_payload

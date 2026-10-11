@@ -7,7 +7,7 @@ import { useActionGuard } from "@/lib/use-action-guard";
 type Media = components["schemas"]["MediaAsset"];
 type Page = { results: Media[]; pages: number; page: number; count: number };
 
-export function InlineMediaPicker({ onSelect }: { onSelect: (id: string, url: string, altText?: string) => void }) {
+export function InlineMediaPicker({ onSelect }: { onSelect: (id: string, url: string, altText?: string, originalFilename?: string) => void }) {
   const { startAction, finishAction } = useActionGuard();
   const [data, setData] = useState<Page | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   async function load(page = 1) {
@@ -28,7 +28,7 @@ export function InlineMediaPicker({ onSelect }: { onSelect: (id: string, url: st
   }
   async function choose(media: Media) {
     const rendition = await apiRequest<components["schemas"]["MediaRendition"]>(`/catalog/admin/media/${media.id}/renditions/`, { method: "POST", body: JSON.stringify({ kind: "hero", width: 1280 }) }, getServerSessionCredential());
-    onSelect(rendition.id, normalizePublicResourceUrl(rendition.url), media.alt_text); setMessage("已填入当前表单；保存草稿后保留，发布后才公开。");
+    onSelect(rendition.id, normalizePublicResourceUrl(rendition.url), media.alt_text, media.original_filename); setMessage("已填入当前表单；保存草稿后保留，发布后才公开。");
   }
   async function select(media: Media) {
     if (!startAction("media")) return;

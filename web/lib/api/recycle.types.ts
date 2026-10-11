@@ -2,7 +2,7 @@ import type { KnowledgePreviewPayload } from "@/components/admin/preview/knowled
 import type { ApiWork } from "./public-catalog";
 import type { RecommendationIssue } from "./recommendation-issues.types";
 
-export type RecycleEntry = { id: string; kind: string; object_id: string; name: string; deleted_at: string; reason: string };
+export type RecycleEntry = { id: string; kind: string; object_id: string; name: string; deleted_at: string; reason: string; thumbnail_url?: string; subtitle?: string; display_warning?: string };
 export type RecycleCollection = { count: number; total_count: number; kind_counts: Record<string, number>; results: RecycleEntry[] };
 export type RecyclePreview = { entry: RecycleEntry; can_restore: boolean; blocked_reason: string; detail: string } & (
   { preview_kind: "work"; preview: { work: ApiWork } }

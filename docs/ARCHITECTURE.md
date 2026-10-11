@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-11 3.0.9.1图片说明与回收缩略图候选职责（未上线）
+
+荐读cover_caption归原不可变修订JSON，alt归准确rendition元数据快照。上传原名归原media.upload审计，不新增实体或schema；只在管理payload返回，不伪造未记录历史值。回收图片只经准确活动Entry、原编辑能力/private no-store读取保留文件，遵从已保存图片草稿及明确移除，恢复后不能沿用此URL。普通/public对象过滤和原文件保持既有边界，无生产数据库或存储写入。
+
 恢复效果预览沿用Nginx/Caddy同源页面名单，仅/admin/preview/recycle/<回收Entry标识>嵌入可见；两个网关默认仍DENY/none，实际内容GET仍需EDIT_METADATA且仅未恢复Entry/private no-store。
 
 ## 2026-10-11 3.0.9.1回收站恢复预览与批量候选（未上线）

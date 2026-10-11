@@ -13,6 +13,11 @@ const labels: Record<string, string> = { upload: "上传", work: "作品", editi
 const destinations: Record<string, string> = { upload: "/admin/review", work: "/admin/library", edition: "/admin/library", scholar: "/admin/scholars", person: "/admin/scholars/people", topic: "/admin/topics", "knowledge-node": "/admin/theories", "theory-school": "/admin/theories", "recommendation-issue": "/admin/recommendations", "about-block": "/admin/about" };
 const tabs = [["", "全部"], ["work,edition,upload", "馆藏"], ["scholar,person", "学者"], ["knowledge-node,theory-school", "理论流派"], ["topic", "主题"], ["recommendation-issue", "荐读文章"]];
 
+function RecycleThumbnail({ entry }: { entry: RecycleEntry }) {
+  const [failed, setFailed] = useState(false);
+  return <span className="recycle-record-thumbnail">{entry.thumbnail_url && !failed ? <img src={entry.thumbnail_url} alt="" loading="lazy" onError={() => setFailed(true)}/> : failed ? <small role="alert">图片无法读取</small> : null}</span>;
+}
+
 export function RecycleBin() {
   const [kind, setKind] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -64,7 +69,7 @@ export function RecycleBin() {
           <div className="admin-table-scroll"><table><thead><tr><th><input type="checkbox" aria-label="选择本页全部内容" disabled={busy || !entries.length} checked={Boolean(entries.length) && selectedEntries.length === entries.length} onChange={event => setSelected(event.target.checked ? entries.map(entry => entry.id) : [])}/></th><th>标题</th><th>类型</th><th>删除时间</th><th>删除原因</th><th>操作</th></tr></thead>
             <tbody>{entries.map(entry => <tr key={entry.id} data-selected={previewed === entry.id}>
               <td><input type="checkbox" aria-label={`选择${entry.name}`} disabled={busy} checked={selected.includes(entry.id)} onChange={() => toggle(entry)}/></td>
-              <td><button className="reference-select-title" type="button" disabled={busy} onClick={() => { setPreviewed(entry.id); setPerspective("restore"); }}>{entry.name}</button></td>
+              <td><div className="recycle-record-identity"><RecycleThumbnail key={`${entry.id}:${entry.deleted_at}`} entry={entry}/><div><button className="reference-select-title" title={entry.name} type="button" disabled={busy} onClick={() => { setPreviewed(entry.id); setPerspective("restore"); }}>{entry.name}</button>{entry.subtitle ? <small className="recycle-record-subtitle">{entry.subtitle}</small> : null}{entry.display_warning ? <small className="recycle-record-warning" role="alert">{entry.display_warning}</small> : null}</div></div></td>
               <td>{labels[entry.kind] || "管理内容"}</td><td>{new Date(entry.deleted_at).toLocaleString("zh-CN")}</td><td>{entry.reason || "未记录"}</td>
               <td><button type="button" className="button secondary" disabled={busy} onClick={() => { setPreviewed(entry.id); setPerspective("restore"); setConfirmation([entry]); }}>恢复</button></td>
             </tr>)}</tbody>

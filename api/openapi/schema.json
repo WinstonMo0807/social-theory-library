@@ -2231,6 +2231,64 @@
                 }
             }
         },
+        "/api/catalog/admin/recycle/{entry_id}/image/": {
+            "get": {
+                "operationId": "catalog_admin_recycle_image_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "entry_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "image/jpeg": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "image/webp": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "image/avif": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recycle/{entry_id}/preview/": {
             "get": {
                 "operationId": "catalog_admin_recycle_preview_retrieve",
@@ -5782,6 +5840,10 @@
                             "$ref": "#/components/schemas/MediaRendition"
                         },
                         "readOnly": true
+                    },
+                    "original_filename": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -5791,6 +5853,7 @@
                     "height",
                     "id",
                     "media_type",
+                    "original_filename",
                     "renditions",
                     "updated_at",
                     "width"
@@ -5920,6 +5983,10 @@
                         },
                         "readOnly": true
                     },
+                    "original_filename": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "references": {
                         "readOnly": true
                     }
@@ -5931,6 +5998,7 @@
                     "height",
                     "id",
                     "media_type",
+                    "original_filename",
                     "references",
                     "renditions",
                     "updated_at",
@@ -7669,6 +7737,18 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "cover_caption": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "cover_alt_text": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_original_filename": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "display_from": {
                         "type": "string",
                         "format": "date-time",
@@ -7705,6 +7785,8 @@
                     }
                 },
                 "required": [
+                    "cover_alt_text",
+                    "cover_original_filename",
                     "draft_revision_id",
                     "has_unpublished_changes",
                     "id",
@@ -7799,6 +7881,10 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "cover_caption": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
                     "display_from": {
                         "type": "string",
                         "format": "date-time",
@@ -7837,7 +7923,7 @@
                     "results": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/RecycleEntry"
+                            "$ref": "#/components/schemas/RecycleDisplayEntry"
                         }
                     }
                 },
@@ -7846,6 +7932,53 @@
                     "kind_counts",
                     "results",
                     "total_count"
+                ]
+            },
+            "RecycleDisplayEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "thumbnail_url": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "display_warning": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "deleted_at",
+                    "display_warning",
+                    "id",
+                    "kind",
+                    "name",
+                    "object_id",
+                    "reason",
+                    "subtitle",
+                    "thumbnail_url"
                 ]
             },
             "RecycleEntry": {

@@ -560,6 +560,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recycle/{entry_id}/image/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recycle_image_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recycle/{entry_id}/preview/": {
         parameters: {
             query?: never;
@@ -1630,6 +1646,7 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
             readonly renditions: components["schemas"]["MediaRendition"][];
+            readonly original_filename: string;
         };
         MediaCollection: {
             count: number;
@@ -1665,6 +1682,7 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
             readonly renditions: components["schemas"]["MediaRendition"][];
+            readonly original_filename: string;
             readonly references: unknown;
         };
         MediaRendition: {
@@ -2171,6 +2189,9 @@ export interface components {
             cover_url?: string;
             /** Format: uuid */
             cover_rendition_id?: string | null;
+            cover_caption?: string;
+            readonly cover_alt_text: string;
+            readonly cover_original_filename: string;
             /** Format: date-time */
             display_from?: string | null;
             /** Format: date-time */
@@ -2202,6 +2223,7 @@ export interface components {
             cover_url?: string;
             /** Format: uuid */
             cover_rendition_id?: string | null;
+            cover_caption?: string;
             /** Format: date-time */
             display_from?: string | null;
             items?: components["schemas"]["IssueItemRequest"][];
@@ -2213,7 +2235,21 @@ export interface components {
             kind_counts: {
                 [key: string]: number;
             };
-            results: components["schemas"]["RecycleEntry"][];
+            results: components["schemas"]["RecycleDisplayEntry"][];
+        };
+        RecycleDisplayEntry: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            name: string;
+            /** Format: date-time */
+            deleted_at: string;
+            reason: string;
+            thumbnail_url: string;
+            subtitle: string;
+            display_warning: string;
         };
         RecycleEntry: {
             /** Format: uuid */
@@ -3651,6 +3687,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecycleRestoreResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_recycle_image_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                    "image/avif": string;
                 };
             };
         };

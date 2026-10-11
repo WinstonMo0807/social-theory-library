@@ -14,7 +14,7 @@ VERIFIED_NAMES = {
     "admin-curation-sources", "admin-evidence-curation", "admin-evidence-curation-publish", "public-evidence-curation",
     "admin-scholar-relation-list", "admin-scholar-relation-detail", "admin-scholar-relation-publish", "admin-scholar-relation-archive", "public-scholar-relation-list",
     "admin-curation-drafts",
-    "admin-recycle", "admin-recycle-preview",
+    "admin-recycle", "admin-recycle-preview", "admin-recycle-image",
     "work-list", "work-detail", "asset-manifest", "asset-page-content",
     "knowledge-image-selection",
     "scholar-portrait-selection",
