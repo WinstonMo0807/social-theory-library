@@ -9,6 +9,7 @@ import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import type { CandidateActionSource } from "./admin/research/candidate-action-contract";
 import { EvidenceEnvelopeCard } from "./admin/research/evidence-envelope-card";
+import { projectionStatusText } from "@/lib/projection-status";
 
 type DirectoryObject = {
   id: string;
@@ -188,10 +189,10 @@ export function KnowledgeWorkspaceDiagnostics() {
         <li><b>1</b><div><strong>已保存草稿</strong><p>{latest || hasDraft ? "有已保存的修改" : draft?.available ? "可读取已保存内容" : "—"}</p><small>{latest?.created_at ? new Date(latest.created_at).toLocaleString("zh-CN") : ""}</small></div></li>
         <li className={latest || visible===false ? "current" : ""}><b>2</b><div><strong>{latest ? "尚未发布（当前原因）" : "发布状态"}</strong><p>{latest ? "内容仍在草稿中" : visible === undefined ? "—" : visible ? "当前有公开内容" : "尚未公开"}</p></div></li>
         <li><b>3</b><div><strong>前台显示</strong><p>{published?.available ? "可查看当前线上内容" : "—"}</p></div></li>
-        <li className={staleProjection ? "current" : ""}><b>4</b><div><strong>搜索更新</strong><p>{projections?.length ? projections.map(row=>`${row.name}：${row.last_error_code ? "处理失败" : row.lag > 0 ? "等待更新" : row.status}`).join("；") : "—"}</p></div></li>
+        <li className={staleProjection ? "current" : ""}><b>4</b><div><strong>搜索与相关内容更新</strong><p>{projections?.length ? projections.map(projectionStatusText).join("；") : "—"}</p></div></li>
       </ol><aside className="diagnostics-reason"><h3>当前检查结果</h3><p>{reason}</p></aside>
       <h3>相关信息</h3><dl><div><dt>预计生效时间</dt><dd>—</dd></div><div><dt>对读者的影响</dt><dd>{latest ? "前台保留当前公开内容，草稿不会自行生效" : visible ? "已有公开页面，具体修改请对照右侧" : "当前对象尚未公开"}</dd></div></dl>
-      <details><summary>修订与处理记录</summary>{projections?.map(row=><p key={row.type}>{row.name} · 来源修订 {row.source_revision} · 已处理 {row.projected_revision}{row.last_error_code ? ` · ${row.last_error_code}` : ""}</p>)}{selected.revisions?.map(row=><p key={row.id}>修订 {row.revision} · {row.status}{row.has_conflict ? " · 存在冲突" : ""}</p>)}</details>
+      <details><summary>修订与处理记录</summary>{projections?.map(row=><p key={row.type}>{row.name} · {row.status} · 来源修订 {row.source_revision} · 已处理 {row.projected_revision}{row.last_error_code ? ` · ${row.last_error_code}` : ""}</p>)}{selected.revisions?.map(row=><p key={row.id}>修订 {row.revision} · {row.status}{row.has_conflict ? " · 存在冲突" : ""}</p>)}</details>
       <details><summary>原文依据与定位</summary>{selected.evidence?.map((row,index)=><EvidenceEnvelopeCard key={index} evidence={row}/>)}</details>
     </section><section className="admin-panel diagnostics-preview"><header><h2>读者会看到什么</h2><div className="diagnostics-preview-tools"><button type="button" aria-pressed={device==="desktop"} onClick={()=>setDevice("desktop")}>电脑</button><button type="button" aria-pressed={device==="mobile"} onClick={()=>setDevice("mobile")}>手机</button><button type="button" onClick={()=>fullPreview.current?.showModal()}>放大查看</button></div></header>
       {preview.data?.public_control?.page_tree?.length ? <label>查看位置<select value={section} onChange={event=>setSection(event.target.value)}>{preview.data.public_control.page_tree.map(page=><option key={page.page_id} value={page.page_id}>{page.display_name}</option>)}</select></label> : null}

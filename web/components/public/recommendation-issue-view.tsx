@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import type { RecommendationIssue, IssueItem } from "@/lib/api/recommendation-issues.types";
 import { CollectionLink } from "@/components/collection-link";
 import { SaveIssueList } from "@/components/save-issue-list";
+import { IssueRelatedWorks } from "@/components/issue-related-works";
 
 function issueDate(issue: RecommendationIssue) {
   const value = issue.display_from || issue.published_at;
@@ -30,7 +31,7 @@ export function RecommendationIssueView({ issue, preview = false, compact = fals
   const toc = <nav className="issue-reference-toc" aria-label="文章目录"><h2>{preview ? "本篇目录" : "文章目录"}</h2>{headings.map(heading=><a href={`#issue-section-${heading.index}`} key={heading.index}>{heading.text}</a>)}</nav>;
   const prose = <section className="issue-reference-prose" data-edit-section="body">{issue.body_blocks.map((block,index)=>block.type==="heading" ? <h2 data-edit-row={index} id={`issue-section-${index}`} key={index}>{block.text}</h2> : block.type==="quote" ? <blockquote data-edit-row={index} key={index}><p>{block.text}</p>{block.source ? <cite>{block.source}</cite> : null}</blockquote> : block.type==="link" ? <p data-edit-row={index} key={index}><a href={block.url} rel="noopener noreferrer">{block.text}</a></p> : <p data-edit-row={index} key={index}>{block.text}</p>)}</section>;
   const books = <section className={preview ? "issue-reference-books" : "issue-mentioned-books"} data-edit-section="items"><header><h2>{preview ? "继续阅读" : "本文提及的书目"}</h2>{!preview ? <Link href="/explore">更多 ›</Link> : null}</header><div>{issue.items.map((item,index)=><IssueItemCard item={item} editIndex={preview ? index : undefined} key={item.id || index}/>)}</div></section>;
-  if (!preview) return <article className="issue-article issue-reference-article issue-public-article"><div className="issue-public-main">{heading}{image}{prose}<SaveIssueList slug={issue.slug}/></div><aside className="issue-public-aside">{books}{toc}<section className="issue-related-space"><header><h2>从馆藏继续阅读</h2><Link href="/explore">更多 ›</Link></header><div aria-hidden="true" /></section></aside></article>;
+  if (!preview) return <article className="issue-article issue-reference-article issue-public-article"><div className="issue-public-main">{heading}{image}{prose}<SaveIssueList slug={issue.slug}/></div><aside className="issue-public-aside">{books}{toc}<IssueRelatedWorks excludedWorkIds={issue.items.flatMap(item => item.work_id ? [item.work_id] : [])}/></aside></article>;
   return <article className={`issue-article issue-reference-article issue-editor-article${compact ? " is-compact" : ""}`}>
     {heading}<div className={`issue-reference-media${compact && headings.length ? " has-toc" : ""}`}>{image}{compact && headings.length ? toc : null}</div>{prose}{books}
   </article>;

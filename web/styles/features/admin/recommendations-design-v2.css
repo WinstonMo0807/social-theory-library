@@ -246,7 +246,7 @@
 .recommendation-v2-steps .done b { background:var(--recommendation-focus); border-color:var(--recommendation-focus); color:white; }
 .recommendation-v2-steps .done { color: var(--recommendation-focus); }
 .recommendation-v2-grid { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(560px, 1.1fr); gap: 16px; align-items: start; }
-.recommendation-v2-control, .recommendation-v2-reader { padding: 16px; }
+.recommendation-v2-control, .recommendation-v2-reader { min-width:0; padding: 16px; }
 .recommendation-v2-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: -16px -16px 18px; background: var(--recommendation-line); }
 .recommendation-v2-tabs button { border: 0; padding: 13px 8px; background: var(--recommendation-surface); color: var(--recommendation-ink); }
 .recommendation-v2-tabs button.active { color: #fff; background: var(--recommendation-focus); }
@@ -328,7 +328,7 @@
   .admin-shell:has(.recommendation-curation-v2) .admin-main { margin-left:var(--stl-container-admin-sidebar); }
   .admin-shell:has(.recommendation-curation-v2) .admin-content { padding:24px 24px 30px 26px; }
 }
-@media(max-width:1120px) { .recommendation-curation-v2 .recommendation-v2-grid { grid-template-columns:1fr; } }
+@media(max-width:1120px) { .recommendation-curation-v2 .recommendation-v2-grid { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:720px) { .recommendation-curation-v2 .recommendation-v2-steps { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; } .recommendation-curation-v2 .recommendation-v2-steps span { white-space:normal; font-size:12px; } .recommendation-curation-v2 .recommendation-v2-steps span::after { display:none; } .recommendation-curation-v2 .recommendation-v2-state { grid-column:1/-1; } .recommendation-curation-v2 .recommendation-v2-selected article { grid-template-columns:24px 48px minmax(0,1fr); } .recommendation-curation-v2 .recommendation-v2-selected img,.recommendation-curation-v2 .recommendation-v2-image-empty { width:48px; height:56px; } .recommendation-curation-v2 .recommendation-v2-reader > header { flex-wrap:wrap; } .recommendation-curation-v2 .recommendation-v2-control { min-height:0; } }
 
 @media (max-width: 1120px) {
@@ -640,7 +640,15 @@
 .issue-public-aside .issue-reference-toc>h2{margin-bottom:16px}
 .issue-public-aside .issue-reference-toc>a{display:block;border-left:2px solid var(--admin-v2-focus);padding:6px 0 6px 16px;font:16px/24px var(--stl-type-serif)}
 .issue-related-space{padding:18px 24px;border-top:1px solid var(--admin-v2-line)}
-.issue-related-space>div{min-height:170px}
+.issue-reading-list{display:grid;gap:12px}
+.issue-related-space .book-card{padding:0 0 12px;min-width:0}
+.issue-related-space .book-card:last-child{padding-bottom:0;border-bottom:0}
+.issue-related-space .book-card-main{grid-template-columns:64px minmax(0,1fr);gap:16px}
+.issue-related-space .book-cover.small{width:64px;height:96px}
+.issue-related-space .book-meta h3{font:600 18px/26px var(--stl-type-serif);margin:0 0 4px;overflow-wrap:anywhere}
+.issue-related-space .book-meta p{font-size:14px;line-height:22px;margin:0 0 4px}
+.issue-related-space>p{font-size:14px;line-height:24px}
+.issue-related-space [role=alert]>button{display:block;margin-top:8px}
 @media(min-width:821px) and (max-width:1250px){.site-header[data-reading-layout=article] .desktop-nav{gap:20px;padding-left:8px;font-size:16px}.site-header[data-reading-layout] .header-actions{gap:15px}.reading-header-search{width:210px}.reading-header-reader{gap:12px;font-size:13px}.reading-header-reader>a+a{padding-left:12px}.issue-public-article{gap:30px;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)}.issue-mentioned-books{padding-inline:16px}.issue-mentioned-books .issue-book-card{grid-template-columns:85px minmax(0,1fr);gap:16px}.issue-mentioned-books .issue-book-cover{width:85px;height:128px}}
 @media(max-width:820px){.reading-header-search,.reading-header-reader{display:none}.daily-reading-page{padding-inline:16px}.daily-reading-public-index>header{flex-wrap:wrap;gap:12px;padding-block:12px}.daily-reading-public-index>header nav{flex-wrap:wrap;gap:8px}.daily-reading-public-index>header nav>*{min-width:70px}.daily-reading-public-lead{grid-template-columns:1fr;gap:12px}.daily-reading-public-lead>.daily-reading-public-image{height:230px}.daily-reading-public-lead h2{font-size:32px}.daily-reading-public-lead>div>p{font-size:18px}.daily-reading-public-latest>div{grid-template-columns:1fr}.daily-reading-public-latest article{border:0;padding:0;gap:16px}.daily-reading-public-latest h3{font-size:21px}.daily-reading-public-latest>header,.daily-reading-public-books>header{gap:12px}.daily-reading-public-latest>header>a,.daily-reading-public-books>header>a{font-size:12px}.daily-reading-public-books>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.daily-reading-public-books .issue-book-card{grid-template-columns:52px minmax(0,1fr);gap:10px;padding:0;border:0}.daily-reading-public-books .issue-book-cover{width:52px;height:84px}.daily-reading-public-more{grid-column:auto;grid-row:auto}.issue-public-article{display:block;padding:24px 16px}.issue-public-main>header h1{font-size:32px}.issue-public-main .issue-introduction{font-size:18px;line-height:28px}.issue-public-main>.issue-reference-image{aspect-ratio:2}.issue-public-main .issue-reference-prose{font-size:18px;line-height:28px}.issue-public-main .issue-reference-prose>h2{font-size:25px;line-height:36px}.issue-public-aside{margin-top:24px}}
 @media(min-width:1201px){.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions{position:fixed;bottom:0;left:198px;right:0;z-index:10;background:var(--recommendation-surface);padding:11px 19px}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:nth-child(2){margin-left:auto}.admin-shell .recommendation-issue-step-1 .recommendation-issue-actions>.button:last-child{margin-left:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions{position:fixed;bottom:18px;left:218px;right:25px;z-index:10;border:0;background:var(--recommendation-paper);padding:0}.admin-shell .recommendation-issue-step-3 .recommendation-issue-actions>.button:last-child{margin-left:auto}}

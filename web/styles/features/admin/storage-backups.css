@@ -25,6 +25,12 @@
 .backup-design-page .backup-steps { margin-top:16px; }
 .backup-design-page .backup-restore-grid { grid-template-columns:minmax(0,.715fr) minmax(0,1fr); gap:10px; align-items:start; }
 .backup-design-page .backup-selection,.backup-design-page .backup-target { min-height:730px; padding:20px 22px; }
+.backup-design-page .backup-selected { padding:14px 16px; margin-bottom:14px; }
+.backup-design-page .backup-selected > header { gap:14px; }
+.backup-design-page .backup-selected h3 { line-height:1.4; }
+.backup-design-page .backup-selected p { margin:4px 0; line-height:20px; }
+.backup-design-page .backup-selected dl { margin-top:12px; gap:6px; line-height:20px; }
+.backup-design-page .backup-selected dd { min-width:0; overflow-wrap:anywhere; }
 .backup-design-page .backup-list { max-height:270px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
 .admin-shell .backup-design-page .backup-selection > header h2,.admin-shell .backup-design-page .backup-target > header h2 { font-size:22px; line-height:1.4; }
 .admin-shell .backup-design-page .backup-selection > header,.admin-shell .backup-design-page .backup-target > header { min-height:32px; padding:0; border:0; }
