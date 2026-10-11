@@ -69,7 +69,7 @@ def test_restored_entry_cannot_keep_serving_a_recycle_image(api_client, admin_us
     api_client.force_authenticate(admin_user)
     image = api_client.get(f"/api/catalog/admin/recycle/{entry.pk}/image/")
     assert image.status_code == 200
-    image.close()
+    assert b"".join(image.streaming_content)
     restore_object(entry.pk, actor=admin_user)
     assert api_client.get(f"/api/catalog/admin/recycle/{entry.pk}/image/").status_code == 404
 

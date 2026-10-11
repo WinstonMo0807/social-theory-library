@@ -132,7 +132,8 @@ class AdminRecycleImageView(AdminPrivateResponseMixin, APIView):
         image, _, _ = retained_display_source(entry)
         if not image:
             raise Http404("没有保存图片。")
-        content_type = guess_type(image.name)[0]
+        # The minimal Python 3.12 NAS MIME database does not identify WebP.
+        content_type = "image/webp" if image.name.lower().endswith(".webp") else guess_type(image.name)[0]
         if content_type not in {"image/jpeg", "image/png", "image/webp", "image/avif"}:
             raise Http404("保留文件不是可预览的图片。")
         try:
