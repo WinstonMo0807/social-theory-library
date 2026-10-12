@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-12 已发布运行架构
+
+3.0.9.1已经公网发布，原Django/Next-Vinext/PostgreSQL/Redis/Celery/Meilisearch/PaddleOCR及NAS/Cloudflare共享系统保持。catalog0065/0066/0067已应用，活动Discovery8e62c8bb保持。API源9a719af、网页源516fdee、OCR源dbb41b5，独立准确镜像对应同一最终业务源码；CPU有界修正只改变OCR推理参数，不更换模型或系统earlyoom策略。最后网页修正只作用上传行与动作按钮，不改传输/权限。原数据职责与人工确认优先级保持。详细身份和边界见[V3.0.9.1部署记录](V3.0.9.1_DEPLOYED_2026-10-12.md)。
+
 ## 2026-10-12 统一增量与NAS OCR受控修正
 
 0067已在专用候选和新鲜生产备份的独立恢复数据前向验证，实际生产仍0064。API/Web准确9a719af的功能及合同保持，后续部署使用单独冻结的OCR组件。NAS earlyoom实际终止识别进程；Paddle模型、既有ProcessPool/请求去重/任务和文件版本保护继续复用，只对CPU检测最长边960/max、方向及识别批量1、2线程/OMP1限制峰值。检测框使用既有坐标映射，原始PDF和180dpi的识别裁图保持。整页实际识别12段文字已通过，同一任务控制流程仍在收尾。系统内存保护及其他NAS服务不修改，没有新增技术栈、第二套书库或重复OCR流程。
