@@ -155,7 +155,7 @@ export default async function ExplorePage({
     <>
       <UsageTracker eventType="search_submit" query={query} resultCount={resultCount(results.counts)} source="exact_search" scope={scope} />
       <SearchClickTracker query={query} source="exact_search" />
-      <div className="page-shell explore-page">
+      <div className="page-shell explore-page stl4-explore-original-page">
         <section className="explore-workbench-head exact-workbench-head">
           <div className="explore-workbench-title">
             <h1>原文检索</h1>
