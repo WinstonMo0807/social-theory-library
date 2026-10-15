@@ -36,7 +36,7 @@
 .stl4-research-footnote { max-width: 1240px; margin: 60px auto 0; color: #a49c91; font: 11px var(--sans); }
 .stl4-spin { animation: stl4-research-spin 1.2s linear infinite; } @keyframes stl4-research-spin { to { transform: rotate(360deg); } }
 .stl4-research-page :is(a, button):focus-visible { outline: 2px solid #a48146; outline-offset: 4px; }
-@media (max-width: 850px) { .stl4-research-page { padding: 24px 18px 50px; }.stl4-research-layout { display: block; }.stl4-research-heading { margin: 24px 0 20px; }.stl4-research-heading h1 { font-size: 36px; }.stl4-research-panel { padding: 22px 16px 26px; }.stl4-research-panel-head { align-items: start; flex-direction: column; }.stl4-research-card { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 17px 16px; }.stl4-research-status { grid-column: 2; grid-row: 1; align-self: start; }.stl4-research-open { grid-column: 2; grid-row: 2; }.stl4-research-card-copy { grid-column: 1; grid-row: 1 / span 2; align-self: center; }.stl4-research-rail { margin: 18px 0 0; }.stl4-research-detail-card { padding: 22px 18px 26px; }.stl4-research-detail-card dl { grid-template-columns: 1fr; gap: 14px; } }
+@media (max-width: 850px) { .stl4-research-page { padding: 24px 18px 50px; }.stl4-research-layout { display: block; }.stl4-research-heading { margin: 24px 0 20px; }.stl4-research-heading h1 { font-size: 36px; }.stl4-research-panel { padding: 22px 16px 26px; }.stl4-research-panel-head { align-items: start; flex-direction: column; }.stl4-plan-create { grid-template-columns: 1fr; }.stl4-plan-create button { width: 100%; }.stl4-research-card { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 17px 16px; }.stl4-research-status { grid-column: 2; grid-row: 1; align-self: start; }.stl4-research-open { grid-column: 2; grid-row: 2; }.stl4-research-card-copy { grid-column: 1; grid-row: 1 / span 2; align-self: center; }.stl4-research-rail { margin: 18px 0 0; }.stl4-research-detail-card { padding: 22px 18px 26px; }.stl4-research-detail-card dl { grid-template-columns: 1fr; gap: 14px; } }
 @media (prefers-reduced-motion: reduce) { .stl4-research-page * { animation-duration: 0s !important; transition-duration: 0s !important; } }
 
 /* Final PDF pages 184 and 191–194: the reader centre is one white work surface. */
@@ -53,6 +53,13 @@
 .stl4-reader-tabs a.is-active { position: relative; color: #172a44; }
 .stl4-reader-tabs a.is-active::after { position: absolute; right: 18px; bottom: -1px; left: 18px; height: 2px; background: #b3894b; content: ""; }
 .stl4-research-panel { padding: 0 22px 28px; }
+.stl4-plan-create { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: end; padding: 18px 0; border-bottom: 1px solid #e5e1d9; }
+.stl4-plan-create label { display: grid; gap: 6px; color: #526276; font: 11px var(--sans); }
+.stl4-plan-create input { min-height: 36px; border: 1px solid #cfd4da; background: #fff; padding: 8px 10px; color: #324660; font: 12px var(--sans); }
+.stl4-plan-create > div { display: contents; }
+.stl4-plan-create button { min-height: 36px; border: 0; background: #172f50; padding: 0 14px; color: #fff; font: 11px var(--sans); cursor: pointer; }
+.stl4-plan-create button:disabled { opacity: .55; cursor: not-allowed; }
+.stl4-plan-create p { grid-column: 1 / -1; margin: 0; color: #6e6d69; font: 11px/1.5 var(--sans); }
 .stl4-research-panel-head { margin: 22px 0 12px; }
 .stl4-research-panel-head h2 { color: #172a44; font-size: 21px; }
 .stl4-research-panel-head > a { border: 1px solid #cfd4da; padding: 8px 11px; color: #172a44; }
@@ -96,3 +103,4 @@
 .stl4-research-status-panel.status-failed { border-left: 3px solid #b45e54; background: #fff9f7; }
 .stl4-research-status-panel.status-canceled, .stl4-research-status-panel.status-cancelled { border-left: 3px solid #8b877d; }
 @media (max-width: 700px) { .stl4-research-status-panel { align-items: flex-start; flex-direction: column; margin-inline: 14px; }.stl4-research-status-panel > div { align-items: flex-start; flex-direction: column; gap: 3px; } }
+

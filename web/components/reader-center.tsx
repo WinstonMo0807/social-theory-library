@@ -19,6 +19,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   apiRequest,
   classifyClientError,
@@ -112,6 +113,20 @@ type NoteGroupRow = {
   latest_at: string;
   previews: AnnotationRow[];
 };
+type PlanItem = {
+  id?: string;
+  title?: string;
+  status?: string;
+  note?: string;
+  reader_url?: string | null;
+  available?: boolean;
+};
+type PlanRow = {
+  id: string;
+  status?: string;
+  data?: { goal?: string; items?: PlanItem[]; generation_status?: string };
+  updated_at: string;
+};
 
 type ReaderData = {
   progress: ProgressRow[];
@@ -121,6 +136,7 @@ type ReaderData = {
   bookmarks: BookmarkRow[];
   lists: ReadingListRow[];
   history: HistoryRow[];
+  plans: PlanRow[];
 };
 
 type ReaderResourceKey = keyof ReaderData | "noteGroups";
@@ -138,11 +154,13 @@ const emptyData: ReaderData = {
   bookmarks: [],
   lists: [],
   history: [],
+  plans: [],
 };
 
 export function ReaderCenter() {
+  const searchParams = useSearchParams();
   const { state: session, retry: retrySession } = useSessionBootstrap();
-  const [active, setActive] = useState("概览");
+  const [active, setActive] = useState(() => (searchParams.get("section") === "lists" ? "书单" : "概览"));
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);
@@ -224,6 +242,8 @@ export function ReaderCenter() {
         .then((results) => ({ key: "lists", label: "书单", results })),
       readAllPages<HistoryRow>("/reading/history/", credential)
         .then((results) => ({ key: "history", label: "阅读历史", results })),
+      readAllPages<PlanRow>("/reading/reading-plans/", credential)
+        .then((results) => ({ key: "plans", label: "阅读计划", results })),
     ];
 
     Promise.allSettled(requests).then((results) => {
@@ -236,6 +256,7 @@ export function ReaderCenter() {
         bookmarks: [],
         lists: [],
         history: [],
+        plans: [],
       };
       let nextNoteGroups: NoteGroupRow[] = [];
       const nextErrors: Partial<Record<ReaderResourceKey, ReaderResourceError>> = {};
@@ -253,6 +274,7 @@ export function ReaderCenter() {
             case "bookmarks": nextData.bookmarks = rows as BookmarkRow[]; break;
             case "lists": nextData.lists = rows as ReadingListRow[]; break;
             case "history": nextData.history = rows as HistoryRow[]; break;
+            case "plans": nextData.plans = rows as PlanRow[]; break;
           }
           return;
         }
@@ -260,8 +282,8 @@ export function ReaderCenter() {
           sessionExpired = true;
           return;
         }
-        const key = ["progress", "saved", "savedTopics", "annotations", "noteGroups", "bookmarks", "lists", "history"][index] as ReaderResourceKey;
-        const labels = ["阅读进度", "文献收藏", "主题收藏", "高亮与笔记", "作品笔记", "书签", "书单", "阅读历史"];
+        const key = ["progress", "saved", "savedTopics", "annotations", "noteGroups", "bookmarks", "lists", "history", "plans"][index] as ReaderResourceKey;
+        const labels = ["阅读进度", "文献收藏", "主题收藏", "高亮与笔记", "作品笔记", "书签", "书单", "阅读历史", "阅读计划"];
         nextErrors[key] = {
           label: labels[index],
           message: result.reason instanceof Error ? result.reason.message : "内容暂时无法读取。",
@@ -294,6 +316,34 @@ export function ReaderCenter() {
     [readerData.progress],
   );
   const savedWorks = readerData.saved.map((item, index) => adaptWork(item.work_data, index));
+  const pendingTasks = useMemo(
+    () => readerData.plans.flatMap((plan) => (plan.data?.items ?? [])
+      .filter((item) => item.status === "pending" || item.status === "reading")
+      .map((item) => ({ ...item, planId: plan.id, goal: plan.data?.goal ?? "阅读计划" })))
+      .slice(0, 6),
+    [readerData.plans],
+  );
+  const materialRows = useMemo(
+    () => [
+      ...readerData.saved.slice(0, 4).map((item) => ({
+        id: `saved-${item.id}`,
+        title: item.work_data.title,
+        kind: "收藏",
+        updated: item.created_at,
+        href: item.reading_progress
+          ? `/reader/${item.reading_progress.asset}?page=${item.reading_progress.current_page}`
+          : "/account?section=lists",
+      })),
+      ...noteGroups.slice(0, 4).map((item) => ({
+        id: `notes-${item.asset}`,
+        title: item.work.title,
+        kind: "笔记",
+        updated: item.latest_at,
+        href: `/account/notes/${item.asset}`,
+      })),
+    ].slice(0, 6),
+    [noteGroups, readerData.saved],
+  );
 
   async function logout() {
     const actionKey = "logout";
@@ -496,12 +546,19 @@ export function ReaderCenter() {
 
   return (
     <div className="reader-center">
-      <main className="account-content">
+      <div className="account-content">
         <header className="reader-center-heading">
           <div><p className="eyebrow">读者中心</p><h1>读者中心</h1><p>继续阅读，整理笔记与研究。</p></div>
-          <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
+          <div className="reader-center-heading-actions">
+            <div className="reader-center-create-links" aria-label="创建资料">
+              <Link href="/explore/opinions">＋ 新建研究</Link>
+              <Link href="/explore/original">新建笔记</Link>
+              <Link href="/account/plans">创建计划</Link>
+            </div>
+            <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
+          </div>
         </header>
-        <ResearchCenterNav active="research" />
+        <ResearchCenterNav active={active === "书单" ? "lists" : "research"} />
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
 
         {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
@@ -555,6 +612,40 @@ export function ReaderCenter() {
                   })}
                 </div>
               ) : <p className="empty-state">开始在线阅读后，最近进度会显示在这里。</p>}
+            </section>
+            <section className="reader-pending-tasks panel">
+              <SectionHeading title="待继续任务" />
+              <p className="continue-reading-note">来自你的阅读计划与私人研究资料。</p>
+              {pendingTasks.length ? (
+                <div className="reader-task-list">
+                  {pendingTasks.map((task, index) => {
+                    const href = task.reader_url || "/account/plans";
+                    return (
+                      <article className="reader-task-row" key={`${task.planId}-${task.id ?? index}`}>
+                        <span className="reader-task-check" aria-hidden="true" />
+                        <FileText size={15} />
+                        <div><strong>{task.title || task.goal}</strong><small>{task.note || task.goal}</small></div>
+                        <span className={`reader-task-status ${task.status === "reading" ? "is-reading" : ""}`}>{task.status === "reading" ? "进行中" : "待开始"}</span>
+                        <Link href={href} aria-label={`继续${task.title || task.goal}`}><ArrowRight size={15} /></Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : <p className="empty-state">创建阅读计划后，待继续任务会显示在这里。</p>}
+            </section>
+            <section className="reader-materials panel">
+              <SectionHeading title="我的资料" />
+              <p className="continue-reading-note">仅显示属于你的收藏与阅读笔记。</p>
+              {materialRows.length ? (
+                <div className="reader-material-table" role="table" aria-label="我的资料">
+                  <div className="reader-material-head" role="row"><span>标题</span><span>类型</span><span>最近更新</span><span>操作</span></div>
+                  {materialRows.map((row) => (
+                    <div className="reader-material-row" role="row" key={row.id}>
+                      <Link href={row.href}>{row.title}</Link><span>{row.kind}</span><time dateTime={row.updated}>{new Date(row.updated).toLocaleDateString("zh-CN")}</time><Link href={row.href} aria-label={`打开${row.title}`}><ArrowRight size={14} /></Link>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="empty-state">收藏或保存笔记后，资料会显示在这里。</p>}
             </section>
             <section className="account-books panel">
               <SectionHeading title="最近收藏" />
@@ -713,7 +804,7 @@ export function ReaderCenter() {
           </DataPanel>
         ) : null}
         {message ? <AsyncStatus className="reader-center-message" state={messageState} message={message} /> : null}
-      </main>
+      </div>
     </div>
   );
 }
