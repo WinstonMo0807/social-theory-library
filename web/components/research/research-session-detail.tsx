@@ -8,6 +8,7 @@ import {
   changeResearchSelection,
   listResearchTurns,
   readResearchRecord,
+  retryResearchTurn,
   startResearchTurn,
   type ProjectData,
   type ResearchRecord,
@@ -151,6 +152,21 @@ export function ResearchSessionDetail({ id }: { id: string }) {
     }
   }
 
+  async function retryTurn() {
+    if (!record || !currentTurn || actionPending) return;
+    setActionPending(true);
+    setActionMessage("");
+    try {
+      const nextTurn = await retryResearchTurn(currentTurn.id, { request_id: crypto.randomUUID(), expected_revision: currentTurn.revision });
+      setTurns((current) => [...current, nextTurn]);
+      setActionMessage("已重新排入这一轮研究；完成后会把新的来源写回本会话。");
+    } catch (reason) {
+      setActionMessage(reason instanceof Error ? reason.message : "研究轮次重试失败，请稍后再试。");
+    } finally {
+      setActionPending(false);
+    }
+  }
+
   if (session.status === "loading" || session.status === "unknown" || loadState === "loading") {
     return <DetailFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取研究会话……</p></div></DetailFrame>;
   }
@@ -165,6 +181,10 @@ export function ResearchSessionDetail({ id }: { id: string }) {
     <header className="stl4-research-heading stl4-research-workspace-heading"><h1>{title}</h1><p>{questionText}</p><span className="stl4-research-privacy">仅本人可见 · {recordStatus(record)}</span></header>
     <section className="stl4-research-workspace" aria-label="持续研究工作区">
       <ResearchCenterNav active="research" />
+      <div className={`stl4-research-status-panel status-${activeStatus}`} role={activeStatus === "failed" ? "alert" : "status"}>
+        <div><strong>{statusLabel[activeStatus] || "已保存"}</strong><span>{currentTurn?.error_code ? `错误标识：${currentTurn.error_code}` : activeStatus === "queued" ? "已进入队列，等待可用的检索资源。" : activeStatus === "running" ? "正在核对来源、版本和页码，结果会自动回到这一轮。" : activeStatus === "partial" ? "本轮只完成了部分来源核对，可以继续提问或补充范围。" : activeStatus === "failed" ? "本轮没有完成，已保留问题和研究范围。" : activeStatus === "canceled" || activeStatus === "cancelled" ? "本轮已取消，原有选材仍保留在当前会话。" : "当前轮次的来源已经可以继续核对。"}</span></div>
+        {currentTurn && (activeStatus === "failed" || activeStatus === "canceled" || activeStatus === "cancelled") ? <button type="button" onClick={() => void retryTurn()} disabled={actionPending}><RefreshCw size={14} />重新检索</button> : null}
+      </div>
       <div className="stl4-research-workspace-grid">
         <aside className="stl4-research-turns" aria-label="研究轮次"><header><h2>研究轮次</h2><span>{turns.length}</span></header>{turns.length ? <ol>{turns.map((turn, index) => <li className={turn.id === currentTurn?.id ? "is-active" : undefined} key={turn.id}><span>{index + 1}</span><div><strong>{turn.data.question || "未命名问题"}</strong><small>{statusLabel[turn.status || ""] || turn.status || "已保存"}</small></div></li>)}</ol> : <p>还没有研究轮次。</p>}<button type="button" className="stl4-research-secondary" onClick={() => setQuestion("")}><span>＋</span> 新建分支</button></aside>
         <main className="stl4-research-results"><div className="stl4-research-results-head"><div><p className="stl4-research-kicker">研究问题</p><h2>{currentTurn?.data.question || questionText}</h2></div><Link href={`/account/research/${encodeURIComponent(id)}/compare`}>打开证据比较 <ArrowRight size={14} /></Link></div><div className="stl4-research-filter-row"><span><Search size={14} /> 证据片段（{candidates.length}）</span><span>来源按当前公开版本重新核对</span></div>{candidates.length ? <div className="stl4-research-evidence-list">{candidates.map((reference, index) => <article className="stl4-research-evidence" key={`${reference.asset_id}-${reference.pdf_page}-${index}`}><div className="stl4-evidence-number">{String(index + 1).padStart(2, "0")}</div><div className="stl4-evidence-copy"><h3>{evidenceTitle(reference, index)}</h3><p>{reference.quote || "当前只返回原文身份，正文将在打开 Reader 时重新读取。"}</p><small>{evidenceLocation(reference)} · {reference.source_status === "available" ? "可定位" : "来源暂不可用"}</small></div><div className="stl4-evidence-actions">{reference.reader_url && reference.source_status === "available" ? <Link href={reference.reader_url}>查看原文 <ArrowRight size={14} /></Link> : null}{selected.some((item) => item.reference_id === reference.reference_id || (item.asset_id === reference.asset_id && item.pdf_page === reference.pdf_page)) ? <span className="is-selected">已在选材</span> : <button type="button" onClick={() => void addSelection(reference)} disabled={actionPending}>加入选材</button>}</div></article>)}</div> : <div className="stl4-research-empty"><Search size={24} /><h2>{activeStatus === "queued" || activeStatus === "running" ? "研究正在进行" : "还没有可展示的证据"}</h2><p>{activeStatus === "queued" || activeStatus === "running" ? "完成后会把来源、页码和定位写入本会话。" : "从下方继续提问，或回到观点检索开始新的研究。"}</p></div>}{actionMessage ? <p className="stl4-research-action-message" role="status">{actionMessage}</p> : null}</main>
