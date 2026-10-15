@@ -46,6 +46,7 @@
 @import "../styles/features/admin/settings-and-backups.css";
 @import "../styles/layout/admin-responsive.css";
 @import "../styles/features/reader/chrome.css";
+@import "../styles/features/reader/stl4-reader.css";
 @import "../styles/features/reader/document.css";
 @import "../styles/features/reader/selection-and-records.css";
 @import "../styles/features/reader/responsive.css";

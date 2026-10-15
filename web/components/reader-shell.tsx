@@ -26,14 +26,19 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import type { Work } from "@/lib/data";
+import { filterOutline, outlinePosition, prepareOutline, type OutlineNode } from "@/lib/api/document-outline";
+import { safeResearchReturn } from "@/lib/api/research-navigation";
+import { readerReturnPath } from "@/lib/api/reader-failure";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ActionButton, type ActionState } from "./action-feedback";
 import { PdfContinuousViewer } from "./pdf-continuous-viewer";
+import { Wordmark } from "./site-header";
 import { BookCover } from "./ui";
 import { UsageTracker } from "./usage-tracker";
 import { AskLibraryLink } from "./ask-library-link";
@@ -46,6 +51,7 @@ import { useReaderDocument, useReaderPageRequest } from "./reader/use-reader-doc
 import { useReaderSearch } from "./reader/use-reader-search";
 import { useReaderCitation } from "./reader/use-reader-citation";
 import { useReaderProgress } from "./reader/use-reader-progress";
+import { useReaderResearch } from "./reader/use-reader-research";
 import { formatReaderTimestamp, useReaderPageOverlays } from "./reader/use-reader-page-overlays";
 
 function useMediaQuery(query: string) {
@@ -65,6 +71,12 @@ export function ReaderShell({
   initialFocus,
   initialPassage,
   initialEvidence,
+  documentRevisionId = "",
+  requestedRevisionId = "",
+  researchProjectId = "",
+  researchTurnId = "",
+  researchReferenceId = "",
+  returnTo = "",
   outline = [],
   relatedScholars = [],
   relatedTheories = [],
@@ -76,7 +88,13 @@ export function ReaderShell({
   initialFocus: string;
   initialPassage: string;
   initialEvidence: string;
-  outline?: { index: number; printed_label: string; chapter_title: string }[];
+  documentRevisionId?: string;
+  requestedRevisionId?: string;
+  researchProjectId?: string;
+  researchTurnId?: string;
+  researchReferenceId?: string;
+  returnTo?: string;
+  outline?: OutlineNode[];
   relatedScholars?: { name: string; slug: string; years: string }[];
   relatedTheories?: { name: string; slug: string }[];
   relatedTopics?: { name: string; slug: string }[];
@@ -106,10 +124,13 @@ export function ReaderShell({
     window.addEventListener("keydown",close);
     return () => window.removeEventListener("keydown",close);
   },[toolbarOpen,isMobile,mobileLeftOpen,isCompact,compactRightOpen]);
-  const { access, accessError, pagePayloads, requestPagePayload, trackDownload, retryAccess } = useReaderDocument({
-    assetId: work.id, workId: work.workId,
+  const { access, accessError, pagePayloads, pageErrors, requestPagePayload, retryPagePayload, statusPollPaused, trackDownload, retryAccess } = useReaderDocument({
+    assetId: work.id, workId: work.workId, documentRevisionId,
   });
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
+  const [outlineQuery, setOutlineQuery] = useState("");
+  const [collapsedOutline, setCollapsedOutline] = useState<Set<string>>(() => new Set());
+  const [selectedOutlineId, setSelectedOutlineId] = useState("");
   const [gate, setGate] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [copyStatusState, setCopyStatusState] = useState<ActionState>("idle");
@@ -137,7 +158,7 @@ export function ReaderShell({
     setFocusedAnnotationId, bookmarkedPage, pendingAction, beginAnnotation,
     saveAnnotation, deleteAnnotation, deleteBookmark, toggleBookmark, protectedAction, showSidebarTab,
   } = useReaderRecords({
-    assetId: work.id, initialFocus, readerAuthenticated, page, pagePayloads, captureSelection,
+    assetId: work.id, initialFocus, readerAuthenticated, readerId: readerSession.user?.id, page, pagePayloads, captureSelection,
     setSelectionTools, setPage, jumpToPage, setLeftPanel, setSidebarTab, setGate,
     setCopyStatus, setCopyStatusState,
   });
@@ -160,34 +181,43 @@ export function ReaderShell({
   const {
     query, setQuery, searchMatches, setSearchMatches, activeSearchMatch,
     searchCandidatesOpen, setSearchCandidatesOpen, passageFocus,
+    sourceError, searchError, retrySearch,
     jumpToFirstSearchMatch, jumpToSearchMatch,
   } = useReaderSearch({
-    assetId: work.id, initialQuery, initialPassage, initialEvidence, requestPagePayload, jumpToPage,
+    assetId: work.id, documentRevisionId, initialQuery, initialPassage, initialEvidence, requestPagePayload, jumpToPage,
   });
 
-  const { citationStyle, setCitationStyle, citations, copyCitation } = useReaderCitation({
+  const { citationStyle, setCitationStyle, citations, citationError, copyCitation, retryCitation } = useReaderCitation({
     editionId: work.editionId ?? access?.edition_id, page, setCopyStatus, setCopyStatusState,
   });
 
   useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated });
+  const { researchAnchors, researchError, retryResearch } = useReaderResearch({ assetId: work.id, revisionId: documentRevisionId, requestedRevisionId,
+    projectId: researchProjectId, turnId: researchTurnId, referenceId: researchReferenceId,
+    ownerId: readerSession.status === "authenticated" && readerSession.user ? String(readerSession.user.id) : null, requestPagePayload, jumpToPage });
 
   const pageOverlays = useReaderPageOverlays({
-    annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches,
+    annotations, focusedAnnotationId, pagePayloads, passageFocus: access ? passageFocus : null,
+    researchAnchors: access ? researchAnchors : [], query, searchMatches: access ? searchMatches : [],
   });
-  const readerOutline = outline.map((item) => [item.chapter_title, item.index] as const);
-  const currentOutline = [...outline]
-    .reverse()
-    .find((item) => item.index <= page);
+  const allOutline = useMemo(() => prepareOutline(outline), [outline]);
+  const readerOutline = useMemo(() => filterOutline(allOutline, outlineQuery, collapsedOutline), [allOutline, outlineQuery, collapsedOutline]);
+  const outlineParents = useMemo(() => new Set(allOutline.map(item => item.parent_id).filter(Boolean)), [allOutline]);
+  const currentOutline = allOutline.find(item => item.id === selectedOutlineId && item.index === page)
+    ?? allOutline.filter(item => item.index <= page).sort((a, b) => b.index - a.index || b.level - a.level)[0];
+  const collapseOutline = (id: string, collapse: boolean) => setCollapsedOutline(current => {
+    const next = new Set(current); if (collapse) next.add(id); else next.delete(id); return next;
+  });
   function setRightPanel(open: boolean) {
     if (isCompact) setCompactRightOpen(open);
     else setRightOpen(open);
   }
 
   return (
-    <div className={`reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}>
+    <div className={`reader stl4-reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}>
       <UsageTracker eventType="reader_open" assetId={work.id} workId={work.workId} source="reader" />
       <header className="reader-toolbar" aria-label="阅读工具栏">
-        <Link className="reader-logo" href="/" aria-label="返回书库"><span>SOCIAL</span><span>THEORY</span><span>LIBRARY</span></Link>
+        <Link className="reader-logo" href="/" aria-label="返回书库"><span className="reader-brand-lockup"><Wordmark /></span></Link>
         <div className="toolbar-group page-control">
           <span>PDF 页</span>
           <button type="button" aria-label="上一页" onClick={() => jumpToPage(page - 1)}><ChevronLeft size={17} /></button>
@@ -283,6 +313,7 @@ export function ReaderShell({
         </div>
         </div>
         <div className="reader-actions">
+          {safeResearchReturn(returnTo) ? <Link href={safeResearchReturn(returnTo)}>返回研究</Link> : null}
           <AskLibraryLink
             context="works"
             ids={[work.workId]}
@@ -312,14 +343,20 @@ export function ReaderShell({
         </nav>
         {sidebarTab === "outline" ? (
           <>
-            <label className="outline-search"><Search size={14} /><input aria-label="搜索目录" name="reader-outline-search" autoComplete="off" placeholder="搜索目录……" /></label>
+            <label className="outline-search"><Search size={14} /><input aria-label="搜索目录" name="reader-outline-search" autoComplete="off" placeholder="搜索目录……" value={outlineQuery} onChange={event => setOutlineQuery(event.target.value)} /></label>
             <div className="outline-list">
-              {readerOutline.map(([label, target]) => (
-                <button className={Number(target) <= page && page < Number(target) + 20 ? "active" : ""} type="button" key={label} onClick={() => jumpToPage(Number(target))}>
-                  <span>{label}</span><small>{target}</small>
+              {readerOutline.map(item => (
+                <button className={item.id === currentOutline?.id ? "active" : ""} type="button" key={item.id}
+                  aria-current={item.id === currentOutline?.id ? "location" : undefined}
+                  aria-expanded={outlineParents.has(item.id) ? !collapsedOutline.has(item.id) : undefined}
+                  title={outlineParents.has(item.id) ? "点击定位；按左方向键折叠，右方向键展开" : undefined}
+                  style={{ paddingInlineStart: `${12 + (item.level - 1) * 14}px` }}
+                  onKeyDown={event => { if (outlineParents.has(item.id) && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); collapseOutline(item.id, event.key === "ArrowLeft"); } }}
+                  onClick={() => { setSelectedOutlineId(item.id); jumpToPage(item.index, "smooth", outlinePosition(item)); }}>
+                  <span>{item.title}</span><small>{item.printed_label || item.index}</small>
                 </button>
               ))}
-              {!readerOutline.length ? <p className="reader-empty-list">该 PDF 没有可识别的目录书签。</p> : null}
+              {!readerOutline.length ? <p className="reader-empty-list">{outlineQuery ? "没有匹配的目录条目。" : "该 PDF 没有可识别的目录书签。"}</p> : null}
             </div>
           </>
         ) : null}
@@ -396,8 +433,10 @@ export function ReaderShell({
           </div>
         ) : null}
         {access?.reader_fallback_reason ? <div className="reader-processing-status status-failed" role="status"><strong>已安全回退</strong><span>{access.reader_fallback_reason}</span></div> : null}
+        {access && pageErrors[page] ? <div className="reader-processing-status status-failed" role="alert"><strong>当前页文字信息未能读取</strong><span>{pageErrors[page]}</span><button type="button" onClick={() => retryPagePayload(page)}>重试页内容</button></div> : null}
         {access ? (
           <PdfContinuousViewer
+            key={`${access.served_asset_id}:${access.sha256}`}
             url={access.url}
             pageCount={totalPages}
             currentPage={page}
@@ -450,6 +489,10 @@ export function ReaderShell({
         <button className="panel-close" type="button" aria-label="关闭信息侧栏" onClick={() => setRightPanel(false)}><X size={18} /></button>
         <section>
           <h2>当前阅读</h2>
+          {researchError ? <p role="alert">{researchError}<button type="button" onClick={retryResearch}>重新核对研究原文</button></p> : null}
+          {sourceError || searchError ? <p role="alert">{sourceError || searchError}<button type="button" onClick={retrySearch}>重试原文定位与检索</button></p> : null}
+          {(passageFocus && !passageFocus.bbox.length) || researchAnchors.some(anchor => !anchor.bbox.length) ? <p>当前来源按页定位，请在 PDF 中核对具体原文。</p> : null}
+          {statusPollPaused ? <p role="status">文字处理状态自动刷新已暂停。<button type="button" onClick={retryAccess}>重新读取处理状态</button></p> : null}
           <strong>{currentOutline?.chapter_title || work.title}</strong>
           <p>{currentPagePayload?.chapter_title || `第 ${currentPagePayload?.printed_label || page} 页`}</p>
           <div className="side-progress"><i style={{ width: `${progress}%` }} /></div>
@@ -475,8 +518,9 @@ export function ReaderShell({
               ? ` · 书页 ${citations.page.printed_label}`
               : ""}
           </p>
-          <p>{citations?.[citationStyle] || "正在根据馆藏元数据生成本页引用……"}</p>
-          <button className="button secondary" type="button" onClick={copyCitation}><Copy size={14} /> 复制引用</button>
+          <p role={citationError ? "alert" : undefined}>{citations?.[citationStyle] || citationError || "正在根据馆藏元数据生成本页引用……"}</p>
+          {citationError ? <button type="button" onClick={retryCitation}>重试读取当前页引用</button> : null}
+          <button className="button secondary" type="button" disabled={!citations?.[citationStyle]} onClick={copyCitation}><Copy size={14} /> 复制引用</button>
         </section>
         <section>
           <h2>相关理论流派</h2>
@@ -546,7 +590,7 @@ export function ReaderShell({
             <p className="eyebrow">保存个人阅读资料</p>
             <h2 id="login-gate-title">登录后使用{gate}</h2>
             <p>在线阅读、下载、全文搜索、复制和引用对访客开放。个人批注、笔记、划线、书签和进度需要登录。</p>
-            <Link className="button" href={`/login?next=/reader/${work.id}`}>登录 <ArrowRight size={16} /></Link>
+            <Link className="button" href={`/login?${new URLSearchParams({ next: readerReturnPath(work.id, { page: String(page), q: query, focus: initialFocus, passage: initialPassage, evidence: initialEvidence, research_project: researchProjectId, research_turn: researchTurnId, reference: researchReferenceId, revision: requestedRevisionId || documentRevisionId, return_to: safeResearchReturn(returnTo) }) })}`}>登录 <ArrowRight size={16} /></Link>
             <Link className="button secondary" href="/register">注册读者</Link>
           </div>
         </Dialog>
