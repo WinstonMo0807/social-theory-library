@@ -7,7 +7,7 @@
 - `python -m compileall -q api/catalog/home_views.py api/catalog/urls.py api/catalog/serializers.py api/catalog/services/recommendations.py` 已退出 0。
 - 全量 `web` TypeScript 静态检查仍被既有 `web/tests/admin-collections-v306-live.spec.ts` 与 `web/tests/relation-timeline-v306-live.spec.ts` 的 3 个 TS7022 阻断；这些错误不在 U01 文件调用链内，未擅自修改旧测试。
 - 尚未运行正式 Django/前端测试、构建、浏览器或视觉验收；U01 仍是“已实现、静态部分通过、正式验收待核实”，不计为完成。
-- U01 局部 Git 检查点为 `9dbea31`。工作区其余改动没有被清理或重置。
+- U01 局部 Git 检查点为 `4dbe776`。工作区其余改动没有被清理或重置。
 
 更新于2026-10-15。阶段：全量功能开发，未进入统一验收。
 

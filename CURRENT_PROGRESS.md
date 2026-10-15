@@ -5,7 +5,7 @@
 - 已恢复当前单主线工作区并保留全部既有未提交修改；当前分支 `codex/stl4-unified`，未执行 reset/clean/pull。
 - U01 首页聚合和前端已经按 `docs/stl4/API_CONTRACT.md` 收口；修复了两个错误状态重载链接，使其使用 Next `Link`。Python 目标模块 `compileall` 退出0，首页目标 ESLint 已清除错误。
 - 全量 TypeScript 仍被三个无关旧 live 测试 TS7022 阻断；未将其误记为首页通过，也未修改这些历史测试。尚未运行正式测试、构建、浏览器验收或部署。
-- 已形成局部 Git 检查点 `9dbea31`（`feat(stl4): establish public homepage contract`），只包含首页业务单元、契约与相应进度记录；其余未完成改动仍保留在工作区。下一步进入已有后端契约的 `/account/research`，不使用图集示例数据填充真实接口。
+- 已形成局部 Git 检查点 `4dbe776`（`feat(stl4): establish public homepage contract`），只包含首页业务单元、契约与相应进度记录；其余未完成改动仍保留在工作区。下一步进入已有后端契约的 `/account/research`，不使用图集示例数据填充真实接口。
 
 ## 2026-10-15 STL 4.0 单主线重构启动（当前执行）
 
