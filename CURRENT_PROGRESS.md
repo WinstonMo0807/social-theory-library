@@ -1,5 +1,13 @@
 # Social Theory Library 当前进度
 
+## 2026-10-15 STL 4.0 终稿 PDF 回溯与读者中心接续
+
+- 按用户重新确认，`output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 是唯一视觉依据；本轮以 Poppler 直接渲染该 PDF 第10–18、23–32、36–42、80–82、183–197页进行源码回溯。旧 PNG、历史 PDF、候选图均未作为视觉证据。
+- 新增 [`docs/stl4/VISUAL_AUDIT_20261015.md`](docs/stl4/VISUAL_AUDIT_20261015.md)，记录首页、探索、Reader、管理端、读者中心、帮助/反馈的已覆盖、明确偏差和缺页。当前没有任何路由可凭源码静态检查写成“已完全按终稿实现”。
+- 读者中心已开始收口：`/account` 改为终稿横向导航壳；`/account/research` 接入同一导航和终稿研究会话列表层级；`/account/research/[id]` 已扩展为真实研究轮次、证据候选、当前选材、加入/移除选材和继续提问工作区；补入 `/account/research/[id]/compare` 的真实私有比较矩阵入口，并补入笔记、阅读计划、引文核验、已确认笔记列表入口。
+- 仍未完成：`/account` 的旧资料面板尚未全部映射为终稿内容；研究工作区的六种状态、轮次分支与范围变更交互尚需继续接入；帮助/反馈缺页、探索/Reader/管理端视觉重构及首页逐图校正尚未完成。以上均不计验收通过。
+- 静态验证：研究/读者中心目标 ESLint 0错误（`reader-center.tsx`保留1条既有内部跳转警告）；全量 TypeScript 只剩既有三个 live 测试 TS7022，新增研究代码无类型错误。尚未运行正式测试、构建、浏览器、视觉回归或部署。
+
 ## 2026-10-15 STL 4.0 接续：U01 首页静态复核
 
 - 已恢复当前单主线工作区并保留全部既有未提交修改；当前分支 `codex/stl4-unified`，未执行 reset/clean/pull。

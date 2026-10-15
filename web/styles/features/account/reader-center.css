@@ -359,6 +359,20 @@
   padding-bottom: 70px;
 }
 
+/* Reader centre shell aligned to final PDF pages 183–185. */
+.reader-center { display: block; min-height: calc(100vh - var(--header-height)); border-top: 0; background: #f7f4ee; }
+.account-content { display: block; width: min(1180px, 100%); margin: 0 auto; padding: 30px 34px 70px; }
+.reader-center-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.account-content > .reader-center-heading h1 { margin: 0; color: #172a44; font: 600 clamp(32px, 4vw, 46px)/1.15 var(--serif); letter-spacing: -.04em; }
+.reader-center-heading > div:first-child > p:last-child { margin: 5px 0 0; color: #74746e; font: 13px/1.6 var(--serif); }
+.reader-center-user { display: flex; align-items: center; gap: 10px; color: #526276; font: 11px var(--sans); }.reader-center-user small { color: #92918b; }.reader-center-user button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #cfd4da; background: #fff; padding: 7px 9px; color: #526276; font: 11px var(--sans); cursor: pointer; }
+.account-content > .stl4-reader-tabs { border: 1px solid #dedbd3; border-bottom-color: #e1ddd4; background: #fff; }
+.reader-legacy-nav { margin: 12px 0 0; color: #6e6d69; font: 11px var(--sans); }.reader-legacy-nav summary { cursor: pointer; }.reader-legacy-nav nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }.reader-legacy-nav nav button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #dedbd3; background: #fff; padding: 6px 9px; color: #5f625f; font: 11px var(--sans); cursor: pointer; }.reader-legacy-nav nav button.active { border-color: #b3894b; color: #172a44; }
+.account-content > header + .stl4-reader-tabs + .reader-legacy-nav + .form-message,
+.account-content > .stl4-reader-tabs + .reader-legacy-nav + .form-message { margin-top: 14px; }
+.account-content .panel, .account-content .account-stats, .account-content .submission-panel { margin-top: 18px; }
+@media (max-width: 720px) { .account-content { padding: 22px 16px 50px; }.reader-center-heading { align-items: flex-start; flex-direction: column; gap: 12px; }.reader-center-user { flex-wrap: wrap; }.account-content > .stl4-reader-tabs { overflow-x: auto; }.account-content > .stl4-reader-tabs a { padding-inline: 12px; } }
+
 .reader-book-notes .back-link {
   display: inline-flex;
   align-items: center;

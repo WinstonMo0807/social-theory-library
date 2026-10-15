@@ -30,11 +30,13 @@ import {
 } from "@/lib/api";
 import { adaptApiWork as adaptWork } from "@/lib/public-data-adapters";
 import type { ApiWork } from "@/lib/api/public-catalog";
+import { readAllPages } from "@/lib/api/read-all-pages";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 import { BookCard, BookCover, SectionHeading } from "./ui";
 import { DisplayPreferences } from "./display-preferences";
+import { ResearchCenterNav } from "./research/research-center-nav";
 
 const tabs = [
   [BookOpen, "概览"],
@@ -48,7 +50,6 @@ const tabs = [
   [Settings, "账户设置"],
 ] as const;
 
-type Paginated<T> = { count?: number; next?: string | null; results: T[] };
 type ProgressSnapshot = {
   id: string;
   asset: string;
@@ -146,6 +147,7 @@ export function ReaderCenter() {
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(true);
+  const [dataOwnerId, setDataOwnerId] = useState<number | null>(null);
   const [resourceErrors, setResourceErrors] = useState<Partial<Record<ReaderResourceKey, ReaderResourceError>>>({});
   const [resourceAttempt, setResourceAttempt] = useState(0);
   const [submissionTitle, setSubmissionTitle] = useState("");
@@ -206,22 +208,22 @@ export function ReaderCenter() {
     });
 
     const requests: Promise<{ key: ReaderResourceKey; label: string; results: unknown[] }>[] = [
-      apiRequest<Paginated<ProgressRow>>("/reading/progress/", {}, credential)
-        .then((payload) => ({ key: "progress", label: "阅读进度", results: payload.results })),
-      apiRequest<Paginated<SavedRow>>("/reading/saved/", {}, credential)
-        .then((payload) => ({ key: "saved", label: "文献收藏", results: payload.results })),
-      apiRequest<Paginated<SavedTopicRow>>("/reading/saved-topics/", {}, credential)
-        .then((payload) => ({ key: "savedTopics", label: "主题收藏", results: payload.results })),
-      apiRequest<Paginated<AnnotationRow>>("/reading/annotations/", {}, credential)
-        .then((payload) => ({ key: "annotations", label: "高亮与笔记", results: payload.results })),
-      apiRequest<Paginated<NoteGroupRow>>("/reading/annotations/note-groups/", {}, credential)
-        .then((payload) => ({ key: "noteGroups", label: "作品笔记", results: payload.results })),
-      apiRequest<Paginated<BookmarkRow>>("/reading/bookmarks/", {}, credential)
-        .then((payload) => ({ key: "bookmarks", label: "书签", results: payload.results })),
-      apiRequest<Paginated<ReadingListRow>>("/reading/lists/", {}, credential)
-        .then((payload) => ({ key: "lists", label: "书单", results: payload.results })),
-      apiRequest<Paginated<HistoryRow>>("/reading/history/", {}, credential)
-        .then((payload) => ({ key: "history", label: "阅读历史", results: payload.results })),
+      readAllPages<ProgressRow>("/reading/progress/", credential)
+        .then((results) => ({ key: "progress", label: "阅读进度", results })),
+      readAllPages<SavedRow>("/reading/saved/", credential)
+        .then((results) => ({ key: "saved", label: "文献收藏", results })),
+      readAllPages<SavedTopicRow>("/reading/saved-topics/", credential)
+        .then((results) => ({ key: "savedTopics", label: "主题收藏", results })),
+      readAllPages<AnnotationRow>("/reading/annotations/", credential)
+        .then((results) => ({ key: "annotations", label: "高亮与笔记", results })),
+      readAllPages<NoteGroupRow>("/reading/annotations/note-groups/", credential)
+        .then((results) => ({ key: "noteGroups", label: "作品笔记", results })),
+      readAllPages<BookmarkRow>("/reading/bookmarks/", credential)
+        .then((results) => ({ key: "bookmarks", label: "书签", results })),
+      readAllPages<ReadingListRow>("/reading/lists/", credential)
+        .then((results) => ({ key: "lists", label: "书单", results })),
+      readAllPages<HistoryRow>("/reading/history/", credential)
+        .then((results) => ({ key: "history", label: "阅读历史", results })),
     ];
 
     Promise.allSettled(requests).then((results) => {
@@ -273,6 +275,7 @@ export function ReaderCenter() {
         return;
       }
       setReaderData(nextData);
+      setDataOwnerId(session.user?.id ?? null);
       setNoteGroups(nextNoteGroups);
       setResourceErrors(nextErrors);
     }).finally(() => {
@@ -282,7 +285,7 @@ export function ReaderCenter() {
     return () => {
       mounted = false;
     };
-  }, [resourceAttempt, session.status]);
+  }, [resourceAttempt, session.status, session.user?.id]);
 
   const recentProgress = useMemo(
     () => [...readerData.progress]
@@ -364,12 +367,11 @@ export function ReaderCenter() {
         bookmarks: kind === "bookmarks" ? current.bookmarks.filter((item) => item.id !== id) : current.bookmarks,
       }));
       if (kind === "annotations") {
-        const groups = await apiRequest<Paginated<NoteGroupRow>>(
+        const groups = await readAllPages<NoteGroupRow>(
           "/reading/annotations/note-groups/",
-          {},
           token,
         );
-        setNoteGroups(groups.results);
+        setNoteGroups(groups);
       }
       finishReaderAction(actionKey, "success", "个人阅读记录已删除。");
     } catch (error) {
@@ -486,7 +488,7 @@ export function ReaderCenter() {
     );
   }
 
-  if (!profile) {
+  if (!profile || dataOwnerId !== session.user?.id) {
     return <div className="account-loading">正在读取账户资料……</div>;
   }
 
@@ -494,25 +496,13 @@ export function ReaderCenter() {
 
   return (
     <div className="reader-center">
-      <aside className="account-sidebar">
-        <div className="account-avatar">{user.display_name.slice(0, 1)}</div>
-        <strong>{user.display_name}</strong>
-        <span>{user.email}</span>
-        <nav>
-          {tabs.map(([Icon, label]) => (
-            <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}>
-              <Icon size={17} />{label}
-            </button>
-          ))}
-        </nav>
-        <ActionButton className="logout-button" type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={16} /> 退出登录</ActionButton>
-      </aside>
       <main className="account-content">
-        <header>
-          <p className="eyebrow">读者中心</p>
-          <h1>{active}</h1>
-          <p>个人阅读资料仅在你的账户中显示。</p>
+        <header className="reader-center-heading">
+          <div><p className="eyebrow">读者中心</p><h1>读者中心</h1><p>继续阅读，整理笔记与研究。</p></div>
+          <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
         </header>
+        <ResearchCenterNav active="research" />
+        <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
 
         {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
         {Object.keys(resourceErrors).length ? (

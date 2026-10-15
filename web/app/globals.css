@@ -31,6 +31,7 @@
 @import "../styles/features/account/authentication.css";
 @import "../styles/features/account/reader-center.css";
 @import "../styles/features/account/responsive.css";
+@import "../styles/features/account/research.css";
 @import "../styles/layout/admin-shell.css";
 @import "../styles/features/admin/dashboard.css";
 @import "../styles/components/admin-page-title.css";
@@ -70,3 +71,4 @@
 @import "../styles/features/explore/editorial-assistant.css";
 @import "../styles/features/explore/editorial-responsive.css";
 @import "../styles/components/overlays.css";
+@import "../styles/features/admin/design-v2.css";
