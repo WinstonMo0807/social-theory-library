@@ -552,15 +552,19 @@ def execute_deep_session(session_id, generation: int, task_id: str) -> None:
         baseline_identity = (session.versions or {}).get("_identity", {})
         if not isinstance(baseline_identity, dict):
             baseline_identity = {}
+        embedding_ready = embedding_state.get("status") == "completed"
         stage.update({
-            "index_uid": str(embedding_state.get("index_uid") or ""),
+            # These fields are evidence of a loaded, queried deep index. A
+            # configured UID/artifact alone is not enough to expose it as
+            # active metadata in the visual workbench.
+            "index_uid": str(embedding_state.get("index_uid") or "") if embedding_ready else "",
             "index_generation": str(
                 getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")
                 or baseline_identity.get("index_generation")
                 or ""
-            ),
-            "embedding_artifact": str(embedding_state.get("artifact") or ""),
-            "embedding_dimensions": embedding_state.get("dimensions"),
+            ) if embedding_ready else "",
+            "embedding_artifact": str(embedding_state.get("artifact") or "") if embedding_ready else "",
+            "embedding_dimensions": embedding_state.get("dimensions") if embedding_ready else None,
             # A configured model name is not proof that the isolated worker
             # loaded it. Keep artifact identity empty until that stage reports
             # completion; the nested state still exposes the requested model
@@ -928,6 +932,10 @@ def _deep_progress(session) -> dict:
     deep_state = raw.get("bge") if isinstance(raw.get("bge"), dict) else {}
     context_state = raw.get("convmemory") if isinstance(raw.get("convmemory"), dict) else {}
     embedding_state = raw.get("embedding") if isinstance(raw.get("embedding"), dict) else {}
+    baseline_identity_visible = status == "baseline_ready"
+    embedding_ready = embedding_state.get("status") == "completed"
+    bge_ready = deep_state.get("status") == "completed"
+    context_ready = context_state.get("status") == "completed"
     payload = {
         "status": status,
         "stage": str(raw.get("stage") or ("baseline" if status == "baseline_ready" else "deep")),
@@ -935,15 +943,15 @@ def _deep_progress(session) -> dict:
         "total": int(raw.get("total") or 1),
         "terminal": bool(raw.get("terminal", terminal)),
         "model": str(raw.get("model") or deep_state.get("model") or context_state.get("model") or ""),
-        "index_uid": str(raw.get("index_uid") or identity.get("index_uid") or ""),
-        "index_generation": str(raw.get("index_generation") or identity.get("index_generation") or ""),
-        "embedding_artifact": str(raw.get("embedding_artifact") or embedding_state.get("artifact") or identity.get("embedding_artifact") or ""),
-        "embedding_dimensions": raw.get("embedding_dimensions", embedding_state.get("dimensions", identity.get("embedding_dimensions"))),
+        "index_uid": str(raw.get("index_uid") or (identity.get("index_uid") if baseline_identity_visible else "") or ""),
+        "index_generation": str(raw.get("index_generation") or (identity.get("index_generation") if baseline_identity_visible else "") or ""),
+        "embedding_artifact": str(raw.get("embedding_artifact") or (embedding_state.get("artifact") if embedding_ready else "") or (identity.get("embedding_artifact") if baseline_identity_visible else "") or ""),
+        "embedding_dimensions": raw.get("embedding_dimensions", embedding_state.get("dimensions") if embedding_ready else (identity.get("embedding_dimensions") if baseline_identity_visible else None)),
         # Model names describe the requested provider; artifact fields only
         # describe a loaded, verified bundle. Never copy a model name into an
         # artifact slot while the isolated worker is pending or degraded.
-        "reranker_artifact": str(raw.get("reranker_artifact") or deep_state.get("artifact") or identity.get("reranker_artifact") or ""),
-        "context_artifact": str(raw.get("context_artifact") or context_state.get("artifact") or context_state.get("artifact_id") or ""),
+        "reranker_artifact": str(raw.get("reranker_artifact") or (deep_state.get("artifact") if bge_ready else "") or (identity.get("reranker_artifact") if baseline_identity_visible else "") or ""),
+        "context_artifact": str(raw.get("context_artifact") or (context_state.get("artifact") or context_state.get("artifact_id") if context_ready else "") or ""),
         "notice": str(raw.get("notice") or ("基础候选已就绪；深度层尚未启动。" if status == "baseline_ready" else
                                               "当前没有可用深度任务，保留基础检索结果。" if status == "unavailable" else "")),
     }
