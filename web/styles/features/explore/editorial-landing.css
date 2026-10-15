@@ -59,8 +59,10 @@
   .stl4-explore-section-heading { margin-bottom: 11px; padding-top: 15px; }
   .stl4-explore-section-heading h2 { font-size: 23px; }
   .stl4-explore-entry-grid { grid-template-columns: 1fr; gap: 12px; }
-  .stl4-explore-entry-image { height: 118px; }
-  .stl4-explore-entry-body { min-height: 88px; padding: 10px 35px 13px 12px; }
+  .stl4-explore-entry { display: grid; grid-template-columns: 92px minmax(0, 1fr); }
+  .stl4-explore-entry-image { height: auto; min-height: 92px; }
+  .stl4-explore-entry-body { min-height: 0; padding: 10px 35px 13px 12px; }
+  .stl4-explore-entry-body > svg { top: 12px; right: 11px; bottom: auto; }
   .stl4-explore-entry-body strong { font-size: 18px; }
   .stl4-explore-entry-body > span { font-size: 11px; }
 }

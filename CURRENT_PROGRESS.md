@@ -6,6 +6,12 @@
 - 三个入口分别连接现有真实检索、观点检索和书库提问链路；搜索请求补带 `context=global`，不写入图集示例书目或虚构统计。
 - 视觉依据仍只来自 `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf`；目前仅完成源码静态检查，尚未进行浏览器截图、移动断点和正式视觉回归。
 
+## 2026-10-15 原文证据入口接续（开发中）
+
+- 新增 `/explore/evidence`，复用现有公开全文检索 API，呈现真实原文片段、版本/页码定位、Reader 回读、分页、空结果与接口不可用状态；没有把 PDF 示例书目或引文写进代码。
+- 该路由承担终稿第30页的跨作品证据入口；更深层的选材、比较和私有研究归属继续使用 `/account/research` 链路。
+- 目标 ESLint 与 `git diff --check` 已通过；尚未运行浏览器、正式测试、构建或视觉回归。
+
 ## 2026-10-15 STL 4.0 终稿 PDF 回溯与读者中心接续
 
 - 按用户重新确认，`output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 是唯一视觉依据；本轮以 Poppler 直接渲染该 PDF 第10–18、23–32、36–42、80–82、183–197页进行源码回溯。旧 PNG、历史 PDF、候选图均未作为视觉证据。

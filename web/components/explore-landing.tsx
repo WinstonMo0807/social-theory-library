@@ -12,13 +12,13 @@ const entries = [
   {
     href: "/explore/opinions",
     title: "观点检索",
-    description: "围绕概念、问题或学术论争，了解不同立场的论证与回应。",
+    description: "围绕核心概念、理论观点或学术论争，了解不同立场的论证与回应。",
     imageClass: "shelves",
   },
   {
     href: "/explore/ask",
     title: "向书库提问",
-    description: "以现实问题展开研究，从馆藏原文出发获得可追溯的讨论路径。",
+    description: "以现实问题或研究兴趣为起点，获得与社会理论相关的文献、概念与讨论路径。",
     imageClass: "desk",
   },
 ] as const;
@@ -26,16 +26,15 @@ const entries = [
 export function ExploreLanding() {
   return (
     <>
-      <main className="stl4-explore-page">
+      <div className="stl4-explore-page">
         <section className="stl4-explore-hero" aria-labelledby="explore-title">
           <div className="stl4-explore-hero-media" aria-hidden="true" />
           <div className="stl4-explore-hero-copy">
             <h1 id="explore-title">在原典与论争之间</h1>
-            <p>从经典文献到当代论争，在文本、观点与问题之间自由穿行，发现社会理论的思想脉络与现实回响。</p>
+            <p>从经典文献到当代争论，在文本、观点与问题之间自由穿行，发现社会理论的思想脉络与现实回响。</p>
             <form className="stl4-explore-search" action="/explore/original" method="get">
               <Search size={17} strokeWidth={1.7} aria-hidden="true" />
               <label className="sr-only" htmlFor="explore-query">搜索书名、作者、概念或主题</label>
-              <input type="hidden" name="context" value="global" />
               <input id="explore-query" name="q" type="search" placeholder="搜索书名、作者、概念、主题……" />
               <button type="submit">搜索</button>
             </form>
@@ -59,7 +58,7 @@ export function ExploreLanding() {
             ))}
           </div>
         </section>
-      </main>
+      </div>
       <SiteFooter />
     </>
   );
