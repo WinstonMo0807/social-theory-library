@@ -63,6 +63,21 @@ def _excerpt(row: dict) -> str:
     return str(row.get("excerpt") or row.get("text") or "").strip()
 
 
+def _page_number(row: dict) -> int | None:
+    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    for key in ("page", "pdf_page", "page_number", "printed_page"):
+        candidate = row.get(key)
+        if candidate in (None, ""):
+            candidate = metadata.get(key)
+        try:
+            value = int(candidate)
+        except (TypeError, ValueError):
+            continue
+        if value >= 1:
+            return value
+    return None
+
+
 def _rrf(branches: Iterable[tuple[list[dict], float]]) -> list[dict]:
     scores: dict[str, float] = {}
     rows: dict[str, dict] = {}
@@ -198,7 +213,9 @@ def _validate_service_endpoint(url: str, allowed_hosts: tuple[str, ...]) -> str:
         or parsed.password
         or parsed.query
         or parsed.fragment
-        or parsed.path not in {"", "/"}
+        # The isolated inference contract uses fixed paths; host allowlisting
+        # still prevents arbitrary outbound requests.
+        or parsed.path not in {"", "/", "/deep-rerank", "/context-organize", "/rerank"}
     ):
         raise ValueError("deep service endpoint is not allowlisted")
     return hostname
@@ -227,6 +244,21 @@ def _post_deep_service(
         )
         if 300 <= response.status_code < 400 or len(response.content) > 1_000_000:
             raise ValueError("unsafe deep service response")
+        if response.status_code >= 400:
+            # The isolated inference service uses a typed 503 envelope while
+            # a deep bundle is pending. Preserve that state for the session
+            # contract; all other HTTP errors remain a normal degradation.
+            try:
+                detail_payload = response.json()
+            except ValueError:
+                detail_payload = None
+            detail = detail_payload.get("detail") if isinstance(detail_payload, dict) else None
+            if isinstance(detail, dict) and detail.get("status") in {"pending", "unavailable"}:
+                return {
+                    "status": str(detail["status"]),
+                    "code": str(detail.get("code") or "deep_service_unavailable"),
+                    "stage": str(detail.get("stage") or "deep"),
+                }
         response.raise_for_status()
         value = response.json()
     except (httpx.HTTPError, ValueError, TypeError) as exc:
@@ -234,6 +266,21 @@ def _post_deep_service(
     if not isinstance(value, dict):
         raise ValueError("deep service response is not an object")
     return value
+
+
+def _configured_service_url(setting_name: str, path: str) -> str:
+    """Resolve an explicitly enabled deep lane against the local inference service.
+
+    The dedicated URL remains the preferred override.  When it is empty, the
+    already configured discovery inference service is the only permitted
+    fallback; no arbitrary provider URL is inferred here.
+    """
+
+    explicit = str(getattr(settings, setting_name, "")).strip()
+    if explicit:
+        return explicit
+    base = str(getattr(settings, "DISCOVERY_INFERENCE_URL", "")).strip().rstrip("/")
+    return f"{base}{path}" if base else ""
 
 
 def _parse_order(payload: dict, rows: list[dict]) -> tuple[list[dict], dict[int, float]]:
@@ -265,15 +312,26 @@ def _parse_order(payload: dict, rows: list[dict]) -> tuple[list[dict], dict[int,
 def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[dict]]:
     config = {
         "enabled": bool(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_ENABLED", False)),
-        "url": str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_URL", "")),
+        "url": _configured_service_url("STL_DEEP_RETRIEVAL_BGE_URL", "/deep-rerank"),
         "model": str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_MODEL", "")),
+        "artifact": str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_ARTIFACT", "")),
     }
     warnings: list[dict] = []
     if not config["enabled"] or not config["url"]:
-        return rows, {"status": "disabled", "provider": "local_http", "model": config["model"]}, warnings
+        return rows, {
+            "status": "disabled",
+            "provider": "local_http",
+            "model": config["model"],
+            "artifact": config["artifact"],
+        }, warnings
     if config["model"].casefold() != "baai/bge-reranker-v2-m3":
         warnings.append(_warning("deep_bge_model_not_allowlisted", "深排模型未通过 BGE-reranker-v2-m3 白名单校验。"))
-        return rows, {"status": "degraded", "provider": "local_http", "model": config["model"]}, warnings
+        return rows, {
+            "status": "degraded",
+            "provider": "local_http",
+            "model": config["model"],
+            "artifact": config["artifact"],
+        }, warnings
     candidates = list(rows[:MAX_BGE_CANDIDATES])
     try:
         payload = _post_deep_service(
@@ -284,11 +342,27 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
                 "documents": [_excerpt(row)[:4000] for row in candidates],
                 "top_n": len(candidates),
                 "return_documents": False,
+                "expected_artifact": str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_ARTIFACT", "")),
+                "generation": str(getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")),
             },
             allowed_hosts=tuple(str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_ALLOWED_HOSTS", "")).split(",")),
             timeout_seconds=int(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_TIMEOUT_SECONDS", 30)),
             api_key=str(getattr(settings, "STL_DEEP_RETRIEVAL_BGE_API_KEY", "")),
         )
+        service_status = str(payload.get("status") or "").casefold()
+        if service_status in {"pending", "unavailable", "degraded", "disabled"}:
+            warnings.append(_warning(
+                "deep_bge_pending" if service_status == "pending" else "deep_bge_unavailable",
+                "BGE 深度重排尚未就绪，已保留 mMARCO 顺序。",
+            ))
+            return rows, {
+                "status": "disabled" if service_status == "disabled" else "degraded",
+                "provider": "local_http",
+                "model": config["model"],
+                "artifact": config["artifact"],
+                "service_status": service_status,
+                "top_k": len(candidates),
+            }, warnings
         ordered, scores = _parse_order(payload, candidates)
         for rank, row in enumerate(ordered, 1):
             row = row
@@ -299,6 +373,7 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
             "status": "completed",
             "provider": "local_http",
             "model": config["model"],
+            "artifact": config["artifact"],
             "top_k": len(candidates),
         }, warnings
     except (ValueError, TypeError, KeyError) as exc:
@@ -308,6 +383,7 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
             "status": "degraded",
             "provider": "local_http",
             "model": config["model"],
+            "artifact": config["artifact"],
             "top_k": len(candidates),
         }, warnings
 
@@ -340,41 +416,79 @@ def _attach_adjacent_context(rows: list[dict], access_statuses: list[str]) -> tu
 
 def _convmemory_organize(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[dict]]:
     enabled = bool(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_ENABLED", False))
-    url = str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_URL", ""))
+    url = _configured_service_url("STL_DEEP_RETRIEVAL_CONVMEMORY_URL", "/context-organize")
     model = str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_MODEL", ""))
+    artifact = str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_ARTIFACT", ""))
     warnings: list[dict] = []
     selected = rows[:_context_limit()]
     if not enabled or not url or not selected:
-        return rows, {"status": "disabled", "provider": "convmemory-v2", "model": model, "count": len(selected)}, warnings
+        return rows, {
+            "status": "disabled",
+            "provider": "convmemory-v2",
+            "model": model,
+            "artifact": artifact,
+            "count": len(selected),
+        }, warnings
     try:
         payload = _post_deep_service(
             url,
             {
                 "model": model,
                 "query": str(query)[:1200],
-                "items": [
+                "hits": [
                     {
                         "id": _identity(row),
                         "text": _excerpt(row)[:4000],
-                        "context": row.get("deep_context") or {},
+                        "before": str((row.get("deep_context") or {}).get("before") or "")[:1000],
+                        "after": str((row.get("deep_context") or {}).get("after") or "")[:1000],
+                        "title": str(row.get("title") or "")[:1000],
+                        "page": _page_number(row),
                     }
                     for row in selected
                 ],
-                "top_n": len(selected),
+                "expected_artifact": str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_ARTIFACT", "")),
+                "generation": str(getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")),
             },
             allowed_hosts=tuple(str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_ALLOWED_HOSTS", "")).split(",")),
             timeout_seconds=int(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_TIMEOUT_SECONDS", 30)),
             api_key=str(getattr(settings, "STL_DEEP_RETRIEVAL_CONVMEMORY_API_KEY", "")),
         )
+        service_status = str(payload.get("status") or "").casefold()
+        if service_status in {"pending", "unavailable", "degraded", "disabled"}:
+            warnings.append(_warning(
+                "deep_convmemory_pending" if service_status == "pending" else "deep_convmemory_unavailable",
+                "连续上下文组织尚未就绪，已保留 BGE 结果和邻近证据。",
+            ))
+            return rows, {
+                "status": "disabled" if service_status == "disabled" else "degraded",
+                "provider": "convmemory-v2",
+                "model": model,
+                "count": len(selected),
+                "service_status": service_status,
+                "artifact": payload.get("artifact_id", ""),
+                "generation": payload.get("generation", ""),
+            }, warnings
         ordered, _scores = _parse_order(payload, selected)
         for rank, row in enumerate(ordered, 1):
             row["deep_rank"] = rank
         ordered.extend(rows[len(selected):])
-        return ordered, {"status": "completed", "provider": "convmemory-v2", "model": model, "count": len(selected)}, warnings
+        return ordered, {
+            "status": "completed",
+            "provider": "convmemory-v2",
+            "model": model,
+            "artifact": artifact,
+            "count": len(selected),
+        }, warnings
     except (ValueError, TypeError, KeyError) as exc:
         logger.warning("ConvMemory context organization unavailable: %s", type(exc).__name__)
         warnings.append(_warning("deep_convmemory_unavailable", "连续上下文组织暂不可用，已保留 BGE 结果和邻近证据。"))
-        return rows, {"status": "degraded", "provider": "convmemory-v2", "model": model, "count": len(selected)}, warnings
+        return rows, {
+            "status": "degraded",
+            "provider": "convmemory-v2",
+            "model": model,
+            "artifact": artifact,
+            "count": len(selected),
+        }, warnings
 
 
 def run_deep_pipeline(
