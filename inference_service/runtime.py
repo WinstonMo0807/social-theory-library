@@ -18,8 +18,9 @@ from opencc import OpenCC
 from tokenizers import Tokenizer
 
 
-NORMALIZATION = "stl-t2s-dehyphen-nfkc-v1"
-PIPELINE = "stl-e5-mean-l2-fp32-v1"
+DEFAULT_NORMALIZATION = "stl-t2s-dehyphen-nfkc-v1"
+DEFAULT_PIPELINE = "stl-e5-mean-l2-fp32-v1"
+DEFAULT_RUNTIME_ID = "onnxruntime-1.22.1-cpu-fp32"
 MAX_TOKENS = 512
 
 
@@ -53,16 +54,43 @@ class Runtime:
         self.batch_size = max(1, min(int(os.getenv("INFERENCE_BATCH_SIZE", "1")), 4))
         self.seconds = max(5, min(int(os.getenv("INFERENCE_REQUEST_SECONDS", "120")), 240))
         self.bundle_id = ""
+        self.pipeline = DEFAULT_PIPELINE
+        self.normalization = DEFAULT_NORMALIZATION
+        self.runtime_id = os.getenv("INFERENCE_RUNTIME_ID", DEFAULT_RUNTIME_ID)
+        self.embedding_dimensions = 384
+        # Deep retrieval is an explicitly opt-in lane.  It has its own bundle
+        # and generation so a BGE/ConvMemory experiment can never masquerade
+        # as the production E5/mMARCO runtime.
+        self.generation = os.getenv("INFERENCE_GENERATION", "").strip()
+        self.deep_root = Path(os.getenv("DEEP_INFERENCE_MODEL_ROOT", str(root / "deep")))
+        self.deep_generation = os.getenv("DEEP_INFERENCE_GENERATION", "").strip()
+        self.deep_models: dict = {}
+        self.deep_bundle_id = ""
+        self.deep_error = "deep_disabled" if os.getenv("DEEP_INFERENCE_ENABLED", "0") != "1" else "model_missing"
 
     def prepare(self) -> None:
         # Hash verification happens once at startup against the fixed bundle, not
         # for every request. The directory is mounted read-only by Compose.
         try:
             manifest = json.loads((self.root / "manifest.json").read_text("utf-8"))
-            lock = json.loads(Path(__file__).with_name("model-lock.json").read_text("utf-8"))
-            if manifest.get("pipeline") != PIPELINE or manifest.get("normalization") != NORMALIZATION:
+            lock_path = Path(__file__).with_name("model-lock.json")
+            # Production keeps the code-pinned lock. An isolated experiment
+            # may opt into a bundle-local lock only in its own container.
+            bundle_lock = self.root / "model-lock.json"
+            if os.getenv("DISCOVERY_ALLOW_BUNDLE_LOCK", "0") == "1" and bundle_lock.is_file():
+                lock_path = bundle_lock
+            lock = json.loads(lock_path.read_text("utf-8"))
+            pipeline = str(manifest.get("pipeline") or "")
+            normalization = str(manifest.get("normalization") or "")
+            if not pipeline or not normalization or pipeline != str(lock.get("pipeline") or "") or normalization != str(lock.get("normalization") or ""):
                 raise ValueError("pipeline mismatch")
+            self.pipeline = pipeline
+            self.normalization = normalization
             self.bundle_id = manifest["bundle_id"]
+            # A model bundle may carry the index generation it was built for.
+            # It is deliberately empty when the bundle does not declare one;
+            # callers that need generation pinning then receive a safe 503.
+            self.generation = str(manifest.get("generation") or self.generation or "").strip()
             for role in ("embedding", "reranker"):
                 spec = manifest["models"][role]
                 pinned = lock["models"][role]
@@ -83,13 +111,24 @@ class Runtime:
                         git_hash = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
                         if git_hash != item["git_oid"]:
                             raise ValueError("source checksum mismatch")
-                expected_id = artifact_id(role, spec)
+                expected_id = artifact_id(
+                    role,
+                    spec,
+                    pipeline=self.pipeline,
+                    normalization=self.normalization,
+                    runtime_id=self.runtime_id,
+                )
                 if spec["artifact_id"] != expected_id:
                     raise ValueError("artifact identity mismatch")
                 tokenizer = Tokenizer.from_file(str(self.root / role / "tokenizer.json"))
                 tokenizer.no_truncation()
                 tokenizer.no_padding()
                 self.models[role] = spec
+                if role == "embedding":
+                    dimensions = int(spec.get("dimensions") or 384)
+                    if not 1 <= dimensions <= 4096:
+                        raise ValueError("embedding dimensions invalid")
+                    self.embedding_dimensions = dimensions
                 # These multilingual vocabularies are large in memory. Validate
                 # one at a time, then keep only the active role during requests.
                 del tokenizer
@@ -99,6 +138,43 @@ class Runtime:
             self.models.clear()
             self.tokenizers.clear()
             self.error = "model_manifest_invalid"
+        self._prepare_deep_manifest()
+
+    def _prepare_deep_manifest(self) -> None:
+        """Read an optional isolated deep bundle without changing production state."""
+        if os.getenv("DEEP_INFERENCE_ENABLED", "0") != "1":
+            self.deep_models.clear()
+            self.deep_error = "deep_disabled"
+            return
+        manifest_path = Path(os.getenv("DEEP_INFERENCE_MANIFEST", str(self.deep_root / "manifest.json")))
+        try:
+            manifest = json.loads(manifest_path.read_text("utf-8"))
+            models = manifest.get("models") or {}
+            # Accept the two names used by the isolated bundle manifest while
+            # keeping the public role names stable in the HTTP contract.
+            reranker = models.get("deep_reranker") or models.get("reranker")
+            context = models.get("context") or models.get("conv_memory")
+            if not isinstance(reranker, dict):
+                raise ValueError("deep reranker missing")
+            expected_model = os.getenv("DEEP_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3").strip()
+            if expected_model and reranker.get("repo_id") != expected_model:
+                raise ValueError("deep reranker model mismatch")
+            generation = str(manifest.get("generation") or self.deep_generation or "").strip()
+            if not generation:
+                raise ValueError("deep generation missing")
+            artifact = str(reranker.get("artifact_id") or "").strip()
+            if not artifact:
+                raise ValueError("deep reranker artifact missing")
+            self.deep_models = {"reranker": reranker}
+            if isinstance(context, dict):
+                self.deep_models["context"] = context
+            self.deep_generation = generation
+            self.deep_bundle_id = str(manifest.get("bundle_id") or "")
+            self.deep_error = ""
+        except Exception:
+            self.deep_models.clear()
+            self.deep_bundle_id = ""
+            self.deep_error = "model_manifest_invalid"
 
     def health(self) -> dict:
         return {
@@ -108,9 +184,12 @@ class Runtime:
             "error": self.error,
             "backend": "onnxruntime-cpu",
             "runtime_version": ort.__version__,
-            "pipeline": PIPELINE,
-            "normalization": NORMALIZATION,
+            "pipeline": self.pipeline,
+            "normalization": self.normalization,
+            "runtime_id": self.runtime_id,
+            "embedding_dimensions": self.embedding_dimensions,
             "bundle_id": self.bundle_id,
+            "generation": self.generation,
             "threads": self.threads,
             "batch_size": self.batch_size,
             "resident_model": self.session_role,
@@ -118,19 +197,98 @@ class Runtime:
             "models": {role: {**self.identity(role), "loaded": role in self.loaded_roles,
                               "inference_completed": role in self.completed_roles}
                        for role in self.models},
+            "deep": self.deep_health(),
         }
+
+    def deep_health(self) -> dict:
+        """Expose optional deep state without claiming a model ran."""
+        # Metadata registration only means that an isolated bundle was found;
+        # the production process never loads it, so it remains pending until a
+        # dedicated deep worker reports completion.
+        status = "pending" if not self.deep_error and self.deep_models else "unavailable"
+        if self.deep_error == "model_missing" and os.getenv("DEEP_INFERENCE_ENABLED", "0") == "1":
+            status = "pending"
+        output = {
+            "status": status,
+            "error": self.deep_error,
+            "bundle_id": self.deep_bundle_id,
+            "generation": self.deep_generation,
+            "models": {},
+        }
+        for role, spec in self.deep_models.items():
+            output["models"][role] = {
+                "model": spec.get("repo_id", ""),
+                "revision": spec.get("revision", ""),
+                "artifact_id": spec.get("artifact_id", ""),
+                "generation": self.deep_generation,
+                "loaded": False,
+                "inference_completed": False,
+            }
+        return output
 
     def identity(self, role: str) -> dict:
         spec = self.models[role]
-        return {"model": spec["repo_id"], "revision": spec["revision"],
-                "artifact_id": spec["artifact_id"], "pipeline": PIPELINE,
-                "normalization": NORMALIZATION}
+        output = {"model": spec["repo_id"], "revision": spec["revision"],
+                  "artifact_id": spec["artifact_id"], "pipeline": self.pipeline,
+                  "normalization": self.normalization, "runtime_id": self.runtime_id}
+        if role == "embedding":
+            output["dimensions"] = self.embedding_dimensions
+        return output
 
-    def require(self, role: str, expected: str = "") -> None:
+    def require(self, role: str, expected: str = "", *, model: str = "", generation: str = "") -> None:
         if self.error or role not in self.models:
             raise InferenceError("model_missing", "本地模型未准备完成，请核对模型清单。")
         if expected and expected != self.models[role]["artifact_id"]:
             raise InferenceError("artifact_mismatch", "查询模型与索引模型不一致。", 409)
+        if model and model != self.models[role].get("repo_id"):
+            raise InferenceError("model_mismatch", "查询模型身份不一致。", 409)
+        if generation:
+            if not self.generation:
+                raise InferenceError("generation_unavailable", "当前推理包没有绑定索引 generation。")
+            if generation != self.generation:
+                raise InferenceError("generation_mismatch", "查询 generation 与模型包不一致。", 409)
+
+    def require_deep(self, *, model: str = "", artifact: str = "", generation: str = "") -> None:
+        if self.deep_error or "reranker" not in self.deep_models:
+            raise InferenceError("deep_unavailable", "BGE 深度重排当前不可用，请保留即时结果并稍后重试。")
+        spec = self.deep_models["reranker"]
+        if model and model != spec.get("repo_id"):
+            raise InferenceError("model_mismatch", "深度重排模型身份不一致。", 409)
+        if artifact and artifact != spec.get("artifact_id"):
+            raise InferenceError("artifact_mismatch", "深度重排模型制品不一致。", 409)
+        if generation and generation != self.deep_generation:
+            raise InferenceError("generation_mismatch", "深度重排 generation 不一致。", 409)
+
+    def deep_rerank(self, query: str, documents: list[str], top_n: int, *,
+                    model: str = "", artifact: str = "", generation: str = "", contexts=None) -> dict:
+        """Reserved deep lane; never falls back to mMARCO under a BGE name."""
+        self.require_deep(model=model, artifact=artifact, generation=generation)
+        # The isolated BGE bundle is intentionally not loaded by the production
+        # runtime yet.  Returning a typed pending response is safer than using
+        # the resident mMARCO session and labelling those scores as BGE.
+        raise InferenceError("deep_pending", "BGE 深度重排制品已登记，等待隔离 Worker 加载。", 503)
+
+    def organize_context(self, *, model: str = "", artifact: str = "", generation: str = "",
+                         query: str = "", hits: list[dict] | None = None) -> dict:
+        """Return a typed ConvMemory state; context is never a relevance fallback."""
+        context = self.deep_models.get("context")
+        candidate_count = len(hits or [])
+        if self.deep_error or not context:
+            return {"status": "unavailable", "stage": "context", "model": model or "ConvMemory-v2",
+                    "artifact_id": artifact, "generation": generation or self.deep_generation,
+                    "candidate_count": candidate_count, "selected_count": 0,
+                    "notice": "ConvMemory 上下文层当前不可用；保留原始证据与邻文。"}
+        expected_model = model or context.get("repo_id", "ConvMemory-v2")
+        if model and model != context.get("repo_id"):
+            raise InferenceError("model_mismatch", "上下文模型身份不一致。", 409)
+        if artifact and artifact != context.get("artifact_id"):
+            raise InferenceError("artifact_mismatch", "上下文模型制品不一致。", 409)
+        if generation and generation != self.deep_generation:
+            raise InferenceError("generation_mismatch", "上下文 generation 不一致。", 409)
+        return {"status": "pending", "stage": "context", "model": expected_model,
+                "artifact_id": context.get("artifact_id", ""), "generation": self.deep_generation,
+                "candidate_count": candidate_count, "selected_count": 0,
+                "notice": "ConvMemory 上下文组织等待隔离 Worker。"}
 
     def normalize(self, text: str) -> str:
         import unicodedata
@@ -313,7 +471,7 @@ class Runtime:
         deadline = time.monotonic() + self.seconds
         for start in range(0, len(prepared), self.batch_size):
             hidden, mask = self.run("embedding", prepared[start:start + self.batch_size], deadline)
-            if hidden.ndim != 3 or hidden.shape[-1] != 384:
+            if hidden.ndim != 3 or hidden.shape[-1] != self.embedding_dimensions:
                 raise InferenceError("invalid_output", "向量模型输出形状不符合固定契约。")
             weights = mask[..., None].astype(np.float32)
             # The hidden tensor is owned by this call; avoid a second tensor of
@@ -322,21 +480,37 @@ class Runtime:
             pooled = hidden.sum(axis=1) / np.maximum(weights.sum(axis=1), 1)
             normalized = pooled / np.maximum(np.linalg.norm(pooled, axis=1, keepdims=True), 1e-12)
             vectors.extend(normalized.tolist())
-        return {**self.identity("embedding"), "dimensions": 384, "vectors": vectors,
+        return {**self.identity("embedding"), "dimensions": self.embedding_dimensions, "vectors": vectors,
                 "token_counts": counts, "truncated": [False] * len(texts)}
 
-    def rerank(self, query: str, documents: list[str], top_n: int, expected: str) -> dict:
+    def rerank(self, query: str, documents: list[str], top_n: int, expected: str, contexts=None) -> dict:
         self.require("reranker", expected)
         tokenizer = self.tokenizer("reranker")
         query = self.normalize(query)
         query_encoding = tokenizer.encode(query, add_special_tokens=False)
         query_truncated = len(query_encoding.ids) > 128
+        if contexts is not None and (len(contexts) != len(documents) or query_truncated):
+            raise InferenceError("context_budget", "上下文实验不允许截断问题或错配邻文。", 422)
         if query_truncated:
             query = query[:query_encoding.offsets[127][1]]
         deadline = time.monotonic() + self.seconds
         results = []
         for index, document in enumerate(documents):
             document = self.normalize(document)
+            if contexts is not None:
+                from context_window import fit_context
+                try:
+                    prepared, clipped = fit_context(tokenizer, query, document,
+                        self.normalize(contexts[index]["before"]), self.normalize(contexts[index]["after"]))
+                except ValueError as exc:
+                    raise InferenceError("context_budget", "命中原文超出上下文实验预算。", 422) from exc
+                logits, _ = self.run("reranker", [(query, prepared)], deadline)
+                if logits.shape != (1, 1):
+                    raise InferenceError("invalid_output", "重排模型输出形状不符合固定契约。")
+                results.append({"index": index, "relevance_score": float(logits[0, 0]),
+                                "windows": 1, "truncated": clipped,
+                                "input_hash": hashlib.sha256(prepared.encode()).hexdigest()})
+                continue
             encoding = tokenizer.encode(document, add_special_tokens=False)
             budget = MAX_TOKENS - len(tokenizer.encode(query, pair="").ids) - 2
             total = len(encoding.ids)
@@ -360,14 +534,19 @@ class Runtime:
             results.append({"index": index, "relevance_score": max(scores),
                             "windows": len(starts), "truncated": truncated})
         results.sort(key=lambda value: (-value["relevance_score"], value["index"]))
-        return {**self.identity("reranker"), "results": results[:top_n],
-                "query_truncated": query_truncated}
+        output = {**self.identity("reranker"), "results": results[:top_n], "query_truncated": query_truncated}
+        if contexts is not None:
+            from context_window import CONTEXT_POLICY
+            output["context_policy"] = CONTEXT_POLICY
+        return output
 
 
-def artifact_id(role: str, spec: dict) -> str:
+def artifact_id(role: str, spec: dict, *, pipeline: str = DEFAULT_PIPELINE,
+                normalization: str = DEFAULT_NORMALIZATION,
+                runtime_id: str = DEFAULT_RUNTIME_ID) -> str:
     files = {item["path"]: item["sha256"] for item in spec["files"]}
     identity = {"repo": spec["repo_id"], "revision": spec["revision"],
                 "model_sha256": files["onnx/model.onnx"], "tokenizer_sha256": files["tokenizer.json"],
-                "role": role, "pipeline": PIPELINE, "normalization": NORMALIZATION,
-                "runtime": "onnxruntime-1.22.1-cpu-fp32"}
+                "role": role, "pipeline": pipeline, "normalization": normalization,
+                "runtime": runtime_id}
     return "stl308-" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
