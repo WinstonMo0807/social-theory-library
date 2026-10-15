@@ -14,6 +14,7 @@ import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
 const running = (status?: string) => status === "queued" || status === "running";
 const statusLabels: Record<string, string> = { queued: "已排队", running: "正在检索", partial: "部分完成", completed: "检索完成", failed: "检索未完成", canceled: "已取消" };
+const deepStatusLabels: Record<string, string> = { baseline_ready: "基础结果已就绪", deep_queued: "深度整理已排队", deep_running: "正在深度整理", completed: "深度结果已完成", partial: "深度结果部分完成", unavailable: "深度层暂不可用" };
 const kindLabels: Record<string, string> = { scholar: "学者", scholar_profile: "学者", theory: "理论", topic: "主题", concept: "概念", discipline: "学科", subdiscipline: "子学科", knowledge_node: "知识条目", timeline: "时间线", timeline_event: "历史事件", reading_path: "阅读路径", recommendation: "推荐书目" };
 const filterLabels: Record<string, string> = { work_id: "指定作品", author: "责任者", scholar: "学者", theory: "理论", topic: "主题", concept: "概念", language: "语言", year: "出版年", year_min: "起始年", year_max: "截止年", document_type: "文献类型", source_type: "来源类型", access: "访问范围" };
 const channelLabels: Record<string, string> = { passages: "原文", entities: "知识", curation: "策展" };
@@ -232,9 +233,9 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/opinions"><div className={styles.filterTitle}><strong>筛选馆藏原文{selectedCount ? ` · ${selectedCount}` : ""}</strong></div><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
       <main className={styles.results} id="discovery-passages" aria-label="原文检索结果">
         <header className={styles.resultsHeader}><div><p>馆藏原文</p><h2>原文材料</h2></div><span>{result ? `${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""} 段` : initialQuery ? "等待检索结果" : "等待输入"}</span></header>
-        {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? "正在创建检索" : result?.expansion_count ? "正在扩大研究范围" : statusLabels[result?.status || "running"]}</strong><p>{result?.status_message || "后台正在查找并排序材料。你可以先阅读已找到的结果。"}</p>{result?.completed_channels?.length ? <small>已完成：{result.completed_channels.map(name => channelLabels[name] || name).join("、")}</small> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>取消检索</button> : null}</div> : null}
+        {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? "正在创建检索" : result?.expansion_count ? "正在扩大研究范围" : statusLabels[result?.status || "running"]}</strong><p>{result?.status_message || "后台正在查找并排序材料。你可以先阅读已找到的结果。"}</p>{result?.completed_channels?.length ? <small>已完成：{result.completed_channels.map(name => channelLabels[name] || name).join("、")}</small> : null}{result ? <DiscoveryDeepProgress result={result} /> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>取消检索</button> : null}</div> : null}
         {pollPaused && isRunning ? <div className={styles.notice}><p>自动更新已暂停，后台任务可能仍在继续。可重新读取进度或取消任务。</p><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>继续读取进度</button></div> : null}
-        {result && !isRunning ? <p className={styles.resultStatus} role="status">{statusLabels[result.status]}{result.mode === "expanded" ? " · 已扩大检索预算" : ""}{result.status_message ? ` · ${result.status_message}` : ""}</p> : null}
+        {result && !isRunning ? <><p className={styles.resultStatus} role="status">{statusLabels[result.status]}{result.mode === "expanded" ? " · 已扩大检索预算" : ""}{result.status_message ? ` · ${result.status_message}` : ""}</p><DiscoveryDeepProgress result={result} /></> : null}
         <div className={styles.cardList}>{result?.passages.map((item, index) => <DiscoveryPassageCard key={item.id} item={item} index={index} onContext={() => void openContext(item)} />)}</div>
         {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? "从你关心的问题开始" : result?.status === "failed" ? "原文通道暂未完成" : result?.status === "canceled" ? "本次检索已取消" : error ? "还没有可显示的结果" : "本次未找到可展示的原文"}</h3><p>{!initialQuery ? "输入概念、开放问题或近似引句。结果直接回到馆内材料，你也可以沿知识与策展线索继续阅读。" : "没有结果不代表馆内不存在相关讨论。可调整问题、扩大研究范围，或继续查看相关知识与策展。"}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">转到原文检索 <ArrowRight size={14} /></Link> : null}</section> : null}
         {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? "正在读取" : "查看更多材料"}<ChevronDown size={15} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? "正在提交" : "扩大研究范围"}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />刷新本次结果</button> : null}</div><p>默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会增加后台检索预算，保留现有顺序。</p></footer> : null}
@@ -271,6 +272,23 @@ export function DiscoveryEntityCard({ item }: { item: DiscoveryEntity }) {
 export function DiscoveryCurationCard({ item, preview = false }: { item: DiscoveryCuration; preview?: boolean }) {
   const href = internalHref(item.url);
   return <article className={styles.curationCard}><span className={styles.sourceTag}>{preview ? "策展推荐 · 草稿预览" : "策展推荐"}</span><h3>{item.title || item.source_title}</h3><p>{item.recommendation_excerpt}</p><small>来源：{item.source_title}</small>{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}{href && !preview ? <CollectionLink className="text-link" href={href}>阅读完整策展 <ArrowRight size={13} /></CollectionLink> : null}</article>;
+}
+
+function DiscoveryDeepProgress({ result }: { result: DiscoverySearch }) {
+  const deep = result.task_progress?.deep;
+  if (!deep) return null;
+  const identity = [
+    deep.index_generation ? `索引代次 ${deep.index_generation}` : "",
+    deep.embedding_dimensions ? `向量 ${deep.embedding_dimensions} 维` : "",
+    deep.reranker_artifact ? `重排器 ${deep.reranker_artifact}` : "",
+    deep.context_artifact ? `上下文 ${deep.context_artifact}` : "",
+  ].filter(Boolean).join(" · ");
+  return <div className={styles.help} role="status" aria-live="polite">
+    <strong>{deepStatusLabels[deep.status] || "深度阶段"}</strong>
+    {deep.notice ? <span> · {deep.notice}</span> : null}
+    {deep.completed < deep.total && deep.total > 0 ? <span>（{deep.completed}/{deep.total}）</span> : null}
+    {identity ? <small className={styles.version}>{identity}</small> : null}
+  </div>;
 }
 
 function DiscoveryCoverageDetails({ result }: { result: DiscoverySearch | null }) {

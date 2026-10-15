@@ -218,6 +218,9 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     coverage = discovery_coverage(access_statuses, filters) if channel == "passages" else {}
     warnings = []
     empty = {"sparse": [], "dense": [], "version": str(generation.pk) if generation else "",
+             "index_uid": str(generation.uid) if generation else "",
+             "embedding_artifact": generation.config_snapshot.get("embedding_artifact", "") if generation else "",
+             "embedding_dimensions": int(generation.dimensions or generation.config_snapshot.get("dimensions") or 0) if generation else None,
              "reranker_artifact": generation.config_snapshot.get("reranker_artifact", "") if generation else "",
              "warnings": warnings, "coverage": coverage}
     if not generation:

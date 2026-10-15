@@ -17,6 +17,56 @@ class DiscoveryCreateSerializer(serializers.Serializer):
     filters = serializers.DictField(required=False, default=dict)
 
 
+class DiscoveryRetrySerializer(serializers.Serializer):
+    expected_generation = serializers.IntegerField(min_value=1, max_value=32766)
+
+
+class DiscoveryDeepProgressSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=(
+        "baseline_ready", "deep_queued", "deep_running", "completed", "partial", "unavailable",
+    ))
+    stage = serializers.CharField()
+    completed = serializers.IntegerField(min_value=0)
+    total = serializers.IntegerField(min_value=0)
+    terminal = serializers.BooleanField()
+    model = serializers.CharField(allow_blank=True)
+    index_uid = serializers.CharField(allow_blank=True)
+    index_generation = serializers.CharField(allow_blank=True)
+    embedding_artifact = serializers.CharField(allow_blank=True)
+    embedding_dimensions = serializers.IntegerField(allow_null=True, required=False)
+    reranker_artifact = serializers.CharField(allow_blank=True)
+    context_artifact = serializers.CharField(allow_blank=True)
+    notice = serializers.CharField(allow_blank=True)
+    started_at = serializers.DateTimeField(allow_null=True, required=False)
+    updated_at = serializers.DateTimeField(allow_null=True, required=False)
+    finished_at = serializers.DateTimeField(allow_null=True, required=False)
+
+
+class DiscoveryTaskProgressSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    generation = serializers.IntegerField()
+    status = serializers.CharField()
+    terminal = serializers.BooleanField()
+    stage = serializers.CharField()
+    completed = serializers.IntegerField()
+    total = serializers.IntegerField()
+    unit = serializers.CharField()
+    retryable = serializers.BooleanField()
+    started_at = serializers.DateTimeField(allow_null=True)
+    updated_at = serializers.DateTimeField()
+    finished_at = serializers.DateTimeField(allow_null=True)
+    deep = DiscoveryDeepProgressSerializer()
+
+
+class DiscoveryRetrievalIdentitySerializer(serializers.Serializer):
+    index_generation = serializers.CharField(allow_blank=True)
+    index_uid = serializers.CharField(allow_blank=True)
+    embedding_artifact = serializers.CharField(allow_blank=True)
+    embedding_dimensions = serializers.IntegerField(allow_null=True, required=False)
+    reranker_artifact = serializers.CharField(allow_blank=True)
+    pipeline_version = serializers.CharField()
+
+
 class DiscoveryWorkSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
@@ -78,6 +128,9 @@ class DiscoveryResponseSerializer(serializers.Serializer):
     curation = DiscoveryCurationSerializer(many=True)
     next_cursor = serializers.CharField(allow_null=True)
     can_expand = serializers.BooleanField()
+    can_retry = serializers.BooleanField()
+    task_progress = DiscoveryTaskProgressSerializer()
+    retrieval_identity = DiscoveryRetrievalIdentitySerializer()
     warnings = DiscoveryWarningSerializer(many=True)
     coverage_summary = serializers.DictField()
     completed_channels = serializers.ListField(child=serializers.CharField())
