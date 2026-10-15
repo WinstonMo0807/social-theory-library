@@ -90,6 +90,8 @@ class DiscoveryPassageSerializer(serializers.Serializer):
     asset_id = serializers.UUIDField()
     edition_id = serializers.UUIDField(required=False)
     document_revision_id = serializers.UUIDField()
+    evidence_span_id = serializers.UUIDField(required=False)
+    passage_id = serializers.UUIDField(required=False)
     pdf_page = serializers.IntegerField()
     printed_page = serializers.CharField(required=False)
     source_kind = serializers.CharField()
@@ -98,6 +100,9 @@ class DiscoveryPassageSerializer(serializers.Serializer):
     locator_precision = serializers.CharField()
     context_reference = serializers.CharField()
     match_basis = serializers.ListField(child=serializers.CharField())
+    deep_rank = serializers.IntegerField(required=False, min_value=1)
+    deep_score = serializers.FloatField(required=False, allow_null=True)
+    deep_context = serializers.DictField(required=False)
 
 
 class DiscoveryEntitySerializer(serializers.Serializer):
@@ -135,6 +140,8 @@ class DiscoveryResponseSerializer(serializers.Serializer):
     passages = DiscoveryPassageSerializer(many=True)
     entities = DiscoveryEntitySerializer(many=True)
     curation = DiscoveryCurationSerializer(many=True)
+    deep_passages = DiscoveryPassageSerializer(many=True, required=False)
+    deep_stage = DiscoveryDeepProgressSerializer(required=False)
     next_cursor = serializers.CharField(allow_null=True)
     can_expand = serializers.BooleanField()
     can_retry = serializers.BooleanField()

@@ -1,6 +1,6 @@
 import uuid
 
-from catalog.discovery_tasks import run_discovery_search, expire_discovery_sessions  # noqa: F401
+from catalog.discovery_tasks import run_discovery_deep, run_discovery_search, expire_discovery_sessions  # noqa: F401
 from catalog.discovery_index_tasks import process_discovery_index_job, reconcile_discovery_index  # noqa: F401
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -20,6 +20,12 @@ from catalog.services.search_evaluation import (
 )
 from catalog.services.query_lexicon.sync import process_pending_events
 from catalog.services.query_lexicon.operations import run_query_lexicon_reconciliation as run_ql_reconciliation
+
+
+@shared_task(bind=True, soft_time_limit=240, time_limit=270)
+def process_editorial_assistance(self, job_id):
+    from catalog.services.editorial_assistance import run_assistance
+    return {"status": run_assistance(job_id, str(self.request.id or "")).status}
 
 
 def _claim_research_task(run_id, task_id: str) -> tuple[bool, str]:

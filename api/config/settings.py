@@ -19,6 +19,7 @@ SECRET_KEY = os.getenv(
 )
 DEBUG = env_bool("DJANGO_DEBUG", True)
 PUBLIC_DEPLOYMENT_MODE = env_bool("PUBLIC_DEPLOYMENT_MODE", False)
+API_CONTRACT_VERSION = os.getenv("STL_API_VERSION", "4.0").strip() or "4.0"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if host.strip()]
 LAN_HOST = os.getenv("LAN_HOST", "").strip()
 LAN_PROXY_TOKEN = os.getenv("LAN_PROXY_TOKEN", "").strip()
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "common.middleware.TrustedLanHttpMiddleware",
+    "common.middleware.ApiContractMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -147,6 +149,8 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "x-request-id",
+    "x-discovery-token",
     "range",
 ]
 CORS_EXPOSE_HEADERS = [
@@ -154,6 +158,14 @@ CORS_EXPOSE_HEADERS = [
     "Content-Disposition",
     "Content-Length",
     "Content-Range",
+    "X-Request-ID",
+    "X-STL-API-Version",
+    "X-STL-Canonical-Endpoint",
+    "Deprecation",
+    "Link",
+    "ETag",
+    "Location",
+    "Retry-After",
 ]
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -170,12 +182,19 @@ for origin in LAN_HTTP_TRUSTED_ORIGINS:
 SPECTACULAR_SETTINGS = {
     "TITLE": "Social Theory Library API",
     "DESCRIPTION": "Canonical catalog, editorial processes and permission-scoped reading APIs.",
-    "VERSION": "3.0.8.1",
+    "VERSION": API_CONTRACT_VERSION,
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
         "CatalogingSourceTypeEnum": "catalog.services.cataloging_sessions.CATALOGING_SOURCE_TYPES",
         "MediaSourceTypeEnum": "catalog.services.media.MEDIA_SOURCE_TYPES",
+        "ResearchScopeKindEnum": ["library", "works", "passages", "filtered"],
+        "ResearchMemoryKindEnum": ["understanding", "question", "contradiction"],
+        "EditorialSourceKindEnum": ["catalog", "planned"],
+        "EditorialTextKindEnum": ["paragraph", "heading"],
+        "ContentReferenceTypeEnum": ["work", "edition", "node", "span"],
+        "EditorialBlockTypeEnum": ["paragraph", "heading", "quote", "link", "evidence", "work", "person", "concept", "node", "timeline", "reading_path", "comparison", "analysis"],
+        "ReadingDifficultyEnum": ["beginner", "intermediate", "advanced"],
     },
 }
 
@@ -304,8 +323,13 @@ DISCOVERY_MAX_QUEUED_QUERIES = max(2, min(24, int(os.getenv("DISCOVERY_MAX_QUEUE
 DISCOVERY_INFERENCE_URL = os.getenv("DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")
 DISCOVERY_INFERENCE_ALLOWED_HOSTS = os.getenv("DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")
 DISCOVERY_INFERENCE_TIMEOUT_SECONDS = int(os.getenv("DISCOVERY_INFERENCE_TIMEOUT_SECONDS", "130"))
+DISCOVERY_EMBEDDING_DIMENSIONS = max(
+    1,
+    min(4096, int(os.getenv("DISCOVERY_EMBEDDING_DIMENSIONS", "384"))),
+)
 CELERY_TASK_ROUTES = {
     "catalog.tasks.run_discovery_search": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
+    "catalog.tasks.run_discovery_deep": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
     "catalog.tasks.process_discovery_index_job": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
     "catalog.tasks.reconcile_discovery_index": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
     "ingestion.tasks.process_upload_item": {"queue": INGESTION_TASK_QUEUE},
@@ -323,6 +347,10 @@ CELERY_TASK_ROUTES = {
     "catalog.tasks.recover_projection_queue": {"queue": "celery"},
     "catalog.tasks.process_knowledge_publication_event": {"queue": "celery"},
     "catalog.tasks.recover_knowledge_publication_events": {"queue": "celery"},
+    "reading.tasks.collect_research_turn": {"queue": "celery"},
+    "reading.tasks.run_citation_audit": {"queue": "celery"},
+    "reading.tasks.enhance_reading_plan": {"queue": "celery"},
+    "reading.tasks.recover_private_research_tasks": {"queue": "celery"},
 }
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = None
@@ -334,6 +362,10 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "recover-private-research-tasks": {
+        "task": "reading.tasks.recover_private_research_tasks", "schedule": 120,
+        "options": {"queue": "celery", "expires": 110},
+    },
     "expire-reader-discovery-sessions": {
         "task": "catalog.tasks.expire_discovery_sessions", "schedule": 60 * 60,
     },
@@ -605,6 +637,57 @@ SEMANTIC_SEARCH_V2_RERANK_MAX_TEXT_CHARS = max(
     500,
     min(int(os.getenv("SEMANTIC_SEARCH_V2_RERANK_MAX_TEXT_CHARS", "4000")), 8000),
 )
+
+# STL 4.0 recommended deep retrieval is an asynchronous, opt-in supplement to
+# the existing Discovery path.  Empty URLs keep the production baseline
+# unchanged; an explicit index/model artifact is required before a worker can
+# call either optional service.
+STL_DEEP_RETRIEVAL_ENABLED = env_bool("STL_DEEP_RETRIEVAL_ENABLED", False)
+STL_DEEP_RETRIEVAL_INDEX_UID = os.getenv("STL_DEEP_RETRIEVAL_INDEX_UID", "").strip()
+STL_DEEP_RETRIEVAL_EMBEDDING_ARTIFACT = os.getenv("STL_DEEP_RETRIEVAL_EMBEDDING_ARTIFACT", "").strip()
+STL_DEEP_RETRIEVAL_EMBEDDING_DIMENSIONS = max(
+    1, min(int(os.getenv("STL_DEEP_RETRIEVAL_EMBEDDING_DIMENSIONS", "768")), 4096)
+)
+STL_DEEP_RETRIEVAL_BGE_ENABLED = env_bool("STL_DEEP_RETRIEVAL_BGE_ENABLED", False)
+STL_DEEP_RETRIEVAL_BGE_URL = os.getenv("STL_DEEP_RETRIEVAL_BGE_URL", "").strip()
+STL_DEEP_RETRIEVAL_BGE_MODEL = os.getenv(
+    "STL_DEEP_RETRIEVAL_BGE_MODEL", "BAAI/bge-reranker-v2-m3"
+).strip()
+STL_DEEP_RETRIEVAL_BGE_ARTIFACT = os.getenv("STL_DEEP_RETRIEVAL_BGE_ARTIFACT", "").strip()
+STL_DEEP_RETRIEVAL_BGE_API_KEY = os.getenv("STL_DEEP_RETRIEVAL_BGE_API_KEY", "")
+STL_DEEP_RETRIEVAL_BGE_ALLOWED_HOSTS = os.getenv(
+    "STL_DEEP_RETRIEVAL_BGE_ALLOWED_HOSTS", "discovery-inference,reranker,localhost,127.0.0.1"
+)
+STL_DEEP_RETRIEVAL_BGE_TIMEOUT_SECONDS = max(
+    2, min(int(os.getenv("STL_DEEP_RETRIEVAL_BGE_TIMEOUT_SECONDS", "30")), 120)
+)
+STL_DEEP_RETRIEVAL_CONVMEMORY_ENABLED = env_bool(
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_ENABLED", False
+)
+STL_DEEP_RETRIEVAL_CONVMEMORY_URL = os.getenv(
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_URL", ""
+).strip()
+STL_DEEP_RETRIEVAL_CONVMEMORY_MODEL = os.getenv(
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_MODEL",
+    "Purdy0228/ConvMemory-v2-Evidence-Reranker",
+).strip()
+STL_DEEP_RETRIEVAL_CONVMEMORY_ARTIFACT = os.getenv("STL_DEEP_RETRIEVAL_CONVMEMORY_ARTIFACT", "").strip()
+STL_DEEP_RETRIEVAL_CONVMEMORY_API_KEY = os.getenv(
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_API_KEY", ""
+)
+STL_DEEP_RETRIEVAL_CONVMEMORY_ALLOWED_HOSTS = os.getenv(
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_ALLOWED_HOSTS", "discovery-inference,convmemory,localhost,127.0.0.1"
+)
+STL_DEEP_RETRIEVAL_CONVMEMORY_TIMEOUT_SECONDS = max(
+    2, min(int(os.getenv("STL_DEEP_RETRIEVAL_CONVMEMORY_TIMEOUT_SECONDS", "30")), 120)
+)
+STL_DEEP_RETRIEVAL_CONTEXT_TOP_K = max(
+    5, min(int(os.getenv("STL_DEEP_RETRIEVAL_CONTEXT_TOP_K", "10")), 10)
+)
+STL_DEEP_RETRIEVAL_QUERY_EXPANSION_ENABLED = env_bool(
+    "STL_DEEP_RETRIEVAL_QUERY_EXPANSION_ENABLED", True
+)
+STL_DEEP_RETRIEVAL_GENERATION = os.getenv("STL_DEEP_RETRIEVAL_GENERATION", "").strip()
 AI_PROVIDER = os.getenv("AI_PROVIDER", "none")
 AI_BASE_URL = os.getenv("AI_BASE_URL", "")
 AI_API_KEY = os.getenv("AI_API_KEY", "")

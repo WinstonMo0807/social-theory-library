@@ -1,5 +1,13 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-16 视觉驱动推荐检索接入（开发完成，统一验收待核实）
+
+- 以最终 PDF `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 的观点检索、证据回读和研究工作区状态为交互依据，接入第一推荐检索链的可选异步深度阶段：QueryLexicon → 独立 EG2 768 维候选 → RRF/来源去重 → BGE-reranker-v2-m3 前20 → EvidenceSpan 邻文 → ConvMemory-v2 上下文组织。现有 E5/mMARCO 首屏链路保持为稳定回退。
+- 同一 `DiscoverySearchSession` 持久化深度阶段、任务代次、模型/索引制品身份和 `passages_deep`；首屏完成交接时换发受同一代次约束的深度 task_id，避免旧 worker 回写。完成/部分完成时把经过来源、权限、版本和原文哈希验证的深度顺序用于 `passages`，服务缺失、超时、取消或来源变化时保留基础卡片并返回可操作状态。
+- 观点检索前端显示基础结果就绪、深度排队/运行、完成、部分完成和不可用等状态，支持现有刷新/取消/重试，不增加模型管理或质量评测界面。API serializer、OpenAPI schema、TypeScript 类型同步补齐深度字段。
+- 默认 `STL_DEEP_RETRIEVAL_ENABLED=false`，深度服务 URL、制品、generation 和 host allowlist 均需显式配置；没有修改生产 `.env`、数据库、生产索引或模型目录。按用户要求跳过第三步检索质量评测。
+- 静态核验已完成：Python compileall、差异检查、目标 ESLint；OpenAPI 生成 0 errors 但保留10条既有类型提示。全量 TypeScript 的3个 TS7022仍为历史 live 测试问题。正式功能/E2E、逐图浏览器验收、迁移和部署仍待统一阶段。
+
 ## 2026-10-15 读者中心工作台接续（开发中）
 
 - `/account` 在既有真实阅读资料接口上增加终稿第183页的继续阅读、待继续任务和我的资料三个工作区。待继续任务来自 owner-only `/reading/reading-plans/` 的 pending/reading 条目；我的资料只由真实收藏和笔记生成，空数据显示真实空态。

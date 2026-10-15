@@ -1,5 +1,14 @@
 # Social Theory Library 当前进度
 
+## 2026-10-16 视觉驱动的推荐检索链路接入（开发完成，统一验收待核实）
+
+- 依据最终参考 PDF `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 的观点检索、原文证据和研究工作区状态，已把第一推荐检索方案接入同一 Discovery 会话：首屏沿用现有 QueryLexicon/Meilisearch 稀疏+向量融合、RRF、mMARCO 初排和 EvidenceSpan/修订/权限复核；可选深度阶段再执行独立 EG2 768 维召回、BGE-reranker-v2-m3 前20重排、相邻 EvidenceSpan 上下文和 ConvMemory-v2 组织。
+- 深度阶段使用同一会话的 `channels.deep`、`passages_deep` 和 generation；首屏完成交接时换发受同一代次约束的深度 task_id，queued/running/completed/partial/unavailable/failed 状态和重试/取消边界保持一致，避免旧 worker 回写。深度完成后只把重新核验过的顺序回填到视觉结果列表，未配置隔离模型或服务时保留首屏并明确显示状态，不冒充 mMARCO 为 BGE，也不切换生产索引。
+- 前端观点检索已显示深度阶段状态、模型/索引/代次/制品身份及部分完成提示；API serializer、OpenAPI 生成物和前端类型已补齐 `task_progress.deep`、`retrieval_identity`、`deep_passages`、`deep_stage` 及证据字段。
+- 深度配置默认关闭，`.env.example` 只提供空 URL、模型制品、host allowlist 和 generation 入口；生产 `.env`、生产数据库、活动索引和模型目录未改。第三步检索质量评测未启动，未新增人工 gold 或质量结论。
+- 静态检查：目标 Python `compileall` 退出0，`git diff --check` 退出0；目标 ESLint 0错误（保留既有 `no-img-element` 警告）；使用 `.venv` 生成 OpenAPI 时 0 schema errors、10 个既有 serializer 类型提示警告；全量 TypeScript 仍只有既有三个 live 测试 TS7022。尚未运行正式 E2E、全量功能/视觉回归、生产部署或迁移。
+- 检查点：`b338503`（隔离推理契约）、`da1bd49`（深度编排）、`2c522d8`/`f0c161c`（前端契约）、`e14ec3a`（降级状态与索引 UID 边界）；本轮 sessions/tasks/settings/contract 与 artifact 身份修正将在当前主代理整理后保存下一检查点。工作区其余历史未提交修改继续保留。
+
 ## 2026-10-15 读者中心工作台接续（开发中）
 
 - `/account` 继续保留真实阅读进度、收藏、笔记、书单、历史和账户操作，并按终稿 PDF 第183页增加“继续阅读—待继续任务—我的资料”工作台编排。待继续任务读取 owner-only `/reading/reading-plans/` 的真实计划条目；资料表只从真实收藏与笔记生成，空数据时显示空态，不填入图集示例。

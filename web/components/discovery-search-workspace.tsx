@@ -14,7 +14,7 @@ import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
 const running = (status?: string) => status === "queued" || status === "running";
 const statusLabels: Record<string, string> = { queued: "已排队", running: "正在检索", partial: "部分完成", completed: "检索完成", failed: "检索未完成", canceled: "已取消" };
-const deepStatusLabels: Record<string, string> = { baseline_ready: "基础结果已就绪", deep_queued: "深度整理已排队", deep_running: "正在深度整理", completed: "深度结果已完成", partial: "深度结果部分完成", unavailable: "深度层暂不可用" };
+const deepStatusLabels: Record<string, string> = { baseline_ready: "基础结果已就绪", deep_queued: "深度整理已排队", deep_running: "正在深度整理", completed: "深度结果已完成", partial: "深度结果部分完成", unavailable: "深度层暂不可用", pending: "深度整理待启动", queued: "深度整理已排队", running: "正在深度整理", degraded: "深度结果部分完成", disabled: "深度层暂不可用", skipped: "深度层暂跳过", failed: "深度层暂不可用" };
 const kindLabels: Record<string, string> = { scholar: "学者", scholar_profile: "学者", theory: "理论", topic: "主题", concept: "概念", discipline: "学科", subdiscipline: "子学科", knowledge_node: "知识条目", timeline: "时间线", timeline_event: "历史事件", reading_path: "阅读路径", recommendation: "推荐书目" };
 const filterLabels: Record<string, string> = { work_id: "指定作品", author: "责任者", scholar: "学者", theory: "理论", topic: "主题", concept: "概念", language: "语言", year: "出版年", year_min: "起始年", year_max: "截止年", document_type: "文献类型", source_type: "来源类型", access: "访问范围" };
 const channelLabels: Record<string, string> = { passages: "原文", entities: "知识", curation: "策展" };
@@ -278,6 +278,8 @@ function DiscoveryDeepProgress({ result }: { result: DiscoverySearch }) {
   const deep = result.task_progress?.deep;
   if (!deep) return null;
   const identity = [
+    deep.model ? `模型 ${deep.model}` : "",
+    deep.index_uid ? `索引 ${deep.index_uid}` : "",
     deep.index_generation ? `索引代次 ${deep.index_generation}` : "",
     deep.embedding_dimensions ? `向量 ${deep.embedding_dimensions} 维` : "",
     deep.reranker_artifact ? `重排器 ${deep.reranker_artifact}` : "",

@@ -15,7 +15,7 @@ class DiscoveryInferenceError(RuntimeError):
 
 
 def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None = None,
-          max_response_bytes: int = 2_000_000) -> dict:
+          max_response_bytes: int = 2_000_000, transport: httpx.BaseTransport | None = None) -> dict:
     base = str(getattr(settings, "DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")).rstrip("/")
     allowed = str(getattr(settings, "DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")).split(",")
     parsed = urlsplit(base)
@@ -26,7 +26,8 @@ def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None
                min(250, max(5, int(getattr(settings, "DISCOVERY_INFERENCE_TIMEOUT_SECONDS", 130)))))
     try:
         # Never inherit a machine's outbound proxy for private library text.
-        with httpx.Client(trust_env=False, follow_redirects=False, timeout=httpx.Timeout(timeout, connect=3)) as client:
+        with httpx.Client(trust_env=False, follow_redirects=False, timeout=httpx.Timeout(timeout, connect=3),
+                          **({"transport": transport} if transport is not None else {})) as client:
             with client.stream("GET" if payload is None else "POST", base + path, json=payload) as response:
                 body = bytearray()
                 for part in response.iter_bytes():
@@ -39,7 +40,9 @@ def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None
                     detail = result.get("detail", {}) if isinstance(result, dict) else {}
                     code = detail.get("code", "service_unavailable") if isinstance(detail, dict) else "invalid_request"
                     safe_codes = {"model_missing", "artifact_mismatch", "input_too_long", "inference_busy", "inference_timeout",
-                                  "model_load_failed", "inference_failed", "model_mismatch", "token_budget", "too_many_chunks"}
+                                  "model_load_failed", "inference_failed", "model_mismatch", "generation_unavailable",
+                                  "generation_mismatch", "deep_unavailable", "deep_pending", "context_unsupported",
+                                  "token_budget", "too_many_chunks", "context_budget"}
                     raise DiscoveryInferenceError(code if code in safe_codes else "service_unavailable")
         if not isinstance(result, dict):
             raise DiscoveryInferenceError("invalid_response")
@@ -92,24 +95,35 @@ def chunk_text(text: str, title: str = "", max_tokens: int = 320, overlap_tokens
     return result
 
 
-def embed_texts(texts: list[str], kind: str = "passage", expected_artifact: str = "") -> dict:
-    result = _call("/embed", {"texts": texts, "kind": kind, "expected_artifact": expected_artifact})
+def embed_texts(texts: list[str], kind: str = "passage", expected_artifact: str = "", *,
+                expected_dimensions: int | None = None,
+                transport: httpx.BaseTransport | None = None) -> dict:
+    if expected_dimensions is None:
+        expected_dimensions = int(getattr(settings, "DISCOVERY_EMBEDDING_DIMENSIONS", 384))
+    if not 1 <= expected_dimensions <= 4096:
+        raise DiscoveryInferenceError("invalid_response", "向量维度配置不在允许范围内。")
+    result = _call("/embed", {"texts": texts, "kind": kind, "expected_artifact": expected_artifact},
+                   **({"transport": transport} if transport is not None else {}))
     _identity(result, expected_artifact)
     vectors = result.get("vectors")
-    if (result.get("dimensions") != 384 or not isinstance(vectors, list) or len(vectors) != len(texts)
+    if (result.get("dimensions") != expected_dimensions or not isinstance(vectors, list) or len(vectors) != len(texts)
             or result.get("truncated") != [False] * len(texts)):
         raise DiscoveryInferenceError("invalid_response")
     for vector in vectors:
-        if (not isinstance(vector, list) or len(vector) != 384
+        if (not isinstance(vector, list) or len(vector) != expected_dimensions
                 or any(not isinstance(number, (int, float)) or not math.isfinite(number) for number in vector)
                 or not 0.995 < sum(number * number for number in vector) < 1.005):
             raise DiscoveryInferenceError("invalid_response", "本地模型返回的向量不符合约定。")
     return result
 
 
-def rerank(query: str, documents: list[str], top_n: int = 20, expected_artifact: str = "") -> dict:
-    result = _call("/rerank", {"query": query, "documents": documents, "top_n": top_n,
-                              "expected_artifact": expected_artifact})
+def rerank(query: str, documents: list[str], top_n: int = 20, expected_artifact: str = "", *, contexts=None) -> dict:
+    payload = {"query": query, "documents": documents, "top_n": top_n, "expected_artifact": expected_artifact}
+    if contexts is not None:
+        payload["contexts"] = [{key: item[key] for key in ("before", "after")} for item in contexts]
+    result = _call("/rerank", payload)
+    if contexts is not None and result.get("context_policy") != "adjacent-evidence-v1":
+        raise DiscoveryInferenceError("context_unsupported", "推理服务未执行指定上下文策略。")
     _identity(result, expected_artifact)
     values = result.get("results")
     if not isinstance(values, list) or len(values) != min(top_n, len(documents)):

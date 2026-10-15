@@ -5,7 +5,7 @@ export type DiscoveryPassage = {
   id: string; excerpt: string; work: { id: string; title: string; slug?: string }; authors: string[];
   asset_id: string; document_revision_id: string; evidence_span_id?: string; passage_id?: string; pdf_page: number; printed_page?: string;
   reader_url: string; context_reference?: string; source_kind: string; locator_precision: string; match_basis: string[];
-  deep_rank?: number; deep_score?: number; deep_context?: { policy?: string; provider?: string; available?: boolean; before?: string; after?: string; blocks?: Array<Record<string, unknown>> };
+  deep_rank?: number; deep_score?: number | null; deep_context?: { policy?: string; provider?: string; available?: boolean; before?: string; after?: string; blocks?: Array<Record<string, unknown>> };
 };
 export type DiscoveryEntity = {
   id: string; kind: string; title: string; url: string; excerpt?: string; portrait_url?: string; match_basis: string[];
@@ -42,7 +42,6 @@ export type DiscoverySearch = {
   id: string; access_token?: string; query: string; status: DiscoveryStatus; status_message?: string;
   mode: "standard" | "expanded"; expansion_count: number; passages: DiscoveryPassage[];
   entities: DiscoveryEntity[]; curation: DiscoveryCuration[]; next_cursor: string | null; can_expand: boolean;
-  deep_passages?: DiscoveryPassage[]; deep_stage?: DiscoveryDeepProgress;
   count?: number; warnings: Array<string | { code: string; message: string; channel?: string }>; coverage_summary: DiscoveryCoverage; completed_channels: string[];
   corpus_version?: string; knowledge_version?: string; pipeline_version?: string; source_changed?: boolean;
   notice?: string; poll_after_ms?: number | null; can_retry?: boolean; task_progress: DiscoveryTaskProgress;

@@ -19,6 +19,7 @@ from billiard.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, Throttled, ValidationError
 
@@ -28,10 +29,13 @@ from common.concurrency import capacity_slot
 
 logger = logging.getLogger(__name__)
 CHANNELS = ("passages", "entities", "curation")
+DEEP_CHANNEL = "deep"
+DEEP_RESULTS_KEY = "passages_deep"
 PIPELINE_VERSION = "discovery-3.0.8-1"
 CURSOR_SALT = "catalog.discovery.cursor.v1"
 ACTIVE = ("queued", "running")
 MAX_MATERIALIZED = 400
+STALE_MINUTES = {"queued": 30, "running": 15}
 
 
 def request_access(request) -> list[str]:
@@ -134,9 +138,34 @@ def _enqueue(session_id, generation: int, task_id: str) -> None:
                                          queue=getattr(settings, "DISCOVERY_QUERY_TASK_QUEUE", "celery"))
     except Exception as exc:
         logger.warning("Discovery dispatch failed: %s", type(exc).__name__)
-        DiscoverySearchSession.objects.filter(pk=session_id, generation=generation, task_id=task_id, status="queued").update(
-            status="failed", finished_at=timezone.now(),
-            warnings=[_warning("queue_unavailable", "检索任务未能进入队列，请稍后重新检索。")])
+        fail_session(session_id, generation, task_id, "queue_unavailable", statuses=("queued",))
+
+
+def close_stale_sessions(*, session_id=None) -> int:
+    """Close abandoned work without requeueing it or spending expansion budget."""
+    now = timezone.now()
+    stale = Q()
+    for state, minutes in STALE_MINUTES.items():
+        stale |= Q(status=state, updated_at__lt=now - timedelta(minutes=minutes))
+    rows = DiscoverySearchSession.objects.filter(stale)
+    if session_id is not None:
+        rows = rows.filter(pk=session_id)
+    closed = 0
+    for row in rows.order_by("updated_at")[:25]:
+        closed += int(fail_session(row.pk, row.generation, row.task_id, "task_timeout",
+                                   observed_updated_at=row.updated_at))
+    return closed
+
+
+def _check_admission(owner, now):
+    # Abandoned sessions must not occupy all admission slots until a reader
+    # happens to poll them. No additional scheduled task is needed.
+    close_stale_sessions()
+    active = DiscoverySearchSession.objects.filter(status__in=ACTIVE, expires_at__gt=now)
+    if active.count() >= max(2, int(getattr(settings, "DISCOVERY_MAX_QUEUED_QUERIES", 12))):
+        raise Throttled(wait=10, detail="馆内检索任务正在处理，请稍后重试。")
+    if owner and active.filter(owner=owner).count() >= 2:
+        raise Throttled(wait=5, detail="请先等待或取消当前检索。")
 
 
 def create_session(request, query: str, filters: dict) -> tuple[DiscoverySearchSession, str]:
@@ -154,19 +183,16 @@ def _create_session(request, query: str, filters: dict) -> tuple[DiscoverySearch
         raise ValidationError({"q": "请输入 2 至 1200 个字符的概念、问题或原文线索。"})
     owner = request.user if request.user.is_authenticated else None
     now = timezone.now()
-    active = DiscoverySearchSession.objects.filter(status__in=ACTIVE, expires_at__gt=now)
-    if active.count() >= max(2, int(getattr(settings, "DISCOVERY_MAX_QUEUED_QUERIES", 12))):
-        raise Throttled(wait=10, detail="馆内检索任务正在处理，请稍后重试。")
-    if owner and active.filter(owner=owner).count() >= 2:
-        raise Throttled(wait=5, detail="请先等待或取消当前检索。")
+    _check_admission(owner, now)
     token = secrets.token_urlsafe(32)
     task_id = str(uuid4())
     with transaction.atomic():
         session = DiscoverySearchSession.objects.create(
             owner=owner, token_hash=_token_hash(token), query=query, filters=filters,
             access_statuses=request_access(request), task_id=task_id,
-            results={channel: [] for channel in CHANNELS},
-            channels={channel: {"status": "pending"} for channel in CHANNELS},
+            results={**{channel: [] for channel in CHANNELS}, DEEP_RESULTS_KEY: []},
+            channels={**{channel: {"status": "pending"} for channel in CHANNELS},
+                      DEEP_CHANNEL: {"status": "pending"}},
             expires_at=now + timedelta(hours=24))
         transaction.on_commit(lambda: _enqueue(session.id, session.generation, task_id))
     session.refresh_from_db()
@@ -186,12 +212,7 @@ def get_session(request, session_id) -> DiscoverySearchSession:
         raise NotFound("检索记录不存在或已过期，请重新检索。")
     # Lost workers must not leave the reader polling forever. Late deliveries
     # are rejected by the same terminal-state/generation check in the task.
-    stale_after = timedelta(minutes=15 if session.status == "running" else 30)
-    if session.status in ACTIVE and session.updated_at < timezone.now() - stale_after:
-        DiscoverySearchSession.objects.filter(pk=session.id, status__in=ACTIVE,
-                                               generation=session.generation).update(
-            status="failed", finished_at=timezone.now(),
-            warnings=[*session.warnings, _warning("task_timeout", "检索任务超时，已保留找到的材料，可重新检索。")])
+    if session.status in ACTIVE and close_stale_sessions(session_id=session.pk):
         session.refresh_from_db()
     return session
 
@@ -202,25 +223,55 @@ def session_access(session: DiscoverySearchSession, request) -> list[str]:
 
 
 def expand_session(session: DiscoverySearchSession, access_statuses=None) -> DiscoverySearchSession:
+    return _resume_session(session, access_statuses, expand=True)
+
+
+def retry_session(session: DiscoverySearchSession, access_statuses, *, expected_generation: int) -> DiscoverySearchSession:
+    return _resume_session(session, access_statuses, expand=False, expected_generation=expected_generation)
+
+
+def _resume_session(session, access_statuses, *, expand, expected_generation=None):
+    with capacity_slot("discovery-admission", limit=1, timeout=10) as acquired:
+        if not acquired:
+            raise Throttled(wait=1, detail="正在接收其他检索，请稍后重试。")
+        return _resume_locked(session, access_statuses, expand=expand, expected_generation=expected_generation)
+
+
+def _resume_locked(session, access_statuses, *, expand, expected_generation):
     with transaction.atomic():
         session = DiscoverySearchSession.objects.select_for_update().get(pk=session.pk)
         if session.expires_at <= timezone.now():
             raise NotFound("检索记录已过期，请重新检索。")
+        if not expand:
+            # A repeated POST for the same observed attempt returns its current
+            # state. It never creates a second task, even after that task ends.
+            if session.generation == expected_generation + 1:
+                return session
+            if session.generation != expected_generation:
+                raise ValidationError({"expected_generation": "检索轮次已改变，请刷新后重试。"})
+            if session.status not in {"failed", "partial"}:
+                raise ValidationError({"detail": "只有失败或部分完成的检索可以重试。"})
         if session.status in ACTIVE:
             raise ValidationError({"detail": "当前检索尚在进行，请等待完成后扩大范围。"})
         if session.status == "canceled":
             raise ValidationError({"detail": "已取消的检索不能继续，请重新检索。"})
-        if session.expansion_count >= 1:
+        if expand and session.expansion_count >= 1:
             raise ValidationError({"detail": "本次检索已使用扩展预算，可调整问题后重新检索。"})
-        session.expansion_count += 1
+        _check_admission(session.owner_id, timezone.now())
+        session.expansion_count += int(expand)
         session.generation += 1
         session.status = "queued"
         session.task_id = str(uuid4())
         session.finished_at = None
-        session.channels = {channel: {"status": "pending"} for channel in CHANNELS}
+        session.started_at = None
+        session.channels = {
+            **{channel: {"status": "pending"} for channel in CHANNELS},
+            DEEP_CHANNEL: {"status": "pending"},
+        }
+        session.results = {**(session.results or {}), DEEP_RESULTS_KEY: []}
         if access_statuses is not None:
             session.access_statuses = sorted(set(session.access_statuses).intersection(access_statuses))
-        session.save(update_fields=["expansion_count", "generation", "status", "task_id", "finished_at", "channels", "access_statuses", "updated_at"])
+        session.save(update_fields=["expansion_count", "generation", "status", "task_id", "started_at", "finished_at", "channels", "results", "access_statuses", "updated_at"])
         transaction.on_commit(lambda: _enqueue(session.id, session.generation, session.task_id))
     session.refresh_from_db()
     return session
@@ -233,7 +284,9 @@ def cancel_session(session: DiscoverySearchSession) -> DiscoverySearchSession:
             session.status = "canceled"
             session.finished_at = timezone.now()
             session.generation += 1
-            session.save(update_fields=["status", "finished_at", "generation", "updated_at"])
+            session.channels = {key: ({"status": "canceled"} if value.get("status") in {"pending", "queued", "running"} else value)
+                                for key, value in session.channels.items()}
+            session.save(update_fields=["status", "finished_at", "generation", "channels", "updated_at"])
     # Cooperative cancellation avoids terminating a shared worker or indexing.
     return session
 
@@ -245,6 +298,34 @@ def _identity(row: dict) -> str:
 def _reference(row: dict) -> dict:
     return {"id": _identity(row), "source_revision": str(row.get("source_revision") or ""),
             "match_basis": [str(item)[:160] for item in row.get("match_basis", [])[:5]]}
+
+
+def _deep_reference(row: dict) -> dict:
+    """Keep only bounded deep annotations beside the source identity."""
+    reference = _reference(row)
+    for key in ("deep_rank", "deep_score", "deep_context"):
+        if key not in row:
+            continue
+        value = row[key]
+        if key == "deep_context" and isinstance(value, dict):
+            value = {
+                "policy": str(value.get("policy") or "")[:80],
+                "provider": str(value.get("provider") or "")[:80],
+                "available": bool(value.get("available")),
+                "before": str(value.get("before") or "")[:3000],
+                "after": str(value.get("after") or "")[:3000],
+                "blocks": [
+                    {
+                        "text": str(block.get("text") or "")[:2000],
+                        "pdf_page": block.get("pdf_page"),
+                        "role": str(block.get("role") or "")[:24],
+                    }
+                    for block in value.get("blocks") or []
+                    if isinstance(block, dict)
+                ][:6],
+            }
+        reference[key] = value
+    return reference
 
 
 def _rrf(branches: list[tuple[list[dict], float]]) -> list[dict]:
@@ -274,6 +355,9 @@ def _deduplicate(rows: list[dict]) -> list[dict]:
         metadata = row.get("metadata") or {}
         start = row.get("start_offset", metadata.get("start_offset"))
         end = row.get("end_offset", metadata.get("end_offset"))
+        if "page_text_range" in row:
+            exact = row["page_text_range"] or {}
+            start, end = exact.get("start"), exact.get("end")
         page = row.get("pdf_page") or metadata.get("pdf_page") or metadata.get("page_number")
         if isinstance(start, int) and isinstance(end, int) and end > start:
             duplicate = False
@@ -281,6 +365,9 @@ def _deduplicate(rows: list[dict]) -> list[dict]:
                 old = prior.get("metadata") or {}
                 other_start = prior.get("start_offset", old.get("start_offset"))
                 other_end = prior.get("end_offset", old.get("end_offset"))
+                if "page_text_range" in prior:
+                    exact = prior["page_text_range"] or {}
+                    other_start, other_end = exact.get("start"), exact.get("end")
                 if (key[0] == str(prior.get("asset_id") or old.get("asset_id") or "") and
                         page == (prior.get("pdf_page") or old.get("pdf_page") or old.get("page_number")) and
                         isinstance(other_start, int) and isinstance(other_end, int) and other_end > other_start):
@@ -295,11 +382,13 @@ def _deduplicate(rows: list[dict]) -> list[dict]:
     return output
 
 
-def _diverse_prefix(rows: list[dict]) -> list[dict]:
+def _diverse_prefix(rows: list[dict], *, eligible_count: int | None = None) -> list[dict]:
     # Limit repetition only within the first six ranks, allowing two highly
-    # ranked passages per work. Deferred hits remain available in later pages.
+    # ranked passages per work. Scan the eligible pool, retaining deferred hits
+    # in their original order after the first screen.
     counts, prefix, deferred = Counter(), [], []
-    for row in rows[:6]:
+    eligible = rows if eligible_count is None else rows[:eligible_count]
+    for row in eligible:
         work = row.get("work") or (row.get("metadata") or {}).get("work") or {}
         work_id = str(work.get("id") or row.get("work_id") or _identity(row))
         if len(prefix) < 6 and counts[work_id] < 2:
@@ -307,7 +396,7 @@ def _diverse_prefix(rows: list[dict]) -> list[dict]:
             counts[work_id] += 1
         else:
             deferred.append(row)
-    return prefix + deferred + rows[6:]
+    return prefix + deferred + rows[len(eligible):]
 
 
 def _rerank(query: str, rows: list[dict], limit: int, expected_artifact: str) -> tuple[list[dict], list[dict]]:
@@ -337,8 +426,222 @@ def _task_current(session_id, generation: int, task_id: str) -> bool:
                                                  status__in=ACTIVE, expires_at__gt=timezone.now()).exists()
 
 
-def execute_session(session_id, generation: int, task_id: str) -> None:
+def retrieve_discovery_channel(query, channel, filters, access_statuses, *, limit=100,
+                               expanded=False, aliases=(), request_context=None, is_current=None):
+    """One recall/fusion/source-check/order path for sessions and the legacy Ask adapter.
+
+    ``filters`` here is a server-resolved scope, not unvalidated HTTP input. This
+    preserves large curated paths and the internal exact-file restriction.
+    """
     from catalog.services.discovery_projection import discovery_candidates, validate_discovery_results
+    request_context = request_context if request_context is not None else {}
+    result = discovery_candidates(query, channel, filters, access_statuses, limit=limit,
+                                  expanded=expanded, request_context=request_context)
+    branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0)]
+    warnings = list(result.get("warnings", []))
+    if channel == "passages" and expanded and aliases:
+        for alias in aliases[:4]:
+            if is_current and not is_current():
+                return {"rows": [], "warnings": warnings, "canceled": True, "version": str(result.get("version") or "")}
+            branch = discovery_candidates(alias, channel, filters, access_statuses, limit=40,
+                                          expanded=True, request_context=request_context)
+            branches.extend([(branch.get("sparse", []), 0.2 / len(aliases[:4])),
+                             (branch.get("dense", []), 0.2 / len(aliases[:4]))])
+            warnings.extend(branch.get("warnings", []))
+    rows = validate_discovery_results(channel, _rrf(branches)[:MAX_MATERIALIZED], access_statuses)
+    if channel == "passages":
+        rows = _deduplicate(rows)
+        if is_current and not is_current():
+            return {"rows": [], "warnings": warnings, "canceled": True, "version": str(result.get("version") or "")}
+        rerank_count = 40 if expanded else 20
+        rows, rerank_warnings = _rerank(query, rows, rerank_count, str(result.get("reranker_artifact") or ""))
+        warnings.extend(rerank_warnings)
+        # Only the scored pool is eligible for promotion. The unscored fusion
+        # tail remains available, but work diversity is not evidence relevance.
+        if not any(warning.get("code") == "reranker_unavailable" for warning in rerank_warnings):
+            rows = _diverse_prefix(rows, eligible_count=rerank_count)
+    # Model calls may outlive a publication change. Recheck after them as well.
+    rows = validate_discovery_results(channel, rows, access_statuses)
+    return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),
+            "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
+            "embedding_artifact": str(result.get("embedding_artifact") or ""),
+            "embedding_dimensions": result.get("embedding_dimensions"),
+            "reranker_artifact": str(result.get("reranker_artifact") or ""),
+            "canceled": False}
+
+
+def _deep_task_current(session_id, generation: int, task_id: str) -> bool:
+    return DiscoverySearchSession.objects.filter(
+        pk=session_id,
+        generation=generation,
+        task_id=task_id,
+        status__in=ACTIVE,
+        expires_at__gt=timezone.now(),
+    ).exists()
+
+
+def _deep_reference_rows(session, access_statuses) -> list[dict]:
+    """Rehydrate baseline passage identities before the optional deep stages."""
+    from catalog.services.discovery_projection import validate_discovery_results
+
+    refs = (session.results or {}).get("passages", [])[:MAX_MATERIALIZED]
+    rows = validate_discovery_results("passages", refs, access_statuses)
+    by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in rows}
+    return [
+        row
+        for ref in refs
+        if (row := by_key.get((_identity(ref), str(ref.get("source_revision") or "")))) is not None
+    ]
+
+
+def execute_deep_session(session_id, generation: int, task_id: str) -> None:
+    """Asynchronously supplement a completed first screen in the same session."""
+    from catalog.services.retrieval.deep_pipeline import DEEP_RESULT_KEY, run_deep_pipeline
+
+    with transaction.atomic():
+        session = DiscoverySearchSession.objects.select_for_update().filter(pk=session_id).first()
+        if (
+            session is None
+            or session.generation != generation
+            or session.task_id != task_id
+            or session.status not in ACTIVE
+            or session.expires_at <= timezone.now()
+        ):
+            return
+        session.channels = {
+            **(session.channels or {}),
+            DEEP_CHANNEL: {"status": "running", "pipeline_version": "stl4-recommended-deep-v1"},
+        }
+        session.save(update_fields=["channels", "updated_at"])
+    try:
+        session.refresh_from_db()
+        access_statuses = list(session.access_statuses or [])
+        baseline = _deep_reference_rows(session, access_statuses)
+        result = run_deep_pipeline(
+            session.query,
+            baseline,
+            access_statuses,
+            filters=session.filters,
+            is_current=lambda: _deep_task_current(session_id, generation, task_id),
+        )
+        if result.get("status") == "canceled":
+            return
+        rows = result.get("rows") or []
+        from catalog.services.discovery_projection import validate_discovery_results
+
+        annotations = {
+            _identity(row): {
+                key: row[key]
+                for key in ("deep_rank", "deep_score", "deep_context")
+                if key in row
+            }
+            for row in rows
+        }
+        rows = validate_discovery_results("passages", rows, access_statuses)
+        for row in rows:
+            row.update(annotations.get(_identity(row), {}))
+        refs = [_deep_reference(row) for row in rows[:MAX_MATERIALIZED] if _identity(row)]
+        stage = {
+            key: value
+            for key, value in result.items()
+            if key not in {"rows", "warnings"}
+        }
+        embedding_state = result.get("embedding") if isinstance(result.get("embedding"), dict) else {}
+        bge_state = result.get("bge") if isinstance(result.get("bge"), dict) else {}
+        context_state = result.get("convmemory") if isinstance(result.get("convmemory"), dict) else {}
+        baseline_identity = (session.versions or {}).get("_identity", {})
+        if not isinstance(baseline_identity, dict):
+            baseline_identity = {}
+        stage.update({
+            "index_uid": str(embedding_state.get("index_uid") or ""),
+            "index_generation": str(
+                getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")
+                or baseline_identity.get("index_generation")
+                or ""
+            ),
+            "embedding_artifact": str(embedding_state.get("artifact") or ""),
+            "embedding_dimensions": embedding_state.get("dimensions"),
+            # A configured model name is not proof that the isolated worker
+            # loaded it. Keep artifact identity empty until that stage reports
+            # completion; the nested state still exposes the requested model
+            # and its pending/degraded status for the UI.
+            "reranker_artifact": str(
+                bge_state.get("artifact") or ""
+            ) if bge_state.get("status") == "completed" else "",
+            "context_artifact": str(
+                context_state.get("artifact") or context_state.get("artifact_id") or ""
+            ) if context_state.get("status") == "completed" else "",
+        })
+        stage.update({"status": result.get("status", "degraded"), "warnings": result.get("warnings", [])})
+        with transaction.atomic():
+            current = DiscoverySearchSession.objects.select_for_update().get(pk=session_id)
+            if not _deep_task_current(session_id, generation, task_id):
+                return
+            current.results = {**(current.results or {}), DEEP_RESULT_KEY: refs}
+            current.channels = {**(current.channels or {}), DEEP_CHANNEL: stage}
+            version = str(result.get("pipeline_version") or "stl4-recommended-deep-v1")
+            versions = list((current.versions or {}).get(DEEP_CHANNEL) or [])
+            if version not in versions:
+                versions.append(version)
+            current.versions = {**(current.versions or {}), DEEP_CHANNEL: versions}
+            unique_warnings = {
+                str(item.get("code", "")) + str(item.get("channel", "")): item
+                for item in [*(current.warnings or []), *(result.get("warnings") or [])]
+                if isinstance(item, dict)
+            }
+            current.warnings = list(unique_warnings.values())[:20]
+            baseline_states = [
+                value.get("status")
+                for key, value in (current.channels or {}).items()
+                if key != DEEP_CHANNEL
+            ]
+            deep_status = str(stage.get("status") or "degraded")
+            current.status = (
+                "failed"
+                if not baseline_states or all(value == "failed" for value in baseline_states)
+                else "partial"
+                if deep_status in {"failed", "degraded"}
+                or any(value in {"failed", "degraded"} for value in baseline_states)
+                else "completed"
+            )
+            current.finished_at = timezone.now()
+            current.save(update_fields=["results", "channels", "versions", "warnings", "status", "finished_at", "updated_at"])
+    except Exception as exc:
+        logger.warning("Deep discovery failed: %s", type(exc).__name__)
+        fail_deep_session(session_id, generation, task_id)
+
+
+def fail_deep_session(session_id, generation: int, task_id: str, code: str = "deep_task_failed") -> bool:
+    """Mark only the optional deep stage failed, preserving baseline cards."""
+    with transaction.atomic():
+        current = DiscoverySearchSession.objects.select_for_update().filter(
+            pk=session_id, generation=generation, task_id=task_id, status__in=ACTIVE
+        ).first()
+        if current is None:
+            return False
+        current.channels = {
+            **(current.channels or {}),
+            DEEP_CHANNEL: {
+                "status": "failed",
+                "pipeline_version": "stl4-recommended-deep-v1",
+            },
+        }
+        current.warnings = [
+            *(current.warnings or []),
+            _warning(code, "深度检索暂未完成，已保留首屏检索结果。", DEEP_CHANNEL),
+        ][-20:]
+        baseline_states = [
+            value.get("status")
+            for key, value in (current.channels or {}).items()
+            if key != DEEP_CHANNEL
+        ]
+        current.status = "failed" if baseline_states and all(value == "failed" for value in baseline_states) else "partial"
+        current.finished_at = timezone.now()
+        current.save(update_fields=["channels", "warnings", "status", "finished_at", "updated_at"])
+        return True
+
+
+def execute_session(session_id, generation: int, task_id: str) -> None:
     with transaction.atomic():
         session = DiscoverySearchSession.objects.select_for_update().filter(pk=session_id).first()
         if (session is None or session.generation != generation or session.task_id != task_id or
@@ -358,27 +661,21 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
     for channel in ("entities", "curation", "passages"):
         if not _task_current(session_id, generation, task_id):
             return
+        with transaction.atomic():
+            current = DiscoverySearchSession.objects.select_for_update().get(pk=session_id)
+            if current.generation != generation or current.task_id != task_id or current.status not in ACTIVE:
+                return
+            current.channels = {**current.channels, channel: {"status": "running"}}
+            current.save(update_fields=["channels", "updated_at"])
         cap = (300 if expanded else 100) if channel == "passages" else (40 if expanded else 16)
         warnings = []
         try:
-            result = discovery_candidates(session.query, channel, session.filters,
-                                          session.access_statuses, limit=cap, expanded=expanded,
-                                          request_context=retrieval_context)
-            branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0)]
-            warnings.extend(result.get("warnings", []))
-            if channel == "passages" and expanded and aliases:
-                # Original full-corpus channels retain dominant total weight.
-                for alias in aliases[:4]:
-                    if not _task_current(session_id, generation, task_id):
-                        return
-                    branch = discovery_candidates(alias, channel, session.filters,
-                                                  session.access_statuses, limit=40, expanded=True,
-                                                  request_context=retrieval_context)
-                    branches.extend([(branch.get("sparse", []), 0.2 / len(aliases[:4])),
-                                     (branch.get("dense", []), 0.2 / len(aliases[:4]))])
-                    warnings.extend(branch.get("warnings", []))
-            rows = _rrf(branches)[:MAX_MATERIALIZED]
-            rows = validate_discovery_results(channel, rows, session.access_statuses)
+            result = retrieve_discovery_channel(session.query, channel, session.filters, session.access_statuses,
+                limit=cap, expanded=expanded, aliases=aliases, request_context=retrieval_context,
+                is_current=lambda: _task_current(session_id, generation, task_id))
+            if result["canceled"]:
+                return
+            rows, warnings = result["rows"], result["warnings"]
             if channel == "entities":
                 for row in rows[:6]:
                     for alias in row.get("aliases") or (row.get("metadata") or {}).get("aliases") or []:
@@ -386,14 +683,6 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
                         if 2 <= len(value) <= 120 and value != session.query and value not in aliases:
                             aliases.append(value)
                 aliases = aliases[:6]
-            if channel == "passages":
-                rows = _deduplicate(rows)
-                if not _task_current(session_id, generation, task_id):
-                    return
-                rows, rerank_warnings = _rerank(session.query, rows, 40 if expanded else 20,
-                                              str(result.get("reranker_artifact") or ""))
-                warnings.extend(rerank_warnings)
-                rows = _diverse_prefix(rows)
             channel_state = {"status": "degraded" if warnings else "completed"}
             version = str(result.get("version") or "")
         except SoftTimeLimitExceeded:
@@ -417,7 +706,21 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
             versions = list((current.versions or {}).get(channel) or [])
             if version and version not in versions:
                 versions.append(version)
-            current.versions = {**current.versions, channel: versions}
+            version_state = {**current.versions, channel: versions}
+            # Keep verified model/index identity beside the immutable version
+            # list. This is diagnostics only and does not change ranking or
+            # access; absent backend metadata stays absent in the response.
+            identity = {
+                "index_uid": str(result.get("index_uid") or ""),
+                "embedding_artifact": str(result.get("embedding_artifact") or ""),
+                "embedding_dimensions": result.get("embedding_dimensions"),
+                "reranker_artifact": str(result.get("reranker_artifact") or ""),
+                "index_generation": version,
+            }
+            if any(value not in ("", None) for value in identity.values()):
+                version_state["_identity"] = {key: value for key, value in identity.items()
+                                                if value not in ("", None)}
+            current.versions = version_state
             unique_warnings = {str(item.get("code", "")) + str(item.get("channel", "")): item
                                for item in [*current.warnings, *warnings] if isinstance(item, dict)}
             current.warnings = list(unique_warnings.values())[:20]
@@ -428,16 +731,91 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
     statuses = list(channel_states.values())
     terminal = "failed" if all(value == "failed" for value in statuses) else (
         "partial" if any(value in {"failed", "degraded"} for value in statuses) else "completed")
-    DiscoverySearchSession.objects.filter(pk=session_id, generation=generation, task_id=task_id,
-                                          status__in=ACTIVE).update(status=terminal, finished_at=timezone.now(),
-                                                                   updated_at=timezone.now())
+    deep_enabled = bool(getattr(settings, "STL_DEEP_RETRIEVAL_ENABLED", False))
+    deep_task_id = str(uuid4()) if deep_enabled else ""
+    with transaction.atomic():
+        current = DiscoverySearchSession.objects.select_for_update().filter(
+            pk=session_id, generation=generation, task_id=task_id, status__in=ACTIVE
+        ).first()
+        if current is None:
+            return
+        passages = list((current.results or {}).get("passages", []))
+        if deep_enabled and passages:
+            # Baseline cards stay visible while the deep stages run. The task
+            # id moves with the same generation so cancel/retry remains safe.
+            current.task_id = deep_task_id
+            current.channels = {
+                **(current.channels or {}),
+                DEEP_CHANNEL: {
+                    "status": "queued",
+                    "pipeline_version": "stl4-recommended-deep-v1",
+                    "task_id": deep_task_id,
+                },
+            }
+            current.status = "running"
+            current.save(update_fields=["task_id", "channels", "status", "updated_at"])
+        else:
+            current.channels = {
+                **(current.channels or {}),
+                DEEP_CHANNEL: {
+                    "status": "disabled" if not deep_enabled else "skipped",
+                    "pipeline_version": "stl4-recommended-deep-v1",
+                    "reason": "feature_disabled" if not deep_enabled else "no_baseline_results",
+                },
+            }
+            current.status = terminal
+            current.finished_at = timezone.now()
+            current.save(update_fields=["channels", "status", "finished_at", "updated_at"])
+            deep_task_id = ""
+    if deep_task_id:
+        from catalog.discovery_tasks import run_discovery_deep
+
+        try:
+            run_discovery_deep.apply_async(
+                args=[str(session_id), generation],
+                task_id=deep_task_id,
+                queue=getattr(settings, "DISCOVERY_QUERY_TASK_QUEUE", "celery"),
+            )
+        except Exception as exc:
+            logger.warning("Deep discovery dispatch failed: %s", type(exc).__name__)
+            with transaction.atomic():
+                current = DiscoverySearchSession.objects.select_for_update().filter(
+                    pk=session_id, generation=generation, task_id=deep_task_id, status__in=ACTIVE
+                ).first()
+                if current is not None:
+                    current.channels = {
+                        **(current.channels or {}),
+                        DEEP_CHANNEL: {
+                            "status": "failed",
+                            "pipeline_version": "stl4-recommended-deep-v1",
+                        },
+                    }
+                    current.status = "failed" if terminal == "failed" else "partial"
+                    current.finished_at = timezone.now()
+                    current.warnings = [
+                        *(current.warnings or []),
+                        _warning("deep_queue_unavailable", "深度检索任务暂未排队，已保留首屏检索结果。", "deep"),
+                    ][-20:]
+                    current.save(update_fields=["channels", "status", "finished_at", "warnings", "updated_at"])
 
 
-def fail_session(session_id, generation: int, task_id: str, code="task_failed") -> None:
-    DiscoverySearchSession.objects.filter(pk=session_id, generation=generation, task_id=task_id,
-                                          status__in=ACTIVE).update(
-        status="failed", finished_at=timezone.now(), updated_at=timezone.now(),
-        warnings=[_warning(code, "检索任务未能完成，已保留找到的材料，可重新检索。")])
+def fail_session(session_id, generation: int, task_id: str, code="task_failed", *,
+                 statuses=ACTIVE, observed_updated_at=None) -> bool:
+    with transaction.atomic():
+        rows = DiscoverySearchSession.objects.select_for_update().filter(
+            pk=session_id, generation=generation, task_id=task_id, status__in=statuses)
+        if observed_updated_at is not None:
+            rows = rows.filter(updated_at=observed_updated_at)
+        session = rows.first()
+        if session is None:
+            return False
+        session.status = "failed"
+        session.finished_at = timezone.now()
+        session.warnings = [*session.warnings, _warning(code, "检索任务未能完成，已保留找到的材料，可重试当前范围。")][-20:]
+        session.channels = {key: ({"status": "failed"} if value.get("status") in {"pending", "queued", "running"} else value)
+                            for key, value in session.channels.items()}
+        session.save(update_fields=["status", "finished_at", "warnings", "channels", "updated_at"])
+        return True
 
 
 def _rehydrate(session, access_statuses) -> dict[str, list[dict]]:
@@ -458,6 +836,27 @@ def _rehydrate(session, access_statuses) -> dict[str, list[dict]]:
     return output
 
 
+def _rehydrate_deep(session, access_statuses) -> list[dict]:
+    from catalog.services.discovery_projection import validate_discovery_results
+
+    refs = (session.results or {}).get(DEEP_RESULTS_KEY, [])[:MAX_MATERIALIZED]
+    fresh = validate_discovery_results("passages", refs, access_statuses)
+    by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in fresh}
+    output = []
+    for position, ref in enumerate(refs):
+        row = by_key.get((_identity(ref), str(ref.get("source_revision") or "")))
+        if row is None:
+            continue
+        row = dict(row)
+        row["_position"] = position
+        row["match_basis"] = ref.get("match_basis") or row.get("match_basis") or []
+        for key in ("deep_rank", "deep_score", "deep_context"):
+            if key in ref:
+                row[key] = ref[key]
+        output.append(row)
+    return output
+
+
 def _public_row(row: dict) -> dict:
     # Projection diagnostics, access filters and ranking scores are never part
     # of a public card. Their existence must not expand the response contract.
@@ -465,7 +864,8 @@ def _public_row(row: dict) -> dict:
                "source_title", "recommendation_excerpt", "source_revision", "portrait_url", "kind",
                "linked_work_ids", "match_basis", "pdf_page", "page_number", "printed_page", "asset_id",
                "edition_id", "work_id", "document_revision_id", "evidence_span_id", "passage_id",
-               "work", "authors", "locator_precision", "context_reference"}
+               "work", "authors", "locator_precision", "context_reference", "deep_rank", "deep_score",
+               "deep_context"}
     output = {key: value for key, value in row.items() if key in allowed}
     metadata = row.get("metadata") or {}
     if "pdf_page" not in output:
@@ -493,6 +893,66 @@ def _public_row(row: dict) -> dict:
     return output
 
 
+DEEP_PROGRESS_STATUSES = {
+    "baseline_ready", "deep_queued", "deep_running", "queued", "running",
+    "completed", "partial", "degraded", "disabled", "skipped", "unavailable",
+}
+
+
+def _deep_progress(session) -> dict:
+    """Project optional deep ranking/context state without inventing completion.
+
+    The baseline Discovery channels remain useful when the isolated BGE /
+    ConvMemory worker is not configured. A future deep worker can persist its
+    own ``channels.deep`` state; the public response then carries that exact
+    state and its verified artifact identities.
+    """
+    raw = session.channels.get("deep") if isinstance(session.channels, dict) else None
+    raw = raw if isinstance(raw, dict) else {}
+    raw_status = str(raw.get("status") or "")
+    # Workers may persist their implementation state names; keep the public
+    # contract stable while they roll forward to the canonical six statuses.
+    status = {
+        "pending": "deep_queued", "queued": "deep_queued", "running": "deep_running",
+        "degraded": "partial", "disabled": "unavailable", "skipped": "unavailable",
+        "failed": "unavailable",
+    }.get(raw_status, raw_status)
+    if status not in DEEP_PROGRESS_STATUSES:
+        passage = session.channels.get("passages", {}) if isinstance(session.channels, dict) else {}
+        passage_status = passage.get("status") if isinstance(passage, dict) else ""
+        status = "baseline_ready" if passage_status in {"completed", "degraded"} else "unavailable"
+    terminal = status in {"baseline_ready", "completed", "partial", "degraded", "disabled", "skipped", "unavailable"}
+    identity = (session.versions or {}).get("_identity", {})
+    if not isinstance(identity, dict):
+        identity = {}
+    deep_state = raw.get("bge") if isinstance(raw.get("bge"), dict) else {}
+    context_state = raw.get("convmemory") if isinstance(raw.get("convmemory"), dict) else {}
+    embedding_state = raw.get("embedding") if isinstance(raw.get("embedding"), dict) else {}
+    payload = {
+        "status": status,
+        "stage": str(raw.get("stage") or ("baseline" if status == "baseline_ready" else "deep")),
+        "completed": int(raw.get("completed") or (1 if status in {"baseline_ready", "completed", "partial", "degraded", "disabled", "skipped"} else 0)),
+        "total": int(raw.get("total") or 1),
+        "terminal": bool(raw.get("terminal", terminal)),
+        "model": str(raw.get("model") or deep_state.get("model") or context_state.get("model") or ""),
+        "index_uid": str(raw.get("index_uid") or identity.get("index_uid") or ""),
+        "index_generation": str(raw.get("index_generation") or identity.get("index_generation") or ""),
+        "embedding_artifact": str(raw.get("embedding_artifact") or embedding_state.get("artifact") or identity.get("embedding_artifact") or ""),
+        "embedding_dimensions": raw.get("embedding_dimensions", embedding_state.get("dimensions", identity.get("embedding_dimensions"))),
+        # Model names describe the requested provider; artifact fields only
+        # describe a loaded, verified bundle. Never copy a model name into an
+        # artifact slot while the isolated worker is pending or degraded.
+        "reranker_artifact": str(raw.get("reranker_artifact") or deep_state.get("artifact") or identity.get("reranker_artifact") or ""),
+        "context_artifact": str(raw.get("context_artifact") or context_state.get("artifact") or context_state.get("artifact_id") or ""),
+        "notice": str(raw.get("notice") or ("基础候选已就绪；深度层尚未启动。" if status == "baseline_ready" else
+                                              "当前没有可用深度任务，保留基础检索结果。" if status == "unavailable" else "")),
+    }
+    for key in ("started_at", "updated_at", "finished_at"):
+        value = raw.get(key)
+        payload[key] = value.isoformat() if hasattr(value, "isoformat") else value
+    return payload
+
+
 def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
     offset = 0
     if cursor:
@@ -507,36 +967,77 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
             raise ValidationError({"cursor": "分页位置无效或已过期，请重新检索。"})
     limit = max(1, min(int(limit), MAX_MATERIALIZED))
     visible = _rehydrate(session, access_statuses)
-    remaining = [row for row in visible["passages"] if row["_position"] >= offset]
+    deep_visible = _rehydrate_deep(session, access_statuses)
+    deep = _deep_progress(session)
+    # Once the optional deep lane has produced a validated order, expose that
+    # order to the same visual result list. Until then the baseline rows remain
+    # immediately usable, so an unavailable model never blanks the first screen.
+    deep_applied = deep["status"] in {"completed", "partial"} and bool(deep_visible)
+    passage_rows = deep_visible if deep_applied else visible["passages"]
+    remaining = [row for row in passage_rows if row["_position"] >= offset]
     page = remaining[:limit]
     next_cursor = None
     if len(remaining) > len(page) and page:
         next_cursor = signing.dumps({"id": str(session.id), "offset": page[-1]["_position"] + 1}, salt=CURSOR_SALT)
     removed = any(len(visible[channel]) < len((session.results or {}).get(channel, [])) for channel in CHANNELS)
+    deep_removed = len(deep_visible) < len((session.results or {}).get(DEEP_RESULTS_KEY, []))
     warnings = list(session.warnings or [])
-    if removed:
+    if removed or deep_removed:
         warnings.append(_warning("sources_changed", "部分来源已更新、撤回或不再可访问，本次结果已移除；可重新检索最新资料。"))
     counts = {channel: len(visible[channel]) for channel in CHANNELS}
+    counts["passages"] = len(passage_rows)
     # No cached corpus totals are returned after permissions change.
     from catalog.services.discovery_projection import discovery_coverage
     coverage = discovery_coverage(access_statuses, filters=session.filters)
-    coverage = {**coverage, "message": (f"当前权限与筛选范围内，有 {coverage.get('eligible_editions', 0)} 份文献具备正文公开资格。"
-                            "关键词与向量覆盖分别统计；这不是全部可阅读馆藏的数量。")}
+    coverage = {**coverage, "message": (
+        f"当前权限与筛选范围内有 {coverage.get('published_editions', 0)} 份已公开书目，"
+        f"其中 {coverage.get('eligible_editions', 0)} 份具备全文检索资格，"
+        f"{coverage.get('text_pending_editions', 0)} 份文档的正文尚未就绪，"
+        f"{coverage.get('bibliographic_editions', 0)} 份为纯书目记录。关键词与向量覆盖分别统计。")}
+    identity = (session.versions or {}).get("_identity", {})
+    identity = identity if isinstance(identity, dict) else {}
     return {
         "id": str(session.id), "query": session.query, "original_query": session.query,
         "status": session.status, "mode": "expanded" if session.expansion_count else "standard",
+        "can_retry": session.status in {"failed", "partial"},
+        "task_progress": {
+            "id": str(session.pk), "generation": session.generation, "status": session.status,
+            "terminal": session.status not in ACTIVE,
+            "stage": next((key for key, value in session.channels.items() if value.get("status") == "running"), session.status),
+            "completed": sum(value.get("status") in {"completed", "degraded", "partial", "failed", "disabled", "skipped"}
+                             for value in session.channels.values()),
+            "total": len(CHANNELS) + int(DEEP_CHANNEL in session.channels), "unit": "channels",
+            "retryable": session.status in {"failed", "partial"},
+            "started_at": session.started_at.isoformat() if session.started_at else None,
+            "updated_at": session.updated_at.isoformat(),
+            "finished_at": session.finished_at.isoformat() if session.finished_at else None,
+            "deep": deep,
+        },
         "expansion_count": session.expansion_count, "generation": session.generation,
         "filters": session.filters, "pipeline_version": PIPELINE_VERSION,
+        "retrieval_identity": {
+            "index_generation": str(identity.get("index_generation") or ""),
+            "index_uid": str(identity.get("index_uid") or ""),
+            "embedding_artifact": str(identity.get("embedding_artifact") or ""),
+            "embedding_dimensions": identity.get("embedding_dimensions"),
+            "reranker_artifact": str(identity.get("reranker_artifact") or ""),
+            "pipeline_version": PIPELINE_VERSION,
+        },
         "corpus_version": ",".join((session.versions or {}).get("passages", [])),
         "knowledge_version": ",".join(dict.fromkeys([*(session.versions or {}).get("entities", []), *(session.versions or {}).get("curation", [])])),
         "passages": [_public_row(row) for row in page],
+        "deep_passages": [_public_row(row) for row in deep_visible],
+        "deep_stage": deep,
         "entities": [_public_row(row) for row in visible["entities"]],
         "curation": [_public_row(row) for row in visible["curation"]],
         "count": counts["passages"], "counts": counts, "next_cursor": next_cursor,
         "can_expand": session.status not in (*ACTIVE, "canceled") and session.expansion_count < 1,
         "completed_channels": [key for key, value in session.channels.items() if value.get("status") in {"completed", "degraded"}],
         "channels": session.channels, "coverage_summary": coverage, "warnings": warnings,
-        "source_changed": removed or any(len(value) > 1 for value in session.versions.values()),
+        "source_changed": removed or deep_removed or any(
+            isinstance(value, list) and len(value) > 1
+            for key, value in session.versions.items() if key != "_identity"
+        ),
         "created_at": session.created_at.isoformat(), "expires_at": session.expires_at.isoformat(),
         "poll_after_ms": 1500 if session.status in ACTIVE else None,
         "notice": "原文材料来自当前可访问馆藏；知识与策展分别列出，不判断观点首创或学术立场。",
