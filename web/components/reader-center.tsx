@@ -19,7 +19,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   apiRequest,
   classifyClientError,
@@ -159,6 +159,7 @@ const emptyData: ReaderData = {
 
 export function ReaderCenter() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { state: session, retry: retrySession } = useSessionBootstrap();
   const [active, setActive] = useState(() => (searchParams.get("section") === "lists" ? "书单" : "概览"));
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
@@ -351,7 +352,7 @@ export function ReaderCenter() {
     try {
       await logoutCurrentSession();
       finishReaderAction(actionKey, "success", "已退出登录，正在返回书库首页……");
-      window.location.href = "/";
+      router.push("/");
     } catch (error) {
       finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "退出登录失败。");
     }
