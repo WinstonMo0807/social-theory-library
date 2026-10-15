@@ -17,6 +17,7 @@
 - 已补入 `/help`、`/help/[slug]`、`/feedback` 页面；支持页沿最终 PDF 第13、15、16、17页的白色内容层、书桌 hero、细线卡片、移动单列和状态反馈实现，未把图集截图贴入页面。
 - 已新增 `POST /api/catalog/feedback/`、`catalog.PublicFeedback` 和迁移 `0067_publicfeedback.py`。反馈只保存类别、正文、可选联系邮箱、站内路径和状态；不写入 PDF、私人笔记或令牌。迁移尚未执行。
 - Python `compileall` 已覆盖反馈模型、接口、URL 和迁移；目标前端 ESLint 0错误（支持页保留 Next 图片优化警告）。Django 迁移检查因当前环境未安装 Django（`ModuleNotFoundError`）待核实；正式测试、构建、浏览器验收和部署仍未运行。
+- 已保存支持与反馈业务检查点 `6bb0f8b`（`feat(stl4): add support and public feedback flow`）；其他既有未提交修改继续保留。
 
 ## 2026-10-15 STL 4.0 接续：U01 首页静态复核
 

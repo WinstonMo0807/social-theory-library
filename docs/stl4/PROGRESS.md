@@ -16,6 +16,7 @@
 
 - 已实现 `/help`、`/help/[slug]`、`/feedback` 及 `POST /api/catalog/feedback/`；后端新增 `PublicFeedback` 和 `0067_publicfeedback.py`，只保留反馈必要字段和状态。
 - 反馈目标前端 ESLint、Python compileall 已通过；Django migration dry-run 因 API 环境缺少 Django 依赖退出并标为待核实。帮助/反馈尚未进行终稿逐图和浏览器验收，`/about` 仍待重构。
+- 支持与反馈业务检查点为 `6bb0f8b`；未执行迁移、测试、构建、浏览器验收或部署。
 
 ## 2026-10-15 U01 首页静态复核（当前接续）
 
