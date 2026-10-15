@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, FileText, Plus, Tags, UserRound, CircleDot, Sparkles, AlertTriangle, Upload } from "lucide-react";
+import { useEffect } from "react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { useAdminSession } from "@/lib/admin-session";
 import { documentLabels, queueWorkbenchHref, type WorkflowQueueItem, type WorkflowQueuePage } from "@/lib/api/admin-collections";
 import { withAdminReturn } from "@/lib/admin-route-context";
 import { PageHeader, StatusBadge } from "./admin-ui";
+import { OcrIndexWorkHelper, type ProcessingAttentionData } from "./admin/ocr-index-work-helper";
 
 type DashboardData = {
   documents: { total: number; published: number; withdrawn: number };
   needs_review: number; processing: number;
   recent_items: { id: string; title: string; source_filename: string; status: string; created_at: string; updated_at: string }[];
+  processing_attention?: ProcessingAttentionData;
 };
 
 function deduplicate(items: WorkflowQueueItem[]) {
@@ -30,7 +33,15 @@ export function AdminDashboard() {
   const credential = user ? getServerSessionCredential() : null;
   const context = String(user?.id ?? "");
   const dashboard = useApiResource<DashboardData>("/ingestion/dashboard/", credential, context);
+  const retryDashboard = dashboard.retry;
   const queue = useApiResource<WorkflowQueuePage>("/catalog/admin/workflows/queue/?category=all&page_size=8", credential, context);
+  useEffect(() => {
+    if (!credential) return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) retryDashboard();
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [credential, retryDashboard]);
   const items = deduplicate(queue.data?.results ?? []).slice(0, 8);
   const cards = [
     { title: "未完成馆藏", value: queue.data?.counts.all, detail: "当前需要处理的出版版本", href: "/admin/review", Icon: BookOpen },
@@ -42,10 +53,11 @@ export function AdminDashboard() {
     {href:"/admin/topics", title:"主题", Icon:Tags}, {href:"/admin/scholars", title:"学者", Icon:UserRound},
     {href:"/admin/theories", title:"理论流派", Icon:CircleDot}, {href:"/admin/recommendations", title:"本期书库推荐", Icon:Sparkles},
   ];
-  return <div className="admin-dashboard admin-v307-dashboard">
-    <PageHeader eyebrow="管理后台" title="今日工作" description="继续整理未完成的馆藏，处理异常，或开始一次策展。" actions={<Link className="button" href="/admin/uploads"><Plus size={16} />上传 PDF</Link>} />
+  return <div className="admin-dashboard admin-v307-dashboard stl4-admin-dashboard">
+    <PageHeader eyebrow="管理后台" title="今日工作与继续处理" description="从待办事项继续，完成馆藏整理、异常处理与发布检查。" actions={<Link className="button" href="/admin/uploads"><Plus size={16} />上传 PDF</Link>} />
     {dashboard.error ? <p className="admin-error" role="alert">{dashboard.error}<button type="button" onClick={dashboard.retry}>重新读取概况</button></p> : null}
     <section className="admin-v307-metrics" aria-label="工作概况">{cards.map(({ title, value, detail, href, Icon }) => <Link href={href} key={title}><Icon size={25} /><div><span>{title}</span><strong>{value ?? "—"}<small>项</small></strong><p>{detail}</p></div></Link>)}</section>
+    <OcrIndexWorkHelper data={dashboard.data?.processing_attention} />
     <div className="admin-v307-day-grid">
       <section className="admin-panel admin-v307-unfinished"><header><div><h2>未完成的馆藏</h2><p>每个出版版本只列一次，直接进入当前需要处理的位置。</p></div><Link href="/admin/review">查看全部 <ArrowRight size={14} /></Link></header>
         {queue.error ? <p className="admin-error" role="alert">{queue.error}<button type="button" onClick={queue.retry}>重试工作队列</button></p> : null}

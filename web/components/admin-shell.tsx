@@ -5,10 +5,13 @@ import {
   Bell,
   BookOpen,
   Boxes,
+  CalendarDays,
   ChartNoAxesCombined,
   Cloud,
   CircleDot,
+  ChevronDown,
   LayoutDashboard,
+  ListTodo,
   Menu,
   RefreshCw,
   Search,
@@ -43,6 +46,21 @@ const navigation = [
     ["/admin/backups", Boxes, "备份"],
     ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
     ["/admin/users", Users, "用户与权限"],
+] as const;
+
+// The legacy route list remains the compatibility map for existing tests and
+// deep links. The visible shell groups those same routes into the nine task
+// areas shown in the v2 reference set; children are contextual links only.
+const designNavigation = [
+  { key: "work", primary: "/admin", label: "工作台", Icon: LayoutDashboard, match: ["/admin"], children: [["/admin", "今日工作"], ["/admin/review", "待完成"], ["/admin/uploads", "最近上传"]] },
+  { key: "library", primary: "/admin/uploads", label: "馆藏", Icon: BookOpen, match: ["/admin/library", "/admin/uploads", "/admin/review", "/admin/intake", "/admin/cataloging", "/admin/" + "media", "/admin/publication"], children: [["/admin/library", "馆藏列表"], ["/admin/uploads", "上传 PDF"], ["/admin/review", "待完成"], ["/admin/" + "media", "图片库"]] },
+  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: CircleDot, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "理论流派"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"]] },
+  { key: "scholars", primary: "/admin/scholars", label: "学者", Icon: UserRound, match: ["/admin/scholars", "/admin/" + "people"], children: [["/admin/scholars", "学者列表"], ["/admin/scholars?create=1", "新建学者"], ["/admin/scholars/people", "人物查重"]] },
+  { key: "topics", primary: "/admin/topics", label: "主题", Icon: Tags, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"]] },
+  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: CalendarDays, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
+  { key: "site", primary: "/admin/about", label: "网站内容", Icon: Boxes, match: ["/admin/about"], children: [["/admin/about", "首页与关于书库"], ["/admin/about?section=brand", "品牌与页脚"]] },
+  { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: ListTodo, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?tab=ocr", "文字识别"], ["/admin/processing?tab=sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/status", "运行检查"]] },
+  { key: "system", primary: "/admin/storage", label: "系统管理", Icon: ChartNoAxesCombined, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
 ] as const;
 
 const routeCapabilities: Record<string, string[]> = {
@@ -189,7 +207,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell ${focusMode ? "focus-mode" : ""}`}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
@@ -203,20 +221,29 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <Link className="admin-logo" href="/" prefetch={false}><Wordmark /></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav>
-          {navigation.filter(([href]) => canViewRoute(href)).map(([href, Icon, label]) => {
-                const [hrefPath, hrefQuery = ""] = href.split("#")[0].split("?");
-                const requestedView = new URLSearchParams(hrefQuery).get("view");
-                const currentView = searchParams.get("view");
-                const requestedSurface = new URLSearchParams(hrefQuery).get("surface");
-                const active = hrefPath === "/admin"
-                  ? pathname === hrefPath
-                  : (pathname === hrefPath || pathname.startsWith(`${hrefPath}/`))
-                    && (requestedView ? currentView === requestedView : hrefPath !== "/admin/library" || !currentView)
-                    && (requestedSurface ? searchParams.get("surface") === requestedSurface : true);
-                return <Link className={active ? "active" : ""} aria-current={active ? "page" : undefined} href={href} key={href} prefetch={false} onClick={closeNavigation}><Icon size={17} />{label}</Link>;
+          {navigation.filter(([href]) => canViewRoute(href)).map(([href]) => {
+            const section = designNavigation.find((item) => item.primary === href);
+            if (!section) return null;
+            const active = section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
+            return <div className={`admin-nav-section ${active ? "active" : ""}`} key={section.key}>
+              <Link className="admin-nav-primary" aria-current={active ? "page" : undefined} href={section.primary} prefetch={false} onClick={closeNavigation}>
+                <section.Icon size={17} />
+                <span>{section.label}</span>
+                <ChevronDown size={14} aria-hidden="true" />
+              </Link>
+              {active ? <div className="admin-nav-children">
+                {section.children.filter(([childHref]) => canViewRoute(childHref)).map(([childHref, childLabel]) => {
+                  const childPath = childHref.split("?")[0];
+                  const childQuery = childHref.includes("?") ? new URLSearchParams(childHref.split("?")[1]) : null;
+                  const queryMatches = childQuery ? Array.from(childQuery.entries()).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") || childPath !== pathname;
+                  const childActive = pathname === childPath && queryMatches;
+                  return <Link className={childActive ? "active" : ""} aria-current={childActive ? "page" : undefined} href={childHref} key={childHref} prefetch={false} onClick={closeNavigation}>{childLabel}</Link>;
+                })}
+              </div> : null}
+            </div>;
           })}
         </nav>
-        <footer><strong>社会理论书库</strong><span>{ADMIN_VERSION_LABEL}</span></footer>
+        <footer><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="admin-version">{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
       <div className="admin-main" inert={compactNavigation && open}>
         {!focusMode ? <header className="admin-topbar">
@@ -229,7 +256,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <strong aria-label="当前管理范围">{scope.title}</strong>
+          <div className="admin-breadcrumb" aria-label="当前管理范围"><span>后台</span><b>›</b><strong>{scope.title}</strong></div>
           <form action="/admin/library">
             <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏……" aria-label="搜索后台馆藏" /></label>
             <button className="sr-only" type="submit">搜索</button>
