@@ -49,6 +49,7 @@
 .stl4-research-panel, .stl4-research-workspace { border: 1px solid #dedbd3; background: #fff; }
 .stl4-reader-tabs { display: flex; align-items: stretch; gap: 0; min-height: 48px; border-bottom: 1px solid #e1ddd4; overflow-x: auto; }
 .stl4-reader-tabs a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; color: #7b7a74; font: 12px/1.2 var(--sans); text-decoration: none; white-space: nowrap; }
+.stl4-reader-tabs a small { margin-left: 5px; color: #a39c92; font: 10px var(--sans); }
 .stl4-reader-tabs a:hover { color: #172a44; }
 .stl4-reader-tabs a.is-active { position: relative; color: #172a44; }
 .stl4-reader-tabs a.is-active::after { position: absolute; right: 18px; bottom: -1px; left: 18px; height: 2px; background: #b3894b; content: ""; }

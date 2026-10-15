@@ -558,7 +558,7 @@ export function ReaderCenter() {
             <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
           </div>
         </header>
-        <ResearchCenterNav active={active === "书单" ? "lists" : "research"} />
+        <ResearchCenterNav active={active === "书单" ? "lists" : "research"} counts={{ notes: noteGroups.length, plans: readerData.plans.length, lists: readerData.lists.length }} />
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
 
         {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}

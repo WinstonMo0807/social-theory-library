@@ -5,6 +5,7 @@
 - `/account` 在既有真实阅读资料接口上增加终稿第183页的继续阅读、待继续任务和我的资料三个工作区。待继续任务来自 owner-only `/reading/reading-plans/` 的 pending/reading 条目；我的资料只由真实收藏和笔记生成，空数据显示真实空态。
 - 页头提供新建研究（`/explore/opinions`）、新建笔记（`/explore/original`）、创建计划（`/account/plans`）入口；计划页新增真实 owner-only POST 创建表单，书单深链接保留 `/account?section=lists`，旧资料面板仍可执行删除、创建、导出和账户设置操作。账户中心改为 `div` 内容层，避免嵌套 `main`。
 - 目标 ESLint 0 错误（保留已有内部跳转警告）；全量 TypeScript 仍仅受三个历史 live 测试 TS7022 阻断。尚未进行正式测试、构建、浏览器或终稿逐图回归。
+- 横向导航计数只使用已读取的真实私人资料，数量为零时不渲染；不会把终稿截图里的示例数字写入空库。
 
 ## 2026-10-15 探索总入口视觉接续（开发中）
 

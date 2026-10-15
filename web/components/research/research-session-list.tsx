@@ -105,7 +105,7 @@ export function ResearchSessionList() {
       <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>研究会话</strong></nav>
       <header className="stl4-research-heading"><h1 id="research-title">研究会话</h1><p>只显示你自己的阅读和研究内容。</p></header>
       <div className="stl4-research-panel">
-        <ResearchCenterNav active="research" />
+        <ResearchCenterNav active="research" counts={{ research: rows.length }} />
         <div className="stl4-research-panel-head"><div><h2>最近研究</h2><p>{countLabel}</p></div><Link href="/explore/opinions">开始新的研究 <ArrowRight size={15} /></Link></div>
         {rows.length ? <div className="stl4-research-list">{rows.map((record) => <ResearchSessionCard key={record.id} record={record} />)}</div> : <div className="stl4-research-empty"><BookOpen size={26} /><h2>还没有研究会话</h2><p>完成一次观点检索或保存一个研究问题后，会话会出现在这里。</p><Link href="/explore/opinions">去探索观点 <ArrowRight size={15} /></Link></div>}
       </div>
