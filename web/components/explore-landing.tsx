@@ -1,87 +1,64 @@
-/* eslint-disable @next/next/no-img-element -- These decorative assets are pre-sized local WebP files and do not require a runtime image transformer. */
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 
 const entries = [
   {
     href: "/explore/original",
-    index: "01",
     title: "原文检索",
-    description: "从题名、责任者和馆藏全文进入，定位可以核对、复制与引用的具体页面。",
-    points: ["关键词与书目信息定位", "全文段落与纸本页码", "从结果直接回到阅读器"],
-    action: "进入原文检索",
-    visual: "/explore/explore-magnifier-v1.webp",
-    visualClass: "magnifier",
-    featured: false,
+    description: "按书名、作者、材料类型或年份查找具体文献，进入思想发生的现场。",
+    imageClass: "book",
   },
   {
     href: "/explore/opinions",
-    index: "02",
     title: "观点检索",
-    description: "用自己的语言描述问题，从馆藏原文中发现相近表达、相关论证和可核查证据。",
-    points: ["最相关原文优先", "更多证据与并排核对", "语义不可用时明确降级"],
-    action: "开始观点检索",
-    visual: "/explore/explore-door-v1.webp",
-    visualClass: "door",
-    featured: true,
+    description: "围绕概念、问题或学术论争，了解不同立场的论证与回应。",
+    imageClass: "shelves",
   },
   {
     href: "/explore/ask",
-    index: "03",
     title: "向书库提问",
-    description: "基于已发布馆藏组织回答，并逐条保留来源，方便继续阅读与回到原文。",
-    points: ["连续追问", "馆藏来源逐条展开", "模型未配置时停止生成"],
-    action: "开始提问",
-    visual: "/explore/explore-dialogue-v1.webp",
-    visualClass: "dialogue",
-    featured: false,
+    description: "以现实问题展开研究，从馆藏原文出发获得可追溯的讨论路径。",
+    imageClass: "desk",
   },
 ] as const;
 
 export function ExploreLanding() {
   return (
     <>
-      <main className="page-shell explore-landing-page">
-        <section className="explore-landing-hero">
-          <img
-            className="explore-landing-hero-image"
-            src="/explore/explore-architecture-hero-v1.webp"
-            alt=""
-            width="1913"
-            height="822"
-            fetchPriority="high"
-          />
-          <div className="explore-landing-copy">
-            <p className="explore-landing-kicker">Texts, concepts, and debate.</p>
-            <h1>在原典与论争之间</h1>
-            <span aria-hidden="true" />
-            <p>从原文进入经典文本，从观点连接问题意识，也可以向已发布馆藏继续提问。</p>
+      <main className="stl4-explore-page">
+        <section className="stl4-explore-hero" aria-labelledby="explore-title">
+          <div className="stl4-explore-hero-media" aria-hidden="true" />
+          <div className="stl4-explore-hero-copy">
+            <h1 id="explore-title">在原典与论争之间</h1>
+            <p>从经典文献到当代论争，在文本、观点与问题之间自由穿行，发现社会理论的思想脉络与现实回响。</p>
+            <form className="stl4-explore-search" action="/explore/original" method="get">
+              <Search size={17} strokeWidth={1.7} aria-hidden="true" />
+              <label className="sr-only" htmlFor="explore-query">搜索书名、作者、概念或主题</label>
+              <input type="hidden" name="context" value="global" />
+              <input id="explore-query" name="q" type="search" placeholder="搜索书名、作者、概念、主题……" />
+              <button type="submit">搜索</button>
+            </form>
           </div>
         </section>
 
-        <nav className="explore-entry-grid" aria-label="选择探索方式">
-          {entries.map((entry) => (
-              <Link className={`explore-entry-card ${entry.visualClass}`} href={entry.href} key={entry.href}>
-                <span className="explore-entry-index">{entry.index}</span>
-                {entry.featured ? <span className="explore-entry-badge">主要功能</span> : null}
-                <h2>{entry.title}</h2>
-                <p>{entry.description}</p>
-                <ul>
-                  {entry.points.map((point) => <li key={point}>{point}</li>)}
-                </ul>
-                <strong>{entry.action}<ArrowRight size={18} aria-hidden="true" /></strong>
-                <img
-                  className="explore-entry-visual"
-                  src={entry.visual}
-                  alt=""
-                  width="520"
-                  height="520"
-                  loading="lazy"
-                />
+        <section className="stl4-explore-entries" aria-labelledby="explore-entries-title">
+          <div className="stl4-explore-section-heading">
+            <h2 id="explore-entries-title">探索入口</h2>
+          </div>
+          <div className="stl4-explore-entry-grid">
+            {entries.map((entry) => (
+              <Link href={entry.href} className="stl4-explore-entry" key={entry.href}>
+                <span className={`stl4-explore-entry-image ${entry.imageClass}`} aria-hidden="true" />
+                <span className="stl4-explore-entry-body">
+                  <strong>{entry.title}</strong>
+                  <span>{entry.description}</span>
+                  <ArrowRight size={18} strokeWidth={1.5} aria-hidden="true" />
+                </span>
               </Link>
-          ))}
-        </nav>
+            ))}
+          </div>
+        </section>
       </main>
       <SiteFooter />
     </>

@@ -1,5 +1,11 @@
 # Social Theory Library 当前进度
 
+## 2026-10-15 探索总入口视觉接续（开发中）
+
+- `/explore` 已从旧的大型浮卡入口改为终稿 PDF 第23页对应的紧凑探索总入口：书桌 hero、原文/观点/向书库提问三张细线入口卡，以及真实原文搜索表单。
+- 三个入口分别连接现有真实检索、观点检索和书库提问链路；搜索请求补带 `context=global`，不写入图集示例书目或虚构统计。
+- 视觉依据仍只来自 `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf`；目前仅完成源码静态检查，尚未进行浏览器截图、移动断点和正式视觉回归。
+
 ## 2026-10-15 STL 4.0 终稿 PDF 回溯与读者中心接续
 
 - 按用户重新确认，`output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 是唯一视觉依据；本轮以 Poppler 直接渲染该 PDF 第10–18、23–32、36–42、80–82、183–197页进行源码回溯。旧 PNG、历史 PDF、候选图均未作为视觉证据。
