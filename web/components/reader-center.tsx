@@ -332,7 +332,7 @@ export function ReaderCenter() {
         updated: item.created_at,
         href: item.reading_progress
           ? `/reader/${item.reading_progress.asset}?page=${item.reading_progress.current_page}`
-          : "/account?section=lists",
+          : "/account",
       })),
       ...noteGroups.slice(0, 4).map((item) => ({
         id: `notes-${item.asset}`,
