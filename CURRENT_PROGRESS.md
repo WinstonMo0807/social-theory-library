@@ -7,7 +7,7 @@
 - 前端观点检索已显示深度阶段状态、模型/索引/代次/制品身份及部分完成提示；API serializer、OpenAPI 生成物和前端类型已补齐 `task_progress.deep`、`retrieval_identity`、`deep_passages`、`deep_stage` 及证据字段。
 - 深度配置默认关闭，`.env.example` 只提供空 URL、模型制品、host allowlist 和 generation 入口；生产 `.env`、生产数据库、活动索引和模型目录未改。第三步检索质量评测未启动，未新增人工 gold 或质量结论。
 - 静态检查：目标 Python `compileall` 退出0，`git diff --check` 退出0；目标 ESLint 0错误（保留既有 `no-img-element` 警告）；使用 `.venv` 生成 OpenAPI 时 0 schema errors、10 个既有 serializer 类型提示警告；全量 TypeScript 仍只有既有三个 live 测试 TS7022。尚未运行正式 E2E、全量功能/视觉回归、生产部署或迁移。
-- 检查点：`b338503`（隔离推理契约）、`da1bd49`（深度编排）、`2c522d8`/`f0c161c`（前端契约）、`e14ec3a`（降级状态与索引 UID 边界）；本轮 sessions/tasks/settings/contract 与 artifact 身份修正将在当前主代理整理后保存下一检查点。工作区其余历史未提交修改继续保留。
+- 检查点：`b338503`（隔离推理契约）、`da1bd49`（深度编排）、`2c522d8`/`f0c161c`（前端契约）、`e14ec3a`（降级状态与索引 UID 边界）、`cfc9c50`（深度服务契约与 pending/artifact 状态）、`585ef30`（视觉检索状态接入与契约文档）。工作区其余历史未提交修改继续保留。
 
 ## 2026-10-15 读者中心工作台接续（开发中）
 

@@ -7,6 +7,7 @@
 - 观点检索前端显示基础结果就绪、深度排队/运行、完成、部分完成和不可用等状态，支持现有刷新/取消/重试，不增加模型管理或质量评测界面。API serializer、OpenAPI schema、TypeScript 类型同步补齐深度字段。
 - 默认 `STL_DEEP_RETRIEVAL_ENABLED=false`，深度服务 URL、制品、generation 和 host allowlist 均需显式配置；没有修改生产 `.env`、数据库、生产索引或模型目录。按用户要求跳过第三步检索质量评测。
 - 静态核验已完成：Python compileall、差异检查、目标 ESLint；OpenAPI 生成 0 errors 但保留10条既有类型提示。全量 TypeScript 的3个 TS7022仍为历史 live 测试问题。正式功能/E2E、逐图浏览器验收、迁移和部署仍待统一阶段。
+- 检查点：`cfc9c50`、`585ef30`；工作区未纳入本次检查点的历史修改保持原样。
 
 ## 2026-10-15 读者中心工作台接续（开发中）
 
