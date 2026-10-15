@@ -1,21 +1,59 @@
 import Link from "next/link";
-import { ArrowRight, Search } from "lucide-react";
-import { BookCard, SearchField } from "@/components/ui";
-import { HomeRandom, HomeScholars } from "@/components/home-random";
-import { IssueItemCard } from "@/components/public/recommendation-issue-view";
+import { ArrowRight, BookOpen } from "lucide-react";
+import { BookCard } from "@/components/ui";
+import { HomeContinueReading, HomeSearch, HomeDiscoveryCards, HomeRandomBook } from "./home-interactions";
 import type { SiteConfig } from "@/lib/site-config";
 import type { Scholar, Work } from "@/lib/data";
 import type { LibraryTopic } from "@/lib/api/topics.types";
 import type { RecommendationIssue } from "@/lib/api/recommendation-issues.types";
+import type { HomeSections } from "@/lib/api/home.types";
 
-export type HomeViewData = { config: SiteConfig; works: Work[]; scholars: Scholar[]; topics: LibraryTopic[]; randomWorks: Work[]; issue: RecommendationIssue | null; hotSearches: string[] };
-export function HomePublicView({ config, works, scholars, topics, randomWorks, issue, hotSearches }: HomeViewData) {
-  return <div className="v307-home">
-    <section className="v307-home-hero" data-edit-section="home"><div className="v307-home-hero-copy"><p className="eyebrow">Social Theory Library · 社会理论书库</p><h1>{config.home_title_left_lines.join("")}<br />{config.home_title_right_lines.join("")}</h1><div className="hero-intro">{config.intro_lines.map((line, index) => <p key={index}>{line}</p>)}</div><form action="/explore"><input type="hidden" name="context" value="global"/><SearchField placeholder="搜索理论、学者、主题或关键词…" /><button type="submit"><Search size={16} /><span>搜索</span></button></form>{hotSearches.length ? <div className="v307-hot-searches"><span>热门检索</span>{hotSearches.slice(0, 5).map(tag => <Link key={tag} href={`/explore?q=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div> : null}</div><img className="v307-home-hero-image" src={config.home_hero_image || "/editorial/library-architecture-hero.webp"} alt={config.home_hero_alt || "书库建筑与阅读空间"} /></section>
-    <section className="v307-home-panel home-current-issue" data-edit-section="recommendations"><div className="home-issue-intro"><h2>本期书库推荐</h2><p className="eyebrow">Featured issue</p>{issue ? <><h3>{issue.title}</h3><p>{issue.introduction}</p>{issue.public_byline ? <p className="home-issue-byline">本期策划　{issue.public_byline}</p> : null}<Link className="button secondary" href={`/recommendations/${issue.slug}`}>阅读本期导语 <ArrowRight size={14} /></Link></> : <><p>新的推荐正在整理。已发布的往期推荐会保留在归档中。</p><Link className="text-link" href="/recommendations">推荐归档 <ArrowRight size={14} /></Link></>}</div><div className="home-issue-books">{issue?.items.slice(0, 4).map((item, index) => <IssueItemCard item={item} key={item.id || index} />)}</div><aside className="home-issue-topics"><h3>主题阅读</h3>{topics.slice(0, 5).map(topic => <Link href={`/topics/${topic.slug}`} key={topic.slug}>{topic.name}<ArrowRight size={13} /></Link>)}<Link href="/recommendations">往期推荐 <ArrowRight size={13} /></Link></aside></section>
-    <HomeScholars scholars={scholars} />
-    <section className="v307-home-panel home-topics" data-edit-section="topics"><header className="v307-section-heading"><h2>精选主题 <small>Themes</small></h2><Link className="text-link" href="/topics">查看全部主题 <ArrowRight size={14} /></Link></header><div className="v307-topic-grid">{topics.slice(0, 5).map(topic => <Link className="v307-topic-card" href={`/topics/${topic.slug}`} key={topic.slug}><img src={topic.heroImage || "/editorial/topics-archive-hero.webp"} alt="" loading="lazy" /><div><h3>{topic.name}</h3><p>{topic.description}</p><ArrowRight size={15} /></div></Link>)}</div>{!topics.length ? <p className="empty-state">发布后的主题会显示在这里。</p> : null}</section>
-    <section className="v307-home-panel home-recent" data-edit-section="recent"><header className="v307-section-heading"><h2>最近入库 <small>Recently added</small></h2><Link className="text-link" href="/explore?sort=newest">查看全部 <ArrowRight size={14} /></Link></header><div className="v307-recent-grid">{works.slice(0, 4).map(work => <BookCard work={work} dense key={work.id} />)}</div>{!works.length ? <p className="empty-state">尚无公开馆藏。</p> : null}</section>
-    <HomeRandom works={randomWorks} />
+export type HomeViewData = {
+  config: SiteConfig; works: Work[]; scholars: Scholar[]; topics: LibraryTopic[];
+  randomWorks: Work[]; issue: RecommendationIssue | null; hotSearches: string[];
+  issues?: RecommendationIssue[]; issueCount?: number | null; sections?: HomeSections;
+};
+
+function HomeSectionState({ section, empty }: { section?: HomeSections[keyof HomeSections]; empty: string }) {
+  const failed = section?.status === "unavailable";
+  return <div className="stl4-home-state" role={failed ? "alert" : "status"}>
+    <BookOpen size={24} strokeWidth={1} aria-hidden="true" /><p>{failed ? section.message : empty}</p>
+    {failed ? <Link href="/">重新加载首页 <ArrowRight size={14} aria-hidden="true" /></Link> : null}
+  </div>;
+}
+
+export function HomePublicView({ config, works, scholars, topics, randomWorks, issue, issues, issueCount, hotSearches, sections }: HomeViewData) {
+  const editions = issues ?? (issue ? [issue] : []);
+  return <div className="stl4-home">
+    <section className="stl4-home-hero" data-edit-section="home" aria-labelledby="home-title">
+      <div className="stl4-hero-picture">
+        <img src={config.home_hero_image || "/editorial/stl4-reading-room.png"} alt={config.home_hero_alt || "阳光下的书桌、书籍与书架"} width={1774} height={887} fetchPriority="high" />
+        <p className="stl4-hero-motto">更好地理解世界，<br />为了更好地参与世界。<small>A more thoughtful world</small></p>
+      </div>
+      <div className="stl4-hero-copy">
+        <p className="stl4-home-kicker">Social Theory Library</p>
+        <h1 id="home-title">{config.home_title_left_lines.join("")}<br />{config.home_title_right_lines.join("")}</h1>
+        <div className="stl4-hero-intro">{config.intro_lines.map((line, index) => <p key={index}>{line}</p>)}</div>
+        <HomeSearch />
+        {hotSearches.length ? <div className="stl4-hot-searches"><span>热门搜索</span>{hotSearches.slice(0, 5).map(tag => <Link key={tag} href={`/explore?q=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div> : null}
+        {sections?.hot_searches.status === "unavailable" ? <p className="stl4-small-status" role="status">热门搜索暂时无法加载，仍可直接检索。</p> : null}
+      </div>
+    </section>
+    {sections?.config.status === "unavailable" ? <p className="stl4-small-status" role="status">网站文案暂时无法加载，当前显示系统默认介绍。</p> : null}
+    <HomeContinueReading />
+    <section className="stl4-home-section" data-edit-section="recommendations" aria-labelledby="home-issues">
+      <header className="stl4-home-heading"><h2 id="home-issues">特别策划 <small>Featured issues</small></h2><div>{issueCount != null ? <span className="stl4-issue-count">已策划 {issueCount} 期</span> : null}<Link href="/recommendations">查看全部 <ArrowRight size={15} /></Link></div></header>
+      {editions.length ? <div className="stl4-issue-grid">{editions.slice(0, 4).map((entry, index) => <Link className={`stl4-issue-card${index === 0 ? " stl4-issue-lead" : ""}`} href={`/recommendations/${entry.slug}`} key={entry.id}>
+        {entry.cover_url ? <img src={entry.cover_url} alt="" loading="lazy" /> : <div className="stl4-image-missing" aria-label="尚未提供策划配图"><BookOpen size={32} strokeWidth={1} /></div>}
+        <div className="stl4-issue-copy">{entry.issue_label ? <span className="stl4-issue-label">{entry.issue_label}</span> : null}<h3>{entry.title}</h3><p>{entry.introduction}</p>{entry.public_byline && index === 0 ? <span className="stl4-issue-byline">{entry.public_byline}</span> : null}<ArrowRight size={17} aria-hidden="true" /></div>
+      </Link>)}</div> : <HomeSectionState section={sections?.issues} empty="暂无已发布的特别策划。新内容发布后会显示在这里。" />}
+      {editions.length > 1 ? <Link href="/recommendations" className="stl4-mobile-more">继续浏览特别策划 <ArrowRight size={15} /></Link> : null}
+    </section>
+    <HomeDiscoveryCards scholars={scholars} topics={topics} sections={sections} />
+    <section className="stl4-home-section" data-edit-section="recent" aria-labelledby="home-recent">
+      <header className="stl4-home-heading"><h2 id="home-recent">最近入库 <small>Recently added</small></h2><Link href="/explore?sort=newest">查看全部 <ArrowRight size={15} /></Link></header>
+      {works.length ? <div className="stl4-recent-grid">{works.slice(0, 4).map(work => <BookCard work={work} dense key={work.id} />)}</div> : <HomeSectionState section={sections?.works} empty="书库当前暂无公开馆藏。发布后的作品会显示在这里。" />}
+    </section>
+    <HomeRandomBook works={randomWorks} section={sections?.random_works} />
   </div>;
 }

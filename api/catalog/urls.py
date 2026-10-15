@@ -1,8 +1,13 @@
 from django.urls import path
+from .home_views import HomeView
+from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
+    AdminOutlineRebuildBatchView, AdminOutlineJobView)
+from .content_placement_urls import urlpatterns as content_placement_urlpatterns
 from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
-    DiscoverySearchCancelView, DiscoverySearchContextView, LegacyDiscoverySearchView)
+    DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, LegacyDiscoverySearchView)
 from .curation_queue_views import CurationDraftQueueView
+from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
     PublishScholarRelationView, PublicScholarRelationListView, ArchiveScholarRelationView)
@@ -224,6 +229,8 @@ urlpatterns = [
     path("admin/scholar-relations/<uuid:pk>/archive/", ArchiveScholarRelationView.as_view(), name="admin-scholar-relation-archive"),
     path("scholar-relations/", PublicScholarRelationListView.as_view(), name="public-scholar-relation-list"),
     path("admin/curation-drafts/", CurationDraftQueueView.as_view(), name="admin-curation-drafts"),
+    path("admin/recommendation-issues/<uuid:issue_id>/assistant/", EditorialAssistanceListView.as_view(), name="editorial-assistance-list"),
+    path("admin/recommendation-issues/<uuid:issue_id>/assistant/<uuid:job_id>/", EditorialAssistanceDetailView.as_view(), name="editorial-assistance-detail"),
     path("admin/bibliographic-candidates/", BibliographicCandidatesView.as_view(), name="admin-bibliographic-candidates"),
     path("recommendation-issues/", PublicIssueListView.as_view(), name="recommendation-issue-list"),
     path("recommendation-issues/<slug:slug>/", PublicIssueDetailView.as_view(), name="recommendation-issue-detail"),
@@ -788,6 +795,7 @@ urlpatterns = [
     path("scholars/", ScholarListView.as_view(), name="scholar-list"),
     path("scholars/<slug:slug>/", ScholarDetailView.as_view(), name="scholar-detail"),
     path("search/", GlobalSearchView.as_view(), name="global-search"),
+    path("home/", HomeView.as_view(), name="catalog-home"),
     path("hot-searches/", HotSearchView.as_view(), name="hot-searches"),
     path("usage-events/", PublicUsageEventView.as_view(), name="usage-events"),
     path("semantic-search/", SemanticSearchView.as_view(), name="semantic-search"),
@@ -796,10 +804,15 @@ urlpatterns = [
     path("discovery-search/<uuid:session_id>/", DiscoverySearchDetailView.as_view(), name="discovery-search-detail"),
     path("discovery-search/<uuid:session_id>/expand/", DiscoverySearchExpandView.as_view(), name="discovery-search-expand"),
     path("discovery-search/<uuid:session_id>/cancel/", DiscoverySearchCancelView.as_view(), name="discovery-search-cancel"),
+    path("discovery-search/<uuid:session_id>/retry/", DiscoverySearchRetryView.as_view(), name="discovery-search-retry"),
     path("discovery-search/<uuid:session_id>/context/", DiscoverySearchContextView.as_view(), name="discovery-search-context"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),
     path("assets/<uuid:asset_id>/manifest/", PublicAssetManifestView.as_view(), name="asset-manifest"),
+    path("assets/<uuid:asset_id>/outline/", PublicDocumentOutlineView.as_view(), name="asset-outline"),
+    path("admin/assets/<uuid:asset_id>/outline/", AdminDocumentOutlineView.as_view(), name="admin-asset-outline"),
+    path("admin/outline-rebuilds/", AdminOutlineRebuildBatchView.as_view(), name="admin-outline-rebuilds"),
+    path("admin/outline-jobs/<uuid:job_id>/", AdminOutlineJobView.as_view(), name="admin-outline-job"),
     path(
         "assets/<uuid:asset_id>/pages/<int:page_index>/",
         PublicPageContentView.as_view(),
@@ -808,4 +821,4 @@ urlpatterns = [
     path("assets/<uuid:asset_id>/search/", DocumentSearchView.as_view(), name="document-search"),
     path("editions/<uuid:edition_id>/citations/", CitationView.as_view(), name="citation"),
     path("clean-copy/", CleanCopyView.as_view(), name="clean-copy"),
-]
+] + content_placement_urlpatterns

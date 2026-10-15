@@ -51,11 +51,11 @@ export type SiteConfig = {
 export const defaultSiteConfig: SiteConfig = {
   site_name: "社会理论书库",
   wordmark_lines: ["SOCIAL", "THEORY", "LIBRARY"],
-  home_title_left_lines: ["社会理论", "如何被感知"],
-  home_title_right_lines: ["阅读就是", "方法"],
+  home_title_left_lines: ["连接思想，"],
+  home_title_right_lines: ["打开更大的世界"],
   intro_lines: [
-    "一座面向社会科学研究与学习的开放书库。",
-    "检索原文，回到具体页码，在完整语境中阅读与引用。",
+    "汇聚社会理论的经典与当代，",
+    "促进知识、研究与公众的对话。",
   ],
   about_label: "关于书库",
   about_title: "从原文出发",

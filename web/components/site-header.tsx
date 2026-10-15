@@ -23,12 +23,34 @@ import { usePublicSession } from "./public-session-provider";
 import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
 
+export function LibraryMark({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={`brand-mark ${className}`.trim()}
+      focusable="false"
+      viewBox="0 0 40 32"
+      role="img"
+    >
+      <path d="M3 7.5c5.4-.9 10.2.3 15.7 3.8v15.2C13.3 23.3 8.2 22.2 3 23.3V7.5Z" fill="currentColor" />
+      <path d="M37 7.5c-5.4-.9-10.2.3-15.7 3.8v15.2c5.4-3.2 10.5-4.3 15.7-3.2V7.5Z" fill="currentColor" />
+      <path d="M20 10.6v16.3" fill="none" stroke="var(--brand-mark-accent, #c9a96a)" strokeLinecap="round" strokeWidth="1.8" />
+      <circle cx="11" cy="5.2" r="2.3" fill="var(--brand-mark-accent, #c9a96a)" />
+      <circle cx="29" cy="5.2" r="2.3" fill="var(--brand-mark-accent, #c9a96a)" />
+      <path d="M6.2 10.1c1.4-1.2 3-1.8 4.8-1.8s3.4.6 4.8 1.8M24.2 10.1c1.4-1.2 3-1.8 4.8-1.8s3.4.6 4.8 1.8" fill="none" stroke="var(--brand-mark-accent, #c9a96a)" strokeLinecap="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
   return (
-    <span className="wordmark" aria-label={config.site_name}>
-      {config.wordmark_lines.map((line) => (
-        <span key={line}>{line}</span>
-      ))}
+    <span className="brand-lockup" aria-label={config.site_name}>
+      <LibraryMark />
+      <span className="brand-type" aria-hidden="true"><span className="wordmark">
+        {config.wordmark_lines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </span><span className="brand-name">{config.site_name}</span></span>
     </span>
   );
 }
@@ -50,6 +72,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
     ["/theories", config.navigation.theory_schools],
     ["/scholars", config.navigation.scholars],
     ["/topics", config.navigation.topics],
+    ["/recommendations", "特别策划"],
   ] as const;
 
   useEffect(() => {
@@ -82,6 +105,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
   return (
     <header
       data-edit-section={preview ? "brand" : undefined}
+      data-stl-home={pathname === "/" || preview ? "true" : undefined}
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
     >

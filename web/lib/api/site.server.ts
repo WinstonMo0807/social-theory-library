@@ -4,6 +4,16 @@ import { WEB_APP_VERSION } from "../version";
 import type { Paginated } from "./pagination";
 import { serverRequest, allowDemoFallback } from "./server-request";
 import type { SiteStats, AboutPageBlock } from "./site.types";
+import { cache } from "react";
+
+// Keep recovery navigation available when the service fails. Never substitute content.
+export const loadSiteChromeConfig = cache(async () => {
+  try {
+    return { config: await serverRequest<SiteConfig>("/catalog/site-config/"), unavailable: false };
+  } catch {
+    return { config: defaultSiteConfig, unavailable: true };
+  }
+});
 
 export async function loadSiteConfig(): Promise<SiteConfig> {
   try {

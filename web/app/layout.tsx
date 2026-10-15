@@ -8,13 +8,14 @@ import "../styles/features/admin/fixed-page-editor.css";
 import "../styles/features/admin/workspace-v307.css";
 import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
+import "../styles/features/home/home-stl4.css";
 import { SiteHeader } from "@/components/site-header";
-import { loadSiteConfig } from "@/lib/api/site.server";
+import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const config = await loadSiteConfig();
+  const { config } = await loadSiteChromeConfig();
   return {
     title: {
       default: config.site_name,
@@ -43,7 +44,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const config = await loadSiteConfig();
+  const { config, unavailable } = await loadSiteChromeConfig();
   return (
     <html lang="zh-CN">
       <head>
@@ -55,6 +56,7 @@ export default async function RootLayout({
             跳到主要内容
           </a>
           <SiteHeader config={config} />
+          {unavailable ? <p className="site-config-unavailable" role="status">网站设置暂时无法加载，当前使用默认导航。</p> : null}
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
         </PublicSessionProvider>
       </body>
