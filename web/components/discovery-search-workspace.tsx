@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, ChevronDown, FileSearch, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch } from "@/lib/api/discovery.client";
+import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
@@ -62,7 +62,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     setResult(next);
     // Context text is also a permission-sensitive snapshot. Close it whenever
     // a fresh response removes its source, rather than retaining revoked text.
-    if (contextItemRef.current && !next.passages.some(row => row.id === contextItemRef.current?.id)) {
+    if (contextItemRef.current && !canKeepDiscoveryContext(contextItemRef.current, next)) {
       contextRevision.current += 1;
       contextItemRef.current = null;
       setContext(null); setContextItem(null);
@@ -293,6 +293,5 @@ function DiscoveryDeepProgress({ result }: { result: DiscoverySearch }) {
 
 function DiscoveryCoverageDetails({ result }: { result: DiscoverySearch | null }) {
   const coverage = result?.coverage_summary;
-  const labels = { eligible_editions: "本次可访问文献", indexed_editions: "关键词已就绪", vector_editions: "向量已就绪", pending_editions: "等待更新", passage_count: "索引段落" } as const;
-  return <section className={styles.coverage}><details><summary>本次检索覆盖</summary>{coverage?.message ? <p>{coverage.message}</p> : !result ? <p>开始检索后显示实际覆盖状态。</p> : null}{coverage?.partial ? <p>当前仍有文献等待文本或索引更新，本次检索覆盖尚未完整。</p> : null}<dl>{Object.entries(labels).map(([key, label]) => { const value = coverage?.[key as keyof typeof labels]; return typeof value === "number" ? <div key={key}><dt>{label}</dt><dd>{value}</dd></div> : null; })}</dl><p>覆盖只说明当前可检索的资料范围，不表示已经找齐所有相关论证。</p>{result?.corpus_version ? <p className={styles.version}>资料版本 {result.corpus_version}</p> : null}</details></section>;
+  return <section className={styles.coverage}><details><summary>本次检索覆盖</summary>{coverage?.message ? <p>{coverage.message}</p> : !result ? <p>开始检索后显示实际覆盖状态。</p> : null}{coverage?.partial ? <p>当前仍有文献等待文本或索引更新，本次检索覆盖尚未完整。</p> : null}<dl>{discoveryCoverageRows(coverage).map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><p>覆盖只说明当前可检索的资料范围，不表示已经找齐所有相关论证。</p>{result?.corpus_version ? <p className={styles.version}>资料版本 {result.corpus_version}</p> : null}</details></section>;
 }

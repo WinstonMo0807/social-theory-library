@@ -8,7 +8,12 @@ from rest_framework.views import APIView
 
 from catalog.services.discovery_sessions import (
     cancel_session, create_session, expand_session, get_session, normalize_filters,
-    serialize_session, session_access,
+    serialize_session, session_access, retry_session,
+)
+from catalog.services.api_contract import (
+    CANONICAL_DISCOVERY_ENDPOINT,
+    api_version,
+    annotate_response,
 )
 
 
@@ -23,7 +28,11 @@ class DiscoveryRetrySerializer(serializers.Serializer):
 
 class DiscoveryDeepProgressSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=(
+        # Canonical public statuses are the six names below. The legacy/raw
+        # values are accepted while existing workers roll forward; the
+        # projection maps them to the canonical labels before presentation.
         "baseline_ready", "deep_queued", "deep_running", "completed", "partial", "unavailable",
+        "pending", "queued", "running", "degraded", "disabled", "skipped", "failed",
     ))
     stage = serializers.CharField()
     completed = serializers.IntegerField(min_value=0)
@@ -150,6 +159,9 @@ class DiscoveryResponseSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
     expires_at = serializers.DateTimeField()
     notice = serializers.CharField()
+    api_version = serializers.CharField(required=False)
+    canonical_endpoint = serializers.CharField(required=False)
+    deprecated = serializers.BooleanField(required=False)
     status_url = serializers.CharField(required=False)
 
 
@@ -183,15 +195,23 @@ class DiscoveryView(APIView):
         response = super().finalize_response(request, response, *args, **kwargs)
         response["Cache-Control"] = "private, no-store"
         patch_vary_headers(response, ["Authorization", "Cookie", "X-Discovery-Token"])
-        return response
+        return annotate_response(response, canonical_endpoint=CANONICAL_DISCOVERY_ENDPOINT,
+                                 deprecated=isinstance(self, LegacyDiscoverySearchView))
 
     def payload(self, request, session):
         try:
             limit = int(request.query_params.get("limit", 3))
         except (TypeError, ValueError):
             raise ValidationError({"limit": "每页数量必须为整数。"})
-        return serialize_session(session, session_access(session, request),
-                                 cursor=request.query_params.get("cursor", ""), limit=limit)
+        payload = serialize_session(
+            session,
+            session_access(session, request),
+            cursor=request.query_params.get("cursor", ""),
+            limit=limit,
+        )
+        payload["api_version"] = api_version()
+        payload["canonical_endpoint"] = CANONICAL_DISCOVERY_ENDPOINT
+        return payload
 
 
 class DiscoverySearchView(DiscoveryView):
@@ -204,7 +224,10 @@ class DiscoverySearchView(DiscoveryView):
         payload = self.payload(request, session)
         payload["access_token"] = token
         payload["status_url"] = f"/api/catalog/discovery-search/{session.id}/"
-        return Response(payload, status=202, headers={"Location": payload["status_url"]})
+        payload["api_version"] = api_version()
+        payload["canonical_endpoint"] = CANONICAL_DISCOVERY_ENDPOINT
+        response = Response(payload, status=202, headers={"Location": payload["status_url"]})
+        return annotate_response(response, canonical_endpoint=CANONICAL_DISCOVERY_ENDPOINT)
 
 
 class DiscoverySearchDetailView(DiscoveryView):
@@ -227,6 +250,18 @@ class DiscoverySearchCancelView(DiscoveryView):
     def post(self, request, session_id):
         session = cancel_session(get_session(request, session_id))
         return Response(self.payload(request, session))
+
+
+class DiscoverySearchRetryView(DiscoveryView):
+    @extend_schema(parameters=[SESSION_TOKEN], request=DiscoveryRetrySerializer,
+                   responses={200: DiscoveryResponseSerializer, 202: DiscoveryResponseSerializer})
+    def post(self, request, session_id):
+        current = get_session(request, session_id)
+        serializer = DiscoveryRetrySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        session = retry_session(current, session_access(current, request),
+                                expected_generation=serializer.validated_data["expected_generation"])
+        return Response(self.payload(request, session), status=202 if session.status in {"queued", "running"} else 200)
 
 
 class DiscoverySearchContextView(DiscoveryView):
@@ -253,5 +288,12 @@ class LegacyDiscoverySearchView(DiscoveryView):
         payload.update({"access_token": token, "results": payload["passages"], "groups": {},
                         "stance_counts": {}, "q": session.query, "engine": "discovery_v308",
                         "search_version": "3.0.8", "status_url": f"/api/catalog/discovery-search/{session.id}/",
+                        "api_version": api_version(), "canonical_endpoint": CANONICAL_DISCOVERY_ENDPOINT,
+                        "deprecated": True,
                         "compatibility_notice": "观点检索已升级为异步三通道检索，请读取 status_url 获取原文、知识与策展结果；旧立场分组已退役。"})
-        return Response(payload, status=202, headers={"Location": payload["status_url"], "Deprecation": "true"})
+        response = Response(payload, status=202, headers={"Location": payload["status_url"]})
+        return annotate_response(
+            response,
+            canonical_endpoint=CANONICAL_DISCOVERY_ENDPOINT,
+            deprecated=True,
+        )
