@@ -1,5 +1,6 @@
 from django.urls import path
 from .home_views import HomeView
+from .feedback_views import PublicFeedbackView
 from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
     AdminOutlineRebuildBatchView, AdminOutlineJobView)
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
@@ -796,6 +797,7 @@ urlpatterns = [
     path("scholars/<slug:slug>/", ScholarDetailView.as_view(), name="scholar-detail"),
     path("search/", GlobalSearchView.as_view(), name="global-search"),
     path("home/", HomeView.as_view(), name="catalog-home"),
+    path("feedback/", PublicFeedbackView.as_view(), name="catalog-feedback"),
     path("hot-searches/", HotSearchView.as_view(), name="hot-searches"),
     path("usage-events/", PublicUsageEventView.as_view(), name="usage-events"),
     path("semantic-search/", SemanticSearchView.as_view(), name="semantic-search"),

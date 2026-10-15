@@ -504,11 +504,41 @@ class Page(UUIDTimeStampedModel):
     label_segment = models.CharField(max_length=80, blank=True)
     width = models.FloatField(default=0)
     height = models.FloatField(default=0)
+    geometry = models.JSONField(default=dict, db_default={}, blank=True)
 
     class Meta:
         ordering = ["index"]
         constraints = [
             models.UniqueConstraint(fields=["asset", "index"], name="unique_page_index_per_asset"),
+        ]
+
+
+class DocumentOutlineRevision(UUIDTimeStampedModel):
+    """Immutable ordered tree for one file and text interpretation.
+
+    Nodes keep stable IDs, parent IDs, physical pages and optional PDF-point
+    coordinates. JSON preserves multiple nodes on one page without turning
+    Page.chapter_title into a second authoritative directory.
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="outline_revisions")
+    document_revision = models.ForeignKey("DocumentRevision", null=True, blank=True, on_delete=models.PROTECT, related_name="outline_revisions")
+    revision = models.PositiveIntegerField()
+    source_checksum = models.CharField(max_length=64)
+    parser_version = models.CharField(max_length=80, default="outline-v1")
+    nodes = models.JSONField(default=list)
+    diagnostics = models.JSONField(default=list, blank=True)
+    origin = models.CharField(max_length=20, default="automatic")
+    is_active = models.BooleanField(default=False)
+    reviewed = models.BooleanField(default=False)
+    restored_from = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="restorations")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_outline_revisions")
+
+    class Meta:
+        ordering = ["-revision"]
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "revision"], name="unique_outline_revision"),
+            models.UniqueConstraint(fields=["asset"], condition=models.Q(is_active=True), name="unique_active_outline"),
         ]
 
 
@@ -3491,6 +3521,7 @@ class EditorialRevision(UUIDTimeStampedModel):
         SITE_CONTENT = "site_content", "网站与关于书库"
         EVIDENCE_CURATION = "evidence_curation", "原文策展"
         SCHOLAR_RELATION = "scholar_relation", "学者关系"
+        CONTENT_PLACEMENT = "content_placement", "页面内容编排"
 
     class Status(models.TextChoices):
         DRAFT = "draft", "草稿"
@@ -6244,6 +6275,31 @@ class AboutPageBlock(UUIDTimeStampedModel):
 
     def __str__(self):
         return self.title or self.key
+
+
+class PublicFeedback(UUIDTimeStampedModel):
+    class Category(models.TextChoices):
+        CONTENT = "content", "内容"
+        FUNCTION = "function", "功能"
+        CITATION = "citation", "引用"
+        ACCESSIBILITY = "accessibility", "无障碍"
+        OTHER = "other", "其他"
+
+    class Status(models.TextChoices):
+        SUBMITTED = "submitted", "已提交"
+        REVIEWING = "reviewing", "处理中"
+        RESOLVED = "resolved", "已处理"
+
+    category = models.CharField(max_length=24, choices=Category.choices, default=Category.OTHER, db_index=True)
+    body = models.TextField(max_length=5000)
+    contact = models.EmailField(blank=True)
+    path = models.CharField(max_length=400, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="public_feedback")
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "-created_at"], name="feedback_status_created_idx")]
 
 
 # Kept separate so short-lived reader queries do not expand editorial models.
