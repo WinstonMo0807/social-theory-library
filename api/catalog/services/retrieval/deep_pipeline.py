@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 import json
 import logging
+import math
 import re
 from urllib.parse import urlsplit
 
@@ -298,7 +299,7 @@ def _parse_order(payload: dict, rows: list[dict]) -> tuple[list[dict], dict[int,
             score = float(item.get("relevance_score", 0.0))
         except (TypeError, ValueError):
             continue
-        if not 0 <= index < len(rows) or index in used:
+        if not math.isfinite(score) or not 0 <= index < len(rows) or index in used:
             continue
         ordered.append(rows[index])
         scores[index] = score
