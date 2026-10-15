@@ -19,6 +19,11 @@
 - Python `compileall` 已覆盖反馈模型、接口、URL 和迁移；目标前端 ESLint 0错误（支持页保留 Next 图片优化警告）。Django 迁移检查因当前环境未安装 Django（`ModuleNotFoundError`）待核实；正式测试、构建、浏览器验收和部署仍未运行。
 - 已保存支持与反馈业务检查点 `6bb0f8b`（`feat(stl4): add support and public feedback flow`）；其他既有未提交修改继续保留。
 
+## 2026-10-15 关于页视觉收口（开发中）
+
+- `/about` 已从旧统计/入库长页改为终稿支持页同一视觉系统的英雄区、四张内容卡、进一步了解和边界提示；内容仍来自 `SiteConfig`/`AboutPageBlock`/真实站点统计，不导入图集文字或示例数据。
+- 目标前端静态检查未发现新增 TypeScript 错误；关于页图片仍需后续以最终 PDF 第14页逐图校正，未计视觉验收。
+
 ## 2026-10-15 STL 4.0 接续：U01 首页静态复核
 
 - 已恢复当前单主线工作区并保留全部既有未提交修改；当前分支 `codex/stl4-unified`，未执行 reset/clean/pull。
