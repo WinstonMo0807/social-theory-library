@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 import json
 import logging
+import re
 from urllib.parse import urlsplit
 
 import httpx
@@ -138,6 +139,9 @@ def _eg2_candidates(
     warnings: list[dict] = []
     if not index_uid or not embedding_artifact:
         return [], {"status": "disabled", "index_uid": "", "artifact": ""}, warnings
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", index_uid):
+        warnings.append(_warning("deep_index_not_allowlisted", "深度索引标识未通过隔离配置校验。"))
+        return [], {"status": "degraded", "index_uid": "", "artifact": embedding_artifact}, warnings
     try:
         base = _deep_meili_filter(filters, access_statuses)
         sparse_response = meili(
@@ -479,7 +483,17 @@ def run_deep_pipeline(
     for rank, row in enumerate(rows[:MAX_DEEP_CANDIDATES], 1):
         row.setdefault("deep_rank", rank)
     states = [lexicon_state, embedding_state, bge_state, context_state, conv_state]
-    status = "completed" if all(item.get("status") in {"completed", "disabled", "skipped"} for item in states) else "degraded"
+    # BGE is the required deep stage; ConvMemory may fall back to the
+    # validated adjacent EvidenceSpan context without changing relevance.
+    model_applied = (
+        embedding_state.get("status") == "completed"
+        and bge_state.get("status") == "completed"
+    )
+    status = (
+        "completed"
+        if model_applied and all(item.get("status") in {"completed", "disabled", "skipped"} for item in states)
+        else "degraded"
+    )
     return {
         "rows": rows[:MAX_DEEP_CANDIDATES],
         "status": status,
