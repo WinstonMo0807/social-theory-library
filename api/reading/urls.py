@@ -27,8 +27,15 @@ from .runtime_views import (
     ReaderAIConnectionTestView,
     ReaderAIConnectionView,
 )
+from .research_views import (CitationAuditViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
+                             ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 
 router = DefaultRouter()
+router.register("research-projects", ResearchProjectViewSet, basename="research-projects")
+router.register("research-turns", ResearchTurnViewSet, basename="research-turns")
+router.register("citation-audits", CitationAuditViewSet, basename="citation-audits")
+router.register("reading-plans", PersonalReadingPlanViewSet, basename="personal-reading-plans")
+router.register("research-memories", ResearchMemoryViewSet, basename="research-memories")
 router.register("progress", ReadingProgressViewSet, basename="progress")
 router.register("annotations", AnnotationViewSet, basename="annotations")
 router.register("bookmarks", BookmarkViewSet, basename="bookmarks")
@@ -43,6 +50,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("research-account/", ResearchAccountView.as_view(), name="research-account"),
     path("", include(router.urls)),
     path("export/", ReaderDataExportView.as_view(), name="reader-data-export"),
     path("submit/", ReaderSubmissionView.as_view(), name="reader-submission"),

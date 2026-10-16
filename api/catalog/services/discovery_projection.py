@@ -15,7 +15,9 @@ from django.db.models import Count, Q
 from catalog.discovery_index_models import DiscoveryDocument, DiscoverySourceState
 from catalog.models import EvidenceSpan, Page, SemanticIndexVersion
 from catalog.services.discovery_inference import DiscoveryInferenceError, embed_texts, normalize_texts
-from catalog.services.discovery_sources import edition_scope_records, iter_source_headers, source_queryset, fingerprint
+from catalog.services.discovery_sources import edition_scope_records, iter_edition_metadata_headers, iter_source_headers, source_queryset, fingerprint
+from catalog.services.publication_eligibility import public_editions
+from catalog.services.text import page_text_range
 
 
 class DiscoveryIndexError(RuntimeError):
@@ -52,6 +54,8 @@ def _matches(header, filters):
     """Metadata facets constrain passages, matching the existing Explore filters."""
     if header["channel"] != "passages":
         return True
+    if filters.get("_asset_id") and str(header.get("asset_id")) != str(filters["_asset_id"]):
+        return False
     from catalog.services.semantic_search import YEAR_FILTERS
     filters = dict(filters)
     if filters.get("document_types"):
@@ -95,7 +99,8 @@ def current_scopes(channel, access_statuses, filters=None):
                 raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
         return scopes
     for kind in kinds_for(channel):
-        for row, header in iter_source_headers(kind, access_statuses):
+        queryset = source_queryset(kind, access_statuses).filter(is_primary=True) if kind == "edition" and filters.get("_primary_only") else None
+        for row, header in iter_source_headers(kind, access_statuses, queryset=queryset):
             if _matches(header, filters):
                 scopes.append(header["scope_token"])
             if len(scopes) > 20000:
@@ -130,7 +135,7 @@ def validate_discovery_results(channel, rows, access_statuses):
     span_ids = [doc.payload.get("evidence_span_id") for doc in documents if doc.payload.get("evidence_span_id")]
     page_ids = [doc.payload.get("page_id") for doc in documents if not doc.payload.get("evidence_span_id") and doc.payload.get("page_id")]
     spans = {str(row["id"]): row for row in EvidenceSpan.objects.filter(pk__in=span_ids, is_stale=False).values(
-        "id", "document_revision_id", "page__asset_id", "original_text")}
+        "id", "document_revision_id", "page__asset_id", "original_text", "page__text", "start_offset", "end_offset")}
     pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "text")}
     for doc in documents:
         ref = refs[str(doc.pk)]
@@ -151,6 +156,14 @@ def validate_discovery_results(channel, rows, access_statuses):
                 original = unit["text"] if unit and str(unit["asset_id"]) == header["asset_id"] else None
             if original is None or fingerprint(original) != payload.get("unit_hash") or original[doc.start_offset:doc.end_offset] != doc.text:
                 continue
+            if span_id:
+                # The saved span and index may predate the corrected extractor.
+                # Never certify raw-page offsets solely from cached metadata.
+                exact_unit = page_text_range(unit["page__text"], original, unit["start_offset"], unit["end_offset"])
+                payload["page_text_range"] = (page_text_range(unit["page__text"], doc.text,
+                    unit["start_offset"] + doc.start_offset, unit["start_offset"] + doc.end_offset) if exact_unit else None)
+            else:
+                payload["page_text_range"] = page_text_range(original, doc.text, doc.start_offset, doc.end_offset)
         # Do not overwrite the passage's OCR/language/locator metadata with its
         # bibliographic header or expose the full knowledge source on one card.
         payload.update({key: value for key, value in header.items() if key not in {"text", "source_kind", "language"}})
@@ -165,6 +178,28 @@ def validate_discovery_results(channel, rows, access_statuses):
     return [output[key] for key in refs if key in output]
 
 
+def _published_coverage(access_statuses, filters, eligible_ids):
+    # Count the actual published metadata scope without admitting unfinished
+    # OCR or bibliographic-only records to retrieval. Never inspect draft text.
+    rows = public_editions().filter(Q(active_catalog_revision__reader_asset__isnull=True)
+        | Q(active_catalog_revision__reader_asset__access_status__in=access_statuses))
+    if filters.get("_primary_only"):
+        rows = rows.filter(is_primary=True)
+    totals = {"published_editions": 0, "bibliographic_editions": 0, "text_pending_editions": 0}
+    for edition, header in iter_edition_metadata_headers(rows):
+        if not _matches(header, filters):
+            continue
+        totals["published_editions"] += 1
+        if totals["published_editions"] > 20000:
+            raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
+        if str(edition.pk) in eligible_ids:
+            continue
+        snapshot_edition = (edition.active_catalog_revision.snapshot or {}).get("edition") or {}
+        mode = snapshot_edition.get("publication_mode", edition.publication_mode)
+        totals["bibliographic_editions" if mode == "bibliographic" else "text_pending_editions"] += 1
+    return totals
+
+
 def discovery_coverage(access_statuses, filters=None):
     generation = active_generation()
     # Stream snapshot metadata in batches. Coverage uses grouped SQL counts,
@@ -174,16 +209,19 @@ def discovery_coverage(access_statuses, filters=None):
     if not any(value for key, value in filters.items() if key != "languages"):
         records = edition_scope_records(access_statuses)
     else:
+        queryset = source_queryset("edition", access_statuses).filter(is_primary=True) if filters.get("_primary_only") else None
         records = ((str(row.pk), header["source_revision"], header["scope_token"])
-                   for row, header in iter_source_headers("edition", access_statuses) if _matches(header, filters))
+                   for row, header in iter_source_headers("edition", access_statuses, queryset=queryset) if _matches(header, filters))
     for key, revision, token in records:
         current[key] = (revision, token)
         if len(current) > 20000:
             raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
     total = len(current)
+    published = _published_coverage(access_statuses, filters, current)
     if not generation:
-        return {"eligible_editions": total, "indexed_editions": 0, "vector_editions": 0,
-                "passage_count": 0, "pending_editions": total, "partial": bool(total), "generation": None}
+        return {**published, "eligible_editions": total, "indexed_editions": 0, "vector_editions": 0,
+                "passage_count": 0, "pending_editions": total, "index_pending_editions": total,
+                "vector_pending_editions": total, "partial": bool(total or published["text_pending_editions"]), "generation": None}
     # A source is ready only when its completed fingerprint is still current.
     ready, vector, text_count = 0, 0, 0
     counts = {(str(row["source_id"]), row["source_revision"]): row for row in
@@ -202,9 +240,10 @@ def discovery_coverage(access_statuses, filters=None):
             ready += 1
             text_count += n
             vector += int(count.get("vectors", 0) == n)
-    return {"eligible_editions": total, "indexed_editions": ready, "vector_editions": vector,
+    return {**published, "eligible_editions": total, "indexed_editions": ready, "vector_editions": vector,
             "passage_count": text_count, "pending_editions": max(0, total - ready),
-            "partial": ready < total or vector < ready, "generation": str(generation.pk)}
+            "index_pending_editions": max(0, total - ready), "vector_pending_editions": max(0, total - vector),
+            "partial": bool(published["text_pending_editions"] or ready < total or vector < ready), "generation": str(generation.pk)}
 
 
 def discovery_candidates(query, channel, filters, access_statuses, limit=120, expanded=False, request_context=None):
@@ -267,9 +306,12 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         warnings.append({"code": "keyword_unavailable", "message": "关键词索引暂不可用。"})
     try:
         vector_cache = context.setdefault("vectors", {})
-        vector_key = (generation.config_snapshot["embedding_artifact"], query)
+        dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
+        vector_key = (generation.config_snapshot["embedding_artifact"], dimensions, query)
         if vector_key not in vector_cache:
-            vector_cache[vector_key] = embed_texts([query], kind="query", expected_artifact=vector_key[0])["vectors"][0]
+            vector_cache[vector_key] = embed_texts(
+                [query], kind="query", expected_artifact=vector_key[0], expected_dimensions=dimensions,
+            )["vectors"][0]
         vector = vector_cache[vector_key]
         dense = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": "", "vector": vector,
             "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})

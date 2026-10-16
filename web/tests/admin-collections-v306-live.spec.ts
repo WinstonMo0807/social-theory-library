@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type APIResponse, type Page } from "@playwright/test";
 
 const localApi = "http://127.0.0.1:8105";
 
@@ -21,9 +21,9 @@ async function allApiRows(page: Page, path: string) {
   const rows: Array<Record<string, unknown>> = [];
   let next: string | null = path;
   for (let count = 0; next && count < 10; count += 1) {
-    const response = await page.request.get(new URL(next, localApi).href);
+    const response: APIResponse = await page.request.get(new URL(next, localApi).href);
     expect(response.ok()).toBeTruthy();
-    const body = await response.json();
+    const body: { results: Array<Record<string, unknown>>; next: string | null } = await response.json();
     rows.push(...body.results);
     next = body.next;
   }

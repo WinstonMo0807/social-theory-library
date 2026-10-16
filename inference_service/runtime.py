@@ -66,6 +66,8 @@ class Runtime:
         self.deep_generation = os.getenv("DEEP_INFERENCE_GENERATION", "").strip()
         self.deep_models: dict = {}
         self.deep_bundle_id = ""
+        self.deep_pipeline = ""
+        self.deep_runtime_id = f"onnxruntime-{ort.__version__}-cpu-sequential-v1"
         self.deep_error = "deep_disabled" if os.getenv("DEEP_INFERENCE_ENABLED", "0") != "1" else "model_missing"
 
     def prepare(self) -> None:
@@ -141,7 +143,7 @@ class Runtime:
         self._prepare_deep_manifest()
 
     def _prepare_deep_manifest(self) -> None:
-        """Read an optional isolated deep bundle without changing production state."""
+        """Verify a read-only isolated bundle; never download or mutate artifacts."""
         if os.getenv("DEEP_INFERENCE_ENABLED", "0") != "1":
             self.deep_models.clear()
             self.deep_error = "deep_disabled"
@@ -149,27 +151,53 @@ class Runtime:
         manifest_path = Path(os.getenv("DEEP_INFERENCE_MANIFEST", str(self.deep_root / "manifest.json")))
         try:
             manifest = json.loads(manifest_path.read_text("utf-8"))
+            lock_path = Path(os.getenv("DEEP_INFERENCE_LOCK", str(self.deep_root / "model-lock.json")))
+            lock = json.loads(lock_path.read_text("utf-8"))
             models = manifest.get("models") or {}
-            # Accept the two names used by the isolated bundle manifest while
-            # keeping the public role names stable in the HTTP contract.
-            reranker = models.get("deep_reranker") or models.get("reranker")
-            context = models.get("context") or models.get("conv_memory")
-            if not isinstance(reranker, dict):
-                raise ValueError("deep reranker missing")
-            expected_model = os.getenv("DEEP_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3").strip()
-            if expected_model and reranker.get("repo_id") != expected_model:
-                raise ValueError("deep reranker model mismatch")
+            pipeline = str(manifest.get("pipeline") or "")
             generation = str(manifest.get("generation") or self.deep_generation or "").strip()
-            if not generation:
-                raise ValueError("deep generation missing")
-            artifact = str(reranker.get("artifact_id") or "").strip()
-            if not artifact:
-                raise ValueError("deep reranker artifact missing")
-            self.deep_models = {"reranker": reranker}
-            if isinstance(context, dict):
-                self.deep_models["context"] = context
+            if not pipeline or pipeline != lock.get("pipeline") or not generation or generation != lock.get("generation"):
+                raise ValueError("deep pipeline or generation mismatch")
+            if self.deep_generation and generation != self.deep_generation:
+                raise ValueError("configured deep generation mismatch")
+            verified = {}
+            roles = {"reranker": ("deep_reranker", "reranker"), "context": ("context", "conv_memory")}
+            expected_models = {"reranker": "BAAI/bge-reranker-v2-m3",
+                               "context": "Purdy0228/ConvMemory-v2-Evidence-Reranker"}
+            for role, aliases in roles.items():
+                key = next((name for name in aliases if name in models), None)
+                if key is None and role == "context":
+                    continue
+                spec = models[key]
+                pinned = lock["models"][key]
+                if spec.get("repo_id") != expected_models[role] or not spec.get("revision"):
+                    raise ValueError("deep model identity invalid")
+                for field in ("repo_id", "revision", "directory", "model_file", "tokenizer_file", "precision", "max_tokens", "artifact_id"):
+                    if spec.get(field) != pinned.get(field):
+                        raise ValueError("deep lock mismatch")
+                if not spec.get("precision") or not 128 <= int(spec.get("max_tokens", 256)) <= 512:
+                    raise ValueError("deep token budget or precision missing")
+                folder = bundle_path(self.deep_root, spec.get("directory", key))
+                files = {item["path"]: item for item in spec["files"]}
+                pinned_files = {item["path"]: item for item in pinned["files"]}
+                if len(files) != len(spec["files"]) or len(pinned_files) != len(pinned["files"]) or files.keys() != pinned_files.keys():
+                    raise ValueError("deep file list mismatch")
+                for relative, recorded in files.items():
+                    path = bundle_path(folder, relative)
+                    checksum = str(pinned_files[relative].get("sha256") or "")
+                    if not re.fullmatch(r"[0-9a-f]{64}", checksum) or recorded.get("sha256") != checksum:
+                        raise ValueError("deep checksum not pinned")
+                    if not path.is_file() or path.stat().st_size != recorded["bytes"] or recorded["bytes"] != pinned_files[relative]["bytes"] or file_hash(path) != checksum:
+                        raise ValueError("deep artifact changed")
+                if spec.get("model_file", "model.onnx") not in files or spec.get("tokenizer_file", "tokenizer.json") not in files:
+                    raise ValueError("deep executable artifacts not pinned")
+                if spec.get("artifact_id") != deep_artifact_id(role, spec, pipeline=pipeline, runtime_id=self.deep_runtime_id):
+                    raise ValueError("deep artifact identity mismatch")
+                verified[role] = {**spec, "directory": str(folder), "max_tokens": int(spec.get("max_tokens", 256))}
+            self.deep_models = verified
             self.deep_generation = generation
             self.deep_bundle_id = str(manifest.get("bundle_id") or "")
+            self.deep_pipeline = pipeline
             self.deep_error = ""
         except Exception:
             self.deep_models.clear()
@@ -177,9 +205,10 @@ class Runtime:
             self.deep_error = "model_manifest_invalid"
 
     def health(self) -> dict:
+        baseline_completed = {"embedding", "reranker"}.issubset(self.completed_roles)
         return {
-            "status": "ready" if len(self.completed_roles) == 2 else "prepared" if not self.error else "unavailable",
-            "ready": not self.error and len(self.completed_roles) == 2,
+            "status": "ready" if not self.error and baseline_completed else "prepared" if not self.error else "unavailable",
+            "ready": not self.error and baseline_completed,
             "manifest_ready": not self.error,
             "error": self.error,
             "backend": "onnxruntime-cpu",
@@ -202,17 +231,18 @@ class Runtime:
 
     def deep_health(self) -> dict:
         """Expose optional deep state without claiming a model ran."""
-        # Metadata registration only means that an isolated bundle was found;
-        # the production process never loads it, so it remains pending until a
-        # dedicated deep worker reports completion.
-        status = "pending" if not self.deep_error and self.deep_models else "unavailable"
-        if self.deep_error == "model_missing" and os.getenv("DEEP_INFERENCE_ENABLED", "0") == "1":
-            status = "pending"
+        prepared = not self.deep_error and bool(self.deep_models)
+        completed = prepared and all(f"deep:{role}" in self.completed_roles for role in self.deep_models)
         output = {
-            "status": status,
+            "status": "ready" if completed else "prepared" if prepared else "unavailable",
+            "manifest_ready": prepared,
             "error": self.deep_error,
             "bundle_id": self.deep_bundle_id,
             "generation": self.deep_generation,
+            "pipeline": self.deep_pipeline,
+            "runtime_id": self.deep_runtime_id,
+            "threads": 1,
+            "batch_size": 1,
             "models": {},
         }
         for role, spec in self.deep_models.items():
@@ -221,8 +251,8 @@ class Runtime:
                 "revision": spec.get("revision", ""),
                 "artifact_id": spec.get("artifact_id", ""),
                 "generation": self.deep_generation,
-                "loaded": False,
-                "inference_completed": False,
+                "loaded": self.session_role == f"deep:{role}",
+                "inference_completed": f"deep:{role}" in self.completed_roles,
             }
         return output
 
@@ -261,16 +291,18 @@ class Runtime:
 
     def deep_rerank(self, query: str, documents: list[str], top_n: int, *,
                     model: str = "", artifact: str = "", generation: str = "", contexts=None) -> dict:
-        """Reserved deep lane; never falls back to mMARCO under a BGE name."""
+        """Run the approved scalar-logit ONNX path, sequentially on bounded pairs."""
         self.require_deep(model=model, artifact=artifact, generation=generation)
-        # The isolated BGE bundle is intentionally not loaded by the production
-        # runtime yet.  Returning a typed pending response is safer than using
-        # the resident mMARCO session and labelling those scores as BGE.
-        raise InferenceError("deep_pending", "BGE 深度重排制品已登记，等待隔离 Worker 加载。", 503)
+        if contexts is not None:
+            raise InferenceError("context_unsupported", "BGE 只重排原始候选；邻文使用独立上下文组织入口。", 422)
+        results = self._deep_scores("reranker", query, documents)
+        results.sort(key=lambda item: (-item["relevance_score"], item["index"]))
+        return {**self.deep_identity("reranker"), "status": "completed", "stage": "deep",
+                "results": results[:top_n], "query_truncated": any(item["query_truncated"] for item in results)}
 
     def organize_context(self, *, model: str = "", artifact: str = "", generation: str = "",
                          query: str = "", hits: list[dict] | None = None) -> dict:
-        """Return a typed ConvMemory state; context is never a relevance fallback."""
+        """Score context windows without changing the caller's evidence order."""
         context = self.deep_models.get("context")
         candidate_count = len(hits or [])
         if self.deep_error or not context:
@@ -278,17 +310,118 @@ class Runtime:
                     "artifact_id": artifact, "generation": generation or self.deep_generation,
                     "candidate_count": candidate_count, "selected_count": 0,
                     "notice": "ConvMemory 上下文层当前不可用；保留原始证据与邻文。"}
-        expected_model = model or context.get("repo_id", "ConvMemory-v2")
-        if model and model != context.get("repo_id"):
+        if model and model not in {context.get("repo_id"), "ConvMemory-v2"}:
             raise InferenceError("model_mismatch", "上下文模型身份不一致。", 409)
         if artifact and artifact != context.get("artifact_id"):
             raise InferenceError("artifact_mismatch", "上下文模型制品不一致。", 409)
         if generation and generation != self.deep_generation:
             raise InferenceError("generation_mismatch", "上下文 generation 不一致。", 409)
-        return {"status": "pending", "stage": "context", "model": expected_model,
-                "artifact_id": context.get("artifact_id", ""), "generation": self.deep_generation,
-                "candidate_count": candidate_count, "selected_count": 0,
-                "notice": "ConvMemory 上下文组织等待隔离 Worker。"}
+        hits = hits or []
+        # These are verbatim input windows, never generated paraphrases. The
+        # canonical hit and neighbouring EvidenceSpan identities stay upstream.
+        windows = ["\n".join(str(hit.get(key) or "") for key in ("title", "before", "text", "after") if hit.get(key)) for hit in hits]
+        scores = self._deep_scores("context", query, windows)
+        ranks = {item["index"]: rank for rank, item in enumerate(
+            sorted(scores, key=lambda item: (-item["relevance_score"], item["index"])), 1)}
+        results = []
+        for item, hit, window in zip(scores, hits, windows):
+            score = item.pop("relevance_score")
+            results.append({**item, "id": hit["id"], "context_score": score,
+                            "context_rank": ranks[item["index"]], "context": window})
+        return {**self.deep_identity("context"), "status": "completed", "stage": "context",
+                "candidate_count": candidate_count, "selected_count": len(results),
+                "query_truncated": any(item["query_truncated"] for item in results), "results": results}
+
+    def deep_identity(self, role: str) -> dict:
+        spec = self.deep_models[role]
+        return {"model": spec["repo_id"], "revision": spec["revision"], "artifact_id": spec["artifact_id"],
+                "generation": self.deep_generation, "pipeline": self.deep_pipeline,
+                "runtime_id": self.deep_runtime_id, "precision": spec["precision"],
+                "max_tokens": spec["max_tokens"], "batch_size": 1, "threads": 1}
+
+    def _deep_runner(self, role: str):
+        key = f"deep:{role}"
+        if self.session_role == key and self.session is not None:
+            return self.tokenizers[key], self.session
+        # Reuse the existing single resident model slot. This avoids keeping
+        # BGE, ConvMemory and the baseline model in memory at the same time.
+        self.session = None
+        self.session_role = ""
+        self.tokenizers.clear()
+        self.trim_memory()
+        spec = self.deep_models[role]
+        folder = Path(spec["directory"])
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = 1
+        options.inter_op_num_threads = 1
+        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        options.enable_cpu_mem_arena = False
+        options.enable_mem_pattern = False
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+        options.add_session_config_entry("session.inter_op.allow_spinning", "0")
+        try:
+            tokenizer = Tokenizer.from_file(str(bundle_path(folder, spec.get("tokenizer_file", "tokenizer.json"))))
+            tokenizer.no_padding()
+            # Same pair tokenizer, longest_first truncation, scalar logit,
+            # CPU provider and BASIC graph optimization as run_ort_reranker.py.
+            tokenizer.enable_truncation(max_length=spec["max_tokens"], strategy="longest_first")
+            session = ort.InferenceSession(str(bundle_path(folder, spec.get("model_file", "model.onnx"))),
+                                           sess_options=options, providers=["CPUExecutionProvider"])
+            if not {item.name for item in session.get_inputs()}.issubset({"input_ids", "attention_mask", "token_type_ids"}):
+                raise ValueError("unsupported deep inputs")
+        except Exception as exc:
+            self.completed_roles.discard(key)
+            raise InferenceError("model_load_failed", "深度模型加载失败，已保留即时结果。") from exc
+        self.tokenizers[key] = tokenizer
+        self.session, self.session_role = session, key
+        self.loaded_roles.add(key)
+        return tokenizer, session
+
+    def _deep_scores(self, role: str, query: str, documents: list[str]) -> list[dict]:
+        deadline = time.monotonic() + self.seconds
+        tokenizer, session = self._deep_runner(role)
+        results = []
+        for index, document in enumerate(documents):
+            # Encode once without truncation for an honest token/truncation
+            # receipt, then use the audited longest_first policy for inference.
+            tokenizer.no_truncation()
+            try:
+                full = tokenizer.encode(query, document)
+                original_query_tokens = len(tokenizer.encode(query, add_special_tokens=False).ids)
+            finally:
+                tokenizer.enable_truncation(max_length=self.deep_models[role]["max_tokens"], strategy="longest_first")
+            encoded = tokenizer.encode(query, document)
+            values = {"input_ids": encoded.ids, "attention_mask": encoded.attention_mask,
+                      "token_type_ids": encoded.type_ids}
+            feeds = {item.name: np.asarray([values[item.name]], dtype=np.int64) for item in session.get_inputs()}
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self.completed_roles.discard(f"deep:{role}")
+                raise InferenceError("inference_timeout", "深度推理达到时间上限，已保留即时结果。", 504)
+            options = ort.RunOptions()
+            timer = threading.Timer(remaining, lambda: setattr(options, "terminate", True))
+            timer.daemon = True
+            timer.start()
+            try:
+                output = np.asarray(session.run([session.get_outputs()[0].name], feeds, options)[0])
+                if output.size != 1 or not np.isfinite(output).all():
+                    raise InferenceError("invalid_output", "深度模型输出不符合单候选分数契约。")
+            except Exception as exc:
+                self.completed_roles.discard(f"deep:{role}")
+                if isinstance(exc, InferenceError):
+                    raise
+                timed_out = time.monotonic() >= deadline
+                raise InferenceError("inference_timeout" if timed_out else "inference_failed",
+                                     "深度推理未完成，已保留即时结果。", 504 if timed_out else 503) from exc
+            finally:
+                timer.cancel()
+            results.append({"index": index, "relevance_score": float(output.reshape(-1)[0]),
+                            "token_count": len(encoded.ids), "truncated": len(encoded.ids) < len(full.ids),
+                            "query_truncated": sum(value == 0 for value in encoded.sequence_ids) < original_query_tokens,
+                            "input_hash": hashlib.sha256(json.dumps([query, document], ensure_ascii=False).encode()).hexdigest()})
+        self.completed_roles.add(f"deep:{role}")
+        return results
 
     def normalize(self, text: str) -> str:
         import unicodedata
@@ -539,6 +672,25 @@ class Runtime:
             from context_window import CONTEXT_POLICY
             output["context_policy"] = CONTEXT_POLICY
         return output
+
+
+def bundle_path(root: Path, relative: str) -> Path:
+    """Reject traversal and symlinks that escape the read-only bundle."""
+    if not isinstance(relative, str) or not relative or Path(relative).is_absolute():
+        raise ValueError("invalid bundle path")
+    path = (root / relative).resolve()
+    path.relative_to(root.resolve())
+    return path
+
+
+def deep_artifact_id(role: str, spec: dict, *, pipeline: str, runtime_id: str) -> str:
+    identity = {"role": role, "repo": spec["repo_id"], "revision": spec["revision"],
+                "files": {item["path"]: item["sha256"] for item in spec["files"]},
+                "model_file": spec.get("model_file", "model.onnx"),
+                "tokenizer_file": spec.get("tokenizer_file", "tokenizer.json"),
+                "precision": spec["precision"], "max_tokens": int(spec.get("max_tokens", 256)),
+                "pipeline": pipeline, "runtime": runtime_id, "truncation": "longest_first"}
+    return "stl4-deep-" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
 def artifact_id(role: str, spec: dict, *, pipeline: str = DEFAULT_PIPELINE,

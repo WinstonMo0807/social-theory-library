@@ -23,7 +23,7 @@ export type ResearchRecord<T = Record<string, unknown>> = {
   error_code?: string; poll_after_ms?: number | null; completed_units?: number; total_units?: number;
   project_id?: string | null; parent_id?: string | null; conversation_id?: string | null; discovery_session_id?: string | null;
 };
-export type ComparisonCell = { dimension: string; author?: string; reference_ids?: string[]; note?: string };
+export type ComparisonCell = { dimension: string; column_id?: string; author?: string; reference_ids?: string[]; note?: string; evidence_status?: "selected" | "partial" | "unavailable" | "missing" };
 export type ProjectData = {
   title: string; question: string; notes?: string; scope: QueryScope; selections: ResolvedEvidence[];
   comparison?: { dimensions: string[]; cells: ComparisonCell[] }; layout?: Record<string, unknown>; last_turn_id?: string;

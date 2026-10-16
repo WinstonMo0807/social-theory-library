@@ -151,7 +151,10 @@ class DiscoveryIndexView(APIView):
             warnings.append({"message": "尚无生效的观点检索版本；新版本核对完成前，原文检索和阅读继续使用既有索引。"})
         return Response({"active_generation": {"id": str(generation.pk), "index_uid": generation.uid,
             "model": generation.model_repo_id, "revision": generation.model_revision,
-            "artifact_id": generation.config_snapshot.get("embedding_artifact", ""), "created_at": generation.created_at.isoformat()} if generation else None,
+            "artifact_id": generation.config_snapshot.get("embedding_artifact", ""),
+            "dimensions": generation.dimensions or generation.config_snapshot.get("dimensions"),
+            "pipeline": generation.config_snapshot.get("pipeline", ""),
+            "created_at": generation.created_at.isoformat()} if generation else None,
             "model": model, "summary": summary, "capabilities": {"rebuild": has_capability(request.user, Capability.MANAGE_SEMANTIC_INDEX), "retry": can_retry},
             "count": total, "page": page, "page_size": page_size, "results": results, "jobs": jobs, "warnings": warnings})
 

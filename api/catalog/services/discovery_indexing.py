@@ -95,7 +95,7 @@ def ensure_index(generation):
         "displayedAttributes": ["*"],
         "filterableAttributes": ["channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language"],
         "pagination": {"maxTotalHits": 10000},
-        "embedders": {"discovery": {"source": "userProvided", "dimensions": 384}}}
+        "embedders": {"discovery": {"source": "userProvided", "dimensions": int(generation.dimensions or 384)}}}
     wait_index_task(meili("PATCH", f"/indexes/{generation.uid}/settings", desired))
 
 
@@ -169,13 +169,17 @@ def _prepare_generation(job):
         current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, task_id=job.task_id, status="running").first()
         if not current:
             raise DiscoveryIndexError("superseded", "建立任务已更新。")
+        embedding_dimensions = int(embedding.get("dimensions") or getattr(settings, "DISCOVERY_EMBEDDING_DIMENSIONS", 384))
+        if not 1 <= embedding_dimensions <= 4096:
+            raise DiscoveryInferenceError("invalid_response", "向量模型维度不在允许范围内。")
         generation = SemanticIndexVersion.discovery_objects.create(index_family="discovery",
             uid="discovery_v308_" + uuid4().hex, provider="local_onnx_user_provided",
-            model_repo_id=embedding["model"], model_revision=embedding["revision"], dimensions=384,
+            model_repo_id=embedding["model"], model_revision=embedding["revision"], dimensions=embedding_dimensions,
             pooling="masked_mean_l2", document_template="passage: {title}\n{normalized_text}",
             config_snapshot={"embedding_artifact": embedding["artifact_id"], "reranker_artifact": reranker["artifact_id"],
                 "pipeline": health.get("pipeline"), "normalization": health.get("normalization"), "index_configured": False,
-                "chunk_tokens": 320, "overlap_tokens": 40, "activate": job.stats.get("activate", True)})
+                "chunk_tokens": 320, "overlap_tokens": 40, "dimensions": embedding_dimensions,
+                "activate": job.stats.get("activate", True)})
         _guard_job(job, stats={**job.stats, "generation_id": str(generation.pk)})
     return generation
 
@@ -309,11 +313,16 @@ def _write_chunk(job, generation, header, unit, child):
         raw = results[0].get("_vectors", {}).get("discovery") if results else None
         if isinstance(raw, dict):
             raw = (raw.get("embeddings") or [None])[0]
-        if (isinstance(raw, list) and len(raw) == 384 and all(isinstance(v, (int, float)) and math.isfinite(v) for v in raw)
+        dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
+        if (isinstance(raw, list) and len(raw) == dimensions and all(isinstance(v, (int, float)) and math.isfinite(v) for v in raw)
                 and .995 < sum(v * v for v in raw) < 1.005):
             vector = raw
     if vector is None:
-        vector = embed_texts([child["embedding_text"]], expected_artifact=generation.config_snapshot["embedding_artifact"])["vectors"][0]
+        vector = embed_texts(
+            [child["embedding_text"]],
+            expected_artifact=generation.config_snapshot["embedding_artifact"],
+            expected_dimensions=int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384),
+        )["vectors"][0]
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务已停止；新版本会重新排队。")
     payload = {**{key: value for key, value in header.items() if key != "text"}, **unit["metadata"], "unit_id": unit["unit_id"],

@@ -181,12 +181,14 @@ class ReaderDataExportView(APIView):
 
     def get(self, request):
         context = {"request": request}
+        from .research import research_export
         conversations = request.user.library_conversations.prefetch_related(
             "messages__sources__asset",
             "messages__sources__edition",
         )
         return Response(
             {
+                "research_data": research_export(request.user),
                 "profile": {
                     "email": request.user.email,
                     "display_name": request.user.display_name,

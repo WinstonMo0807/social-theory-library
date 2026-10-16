@@ -117,33 +117,48 @@ def edition_scope_records(access_statuses):
         yield str(key), version, f"edition:{key}:{version}"
 
 
+def edition_metadata_header(row, *, taxonomy=None):
+    """Published facets also describe records whose text is not yet eligible."""
+    rev = row.active_catalog_revision
+    asset = rev.reader_asset
+    snapshot = dict(rev.snapshot or {})
+    taxonomy = _taxonomy_for([row]) if taxonomy is None else taxonomy
+    for (section, field), allowed in taxonomy.items():
+        values = snapshot.get(section) or {}
+        snapshot[section] = {**values, field: [item for item in values.get(field, [])
+            if isinstance(item, dict) and str(item.get("id")) in allowed]}
+    work = snapshot.get("work") or {}
+    edition = snapshot.get("edition") or {}
+    return dict(channel="passages", title=work.get("title", ""), source_kind="passage",
+        edition_id=str(row.pk), work_id=str(row.work_id), asset_id=str(asset.pk) if asset else None,
+        access_status=asset.access_status if asset else "public", url=f"/works/{row.public_slug}",
+        publication_year=edition.get("publication_year"), document_type=work.get("document_type", "book"),
+        work={"id": str(row.work_id), "title": work.get("title", ""), "slug": row.public_slug},
+        authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
+                 for item in snapshot.get("contributions", []) if item.get("role") == "author"],
+        author_ids=[str(item.get("person_id") or (item.get("person") or {}).get("id") or "")
+                    for item in snapshot.get("contributions", []) if item.get("role") == "author"],
+        language=work.get("language", ""), topics=snapshot.get("knowledge", {}).get("topics", []),
+        theories=snapshot.get("knowledge", {}).get("nodes", []))
+
+
+def iter_edition_metadata_headers(queryset):
+    rows = iter(queryset.iterator(chunk_size=100))
+    while batch := list(islice(rows, 100)):
+        taxonomy = _taxonomy_for(batch)
+        for row in batch:
+            yield row, edition_metadata_header(row, taxonomy=taxonomy)
+
+
 def source_header(kind, row, *, taxonomy=None):
     """A hash of published input, never an unbounded full-document read."""
     payload = {"source_type": kind, "source_id": str(row.pk), "scope_token": scope_token(kind, row)}
     if kind == "edition":
         rev = row.active_catalog_revision
         asset = rev.reader_asset
-        snapshot = dict(rev.snapshot or {})
-        taxonomy = _taxonomy_for([row]) if taxonomy is None else taxonomy
-        for (section, field), allowed in taxonomy.items():
-            values = snapshot.get(section) or {}
-            snapshot[section] = {**values, field: [item for item in values.get(field, [])
-                if isinstance(item, dict) and str(item.get("id")) in allowed]}
-        work = snapshot.get("work") or {}
-        edition = snapshot.get("edition") or {}
-        payload.update(channel="passages", title=work.get("title", ""), source_kind="passage",
-            edition_id=str(row.pk), work_id=str(row.work_id), asset_id=str(asset.pk),
+        payload.update(edition_metadata_header(row, taxonomy=taxonomy))
+        payload.update(
             document_revision_id=str(rev.document_revision_id), catalog_revision_id=str(rev.pk),
-            access_status=asset.access_status, url=f"/works/{row.public_slug}",
-            publication_year=edition.get("publication_year"), document_type=work.get("document_type", "book"),
-            work={"id": str(row.work_id), "title": work.get("title", ""), "slug": row.public_slug},
-            authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
-                     for item in snapshot.get("contributions", []) if item.get("role") == "author"],
-            author_ids=[str(item.get("person_id") or (item.get("person") or {}).get("id") or "")
-                        for item in snapshot.get("contributions", []) if item.get("role") == "author"],
-            language=work.get("language", ""),
-            topics=snapshot.get("knowledge", {}).get("topics", []),
-            theories=snapshot.get("knowledge", {}).get("nodes", []),
             source_revision=edition_revision(rev.pk, rev.document_revision_id, rev.document_revision.text_checksum, asset.access_status))
         payload["scope_token"] = f"edition:{row.pk}:{payload['source_revision']}"
         return payload
@@ -240,15 +255,18 @@ def source_units(kind, row, header):
         for span in spans.iterator(chunk_size=100):
             if not span.original_text.strip():
                 continue
+            is_ocr = (span.extraction_method.lower() in {"ocr", "hybrid"}
+                or "ocr" in span.extraction_method.lower()
+                or any((span.ocr_provenance or {}).get(key) for key in ("provider", "model", "version")))
             yield {"unit_id": str(span.pk), "text": span.original_text, "metadata": {
                 "evidence_span_id": str(span.pk), "passage_id": str(span.passage_id) if span.passage_id else None,
                 "page_id": str(span.page_id), "unit_hash": fingerprint(span.original_text),
                 "source_start_offset": span.start_offset,
                 "pdf_page": span.page_number, "page_index": span.page_number, "printed_page": span.printed_page_label,
-                "source_kind": "ocr" if span.ocr_provenance or "ocr" in span.extraction_method.lower() else "native",
+                "source_kind": "ocr" if is_ocr else "native",
                 "language": span.language, "bbox": [], "locator_precision": "page",
                 "reader_url": f"/reader/{revision.reader_asset_id}?page={span.page_number}" + (f"&passage={span.passage_id}" if span.passage_id else ""),
-                "quality_flags": ["ocr_unverified"] if span.ocr_provenance else []}}
+                "quality_flags": ["ocr_unverified"] if is_ocr else []}}
     else:
         # No inferred coordinates. A page-level source is still a real source.
         for page in revision.reader_asset.pages.exclude(text="").order_by("index").iterator(chunk_size=50):

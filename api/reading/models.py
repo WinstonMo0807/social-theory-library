@@ -264,3 +264,7 @@ class LibraryMessageSource(UUIDTimeStampedModel):
             ),
         ]
         indexes = [models.Index(fields=["message", "cited", "ordinal"])]
+
+
+# Register the private research models without expanding the legacy reader file.
+from .research_models import CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn  # noqa: E402,F401

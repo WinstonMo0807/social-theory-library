@@ -1,200 +1,106 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CircleAlert, LoaderCircle, RefreshCw, Search, Send, X } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { classifyClientError, getServerSessionCredential, isUnauthenticatedError } from "@/lib/api";
-import {
-  changeResearchSelection,
-  listResearchTurns,
-  readResearchRecord,
-  retryResearchTurn,
-  startResearchTurn,
-  type ProjectData,
-  type ResearchRecord,
-  type ResolvedEvidence,
-  type TurnData,
-} from "@/lib/api/research.client";
-import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
+import { ArrowRight, CircleAlert, GitBranch, LoaderCircle, RefreshCw, Search, Send, X } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { cancelResearchTurn, changeResearchSelection, expandResearchTurn, retryResearchTurn, startResearchTurn, updateResearchProject, type QueryScope, type ResolvedEvidence } from "@/lib/api/research.client";
+import { researchEvidenceKey, researchEvidenceReference, researchReaderHref, researchScopeLabel } from "@/lib/api/research-evidence";
+import { isTaskRunning } from "@/lib/api/task-polling";
 import { ResearchCenterNav } from "./research-center-nav";
+import { useResearchProject } from "./use-research-project";
 
-type LoadState = "loading" | "ready" | "error";
-
-const statusLabel: Record<string, string> = {
-  completed: "已完成", complete: "已完成", running: "处理中", queued: "排队中",
-  partial: "部分完成", failed: "处理失败", canceled: "已取消", cancelled: "已取消",
-};
-
-function recordStatus(record: ResearchRecord | null) {
-  const status = String(record?.status || record?.state || "saved").toLowerCase();
-  return statusLabel[status] || "已保存";
-}
-
-function evidenceTitle(reference: ResolvedEvidence, index: number) {
-  return reference.title?.trim() || `原文证据 ${index + 1}`;
-}
-
-function evidenceLocation(reference: ResolvedEvidence) {
-  if (reference.pdf_page) return `PDF 第 ${reference.pdf_page} 页`;
-  return reference.locator_precision === "span" ? "原文段落" : "原文定位";
-}
+const statuses: Record<string, string> = { completed: "已完成", complete: "已完成", running: "处理中", queued: "排队中", pending: "等待中", partial: "部分完成", failed: "处理失败", canceled: "已取消", cancelled: "已取消" };
+const titleOf = (ref: ResolvedEvidence, index: number) => ref.title?.trim() || `原文证据 ${index + 1}`;
+const locationOf = (ref: ResolvedEvidence) => ref.pdf_page ? `PDF 第 ${ref.pdf_page} 页` : "原文段落";
 
 export function ResearchSessionDetail({ id }: { id: string }) {
-  const { state: session } = useSessionBootstrap();
-  const [record, setRecord] = useState<ResearchRecord<ProjectData> | null>(null);
-  const [turns, setTurns] = useState<ResearchRecord<TurnData>[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
+  const workspace = useResearchProject(id, true);
+  if (workspace.error || ["forbidden", "temporary_error"].includes(workspace.session.status)) {
+    return <Frame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>研究会话暂时不可用</h2><p>{workspace.error || workspace.session.message}</p><button onClick={workspace.refresh}><RefreshCw size={15} />重新读取</button></div></Frame>;
+  }
+  if (!workspace.record) return <Frame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取研究会话……</p></div></Frame>;
+  return <Workspace key={`${workspace.session.user?.id}:${id}`} workspace={workspace} />;
+}
+
+function Workspace({ workspace }: { workspace: ReturnType<typeof useResearchProject> }) {
+  const { record, turns, pending, run, refresh, requestId, notice, actionError, pollPaused } = workspace;
+  const [activeId, setActiveId] = useState("");
   const [question, setQuestion] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
-  const [actionPending, setActionPending] = useState(false);
-
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const credential = getServerSessionCredential();
-    if (!credential) throw new Error("登录状态只能在浏览器中验证，请重新打开此页面。");
-    const [project, turnPage] = await Promise.all([
-      readResearchRecord<ProjectData>("research-projects", id, signal),
-      listResearchTurns(id, 1, signal),
-    ]);
-    return { project, turnRows: turnPage.results };
-  }, [id]);
-
+  const [scopeChoice, setScopeChoice] = useState<"saved" | "selected" | "library">("saved");
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [branchQuestion, setBranchQuestion] = useState("");
+  const [query, setQuery] = useState("");
+  const [onlySelected, setOnlySelected] = useState(false);
   useEffect(() => {
-    if (session.status === "unauthenticated") {
-      window.location.replace(`/login?next=${encodeURIComponent(`/account/research/${id}`)}`);
-      return;
-    }
-    if (session.status !== "authenticated") return;
-    const controller = new AbortController();
-    Promise.resolve().then(() => {
-      if (controller.signal.aborted) return;
-      setLoadState("loading");
-      setError("");
-    });
-    load(controller.signal)
-      .then(({ project, turnRows }) => {
-        if (controller.signal.aborted) return;
-        setRecord(project);
-        setTurns(turnRows);
-        setLoadState("ready");
-      })
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
-        if (isUnauthenticatedError(reason)) {
-          window.location.replace(`/login?next=${encodeURIComponent(`/account/research/${id}`)}`);
-          return;
-        }
-        const category = classifyClientError(reason);
-        setError(category === "auth_403" ? "当前账户没有访问这个研究会话的权限。" : reason instanceof Error ? reason.message : "研究会话暂时无法加载，请稍后重试。");
-        setLoadState("error");
-      });
-    return () => controller.abort();
-  }, [attempt, id, load, session.status]);
-
-  const currentTurn = turns[turns.length - 1] ?? null;
+    if (!question.trim() && !branchQuestion.trim()) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [question, branchQuestion]);
+  const current = turns.find((turn) => turn.id === activeId) || turns.find((turn) => turn.id === record?.data.last_turn_id) || turns.at(-1);
   const selected = record?.data.selections ?? [];
+  const selectedKeys = new Set(selected.map(researchEvidenceKey));
   const candidates = useMemo(() => {
-    const refs = currentTurn?.data.result_refs ?? [];
-    return refs.filter((reference, index) => refs.findIndex((candidate) => `${candidate.asset_id}:${candidate.pdf_page}` === `${reference.asset_id}:${reference.pdf_page}`) === index).slice(0, 12);
-  }, [currentTurn]);
-  const activeStatus = String(currentTurn?.status || record?.status || "saved").toLowerCase();
+    const seen = new Set<string>();
+    return (current?.data.result_refs ?? []).filter((ref) => { const key = researchEvidenceKey(ref); if (seen.has(key)) return false; seen.add(key); return true; });
+  }, [current]);
+  if (!record) return null;
+  const activeStatus = current?.status || "saved";
+  const shown = candidates.filter((ref) => (!onlySelected || selectedKeys.has(researchEvidenceKey(ref))) && (!query.trim() || `${ref.title || ""} ${ref.source_status === "available" ? ref.quote || ref.text || "" : ""}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
+  const currentNumber = turns.findIndex((turn) => turn.id === current?.id) + 1;
+  const availableSelected = selected.filter((ref) => ref.source_status === "available");
+  const chosenScope: QueryScope = scopeChoice === "library" ? { kind: "library", filters: {} } : scopeChoice === "selected" ? { kind: "passages", references: availableSelected.map(researchEvidenceReference), allow_neighbors: false } : record.data.scope;
+  const validScope = scopeChoice !== "selected" || availableSelected.length > 0;
+  const scopeText = scopeChoice === "selected" ? `当前可用选材（${availableSelected.length}条）` : researchScopeLabel(chosenScope);
 
-  async function addSelection(reference: ResolvedEvidence) {
-    if (!record || actionPending) return;
-    setActionPending(true);
-    setActionMessage("");
-    try {
-      const next = await changeResearchSelection(record.id, {
-        expected_revision: record.revision,
-        action: "add",
-        references: [{ asset_id: reference.asset_id, document_revision_id: reference.document_revision_id, pdf_page: reference.pdf_page, evidence_span_id: reference.evidence_span_id }],
-      });
-      setRecord(next);
-      setActionMessage("已加入当前选材。来源身份和版本已重新核对。");
-    } catch (reason) {
-      setActionMessage(reason instanceof Error ? reason.message : "加入选材失败，请重试。");
-    } finally {
-      setActionPending(false);
-    }
-  }
-
-  async function removeSelection(reference: ResolvedEvidence) {
-    if (!record || actionPending) return;
-    const referenceId = reference.reference_id || `${reference.asset_id}:${reference.pdf_page}`;
-    setActionPending(true);
-    setActionMessage("");
-    try {
-      const next = await changeResearchSelection(record.id, { expected_revision: record.revision, action: "remove", reference_id: referenceId });
-      setRecord(next);
-      setActionMessage("已从当前选材移除。");
-    } catch (reason) {
-      setActionMessage(reason instanceof Error ? reason.message : "移除选材失败，请重试。");
-    } finally {
-      setActionPending(false);
-    }
-  }
-
-  async function submitQuestion(event: FormEvent) {
+  async function submit(event: FormEvent, branch = false) {
     event.preventDefault();
-    if (!record || question.trim().length < 2 || actionPending) return;
-    setActionPending(true);
-    setActionMessage("");
-    try {
-      const nextTurn = await startResearchTurn(record.id, { request_id: crypto.randomUUID(), expected_revision: record.revision, question: question.trim(), mode: "search" });
-      setTurns((current) => [...current, nextTurn]);
-      setQuestion("");
-      setActionMessage("新的研究轮次已加入队列；完成后会自动保留在本会话中。");
-    } catch (reason) {
-      setActionMessage(reason instanceof Error ? reason.message : "无法开始新的研究轮次，请稍后重试。");
-    } finally {
-      setActionPending(false);
-    }
+    if (!record || !validScope || pending) return;
+    const text = (branch ? branchQuestion : question).trim();
+    if (text.length < 2 || branch && !current) return;
+    let nextId = "";
+    if (current) setActiveId(current.id);
+    const data = { expected_revision: record.revision, request_id: requestId(JSON.stringify({ text, scope: chosenScope, parent: current?.id, branch })), question: text, scope: chosenScope };
+    const ok = await run(async () => {
+      const next = !branch && current && JSON.stringify(current.data.scope) !== JSON.stringify(chosenScope)
+        ? await expandResearchTurn(current.id, data)
+        : await startResearchTurn(record.id, { ...data, ...(current ? { parent_id: current.id } : {}), mode: "search" });
+      nextId = next.id;
+    }, branch ? "已从选定轮次建立分支，原有轮次和材料继续保留。" : "新的研究轮次已加入队列，进度会自动更新。" );
+    if (ok) { setActiveId(nextId); if (branch) { setBranchOpen(false); setBranchQuestion(""); } else setQuestion(""); }
   }
-
-  async function retryTurn() {
-    if (!record || !currentTurn || actionPending) return;
-    setActionPending(true);
-    setActionMessage("");
-    try {
-      const nextTurn = await retryResearchTurn(currentTurn.id, { request_id: crypto.randomUUID(), expected_revision: currentTurn.revision });
-      setTurns((current) => [...current, nextTurn]);
-      setActionMessage("已重新排入这一轮研究；完成后会把新的来源写回本会话。");
-    } catch (reason) {
-      setActionMessage(reason instanceof Error ? reason.message : "研究轮次重试失败，请稍后再试。");
-    } finally {
-      setActionPending(false);
-    }
+  async function retry() {
+    if (!record || !current) return;
+    let nextId = "";
+    const ok = await run(async () => {
+      const next = await retryResearchTurn(current.id, { expected_revision: record.revision, request_id: requestId(`retry:${current.id}`) }); nextId = next.id;
+    }, "已重新排队，上一轮材料仍然保留。");
+    if (ok) setActiveId(nextId);
   }
-
-  if (session.status === "loading" || session.status === "unknown" || loadState === "loading") {
-    return <DetailFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取研究会话……</p></div></DetailFrame>;
+  function selection(ref: ResolvedEvidence, remove: boolean) {
+    if (!record) return;
+    void run(() => changeResearchSelection(record.id, { expected_revision: record.revision, action: remove ? "remove" : "add", ...(remove ? { reference_id: researchEvidenceKey(ref) } : { references: [researchEvidenceReference(ref)] }) }), remove ? "已从当前选材移除。" : "已加入选材，来源身份和版本已重新核对。");
   }
-  if (error || session.status === "forbidden" || loadState === "error" || !record) {
-    return <DetailFrame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>研究会话暂时不可用</h2><p>{session.message || error || "研究会话不存在或已无法访问。"}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={15} />重试</button></div></DetailFrame>;
-  }
-
-  const title = record.data.title?.trim() || "未命名研究";
-  const questionText = record.data.question?.trim() || "尚未填写研究问题。";
-  return <DetailFrame>
+  const statusText = isTaskRunning(activeStatus) ? "正在核对来源与页码，已有材料仍可阅读。" : activeStatus === "partial" ? "部分检索已完成，可保留现有材料并重试。" : activeStatus === "failed" ? "本轮未完成，问题与材料已保留。" : ["canceled", "cancelled"].includes(activeStatus) ? "本轮已取消，原有轮次与选材继续保留。" : current ? "可以继续核对来源、选择材料或提出后续问题。" : "提交问题后开始第一轮研究。";
+  return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href="/account/research">我的研究</Link><span>/</span><strong>持续研究</strong></nav>
-    <header className="stl4-research-heading stl4-research-workspace-heading"><h1>{title}</h1><p>{questionText}</p><span className="stl4-research-privacy">仅本人可见 · {recordStatus(record)}</span></header>
+    <header className="stl4-research-heading stl4-research-workspace-heading"><h1>持续研究工作区</h1><p>{record.data.title || record.data.question || "未命名研究"}</p><span className="stl4-research-privacy">仅本人可见 · 问题、选材和比较记录保存在此会话</span></header>
     <section className="stl4-research-workspace" aria-label="持续研究工作区">
       <ResearchCenterNav active="research" />
-      <div className={`stl4-research-status-panel status-${activeStatus}`} role={activeStatus === "failed" ? "alert" : "status"}>
-        <div><strong>{statusLabel[activeStatus] || "已保存"}</strong><span>{currentTurn?.error_code ? `错误标识：${currentTurn.error_code}` : activeStatus === "queued" ? "已进入队列，等待可用的检索资源。" : activeStatus === "running" ? "正在核对来源、版本和页码，结果会自动回到这一轮。" : activeStatus === "partial" ? "本轮只完成了部分来源核对，可以继续提问或补充范围。" : activeStatus === "failed" ? "本轮没有完成，已保留问题和研究范围。" : activeStatus === "canceled" || activeStatus === "cancelled" ? "本轮已取消，原有选材仍保留在当前会话。" : "当前轮次的来源已经可以继续核对。"}</span></div>
-        {currentTurn && (activeStatus === "failed" || activeStatus === "canceled" || activeStatus === "cancelled") ? <button type="button" onClick={() => void retryTurn()} disabled={actionPending}><RefreshCw size={14} />重新检索</button> : null}
-      </div>
+      <div className={`stl4-research-status-panel status-${activeStatus}`} role="status"><div><strong>{statuses[activeStatus] || "尚未开始"}</strong><span>{statusText}</span></div><div className="stl4-research-status-actions">{current && isTaskRunning(activeStatus) ? <button disabled={pending} onClick={() => void run(() => cancelResearchTurn(current.id), "本轮已取消，已取得的材料继续保留。")}>取消本轮</button> : null}{current && ["failed", "partial", "canceled", "cancelled"].includes(activeStatus) ? <button disabled={pending} onClick={() => void retry()}><RefreshCw size={14} />重新检索</button> : null}<button disabled={pending} onClick={refresh}><RefreshCw size={14} />{pollPaused ? "继续更新" : "刷新"}</button></div></div>
       <div className="stl4-research-workspace-grid">
-        <aside className="stl4-research-turns" aria-label="研究轮次"><header><h2>研究轮次</h2><span>{turns.length}</span></header>{turns.length ? <ol>{turns.map((turn, index) => <li className={turn.id === currentTurn?.id ? "is-active" : undefined} key={turn.id}><span>{index + 1}</span><div><strong>{turn.data.question || "未命名问题"}</strong><small>{statusLabel[turn.status || ""] || turn.status || "已保存"}</small></div></li>)}</ol> : <p>还没有研究轮次。</p>}<button type="button" className="stl4-research-secondary" onClick={() => setQuestion("")}><span>＋</span> 新建分支</button></aside>
-        <div className="stl4-research-results"><div className="stl4-research-results-head"><div><p className="stl4-research-kicker">研究问题</p><h2>{currentTurn?.data.question || questionText}</h2></div><Link href={`/account/research/${encodeURIComponent(id)}/compare`}>打开证据比较 <ArrowRight size={14} /></Link></div><div className="stl4-research-filter-row"><span><Search size={14} /> 证据片段（{candidates.length}）</span><span>来源按当前公开版本重新核对</span></div>{candidates.length ? <div className="stl4-research-evidence-list">{candidates.map((reference, index) => <article className="stl4-research-evidence" key={`${reference.asset_id}-${reference.pdf_page}-${index}`}><div className="stl4-evidence-number">{String(index + 1).padStart(2, "0")}</div><div className="stl4-evidence-copy"><h3>{evidenceTitle(reference, index)}</h3><p>{reference.quote || "当前只返回原文身份，正文将在打开 Reader 时重新读取。"}</p><small>{evidenceLocation(reference)} · {reference.source_status === "available" ? "可定位" : "来源暂不可用"}</small></div><div className="stl4-evidence-actions">{reference.reader_url && reference.source_status === "available" ? <Link href={reference.reader_url}>查看原文 <ArrowRight size={14} /></Link> : null}{selected.some((item) => item.reference_id === reference.reference_id || (item.asset_id === reference.asset_id && item.pdf_page === reference.pdf_page)) ? <span className="is-selected">已在选材</span> : <button type="button" onClick={() => void addSelection(reference)} disabled={actionPending}>加入选材</button>}</div></article>)}</div> : <div className="stl4-research-empty"><Search size={24} /><h2>{activeStatus === "queued" || activeStatus === "running" ? "研究正在进行" : "还没有可展示的证据"}</h2><p>{activeStatus === "queued" || activeStatus === "running" ? "完成后会把来源、页码和定位写入本会话。" : "从下方继续提问，或回到观点检索开始新的研究。"}</p></div>}{actionMessage ? <p className="stl4-research-action-message" role="status">{actionMessage}</p> : null}</div>
-        <aside className="stl4-research-selected" aria-label="当前选材"><header><h2>当前选材</h2><span>{selected.length}</span></header>{selected.length ? <ol>{selected.map((reference, index) => <li key={`${reference.asset_id}-${reference.pdf_page}-${index}`}><div><strong>{evidenceTitle(reference, index)}</strong><small>{evidenceLocation(reference)}</small></div><button type="button" aria-label={`移除${evidenceTitle(reference, index)}`} onClick={() => void removeSelection(reference)} disabled={actionPending}><X size={14} /></button></li>)}</ol> : <p>选择证据后会出现在这里。</p>}<Link className="stl4-research-secondary" href={`/account/research/${encodeURIComponent(id)}/compare`}>查看选材比较 <ArrowRight size={14} /></Link></aside>
+        <aside className="stl4-research-turns" aria-label="研究轮次"><header><h2>问题路径</h2><span>{turns.length} 轮</span></header>{turns.length ? <ol>{turns.map((turn, index) => <li key={turn.id} className={turn.id === current?.id ? "is-active" : undefined}><button type="button" aria-current={turn.id === current?.id ? "step" : undefined} onClick={() => { setActiveId(turn.id); setQuery(""); }}><span>{index + 1}</span><div><strong>{turn.data.question || "未命名问题"}</strong><small>{statuses[turn.status || ""] || "已保存"}{turn.parent_id ? ` · 承接第 ${turns.findIndex((row) => row.id === turn.parent_id) + 1} 轮` : ""}</small></div></button></li>)}</ol> : <p>从下方提交第一个研究问题。</p>}<button type="button" className="stl4-research-secondary" disabled={pending || !current} onClick={() => { setBranchQuestion(""); setBranchOpen(true); }}><GitBranch size={13} />从本轮建立分支</button></aside>
+        <div className="stl4-research-results"><div className="stl4-research-results-head"><div><p className="stl4-research-kicker">{current ? `第 ${currentNumber} 轮 · ${researchScopeLabel(current.data.scope)}` : "研究问题"}</p><h2>{current?.data.question || record.data.question || "开始一项研究"}</h2></div><Link href={`/account/research/${record.id}/compare`}>打开证据比较 <ArrowRight size={14} /></Link></div>
+          <div className="stl4-research-filter-row"><label className="stl4-research-result-search"><Search size={14} /><input aria-label="在本轮材料中查找" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`查找本轮材料（${candidates.length}）`} /></label><label><input type="checkbox" checked={onlySelected} onChange={(event) => setOnlySelected(event.target.checked)} />仅看已选</label></div>
+          {shown.length ? <div className="stl4-research-evidence-list">{shown.map((ref, index) => { const key = researchEvidenceKey(ref); const selectedAlready = selectedKeys.has(key); const href = researchReaderHref(ref); return <article className="stl4-research-evidence" key={key}><div className="stl4-evidence-number">{String(index + 1).padStart(2, "0")}</div><div className="stl4-evidence-copy"><h3>{titleOf(ref, index)}</h3><p>{ref.source_status === "available" ? ref.quote || ref.text || "打开原文核对这条材料。" : "来源已变化或暂不可用，保留材料身份供后续核对。"}</p><small>{locationOf(ref)} · {ref.source_status === "available" ? "可定位" : "待重新核对"}</small></div><div className="stl4-evidence-actions">{href ? <Link href={href}>查看原文 <ArrowRight size={14} /></Link> : null}<button type="button" aria-pressed={selectedAlready} className={selectedAlready ? "is-selected" : undefined} disabled={pending || !selectedAlready && ref.source_status !== "available"} onClick={() => selection(ref, selectedAlready)}>{selectedAlready ? "已选 · 移除" : "加入选材"}</button></div></article>; })}</div> : <div className="stl4-research-empty"><Search size={24} /><h2>{candidates.length ? "没有匹配的材料" : isTaskRunning(activeStatus) ? "研究正在进行" : "还没有可展示的证据"}</h2><p>{candidates.length ? "可以调整关键词或取消仅看已选。" : "提交或继续问题后，真实来源和页码会出现在这里。"}</p></div>}
+        </div>
+        <aside className="stl4-research-selected" aria-label="当前选材"><header><h2>当前选材</h2><span>{selected.length}</span></header>{selected.length ? <ol>{selected.map((ref, index) => <li key={researchEvidenceKey(ref)}><div><strong>{titleOf(ref, index)}</strong><small>{locationOf(ref)}{ref.source_status !== "available" ? " · 来源待核对" : ""}</small></div><button aria-label={`移除${titleOf(ref, index)}`} disabled={pending} onClick={() => selection(ref, true)}><X size={14} /></button></li>)}</ol> : <p>从本轮证据中选择材料。</p>}<Link className="stl4-research-secondary" href={`/account/research/${record.id}/compare`}>比较当前选材 <ArrowRight size={14} /></Link></aside>
       </div>
-      <form className="stl4-research-prompt" onSubmit={submitQuestion}><label htmlFor="research-follow-up">继续提问</label><div><input id="research-follow-up" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="基于当前选材继续追问……" minLength={2} maxLength={1200} /><button type="submit" disabled={actionPending || question.trim().length < 2}>{actionPending ? <LoaderCircle className="stl4-spin" size={15} /> : <Send size={15} />}<span>发送</span></button></div></form>
+      <form className="stl4-research-prompt" onSubmit={(event) => void submit(event)}><label htmlFor="research-follow-up">{current ? `承接第 ${currentNumber} 轮继续提问` : "提出研究问题"}</label><div><textarea id="research-follow-up" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="基于原文材料继续追问……" minLength={2} maxLength={1200} rows={2} required /><button type="submit" disabled={pending || question.trim().length < 2 || !validScope}>{pending ? <LoaderCircle className="stl4-spin" size={15} /> : <Send size={15} />}发送</button></div><fieldset className="stl4-research-scope"><legend>下一轮检索范围</legend>{([["saved", "已保存的范围"], ["selected", "仅当前选材"], ["library", "扩展至全馆"]] as const).map(([value, label]) => <label key={value}><input type="radio" name="research-scope" value={value} checked={scopeChoice === value} disabled={pending} onChange={() => setScopeChoice(value)} />{label}</label>)}<button type="button" className="stl4-research-text-button" disabled={pending || !validScope || scopeChoice === "saved"} onClick={() => void run(() => updateResearchProject(record.id, { expected_revision: record.revision, scope: chosenScope }), "已保存后续研究范围，既有轮次不变。").then((ok) => { if (ok) setScopeChoice("saved"); })}>保存为后续范围</button></fieldset><p className="stl4-research-scope-caption">{scopeText}{!validScope ? " · 请先加入可用原文材料" : ""}</p></form>
+      {notice ? <p className="stl4-research-action-message" role="status">{notice}</p> : null}{actionError ? <p className="stl4-research-action-message is-error" role="alert">{actionError} 输入内容仍保留，请刷新状态后重试。</p> : null}
     </section>
-  </DetailFrame>;
+    <Dialog open={branchOpen} onRequestClose={() => { if (!pending) setBranchOpen(false); }} className="stl4-research-dialog" aria-labelledby="research-branch-title"><form onSubmit={(event) => void submit(event, true)}><h2 id="research-branch-title">从第 {currentNumber} 轮建立分支</h2><p>{current?.data.question}</p><label htmlFor="research-branch-question">新的研究问题</label><textarea id="research-branch-question" value={branchQuestion} onChange={(event) => setBranchQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required /><p>范围：{scopeText}。原问题和已收集材料继续保留。</p>{actionError ? <p role="alert">{actionError}</p> : null}<footer><button type="button" disabled={pending} onClick={() => setBranchOpen(false)}>返回</button><button type="submit" disabled={pending || !validScope || branchQuestion.trim().length < 2}>{pending ? "正在创建……" : "建立分支"}</button></footer></form></Dialog>
+  </Frame>;
 }
-
-function DetailFrame({ children }: { children: React.ReactNode }) {
-  return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div><p className="stl4-research-footnote">/account/research/[id]　·　私人内容</p></div>;
-}
+function Frame({ children }: { children: ReactNode }) { return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div></div>; }

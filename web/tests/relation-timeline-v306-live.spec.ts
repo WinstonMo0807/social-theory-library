@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type APIResponse, type BrowserContext, type Page } from "@playwright/test";
 
 const api = "http://127.0.0.1:8105/api";
 async function login(page: Page, context: BrowserContext, role: string) {
@@ -16,7 +16,7 @@ test("A31 theory timeline is secondary, scoped and keeps legacy object/filter li
   const headers = { "X-CSRFToken": csrf, Origin: baseURL!, Referer: `${baseURL}/admin` };
   const nodes = [];
   for (const name of ["甲", "乙"]) {
-    const response = await page.request.post(`${api}/catalog/admin/theory-system/nodes/`, { headers, data: {
+    const response: APIResponse = await page.request.post(`${api}/catalog/admin/theory-system/nodes/`, { headers, data: {
       canonical_name_zh: `时间线归属${name}`, slug: `timeline-scope-${nodes.length}-${Date.now()}`, node_type: "theory_tradition", status: "draft",
     } });
     expect(response.status(), await response.text()).toBe(201);

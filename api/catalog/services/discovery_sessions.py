@@ -31,10 +31,12 @@ logger = logging.getLogger(__name__)
 CHANNELS = ("passages", "entities", "curation")
 DEEP_CHANNEL = "deep"
 DEEP_RESULTS_KEY = "passages_deep"
+DEEP_RANKED_KEY = "passages_deep_ranked"
 PIPELINE_VERSION = "discovery-3.0.8-1"
 CURSOR_SALT = "catalog.discovery.cursor.v1"
 ACTIVE = ("queued", "running")
 MAX_MATERIALIZED = 400
+MAX_VISIBLE_PASSAGES = MAX_MATERIALIZED + 40
 STALE_MINUTES = {"queued": 30, "running": 15}
 
 
@@ -264,11 +266,16 @@ def _resume_locked(session, access_statuses, *, expand, expected_generation):
         session.task_id = str(uuid4())
         session.finished_at = None
         session.started_at = None
+        previous_deep = (session.channels or {}).get(DEEP_CHANNEL, {})
+        session.results = {
+            **(session.results or {}),
+            DEEP_RANKED_KEY: (session.results or {}).get(
+                DEEP_RANKED_KEY, (previous_deep.get("bge") or {}).get("status") == "completed"),
+        }
         session.channels = {
             **{channel: {"status": "pending"} for channel in CHANNELS},
             DEEP_CHANNEL: {"status": "pending"},
         }
-        session.results = {**(session.results or {}), DEEP_RESULTS_KEY: []}
         if access_statuses is not None:
             session.access_statuses = sorted(set(session.access_statuses).intersection(access_statuses))
         session.save(update_fields=["expansion_count", "generation", "status", "task_id", "started_at", "finished_at", "channels", "results", "access_statuses", "updated_at"])
@@ -312,17 +319,20 @@ def _deep_reference(row: dict) -> dict:
                 "policy": str(value.get("policy") or "")[:80],
                 "provider": str(value.get("provider") or "")[:80],
                 "available": bool(value.get("available")),
-                "before": str(value.get("before") or "")[:3000],
-                "after": str(value.get("after") or "")[:3000],
+                # Text is re-read by session_context. Persisting neighbour
+                # quotations here would serve stale text after their edits.
                 "blocks": [
                     {
-                        "text": str(block.get("text") or "")[:2000],
+                        "evidence_span_id": str(block.get("evidence_span_id") or ""),
+                        "document_revision_id": str(block.get("document_revision_id") or ""),
                         "pdf_page": block.get("pdf_page"),
                         "role": str(block.get("role") or "")[:24],
                     }
                     for block in value.get("blocks") or []
                     if isinstance(block, dict)
                 ][:6],
+                **{key: value[key] for key in ("context_score", "context_rank", "truncated", "query_truncated")
+                   if key in value},
             }
         reference[key] = value
     return reference
@@ -581,7 +591,11 @@ def execute_deep_session(session_id, generation: int, task_id: str) -> None:
             current = DiscoverySearchSession.objects.select_for_update().get(pk=session_id)
             if not _deep_task_current(session_id, generation, task_id):
                 return
-            current.results = {**(current.results or {}), DEEP_RESULT_KEY: refs}
+            # A failed retry must not erase the last usable deep prefix. Every
+            # response still revalidates that prefix against current sources.
+            if result.get("ranking_applied") or not (current.results or {}).get(DEEP_RESULT_KEY):
+                current.results = {**(current.results or {}), DEEP_RESULT_KEY: refs,
+                                   DEEP_RANKED_KEY: bool(result.get("ranking_applied"))}
             current.channels = {**(current.channels or {}), DEEP_CHANNEL: stage}
             version = str(result.get("pipeline_version") or "stl4-recommended-deep-v1")
             versions = list((current.versions or {}).get(DEEP_CHANNEL) or [])
@@ -673,6 +687,7 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
             current.save(update_fields=["channels", "updated_at"])
         cap = (300 if expanded else 100) if channel == "passages" else (40 if expanded else 16)
         warnings = []
+        result = {}
         try:
             result = retrieve_discovery_channel(session.query, channel, session.filters, session.access_statuses,
                 limit=cap, expanded=expanded, aliases=aliases, request_context=retrieval_context,
@@ -813,7 +828,9 @@ def fail_session(session_id, generation: int, task_id: str, code="task_failed", 
         session = rows.first()
         if session is None:
             return False
-        session.status = "failed"
+        session.status = "partial" if any(
+            (session.results or {}).get(channel) for channel in (*CHANNELS, DEEP_RESULTS_KEY)
+        ) else "failed"
         session.finished_at = timezone.now()
         session.warnings = [*session.warnings, _warning(code, "检索任务未能完成，已保留找到的材料，可重试当前范围。")][-20:]
         session.channels = {key: ({"status": "failed"} if value.get("status") in {"pending", "queued", "running"} else value)
@@ -854,10 +871,48 @@ def _rehydrate_deep(session, access_statuses) -> list[dict]:
         row = dict(row)
         row["_position"] = position
         row["match_basis"] = ref.get("match_basis") or row.get("match_basis") or []
+        annotations = _deep_reference(ref)
         for key in ("deep_rank", "deep_score", "deep_context"):
-            if key in ref:
-                row[key] = ref[key]
+            if key in annotations:
+                row[key] = annotations[key]
         output.append(row)
+    return output
+
+
+def _deep_order_token(session) -> str:
+    results = session.results or {}
+    stage = (session.channels or {}).get(DEEP_CHANNEL, {})
+    ranked = results.get(DEEP_RANKED_KEY, (stage.get("bge") or {}).get("status") == "completed")
+    refs = results.get(DEEP_RESULTS_KEY, [])[:40]
+    if not ranked or not refs:
+        return "baseline"
+    identity = "|".join(f"{_identity(ref)}:{ref.get('source_revision', '')}" for ref in refs)
+    return "deep:" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+def rehydrate_passages(session, access_statuses, *, baseline_only=False,
+                       baseline_rows=None, deep_rows=None) -> list[dict]:
+    """One validated passage order for cards, pagination and research capture.
+
+    Deep ranking supplements a bounded prefix; it never discards the baseline
+    tail. Positions belong to stored references, so withdrawn rows remain
+    tombstones and cannot make a cursor skip the next still-readable source.
+    """
+    baseline = _rehydrate(session, access_statuses)["passages"] if baseline_rows is None else baseline_rows
+    deep = _rehydrate_deep(session, access_statuses) if deep_rows is None else deep_rows
+    results = session.results or {}
+    refs = list(results.get("passages", [])[:MAX_MATERIALIZED])
+    if not baseline_only and _deep_order_token(session) != "baseline":
+        prefix = list(results.get(DEEP_RESULTS_KEY, [])[:40])
+        seen = {(_identity(ref), str(ref.get("source_revision") or "")) for ref in prefix}
+        refs = prefix + [ref for ref in refs
+                         if (_identity(ref), str(ref.get("source_revision") or "")) not in seen]
+    by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in [*baseline, *deep]}
+    output = []
+    for position, ref in enumerate(refs):
+        row = by_key.get((_identity(ref), str(ref.get("source_revision") or "")))
+        if row is not None:
+            output.append({**row, "_position": position})
     return output
 
 
@@ -919,7 +974,7 @@ def _deep_progress(session) -> dict:
     status = {
         "pending": "deep_queued", "queued": "deep_queued", "running": "deep_running",
         "degraded": "partial", "disabled": "unavailable", "skipped": "unavailable",
-        "failed": "unavailable",
+        "failed": "unavailable", "canceled": "unavailable",
     }.get(raw_status, raw_status)
     if status not in DEEP_PROGRESS_STATUSES:
         passage = session.channels.get("passages", {}) if isinstance(session.channels, dict) else {}
@@ -963,30 +1018,33 @@ def _deep_progress(session) -> dict:
 
 def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
     offset = 0
+    order = _deep_order_token(session)
     if cursor:
         try:
             signed = signing.loads(cursor, salt=CURSOR_SALT, max_age=24 * 60 * 60)
             if signed.get("id") != str(session.id):
                 raise ValueError("wrong session")
             offset = int(signed["offset"])
-            if not 0 <= offset <= MAX_MATERIALIZED:
+            if not 0 <= offset <= MAX_VISIBLE_PASSAGES:
                 raise ValueError("bad offset")
+            cursor_order = str(signed.get("order") or "baseline")
+            if cursor_order != "baseline" and cursor_order != order:
+                raise ValueError("ranking changed")
+            order = cursor_order
         except (signing.BadSignature, ValueError, TypeError, KeyError):
             raise ValidationError({"cursor": "分页位置无效或已过期，请重新检索。"})
-    limit = max(1, min(int(limit), MAX_MATERIALIZED))
+    limit = max(1, min(int(limit), MAX_VISIBLE_PASSAGES))
     visible = _rehydrate(session, access_statuses)
     deep_visible = _rehydrate_deep(session, access_statuses)
     deep = _deep_progress(session)
-    # Once the optional deep lane has produced a validated order, expose that
-    # order to the same visual result list. Until then the baseline rows remain
-    # immediately usable, so an unavailable model never blanks the first screen.
-    deep_applied = deep["status"] in {"completed", "partial"} and bool(deep_visible)
-    passage_rows = deep_visible if deep_applied else visible["passages"]
+    passage_rows = rehydrate_passages(session, access_statuses, baseline_only=order == "baseline",
+                                     baseline_rows=visible["passages"], deep_rows=deep_visible)
     remaining = [row for row in passage_rows if row["_position"] >= offset]
     page = remaining[:limit]
     next_cursor = None
     if len(remaining) > len(page) and page:
-        next_cursor = signing.dumps({"id": str(session.id), "offset": page[-1]["_position"] + 1}, salt=CURSOR_SALT)
+        next_cursor = signing.dumps({"id": str(session.id), "offset": page[-1]["_position"] + 1,
+                                     "order": order}, salt=CURSOR_SALT)
     removed = any(len(visible[channel]) < len((session.results or {}).get(channel, [])) for channel in CHANNELS)
     deep_removed = len(deep_visible) < len((session.results or {}).get(DEEP_RESULTS_KEY, []))
     warnings = list(session.warnings or [])

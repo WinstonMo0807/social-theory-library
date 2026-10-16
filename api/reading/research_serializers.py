@@ -1,0 +1,260 @@
+"""Published request contracts for API clients and subsequent frontend type generation."""
+from rest_framework import serializers
+
+
+class EvidenceAnchorInput(serializers.Serializer):
+    evidence_span_id = serializers.UUIDField(required=False)
+    asset_id = serializers.UUIDField(required=False)
+    document_revision_id = serializers.UUIDField(required=False)
+    pdf_page = serializers.IntegerField(min_value=1, required=False)
+    content_hash = serializers.CharField(max_length=64, required=False)
+
+
+class EvidenceReferenceInput(EvidenceAnchorInput):
+    anchors = EvidenceAnchorInput(many=True, required=False, help_text="跨页引用按顺序传 1—20 个同文件同修订的单页锚点。")
+
+
+class QueryScopeInput(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["library", "works", "passages", "filtered"], default="library")
+    filters = serializers.JSONField(required=False, help_text="Discovery 同一过滤协议；作品/学者/主题/时期/语言/类型。")
+    references = EvidenceReferenceInput(many=True, required=False)
+    allow_neighbors = serializers.BooleanField(default=False, help_text="限定段落时始终关闭，不扩大到整书。")
+
+
+class RevisionInput(serializers.Serializer):
+    expected_revision = serializers.IntegerField(min_value=1)
+
+
+class ProjectCreateInput(serializers.Serializer):
+    request_id = serializers.UUIDField(help_text="客户端每次新操作生成，重试沿用。")
+    title = serializers.CharField(max_length=240, required=False)
+    question = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    conversation_id = serializers.UUIDField(required=False)
+    scope = QueryScopeInput(required=False)
+
+
+class ProjectUpdateInput(RevisionInput):
+    title = serializers.CharField(max_length=240, required=False)
+    question = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    notes = serializers.CharField(max_length=20000, required=False, allow_blank=True)
+    scope = QueryScopeInput(required=False)
+    archived = serializers.BooleanField(required=False)
+    layout = serializers.JSONField(required=False)
+
+
+class SelectionInput(RevisionInput):
+    action = serializers.ChoiceField(choices=["add", "remove", "undo", "reorder"])
+    references = EvidenceReferenceInput(many=True, required=False)
+    reference_id = serializers.CharField(required=False)
+    order = serializers.ListField(child=serializers.CharField(), max_length=400, required=False)
+
+
+class ComparisonCellInput(serializers.Serializer):
+    dimension = serializers.CharField(max_length=160)
+    column_id = serializers.CharField(max_length=160, required=False, allow_blank=True,
+        help_text="当前选材的 edition:/work:/asset: 身份，或原比较格的文献身份。")
+    author = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    reference_ids = serializers.ListField(child=serializers.CharField(), max_length=400, required=False)
+    note = serializers.CharField(max_length=8000, required=False, allow_blank=True)
+
+
+class ComparisonInput(RevisionInput):
+    dimensions = serializers.ListField(child=serializers.CharField(max_length=160), max_length=20)
+    cells = ComparisonCellInput(many=True)
+
+
+class StatementInput(serializers.Serializer):
+    proposition = serializers.CharField(max_length=1200)
+    subject = serializers.CharField(required=False)
+    predicate = serializers.CharField(required=False)
+    object = serializers.CharField(required=False)
+    polarity = serializers.ChoiceField(choices=["positive", "negative", "mixed", "uncertain"], required=False)
+    modality = serializers.CharField(required=False)
+    qualifiers = serializers.ListField(child=serializers.CharField(), required=False)
+    temporal_scope = serializers.JSONField(required=False)
+    geographic_scope = serializers.JSONField(required=False)
+    population_scope = serializers.JSONField(required=False)
+
+
+class SubclaimInput(StatementInput):
+    id = serializers.UUIDField()
+
+
+class SubclaimsInput(RevisionInput):
+    subclaims = SubclaimInput(many=True, help_text="本人明确拆分的 0—12 个子命题；不自动认定为作者主张或有效反证。")
+
+
+class TurnCreateInput(RevisionInput):
+    request_id = serializers.UUIDField()
+    question = serializers.CharField(min_length=2, max_length=1200)
+    parent_id = serializers.UUIDField(required=False)
+    scope = QueryScopeInput(required=False)
+    mode = serializers.ChoiceField(choices=["search", "counterargument"], default="search")
+    statement = StatementInput(required=False)
+    subclaims = SubclaimInput(many=True, required=False)
+    active_subclaim_id = serializers.UUIDField(required=False, allow_null=True)
+    return_context = serializers.JSONField(required=False)
+
+
+class TurnRetryInput(RevisionInput):
+    request_id = serializers.UUIDField()
+
+
+class TurnExpandInput(TurnRetryInput):
+    scope = QueryScopeInput()
+    question = serializers.CharField(min_length=2, max_length=1200, required=False)
+
+
+class ImportedTurnInput(serializers.Serializer):
+    local_id = serializers.CharField(max_length=160)
+    parent_local_id = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    question = serializers.CharField(min_length=2, max_length=1200)
+    scope = QueryScopeInput(required=False)
+    references = EvidenceReferenceInput(many=True, required=False)
+    selected_references = EvidenceReferenceInput(many=True, required=False)
+    notes = serializers.CharField(max_length=20000, required=False, allow_blank=True)
+    created_at = serializers.DateTimeField(required=False)
+    status = serializers.ChoiceField(choices=["queued", "running", "completed", "partial", "failed", "canceled"], required=False)
+
+
+class ImportedComparisonInput(serializers.Serializer):
+    dimensions = serializers.ListField(child=serializers.CharField(max_length=160), max_length=20)
+    cells = ComparisonCellInput(many=True)
+
+
+class ProjectImportInput(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    title = serializers.CharField(max_length=240, required=False)
+    question = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    scope = QueryScopeInput(required=False)
+    schema_version = serializers.IntegerField(min_value=1, max_value=1)
+    local_id = serializers.CharField(max_length=160)
+    selections = EvidenceReferenceInput(many=True, required=False)
+    notes = serializers.CharField(max_length=20000, required=False, allow_blank=True)
+    layout = serializers.JSONField(required=False)
+    comparison = ImportedComparisonInput(required=False)
+    turns = ImportedTurnInput(many=True, required=False)
+
+
+class AnalysisDecisionInput(RevisionInput):
+    id = serializers.CharField(help_text="分析候选 id，来自轮次返回值。")
+    relation = serializers.ChoiceField(choices=["support", "different_conclusion", "qualification", "reframe", "insufficient_evidence"])
+    note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+
+
+class MemoryCreateInput(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    body = serializers.CharField(max_length=20000)
+    kind = serializers.ChoiceField(choices=["understanding", "question", "contradiction"], default="understanding")
+    project_id = serializers.UUIDField(required=False)
+    turn_id = serializers.UUIDField(required=False)
+    annotation_id = serializers.UUIDField(required=False)
+    sources = EvidenceReferenceInput(many=True, required=False)
+
+
+class MemoryUpdateInput(RevisionInput):
+    body = serializers.CharField(max_length=20000, required=False)
+    sources = EvidenceReferenceInput(many=True, required=False)
+    state = serializers.ChoiceField(choices=["proposed", "confirmed", "ignored"], required=False)
+
+
+class MemorySearchInput(serializers.Serializer):
+    q = serializers.CharField(max_length=1200)
+    semantic = serializers.BooleanField(default=False)
+    allowed_ids = serializers.ListField(child=serializers.UUIDField(), max_length=400, required=False)
+
+
+class PrerequisiteInput(serializers.Serializer):
+    work_id = serializers.UUIDField()
+    requires_work_id = serializers.UUIDField()
+    reference = EvidenceReferenceInput()
+
+
+class ReadingPaceInput(serializers.Serializer):
+    cjk_chars_per_minute = serializers.IntegerField(min_value=20, max_value=3000, required=False)
+    words_per_minute = serializers.IntegerField(min_value=20, max_value=1500, required=False)
+    fallback_minutes_per_page = serializers.IntegerField(min_value=1, max_value=60, required=False)
+
+
+class ItemEstimateInput(serializers.Serializer):
+    work_id = serializers.UUIDField()
+    difficulty = serializers.ChoiceField(choices=["beginner", "intermediate", "advanced"], required=False)
+    minutes = serializers.IntegerField(min_value=1, max_value=100000, required=False)
+
+
+class PlanPolicyInput(serializers.Serializer):
+    time_budget = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    budget_minutes = serializers.IntegerField(min_value=1, max_value=100000, allow_null=True, required=False)
+    session_minutes = serializers.IntegerField(min_value=5, max_value=480, required=False)
+    reading_level = serializers.ChoiceField(choices=["beginner", "intermediate", "advanced"], required=False)
+    reading_pace = ReadingPaceInput(required=False)
+    prefer_unread = serializers.BooleanField(required=False)
+    item_estimates = ItemEstimateInput(many=True, required=False)
+
+
+class PlanCreateInput(PlanPolicyInput):
+    request_id = serializers.UUIDField()
+    goal = serializers.CharField(max_length=4000, help_text="无材料时先启动 Discovery；此时问题最多 1200 字符。")
+    background = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    time_budget = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    project_id = serializers.UUIDField(required=False)
+    turn_id = serializers.UUIDField(required=False)
+    reading_path_id = serializers.UUIDField(required=False)
+    references = EvidenceReferenceInput(many=True, required=False)
+    prerequisites = PrerequisiteInput(many=True, required=False)
+    scope = QueryScopeInput(required=False)
+
+
+class PlanUpdateInput(RevisionInput, PlanPolicyInput):
+    order = serializers.ListField(child=serializers.UUIDField(), required=False)
+    item_id = serializers.UUIDField(required=False)
+    status = serializers.ChoiceField(choices=["pending", "reading", "completed", "skipped"], required=False)
+    note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    reference = EvidenceReferenceInput(required=False)
+    adopt_suggestion = serializers.BooleanField(required=False)
+    optimize_order = serializers.BooleanField(required=False)
+
+
+class PlanCommandInput(RevisionInput):
+    action = serializers.ChoiceField(choices=["cancel", "retry", "enhance"])
+
+
+class CitationOCROutput(serializers.Serializer):
+    progress = serializers.JSONField(read_only=True)
+    units = serializers.JSONField(read_only=True, required=False)
+    unit = serializers.JSONField(read_only=True, required=False)
+
+
+class AuditCreateInput(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    file = serializers.FileField(help_text="DOCX/PDF，最大 12 MiB，仅保存在本人的加密记录中。")
+    project_id = serializers.UUIDField(required=False)
+
+
+class AuditCommandInput(RevisionInput):
+    action = serializers.ChoiceField(choices=["cancel", "match", "link", "decision", "analyze", "retry"])
+    entry_id = serializers.UUIDField(required=False)
+    edition_id = serializers.UUIDField(required=False)
+    occurrence_id = serializers.UUIDField(required=False)
+    occurrence_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    entry_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    decision = serializers.ChoiceField(choices=["accepted", "ignored", "corrected", "needs_review"], required=False)
+    note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    reference = EvidenceReferenceInput(required=False)
+
+
+class ResearchPreferenceInput(serializers.Serializer):
+    research_personalization = serializers.BooleanField()
+
+
+class ResearchAccountCountsOutput(serializers.Serializer):
+    research = serializers.IntegerField(min_value=0, read_only=True)
+    memories = serializers.IntegerField(min_value=0, read_only=True)
+    plans = serializers.IntegerField(min_value=0, read_only=True)
+    audits = serializers.IntegerField(min_value=0, read_only=True)
+
+
+class ResearchAccountOutput(serializers.Serializer):
+    counts = ResearchAccountCountsOutput(read_only=True)
+    preferences = serializers.BooleanField(read_only=True)
+    deletion_notice = serializers.CharField(read_only=True)

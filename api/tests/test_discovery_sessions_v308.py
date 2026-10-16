@@ -127,6 +127,29 @@ def test_cursor_is_bound_to_session():
         sessions.serialize_session(other, ["public"], cursor=cursor)
 
 
+def test_deep_prefix_preserves_tail_and_old_baseline_cursor():
+    _, asset, _, docs = fixture_source(7)
+    session = make_session(docs[:6])
+    baseline_cursor = sessions.serialize_session(session, ["public"], limit=3)["next_cursor"]
+    session.results[sessions.DEEP_RESULTS_KEY] = [
+        {"id": str(doc.pk), "source_revision": doc.source_revision} for doc in (docs[6], docs[1])]
+    session.results[sessions.DEEP_RANKED_KEY] = True
+    merged = sessions.serialize_session(session, ["public"], limit=440)
+    assert [row["id"] for row in merged["passages"]] == [
+        str(doc.pk) for doc in (docs[6], docs[1], docs[0], *docs[2:6])]
+    old_page = sessions.serialize_session(session, ["public"], cursor=baseline_cursor)
+    assert [row["id"] for row in old_page["passages"]] == [str(doc.pk) for doc in docs[3:6]]
+    assert session_context(session, str(docs[6].pk), ["public"])["excerpt"] == docs[6].text
+    deep_cursor = sessions.serialize_session(session, ["public"], limit=3)["next_cursor"]
+    session.results[sessions.DEEP_RESULTS_KEY].reverse()
+    with pytest.raises(ValidationError):
+        sessions.serialize_session(session, ["public"], cursor=deep_cursor)
+    Asset.objects.filter(pk=asset.pk).update(access_status="private")
+    assert sessions.rehydrate_passages(session, ["public"]) == []
+    with pytest.raises(NotFound):
+        session_context(session, str(docs[6].pk), ["public"])
+
+
 def test_cancel_during_retrieval_blocks_late_channel_write(monkeypatch):
     session = make_session(status="queued")
     calls = []
