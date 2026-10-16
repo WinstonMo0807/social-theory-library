@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { classifyClientError, getServerSessionCredential, isUnauthenticatedError, type ClientErrorCategory } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
 import type { ProjectData, ResearchRecord } from "@/lib/api/research.client";
@@ -51,6 +51,7 @@ export function ResearchSessionList() {
   const [state, setState] = useState<LoadState>("idle");
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const lastReadAt = useRef(0);
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
@@ -76,6 +77,7 @@ export function ResearchSessionList() {
       .then((nextRows) => {
         if (controller.signal.aborted) return;
         setRows(nextRows.sort((left, right) => right.updated_at.localeCompare(left.updated_at)));
+        lastReadAt.current = Date.now();
         setState("ready");
       })
       .catch((reason: unknown) => {
@@ -89,6 +91,21 @@ export function ResearchSessionList() {
       });
     return () => controller.abort();
   }, [attempt, session.status, session.user]);
+
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState !== "visible" || session.status !== "authenticated" || Date.now() - lastReadAt.current < 30_000) return;
+      setAttempt((value) => value + 1);
+    };
+    window.addEventListener("focus", revalidate);
+    window.addEventListener("pageshow", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      window.removeEventListener("focus", revalidate);
+      window.removeEventListener("pageshow", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
+  }, [session.status]);
 
   const countLabel = useMemo(() => `${rows.length} 个会话`, [rows.length]);
 
