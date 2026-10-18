@@ -14,9 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import research
-from .citation_audit import audit_capabilities, create_audit, original_document, update_audit
+from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
-from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, CitationOCROutput, ComparisonInput,
+from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonInput,
     MemoryCreateInput, MemorySearchInput, MemoryUpdateInput, PlanCreateInput, PlanUpdateInput,
     PlanCommandInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
     SubclaimsInput, TurnExpandInput, TurnRetryInput)
@@ -270,6 +270,19 @@ class CitationAuditViewSet(PrivateRecordViewSet):
     def create(self, request):
         AuditCreateInput(data=request.data).is_valid(raise_exception=True)
         audit = create_audit(request.user, request.FILES.get("file"), request.data)
+        return Response(research.serialize_record(audit, request.user), status=202)
+
+    @extend_schema(responses=AuditVersionsOutput)
+    @action(detail=True, methods=["get"])
+    def versions(self, request, pk=None):
+        return Response(audit_versions(self.get_object(), request.user))
+
+    @extend_schema(request={"multipart/form-data": AuditVersionInput}, responses={202: PrivateRecordSerializer})
+    @versions.mapping.post
+    def upload_version(self, request, pk=None):
+        schema = AuditVersionInput(data=request.data)
+        schema.is_valid(raise_exception=True)
+        audit = create_audit(request.user, request.FILES.get("file"), schema.validated_data, parent_id=pk)
         return Response(research.serialize_record(audit, request.user), status=202)
 
     @extend_schema(request=AuditCommandInput)

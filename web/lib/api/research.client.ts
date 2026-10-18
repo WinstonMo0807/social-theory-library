@@ -99,6 +99,16 @@ export type AuditOccurrence = {
   support_analysis?: { status: string; reference: ResolvedEvidence; suggestions: Array<{ relation?: string; reason?: string; [key: string]: unknown }> };
   history?: Array<{ generation: number; checked_at: string; findings: AuditFinding[]; decision?: AuditDecision | null }>;
 };
+export type AuditVersionSummary = {
+  id: string; revision: number; manuscript_revision: number; filename: string; status: string;
+  created_at: string; finished_at: string | null; parent_audit_id: string | null;
+};
+export type AuditVersions = { current_id: string; versions: AuditVersionSummary[]; notice: string; truncated?: boolean };
+export type AuditVersionComparison = {
+  status: "pending" | "completed"; base_audit_id: string; notice?: string;
+  total_occurrences?: number; changed_occurrences?: number; reused_occurrences?: number; added_occurrences?: number;
+  removed_occurrences?: number; ambiguous_occurrences?: number; changed_bibliography_entries?: number; rechecked_occurrences?: number;
+};
 export type AuditData = {
   filename: string; filetype: "pdf" | "docx"; manuscript_revision?: number; stage?: string; parsed?: boolean;
   bibliography: AuditEntry[]; occurrences: AuditOccurrence[]; checks?: AuditCheck[]; scope?: string;
@@ -108,6 +118,8 @@ export type AuditData = {
   ocr_progress?: { processed?: number; total?: number; completed?: number; failed?: number; no_text?: number };
   ocr_units?: Record<string, { status: string; pdf_page?: number; error?: string; [key: string]: unknown }>;
   parse_history?: Array<{ occurrences?: AuditOccurrence[]; bibliography?: AuditEntry[]; [key: string]: unknown }>;
+  version_lineage?: { parent_audit_id: string; parent_revision: number; ancestor_ids: string[]; check_changed_only: boolean };
+  version_comparison?: AuditVersionComparison;
 };
 
 export const researchRecordPath = (collection: ResearchCollection, id?: string) => `/reading/${collection}/${id ? `${encodeURIComponent(id)}/` : ""}`;
@@ -201,6 +213,11 @@ export function createCitationAudit(file: File, requestId: string, projectId?: s
 }
 export function commandCitationAudit(id: string, data: Revision & { action: "cancel" | "match" | "link" | "decision" | "analyze" | "retry"; entry_id?: string; edition_id?: string; occurrence_id?: string; occurrence_ids?: string[]; entry_ids?: string[]; decision?: "accepted" | "ignored" | "corrected" | "needs_review"; note?: string; corrected_text?: string; reference?: EvidenceReference }) {
   return write<ResearchRecord<AuditData>>(`${researchRecordPath("citation-audits", id)}command/`, data);
+}
+export function createCitationAuditVersion(id: string, file: File, data: Revision & { request_id: string; check_changed_only: boolean }) {
+  const body = new FormData(); body.set("file", file); body.set("request_id", data.request_id);
+  body.set("expected_revision", String(data.expected_revision)); body.set("check_changed_only", String(data.check_changed_only));
+  return privateRequest<ResearchRecord<AuditData>>(`${researchRecordPath("citation-audits", id)}versions/`, { method: "POST", body });
 }
 export function readCitationOCR(id: string, unit?: string, signal?: AbortSignal) {
   return privateRequest<{ progress: Record<string, unknown>; units?: Array<Record<string, unknown>>; unit?: Record<string, unknown> }>(`${researchRecordPath("citation-audits", id)}ocr/${unit ? `?unit_id=${encodeURIComponent(unit)}` : ""}`, { signal });

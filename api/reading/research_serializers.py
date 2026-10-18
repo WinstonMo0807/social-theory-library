@@ -246,6 +246,31 @@ class AuditCreateInput(serializers.Serializer):
     scope = serializers.ChoiceField(choices=["public_library"], required=False)
 
 
+class AuditVersionInput(RevisionInput):
+    request_id = serializers.UUIDField()
+    file = serializers.FileField(help_text="新版本 DOCX/PDF，最大 12 MiB；原稿与旧报告保持独立。")
+    check_changed_only = serializers.BooleanField(default=True,
+        help_text="默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。")
+
+
+class AuditVersionSummary(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    revision = serializers.IntegerField(read_only=True)
+    manuscript_revision = serializers.IntegerField(read_only=True)
+    filename = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    parent_audit_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+
+class AuditVersionsOutput(serializers.Serializer):
+    current_id = serializers.UUIDField(read_only=True)
+    versions = AuditVersionSummary(many=True, read_only=True)
+    notice = serializers.CharField(read_only=True)
+    truncated = serializers.BooleanField(read_only=True)
+
+
 class AuditCapabilitiesOutput(serializers.Serializer):
     max_upload_bytes = serializers.IntegerField(read_only=True)
     max_pdf_pages = serializers.IntegerField(read_only=True)

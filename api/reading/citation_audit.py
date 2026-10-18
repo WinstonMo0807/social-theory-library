@@ -6,6 +6,7 @@ none are public catalog objects. The original package is retained byte-for-byte.
 from __future__ import annotations
 
 import base64
+from collections import Counter
 from copy import deepcopy
 import hashlib
 from io import BytesIO
@@ -424,6 +425,7 @@ def match_bibliography(entry, editions):
         rank += sum(20 if signal["status"] in {"matched", "mentioned"} else -20 if signal["status"] == "conflict" else 0
             for signal in signals.values())
         candidate = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": title_value,
+            "catalog_revision_id": str(edition.active_catalog_revision_id),
             "year": values.get("publication_year"), "version_label": values.get("version_label", ""),
             "basis": identity, "similarity": score if identity == "fuzzy_candidate" else None,
             "identity_signals": signals, "review_fields": conflicts,
@@ -437,9 +439,11 @@ def match_bibliography(entry, editions):
     entry["candidates"] = [{key: value for key, value in row.items() if key != "_rank"} for row in candidates[:8]]
     if exact_count == 1 and not exact_candidate["review_fields"]:
         entry["identity_status"], entry["selected_edition_id"] = "identifier_matched", exact_candidate["edition_id"]
+        entry["selected_catalog_revision_id"] = exact_candidate["catalog_revision_id"]
     else:
         entry["identity_status"] = "needs_review" if candidates else "not_matched_in_library"
         entry["selected_edition_id"] = None
+        entry.pop("selected_catalog_revision_id", None)
     return entry
 
 
@@ -521,8 +525,7 @@ def check_occurrence(occurrence, entries, user):
 
 
 @transaction.atomic
-def create_audit(user, upload, data):
-    checks = audit_options(data)
+def create_audit(user, upload, data, *, parent_id=None):
     if upload is None or upload.size > MAX_UPLOAD_BYTES:
         raise ValidationError({"file": "请上传不超过 12 MiB 的 DOCX 或 PDF。"})
     name = PurePath(str(upload.name)).name
@@ -537,31 +540,259 @@ def create_audit(user, upload, data):
     from django.contrib.auth import get_user_model
     get_user_model().objects.select_for_update().get(pk=user.pk)
     digest = hashlib.sha256(blob).hexdigest()
-    fingerprint_data = {"filename": name, "content_hash": digest, "project_id": data.get("project_id")}
-    # Keep legacy idempotency keys valid for unchanged default requests.
-    if "checks" in data or "scope" in data:
-        fingerprint_data.update(checks=checks, scope="public_library")
+    parent_id = identifier(parent_id) if parent_id is not None else None
+    if parent_id:
+        changed_only = data.get("check_changed_only", True)
+        if not isinstance(changed_only, bool):
+            raise ValidationError({"check_changed_only": "需要布尔值。"})
+        fingerprint_data = {"filename": name, "content_hash": digest, "parent_id": parent_id,
+            "expected_revision": data.get("expected_revision"), "check_changed_only": changed_only}
+    else:
+        checks = audit_options(data)
+        fingerprint_data = {"filename": name, "content_hash": digest, "project_id": data.get("project_id")}
+        # Keep legacy idempotency keys valid for unchanged default requests.
+        if "checks" in data or "scope" in data:
+            fingerprint_data.update(checks=checks, scope="public_library")
     fingerprint = request_fingerprint(fingerprint_data, tuple(fingerprint_data))
     existing = CitationAudit.objects.filter(user=user, request_id=request_id).first()
     if existing:
         if existing.content_hash != digest:
             raise ResearchConflict("该请求标识已用于另一份稿件。")
         return same_request(existing, fingerprint)
+    parent, previous = None, None
+    if parent_id:
+        parent = owned(CitationAudit, user, parent_id, lock=True)
+        expect(parent, data.get("expected_revision"))
+        previous = unpack(parent)
+        if parent.status in ACTIVE or not previous.get("parsed"):
+            raise ResearchConflict("请先完成或取消原稿检查，并取得已解析的稿件报告后再上传新版本。")
+        checks = audit_options({"checks": previous.get("checks", list(UPLOAD_CHECKS)),
+            "scope": previous.get("scope", "public_library")})
     if CitationAudit.objects.filter(user=user, status__in=ACTIVE).count() >= MAX_ACTIVE_AUDITS_PER_OWNER:
         raise ResearchConflict("本人已有两项体检排队或运行，请等待完成或取消后再上传。")
     if "scan_ocr" in checks and not audit_capabilities()["ocr"]["available"]:
-        raise ValidationError({"checks": "本地 OCR 暂不可用，请关闭扫描页识别或稍后重试。"})
-    project = source_project(user, data)
+        raise ValidationError({"checks": "本版本继承的本地 OCR 暂不可用，请保留新稿并稍后重试。" if parent else "本地 OCR 暂不可用，请关闭扫描页识别或稍后重试。"})
+    project = source_project(user, {"project_id": str(parent.project_id)} if parent and parent.project_id else {} if parent else data)
+    payload = {"request_fingerprint": fingerprint, "filename": name, "filetype": kind, "manuscript_revision": 1,
+        "bibliography": [], "occurrences": [], "warnings": [], "external_metadata": False,
+        "checks": checks, "scope": "public_library", "file_size_bytes": len(blob),
+        "manuscript_stats": {"file_size_bytes": len(blob)},
+        "checker_version": CHECKER_VERSION, "stage": "queued", "rerun_occurrence_ids": None}
+    if parent:
+        payload["manuscript_revision"] = previous.get("manuscript_revision", 1) + 1
+        payload["version_lineage"] = {"parent_audit_id": str(parent.id), "parent_revision": parent.revision,
+            "ancestor_ids": [*previous.get("version_lineage", {}).get("ancestor_ids", []), str(parent.id)],
+            "check_changed_only": changed_only}
+        payload["version_comparison"] = {"status": "pending", "base_audit_id": str(parent.id),
+            "notice": "完成新稿解析后，按引文内容、上下文及引用书目比较；原稿与旧报告保留。"}
+        # The baseline is encrypted and immutable even if the owner later edits/deletes
+        # the old report. Original bytes/OCR images are never copied between versions.
+        payload["version_baseline"] = deepcopy({key: previous.get(key) for key in
+            ("bibliography", "occurrences", "checker_version", "checks", "scope")})
+        payload["version_baseline"]["checks"] = checks
     audit = CitationAudit.objects.create(user=user, project=project, request_id=request_id,
         content_hash=digest, task_id=str(uuid4()), original_ciphertext=encrypt_private_text(base64.b64encode(blob).decode("ascii")),
-        data_ciphertext=pack({"request_fingerprint": fingerprint, "filename": name, "filetype": kind, "manuscript_revision": 1,
-            "bibliography": [], "occurrences": [], "warnings": [], "external_metadata": False,
-            "checks": checks, "scope": "public_library", "file_size_bytes": len(blob),
-            "manuscript_stats": {"file_size_bytes": len(blob)},
-            "checker_version": CHECKER_VERSION, "stage": "queued", "rerun_occurrence_ids": None}))
+        data_ciphertext=pack(payload))
+    if parent:
+        previous.setdefault("version_children", []).append(str(audit.id))
+        save_data(parent, previous)
     from .tasks import enqueue_citation_audit
     transaction.on_commit(lambda: enqueue_citation_audit(audit.id, audit.generation, audit.task_id))
     return audit
+
+
+def audit_versions(audit, user):
+    """Follow only encrypted, owner-checked links; never scan other private jobs."""
+    pending, visited, result = {str(audit.id)}, set(), []
+    # ponytail: bounded graph walk covers normal histories without a new index/table.
+    # Extremely large families remain accessible through the existing paginated task list.
+    limit = 200
+    while pending and len(visited) < limit:
+        batch = sorted(pending)[:limit - len(visited)]
+        pending.difference_update(batch)
+        visited.update(batch)
+        for record in CitationAudit.objects.filter(user=user, pk__in=batch).defer("original_ciphertext").iterator(chunk_size=10):
+            payload = unpack(record)
+            lineage = payload.get("version_lineage", {})
+            pending.update(set([*lineage.get("ancestor_ids", []), *payload.get("version_children", [])]) - visited)
+            result.append({"id": str(record.id), "revision": record.revision,
+                "manuscript_revision": payload.get("manuscript_revision", 1), "filename": payload.get("filename", ""),
+                "status": record.status, "created_at": record.created_at.isoformat(),
+                "finished_at": record.finished_at.isoformat() if record.finished_at else None,
+                "parent_audit_id": lineage.get("parent_audit_id")})
+    return {"current_id": str(audit.id), "versions": sorted(result, key=lambda row: row["created_at"], reverse=True),
+        "truncated": bool(pending), "notice": ("仅列出可访问的关联版本；分支使用各自稿件版本号，旧原稿与报告独立保留。删除中间版本可能断开后续关联，仍存在的版本可从体检任务列表打开。"
+            + ("此处最多显示 200 个关联记录，其余可从体检任务列表打开。" if pending else ""))}
+
+
+def _entry_content(row):
+    return json.dumps({key: row.get(key) for key in ("raw", "label", "doi", "kind", "field_item")},
+        ensure_ascii=False, sort_keys=True)
+
+
+def _occurrence_content(row):
+    # Positions may move after an insertion; exact wording/context and source part
+    # must still agree. No fuzzy match can carry a person's decision to another quote.
+    return json.dumps({"part": row.get("location", {}).get("part"), **{key: row.get(key) for key in
+        ("raw", "quote", "context", "labels", "author_date", "citation_field", "note_text")}},
+        ensure_ascii=False, sort_keys=True)
+
+
+def _catalog_identity_current(entry, edition):
+    if edition is None:
+        return False
+    revision_id = entry.get("selected_catalog_revision_id")
+    if revision_id:
+        return revision_id == str(edition.active_catalog_revision_id)
+    candidate = next((item for item in entry.get("candidates", []) if item.get("edition_id") == str(edition.id)), {})
+    return bool(candidate.get("citation") and candidate["citation"] == format_gbt_7714_2025(edition, snapshot=edition.active_catalog_revision.snapshot))
+
+
+def _revalidate_reused_occurrences(payload, user):
+    """A resumed lease cannot trust evidence that was valid when parsing finished."""
+    reused = [row for row in payload.get("occurrences", []) if row.get("reused_at")]
+    if not reused:
+        return
+    entries = {entry["id"]: entry for entry in payload["bibliography"]}
+    editions = {str(edition.id): edition for edition in public_editions().filter(
+        pk__in=[entry["selected_edition_id"] for entry in entries.values() if entry.get("selected_edition_id")])}
+    targets = payload.get("rerun_occurrence_ids")
+    for row in reused:
+        current = True
+        for entry_id in row.get("entry_ids", []):
+            entry = entries.get(entry_id)
+            if entry is None:
+                current = False
+                continue
+            selected = entry.get("selected_edition_id")
+            if selected and not _catalog_identity_current(entry, editions.get(selected)):
+                current = False
+                if entry.get("identity_status") != "user_confirmed":
+                    entry["version_rematch"] = True
+        refs = [ref for finding in row.get("findings", []) for ref in finding.get("references", [])]
+        if row.get("support_analysis", {}).get("reference"):
+            refs.append(row["support_analysis"]["reference"])
+        if any(resolve_reference(ref, user)["source_status"] != "available" for ref in refs):
+            current = False
+        if current:
+            continue
+        if row.get("decision"):
+            row.setdefault("decision_history", []).append(deepcopy(row["decision"]))
+            row["decision"] = None
+        row.pop("reused_at", None)
+        row.pop("checked_generation", None)
+        row["version_change"] = "evidence_changed"
+        row["version_revalidated_at"] = timezone.now().isoformat()
+        if row.get("support_analysis"):
+            row["support_analysis"].update(status="source_unavailable", suggestions=[])
+        if targets is not None and row["id"] not in targets:
+            targets.append(row["id"])
+    comparison = payload.get("version_comparison")
+    if comparison:
+        remaining = sum(bool(row.get("reused_at")) for row in payload["occurrences"])
+        comparison.update(reused_occurrences=remaining, rechecked_occurrences=len(payload["occurrences"]) - remaining,
+            changed_occurrences=sum(row.get("version_change") != "unchanged" for row in payload["occurrences"]))
+
+
+def _compare_version(parsed, payload, user, generation):
+    baseline = payload["version_baseline"]
+    lineage = payload["version_lineage"]
+    changed_only = lineage["check_changed_only"]
+    old_entries, old_rows = baseline.get("bibliography") or [], baseline.get("occurrences") or []
+    old_entry_counts, new_entry_counts = Counter(map(_entry_content, old_entries)), Counter(map(_entry_content, parsed["bibliography"]))
+    old_entries_by_content = {_entry_content(row): row for row in old_entries}
+    existing_entry_ids = {row["id"] for row in payload.get("bibliography", [])}
+    existing_contents = {_occurrence_content(row) for row in payload.get("occurrences", [])}
+    available_editions = {str(edition.id): edition for edition in public_editions().filter(
+        pk__in=[row["selected_edition_id"] for row in old_entries if row.get("selected_edition_id")])}
+    entry_map = {}
+    for entry in parsed["bibliography"]:
+        key = _entry_content(entry)
+        if old_entry_counts[key] != 1 or new_entry_counts[key] != 1:
+            continue
+        old = old_entries_by_content[key]
+        entry_map[old["id"]] = entry["id"]
+        if entry["id"] in existing_entry_ids:
+            continue  # Current-version owner edits outrank the immutable parent snapshot.
+        entry["inherited_from"] = {"audit_id": lineage["parent_audit_id"], "entry_id": old["id"]}
+        entry["history"] = deepcopy(old.get("history", []))
+        selected = old.get("selected_edition_id")
+        if selected in available_editions or old.get("identity_status") == "not_requested":
+            entry.update(deepcopy({name: old[name] for name in
+                ("identity_status", "selected_edition_id", "selected_catalog_revision_id", "candidates", "identity_hints") if name in old}))
+            if not changed_only and old.get("identity_status") != "user_confirmed" and "bibliography_identity" in payload["checks"]:
+                entry["version_rematch"] = True
+        elif selected:
+            entry["history"].append({"selected_edition_id": selected, "identity_status": old.get("identity_status"),
+                "reason": "new_version_requires_matching", "audit_id": lineage["parent_audit_id"]})
+    old_counts, new_counts = Counter(map(_occurrence_content, old_rows)), Counter(map(_occurrence_content, parsed["occurrences"]))
+    old_by_content = {_occurrence_content(row): row for row in old_rows}
+    old_by_id = {row["id"]: row for row in old_entries}
+    new_by_id = {row["id"]: row for row in parsed["bibliography"]}
+    targets, reused = [], 0
+    for row in parsed["occurrences"]:
+        key = _occurrence_content(row)
+        old = old_by_content.get(key)
+        unique = old_counts[key] == 1 and new_counts[key] == 1
+        row["version_change"] = "ambiguous" if old and not unique else "added"
+        if not unique:
+            targets.append(row["id"])
+            continue
+        linked = old.get("entry_ids", [])
+        mapped = [entry_map[value] for value in linked if value in entry_map]
+        complete_links = len(mapped) == len(linked)
+        if old.get("entry_link") and complete_links and old_entry_counts == new_entry_counts and key not in existing_contents:
+            row["entry_ids"] = mapped
+        unchanged = complete_links and set(mapped) == set(row.get("entry_ids", []))
+        if old.get("entry_link") and old_entry_counts != new_entry_counts:
+            unchanged = False
+        evidence_current = unchanged
+        for old_id, new_id in zip(linked, mapped) if complete_links else []:
+            selected = old_by_id[old_id].get("selected_edition_id")
+            if selected and (selected not in available_editions or new_by_id[new_id].get("selected_edition_id") != selected):
+                evidence_current = False
+            elif selected:
+                # Legacy matches can only be reused when their saved citation agrees
+                # with the current public catalog snapshot. Missing proof means recheck.
+                if not _catalog_identity_current(old_by_id[old_id], available_editions[selected]):
+                    evidence_current = False
+                    if new_by_id[new_id].get("identity_status") != "user_confirmed":
+                        new_by_id[new_id]["version_rematch"] = True
+        references = [ref for finding in old.get("findings", []) for ref in finding.get("references", [])]
+        if old.get("support_analysis", {}).get("reference"):
+            references.append(old["support_analysis"]["reference"])
+        if evidence_current and any(resolve_reference(ref, user)["source_status"] != "available" for ref in references):
+            evidence_current = False
+        row["version_change"] = "bibliography_changed" if not unchanged else "evidence_changed" if not evidence_current else "unchanged"
+        if unchanged:
+            row["inherited_from"] = {"audit_id": lineage["parent_audit_id"], "occurrence_id": old["id"]}
+        if evidence_current and key not in existing_contents:
+            row.update(deepcopy({name: old[name] for name in ("decision", "decision_history", "history", "link_history") if name in old}))
+            if old.get("entry_link"):
+                row["entry_link"] = {**deepcopy(old["entry_link"]), "entry_ids": mapped}
+        # Unfinished/negative checks can change when the corpus or OCR coverage grows.
+        # Recheck them even when the manuscript text itself is unchanged.
+        reusable = (evidence_current and changed_only and bool(old.get("checked_at"))
+            and baseline.get("checker_version") == CHECKER_VERSION and baseline.get("checks") == payload.get("checks")
+            and key not in existing_contents
+            and not any(finding.get("status") == "unverified" for finding in old.get("findings", []))
+            and all(old_by_id[value].get("identity_status") in {"user_confirmed", "identifier_matched", "not_requested"} for value in linked))
+        if reusable:
+            row.update(deepcopy({name: old[name] for name in ("findings", "support_analysis", "checked_at", "checker_version") if name in old}))
+            row["checked_generation"] = generation
+            row["reused_at"] = timezone.now().isoformat()
+            reused += 1
+        else:
+            targets.append(row["id"])
+    payload["rerun_occurrence_ids"] = targets
+    payload["version_comparison"] = {"status": "completed", "base_audit_id": lineage["parent_audit_id"],
+        "total_occurrences": len(parsed["occurrences"]), "changed_occurrences": sum(row["version_change"] != "unchanged" for row in parsed["occurrences"]),
+        "reused_occurrences": reused, "added_occurrences": sum((new_counts - old_counts).values()),
+        "removed_occurrences": sum((old_counts - new_counts).values()),
+        "ambiguous_occurrences": sum(row["version_change"] == "ambiguous" for row in parsed["occurrences"]),
+        "changed_bibliography_entries": sum((new_entry_counts - old_entry_counts).values()) + sum((old_entry_counts - new_entry_counts).values()),
+        "rechecked_occurrences": len(targets),
+        "notice": "按文字、上下文和引用书目精确比较；内容改写计为旧位置移除及新位置加入，重复歧义、书目变化和失效依据重新检查。重查数量为本轮处理范围，进度以任务状态为准。"}
 
 
 def process_audit(audit_id, generation, task_id):
@@ -616,6 +847,8 @@ def process_audit(audit_id, generation, task_id):
             return
         parsed = parse_manuscript(blob, payload["filetype"], paragraphs=paragraphs)
         _preserve_parser_decisions(parsed, payload)
+        if payload.get("version_baseline"):
+            _compare_version(parsed, payload, audit.user, generation)
         payload.update(parsed)
         payload["warnings"] = [*payload["warnings"], *ocr_warnings]
         payload["parsed"] = True
@@ -625,15 +858,33 @@ def process_audit(audit_id, generation, task_id):
             return
     # Pending identities survive cancellation or a matching failure; retries do not
     # discard an already confirmed version or repeat completed catalog scans.
-    pending_entries = [entry for entry in payload["bibliography"] if entry["identity_status"] == "pending"]
+    _revalidate_reused_occurrences(payload, audit.user)
+    pending_entries = [entry for entry in payload["bibliography"] if entry["identity_status"] == "pending" or entry.get("version_rematch")]
     for index, entry in enumerate(pending_entries):
         if not CitationAudit.objects.filter(pk=audit_id, generation=generation, task_id=task_id, status="running").exists():
             return
         if "bibliography_identity" in checks:
             # Stream catalog rows: the full published corpus must not reside in every private worker.
+            previous_selection = entry.get("selected_edition_id")
             match_bibliography(entry, public_editions().iterator(chunk_size=200))
+            if entry.pop("version_rematch", False) and entry.get("selected_edition_id") != previous_selection:
+                targets = payload.get("rerun_occurrence_ids")
+                for row in payload["occurrences"]:
+                    if entry["id"] not in row["entry_ids"]:
+                        continue
+                    if row.get("decision"):
+                        row.setdefault("decision_history", []).append(row.pop("decision"))
+                        row["decision"] = None
+                    row["version_change"] = "evidence_changed"
+                    if targets is not None and row["id"] not in targets:
+                        targets.append(row["id"])
+                comparison = payload.get("version_comparison")
+                if comparison and targets is not None:
+                    comparison.update(changed_occurrences=sum(row.get("version_change") != "unchanged" for row in payload["occurrences"]),
+                        rechecked_occurrences=len(targets), reused_occurrences=len(payload["occurrences"]) - len(targets))
         else:
             entry["identity_status"] = "not_requested"
+            entry.pop("version_rematch", None)
         if not _checkpoint(audit_id, generation, task_id, payload, index + 1, len(pending_entries), "matching"):
             return
     selected_ids = payload.get("rerun_occurrence_ids")
@@ -649,6 +900,7 @@ def process_audit(audit_id, generation, task_id):
             occurrence.setdefault("history", []).append({"generation": occurrence.get("checked_generation", generation - 1),
                 "checked_at": occurrence["checked_at"], "findings": occurrence.get("findings", []),
                 "support_analysis": occurrence.get("support_analysis"), "decision": occurrence.get("decision")})
+        occurrence.pop("reused_at", None)
         occurrence["findings"] = check_occurrence(occurrence, payload["bibliography"], audit.user) if "version_page" in checks else []
         requested_ref = payload.get("support_requests", {}).get(occurrence["id"])
         if requested_ref:
@@ -670,6 +922,10 @@ def process_audit(audit_id, generation, task_id):
     payload["stage"] = "report"
     payload["report_notice"] = "没有总分；分别呈现书目身份、原文匹配、页码与论断关系。未命中不等于未收录，也不等于引文错误。"
     payload["rerun_occurrence_ids"] = None
+    if payload.get("version_comparison"):
+        remaining = sum(bool(row.get("reused_at")) for row in payload["occurrences"])
+        payload["version_comparison"].update(reused_occurrences=remaining,
+            rechecked_occurrences=len(payload["occurrences"]) - remaining)
     incomplete = bool(payload["warnings"]) or any(entry["identity_status"] in {"needs_review", "not_matched_in_library"} for entry in payload["bibliography"])
     incomplete = incomplete or any(finding["status"] == "unverified" or finding.get("page_status") == "needs_review"
         for row in payload["occurrences"] for finding in row["findings"])
@@ -694,27 +950,39 @@ def _checkpoint(audit_id, generation, task_id, payload, completed, total, stage)
 
 
 def _preserve_parser_decisions(parsed, previous):
-    def key(row):
-        return json.dumps({"location": row.get("location"), "raw": row.get("raw"),
-            "field": row.get("citation_field")}, ensure_ascii=False, sort_keys=True)
-    old_entries = {key(row): row for row in previous.get("bibliography", [])}
+    entry_key = _entry_content
+    old_entries = {entry_key(row): row for row in previous.get("bibliography", [])}
+    old_entry_counts = Counter(entry_key(row) for row in previous.get("bibliography", []))
+    new_entry_counts = Counter(entry_key(row) for row in parsed["bibliography"])
     id_map = {}
     for entry in parsed["bibliography"]:
-        old = old_entries.get(key(entry))
-        if old:
+        key = entry_key(entry)
+        old = old_entries.get(key)
+        if old and old_entry_counts[key] == new_entry_counts[key] == 1:
             id_map[entry["id"]] = old["id"]
-            entry.update(deepcopy({name: old[name] for name in ("id", "identity_status", "selected_edition_id", "history", "candidates") if name in old}))
-    old_occurrences = {key(row): row for row in previous.get("occurrences", [])}
+            entry.update(deepcopy({name: old[name] for name in ("id", "identity_status", "selected_edition_id", "selected_catalog_revision_id", "history", "candidates", "inherited_from") if name in old}))
+    occurrence_key = _occurrence_content
+    old_occurrences = {occurrence_key(row): row for row in previous.get("occurrences", [])}
+    old_counts = Counter(occurrence_key(row) for row in previous.get("occurrences", []))
+    new_counts = Counter(occurrence_key(row) for row in parsed["occurrences"])
+    available_ids = {entry["id"] for entry in parsed["bibliography"]}
     for occurrence in parsed["occurrences"]:
         occurrence["entry_ids"] = [id_map.get(value, value) for value in occurrence["entry_ids"]]
-        old = old_occurrences.get(key(occurrence))
-        if old:
-            occurrence.update(deepcopy({name: old[name] for name in ("id", "decision", "decision_history", "findings", "history", "checked_at", "checked_generation", "support_analysis", "entry_link", "link_history") if name in old}))
-            if old.get("entry_link"):
-                available_ids = {entry["id"] for entry in parsed["bibliography"]}
-                selected = old["entry_link"]["entry_ids"]
-                occurrence["entry_ids"] = [value for value in selected if value in available_ids]
-                occurrence["entry_link"] = {**deepcopy(old["entry_link"]), "status": "preserved" if set(selected).issubset(available_ids) else "needs_review"}
+        key = occurrence_key(occurrence)
+        old = old_occurrences.get(key)
+        if not old or old_counts[key] != 1 or new_counts[key] != 1:
+            continue
+        selected = old.get("entry_link", {}).get("entry_ids", old.get("entry_ids", []))
+        if not set(selected).issubset(available_ids):
+            continue
+        if old.get("entry_link") and old_entry_counts != new_entry_counts:
+            continue
+        if not old.get("entry_link") and set(selected) != set(occurrence["entry_ids"]):
+            continue
+        occurrence.update(deepcopy({name: old[name] for name in ("id", "decision", "decision_history", "findings", "history", "checked_at", "checked_generation", "support_analysis", "entry_link", "link_history", "inherited_from", "version_change", "reused_at") if name in old}))
+        if old.get("entry_link"):
+            occurrence["entry_ids"] = list(selected)
+            occurrence["entry_link"]["status"] = "preserved"
     if previous.get("occurrences") or previous.get("bibliography"):
         previous.setdefault("parse_history", []).append(deepcopy({"bibliography": previous.get("bibliography", []),
             "occurrences": previous.get("occurrences", []), "at": timezone.now().isoformat()}))
@@ -747,6 +1015,7 @@ def update_audit(user, pk, data):
         entry.setdefault("history", []).append({"at": timezone.now().isoformat(),
             "selected_edition_id": entry.get("selected_edition_id"), "identity_status": entry["identity_status"]})
         entry["selected_edition_id"], entry["identity_status"] = str(edition.id), "user_confirmed"
+        entry["selected_catalog_revision_id"] = str(edition.active_catalog_revision_id)
         payload["rerun_occurrence_ids"] = [row["id"] for row in payload["occurrences"] if entry["id"] in row["entry_ids"]]
     elif action == "decision":
         if ("occurrence_id" in data) == ("occurrence_ids" in data):

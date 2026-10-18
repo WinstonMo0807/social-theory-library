@@ -12,6 +12,7 @@ import { isTaskRunning } from "@/lib/api/task-polling";
 import { AuditBreadcrumb, AuditFrame, AuditGate, AuditProgress, auditCategories, auditCategory, auditDecisions, auditLocation, type AuditCategory } from "./citation-audit-shared";
 import { CitationManuscriptPreview } from "./citation-manuscript-preview";
 import { CitationAuditPrint } from "./citation-audit-print";
+import { CitationAuditVersions } from "./citation-audit-versions";
 
 export type AuditCommand = Omit<Parameters<typeof commandCitationAudit>[1], "expected_revision">;
 const message = (reason: unknown) => reason instanceof Error ? reason.message : "操作未完成，请重试。";
@@ -107,6 +108,7 @@ function Report({ id, ownerId, retrySession }: { id: string; ownerId: string; re
   }
   return <AuditFrame><AuditBreadcrumb id={id} /><header className="stl4-audit-heading"><div><h1>论文体检报告总览</h1><p>逐项理解哪里已核对，哪里仍需回到原文。</p></div><div className="stl4-audit-manuscript"><FileText size={27} /><div><strong>{data.filename}</strong><span>稿件版本 {data.manuscript_revision || 1} · {data.filetype.toUpperCase()}</span><time dateTime={record.updated_at}>更新于 {new Date(record.updated_at).toLocaleString("zh-CN")}</time></div></div></header>
     <AuditMessages workspace={workspace} />
+    <CitationAuditVersions key={record.id} record={record} ownerId={ownerId} disabled={workspace.busy} onRefresh={workspace.reload} retrySession={retrySession} />
     <AuditProgress record={record} />
     <details className="stl4-audit-diagnostics" onToggle={event => setPreview(event.currentTarget.open)}><summary>查看稿件与解析预览</summary>{preview ? <CitationManuscriptPreview record={record} ownerId={ownerId} /> : null}</details>
     <div className="stl4-audit-toolbar"><span>已识别 {rows.length} 处引文 · {data.bibliography?.length || 0} 条参考文献</span><div><button disabled={workspace.busy} onClick={() => void workspace.download("original")}>下载原稿</button><button disabled={workspace.busy} onClick={() => void workspace.download("report")}><Download size={14} />导出报告 JSON</button><button disabled={workspace.busy} onClick={() => void workspace.download("print")}>打印 / 保存 PDF</button><button disabled={workspace.busy} onClick={workspace.reload}><RefreshCw size={14} />读取进度</button>{running ? <button disabled={workspace.busy} onClick={() => void workspace.command({ action: "cancel" })}>取消任务</button> : <button disabled={workspace.busy} onClick={() => void workspace.command({ action: "retry" })}>重新检查</button>}</div></div>

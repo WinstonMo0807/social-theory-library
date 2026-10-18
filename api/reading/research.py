@@ -625,6 +625,9 @@ def serialize_record(record, user):
         record.refresh_from_db()
     payload = unpack(record)
     payload.pop("source_paragraphs", None)
+    # Immutable input for incremental processing, not a second report/export.
+    payload.pop("version_baseline", None)
+    payload.pop("version_children", None)
     if "ocr_units" in payload:
         payload["ocr_units"] = {key: {name: value for name, value in unit.items() if name not in {"text", "blocks"}}
                                 for key, unit in payload["ocr_units"].items()}
@@ -734,6 +737,10 @@ def serialize_record(record, user):
                         if finding["references"] and not available:
                             finding.update(status="unverified", source_status="source_unavailable",
                                 page_status="needs_review", message="原文已变化、撤回或不可访问；原匹配记录保留，当前需重新核对。")
+                        elif finding.get("claimed_printed_label"):
+                            # A different surviving text match cannot support the old page claim.
+                            finding["page_status"] = "matched" if any(anchor.get("printed_label") == finding["claimed_printed_label"]
+                                for ref in available for anchor in ref.get("anchors", [ref])) else "needs_review"
                 analysis = version.get("support_analysis")
                 if analysis:
                     analysis["reference"] = resolve_reference(analysis["reference"], user)

@@ -18,6 +18,7 @@ import { isTaskRunning } from "@/lib/api/task-polling";
 import { AuditBreadcrumb, AuditFrame, AuditGate, auditCategories, auditCategory, auditDecisions, auditFindingNames, auditLocation } from "./citation-audit-shared";
 import { AuditMessages, AuditUnavailable, DecisionForm, useAuditWorkspace } from "./citation-audit-report";
 import { CitationSourcePreview } from "./citation-source-preview";
+import { CitationAuditVersions } from "./citation-audit-versions";
 
 const identityNames: Record<string, string> = { pending: "尚未匹配", identifier_matched: "标识匹配，待核对上下文", user_confirmed: "本人已确认", needs_review: "候选版本待确认", not_matched_in_library: "未找到馆内候选", source_unavailable: "版本当前不可用", not_requested: "未选择书目匹配" };
 const relationNames: Record<string, string> = { support: "支持", different_conclusion: "不同结论", qualification: "限定条件", reframe: "转换解释", insufficient_evidence: "证据不足" };
@@ -92,6 +93,7 @@ function Issue({ id, issueId, ownerId, retrySession }: { id: string; issueId: st
     finally { transferInFlight.current = false; if (alive.current) setTransferBusy(false); }
   }
   return <AuditFrame><AuditBreadcrumb id={id} issue /><header className="stl4-audit-heading"><div><h1>引文问题详情与原文核验</h1><p>把稿件中的具体论断、书目和原始段落放在可核对的上下文中。</p></div><div className="stl4-audit-header-actions">{reference && researchReaderHref(reference) ? <Link className="stl4-audit-button is-primary" target="_blank" rel="noreferrer" href={researchReaderHref(reference)}>打开原文 PDF</Link> : null}<button onClick={() => setLocator(true)}>稿件中定位</button><button onClick={() => void workspace.download("original")} disabled={workspace.busy}>下载原稿</button></div></header><AuditMessages workspace={workspace} />{transferError ? <p role="alert">{transferError}</p> : null}
+    <CitationAuditVersions key={record.id} record={record} ownerId={ownerId} disabled={workspace.busy || transferBusy} onRefresh={workspace.reload} retrySession={retrySession} />
     <div className="stl4-audit-issue-bar"><div><strong>{record.data.filename}</strong><small>稿件版本 {record.data.manuscript_revision || 1} · {auditLocation(row.location)}</small></div><nav aria-label="逐条核验">{index > 0 ? <Link aria-label="上一条引文" href={`/account/citation-audits/${id}/issues/${record.data.occurrences[index - 1].id}`}><ChevronLeft size={16} /></Link> : <span />}<span>{index + 1} / {record.data.occurrences.length}</span>{index + 1 < record.data.occurrences.length ? <Link aria-label="下一条引文" href={`/account/citation-audits/${id}/issues/${record.data.occurrences[index + 1].id}`}><ChevronRight size={16} /></Link> : <span />}</nav><span className="stl4-audit-state" data-state={auditCategory(row)}>{auditCategories[auditCategory(row)]}</span></div>
     <nav className="stl4-audit-mobile-tabs" aria-label="核验内容">{[["manuscript", "稿件"], ["candidates", "候选版本"], ["source", "原文"], ["decision", "判断"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}</nav>
     <div className="stl4-audit-issue-grid" data-mobile-tab={tab}>
