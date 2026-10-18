@@ -11,6 +11,6 @@
 
 ## 2026-10-18 接续点
 
-阅读计划已保存15f6252（前置依赖a77be7a）。引文体检第208–215页已实际读取，真实接入位于web/components/research/citation-*与api/reading/{citation_audit,research,research_views,research_serializers,tasks}.py；新增路由、schema和测试需与同一检查点恢复。最新检查点见CURRENT_PROGRESS及Git日志，静态证据见VALIDATION。
+阅读计划已保存15f6252（前置依赖a77be7a）。引文体检第208–215页已实际读取，真实接入位于web/components/research/citation-*与api/reading/{citation_audit,research,research_views,research_serializers,tasks}.py；新增路由、schema和测试需与同一检查点恢复。引文体检检查点为50cf8ed（37文件）；后续文档提交只记录此检查点。静态证据见VALIDATION。
 
 本单元尚未闭合的新稿件版本增量比较、私人来源文件匹配和PDF209解析三栏优先继续；随后按最终PDF推进已确认笔记/隐私及其余视图。检查/导出/打印控件存在不代表运行验收。不要重新执行旧业务清理，不启动第三步检索质量测评，不提前做正式全站测试或部署。其他历史未提交修改保留。

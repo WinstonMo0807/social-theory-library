@@ -62,3 +62,5 @@
 | 限定检查点文件的private-key/provider-token/credential-url模式扫描 | 无命中 | 有限模式静态检查，不能代表所有秘密类型都已证明不存在 |
 
 新增后端test_citation_atlas_20261018.py共11项，前端citation-audit-workspace.spec.ts共6项、citation-audit-upload.spec.ts共3项；旧扫描用例按显式scan_ocr/旧记录兼容更新。均仅编写，未执行。重点覆盖批量原子性/owner、检查项、同请求指纹、失败恢复容量、人工历史、撤回来源、409输入保留和打印快照清理。真实锁并发、NAS负载、OCR/Provider、打印、路由与209视图仍待统一验收。第三步检索质量评测、迁移、部署和清理未运行。
+
+本单元37文件提交前的 `git diff --cached --check` 退出0；ATLAS_INDEX静态比对确认仅208–215八行语义变更、仍为209行22列，来源身份及其他行保留。源码检查点50cf8ed；后续仅补记提交号。
