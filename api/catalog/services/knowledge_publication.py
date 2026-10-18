@@ -865,7 +865,7 @@ def create_catalog_publication_event(
         fields = sorted(set(fields).union(*(
             set(row.changed_fields or []) for row in pending_revisions
         )))
-    system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance", "page_mapping"}
+    system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance", "page_mapping", "file_selection", "ocr_text_correction"}
     shared_work_update = (provenance or {}).get("source") == "shared_work_publication"
     bundle = None if restored is not None else (
         pending_base.bundle if shared_work_update and pending_base is not None
@@ -972,7 +972,7 @@ def create_catalog_publication_event(
         ):
             return candidate
 
-    if system_content_update and old_active and old_active.fulltext_ready and not quality_ready:
+    if system_content_update and (provenance or {}).get("source") != "file_selection" and old_active and old_active.fulltext_ready and not quality_ready:
         raise ValueError("新识别正文未达到质量要求，继续使用上一稳定正文版本。")
     content_changed = bool(CONTENT_FIELDS.intersection(fields))
     same_document = bool(

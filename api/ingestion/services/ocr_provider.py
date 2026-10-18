@@ -13,6 +13,26 @@ OCR_RUNTIME_KEY = "ocr_runtime"
 OCR_MODES = {"nas_preferred", "nas_only", "remote_only"}
 
 
+def normalize_task_options(value=None):
+    if value is not None and not isinstance(value, dict):
+        raise ValueError("识别策略必须为对象。")
+    value = value or {}
+    allowed = {"languages", "layout", "quality_threshold", "detect_spreads", "detect_garbled", "skip_reviewed"}
+    if set(value) - allowed:
+        raise ValueError("识别策略包含不支持的参数。")
+    languages = value.get("languages", ["ch", "en", "chinese_cht"])
+    if not isinstance(languages, list) or not languages or len(languages) > 3 or any(not isinstance(language, str) or language not in {"ch", "en", "chinese_cht"} for language in languages):
+        raise ValueError("请选择中文、繁体中文或英语识别语言。")
+    result = {"languages": list(dict.fromkeys(languages)), "quality_threshold": value.get("quality_threshold", .75)}
+    if type(result["quality_threshold"]) not in {int, float} or not 0 <= result["quality_threshold"] <= 1:
+        raise ValueError("质检阈值必须位于0至1之间。")
+    for name in allowed - {"languages", "quality_threshold"}:
+        result[name] = value.get(name, True)
+        if type(result[name]) is not bool:
+            raise ValueError("识别开关必须为布尔值。")
+    return result
+
+
 class OCRConfigurationError(RuntimeError):
     pass
 
@@ -60,14 +80,14 @@ def _request_document_gateway(
     timeout_seconds: int | None = None,
     request_headers: dict | None = None,
     transport: httpx.BaseTransport | None = None,
+    task_options: dict | None = None,
 ):
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     if request_headers:
         headers.update(request_headers)
-    data = {
-        "languages": "ch,en,chinese_cht",
-        "layout": "true",
-    }
+    options = task_options or {}
+    data = {"languages": ",".join(options.get("languages") or ["ch", "en", "chinese_cht"]),
+            "layout": "true" if options.get("layout", True) else "false"}
     from .ocr_heartbeat import request_identity
     if request_identity.get():
         data["request_id"] = request_identity.get()
@@ -121,7 +141,7 @@ def _request_document_gateway(
     return payload
 
 
-def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None):
+def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_options: dict | None = None):
     config = ocr_runtime_config()
     providers = []
     if config["mode"] in {"nas_preferred", "nas_only"}:
@@ -162,6 +182,7 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None):
                 model=model,
                 api_key=api_key,
                 page_numbers=page_numbers,
+                task_options=task_options,
             )
             return payload, provider
         except (httpx.HTTPError, ValueError) as exc:
@@ -182,7 +203,7 @@ def parse_pdf_with_ocr(path: str | Path):
     return _parse_pdf(path)
 
 
-def parse_pdf_pages_with_ocr(path: str | Path, page_numbers: list[int]):
+def parse_pdf_pages_with_ocr(path: str | Path, page_numbers: list[int], *, task_options: dict | None = None):
     if not page_numbers:
         return {"pages": []}, "not_required"
-    return _parse_pdf(path, page_numbers=page_numbers)
+    return _parse_pdf(path, page_numbers=page_numbers, task_options=task_options)

@@ -74,7 +74,7 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
         raise ValueError("Only paused OCR jobs can be classified by this inventory.")
 
     asset = job.asset
-    if (job.stats or {}).get("requested_mode") == "all_pages":
+    if (job.stats or {}).get("requested_mode") in {"all_pages", "selected_pages"}:
         from .catalog_ocr import ensure_source_current
         from .processing import _remaining_ocr_page_indexes
 
@@ -122,6 +122,7 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
             created_at__gt=job.created_at,
         )
         .exclude(pk=job.pk)
+        .exclude(status=ProcessingJob.Status.CANCELED)
         .order_by("-created_at")
         .first()
     )
@@ -136,13 +137,10 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
         .first()
     )
 
-    if not remaining and (
-        newer_revision is not None
-        or (
-            newer_job is not None
-            and newer_job.status == ProcessingJob.Status.SUCCEEDED
-        )
-    ):
+    # This same job writes its DocumentRevision before publishing. A newer
+    # revision timestamp alone cannot prove another job completed the work;
+    # otherwise a failure after text persistence permanently blocks recovery.
+    if not remaining and newer_job is not None and newer_job.status == ProcessingJob.Status.SUCCEEDED:
         return PausedOCRInventoryRow(
             job_id=str(job.id),
             asset_id=str(asset.id),
@@ -154,14 +152,16 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
             newer_revision_id=str(newer_revision.id) if newer_revision else "",
         )
 
-    replacement_exists = Asset.objects.filter(
-        edition_id=asset.edition_id,
-        kind=Asset.Kind.NORMALIZED,
-        is_current=True,
-    ).exclude(pk=asset.pk).exists()
-    if not asset.is_current or replacement_exists or newer_job is not None:
+    from .catalog_ocr import ensure_source_current
+
+    source_changed = False
+    try:
+        ensure_source_current(job)
+    except ValueError:
+        source_changed = True
+    if source_changed or newer_job is not None:
         reasons = []
-        if not asset.is_current or replacement_exists:
+        if source_changed:
             reasons.append("normalized_asset_superseded")
         if newer_job is not None:
             reasons.append("newer_ocr_job_present")
@@ -215,7 +215,7 @@ def classify_paused_ocr_job(job: ProcessingJob) -> PausedOCRInventoryRow:
         job_id=str(job.id),
         asset_id=str(asset.id),
         category="recoverable",
-        reasons=("current_asset_has_unprocessed_targets",),
+        reasons=("current_asset_has_unprocessed_targets" if remaining else "finish_remaining_processing",),
         target_page_indexes=targets,
         remaining_page_indexes=remaining,
     )

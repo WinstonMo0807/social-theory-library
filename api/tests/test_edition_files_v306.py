@@ -21,7 +21,7 @@ PDF = b"%PDF-1.4\n% v306 isolated upload signature fixture\n%%EOF"
 def isolated_files(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path / "media"
     settings.STORAGES = {**settings.STORAGES, "intake": {"BACKEND": "django.core.files.storage.FileSystemStorage", "OPTIONS": {"location": str(tmp_path / "incoming")}}}
-    with patch("catalog.services.edition_files.schedule_upload_item") as schedule:
+    with patch("catalog.services.edition_files.schedule_upload_item") as schedule, patch("catalog.services.edition_file_intake.schedule_upload_item"):
         yield schedule
 
 

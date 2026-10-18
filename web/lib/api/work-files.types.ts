@@ -1,0 +1,22 @@
+export type FileFormatCapability = { extension: "pdf" | "docx" | "tiff"; max_bytes: number; max_derived_bytes: number | null; available: boolean; reason: string; can_generate_reader: boolean; service_verified: boolean };
+export type WorkFilePublicPreparation = { required: boolean; status: string; can_prepare: boolean; prepare_url: string; detail: string };
+export type WorkFilePublicPreparationResult = { request_key: string; asset_id: string; status: string; detail: string };
+export type WorkFile = { id: string; kind: string; filename: string; mime_type: string; byte_size: number; page_count: number; sha256: string; version: number; source_asset_id: string | null; created_at: string; updated_at: string; created_by: string; status: string; validation_status: string; is_current: boolean; is_public_reader: boolean; preview_url: string; download_url: string; generate_reader_url: string; can_adopt: boolean; rights_note: string; access_status: string; public_preparation: WorkFilePublicPreparation };
+export type WorkEdition = { id: string; label: string; version_label: string; publication_year: number | null; publisher: string; language: string; is_primary: boolean; state: string; original_count: number; reader_count: number; current_reader_asset_id: string | null };
+export type WorkFileTask = { id: string; status: string; dispatch_status: string; progress: number; is_active: boolean; error_message: string; retry_url: string; resume_url: string; processing_href: string; source_filename: string; original_asset_id: string | null; reader_asset_id: string | null; generate_reader: boolean; action: string; created_at: string };
+export type FileImpactRow = { id: string; kind: string; title: string; asset_id: string; file_page_index: number | null; printed_page_label: string; status: string; href: string };
+export type FileImpact = { count: number; page: number; page_size: number; results: FileImpactRow[]; summary: { catalog_evidence: number; reader_annotations: number; reader_bookmarks: number; reader_progress: number }; notice: string; export_url: string };
+export type WorkFilesState = {
+  work: { id: string; title: string; updated_at: string; cover_url: string; authors: string[]; document_type: string; original_publication_year: number | null };
+  editions: WorkEdition[]; selected_edition_id: string | null;
+  edition: { id: string; updated_at: string; active_revision_id: string | null; current_reader_asset_id: string | null; public_reader_asset_id: string | null; rights: { note: string; access_status: string; source_asset_id: string | null; updated_at: string | null; can_edit: boolean }; workbench_url: string } | null;
+  files: { count: number; page: number; page_size: number; results: WorkFile[] }; current_reader_file: WorkFile | null; public_reader_file: WorkFile | null; tasks: WorkFileTask[]; task_count: number;
+  capabilities: { formats: FileFormatCapability[]; can_edit: boolean; can_publish: boolean; max_active_tasks_per_edition: number };
+  history: { count: number; page: number; page_size: number; results: { id: string; revision: number; title: string; status: string; activated_at: string | null; is_current: boolean; can_rollback: boolean }[] }; impact: FileImpact;
+};
+export type NewWorkEditionInput = { request_key: string; expected_work_updated_at: string; version_label: string; publication_year?: number | null; publisher?: string };
+export type NewWorkEditionResult = { created: boolean; work_id: string; edition_id: string; request_key: string; workbench_url: string };
+export type FileAdoptPreview = { edition_id: string; target_asset_id: string; current_reader_asset_id: string | null; request_key: string; fingerprint: string; can_adopt: boolean; already_current: boolean; blocking: string[]; impact: string[] };
+export type FileAdoptInput = { request_key: string; fingerprint: string; confirm: true };
+export type FileAdoptResult = { request_key: string; edition_id: string; target_asset_id: string; event_id: string; status: string; command_accepted: true; effective: boolean; public_effective: boolean; publication_required: boolean; detail: string };
+export type WorkFileUploadResult = { accepted: true; created: boolean; request_key: string; item_id: string; work_id: string; edition_id: string; status: string; dispatch_status: string; workbench_url: string; detail: string };

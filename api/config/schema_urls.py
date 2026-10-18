@@ -6,6 +6,7 @@ preserve their real /api/catalog prefix and original permission-protected view.
 from django.urls import include, path
 from catalog.urls import urlpatterns as catalog_patterns
 from distribution.urls import urlpatterns as distribution_patterns
+from ingestion.urls import urlpatterns as ingestion_patterns
 from reading.urls import router as reading_router, urlpatterns as reading_patterns
 
 
@@ -39,14 +40,20 @@ VERIFIED_NAMES = {
     "asset-outline", "admin-asset-outline", "admin-outline-rebuilds", "admin-outline-job", "admin-page-mapping",
     "content-placement-sources", "admin-content-placements", "content-placement-history", "public-content-placements",
     "editorial-assistance-list", "editorial-assistance-detail",
+    "edition-file-submit", "work-files", "work-edition-create", "edition-file-impact-csv",
+    "edition-file-request", "edition-generate-reader", "edition-file-adopt", "edition-file-content", "edition-file-rights", "edition-file-prepare-public",
 }
 urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list",
     }])),
+    path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name == "ocr-workspace"])),
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views"}
-    ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {"research-account", "reader-privacy", "reader-privacy-items"}])),
+    ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
+        "research-account", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
+        "citation-source-preview", "citation-source-preview-file",
+    }])),
 ]

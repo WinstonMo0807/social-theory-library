@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import re
 
@@ -6,8 +6,9 @@ import fitz
 from django.db import transaction
 from django.utils import timezone
 
-from catalog.models import Asset, Page, Passage, TextBlock
+from catalog.models import Asset, Edition, Page, Passage, TextBlock
 from catalog.services.text import clean_page_label, normalize_search_text, sanitize_unicode
+from catalog.services.page_geometry import native_geometry, ocr_geometry, validated_geometry
 from .ocr_provider import (
     OCRConfigurationError,
     OCRServiceUnavailable,
@@ -44,6 +45,7 @@ class ExtractedPage:
     label_confidence: float = 0
     raster_coverage: float = 0
     ocr_reasons: tuple[str, ...] = ()
+    geometry: dict = field(default_factory=dict)
 
 
 def _explicit_page_labels(document) -> bool:
@@ -163,6 +165,7 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
                     label_confidence=label_confidence,
                     raster_coverage=raster_coverage,
                     ocr_reasons=tuple(reasons),
+                    geometry=native_geometry(page),
                 )
             )
         return pages
@@ -203,12 +206,13 @@ def _ocr_pages(
     path: str | Path,
     *,
     page_numbers: list[int] | None = None,
+    task_options: dict | None = None,
 ) -> tuple[list[ExtractedPage], str]:
     try:
         if page_numbers is None:
             payload, provider = parse_pdf_with_ocr(path)
         else:
-            payload, provider = parse_pdf_pages_with_ocr(path, page_numbers)
+            payload, provider = parse_pdf_pages_with_ocr(path, page_numbers, **({"task_options": task_options} if task_options else {}))
     except OCRServiceUnavailable:
         raise
     except OCRConfigurationError as exc:
@@ -223,6 +227,7 @@ def _ocr_pages(
     for raw_page in payload.get("pages", []):
         page_index = int(raw_page["index"])
         source_page = source_document[page_index - 1]
+        geometry = ocr_geometry(raw_page, source_page)
         printed_label, label_source, label_confidence = _page_label(
             source_page,
             explicit_labels=explicit_labels,
@@ -251,6 +256,7 @@ def _ocr_pages(
                 blocks=blocks,
                 label_source=label_source,
                 label_confidence=label_confidence,
+                geometry=geometry,
             )
         )
     source_document.close()
@@ -267,8 +273,9 @@ def extract_ocr_pages(path: str | Path) -> tuple[list[ExtractedPage], str]:
 def extract_ocr_page_batch(
     path: str | Path,
     page_numbers: list[int],
+    *, task_options: dict | None = None,
 ) -> tuple[list[ExtractedPage], str]:
-    pages, provider = _ocr_pages(path, page_numbers=page_numbers)
+    pages, provider = _ocr_pages(path, page_numbers=page_numbers, task_options=task_options)
     return _mark_repeated_marginalia(pages), provider
 
 
@@ -308,31 +315,39 @@ def _mark_repeated_marginalia(pages: list[ExtractedPage]) -> list[ExtractedPage]
     return pages
 
 
-def _passage_chunks(blocks: list[ExtractedBlock], target_size: int = 700):
-    chunk_texts = []
-    chunk_boxes = []
-    chunk_start = 0
-    page_offset = 0
-    order = 0
+def _passage_chunks(blocks: list[ExtractedBlock], page_text: str, target_size: int = 700):
+    # Page.text is the character-offset authority. Rejoining stripped blocks
+    # invents a different string (including its paragraph separators).
+    ranges = []
+    cursor = 0
     for block in blocks:
         if block.block_type in {"header", "footer"}:
             continue
         text = block.text.strip()
         if not text:
             continue
-        if chunk_texts and sum(len(item) for item in chunk_texts) + len(text) > target_size:
-            joined = "\n".join(chunk_texts)
-            yield order, joined, chunk_start, chunk_start + len(joined), _bbox_union(chunk_boxes)
+        start = page_text.find(text, cursor)
+        if start < 0:
+            # Preserve the authoritative text without claiming block geometry
+            # when an external extractor's blocks do not match its page text.
+            if page_text.strip():
+                yield 0, page_text, 0, len(page_text), []
+            return
+        cursor = start + len(text)
+        ranges.append((start, cursor, block.bbox))
+    chunk_boxes = []
+    chunk_start = chunk_end = order = 0
+    for start, end, bbox in ranges:
+        if chunk_boxes and (end - chunk_start > target_size or page_text[chunk_end:start].strip()):
+            yield order, page_text[chunk_start:chunk_end], chunk_start, chunk_end, _bbox_union(chunk_boxes)
             order += 1
-            chunk_texts = []
             chunk_boxes = []
-            chunk_start = page_offset
-        chunk_texts.append(text)
-        chunk_boxes.append(block.bbox)
-        page_offset += len(text) + 1
-    if chunk_texts:
-        joined = "\n".join(chunk_texts)
-        yield order, joined, chunk_start, chunk_start + len(joined), _bbox_union(chunk_boxes)
+        if not chunk_boxes:
+            chunk_start = start
+        chunk_end = end
+        chunk_boxes.append(bbox)
+    if chunk_boxes:
+        yield order, page_text[chunk_start:chunk_end], chunk_start, chunk_end, _bbox_union(chunk_boxes)
 
 
 def _bbox_union(boxes: list[list[float]]) -> list[float]:
@@ -364,8 +379,14 @@ def persist_pages(
 
     from catalog.services.document_intelligence import document_asset_is_published
 
+    Edition.objects.select_for_update().get(pk=asset.edition_id)
+    asset = Asset.objects.select_for_update().get(pk=asset.pk)
     if document_asset_is_published(asset):
         raise ValueError("已发布正文不能原位改写，请先创建正文草稿文件。")
+    # All import/OCR callers preserve confirmed human text, including missing
+    # pages and their stable blocks/passages. Adoption owns explicit changes.
+    protected = set(asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
+    pages = [page for page in pages if page.index not in protected]
     page_indexes = {page.index for page in pages}
     persisted = {}
     for extracted in pages:
@@ -392,6 +413,7 @@ def persist_pages(
                 ),
                 "chapter_title": extracted.chapter_title,
                 "text": extracted.text,
+                "reviewed_text_revision": None,
                 "normalized_text": normalize_search_text(extracted.text),
                 "text_source": extracted.source,
                 "confidence": extracted.confidence,
@@ -405,6 +427,7 @@ def persist_pages(
                 ),
                 "width": extracted.width,
                 "height": extracted.height,
+                "geometry": validated_geometry(extracted.geometry),
             },
         )
         persisted[extracted.index] = page
@@ -412,16 +435,18 @@ def persist_pages(
         # Page is a stable reader identity. A shorter or partially failed
         # extraction must not cascade-delete annotations and bookmarks. Keep
         # the row and clear only derived text for pages absent from this run.
-        asset.pages.exclude(index__in=page_indexes).update(
+        asset.pages.exclude(index__in=page_indexes | protected).update(
             chapter_title="",
             text="",
             normalized_text="",
             text_source=Page.TextSource.NONE,
             confidence=0,
+            geometry={},
+            reviewed_text_revision=None,
             updated_at=timezone.now(),
         )
-        TextBlock.objects.filter(page__asset=asset).delete()
-        Passage.objects.filter(page__asset=asset).delete()
+        TextBlock.objects.filter(page__asset=asset).exclude(page__is_text_manual=True).delete()
+        Passage.objects.filter(page__asset=asset).exclude(page__is_text_manual=True).delete()
     else:
         TextBlock.objects.filter(page__asset=asset, page__index__in=page_indexes).delete()
         Passage.objects.filter(page__asset=asset, page__index__in=page_indexes).delete()
@@ -445,7 +470,7 @@ def persist_pages(
                     confidence=block.confidence,
                 )
             )
-        for order, text, start, end, bbox in _passage_chunks(extracted.blocks):
+        for order, text, start, end, bbox in _passage_chunks(extracted.blocks, extracted.text):
             passage_rows.append(
                 Passage(
                     page=page,

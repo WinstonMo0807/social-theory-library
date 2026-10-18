@@ -30,6 +30,7 @@ from .runtime_views import (
 from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
+from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 
 router = DefaultRouter()
 router.register("privacy/operations", ReaderDataOperationViewSet, basename="reader-data-operations")
@@ -53,6 +54,10 @@ router.register(
 )
 
 urlpatterns = [
+    path("citation-audits/<uuid:pk>/preview/", CitationPreviewView.as_view(), name="citation-preview"),
+    path("citation-audits/<uuid:pk>/preview/file/", CitationPreviewFileView.as_view(), name="citation-preview-file"),
+    path("citation-sources/<uuid:pk>/preview/", CitationPreviewView.as_view(purpose="private_source"), name="citation-source-preview"),
+    path("citation-sources/<uuid:pk>/preview/file/", CitationPreviewFileView.as_view(purpose="private_source"), name="citation-source-preview-file"),
     path("privacy/", ReaderPrivacyView.as_view(), name="reader-privacy"),
     path("privacy/items/", ReaderPrivacyItemsView.as_view(), name="reader-privacy-items"),
     path("research-account/", ResearchAccountView.as_view(), name="research-account"),

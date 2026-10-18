@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from catalog.models import Asset, Page
+from catalog.services.page_geometry import normalized_bbox, validated_geometry
 
 from .files import materialize_field_file, safe_component, sha256_file, validate_pdf_structure
 
@@ -18,22 +19,17 @@ class OcrPdfValidationError(RuntimeError):
 
 
 def _scaled_rectangle(block_bbox, source_page: Page, pdf_page) -> fitz.Rect | None:
-    if len(block_bbox) != 4:
+    geometry = validated_geometry(source_page.geometry, source_page=pdf_page)
+    coordinates = normalized_bbox(block_bbox, geometry)
+    if not coordinates:
         return None
-    try:
-        rectangle = fitz.Rect([float(value) for value in block_bbox])
-    except (TypeError, ValueError):
-        return None
-    if rectangle.is_empty or rectangle.is_infinite:
-        return None
-    scale_x = float(pdf_page.rect.width) / max(float(source_page.width), 1)
-    scale_y = float(pdf_page.rect.height) / max(float(source_page.height), 1)
+    displayed = pdf_page.rect
     rectangle = fitz.Rect(
-        rectangle.x0 * scale_x,
-        rectangle.y0 * scale_y,
-        rectangle.x1 * scale_x,
-        rectangle.y1 * scale_y,
-    ) & pdf_page.rect
+        displayed.x0 + coordinates[0] * displayed.width,
+        displayed.y0 + coordinates[1] * displayed.height,
+        displayed.x0 + coordinates[2] * displayed.width,
+        displayed.y0 + coordinates[3] * displayed.height,
+    ) * pdf_page.derotation_matrix
     return None if rectangle.is_empty else rectangle
 
 
@@ -41,7 +37,8 @@ def _insert_invisible_text(pdf_page, rectangle: fitz.Rect, text: str) -> bool:
     text = str(text or "").replace("\x00", "").strip()
     if not text:
         return False
-    font_size = max(4, min(18, rectangle.height * 0.72))
+    displayed = rectangle * pdf_page.rotation_matrix
+    font_size = max(4, min(18, displayed.height * 0.72))
     result = pdf_page.insert_textbox(
         rectangle,
         text,
@@ -50,18 +47,20 @@ def _insert_invisible_text(pdf_page, rectangle: fitz.Rect, text: str) -> bool:
         lineheight=1,
         render_mode=3,
         overlay=True,
+        rotate=pdf_page.rotation,
     )
     if result >= 0:
         return True
     # OCR boxes can be slightly tighter than the font metrics. Invisible text
     # may safely use a smaller baseline fallback while preserving copy/search.
     pdf_page.insert_text(
-        fitz.Point(rectangle.x0, max(rectangle.y0 + font_size, rectangle.y1 - 1)),
+        fitz.Point(displayed.x0, max(displayed.y0 + font_size, displayed.y1 - 1)) * pdf_page.derotation_matrix,
         text.replace("\n", " "),
         fontname="china-s",
-        fontsize=max(3, min(font_size, rectangle.height * 0.55)),
+        fontsize=max(3, min(font_size, displayed.height * 0.55)),
         render_mode=3,
         overlay=True,
+        rotate=pdf_page.rotation,
     )
     return True
 
@@ -70,6 +69,7 @@ def _write_searchable_copy(source_path: Path, target_path: Path, asset: Asset) -
     document = fitz.open(str(source_path))
     inserted_blocks = 0
     inserted_pages = 0
+    unlocated_blocks = 0
     try:
         if document.page_count != asset.page_count:
             raise OcrPdfValidationError(
@@ -86,6 +86,7 @@ def _write_searchable_copy(source_path: Path, target_path: Path, asset: Asset) -
             for block in source_page.blocks.all().order_by("order"):
                 rectangle = _scaled_rectangle(block.bbox, source_page, pdf_page)
                 if rectangle is None:
+                    unlocated_blocks += 1
                     continue
                 if _insert_invisible_text(pdf_page, rectangle, block.text):
                     page_insertions += 1
@@ -93,11 +94,13 @@ def _write_searchable_copy(source_path: Path, target_path: Path, asset: Asset) -
             if page_insertions:
                 inserted_pages += 1
         if inserted_blocks == 0:
-            raise OcrPdfValidationError("OCR 已完成，但没有可写入 PDF 的文字块。")
+            raise OcrPdfValidationError("OCR 正文已保留，但文字块缺少与源 PDF 相符的坐标，未生成定位不可靠的 OCR 下载副本。")
         document.save(str(target_path), garbage=4, deflate=True)
     finally:
         document.close()
-    return {"inserted_blocks": inserted_blocks, "inserted_pages": inserted_pages}
+    return {"inserted_blocks": inserted_blocks, "inserted_pages": inserted_pages,
+            "unlocated_blocks": unlocated_blocks, "geometry_schema": 1,
+            "geometry_status": "partial" if unlocated_blocks else "validated"}
 
 
 @transaction.atomic

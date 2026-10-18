@@ -110,7 +110,7 @@ def rows(user, category):
         raise ValidationError({"category": "资料类型无效。"})
     result = MODELS[category].objects.filter(user=user)
     if category in {"audits", "citation_sources"}:
-        result = result.filter(purpose="manuscript" if category == "audits" else "private_source").defer("original_ciphertext")
+        result = result.filter(purpose="manuscript" if category == "audits" else "private_source").defer("original_ciphertext", "preview_ciphertext")
     return result
 
 

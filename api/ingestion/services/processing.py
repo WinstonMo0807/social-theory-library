@@ -51,6 +51,18 @@ PROCESSING_PAUSE_KEYS = {
 }
 
 
+class OCRClaimSuperseded(RuntimeError):
+    """A delayed worker must stop without changing the replacement's state."""
+
+
+def _write_ocr_checkpoint(job, **updates):
+    updates["updated_at"] = timezone.now()
+    if not ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(**updates):
+        raise OCRClaimSuperseded()
+    for field, value in updates.items():
+        setattr(job, field, value)
+
+
 def processing_workload_paused(job_type: str) -> bool:
     key = PROCESSING_PAUSE_KEYS.get(job_type)
     if key is None:
@@ -89,7 +101,9 @@ def set_processing_workload_paused(job_type: str, paused: bool, *, actor=None) -
 
 
 def _pause_requested(job: ProcessingJob) -> bool:
-    job.refresh_from_db(fields=["status", "task_id", "pause_requested_at", "updated_at"])
+    # A delayed worker must retain its own claim token, never adopt a newer
+    # task identity while checking a cooperative pause request.
+    job.refresh_from_db(fields=["status", "pause_requested_at", "updated_at"])
     return bool(
         job.status == ProcessingJob.Status.PAUSED
         or job.pause_requested_at
@@ -98,23 +112,27 @@ def _pause_requested(job: ProcessingJob) -> bool:
 
 
 def _mark_job_paused(job: ProcessingJob) -> ProcessingJob:
+    expected_task_id = job.task_id
     job.status = ProcessingJob.Status.PAUSED
     job.task_id = ""
     job.pause_requested_at = job.pause_requested_at or timezone.now()
     job.finished_at = None
-    job.save(
-        update_fields=[
-            "status",
-            "task_id",
-            "pause_requested_at",
-            "finished_at",
-            "updated_at",
-        ]
-    )
+    changed = ProcessingJob.objects.filter(pk=job.pk, task_id=expected_task_id,
+        status__in=[ProcessingJob.Status.PENDING, ProcessingJob.Status.RUNNING, ProcessingJob.Status.FAILED]).update(
+            status=job.status, task_id=job.task_id, pause_requested_at=job.pause_requested_at,
+            finished_at=None, updated_at=timezone.now())
+    if not changed:
+        return ProcessingJob.objects.get(pk=job.pk)
     return job
 
 
+@transaction.atomic
 def request_processing_job_pause(job: ProcessingJob) -> ProcessingJob:
+    if job.edition_id:
+        Edition.objects.select_for_update().get(pk=job.edition_id)
+    # A page may finish between the UI read and this command. Preserve the
+    # current delivery token rather than saving a stale caller's snapshot.
+    job = ProcessingJob.objects.select_for_update().get(pk=job.pk)
     if job.job_type not in PROCESSING_PAUSE_KEYS:
         raise ValueError("该任务类型不支持协作式暂停。")
     if job.status == ProcessingJob.Status.PAUSED:
@@ -129,11 +147,19 @@ def request_processing_job_pause(job: ProcessingJob) -> ProcessingJob:
     return job
 
 
+@transaction.atomic
 def resume_processing_job(job: ProcessingJob, *, actor=None) -> ProcessingJob:
+    if job.edition_id:
+        Edition.objects.select_for_update().get(pk=job.edition_id)
+    job = ProcessingJob.objects.select_for_update(of=("self",)).select_related("asset__edition", "edition").get(pk=job.pk)
     if job.job_type not in PROCESSING_PAUSE_KEYS:
         raise ValueError("该任务类型不支持恢复。")
     if processing_workload_paused(job.job_type):
         raise ValueError("该类任务仍处于全局暂停状态。")
+    if job.job_type == ProcessingJob.JobType.OCR:
+        from .catalog_ocr import check_resume_source
+
+        check_resume_source(job)
     if job.status == ProcessingJob.Status.RUNNING and job.pause_requested_at:
         job.pause_requested_at = None
         job.save(update_fields=["pause_requested_at", "updated_at"])
@@ -223,6 +249,7 @@ def _claim_processing_job(
     job.progress = max(progress_floor, job.progress)
     # Recovery uses this batch lease, not the whole-document start time.
     job.started_at = timezone.now()
+    job.heartbeat_at = job.started_at
     job.finished_at = None
     job.error_code = ""
     job.error_message = ""
@@ -232,6 +259,7 @@ def _claim_processing_job(
             "attempt",
             "progress",
             "started_at",
+            "heartbeat_at",
             "finished_at",
             "error_code",
             "error_message",
@@ -250,7 +278,33 @@ def _processing_claim_is_current(job: ProcessingJob, task_id: str) -> bool:
     ).exists()
 
 
+@transaction.atomic
+def _update_ocr_edition_if_current(job, *, expected_status=None, **fields):
+    """Old tasks keep their own errors, never change a replacement's status."""
+    from .catalog_ocr import OCRSourceChanged, ensure_source_current
+
+    Edition.objects.select_for_update().get(pk=job.edition_id)
+    claim = ProcessingJob.objects.select_for_update().filter(
+        pk=job.pk, task_id=job.task_id, status=expected_status or job.status,
+    ).first()
+    if claim is None:
+        return False
+    try:
+        ensure_source_current(claim)
+    except OCRSourceChanged:
+        return False
+    Edition.objects.filter(pk=job.edition_id).update(**fields, updated_at=timezone.now())
+    return True
+
+
 def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
+    if job_type == ProcessingJob.JobType.EDITORIAL_ASSISTANCE:
+        from catalog.services.editorial_assistance import dispatch_assistance
+        return dispatch_assistance(job_id, task_id)
+    if job_type == ProcessingJob.JobType.TEXT_EXTRACTION and ProcessingJob.objects.filter(pk=job_id, stats__operation="outline_rebuild").exists():
+        from catalog.services.document_outline import dispatch_outline_job
+
+        return dispatch_outline_job(job_id, task_id)
     if job_type == ProcessingJob.JobType.OCR:
         return dispatch_ocr_job(job_id, task_id)
     if job_type == ProcessingJob.JobType.EXTERNAL_ENRICHMENT:
@@ -277,6 +331,8 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
     queue_cutoff = now - timedelta(seconds=settings.INGESTION_QUEUE_STALLED_SECONDS)
     stage_cutoff = now - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS)
     supported_types = {
+        ProcessingJob.JobType.EDITORIAL_ASSISTANCE,
+        ProcessingJob.JobType.TEXT_EXTRACTION,
         ProcessingJob.JobType.OCR,
         ProcessingJob.JobType.EXTERNAL_ENRICHMENT,
         ProcessingJob.JobType.PAGE_LABELS,
@@ -300,6 +356,12 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
         requeued = 0
         exhausted = 0
         for job in jobs:
+            if job.job_type in PROCESSING_PAUSE_KEYS and (
+                    job.pause_requested_at or processing_workload_paused(job.job_type)):
+                # A killed worker cannot acknowledge the user's pause itself.
+                # Keep its checkpoint without scheduling another OCR request.
+                _mark_job_paused(job)
+                continue
             if job.status == ProcessingJob.Status.PENDING and job.task_id:
                 # Redeliver the same wakeup. A healthy queued task must not lose
                 # its identity just because another document occupies the worker.
@@ -366,6 +428,18 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
                 )
             )
             requeued += 1
+    # The exhausted recovery branch never reaches run_ocr_job's failure
+    # handler. Repair its summary (including historical rows) after releasing
+    # ProcessingJob locks so the regular Edition -> job lock order is retained.
+    terminal_ocr = ProcessingJob.objects.filter(job_type=ProcessingJob.JobType.OCR,
+        status=ProcessingJob.Status.FAILED, error_code="max_attempts_exhausted",
+        edition__ocr_status__in=[OcrStatus.RUNNING, OcrStatus.PENDING]).order_by("-created_at")[:max(1, min(limit, 500))]
+    for job in terminal_ocr:
+        _update_ocr_edition_if_current(job, expected_status=ProcessingJob.Status.FAILED, ocr_status=OcrStatus.FAILED)
+    paused_ocr = ProcessingJob.objects.filter(job_type=ProcessingJob.JobType.OCR,
+        status=ProcessingJob.Status.PAUSED, edition__ocr_status=OcrStatus.RUNNING).order_by("-created_at")[:max(1, min(limit, 500))]
+    for job in paused_ocr:
+        _update_ocr_edition_if_current(job, expected_status=ProcessingJob.Status.PAUSED, ocr_status=OcrStatus.PENDING)
     return {"candidates": len(jobs), "requeued": requeued, "exhausted": exhausted}
 
 
@@ -396,7 +470,8 @@ def create_ocr_job(asset: Asset, *, upload_item=None, actor=None, force: bool = 
         settings_version=_settings_version(),
         created_by=actor,
         pause_requested_at=timezone.now() if paused else None,
-        stats={"force_reprocess": bool(force)},
+        stats={"force_reprocess": bool(force), "requested_asset_id": str(asset.pk),
+               "source_sha256": asset.sha256, "source_page_count": asset.page_count},
     )
 
 
@@ -435,19 +510,17 @@ def dispatch_ocr_job(job_id: str, task_id: str, *, countdown: int = 0) -> bool:
             countdown=countdown,
         )
     except (KombuOperationalError, OSError, ConnectionError, TimeoutError) as exc:
-        ProcessingJob.objects.filter(pk=job_id, task_id=task_id).update(
+        changed = ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status=ProcessingJob.Status.PENDING).update(
             status=ProcessingJob.Status.FAILED,
             error_code="queue_unavailable",
             error_message=f"OCR 任务未进入队列：{exc}"[:4000],
             finished_at=timezone.now(),
             updated_at=timezone.now(),
         )
-        job = ProcessingJob.objects.filter(pk=job_id).only("edition_id").first()
+        job = ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status=ProcessingJob.Status.FAILED,
+                                          error_code="queue_unavailable").first() if changed else None
         if job and job.edition_id:
-            Edition.objects.filter(pk=job.edition_id).update(
-                ocr_status=OcrStatus.FAILED,
-                updated_at=timezone.now(),
-            )
+            _update_ocr_edition_if_current(job, expected_status=ProcessingJob.Status.FAILED, ocr_status=OcrStatus.FAILED)
         return False
     return True
 
@@ -887,10 +960,12 @@ def run_query_lexicon_candidate_job(
 
 
 def _remaining_ocr_page_indexes(asset: Asset, job: ProcessingJob | None = None) -> tuple[int, int, list[int]]:
-    if job and (job.stats or {}).get("requested_mode") == "all_pages":
+    protected = set(asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
+    if job and (job.stats or {}).get("requested_mode") in {"all_pages", "selected_pages"}:
         count = int(job.stats.get("total_pages") or asset.page_count)
         completed = set(job.stats.get("completed_page_indexes") or [])
-        return count, count, [index for index in range(1, count + 1) if index not in completed]
+        targets = [index for index in job.stats.get("requested_page_indexes", list(range(1, count + 1))) if index not in protected]
+        return count, len(targets), [index for index in targets if index not in completed]
     rows = list(
         asset.pages.order_by("index").values_list("index", "text_source")
     )
@@ -915,6 +990,7 @@ def _remaining_ocr_page_indexes(asset: Asset, job: ProcessingJob | None = None) 
         for index, text_source in rows
         if text_source in {Page.TextSource.OCR, Page.TextSource.HYBRID}
     }
+    targets = [index for index in targets if index not in protected]
     remaining = [index for index in targets if index not in completed]
     return document_page_count, len(targets), remaining
 
@@ -923,6 +999,8 @@ def _remaining_ocr_page_indexes(asset: Asset, job: ProcessingJob | None = None) 
 def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
     Edition.objects.select_for_update().get(pk=job.edition_id)
     locked = ProcessingJob.objects.select_for_update(of=("self",)).select_related("asset__edition").get(pk=job.pk)
+    if locked.status != "running" or locked.task_id != job.task_id:
+        raise OCRClaimSuperseded()
     if locked.asset is None:
         return locked
     from .catalog_ocr import ensure_source_current
@@ -932,7 +1010,7 @@ def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
         return locked
     staged = stage_document_asset(
         locked.asset, stage_key=f"ocr-job:{locked.pk}",
-        reset_ocr=bool((locked.stats or {}).get("force_reprocess")) and (locked.stats or {}).get("requested_mode") != "all_pages",
+        reset_ocr=bool((locked.stats or {}).get("force_reprocess")) and (locked.stats or {}).get("requested_mode") not in {"all_pages", "selected_pages"},
     )
     if staged.pk != locked.asset_id:
         locked.stats = {
@@ -946,7 +1024,7 @@ def _stage_ocr_job_asset(job: ProcessingJob) -> ProcessingJob:
 
 def _ocr_phase(job, stats, phase, *, pages=()):
     stats.update(ocr_phase=phase, active_page_indexes=list(pages), phase_started_at=timezone.now().isoformat())
-    ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(stats=stats, heartbeat_at=timezone.now(), updated_at=timezone.now())
+    _write_ocr_checkpoint(job, stats=stats, heartbeat_at=timezone.now())
 
 
 @transaction.atomic
@@ -959,9 +1037,9 @@ def _persist_claimed_ocr_pages(job, pages, claim_task_id):
 
     ensure_source_current(current)
     persist_page_batch(job.asset, pages)
-    if current.stats.get("requested_mode") == "all_pages":
+    if current.stats.get("requested_mode") in {"all_pages", "selected_pages"}:
         completed = sorted(set(current.stats.get("completed_page_indexes") or []).union(page.index for page in pages))
-        job.stats = {**current.stats, "completed_page_indexes": completed, "processed_pages": len(completed), "remaining_pages": current.stats["total_pages"] - len(completed), "active_page_indexes": []}
+        job.stats = {**current.stats, "completed_page_indexes": completed, "processed_pages": len(completed), "remaining_pages": max(0, current.stats["target_pages"] - len(completed)), "active_page_indexes": []}
         current.stats = job.stats
         current.save(update_fields=["stats", "updated_at"])
     return True
@@ -978,8 +1056,17 @@ def _publish_ocr_result(job, stats, claim_task_id):
     ensure_source_current(current)
     from catalog.services.publication_commands import catalog_publication_state
 
+    edition.ocr_status = OcrStatus.SUCCEEDED
+    edition.page_label_status = (
+        PageLabelStatus.READY if not job.asset.pages.exclude(
+            label_source__in=[Page.LabelSource.MANUAL, Page.LabelSource.PDF_PAGE_LABELS]
+        ).exists() else PageLabelStatus.NEEDS_REVIEW
+    )
+    edition.semantic_index_status = SemanticIndexStatus.PENDING
+    edition.save(update_fields=["ocr_status", "page_label_status", "semantic_index_status", "updated_at"])
+
     may_update_public = edition.state == PublicationState.PUBLISHED
-    if current.stats.get("requested_mode") == "all_pages":
+    if current.stats.get("requested_mode") in {"all_pages", "selected_pages"}:
         may_update_public = catalog_publication_state(edition)["catalog_revision_active"]
     if may_update_public:
         intelligence = stats.get("document_intelligence") or {}
@@ -1018,10 +1105,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
 
     if _pause_requested(job):
         if job.asset_id:
-            Edition.objects.filter(pk=job.edition_id).update(
-                ocr_status=OcrStatus.PENDING,
-                updated_at=timezone.now(),
-            )
+            _update_ocr_edition_if_current(job, ocr_status=OcrStatus.PENDING)
         return _mark_job_paused(job)
 
     job, claimed = _claim_processing_job(
@@ -1033,19 +1117,16 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     if not claimed:
         return job
     claim_task_id = job.task_id
-    job = ProcessingJob.objects.select_related("asset__edition").get(pk=job_id)
     if job.asset is None:
-        job.status = ProcessingJob.Status.FAILED
-        job.error_code = "missing_asset"
-        job.error_message = "OCR 目标文件已经不存在。"
-        job.finished_at = timezone.now()
-        job.save()
+        try:
+            _write_ocr_checkpoint(job, status=ProcessingJob.Status.FAILED, error_code="missing_asset",
+                                  error_message="OCR 目标文件已经不存在。", finished_at=timezone.now())
+        except OCRClaimSuperseded:
+            return ProcessingJob.objects.get(pk=job.pk)
         return job
     asset = job.asset
     edition = asset.edition
     stats = dict(job.stats or {})
-    edition.ocr_status = OcrStatus.RUNNING
-    edition.save(update_fields=["ocr_status", "updated_at"])
 
     cleanup = None
     next_task_id = ""
@@ -1053,6 +1134,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
     try:
         _ocr_phase(job, stats, "preparing")
         job = _stage_ocr_job_asset(job)
+        _update_ocr_edition_if_current(job, ocr_status=OcrStatus.RUNNING)
         asset = job.asset
         edition = asset.edition
         stats = dict(job.stats or {})
@@ -1071,7 +1153,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             from .ocr_heartbeat import ocr_request_lease
             identity = sha256(f"{job.pk}:{asset.pk}:{asset.sha256}:{batch_indexes}".encode()).hexdigest()
             with ocr_request_lease(job, identity):
-                pages, provider = extract_ocr_page_batch(local_path, batch_indexes)
+                pages, provider = extract_ocr_page_batch(local_path, batch_indexes, **({"task_options": stats["task_options"]} if stats.get("task_options") else {}))
             returned_indexes = {page.index for page in pages}
             if returned_indexes != set(batch_indexes) or len(pages) != len(batch_indexes):
                 raise ValueError(
@@ -1113,8 +1195,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 },
             }
             asset.save(update_fields=["validation_details", "updated_at"])
-            job.engine = provider
-            job.progress = min(
+            progress = min(
                 90,
                 max(
                     5,
@@ -1124,32 +1205,20 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     ),
                 ),
             )
-            job.stats = stats
-            job.save(update_fields=["progress", "engine", "stats", "updated_at"])
+            _write_ocr_checkpoint(job, progress=progress, engine=provider, stats=stats)
 
         # OCR is cooperative. A running batch is allowed to finish and persist
         # its pages before a pause takes effect, so resume can continue from
         # the remaining page indexes without revoking a worker task.
         if _pause_requested(job):
-            edition.ocr_status = OcrStatus.PENDING
-            edition.save(update_fields=["ocr_status", "updated_at"])
+            _update_ocr_edition_if_current(job, ocr_status=OcrStatus.PENDING)
             return _mark_job_paused(job)
 
         if remaining:
             if not _processing_claim_is_current(job, claim_task_id):
                 return ProcessingJob.objects.get(pk=job.pk)
             queued_task_id = str(uuid.uuid4())
-            job.status = ProcessingJob.Status.PENDING
-            job.task_id = queued_task_id
-            job.finished_at = None
-            job.save(
-                update_fields=[
-                    "status",
-                    "task_id",
-                    "finished_at",
-                    "updated_at",
-                ]
-            )
+            _write_ocr_checkpoint(job, status=ProcessingJob.Status.PENDING, task_id=queued_task_id, finished_at=None)
             next_task_id = queued_task_id
         else:
             stats.update(
@@ -1163,9 +1232,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             )
 
         if not next_task_id:
-            job.progress = 92
-            job.stats = stats
-            job.save(update_fields=["progress", "stats", "updated_at"])
+            _write_ocr_checkpoint(job, progress=92, stats=stats)
             _ocr_phase(job, stats, "finalizing")
 
         if next_task_id:
@@ -1193,7 +1260,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         configured_ocr_pages = (asset.validation_details or {}).get(
             "ocr_required_page_indexes"
         )
-        if stats.get("requested_mode") == "all_pages":
+        if stats.get("requested_mode") in {"all_pages", "selected_pages"}:
             completed_ocr_pages = list(stats.get("completed_page_indexes") or [])
         elif isinstance(configured_ocr_pages, list):
             completed_ocr_pages = sorted(
@@ -1264,7 +1331,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             except Exception as exc:
                 stats["taxonomy_candidate_warning"] = str(exc)[:2000]
         reason_counts = (asset.validation_details or {}).get("ocr_reason_counts") or {}
-        should_build_ocr_pdf = stats.get("requested_mode") == "all_pages" or not reason_counts or int(reason_counts.get("scanned_page") or 0) > 0
+        should_build_ocr_pdf = stats.get("requested_mode") in {"all_pages", "selected_pages"} or not reason_counts or int(reason_counts.get("scanned_page") or 0) > 0
         if should_build_ocr_pdf:
             _ocr_phase(job, stats, "pdf")
             try:
@@ -1279,29 +1346,15 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     "sha256": derivative.sha256,
                     "validation_status": derivative.validation_status,
                 }
+                unlocated_blocks = (derivative.validation_details or {}).get("unlocated_blocks", 0)
+                if unlocated_blocks:
+                    stats["ocr_pdf_warning"] = f"{unlocated_blocks} 个文字块缺少可靠坐标，下载副本保留对应原图；独立 OCR 正文仍可用。"
             except Exception as exc:
                 # The independent OCR text layer remains usable even when a
                 # downloadable derivative cannot be produced.
                 stats["ocr_pdf_warning"] = str(exc)[:2000]
         else:
             stats["ocr_pdf_skipped"] = "原文件已有视觉与原生文字，仅补充缺失文字层。"
-        edition.ocr_status = OcrStatus.SUCCEEDED
-        edition.page_label_status = (
-            PageLabelStatus.READY
-            if asset.pages.exclude(
-                label_source__in=[Page.LabelSource.MANUAL, Page.LabelSource.PDF_PAGE_LABELS]
-            ).exists() is False
-            else PageLabelStatus.NEEDS_REVIEW
-        )
-        edition.semantic_index_status = SemanticIndexStatus.PENDING
-        edition.save(
-            update_fields=[
-                "ocr_status",
-                "page_label_status",
-                "semantic_index_status",
-                "updated_at",
-            ]
-        )
 
         # OCR prepares one immutable text interpretation. Only its explicit
         # publication event may update the reader-facing derived systems.
@@ -1324,8 +1377,6 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             stats["page_label_warning"] = str(exc)[:2000]
         if not _processing_claim_is_current(job, claim_task_id):
             return ProcessingJob.objects.get(pk=job.pk)
-        job.status = ProcessingJob.Status.SUCCEEDED
-        job.progress = 100
         stats.update(
             {
                 "pages": document_page_count,
@@ -1335,14 +1386,16 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 "active_page_indexes": [],
             }
         )
-        job.stats = stats
-        job.finished_at = timezone.now()
-        job.save()
+        _write_ocr_checkpoint(job, status=ProcessingJob.Status.SUCCEEDED, progress=100,
+                              stats=stats, finished_at=timezone.now())
         return job
+    except OCRClaimSuperseded:
+        return ProcessingJob.objects.get(pk=job.pk)
     except OCRServiceBusy:
         # A full healthy OCR queue is not a failed recognition attempt. Keep
         # the session and checkpoint, but issue a new delivery claim.
         with transaction.atomic():
+            Edition.objects.select_for_update().get(pk=job.edition_id)
             current = ProcessingJob.objects.select_for_update().filter(
                 pk=job.pk, status=ProcessingJob.Status.RUNNING, task_id=claim_task_id,
             ).first()
@@ -1353,12 +1406,11 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 current.task_id = next_task_id
                 current.stats = {**current.stats, "phase": "queued", "service_activity": "queued"}
                 current.save(update_fields=["status", "task_id", "stats", "updated_at"])
-                Edition.objects.filter(pk=current.edition_id).update(ocr_status=OcrStatus.PENDING)
+                _update_ocr_edition_if_current(current, ocr_status=OcrStatus.PENDING)
         return job
     except Exception as exc:
         if _processing_claim_is_current(job, claim_task_id):
-            edition.ocr_status = OcrStatus.FAILED
-            edition.save(update_fields=["ocr_status", "updated_at"])
+            _update_ocr_edition_if_current(job, ocr_status=OcrStatus.FAILED)
             ProcessingJob.objects.filter(
                 pk=job.pk,
                 status=ProcessingJob.Status.RUNNING,

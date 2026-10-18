@@ -1,0 +1,44 @@
+# Optional overlay. Only the existing Celery worker can reach this Unix socket.
+# The converter has no network, DB/NAS credentials, library mounts, or host port.
+services:
+  docx-preview:
+    image: ${LIBRARY_DOCX_PREVIEW_IMAGE:-social-theory-library-docx-preview:1}
+    build:
+      context: ./docx_preview_service
+    profiles: [docx-preview]
+    restart: unless-stopped
+    init: true
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+    tmpfs:
+      - /tmp:size=384m,noexec,nosuid,nodev,mode=1777
+    volumes:
+      - docx-preview-socket:/run/docx-preview
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 1.0
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, python, -c, "import socket; s=socket.socket(socket.AF_UNIX); s.settimeout(2); s.connect('/run/docx-preview/preview.sock'); s.sendall(b'GET /health HTTP/1.0\\r\\n\\r\\n'); assert b'200' in s.recv(128)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  api:
+    environment:
+      DOCX_PREVIEW_ENABLED: "true"
+      DOCX_PREVIEW_SOCKET: /run/docx-preview/preview.sock
+  worker:
+    environment:
+      DOCX_PREVIEW_ENABLED: "true"
+      DOCX_PREVIEW_SOCKET: /run/docx-preview/preview.sock
+      DOCX_PREVIEW_TIMEOUT_SECONDS: "90"
+    volumes:
+      - docx-preview-socket:/run/docx-preview:ro
+volumes:
+  docx-preview-socket:

@@ -195,6 +195,7 @@ SPECTACULAR_SETTINGS = {
         "ResearchMemoryUsageActionEnum": ["grant", "revoke", "revoke_all"],
         "CitationSourceCommandActionEnum": ["cancel", "retry"],
         "ReaderPrivacyOperationKindEnum": ["export", "erase"],
+        "DocumentRevisionApplyModeEnum": ["publish", "apply_draft"],
         "EditorialSourceKindEnum": ["catalog", "planned"],
         "EditorialTextKindEnum": ["paragraph", "heading"],
         "ContentReferenceTypeEnum": ["work", "edition", "node", "span"],
@@ -995,6 +996,10 @@ READER_SUBMISSION_EMAIL = os.getenv("READER_SUBMISSION_EMAIL", "")
 LIBRARY_OWNER_EMAIL = os.getenv("LIBRARY_OWNER_EMAIL", "").strip().lower()
 LIBRARY_OWNER_DISPLAY_NAME = os.getenv("LIBRARY_OWNER_DISPLAY_NAME", "Winston").strip() or "Winston"
 PRIVATE_DATA_ENCRYPTION_KEY = os.getenv("PRIVATE_DATA_ENCRYPTION_KEY", "")
+# Optional private DOCX preview: only the fixed, dedicated Unix socket is supported.
+DOCX_PREVIEW_ENABLED = env_bool("DOCX_PREVIEW_ENABLED", False)
+DOCX_PREVIEW_SOCKET = os.getenv("DOCX_PREVIEW_SOCKET", "/run/docx-preview/preview.sock")
+DOCX_PREVIEW_TIMEOUT_SECONDS = int(os.getenv("DOCX_PREVIEW_TIMEOUT_SECONDS", "90"))
 S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
 S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
 S3_SESSION_TOKEN = os.getenv("S3_SESSION_TOKEN", "")

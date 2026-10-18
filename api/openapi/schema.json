@@ -1019,6 +1019,524 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/files/": {
+            "post": {
+                "operationId": "catalog_admin_editions_files_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditionFileInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditionFileInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFileUploadOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFileUploadOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/adopt/": {
+            "get": {
+                "operationId": "catalog_admin_editions_files_adopt_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FileAdoptionPreviewOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_files_adopt_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FileAdoptionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FileAdoptionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FileAdoptionInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FileAdoptionResultOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/content/": {
+            "get": {
+                "operationId": "catalog_admin_editions_files_content_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/generate-reader/": {
+            "post": {
+                "operationId": "catalog_admin_editions_files_generate_reader_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateReaderInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateReaderInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateReaderInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFileUploadOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/prepare-public/": {
+            "post": {
+                "operationId": "catalog_admin_editions_files_prepare_public_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreparePublicFileInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreparePublicFileInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreparePublicFileInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFilePublicPreparationResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/rights/": {
+            "patch": {
+                "operationId": "catalog_admin_editions_files_rights_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedWorkFileRightsInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedWorkFileRightsInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedWorkFileRightsInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFileRightsUpdateOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/impact.csv": {
+            "get": {
+                "operationId": "catalog_admin_editions_files_impact.csv_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/files/requests/{request_key}/": {
+            "get": {
+                "operationId": "catalog_admin_editions_files_requests_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_key",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFileUploadOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/editions/{edition_id}/media/cover/": {
             "post": {
                 "operationId": "catalog_admin_editions_media_cover_create",
@@ -3422,6 +3940,147 @@
                 }
             }
         },
+        "/api/catalog/admin/works/{work_id}/editions/": {
+            "post": {
+                "operationId": "catalog_admin_works_editions_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewWorkEditionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewWorkEditionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewWorkEditionInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NewWorkEditionOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/works/{work_id}/files/": {
+            "get": {
+                "operationId": "catalog_admin_works_files_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "edition",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "impact_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkFilesStateOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
             "get": {
                 "operationId": "catalog_admin_works_recommendation_image_metadata_retrieve",
@@ -4926,6 +5585,176 @@
                 }
             }
         },
+        "/api/ingestion/ocr-workspace/{asset_id}/": {
+            "get": {
+                "operationId": "ingestion_ocr_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "detect_garbled",
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "detect_spreads",
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "list_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "pdf_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "quality_threshold",
+                        "schema": {
+                            "type": "number",
+                            "format": "double",
+                            "maximum": 1,
+                            "minimum": 0,
+                            "default": 0.75
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "issues",
+                                "failed",
+                                "unread",
+                                "needs_review",
+                                "completed",
+                                "manual",
+                                "reviewed"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `issues` - issues\n* `failed` - failed\n* `unread` - unread\n* `needs_review` - needs_review\n* `completed` - completed\n* `manual` - manual\n* `reviewed` - reviewed"
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OCRWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_ocr_workspace_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OCRCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OCRCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OCRCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OCRWorkspaceCommandResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/citation-audits/": {
             "get": {
                 "operationId": "reading_citation_audits_list",
@@ -5300,6 +6129,150 @@
                     "200": {
                         "content": {
                             "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-audits/{id}/preview/": {
+            "get": {
+                "operationId": "reading_citation_audits_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PreviewStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_citation_audits_preview_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PreviewStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-audits/{id}/preview/file/": {
+            "get": {
+                "operationId": "reading_citation_audits_preview_file_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "generation",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/pdf": {
                                 "schema": {
                                     "type": "string",
                                     "format": "binary"
@@ -5761,6 +6734,150 @@
                     "200": {
                         "content": {
                             "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/preview/": {
+            "get": {
+                "operationId": "reading_citation_sources_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PreviewStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_citation_sources_preview_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreviewCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PreviewStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/preview/file/": {
+            "get": {
+                "operationId": "reading_citation_sources_preview_file_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "generation",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/pdf": {
                                 "schema": {
                                     "type": "string",
                                     "format": "binary"
@@ -10461,6 +11578,14 @@
                     "title"
                 ]
             },
+            "DocumentRevisionApplyModeEnum": {
+                "enum": [
+                    "publish",
+                    "apply_draft"
+                ],
+                "type": "string",
+                "description": "* `publish` - publish\n* `apply_draft` - apply_draft"
+            },
             "DocumentTypeEnum": {
                 "enum": [
                     "book",
@@ -10626,6 +11751,53 @@
                     "publication_place_verbatim",
                     "publisher_verbatim",
                     "readable_asset"
+                ]
+            },
+            "EditionFileInputActionEnum": {
+                "enum": [
+                    "supplement",
+                    "replace"
+                ],
+                "type": "string",
+                "description": "* `supplement` - supplement\n* `replace` - replace"
+            },
+            "EditionFileInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/EditionFileInputActionEnum"
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expected_reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    },
+                    "generate_reader": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "required": [
+                    "action",
+                    "confirm",
+                    "expected_updated_at",
+                    "file",
+                    "request_key"
                 ]
             },
             "EditorialAssistance": {
@@ -11030,6 +12202,298 @@
                         "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
                     }
                 }
+            },
+            "ExtensionEnum": {
+                "enum": [
+                    "pdf",
+                    "docx",
+                    "tiff"
+                ],
+                "type": "string",
+                "description": "* `pdf` - pdf\n* `docx` - docx\n* `tiff` - tiff"
+            },
+            "FileAdoptionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirm",
+                    "fingerprint",
+                    "request_key"
+                ]
+            },
+            "FileAdoptionPreviewOutput": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "current_reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "can_adopt": {
+                        "type": "boolean"
+                    },
+                    "already_current": {
+                        "type": "boolean"
+                    },
+                    "blocking": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "impact": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "already_current",
+                    "blocking",
+                    "can_adopt",
+                    "current_reader_asset_id",
+                    "edition_id",
+                    "fingerprint",
+                    "impact",
+                    "request_key",
+                    "target_asset_id"
+                ]
+            },
+            "FileAdoptionResultOutput": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "event_id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "command_accepted": {
+                        "type": "boolean"
+                    },
+                    "effective": {
+                        "type": "boolean"
+                    },
+                    "public_effective": {
+                        "type": "boolean"
+                    },
+                    "publication_required": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "command_accepted",
+                    "detail",
+                    "edition_id",
+                    "effective",
+                    "event_id",
+                    "public_effective",
+                    "publication_required",
+                    "request_key",
+                    "status",
+                    "target_asset_id"
+                ]
+            },
+            "FileFormatCapabilityOutput": {
+                "type": "object",
+                "properties": {
+                    "extension": {
+                        "$ref": "#/components/schemas/ExtensionEnum"
+                    },
+                    "max_bytes": {
+                        "type": "integer"
+                    },
+                    "max_derived_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "can_generate_reader": {
+                        "type": "boolean"
+                    },
+                    "service_verified": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "available",
+                    "can_generate_reader",
+                    "extension",
+                    "max_bytes",
+                    "max_derived_bytes",
+                    "reason",
+                    "service_verified"
+                ]
+            },
+            "FileImpactOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FileImpactRowOutput"
+                        }
+                    },
+                    "summary": {
+                        "$ref": "#/components/schemas/FileImpactSummaryOutput"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "export_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "export_url",
+                    "notice",
+                    "page",
+                    "page_size",
+                    "results",
+                    "summary"
+                ]
+            },
+            "FileImpactRowOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "file_page_index": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "1-based PDF page index."
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "file_page_index",
+                    "href",
+                    "id",
+                    "kind",
+                    "printed_page_label",
+                    "status",
+                    "title"
+                ]
+            },
+            "FileImpactSummaryOutput": {
+                "type": "object",
+                "properties": {
+                    "catalog_evidence": {
+                        "type": "integer"
+                    },
+                    "reader_annotations": {
+                        "type": "integer"
+                    },
+                    "reader_bookmarks": {
+                        "type": "integer"
+                    },
+                    "reader_progress": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "catalog_evidence",
+                    "reader_annotations",
+                    "reader_bookmarks",
+                    "reader_progress"
+                ]
+            },
+            "GenerateReaderInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_asset_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "expected_asset_updated_at",
+                    "request_key"
+                ]
             },
             "HomeResponse": {
                 "type": "object",
@@ -11737,6 +13201,15 @@
                     "preview_url"
                 ]
             },
+            "LanguagesEnum": {
+                "enum": [
+                    "ch",
+                    "en",
+                    "chinese_cht"
+                ],
+                "type": "string",
+                "description": "* `ch` - ch\n* `en` - en\n* `chinese_cht` - chinese_cht"
+            },
             "MappingAsset": {
                 "type": "object",
                 "properties": {
@@ -12298,7 +13771,7 @@
                         "type": "boolean"
                     },
                     "mode": {
-                        "$ref": "#/components/schemas/MappingPreviewModeEnum"
+                        "$ref": "#/components/schemas/DocumentRevisionApplyModeEnum"
                     }
                 },
                 "required": [
@@ -12316,14 +13789,6 @@
                     "segments_before",
                     "source_fingerprint"
                 ]
-            },
-            "MappingPreviewModeEnum": {
-                "enum": [
-                    "publish",
-                    "apply_draft"
-                ],
-                "type": "string",
-                "description": "* `publish` - publish\n* `apply_draft` - apply_draft"
             },
             "MappingPublication": {
                 "type": "object",
@@ -13394,6 +14859,578 @@
                     "action"
                 ]
             },
+            "NewWorkEditionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_work_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "version_label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "maximum": 9999,
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "maxLength": 300
+                    }
+                },
+                "required": [
+                    "expected_work_updated_at",
+                    "request_key",
+                    "version_label"
+                ]
+            },
+            "NewWorkEditionOutput": {
+                "type": "object",
+                "properties": {
+                    "created": {
+                        "type": "boolean"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "created",
+                    "edition_id",
+                    "request_key",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
+            "OCRCommandActionEnum": {
+                "enum": [
+                    "save",
+                    "prepare",
+                    "apply",
+                    "start",
+                    "pause",
+                    "resume",
+                    "cancel",
+                    "review"
+                ],
+                "type": "string",
+                "description": "* `save` - save\n* `prepare` - prepare\n* `apply` - apply\n* `start` - start\n* `pause` - pause\n* `resume` - resume\n* `cancel` - cancel\n* `review` - review"
+            },
+            "OCRCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/OCRCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "source_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "text": {
+                        "type": "string",
+                        "maxLength": 200000
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "prepared_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "page_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "maxItems": 20000
+                    },
+                    "source_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "task_options": {
+                        "$ref": "#/components/schemas/OCRTaskOptionsRequest"
+                    },
+                    "pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRReviewPageRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "OCRCorrection": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "original_text": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "review_only": {
+                        "type": "boolean"
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "applied_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "applied_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "publication": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "applied_asset_id",
+                    "applied_at",
+                    "confirmed",
+                    "created_at",
+                    "id",
+                    "note",
+                    "original_text",
+                    "pdf_page",
+                    "publication",
+                    "review_only",
+                    "revision",
+                    "source_fingerprint",
+                    "text"
+                ]
+            },
+            "OCRCorrectionPreview": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "before": {
+                        "type": "string"
+                    },
+                    "after": {
+                        "type": "string"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "can_apply": {
+                        "type": "boolean"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/DocumentRevisionApplyModeEnum"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "prepared_fingerprint": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "after",
+                    "before",
+                    "blockers",
+                    "can_apply",
+                    "mode",
+                    "notice",
+                    "pdf_page",
+                    "prepared_fingerprint",
+                    "revision_id"
+                ]
+            },
+            "OCRPage": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "text_source": {
+                        "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "is_text_manual": {
+                        "type": "boolean"
+                    },
+                    "char_count": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "reviewed": {
+                        "type": "boolean"
+                    },
+                    "width": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "replacement_character": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "char_count",
+                    "confidence",
+                    "height",
+                    "is_text_manual",
+                    "pdf_page",
+                    "printed_label",
+                    "reason",
+                    "replacement_character",
+                    "reviewed",
+                    "source_fingerprint",
+                    "status",
+                    "text_source",
+                    "width"
+                ]
+            },
+            "OCRPageDetail": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "original_text": {
+                        "type": "string"
+                    },
+                    "parsed": {
+                        "type": "boolean"
+                    },
+                    "manual": {
+                        "type": "boolean"
+                    },
+                    "manual_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "manual_revision": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OCRCorrection"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "latest": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OCRCorrection"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRCorrection"
+                        }
+                    },
+                    "history_count": {
+                        "type": "integer"
+                    },
+                    "history_page": {
+                        "type": "integer"
+                    },
+                    "history_next_page": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "history",
+                    "history_count",
+                    "history_next_page",
+                    "history_page",
+                    "latest",
+                    "manual",
+                    "manual_revision",
+                    "manual_revision_id",
+                    "original_text",
+                    "parsed",
+                    "pdf_page",
+                    "source_fingerprint",
+                    "text"
+                ]
+            },
+            "OCRReviewPageRequest": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "source_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "pdf_page",
+                    "source_fingerprint"
+                ]
+            },
+            "OCRTaskOptionsRequest": {
+                "type": "object",
+                "properties": {
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LanguagesEnum"
+                        },
+                        "maxItems": 3,
+                        "minItems": 1
+                    },
+                    "layout": {
+                        "type": "boolean"
+                    },
+                    "quality_threshold": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "detect_spreads": {
+                        "type": "boolean"
+                    },
+                    "detect_garbled": {
+                        "type": "boolean"
+                    },
+                    "skip_reviewed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "detect_garbled",
+                    "detect_spreads",
+                    "languages",
+                    "layout",
+                    "quality_threshold",
+                    "skip_reviewed"
+                ]
+            },
+            "OCRWorkspace": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "$ref": "#/components/schemas/MappingAsset"
+                    },
+                    "source_version": {
+                        "type": "string"
+                    },
+                    "expected_revision": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRPage"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "list_page": {
+                        "type": "integer"
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "parsed_page_count": {
+                        "type": "integer"
+                    },
+                    "missing_page_count": {
+                        "type": "integer"
+                    },
+                    "detail": {
+                        "$ref": "#/components/schemas/OCRPageDetail"
+                    },
+                    "jobs": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "active_job_id": {
+                        "type": "string"
+                    },
+                    "paused": {
+                        "type": "boolean"
+                    },
+                    "can_run": {
+                        "type": "boolean"
+                    },
+                    "denied_reason": {
+                        "type": "string"
+                    },
+                    "provider_label": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "settings": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "result": {
+                        "$ref": "#/components/schemas/OCRCorrection"
+                    }
+                },
+                "required": [
+                    "active_job_id",
+                    "asset",
+                    "can_run",
+                    "checked_at",
+                    "count",
+                    "counts",
+                    "denied_reason",
+                    "detail",
+                    "expected_revision",
+                    "jobs",
+                    "list_page",
+                    "missing_page_count",
+                    "next_page",
+                    "pages",
+                    "parsed_page_count",
+                    "paused",
+                    "provider_label",
+                    "settings",
+                    "source_version"
+                ]
+            },
+            "OCRWorkspaceCommandResult": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/OCRWorkspace"
+                    },
+                    {
+                        "$ref": "#/components/schemas/OCRCorrectionPreview"
+                    }
+                ]
+            },
             "ObjectTypeEnum": {
                 "enum": [
                     "knowledge_node",
@@ -13962,6 +15999,23 @@
                 "properties": {
                     "research_personalization": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "PatchedWorkFileRightsInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_asset_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "rights_note": {
+                        "type": "string",
+                        "maxLength": 4000
                     }
                 }
             },
@@ -15275,6 +17329,27 @@
                 "type": "string",
                 "description": "* `auto` - 自动选择\n* `original` - 强制原始 PDF\n* `ocr` - 强制 OCR PDF"
             },
+            "PreparePublicFileInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_asset_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirm",
+                    "expected_asset_updated_at",
+                    "request_key"
+                ]
+            },
             "PrerequisiteInputRequest": {
                 "type": "object",
                 "properties": {
@@ -15294,6 +17369,127 @@
                     "reference",
                     "requires_work_id",
                     "work_id"
+                ]
+            },
+            "PreviewCommandActionEnum": {
+                "enum": [
+                    "generate",
+                    "cancel"
+                ],
+                "type": "string",
+                "description": "* `generate` - generate\n* `cancel` - cancel"
+            },
+            "PreviewCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PreviewCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_preview_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "source_generation": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_preview_revision",
+                    "request_id",
+                    "source_generation"
+                ]
+            },
+            "PreviewStatus": {
+                "type": "object",
+                "properties": {
+                    "audit_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "audit_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "content_hash": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_generation": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "manuscript_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "preview_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "preview_generation": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "page_count": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "converter_version": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "fonts_version": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "poll_after_ms": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "audit_id",
+                    "audit_revision",
+                    "content_hash",
+                    "converter_version",
+                    "enabled",
+                    "fonts_version",
+                    "manuscript_revision",
+                    "message",
+                    "notice",
+                    "page_count",
+                    "poll_after_ms",
+                    "preview_generation",
+                    "preview_revision",
+                    "source_generation",
+                    "status"
                 ]
             },
             "PrintedLabelPrecisionEnum": {
@@ -18929,6 +21125,676 @@
                     "theory_associations",
                     "title",
                     "topics"
+                ]
+            },
+            "WorkEditionOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "original_count": {
+                        "type": "integer"
+                    },
+                    "reader_count": {
+                        "type": "integer"
+                    },
+                    "current_reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "current_reader_asset_id",
+                    "id",
+                    "is_primary",
+                    "label",
+                    "language",
+                    "original_count",
+                    "publication_year",
+                    "publisher",
+                    "reader_count",
+                    "state",
+                    "version_label"
+                ]
+            },
+            "WorkFileHistoryOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkFileHistoryRowOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "WorkFileHistoryRowOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "can_rollback": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "activated_at",
+                    "can_rollback",
+                    "id",
+                    "is_current",
+                    "revision",
+                    "status",
+                    "title"
+                ]
+            },
+            "WorkFileOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "mime_type": {
+                        "type": "string"
+                    },
+                    "byte_size": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "sha256": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "source_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "validation_status": {
+                        "type": "string"
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "is_public_reader": {
+                        "type": "boolean"
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "download_url": {
+                        "type": "string"
+                    },
+                    "generate_reader_url": {
+                        "type": "string"
+                    },
+                    "can_adopt": {
+                        "type": "boolean"
+                    },
+                    "rights_note": {
+                        "type": "string"
+                    },
+                    "public_preparation": {
+                        "$ref": "#/components/schemas/WorkFilePublicPreparationOutput"
+                    },
+                    "access_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "access_status",
+                    "byte_size",
+                    "can_adopt",
+                    "created_at",
+                    "created_by",
+                    "download_url",
+                    "filename",
+                    "generate_reader_url",
+                    "id",
+                    "is_current",
+                    "is_public_reader",
+                    "kind",
+                    "mime_type",
+                    "page_count",
+                    "preview_url",
+                    "public_preparation",
+                    "rights_note",
+                    "sha256",
+                    "source_asset_id",
+                    "status",
+                    "updated_at",
+                    "validation_status",
+                    "version"
+                ]
+            },
+            "WorkFilePageOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkFileOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "WorkFilePublicPreparationOutput": {
+                "type": "object",
+                "properties": {
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "can_prepare": {
+                        "type": "boolean"
+                    },
+                    "prepare_url": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_prepare",
+                    "detail",
+                    "prepare_url",
+                    "required",
+                    "status"
+                ]
+            },
+            "WorkFilePublicPreparationResult": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "detail",
+                    "request_key",
+                    "status"
+                ]
+            },
+            "WorkFileRightsOutput": {
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "type": "string"
+                    },
+                    "access_status": {
+                        "type": "string"
+                    },
+                    "source_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "access_status",
+                    "can_edit",
+                    "note",
+                    "source_asset_id",
+                    "updated_at"
+                ]
+            },
+            "WorkFileRightsUpdateOutput": {
+                "type": "object",
+                "properties": {
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rights_note": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "request_key",
+                    "rights_note",
+                    "updated_at"
+                ]
+            },
+            "WorkFileTaskOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "dispatch_status": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "retry_url": {
+                        "type": "string"
+                    },
+                    "resume_url": {
+                        "type": "string"
+                    },
+                    "processing_href": {
+                        "type": "string"
+                    },
+                    "source_filename": {
+                        "type": "string"
+                    },
+                    "original_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "generate_reader": {
+                        "type": "boolean"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "action",
+                    "created_at",
+                    "dispatch_status",
+                    "error_message",
+                    "generate_reader",
+                    "id",
+                    "is_active",
+                    "original_asset_id",
+                    "processing_href",
+                    "progress",
+                    "reader_asset_id",
+                    "resume_url",
+                    "retry_url",
+                    "source_filename",
+                    "status"
+                ]
+            },
+            "WorkFileUploadOutput": {
+                "type": "object",
+                "properties": {
+                    "accepted": {
+                        "type": "boolean"
+                    },
+                    "created": {
+                        "type": "boolean"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "dispatch_status": {
+                        "type": "string"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accepted",
+                    "created",
+                    "detail",
+                    "dispatch_status",
+                    "edition_id",
+                    "item_id",
+                    "request_key",
+                    "status",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
+            "WorkFilesCapabilitiesOutput": {
+                "type": "object",
+                "properties": {
+                    "formats": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FileFormatCapabilityOutput"
+                        }
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "can_publish": {
+                        "type": "boolean"
+                    },
+                    "max_active_tasks_per_edition": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "can_edit",
+                    "can_publish",
+                    "formats",
+                    "max_active_tasks_per_edition"
+                ]
+            },
+            "WorkFilesEditionOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "active_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "current_reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "public_reader_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/WorkFileRightsOutput"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "active_revision_id",
+                    "current_reader_asset_id",
+                    "id",
+                    "public_reader_asset_id",
+                    "rights",
+                    "updated_at",
+                    "workbench_url"
+                ]
+            },
+            "WorkFilesStateOutput": {
+                "type": "object",
+                "properties": {
+                    "work": {
+                        "$ref": "#/components/schemas/WorkFilesWorkOutput"
+                    },
+                    "editions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkEditionOutput"
+                        }
+                    },
+                    "selected_edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkFilesEditionOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "files": {
+                        "$ref": "#/components/schemas/WorkFilePageOutput"
+                    },
+                    "current_reader_file": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkFileOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "public_reader_file": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkFileOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "tasks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkFileTaskOutput"
+                        }
+                    },
+                    "task_count": {
+                        "type": "integer"
+                    },
+                    "capabilities": {
+                        "$ref": "#/components/schemas/WorkFilesCapabilitiesOutput"
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/WorkFileHistoryOutput"
+                    },
+                    "impact": {
+                        "$ref": "#/components/schemas/FileImpactOutput"
+                    }
+                },
+                "required": [
+                    "capabilities",
+                    "current_reader_file",
+                    "edition",
+                    "editions",
+                    "files",
+                    "history",
+                    "impact",
+                    "public_reader_file",
+                    "selected_edition_id",
+                    "task_count",
+                    "tasks",
+                    "work"
+                ]
+            },
+            "WorkFilesWorkOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "original_publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "authors",
+                    "cover_url",
+                    "document_type",
+                    "id",
+                    "original_publication_year",
+                    "title",
+                    "updated_at"
                 ]
             }
         },

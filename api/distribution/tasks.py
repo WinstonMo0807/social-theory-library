@@ -28,12 +28,13 @@ from .services import sync_asset_to_cloud
     retry_jitter=True,
     max_retries=5,
 )
-def sync_cloud_object(self, cloud_object_id):
+def sync_cloud_object(self, cloud_object_id, *, resume_publication=True):
     cloud_object = CloudObject.objects.select_related("asset", "provider").get(pk=cloud_object_id)
     sync_asset_to_cloud(cloud_object)
     from ingestion.services.pipeline import resume_publication_for_asset
 
-    resume_publication_for_asset(str(cloud_object.asset_id))
+    if resume_publication:
+        resume_publication_for_asset(str(cloud_object.asset_id))
     return str(cloud_object.id)
 
 

@@ -1,4 +1,5 @@
 from django.urls import path
+from .ocr_workspace_views import OCRWorkspaceView
 
 from .views import (
     BatchDetailView,
@@ -42,6 +43,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("ocr-workspace/<uuid:asset_id>/", OCRWorkspaceView.as_view(), name="ocr-workspace"),
     path("dashboard/", DashboardView.as_view(), name="ingestion-dashboard"),
     path("queue-health/", QueueHealthView.as_view(), name="ingestion-queue-health"),
     path("processing-center/", ProcessingCenterView.as_view(), name="processing-center"),

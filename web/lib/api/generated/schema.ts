@@ -240,6 +240,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/files/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_editions_files_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/adopt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_files_adopt_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_files_adopt_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/content/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_files_content_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/generate-reader/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_editions_files_generate_reader_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/prepare-public/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_editions_files_prepare_public_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/{asset_id}/rights/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["catalog_admin_editions_files_rights_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/impact.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_files_impact.csv_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/files/requests/{request_key}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_files_requests_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/media/cover/": {
         parameters: {
             query?: never;
@@ -817,6 +945,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/works/{work_id}/editions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_works_editions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/works/{work_id}/files/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_works_files_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/works/{work_id}/recommendation-image/metadata/": {
         parameters: {
             query?: never;
@@ -1273,6 +1433,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/ocr-workspace/{asset_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_ocr_workspace_retrieve"];
+        put?: never;
+        post: operations["ingestion_ocr_workspace_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/citation-audits/": {
         parameters: {
             query?: never;
@@ -1377,6 +1553,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["reading_citation_audits_original_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-audits/{id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_audits_preview_retrieve"];
+        put?: never;
+        post: operations["reading_citation_audits_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-audits/{id}/preview/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_audits_preview_file_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1505,6 +1713,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["reading_citation_sources_original_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_preview_retrieve"];
+        put?: never;
+        post: operations["reading_citation_sources_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/preview/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_preview_file_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2840,6 +3080,12 @@ export interface components {
             slug?: string;
         };
         /**
+         * @description * `publish` - publish
+         *     * `apply_draft` - apply_draft
+         * @enum {string}
+         */
+        DocumentRevisionApplyModeEnum: "publish" | "apply_draft";
+        /**
          * @description * `book` - 图书
          *     * `journal_article` - 期刊论文
          *     * `journal_issue` - 整期期刊
@@ -2882,6 +3128,26 @@ export interface components {
             responsibility_statement?: string;
             readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
             readonly readable_asset: components["schemas"]["AssetCompact"] | null;
+        };
+        /**
+         * @description * `supplement` - supplement
+         *     * `replace` - replace
+         * @enum {string}
+         */
+        EditionFileInputActionEnum: "supplement" | "replace";
+        EditionFileInputRequest: {
+            action: components["schemas"]["EditionFileInputActionEnum"];
+            /** Format: binary */
+            file: string;
+            /** Format: uuid */
+            request_key: string;
+            /** Format: date-time */
+            expected_updated_at: string;
+            /** Format: uuid */
+            expected_reader_asset_id?: string | null;
+            confirm: boolean;
+            /** @default true */
+            generate_reader: boolean;
         };
         EditorialAssistance: {
             /** Format: uuid */
@@ -3021,6 +3287,92 @@ export interface components {
             content_hash?: string;
             /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
             anchors?: components["schemas"]["EvidenceAnchorInputRequest"][];
+        };
+        /**
+         * @description * `pdf` - pdf
+         *     * `docx` - docx
+         *     * `tiff` - tiff
+         * @enum {string}
+         */
+        ExtensionEnum: "pdf" | "docx" | "tiff";
+        FileAdoptionInputRequest: {
+            /** Format: uuid */
+            request_key: string;
+            fingerprint: string;
+            confirm: boolean;
+        };
+        FileAdoptionPreviewOutput: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            target_asset_id: string;
+            /** Format: uuid */
+            current_reader_asset_id: string | null;
+            /** Format: uuid */
+            request_key: string;
+            fingerprint: string;
+            can_adopt: boolean;
+            already_current: boolean;
+            blocking: string[];
+            impact: string[];
+        };
+        FileAdoptionResultOutput: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            target_asset_id: string;
+            event_id: string;
+            status: string;
+            command_accepted: boolean;
+            effective: boolean;
+            public_effective: boolean;
+            publication_required: boolean;
+            detail: string;
+        };
+        FileFormatCapabilityOutput: {
+            extension: components["schemas"]["ExtensionEnum"];
+            max_bytes: number;
+            max_derived_bytes: number | null;
+            available: boolean;
+            can_generate_reader: boolean;
+            service_verified: boolean;
+            reason: string;
+        };
+        FileImpactOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["FileImpactRowOutput"][];
+            summary: components["schemas"]["FileImpactSummaryOutput"];
+            notice: string;
+            export_url: string;
+        };
+        FileImpactRowOutput: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** @description 1-based PDF page index. */
+            file_page_index: number | null;
+            printed_page_label: string;
+            status: string;
+            href: string;
+        };
+        FileImpactSummaryOutput: {
+            catalog_evidence: number;
+            reader_annotations: number;
+            reader_bookmarks: number;
+            reader_progress: number;
+        };
+        GenerateReaderInputRequest: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: date-time */
+            expected_asset_updated_at: string;
         };
         HomeResponse: {
             schema_version: string;
@@ -3237,6 +3589,13 @@ export interface components {
             editor_url: string;
             fingerprint: string;
         };
+        /**
+         * @description * `ch` - ch
+         *     * `en` - en
+         *     * `chinese_cht` - chinese_cht
+         * @enum {string}
+         */
+        LanguagesEnum: "ch" | "en" | "chinese_cht";
         MappingAsset: {
             /** Format: uuid */
             id: string;
@@ -3384,14 +3743,8 @@ export interface components {
             diagnostics: components["schemas"]["MappingDiagnostics"];
             blockers: string[];
             can_apply: boolean;
-            mode: components["schemas"]["MappingPreviewModeEnum"];
+            mode: components["schemas"]["DocumentRevisionApplyModeEnum"];
         };
-        /**
-         * @description * `publish` - publish
-         *     * `apply_draft` - apply_draft
-         * @enum {string}
-         */
-        MappingPreviewModeEnum: "publish" | "apply_draft";
         MappingPublication: {
             /** Format: uuid */
             event_id: string;
@@ -3694,6 +4047,169 @@ export interface components {
         MetadataDecisionRequest: {
             action: components["schemas"]["MetadataDecisionActionEnum"];
         };
+        NewWorkEditionInputRequest: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: date-time */
+            expected_work_updated_at: string;
+            version_label: string;
+            publication_year?: number | null;
+            publisher?: string;
+        };
+        NewWorkEditionOutput: {
+            created: boolean;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            request_key: string;
+            workbench_url: string;
+        };
+        /**
+         * @description * `save` - save
+         *     * `prepare` - prepare
+         *     * `apply` - apply
+         *     * `start` - start
+         *     * `pause` - pause
+         *     * `resume` - resume
+         *     * `cancel` - cancel
+         *     * `review` - review
+         * @enum {string}
+         */
+        OCRCommandActionEnum: "save" | "prepare" | "apply" | "start" | "pause" | "resume" | "cancel" | "review";
+        OCRCommandRequest: {
+            action: components["schemas"]["OCRCommandActionEnum"];
+            /** Format: uuid */
+            request_id?: string;
+            pdf_page?: number;
+            expected_revision?: number;
+            source_fingerprint?: string;
+            text?: string;
+            /** @default  */
+            note: string;
+            confirmed?: boolean;
+            /** Format: uuid */
+            revision_id?: string;
+            prepared_fingerprint?: string;
+            page_indexes?: number[];
+            source_version?: string;
+            /** Format: uuid */
+            job_id?: string;
+            job_version?: string;
+            task_options?: components["schemas"]["OCRTaskOptionsRequest"];
+            pages?: components["schemas"]["OCRReviewPageRequest"][];
+        };
+        OCRCorrection: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            pdf_page: number;
+            text: string;
+            original_text: string;
+            note: string;
+            confirmed: boolean;
+            review_only: boolean;
+            source_fingerprint: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            applied_at: string | null;
+            /** Format: uuid */
+            applied_asset_id: string | null;
+            publication: {
+                [key: string]: unknown;
+            } | null;
+        };
+        OCRCorrectionPreview: {
+            /** Format: uuid */
+            revision_id: string;
+            pdf_page: number;
+            before: string;
+            after: string;
+            blockers: string[];
+            can_apply: boolean;
+            mode: components["schemas"]["DocumentRevisionApplyModeEnum"];
+            notice: string;
+            prepared_fingerprint: string;
+        };
+        OCRPage: {
+            pdf_page: number;
+            printed_label: string;
+            text_source: string;
+            /** Format: double */
+            confidence: number;
+            is_text_manual: boolean;
+            char_count: number;
+            status: string;
+            reason: string;
+            source_fingerprint: string;
+            reviewed: boolean;
+            /** Format: double */
+            width: number;
+            /** Format: double */
+            height: number;
+            replacement_character: boolean;
+        };
+        OCRPageDetail: {
+            pdf_page: number;
+            text: string;
+            original_text: string;
+            parsed: boolean;
+            manual: boolean;
+            /** Format: uuid */
+            manual_revision_id: string | null;
+            manual_revision: components["schemas"]["OCRCorrection"] | null;
+            latest: components["schemas"]["OCRCorrection"] | null;
+            source_fingerprint: string;
+            history: components["schemas"]["OCRCorrection"][];
+            history_count: number;
+            history_page: number;
+            history_next_page: number | null;
+        };
+        OCRReviewPageRequest: {
+            pdf_page: number;
+            source_fingerprint: string;
+        };
+        OCRTaskOptionsRequest: {
+            languages: components["schemas"]["LanguagesEnum"][];
+            layout: boolean;
+            /** Format: double */
+            quality_threshold: number;
+            detect_spreads: boolean;
+            detect_garbled: boolean;
+            skip_reviewed: boolean;
+        };
+        OCRWorkspace: {
+            asset: components["schemas"]["MappingAsset"];
+            source_version: string;
+            expected_revision: number;
+            pages: components["schemas"]["OCRPage"][];
+            count: number;
+            list_page: number;
+            next_page: number | null;
+            counts: {
+                [key: string]: number;
+            };
+            parsed_page_count: number;
+            missing_page_count: number;
+            detail: components["schemas"]["OCRPageDetail"];
+            jobs: {
+                [key: string]: unknown;
+            }[];
+            active_job_id: string;
+            paused: boolean;
+            can_run: boolean;
+            denied_reason: string;
+            provider_label: string;
+            /** Format: date-time */
+            checked_at: string;
+            settings: {
+                [key: string]: unknown;
+            };
+            result?: components["schemas"]["OCRCorrection"];
+        };
+        OCRWorkspaceCommandResult: components["schemas"]["OCRWorkspace"] | components["schemas"]["OCRCorrectionPreview"];
         /**
          * @description * `knowledge_node` - knowledge_node
          *     * `reading_path` - reading_path
@@ -3907,6 +4423,13 @@ export interface components {
         };
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
+        };
+        PatchedWorkFileRightsInputRequest: {
+            /** Format: uuid */
+            request_key?: string;
+            /** Format: date-time */
+            expected_asset_updated_at?: string;
+            rights_note?: string;
         };
         PersonCompact: {
             /** Format: uuid */
@@ -4313,12 +4836,50 @@ export interface components {
          * @enum {string}
          */
         PolicyEnum: "auto" | "original" | "ocr";
+        PreparePublicFileInputRequest: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: date-time */
+            expected_asset_updated_at: string;
+            confirm: boolean;
+        };
         PrerequisiteInputRequest: {
             /** Format: uuid */
             work_id: string;
             /** Format: uuid */
             requires_work_id: string;
             reference: components["schemas"]["EvidenceReferenceInputRequest"];
+        };
+        /**
+         * @description * `generate` - generate
+         *     * `cancel` - cancel
+         * @enum {string}
+         */
+        PreviewCommandActionEnum: "generate" | "cancel";
+        PreviewCommandRequest: {
+            action: components["schemas"]["PreviewCommandActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            expected_preview_revision: number;
+            source_generation: number;
+        };
+        PreviewStatus: {
+            /** Format: uuid */
+            readonly audit_id: string;
+            readonly audit_revision: number;
+            readonly content_hash: string;
+            readonly source_generation: number;
+            readonly manuscript_revision: number;
+            readonly preview_revision: number;
+            readonly preview_generation: number;
+            readonly status: string;
+            readonly enabled: boolean;
+            readonly page_count: number | null;
+            readonly converter_version: string | null;
+            readonly fonts_version: string | null;
+            readonly poll_after_ms: number | null;
+            readonly notice: string;
+            readonly message: string;
         };
         /**
          * @description * `spread` - spread
@@ -5369,6 +5930,189 @@ export interface components {
                 [key: string]: unknown[];
             };
         };
+        WorkEditionOutput: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            version_label: string;
+            publication_year: number | null;
+            publisher: string;
+            language: string;
+            is_primary: boolean;
+            state: string;
+            original_count: number;
+            reader_count: number;
+            /** Format: uuid */
+            current_reader_asset_id: string | null;
+        };
+        WorkFileHistoryOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["WorkFileHistoryRowOutput"][];
+        };
+        WorkFileHistoryRowOutput: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            title: string;
+            status: string;
+            /** Format: date-time */
+            activated_at: string | null;
+            is_current: boolean;
+            can_rollback: boolean;
+        };
+        WorkFileOutput: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            filename: string;
+            mime_type: string;
+            byte_size: number;
+            page_count: number;
+            sha256: string;
+            version: number;
+            /** Format: uuid */
+            source_asset_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            created_by: string;
+            status: string;
+            validation_status: string;
+            is_current: boolean;
+            is_public_reader: boolean;
+            preview_url: string;
+            download_url: string;
+            generate_reader_url: string;
+            can_adopt: boolean;
+            rights_note: string;
+            public_preparation: components["schemas"]["WorkFilePublicPreparationOutput"];
+            access_status: string;
+        };
+        WorkFilePageOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["WorkFileOutput"][];
+        };
+        WorkFilePublicPreparationOutput: {
+            required: boolean;
+            status: string;
+            can_prepare: boolean;
+            prepare_url: string;
+            detail: string;
+        };
+        WorkFilePublicPreparationResult: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: uuid */
+            asset_id: string;
+            status: string;
+            detail: string;
+        };
+        WorkFileRightsOutput: {
+            note: string;
+            access_status: string;
+            /** Format: uuid */
+            source_asset_id: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            can_edit: boolean;
+        };
+        WorkFileRightsUpdateOutput: {
+            /** Format: uuid */
+            request_key: string;
+            /** Format: uuid */
+            asset_id: string;
+            rights_note: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WorkFileTaskOutput: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            dispatch_status: string;
+            progress: number;
+            is_active: boolean;
+            error_message: string;
+            retry_url: string;
+            resume_url: string;
+            processing_href: string;
+            source_filename: string;
+            /** Format: uuid */
+            original_asset_id: string | null;
+            /** Format: uuid */
+            reader_asset_id: string | null;
+            generate_reader: boolean;
+            action: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WorkFileUploadOutput: {
+            accepted: boolean;
+            created: boolean;
+            /** Format: uuid */
+            request_key: string;
+            /** Format: uuid */
+            item_id: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            status: string;
+            dispatch_status: string;
+            workbench_url: string;
+            detail: string;
+        };
+        WorkFilesCapabilitiesOutput: {
+            formats: components["schemas"]["FileFormatCapabilityOutput"][];
+            can_edit: boolean;
+            can_publish: boolean;
+            max_active_tasks_per_edition: number;
+        };
+        WorkFilesEditionOutput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            active_revision_id: string | null;
+            /** Format: uuid */
+            current_reader_asset_id: string | null;
+            /** Format: uuid */
+            public_reader_asset_id: string | null;
+            rights: components["schemas"]["WorkFileRightsOutput"];
+            workbench_url: string;
+        };
+        WorkFilesStateOutput: {
+            work: components["schemas"]["WorkFilesWorkOutput"];
+            editions: components["schemas"]["WorkEditionOutput"][];
+            /** Format: uuid */
+            selected_edition_id: string | null;
+            edition: components["schemas"]["WorkFilesEditionOutput"] | null;
+            files: components["schemas"]["WorkFilePageOutput"];
+            current_reader_file: components["schemas"]["WorkFileOutput"] | null;
+            public_reader_file: components["schemas"]["WorkFileOutput"] | null;
+            tasks: components["schemas"]["WorkFileTaskOutput"][];
+            task_count: number;
+            capabilities: components["schemas"]["WorkFilesCapabilitiesOutput"];
+            history: components["schemas"]["WorkFileHistoryOutput"];
+            impact: components["schemas"]["FileImpactOutput"];
+        };
+        WorkFilesWorkOutput: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            cover_url: string;
+            authors: string[];
+            document_type: string;
+            original_publication_year: number | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -5915,6 +6659,239 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IndexActionResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["EditionFileInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditionFileInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFileUploadOutput"];
+                };
+            };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFileUploadOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_adopt_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileAdoptionPreviewOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_adopt_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileAdoptionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FileAdoptionInputRequest"];
+                "multipart/form-data": components["schemas"]["FileAdoptionInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileAdoptionResultOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_content_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_generate_reader_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateReaderInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GenerateReaderInputRequest"];
+                "multipart/form-data": components["schemas"]["GenerateReaderInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFileUploadOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_prepare_public_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreparePublicFileInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PreparePublicFileInputRequest"];
+                "multipart/form-data": components["schemas"]["PreparePublicFileInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFilePublicPreparationResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_rights_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedWorkFileRightsInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedWorkFileRightsInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedWorkFileRightsInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFileRightsUpdateOutput"];
+                };
+            };
+        };
+    };
+    "catalog_admin_editions_files_impact.csv_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
+    catalog_admin_editions_files_requests_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFileUploadOutput"];
                 };
             };
         };
@@ -7118,6 +8095,60 @@ export interface operations {
             };
         };
     };
+    catalog_admin_works_editions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWorkEditionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NewWorkEditionInputRequest"];
+                "multipart/form-data": components["schemas"]["NewWorkEditionInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewWorkEditionOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_works_files_retrieve: {
+        parameters: {
+            query?: {
+                asset?: string;
+                edition?: string;
+                history_page?: number;
+                impact_page?: number;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkFilesStateOutput"];
+                };
+            };
+        };
+    };
     catalog_admin_works_recommendation_image_metadata_retrieve: {
         parameters: {
             query?: {
@@ -7858,6 +8889,72 @@ export interface operations {
             };
         };
     };
+    ingestion_ocr_workspace_retrieve: {
+        parameters: {
+            query?: {
+                detect_garbled?: boolean;
+                detect_spreads?: boolean;
+                history_page?: number;
+                list_page?: number;
+                pdf_page?: number;
+                quality_threshold?: number;
+                /**
+                 * @description * `all` - all
+                 *     * `issues` - issues
+                 *     * `failed` - failed
+                 *     * `unread` - unread
+                 *     * `needs_review` - needs_review
+                 *     * `completed` - completed
+                 *     * `manual` - manual
+                 *     * `reviewed` - reviewed
+                 */
+                status?: "all" | "issues" | "failed" | "unread" | "needs_review" | "completed" | "manual" | "reviewed";
+            };
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OCRWorkspace"];
+                };
+            };
+        };
+    };
+    ingestion_ocr_workspace_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OCRCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OCRCommandRequest"];
+                "multipart/form-data": components["schemas"]["OCRCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OCRWorkspaceCommandResult"];
+                };
+            };
+        };
+    };
     reading_citation_audits_list: {
         parameters: {
             query?: {
@@ -8062,6 +9159,77 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_citation_audits_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStatus"];
+                };
+            };
+        };
+    };
+    reading_citation_audits_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PreviewCommandRequest"];
+                "multipart/form-data": components["schemas"]["PreviewCommandRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStatus"];
+                };
+            };
+        };
+    };
+    reading_citation_audits_preview_file_retrieve: {
+        parameters: {
+            query: {
+                generation: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
         };
@@ -8315,6 +9483,77 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_citation_sources_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStatus"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PreviewCommandRequest"];
+                "multipart/form-data": components["schemas"]["PreviewCommandRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStatus"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_preview_file_retrieve: {
+        parameters: {
+            query: {
+                generation: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
         };

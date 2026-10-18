@@ -491,6 +491,9 @@ class Page(UUIDTimeStampedModel):
     text = models.TextField(blank=True)
     normalized_text = models.TextField(blank=True)
     text_source = models.CharField(max_length=16, choices=TextSource.choices)
+    is_text_manual = models.BooleanField(default=False)
+    manual_text_revision = models.ForeignKey("PageTextRevision", null=True, blank=True, on_delete=models.PROTECT, related_name="protected_pages")
+    reviewed_text_revision = models.ForeignKey("PageTextRevision", null=True, blank=True, on_delete=models.PROTECT, related_name="reviewed_pages")
     confidence = models.FloatField(default=1)
     label_source = models.CharField(
         max_length=24,
@@ -575,6 +578,46 @@ class PageMappingRevision(UUIDTimeStampedModel):
             models.UniqueConstraint(fields=["asset", "revision"], name="unique_page_mapping_revision"),
             models.UniqueConstraint(fields=["asset", "request_id"], name="unique_page_mapping_request"),
             models.UniqueConstraint(fields=["asset", "apply_request_id"], name="unique_page_mapping_apply"),
+        ]
+
+
+class PageTextRevision(UUIDTimeStampedModel):
+    """Append-only human text candidates; adoption retains the original interpretation."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="text_corrections")
+    document_revision = models.ForeignKey("DocumentRevision", null=True, blank=True, on_delete=models.PROTECT, related_name="text_corrections")
+    review_only = models.BooleanField(default=False)
+    page_index = models.PositiveIntegerField()
+    revision = models.PositiveIntegerField()
+    source_fingerprint = models.CharField(max_length=64)
+    original_text = models.TextField(blank=True)
+    text = models.TextField(blank=True)
+    note = models.CharField(max_length=2000, blank=True)
+    confirmed = models.BooleanField(default=False)
+    request_id = models.UUIDField()
+    request_fingerprint = models.CharField(max_length=64)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_text_corrections")
+    applied_asset = models.ForeignKey(Asset, null=True, blank=True, on_delete=models.PROTECT, related_name="applied_text_corrections")
+    publication_event = models.ForeignKey("KnowledgePublicationEvent", null=True, blank=True, on_delete=models.PROTECT, related_name="text_corrections")
+    apply_request_id = models.UUIDField(null=True, blank=True)
+    apply_fingerprint = models.CharField(max_length=64, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        immutable = ("asset_id", "document_revision_id", "review_only", "page_index", "revision", "source_fingerprint", "original_text", "text", "note", "confirmed", "request_id", "request_fingerprint")
+        fields = set(kwargs.get("update_fields") or ())
+        if not self._state.adding and (not fields or fields.intersection(immutable)):
+            before = type(self).objects.filter(pk=self.pk).values(*immutable).first()
+            if before and any(before[key] != getattr(self, key) for key in immutable):
+                raise ValidationError("人工文字修订不可原位改写，请保存新修订。")
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["-revision"]
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "revision"], name="unique_page_text_revision"),
+            models.UniqueConstraint(fields=["asset", "request_id"], name="unique_page_text_request"),
+            models.UniqueConstraint(fields=["asset", "apply_request_id"], name="unique_page_text_apply"),
         ]
 
 
@@ -6317,6 +6360,8 @@ class PublicFeedback(UUIDTimeStampedModel):
     class Category(models.TextChoices):
         CONTENT = "content", "内容"
         FUNCTION = "function", "功能"
+        USAGE = "usage", "使用咨询"
+        SUGGESTION = "suggestion", "改进建议"
         CITATION = "citation", "引用"
         ACCESSIBILITY = "accessibility", "无障碍"
         OTHER = "other", "其他"
@@ -6332,6 +6377,14 @@ class PublicFeedback(UUIDTimeStampedModel):
     path = models.CharField(max_length=400, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="public_feedback")
+    request_id = models.UUIDField(null=True, blank=True, unique=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True)
+    consent_at = models.DateTimeField(null=True, blank=True)
+    consent_version = models.CharField(max_length=40, blank=True)
+    revision = models.PositiveIntegerField(default=1)
+    resolution_note = models.TextField(max_length=2000, blank=True)
+    follow_up = models.BooleanField(default=False)
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="handled_public_feedback")
 
     class Meta:
         ordering = ["-created_at"]

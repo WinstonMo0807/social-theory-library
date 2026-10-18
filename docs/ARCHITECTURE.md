@@ -1,5 +1,13 @@
 # Social Theory Library 架构
 
+## 2026-10-18 文件与人工正文、私人分页预览
+
+新的版本/文件工作台沿原Work→Edition→Asset/UploadItem，新增staged分支仅生成独立阅读副本，不自动书目增强或公开。CloudObject仍是唯一分发任务记录；显式准备命令关闭旧发布续跑回调。当前管理选择和活动CatalogPublicationRevision分别读取。
+
+PageTextRevision与Page人工/核验指针采用0069 migration；普通提取/OCR/重置保留已采用人工文字。人工文字不伪造OCR置信度或字形坐标，公开采用复用不可变文档/证据/发布链，并保留人工目录与未发布书目。
+
+CitationAudit新增加密派生字段（0012），可选LibreOffice转换服务通过固定Unix socket接收有界DOCX，无网络、数据库或NAS访问；原稿不替换，分页结果不替代原始段落/字符定位。service/profile默认未启用，迁移、服务及部署未执行。
+
 ## 2026-10-18 反证、隐私与页码解释
 
 反证继续复用ResearchProject/ResearchTurn与Discovery，结构化条件进入真实检索；本人决定与系统候选分别保存，显式保存笔记与决定同一事务，笔记仍为proposed且不自动授权。双页映射信息沿公共Page内容、EvidenceReference与引文体检传递，不从同一扫描页推定具体印刷半页。

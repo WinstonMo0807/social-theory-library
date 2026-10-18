@@ -1,5 +1,15 @@
 # 2026-10-18 检查点依赖核对
 
+## 2026-10-18 文件与OCR必要继承依赖
+
+本单元68个源码/契约/单元记录路径由tmp/files-ocr-docx-checkpoint-review.json逐文件复核，review快照散列与暂存快照分别保存于tmp，仅作本机恢复辅助，不提交运行产物。
+
+随OCR保存extract、processing、catalog_ocr、ocr_inventory、ocr_pdf的已审继承来源身份/几何/取消恢复改动。processing的策划和目录调度目标及Celery入口已在HEAD，未另建实现。ocr_provider服务参数原HEAD已支持，未混入ocr_service/compose主配置其他历史改动。
+
+5共享文件只保存对应hunk：ingestion/views的staged重试、旧发布拒绝与selected_pages；distribution/tasks的云同步可选发布回调；pipeline的新staged文件链（旧主流程ocr_decision继承统计仍未暂存）；settings的DOCX配置及共享采用枚举；catalog/urls的文件工作台路由。其余备份、策划队列、工作筛选/仪表盘修改留工作区。
+
+下一单元导航/帮助/反馈和来源关注不混入本业务检查点。Git检查点只是源码恢复证据，不表示正式测试、服务运行或视觉通过。
+
 ## 2026-10-18 页码与Reader继承依赖补存
 
 逐文件读diff后，将本单元必需的既有修改一并保存：catalog/views/public_response_serializers/serializers（公开目录、坐标、修订/来源身份、OCR阅读策略）；distribution/serializers/services（策略契约及同源OCR副本守卫）；catalog/search_geometry/evidence_envelope/document_intelligence（坐标缓存身份、文字范围、几何摘要与不可变证据）；ingestion/tasks的process_outline_job（已提交目录服务的实际Celery入口）。geometry/public_outline/public_hot_searches等引用的实现已在HEAD，不重复新建。

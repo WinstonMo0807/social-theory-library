@@ -2,6 +2,19 @@
 
 当前阶段：功能开发。全站正式功能、视觉、权限、迁移、性能验收全部待核实；未部署。
 
+## 2026-10-18 文件、OCR与DOCX静态收口
+
+- 唯一终稿PDF95–98、109–111及209实际读图。没有浏览器/实施页截图/正式逐图回归。本单元为源码接入，实际服务及全站验收尚未执行。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web）：生成契约后的最终检查退出0。此前并行修改阶段，先因版权说明types未同步、后因OCR/文件fixture新增字段缺失退出1，均补齐后重新检查通过；没有忽略错误。
+- `node node_modules/eslint/bin/eslint.js components/admin/library/work-files-workspace.tsx components/admin/library/work-file-actions.tsx components/admin/library/work-file-preview.tsx components/admin/library/work-file-rights.tsx components/admin/library/work-file-public-preparation.tsx components/admin/library/work-library.tsx components/admin/workflow/workflow-editor.tsx components/pdf-canvas.tsx components/research/citation-docx-preview.tsx components/research/citation-manuscript-preview.tsx components/research/citation-audit-parse.tsx components/admin/library/ocr-workspace.tsx lib/api/work-files.client.ts lib/api/work-files.types.ts lib/api/citation-preview.client.ts lib/api/ocr-workspace.client.ts lib/api.ts tests/work-files.spec.ts tests/citation-docx-preview.spec.ts tests/ocr-workspace.spec.ts app/admin/library/works/[workId]/files/page.tsx app/admin/library/assets/[assetId]/ocr/page.tsx`（web）：22路径退出0，0错误/4警告（OCR真实封面/缩略图2条no-img，旧WorkflowEditor2条导航规则提示）。
+- `.venv/Scripts/python.exe tmp/checkpoint-files-ocr-docx.py --stage`：68条已复核源码/契约/单元记录精确暂存，63整文件+5按hunk。脚本对暂存Python逐项`ast.parse(git show :path)`及cached whitespace检查退出0。另标准库AST汇总37个暂存Python文件、PyYAML对可选compose overlay仅语法解析退出0；不导入应用或访问数据库。脚本禁止在已有暂存或HEAD变化时重跑，不能作为下一轮通用git add脚本。
+- PostCSS解析work-files.module.css和ocr-workspace.module.css退出0，顶层节点164/79。所有语法结果不证明实际布局。
+- 仅本进程环境`DATABASE_URL=sqlite:///:memory:`、`PUBLIC_DEPLOYMENT_MODE=false`、`DJANGO_DEBUG=true`，执行`.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/files-ocr-docx-openapi.json --validate`最终退出0，0errors/10条原Home/Scholar/Topic类型提示。首次因文件采用动态get_permissions读取schema缺失kwargs失败，增加swagger_fake_view静态路径修复，真实权限未放宽。新增mode枚举碰撞通过共用DocumentRevisionApplyModeEnum命名消除。
+- openapi-typescript的openapiTS/astToString同步schema.json与前端生成类型，退出0。结构化对比原126 paths全部保留、内容未变，新增15 paths至141；原MappingPreviewModeEnum改为页码/人工文字共用枚举，没有删减业务契约。
+- DOCX交叉审查修复过期请求仍运行/晚到回写、解密前后未重验稿件/预览身份两项问题；12函数/22案例。文件34函数/37案例、OCR18函数/23案例；后端合计64函数/82案例，前端22场景仅编写，未运行。迁移0069/0012仅编写，未应用。
+- ATLAS_INDEX更新95–98、109–111和209共8行，仍209行×22列，page/id/image_path/image_sha256逐项不变。全部为源码接入和正式验收待核实。
+- 检查点保留必要OCR来源/取消/几何继承实现，排除旧备份、处理中心筛选/仪表盘、旧主流程OCR统计及下一单元帮助/导航/反馈/来源关注。未运行正式测试、浏览器、构建、真实OCR/转换器/模型/NAS、检索质量评测、迁移、生产清理或部署。
+
 ## 2026-10-18 反证、隐私和页码映射静态收口
 
 - 最终PDF198–200、223–225、116–118均已实际渲染读取；没有实施页截图或浏览器操作。

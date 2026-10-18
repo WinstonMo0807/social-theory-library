@@ -313,7 +313,7 @@ class CitationAuditViewSet(PrivateRecordViewSet):
     model = CitationAudit
 
     def get_queryset(self):
-        return super().get_queryset().filter(purpose="manuscript").defer("original_ciphertext")
+        return super().get_queryset().filter(purpose="manuscript").defer("original_ciphertext", "preview_ciphertext")
 
     @extend_schema(responses=AuditCapabilitiesOutput)
     @action(detail=False, methods=["get"])
@@ -381,7 +381,7 @@ class CitationSourceViewSet(PrivateRecordViewSet):
     model = CitationAudit
 
     def get_queryset(self):
-        return super().get_queryset().filter(purpose="private_source").defer("original_ciphertext")
+        return super().get_queryset().filter(purpose="private_source").defer("original_ciphertext", "preview_ciphertext")
 
     @extend_schema(request={"multipart/form-data": CitationSourceCreateInput}, responses={202: PrivateRecordSerializer})
     def create(self, request):

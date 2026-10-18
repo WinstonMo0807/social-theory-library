@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 from common.capabilities import Capability, has_capability
 from catalog.models import Asset, Edition, KnowledgePublicationEvent
 from ingestion.models import AuditEvent, ProcessingJob
-from .ocr_provider import ocr_runtime_config
+from .ocr_provider import normalize_task_options, ocr_runtime_config
 from .processing import (
     queue_ocr_job, processing_workload_paused, request_processing_job_pause,
     resume_processing_job,
@@ -18,6 +18,10 @@ from .processing import (
 
 
 ACTIVE = [ProcessingJob.Status.PENDING, ProcessingJob.Status.RUNNING, ProcessingJob.Status.PAUSED]
+
+
+class OCRSourceChanged(ValueError):
+    """The retained task belongs to an obsolete or unverified file source."""
 
 
 def identifier(value, label):
@@ -48,17 +52,46 @@ def source_problem(asset):
 
 
 def ensure_source_current(job):
-    """Called again under the edition lock before writes and publication."""
+    """Resolve the authoritative source, never treating staging as current.
+
+    Called under the Edition lock before writes, resumption and publication.
+    Legacy jobs without a saved fingerprint can only use their own immutable
+    Asset (or the verified staging parent); new jobs pin the source at creation.
+    """
     stats = job.stats or {}
-    if stats.get("requested_mode") != "all_pages":
-        return
-    source = Asset.objects.filter(pk=stats.get("requested_asset_id"), edition_id=job.edition_id).first()
-    if not source or source_problem(source) or source.sha256 != stats.get("source_sha256") or source.page_count != stats.get("total_pages"):
-        raise ValueError("识别来源已更换或不再有效；本次结果保留但不能覆盖新文件，请重新选择当前 PDF。")
+    source_id = stats.get("requested_asset_id") or stats.get("text_source_asset_id") or job.asset_id
+    source = Asset.objects.filter(pk=source_id, edition_id=job.edition_id).first()
+    from .source_identity import pending_replacement_source
+
+    replacement = pending_replacement_source(source, upload_item_id=job.upload_item_id) if source and job.upload_item_id else None
+    problem = source_problem(source) if source else "missing"
+    if replacement and source.kind == Asset.Kind.NORMALIZED and source.status == Asset.Status.READY and source.validation_status == Asset.ValidationStatus.VALID and source.file and source.page_count > 0:
+        problem = ""
+    if problem:
+        raise OCRSourceChanged("识别来源已更换或不再有效；本次结果保留但不能覆盖新文件，请重新选择当前 PDF。")
+    expected_sha = stats.get("source_sha256") or source.sha256
+    expected_pages = stats.get("source_page_count") or stats.get("total_pages") or source.page_count
+    if source.sha256 != expected_sha or source.page_count != expected_pages:
+        raise OCRSourceChanged("识别来源已更换或不再有效；本次结果保留但不能覆盖新文件，请重新选择当前 PDF。")
+    if str(job.asset_id) != str(source.pk):
+        staged = job.asset
+        details = (staged.validation_details or {}) if staged else {}
+        if (not staged or staged.edition_id != source.edition_id
+                or staged.source_asset_id != source.pk or staged.sha256 != expected_sha
+                or stats.get("staging_asset_id") != str(staged.pk)
+                or details.get("text_source_asset_id") != str(source.pk)
+                or details.get("text_stage_key") != f"ocr-job:{job.pk}"):
+            raise OCRSourceChanged("识别暂存结果与本次源文件不一致，请在处理中心核对来源。")
+    allowed_current = [source.pk]
+    if replacement:
+        allowed_current.append(replacement.replacement_of_asset_id)
+    if Asset.objects.filter(edition_id=job.edition_id, kind=Asset.Kind.NORMALIZED, is_current=True).exclude(pk__in=allowed_current).exists():
+        raise OCRSourceChanged("此版本的当前阅读文件已变化，旧识别任务不能覆盖新文件。")
     if ProcessingJob.objects.filter(edition_id=job.edition_id, job_type="ocr", created_at__gt=job.created_at).exclude(status="canceled").exists():
-        raise ValueError("此版本已有较新的 OCR 任务，旧任务不能覆盖新结果。")
+        raise OCRSourceChanged("此版本已有较新的 OCR 任务，旧任务不能覆盖新结果。")
     if job.edition.catalog_revisions.filter(status="preparing", created_at__gt=job.created_at, reader_asset__isnull=False).exclude(reader_asset_id__in=[source.pk, job.asset_id]).exists():
-        raise ValueError("此版本正在发布另一份阅读文件，请先完成文件更新。")
+        raise OCRSourceChanged("此版本正在发布另一份阅读文件，请先完成文件更新。")
+    return source
 
 
 def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False):
@@ -92,7 +125,7 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
             public = "文字识别已保存，但公开更新失败，稳定旧版仍保留；请到本版本发布区检查并恢复。"
         else:
             public = "文字识别已保存，公开更新仍在处理，不等于新文字已经公开。"
-    allowed = has_capability(actor, Capability.RETRY_JOBS) and (legacy_controls or stats.get("requested_mode") == "all_pages")
+    allowed = has_capability(actor, Capability.RETRY_JOBS) and (legacy_controls or stats.get("requested_mode") in {"all_pages", "selected_pages"})
     resume_reason = ""
     can_resume = allowed and job.status in {"paused", "failed"}
     if can_resume:
@@ -119,17 +152,19 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
         "warnings": [str(stats[key]) for key in ["ocr_pdf_warning", "page_label_warning", "front_matter_warning", "theory_suggestion_warning"] if stats.get(key)],
         "source_asset_id": str(stats.get("requested_asset_id") or stats.get("text_source_asset_id") or job.asset_id or ""),
         "result_asset_id": str(job.asset_id or ""), "public_result": public,
+        "task_options": stats.get("task_options"), "protected_page_indexes": stats.get("protected_page_indexes", []),
+        "reviewed_page_indexes": stats.get("reviewed_page_indexes", []),
         "workbench_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication" if edition else "",
         "can_pause": allowed and job.status in {"pending", "running"},
         "can_resume": can_resume, "resume_reason": resume_reason,
-        "can_cancel": allowed and stats.get("requested_mode") == "all_pages" and job.status in {"paused", "pending", "failed"},
+        "can_cancel": allowed and stats.get("requested_mode") in {"all_pages", "selected_pages"} and job.status in {"paused", "pending", "failed"},
     }
 
 
 def check_resume_source(job, *, manual_retry=False):
     if (job.attempt >= job.max_attempts and not manual_retry) or job.error_kind in {"manual_intervention", "permanent"}:
         raise ValueError("已达到重试上限或需要人工处理，请查看任务详情。")
-    if job.stats.get("requested_mode") == "all_pages":
+    if job.stats.get("requested_mode") in {"all_pages", "selected_pages"}:
         ensure_source_current(job)
         return
     from copy import copy
@@ -209,7 +244,16 @@ def start_catalog_ocr(data, actor):
     request_id = str(identifier(data.get("request_id"), "request_id"))
     if data.get("confirmed") is not True:
         raise ValidationError({"confirmed": ["请确认重新识别这份 PDF 及服务使用范围。"]})
-    fingerprint = sha256(f"{edition.pk}:{asset_id}:{data.get('source_version', '')}".encode()).hexdigest()
+    targets = data.get("page_indexes")
+    if targets is not None and (not isinstance(targets, list) or not targets or len(targets) > 20000 or any(type(value) is not int or value < 1 for value in targets)):
+        raise ValidationError({"page_indexes": ["请选择有效的 PDF 页序，最多 20000 页。"]})
+    targets = sorted(set(targets)) if targets is not None else None
+    options = normalize_task_options(data.get("task_options"))
+    identity = f"{edition.pk}:{asset_id}:{data.get('source_version', '')}"
+    if "task_options" in data:
+        import json
+        identity += ":" + json.dumps(options, sort_keys=True)
+    fingerprint = sha256((identity if targets is None else f"{identity}:{targets}").encode()).hexdigest()
     receipt = AuditEvent.objects.filter(actor=actor, action="catalog.ocr.start", request_id=request_id).first()
     if receipt:
         if receipt.after.get("fingerprint") != fingerprint:
@@ -224,20 +268,31 @@ def start_catalog_ocr(data, actor):
         raise ValueError(problem)
     if data.get("source_version") != asset.updated_at.isoformat():
         raise ValueError("文件已经更新，请重新读取并选择当前 PDF，再确认识别。")
+    if targets and targets[-1] > asset.page_count:
+        raise ValidationError({"page_indexes": ["所选页超出当前 PDF 的真实页数。"]})
+    protected = set(asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
+    reviewed = set()
+    if options["skip_reviewed"]:
+        from .ocr_workspace import reviewed_page_query
+        reviewed = set(reviewed_page_query(asset).values_list("index", flat=True))
+    requested = targets if targets is not None else list(range(1, asset.page_count + 1))
+    eligible = [index for index in requested if index not in protected and index not in reviewed]
+    if not eligible:
+        raise ValueError("所选页均有人工文字保护或按策略跳过已核验页，没有需要识别的页面。")
     active = ProcessingJob.objects.filter(edition=edition, job_type="ocr", status__in=ACTIVE).first()
     if active:
-        if active.stats.get("requested_mode") != "all_pages" or active.stats.get("requested_asset_id") != str(asset.pk):
-            raise ValueError("此版本已有未结束的识别任务，请先核对并完成或取消它。")
-        job = active
+        raise ValueError("此版本已有未结束的识别任务，请先核对并完成或取消它。")
     else:
         job = queue_ocr_job(asset, actor=actor, force=True)
         job.idempotency_key = f"catalog-ocr:{actor.pk}:{request_id}"
-        job.stats = {**job.stats, "requested_mode": "all_pages", "requested_asset_id": str(asset.pk), "source_sha256": asset.sha256,
-                     "source_version": asset.updated_at.isoformat(), "total_pages": asset.page_count, "target_pages": asset.page_count,
-                     "processed_pages": 0, "completed_page_indexes": [], "remaining_pages": asset.page_count, "ocr_phase": "queued"}
+        job.stats = {**job.stats, "requested_mode": "selected_pages" if targets is not None else "all_pages", "requested_asset_id": str(asset.pk), "source_sha256": asset.sha256,
+                     "source_version": asset.updated_at.isoformat(), "total_pages": asset.page_count, "target_pages": len(eligible),
+                     "requested_page_indexes": eligible, "protected_page_indexes": sorted(protected.intersection(requested)),
+                     "reviewed_page_indexes": sorted(reviewed.intersection(requested)), "task_options": options,
+                     "processed_pages": 0, "completed_page_indexes": [], "remaining_pages": len(eligible), "ocr_phase": "queued"}
         job.save(update_fields=["stats", "idempotency_key", "updated_at"])
     AuditEvent.objects.create(actor=actor, action="catalog.ocr.start", object_type="edition", object_id=str(edition.pk), request_id=request_id,
-                              after={"job_id": str(job.pk), "asset_id": str(asset.pk), "fingerprint": fingerprint, "mode": "all_pages"})
+                              after={"job_id": str(job.pk), "asset_id": str(asset.pk), "fingerprint": fingerprint, "mode": job.stats["requested_mode"]})
     return job, bool(active)
 
 
@@ -245,7 +300,7 @@ def start_catalog_ocr(data, actor):
 def catalog_ocr_action(data, actor):
     edition = edition_for(data.get("edition_id"), lock=True)
     job = ProcessingJob.objects.select_for_update(of=("self",)).select_related("edition").filter(pk=identifier(data.get("job_id"), "job_id"), edition=edition, job_type="ocr").first()
-    if not job or job.stats.get("requested_mode") != "all_pages":
+    if not job or job.stats.get("requested_mode") not in {"all_pages", "selected_pages"}:
         raise ValueError("请选择这个版本的人工识别任务；旧暂停任务请在处理中心核对后恢复。")
     action = data.get("action")
     before = job.status

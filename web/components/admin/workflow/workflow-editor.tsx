@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RecommendationImageEditor } from "@/components/admin/media/recommendation-image-editor";
 import { EditionCoverEditor } from "./edition-cover-editor";
 import { RecycleControl } from "@/components/admin/recycle-control";
@@ -517,8 +518,9 @@ function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, bus
   const status = asString(draft.status, "pending");
   const validation = pdfValidationPresentation(draft.validation);
   const history = asArray(draft.file_history).map(asRecord);
+  const filesHref = asString(context.work_id) && asString(context.edition_id) ? `/admin/library/works/${encodeURIComponent(asString(context.work_id))}/files?edition=${encodeURIComponent(asString(context.edition_id))}&tab=files` : "";
   return <div className="workflow-file-summary">
-    <p>文件操作始终属于当前出版版本。补充首份 PDF 不会另建作品；替换须明确确认，原文件、阅读位置和读者笔记都会保留。</p>
+    <p>文件操作始终属于当前出版版本。补充文件不会另建作品；新文件需预览和明确采用，原文件、阅读位置和读者笔记都会保留。</p>
     <dl><div><dt>文件</dt><dd>{asString(draft.filename ?? context.filename, "尚无文件") || "尚无文件"}</dd></div>
       <div><dt>处理状态</dt><dd>{draft.can_supplement ? "纯书目，文件处理不适用" : fileProcessingStatusLabel(status)}</dd></div>
       <div><dt>PDF 校验</dt><dd data-pdf-validation={draft.can_supplement ? "not_applicable" : validation.state} data-tone={validation.tone}>{draft.can_supplement ? "尚无 PDF" : validation.label}</dd></div>
@@ -530,7 +532,7 @@ function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, bus
     <div className="workflow-file-actions"><ActionButton onClick={inspectPdf} disabled={!history.length}><Eye size={14} />检查 PDF</ActionButton>
       {draft.can_retry ? <ActionButton disabled={!canEdit || Boolean(busy)} onClick={() => fileAction("retry")}><RefreshCw size={14} />重试原文件任务</ActionButton> : null}
       {draft.can_resume ? <ActionButton disabled={!canEdit || Boolean(busy)} onClick={() => fileAction("resume")}><Upload size={14} />继续处理</ActionButton> : null}
-      {(["supplement","replace"] as const).map((action) => draft[`can_${action}`] ? <label className="button secondary" key={action}><span>{busy === `file-${action}` ? "正在保存文件请求" : action === "supplement" ? "为当前版本补充 PDF" : "替换当前版本阅读文件"}</span><input aria-label={action === "supplement" ? "为当前版本补充 PDF" : "替换当前版本阅读文件"} className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit || Boolean(busy)} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction(action, file); event.currentTarget.value=""; }} /></label> : null)}
+      {filesHref ? <Link className="button secondary" href={filesHref}>管理版本、文件与历史</Link> : (["supplement","replace"] as const).map((action) => draft[`can_${action}`] ? <label className="button secondary" key={action}><span>{busy === `file-${action}` ? "正在保存文件请求" : action === "supplement" ? "为当前版本补充 PDF" : "替换当前版本阅读文件"}</span><input aria-label={action === "supplement" ? "为当前版本补充 PDF" : "替换当前版本阅读文件"} className="sr-only" type="file" accept="application/pdf,.pdf" disabled={!canEdit || Boolean(busy)} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) fileAction(action, file); event.currentTarget.value=""; }} /></label> : null)}
     </div>
     {draft.error_message ? <p role="alert">{asString(draft.error_message)} 原文件及记录保留，请恢复原任务并刷新结果。</p> : null}
     {asString(context.edition_id) ? <EditionOcrControl key={asString(context.edition_id)} editionId={asString(context.edition_id)} workId={asString(context.work_id)} /> : null}

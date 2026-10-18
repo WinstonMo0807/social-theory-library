@@ -37,7 +37,7 @@ function ParseWorkspace({ id, ownerId, retrySession, initialSelection }: { id: s
   const row = rows.find(item => `occurrence:${item.id}` === selected) || (!selected ? rows[0] : undefined);
   const entry = entries.find(item => `entry:${item.id}` === selected);
   const selectedKey = row ? `occurrence:${row.id}` : entry ? `entry:${entry.id}` : "";
-  const focus = row ? { key: selectedKey, occurrenceId: row.id, location: row.location, text: row.quote || row.raw } : entry ? { key: selectedKey, entryId: entry.id, location: entry.location, text: entry.raw } : undefined;
+  const focus = !selected ? undefined : row ? { key: selectedKey, occurrenceId: row.id, location: row.location, text: row.quote || row.raw } : entry ? { key: selectedKey, entryId: entry.id, location: entry.location, text: entry.raw } : undefined;
   const stage = record.status === "completed" || data.stage === "report" ? 4 : data.stage === "checking" ? 3 : data.stage === "matching" ? 2 : running || data.parsed ? 1 : 0;
   const term = query.trim().toLocaleLowerCase();
   const shownRows = rows.filter(item => !term || `${item.raw} ${item.quote || ""} ${item.context}`.toLocaleLowerCase().includes(term));

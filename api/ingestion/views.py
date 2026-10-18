@@ -1265,6 +1265,19 @@ class RetryUploadItemView(APIView):
             _locked_upload_items("edition"),
             pk=item_id,
         )
+        from catalog.services.edition_file_intake import ACTIVE, staged_file
+        if staged_file(item):
+            from django.db import DatabaseError
+            try:
+                with transaction.atomic():
+                    Edition.objects.select_for_update(nowait=True).get(pk=item.edition_id)
+            except DatabaseError as error:
+                cause = error.__cause__
+                if (getattr(cause, "sqlstate", None) or getattr(cause, "pgcode", None)) == "55P03":
+                    return Response({"detail": "此版本正在变更，请稍后重试。"}, status=409)
+                raise
+            if UploadItem.objects.filter(edition_id=item.edition_id, status__in=ACTIVE).exclude(pk=item.pk).exists():
+                return Response({"detail": "此版本已有其他文件正在处理，请等待完成。"}, status=409)
         if item.status in {
             UploadItem.Status.PUBLISHED,
             UploadItem.Status.WITHDRAWN,
@@ -2553,6 +2566,9 @@ class PublishUploadItemView(APIView):
 
     def post(self, request, item_id):
         item = self._item(item_id)
+        from catalog.services.edition_file_intake import staged_file
+        if staged_file(item):
+            return Response({"detail": "补充文件需在版本与文件工作台预览影响并明确采用，随后从编目工作台发布。"}, status=409)
         if item.edition is None:
             return Response({"detail": "文献记录尚未建立。"}, status=409)
         if item.replacement_of_asset_id:
@@ -2837,7 +2853,7 @@ class ProcessingCenterView(APIView):
             except ValueError as exc:
                 return Response({"detail": str(exc)}, status=409)
             return Response({"job_id": str(job.pk), "status": job.status}, status=202)
-        if job.job_type == "ocr" and job.stats.get("requested_mode") == "all_pages" and action in {"pause", "resume", "retry", "cancel"}:
+        if job.job_type == "ocr" and job.stats.get("requested_mode") in {"all_pages", "selected_pages"} and action in {"pause", "resume", "retry", "cancel"}:
             from .services.catalog_ocr import catalog_ocr_action
 
             try:

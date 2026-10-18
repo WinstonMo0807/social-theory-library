@@ -113,7 +113,7 @@ def stage_document_asset(asset: Asset, *, stage_key: str, reset_ocr: bool = Fals
         pages = staged.pages.all()
         if isinstance(targets, list):
             pages = pages.filter(index__in=targets)
-        pages.update(text_source=Page.TextSource.NONE, updated_at=timezone.now())
+        pages.exclude(is_text_manual=True).update(text_source=Page.TextSource.NONE, updated_at=timezone.now())
     return staged
 
 
@@ -154,14 +154,18 @@ def document_text_checksum(asset: Asset) -> str:
             "text_source",
             "confidence",
             "geometry",
+            "is_text_manual",
+            "manual_text_revision_id",
         )
     )
     for row in page_rows.iterator(chunk_size=200):
-        for value in row[:-1]:
+        for value in row[:-3]:
             _hash_value(digest, value)
         # Preserve all existing fingerprints for unknown historical geometry.
-        if row[-1]:
-            _hash_value(digest, {"geometry": row[-1]})
+        if row[-3]:
+            _hash_value(digest, {"geometry": row[-3]})
+        if row[-2] or row[-1]:
+            _hash_value(digest, {"human_text": {"protected": row[-2], "revision": str(row[-1] or "")}})
     passage_rows = (
         Passage.objects.filter(page__asset=asset)
         .order_by("page__index", "order")
@@ -215,8 +219,15 @@ def _quality_values(
             "confidence",
             "chapter_title",
             "printed_label",
+            "text",
+            "is_text_manual",
+            "manual_text_revision__confirmed",
+            "manual_text_revision__text",
         )
     )
+    for row in page_rows:
+        row["human_verified"] = bool(row["is_text_manual"] and row["manual_text_revision__confirmed"]
+                                     and row["manual_text_revision__text"] == row["text"])
     page_count = len(page_rows)
     denominator = max(page_count, 1)
     populated = [row for row in page_rows if str(row["normalized_text"] or "").strip()]
@@ -226,19 +237,22 @@ def _quality_values(
         if len(str(row["normalized_text"] or "").strip()) >= 80
     ]
     passage_pages = Passage.objects.filter(page__asset=asset).values("page_id").distinct().count()
-    average_confidence = _mean(
-        [float(row["confidence"] or 0) for row in populated],
+    # Human verification is an explicit coverage rule, not a manufactured OCR
+    # probability. Keep the observed engine mean separately for truthful display.
+    quality_weight = _mean(
+        [1.0 if row["human_verified"] else float(row["confidence"] or 0) for row in populated],
         fallback=0.0,
     )
+    average_confidence = _mean([float(row["confidence"] or 0) for row in populated], fallback=0.0)
     text_coverage = len(populated) / denominator
     validated = (
         asset.status == Asset.Status.READY
         and asset.validation_status == Asset.ValidationStatus.VALID
     )
     reader_quality = (0.75 if validated else 0.35) + 0.25 * text_coverage
-    fulltext_quality = text_coverage * (0.5 + 0.5 * average_confidence)
+    fulltext_quality = text_coverage * (0.5 + 0.5 * quality_weight)
     semantic_quality = (passage_pages / denominator) * (0.4 + 0.6 * fulltext_quality)
-    claim_quality = (len(claim_ready) / denominator) * (0.4 + 0.6 * average_confidence)
+    claim_quality = (len(claim_ready) / denominator) * (0.4 + 0.6 * quality_weight)
     structure_quality = (
         0.6
         * sum(bool(str(row["chapter_title"] or "").strip()) for row in page_rows)
@@ -250,7 +264,7 @@ def _quality_values(
     ocr_rows = [
         row
         for row in page_rows
-        if row["text_source"] in {Page.TextSource.OCR, Page.TextSource.HYBRID}
+        if row["text_source"] in {Page.TextSource.OCR, Page.TextSource.HYBRID} and not row["human_verified"]
     ]
     ocr_quality = _mean(
         [float(row["confidence"] or 0) for row in ocr_rows],
@@ -260,7 +274,7 @@ def _quality_values(
         int(row["index"])
         for row in page_rows
         if not str(row["normalized_text"] or "").strip()
-        or float(row["confidence"] or 0) < 0.5
+        or not row["human_verified"] and float(row["confidence"] or 0) < 0.5
     }
     critical_pages.update(int(index) for index in pending_ocr_pages if int(index) > 0)
     return {
@@ -277,6 +291,9 @@ def _quality_values(
             "passage_pages": passage_pages,
             "claim_ready_pages": len(claim_ready),
             "average_text_confidence": _bounded_score(average_confidence),
+            "human_verified_pages": sum(row["human_verified"] for row in page_rows),
+            "review_adjusted_text_weight": _bounded_score(quality_weight),
+            "ocr_observed_pages": len(ocr_rows),
         },
     }
 
@@ -684,6 +701,7 @@ def synchronize_document_revision(
     changed_page_indexes: Iterable[int] | None = None,
     pending_ocr_pages: Iterable[int] = (),
     schedule_claims: bool = True,
+    schedule_outline: bool = True,
     actor=None,
 ) -> dict:
     """Activate one interpretation revision and rebuild its evidence spans.
@@ -787,7 +805,7 @@ def synchronize_document_revision(
             )
         )
     outline_job = None
-    if locked_asset.status == Asset.Status.READY and locked_asset.file and locked_asset.page_count:
+    if schedule_outline and locked_asset.status == Asset.Status.READY and locked_asset.file and locked_asset.page_count:
         from catalog.services.document_outline import queue_outline_rebuild
 
         outline_job = queue_outline_rebuild(locked_asset.pk, actor=actor, automatic=True)
@@ -811,6 +829,7 @@ def synchronize_native_extraction(
     *,
     actor=None,
     schedule_claims: bool = True,
+    schedule_outline: bool = True,
 ) -> dict:
     pending_ocr_pages = (
         (asset.validation_details or {}).get("ocr_required_page_indexes") or []
@@ -824,6 +843,7 @@ def synchronize_native_extraction(
         changed_page_indexes=None,
         pending_ocr_pages=pending_ocr_pages,
         schedule_claims=schedule_claims,
+        schedule_outline=schedule_outline,
         actor=actor,
     )
 
@@ -870,12 +890,14 @@ def best_effort_native_extraction(
     *,
     actor=None,
     schedule_claims: bool = True,
+    schedule_outline: bool = True,
 ) -> dict:
     return _best_effort(
         synchronize_native_extraction,
         asset,
         actor=actor,
         schedule_claims=schedule_claims,
+        schedule_outline=schedule_outline,
     )
 
 

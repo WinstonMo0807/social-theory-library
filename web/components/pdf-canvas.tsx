@@ -45,6 +45,7 @@ export function PdfCanvas({
   highlights,
   onDocumentLoad,
   navigationTarget,
+  withCredentials = false,
 }: {
   url: string;
   page: number;
@@ -55,6 +56,7 @@ export function PdfCanvas({
   highlights: PageHighlight[];
   onDocumentLoad: (pages: number) => void;
   navigationTarget?: [number, number];
+  withCredentials?: boolean;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,7 +108,7 @@ export function PdfCanvas({
       pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       loadingTask = pdfjs.getDocument({
         url,
-        withCredentials: false,
+        withCredentials,
         disableStream: true,
         disableAutoFetch: true,
         enableXfa: true,
@@ -136,7 +138,7 @@ export function PdfCanvas({
         void loadedDocument.destroy();
       }
     };
-  }, [onDocumentLoad, url]);
+  }, [onDocumentLoad, url, withCredentials]);
 
   useEffect(() => {
     if (!document || !canvasRef.current) return;

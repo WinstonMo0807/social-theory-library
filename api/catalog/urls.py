@@ -20,6 +20,9 @@ from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, 
     PublicEditorialMediaView, IssueItemCoverView, AdminIssueItemCoverView)
 from .cover_views import EditionCoverView
 from .edition_file_views import EditionFileView
+from .edition_file_workspace_views import (WorkFilesView, NewWorkEditionView, EditionFileAdoptionView,
+                                          EditionFileContentView, EditionFileImpactCSVView,
+                                          EditionGenerateReaderView, EditionFileRequestView, EditionFileRightsView, EditionPreparePublicFileView)
 from .primary_edition_views import PrimaryEditionView
 from .person_resolution_views import (
     AdminPersonSearchView, AdminPersonMergeHistoryView,
@@ -250,6 +253,15 @@ urlpatterns = [
     path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),
     path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
     path("admin/editions/<uuid:edition_id>/files/", EditionFileView.as_view(), name="edition-file-submit"),
+    path("admin/works/<uuid:work_id>/files/", WorkFilesView.as_view(), name="work-files"),
+    path("admin/works/<uuid:work_id>/editions/", NewWorkEditionView.as_view(), name="work-edition-create"),
+    path("admin/editions/<uuid:edition_id>/files/impact.csv", EditionFileImpactCSVView.as_view(), name="edition-file-impact-csv"),
+    path("admin/editions/<uuid:edition_id>/files/requests/<uuid:request_key>/", EditionFileRequestView.as_view(), name="edition-file-request"),
+    path("admin/editions/<uuid:edition_id>/files/<uuid:asset_id>/generate-reader/", EditionGenerateReaderView.as_view(), name="edition-generate-reader"),
+    path("admin/editions/<uuid:edition_id>/files/<uuid:asset_id>/rights/", EditionFileRightsView.as_view(), name="edition-file-rights"),
+    path("admin/editions/<uuid:edition_id>/files/<uuid:asset_id>/prepare-public/", EditionPreparePublicFileView.as_view(), name="edition-file-prepare-public"),
+    path("admin/editions/<uuid:edition_id>/files/<uuid:asset_id>/adopt/", EditionFileAdoptionView.as_view(), name="edition-file-adopt"),
+    path("admin/editions/<uuid:edition_id>/files/<uuid:asset_id>/content/", EditionFileContentView.as_view(), name="edition-file-content"),
     path("admin/knowledge-media/<str:object_type>/<uuid:object_id>/", KnowledgeImageSelectionView.as_view(), name="knowledge-image-selection"),
     path("knowledge-media/<str:object_type>/<uuid:object_id>/file/", PublicKnowledgeImageView.as_view(), name="public-knowledge-image"),
     path("admin/people/", AdminPersonSearchView.as_view(), name="person-search"),

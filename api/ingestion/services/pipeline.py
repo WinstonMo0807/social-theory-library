@@ -5,7 +5,7 @@ import socket
 
 from django.conf import settings
 from django.core.files import File
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.text import slugify
@@ -27,6 +27,7 @@ from distribution.services import cloud_budget_allows_new_publication
 from distribution.tasks import sync_cloud_object
 from catalog.services.covers import generate_cover_candidates, generate_recommendation_image
 from catalog.services.document_intelligence import best_effort_native_extraction
+from catalog.services.edition_file_intake import prepare_reader_input, staged_file, workspace_file
 from catalog.services.front_matter_intelligence import run_front_matter_intelligence
 from catalog.services.semantic_indexing import queue_semantic_job, remove_semantic_asset
 from catalog.services.publication_places import detect_publication_places
@@ -530,11 +531,22 @@ def _create_or_update_catalog(item: UploadItem, selected: dict, candidates: list
 
 
 def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) -> Asset:
+    staged = workspace_file(item)
+    if staged and kind == Asset.Kind.ORIGINAL:
+        return edition.assets.get(pk=staged["original_asset_id"], kind=Asset.Kind.ORIGINAL,
+                                  sha256=staged["original_sha256"])
     existing = edition.assets.filter(kind=kind, sha256=item.sha256, text_revision=0).first()
     if existing:
+        if staged and str(existing.source_asset_id) != staged["original_asset_id"]:
+            raise ValueError("相同阅读副本已存在，请核对已有文件；原件保留。")
+        if staged and not existing.file:
+            with item.file.open("rb") as source:
+                existing.file.save(f"{existing.pk}/{filename}", File(source), save=True)
         return existing
     is_replacement = bool(item.replacement_of_asset_id)
-    if is_replacement:
+    if staged:
+        version = staged["version"]
+    elif is_replacement:
         if item.asset_id:
             version = item.asset.version
         else:
@@ -550,14 +562,25 @@ def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) ->
         status=Asset.Status.PROCESSING,
         processor="immutable-upload-copy",
         processor_version="1",
-        is_current=not is_replacement,
+        is_current=not is_replacement and not staged,
         version=version,
         access_status=_batch_asset_access_status(item.batch),
-        original_filename=item.source_filename,
+        original_filename=(Path(item.source_filename).stem + ".pdf") if staged and kind == Asset.Kind.NORMALIZED else item.source_filename,
         mime_type="application/pdf",
+        source_asset_id=staged.get("original_asset_id") if staged else None,
+        rights_note=edition.assets.get(pk=staged["original_asset_id"]).rights_note if staged else "",
     )
+    if staged:
+        # Reserve the globally unique digest before writing a storage object.
+        try:
+            with transaction.atomic():
+                asset.save()
+        except IntegrityError as error:
+            if Asset.objects.filter(kind=kind, sha256=item.sha256, text_revision=0).exists():
+                raise ValueError("相同阅读副本已存在，未改绑文件；原件保留。") from error
+            raise
     with item.file.open("rb") as source:
-        asset.file.save(filename, File(source), save=False)
+        asset.file.save(f"{asset.pk}/{filename}" if staged else filename, File(source), save=False)
     asset.save()
     return asset
 
@@ -578,7 +601,7 @@ def _ensure_cloud_copy(item: UploadItem, asset: Asset) -> bool:
         provider=provider,
         object_key=(
             f"published/{asset.edition_id}/v{asset.version}/"
-            f"{asset.edition.canonical_filename}"
+            f"{asset.edition.canonical_filename or asset.original_filename}"
         ),
         defaults={
             "sha256": asset.sha256,
@@ -678,6 +701,8 @@ def resume_reviewed_item_publication(item_id: str) -> UploadItem:
         "edition__work",
         "replacement_of_asset",
     ).get(pk=item_id)
+    if staged_file(item):
+        return run_pipeline(item_id)
     if item.edition_id is None:
         item.status = UploadItem.Status.NEEDS_REVIEW
         item.error_code = "missing_edition"
@@ -800,6 +825,68 @@ def prepare_early_cover_candidates(item, asset):
     return True
 
 
+def _run_staged_file_pipeline(item: UploadItem, source_path: Path) -> UploadItem:
+    """Prepare an independent reader file without applying catalog suggestions."""
+    from catalog.services.document_intelligence import document_asset_is_published
+
+    edition = Edition.objects.select_related("work").get(pk=item.edition_id)
+    set_stage(item, UploadItem.Status.EXTRACTING, 25)
+    with processing_attempt(item, "asset"):
+        original = _copy_asset(item, edition, Asset.Kind.ORIGINAL, item.source_filename)
+        normalized = _copy_asset(item, edition, Asset.Kind.NORMALIZED, Path(item.source_filename).stem + ".pdf")
+    if document_asset_is_published(normalized):
+        # A delayed retry must never reparse an adopted historical snapshot.
+        set_stage(item, UploadItem.Status.READY, 100)
+        return item
+    with processing_attempt(item, "text_extraction", reuse_completed=False) as attempt:
+        pages, _ = extract_native_pages(source_path)
+        detected = ocr_required_page_indexes(pages)
+        reasons: dict[str, int] = {}
+        for page in pages:
+            for reason in page.ocr_reasons:
+                reasons[reason] = reasons.get(reason, 0) + 1
+        # Recheck generation and publication under the same lock as page writes.
+        with transaction.atomic():
+            Edition.objects.select_for_update().get(pk=edition.pk)
+            current = UploadItem.objects.select_for_update().get(pk=item.pk)
+            if current.status in {UploadItem.Status.DELETED, UploadItem.Status.WITHDRAWN} or current.dispatch_task_id != item.dispatch_task_id:
+                raise ProcessingCancelled("文件任务已停止。")
+            normalized = Asset.objects.select_for_update(nowait=True).get(pk=normalized.pk)
+            if not document_asset_is_published(normalized):
+                persist_pages(normalized, pages)
+                normalized.page_count = len(pages)
+                normalized.extraction_method = "ocr_disabled" if detected else "embedded"
+                normalized.status, normalized.validation_status = Asset.Status.READY, Asset.ValidationStatus.VALID
+                normalized.validation_details = {**(normalized.validation_details or {}), "page_count": len(pages),
+                    "sha256": normalized.sha256, "validated_at": timezone.now().isoformat(), "staged_file": True,
+                    "ocr_required_page_indexes": [], "ocr_detected_page_indexes": detected, "ocr_reason_counts": reasons,
+                    "ocr_strategy": "skip", "ocr_detection_version": "per-page-v1"}
+                normalized.save(update_fields=["page_count", "extraction_method", "status", "validation_status", "validation_details", "updated_at"])
+                intelligence = best_effort_native_extraction(normalized, actor=item.batch.created_by,
+                                                            schedule_claims=False, schedule_outline=False)
+                if intelligence.get("status") != "ready":
+                    raise ValueError("阅读副本文档解析尚未完成，原件保留；请重试处理。")
+                original.page_count = len(pages) if workspace_file(item).get("extension") == "pdf" else 0
+                original.status, original.validation_status = Asset.Status.READY, Asset.ValidationStatus.VALID
+                original.validation_details = {**(original.validation_details or {}), "derived_page_count": len(pages),
+                    "reader_asset_id": str(normalized.pk), "sha256": original.sha256, "validated_at": timezone.now().isoformat()}
+                original.save(update_fields=["page_count", "status", "validation_status", "validation_details", "updated_at"])
+            item.preflight_summary = {**item.preflight_summary, "page_count": len(pages),
+                "text_profile": "born_digital" if not detected else "scanned" if len(detected) == len(pages) else "mixed",
+                "detected_ocr_pages": len(detected), "scheduled_ocr_pages": 0, "ocr_strategy": "skip",
+                "ocr_decision": "skipped" if detected else "not_required", "ocr_reason_counts": reasons}
+            item.save(update_fields=["preflight_summary", "updated_at"])
+        attempt.output_summary = {"pages": len(pages), "ocr_scheduled": False, "catalog_metadata_changed": False}
+        attempt.save(update_fields=["output_summary", "updated_at"])
+    set_stage(item, UploadItem.Status.INDEXING, 82)
+    with processing_attempt(item, "index"):
+        index_asset(normalized, is_public=False)
+    # Supplemental material stays local until a separate, explicit public
+    # preparation command. An upload is not permission to transmit to a CDN.
+    set_stage(item, UploadItem.Status.READY, 100)
+    return item
+
+
 def run_pipeline(item_id: str) -> UploadItem:
     item = UploadItem.objects.select_related("batch").get(pk=item_id)
     if item.status in {
@@ -813,6 +900,18 @@ def run_pipeline(item_id: str) -> UploadItem:
         return item
     cleanup_source = None
     try:
+        if staged_file(item):
+            if not workspace_file(item).get("generate_reader"):
+                transition_upload_item(item, UploadItem.WorkflowState.READY, actor=item.batch.created_by,
+                                       reason="保留原件，无阅读副本生成授权", force=True)
+                item.status, item.stage_progress = UploadItem.Status.READY, 100
+                item.save(update_fields=["status", "stage_progress", "updated_at"])
+                return item
+            with processing_attempt(item, "reader_conversion", reuse_completed=workspace_file(item).get("converted", False)) as attempt:
+                prepare_reader_input(item)
+                attempt.output_summary = {"original_asset_id": workspace_file(item).get("original_asset_id"),
+                                          "reader_sha256": item.sha256, "staged": True}
+                attempt.save(update_fields=["output_summary", "updated_at"])
         block_reason = initial_ingestion_block_reason(item)
         if block_reason:
             if is_r2_pre_import_block(block_reason):
@@ -849,6 +948,7 @@ def run_pipeline(item_id: str) -> UploadItem:
                     kind=Asset.Kind.ORIGINAL,
                 ).exclude(pk=item.asset_id).select_related("edition__work").first()
                 item.preflight_summary = {
+                    **({"file_workspace": workspace_file(item)} if staged_file(item) else {}),
                     **({"catalog_reconciliation": item.preflight_summary["catalog_reconciliation"]}
                        if item.batch.source in {"edition-supplement", "edition-replace"}
                        and (item.preflight_summary or {}).get("catalog_reconciliation") else {}),
@@ -868,6 +968,9 @@ def run_pipeline(item_id: str) -> UploadItem:
                 item.save(update_fields=["preflight_summary", "updated_at"])
                 if duplicate and not item.asset_id:
                     raise DuplicateDocument(duplicate)
+
+        if staged_file(item):
+            return _run_staged_file_pipeline(item, source_path)
 
         set_stage(item, UploadItem.Status.METADATA, 18)
         metadata_reusable = bool(
@@ -931,8 +1034,9 @@ def run_pipeline(item_id: str) -> UploadItem:
                 if normalized.source_asset_id != original.id:
                     normalized.source_asset = original
                     normalized.save(update_fields=["source_asset", "updated_at"])
-                edition.public_asset_prepared_at = timezone.now()
-                edition.save(update_fields=["public_asset_prepared_at", "updated_at"])
+                if not staged_file(item):
+                    edition.public_asset_prepared_at = timezone.now()
+                    edition.save(update_fields=["public_asset_prepared_at", "updated_at"])
             else:
                 original = Asset.objects.get(pk=item.asset_id)
                 normalized = edition.assets.get(
@@ -1025,7 +1129,7 @@ def run_pipeline(item_id: str) -> UploadItem:
                     "updated_at",
                 ]
             )
-            original.page_count = len(pages)
+            original.page_count = len(pages) if not staged_file(item) or workspace_file(item).get("extension") == "pdf" else 0
             original.status = Asset.Status.READY
             original.validation_status = Asset.ValidationStatus.VALID
             original.validation_details = {
@@ -1061,17 +1165,19 @@ def run_pipeline(item_id: str) -> UploadItem:
                 if edition.ocr_status == OcrStatus.DISABLED
                 else SemanticIndexStatus.PENDING
             )
-            edition.save(
-                update_fields=[
-                    "ocr_status",
-                    "page_label_status",
-                    "semantic_index_status",
-                    "updated_at",
-                ]
-            )
+            if not staged_file(item):
+                edition.save(
+                    update_fields=[
+                        "ocr_status",
+                        "page_label_status",
+                        "semantic_index_status",
+                        "updated_at",
+                    ]
+                )
             document_intelligence = best_effort_native_extraction(
                 normalized,
                 actor=item.batch.created_by,
+                schedule_claims=not staged_file(item),
             )
             front_matter_intelligence = run_front_matter_intelligence(
                 normalized,
@@ -1198,7 +1304,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             }
             attempt.save(update_fields=["output_summary", "updated_at"])
 
-        if edition.work.document_type not in {"book", "journal_issue"}:
+        if edition.work.document_type not in {"book", "journal_issue"} and not staged_file(item):
             with processing_attempt(item, "recommendation_image", reuse_completed=False) as attempt:
                 image = generate_recommendation_image(normalized)
                 attempt.output_summary = {
@@ -1253,14 +1359,16 @@ def run_pipeline(item_id: str) -> UploadItem:
             # only active index target and make publication fail spuriously.
             if (
                 not item.replacement_of_asset_id
+                and not staged_file(item)
                 and edition.ocr_status != OcrStatus.DISABLED
             ):
                 queue_semantic_job(normalized, force=False, actor=item.batch.created_by)
-            queue_page_label_job(
-                normalized,
-                upload_item=item,
-                actor=item.batch.created_by,
-            )
+            if not staged_file(item):
+                queue_page_label_job(
+                    normalized,
+                    upload_item=item,
+                    actor=item.batch.created_by,
+                )
             # External bibliography is an explicit free-source action. Old
             # batch flags do not authorize an automatic network request.
         if item.replacement_of_asset_id:
@@ -1408,6 +1516,8 @@ def resume_publication_for_asset(asset_id: str) -> None:
                     "updated_at",
                 ]
             )
+            if staged_file(item):
+                return
             if item.edition.ocr_status == OcrStatus.PENDING:
                 queue_ocr_job(asset, upload_item=item, actor=item.batch.created_by)
             elif item.edition.ocr_status in {OcrStatus.NOT_REQUIRED, OcrStatus.SUCCEEDED}:

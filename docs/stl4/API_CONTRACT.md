@@ -1,5 +1,12 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-18 文件工作台、OCR与私有预览
+
+- 文件接口 `/catalog/admin/works/{id}/files/`、同作品editions、edition files/requests/generate-reader/adopt/rights/prepare-public/content/impact.csv 同步前端和命名serializer；GET/HEAD与Range复用原文件权限，写入使用修订+nonce。采用/公开准备各自明确确认，独立于上传和主版本选择。详见WORK_FILES_20261018.md。
+- `/ingestion/ocr-workspace/{asset}/` GET返回真实页状态/筛选/来源指纹/修订和任务；POST save/prepare/apply/review/start/pause/resume/cancel按能力鉴权。人工正文与人工核验分别保存，策略实际传递原worker/provider。详见OCR_WORKSPACE_20261018.md。
+- 本人稿件/私人来源的preview和preview-file接口按purpose、owner和代次隔离；预览生成/取消有独立CAS/nonce，下载前后重验，不能将派生PDF位置作为原DOCX精确页码。详见DOCX_PRIVATE_PREVIEW_20261018.md。
+- 当前验证表面新增15路径至141；原126条路径内容未变。DocumentRevisionApplyModeEnum供页码/人工正文共享，避免同名mode产生歧义。schema及前端生成类型已同步，正式运行待验收。
+
 ## 2026-10-18 反证、资料操作与页码映射
 
 - 研究轮次GET支持mode=all/search/counterargument及order=oldest/newest，在本人项目内解密筛选后分页。反证命题与条件合计最多1200字符；可选文本条件允许清空。decision支持confirm/clear、request_id、relation、note、attribution、scope_note、save_as_note；显式保存笔记与本人决定原子持久化，理由必填，request_id异内容409，旧决定留历史。

@@ -54,6 +54,9 @@ class CitationAudit(PrivateResearchRecord):
     project = models.ForeignKey(ResearchProject, null=True, blank=True, on_delete=models.SET_NULL, related_name="audits")
     request_id = models.UUIDField(default=uuid.uuid4)
     original_ciphertext = models.BinaryField(default=bytes)
+    # Disposable owner-only preview; never overwrites the original or report payload.
+    preview_ciphertext = models.BinaryField(default=bytes, blank=True)
+    preview_state = models.JSONField(default=dict, blank=True)
     content_hash = models.CharField(max_length=64)
     status = models.CharField(max_length=16, default="queued", db_index=True)
     generation = models.PositiveIntegerField(default=1)

@@ -314,13 +314,18 @@ export async function apiUpload<T>(
   token?: string | null,
   onProgress?: (progress: UploadProgress) => void,
   allowRefresh = true,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<T> {
   if (typeof window === "undefined") throw new Error("上传只能在浏览器中进行。");
   return new Promise<T>((resolve, reject) => {
+    if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查回结果。", 0)); return; }
     const request = new XMLHttpRequest();
     request.open("POST", apiEndpoint(path), true);
     request.withCredentials = true;
-    request.timeout = 0;
+    request.timeout = options.timeoutMs === undefined ? 0 : Math.min(30 * 60 * 1000, Math.max(1000, options.timeoutMs || 15 * 60 * 1000));
+    const abort = () => request.abort();
+    const cleanup = () => options.signal?.removeEventListener("abort", abort);
+    options.signal?.addEventListener("abort", abort, { once: true });
     if (token && token !== COOKIE_SESSION) {
       request.setRequestHeader("Authorization", `Bearer ${token}`);
     }
@@ -334,17 +339,21 @@ export async function apiUpload<T>(
           : 0,
       });
     };
-    request.onerror = () => reject(new ApiRequestError("上传连接中断，请检查网络后重试。", 0));
-    request.onabort = () => reject(new ApiRequestError("上传已取消。", 0));
+    request.onerror = () => { cleanup(); reject(new ApiRequestError("上传连接中断，服务器可能已接收请求，请先查回结果。", 0)); };
+    request.onabort = () => { cleanup(); reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查回结果。", 0)); };
+    request.ontimeout = () => { cleanup(); reject(new ApiRequestError("上传等待超时，服务器可能已接收请求，请先查回结果。", 0)); };
     request.onload = async () => {
+      cleanup();
+      if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，请先查回服务器结果。", 0)); return; }
       if (request.status === 401 && token && allowRefresh) {
-        const nextToken = await refreshAccessToken();
-        if (nextToken) {
-          try {
-            resolve(await apiUpload<T>(path, body, nextToken, onProgress, false));
-          } catch (reason) {
-            reject(reason);
+        try {
+          const nextToken = await refreshAccessToken();
+          if (nextToken) {
+            resolve(await apiUpload<T>(path, body, nextToken, onProgress, false, options));
+            return;
           }
+        } catch (reason) {
+          reject(reason);
           return;
         }
       }
@@ -372,7 +381,8 @@ export async function apiUpload<T>(
       }
       resolve(payload as T);
     };
-    request.send(body);
+    try { request.send(body); }
+    catch (reason) { cleanup(); reject(reason); }
   });
 }
 
