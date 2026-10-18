@@ -8,7 +8,7 @@ import unicodedata
 import uuid
 
 from django.conf import settings
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from catalog.models import AnonymousUsageEvent, SearchQueryAggregate
@@ -26,6 +26,35 @@ SENSITIVE_RE = re.compile(
 def normalize_query(value: str) -> str:
     value = unicodedata.normalize("NFKC", str(value or ""))
     return " ".join(value.casefold().split())[:500]
+
+
+def public_hot_searches(*, days=30, limit=10):
+    """Publish only thresholded, non-sensitive aggregates; never reader history."""
+    since = timezone.localdate() - timedelta(days=days - 1)
+    rows = (
+        SearchQueryAggregate.objects.filter(
+            period="day", period_start__gte=since, excluded=False,
+        )
+        .exclude(normalized_query="")
+        .values("normalized_query")
+        .annotate(
+            search_count=Sum("search_count"), unique_sessions=Sum("unique_sessions"),
+            click_count=Sum("click_count"), zero_result_count=Sum("zero_result_count"),
+        )
+        .filter(unique_sessions__gte=3, search_count__gte=3)
+        .order_by("-search_count", "normalized_query")
+    )
+    # Recheck legacy/imported aggregates as well as the ingestion-time flag.
+    results = []
+    for row in rows.iterator():
+        if SENSITIVE_RE.search(row["normalized_query"]):
+            continue
+        results.append({"query": row["normalized_query"], **{
+            key: row[key] for key in ("search_count", "unique_sessions", "click_count", "zero_result_count")
+        }})
+        if len(results) >= limit:
+            break
+    return {"period_days": days, "results": results}
 
 
 def is_bot_request(request) -> bool:

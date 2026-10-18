@@ -295,6 +295,7 @@ class ProcessingJob(UUIDTimeStampedModel):
         THUMBNAIL = "thumbnail", "缩略图"
         CACHE_REFRESH = "cache_refresh", "公开目录刷新"
         R2_STAGING = "r2_staging", "R2 上传中转"
+        EDITORIAL_ASSISTANCE = "editorial_assistance", "策划助手候选"
 
     class Status(models.TextChoices):
         PENDING = "pending", "等待处理"

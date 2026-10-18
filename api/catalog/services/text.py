@@ -26,6 +26,14 @@ def sanitize_unicode(value: str) -> str:
     return SURROGATE_RE.sub("\ufffd", str(value or ""))
 
 
+def page_text_range(page_text: str, text: str, start: int, end: int) -> dict | None:
+    """Validate raw-page codepoint offsets without guessing historical alignment."""
+    if (type(start) is not int or type(end) is not int or not text
+            or not 0 <= start < end <= len(page_text) or page_text[start:end] != text):
+        return None
+    return {"start": start, "end": end, "unit": "unicode_codepoints"}
+
+
 def normalize_search_text(value: str) -> str:
     value = unicodedata.normalize("NFKC", sanitize_unicode(value))
     value = value.replace("\u200b", "").replace("\ufeff", "")

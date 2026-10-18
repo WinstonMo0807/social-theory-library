@@ -14,7 +14,7 @@ export function readerFailure(status?: number): ReaderFailure {
 
 export function readerReturnPath(assetId: string, query: Record<string, string | undefined>) {
   const search = new URLSearchParams();
-  for (const key of ["page", "q", "focus", "passage", "evidence"]) {
+  for (const key of ["page", "q", "focus", "passage", "evidence", "research_project", "research_turn", "reference", "revision", "return_to"]) {
     if (query[key] !== undefined) search.set(key, query[key]!);
   }
   return `/reader/${encodeURIComponent(assetId)}${search.size ? `?${search}` : ""}`;

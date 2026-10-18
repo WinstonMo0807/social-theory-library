@@ -5,11 +5,12 @@ import type {
   PDFDocumentLoadingTask,
   RenderTask,
 } from "pdfjs-dist/types/src/display/api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { displayedHighlightBox, displayedReaderBox, type ReaderGeometryBox } from "@/lib/reader-coordinates";
 
 const pdfWorkerUrl = "/pdfjs/pdf.worker.min.js";
 
-export type CanonicalBlock = {
+export type CanonicalBlock = ReaderGeometryBox & {
   id: string;
   order: number;
   type: string;
@@ -18,9 +19,10 @@ export type CanonicalBlock = {
   confidence: number;
 };
 
-export type PageHighlight = {
+export type PageHighlight = ReaderGeometryBox & {
   bbox: number[];
   kind?: "search" | "highlight" | "underline" | "note";
+  source?: "pdf-text" | "ocr-estimate";
 };
 
 type PageDimensions = {
@@ -193,14 +195,6 @@ export function PdfCanvas({
     };
   }, [availableSize, document, page, zoom]);
 
-  const scale = useMemo(
-    () => ({
-      x: dimensions.width / Math.max(sourceWidth, 1),
-      y: dimensions.height / Math.max(sourceHeight, 1),
-    }),
-    [dimensions, sourceHeight, sourceWidth],
-  );
-
   return (
     <div
       className={`pdf-canvas-stage ${status ? "is-rendering" : "is-ready"}`}
@@ -209,22 +203,23 @@ export function PdfCanvas({
       aria-busy={Boolean(status)}
     >
       <canvas ref={canvasRef} aria-label={`PDF 第 ${page} 页`} />
-      {dimensions.width && sourceWidth && sourceHeight ? (
+      {dimensions.width ? (
         <div className="canonical-text-layer" aria-label="可选择的规范文字层">
           {canonicalBlocks.map((block) => {
-            if (block.bbox.length !== 4) return null;
-            const [x0, y0, x1, y1] = block.bbox;
+            const box = displayedReaderBox(block, dimensions.width, dimensions.height);
+            if (!box) return null;
+            const [x0, y0, x1, y1] = box;
             return (
               <span
                 data-block-id={block.id}
                 data-confidence={block.confidence}
                 key={block.id}
                 style={{
-                  left: x0 * scale.x,
-                  top: y0 * scale.y,
-                  width: Math.max((x1 - x0) * scale.x, 1),
-                  height: Math.max((y1 - y0) * scale.y, 1),
-                  fontSize: Math.max(Math.min((y1 - y0) * scale.y * 0.36, 18), 6),
+                  left: x0,
+                  top: y0,
+                  width: Math.max(x1 - x0, 1),
+                  height: Math.max(y1 - y0, 1),
+                  fontSize: Math.max(Math.min((y1 - y0) * 0.36, 18), 6),
                 }}
               >
                 {block.text}
@@ -235,17 +230,19 @@ export function PdfCanvas({
       ) : null}
       <div className="pdf-search-highlights" aria-hidden>
         {highlights.map((highlight, index) => {
-          if (highlight.bbox.length !== 4 || !sourceWidth || !sourceHeight) return null;
-          const [x0, y0, x1, y1] = highlight.bbox;
+          const box = displayedHighlightBox(highlight, dimensions.width, dimensions.height, sourceWidth, sourceHeight);
+          if (!box) return null;
+          const [x0, y0, x1, y1] = box;
           return (
             <i
               className={highlight.kind ?? "search"}
+              data-source={highlight.source}
               key={`${x0}-${y0}-${index}`}
               style={{
-                left: x0 * scale.x,
-                top: y0 * scale.y,
-                width: Math.max((x1 - x0) * scale.x, 3),
-                height: Math.max((y1 - y0) * scale.y, 3),
+                left: x0,
+                top: y0,
+                width: Math.max(x1 - x0, 3),
+                height: Math.max(y1 - y0, 3),
               }}
             />
           );

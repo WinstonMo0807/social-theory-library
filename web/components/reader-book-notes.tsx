@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { adaptApiWork as adaptWork } from "@/lib/public-data-adapters";
 import type { ApiWork } from "@/lib/api/public-catalog";
+import { readAllPages } from "@/lib/api/read-all-pages";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
@@ -28,34 +29,15 @@ type AnnotationRow = {
   created_at: string;
 };
 
-type Paginated<T> = {
-  count: number;
-  next: string | null;
-  results: T[];
-};
-
 async function loadAllBookNotes(assetId: string, token: string) {
-  const collected: AnnotationRow[] = [];
-  let page = 1;
-  let total = 1;
-  while (collected.length < total && page <= 100) {
-    const payload = await apiRequest<Paginated<AnnotationRow>>(
-      `/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note&p=${page}`,
-      {},
-      token,
-    );
-    total = payload.count;
-    collected.push(...payload.results);
-    if (!payload.next) break;
-    page += 1;
-  }
-  return collected;
+  return readAllPages<AnnotationRow>(`/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note`, token);
 }
 
 export function ReaderBookNotes({ assetId }: { assetId: string }) {
   const { state: session, retry: retrySession } = useSessionBootstrap();
   const [notes, setNotes] = useState<AnnotationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedOwnerId, setLoadedOwnerId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -75,6 +57,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     Promise.resolve().then(() => {
       if (!mounted) return;
       setLoading(true);
+      setNotes([]);
       setMessage("");
       setMessageState("pending");
     });
@@ -96,12 +79,12 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
         setMessageState("error");
       })
       .finally(() => {
-        if (mounted) setLoading(false);
+        if (mounted) { setLoading(false); setLoadedOwnerId(session.user?.id ?? null); }
       });
     return () => {
       mounted = false;
     };
-  }, [assetId, loadAttempt, session.status]);
+  }, [assetId, loadAttempt, session.status, session.user?.id]);
 
   async function deleteNote(id: string) {
     if (!window.confirm("确定删除这条笔记吗？")) return;
@@ -136,7 +119,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     return <main className="account-loading" data-error-category={session.errorCategory}><strong>认证服务暂时不可用</strong><p>{session.message}</p><button type="button" onClick={retrySession}><RefreshCw size={15} />保留会话并重试</button></main>;
   }
 
-  if (loading) {
+  if (loading || loadedOwnerId !== session.user?.id) {
     return <main className="account-loading">正在读取这本书的笔记……</main>;
   }
 

@@ -13,7 +13,7 @@ export default async function ReaderPage({
   searchParams,
 }: {
   params: Promise<{ assetId: string }>;
-  searchParams: Promise<{ page?: string; q?: string; focus?: string; passage?: string; evidence?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; focus?: string; passage?: string; evidence?: string; research_project?: string; research_turn?: string; reference?: string; revision?: string; return_to?: string }>;
 }) {
   const [{ assetId }, query] = await Promise.all([params, searchParams]);
   const result = await loadReaderManifestResult(assetId);
@@ -23,7 +23,14 @@ export default async function ReaderPage({
   const manifest = result.manifest;
   return (
     <ReaderShell
+      key={`${manifest.work.id}:${manifest.documentRevisionId || ""}`}
       work={manifest.work}
+      documentRevisionId={manifest.documentRevisionId || ""}
+      requestedRevisionId={query.revision || ""}
+      researchProjectId={query.research_project || ""}
+      researchTurnId={query.research_turn || ""}
+      researchReferenceId={query.reference || ""}
+      returnTo={query.return_to || ""}
       initialPage={Number(query.page) || 1}
       initialQuery={query.q ?? ""}
       initialFocus={query.focus ?? ""}

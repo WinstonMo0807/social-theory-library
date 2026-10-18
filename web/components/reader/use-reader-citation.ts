@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { apiRequest } from "@/lib/api";
 import type { ActionState } from "../action-feedback";
 import type { CitationBundle, CitationStyle } from "./types";
@@ -12,37 +12,49 @@ export function useReaderCitation({ editionId, page, setCopyStatus, setCopyStatu
   setCopyStatusState: Dispatch<SetStateAction<ActionState>>;
 }) {
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("gbt7714-2025");
-  const [citations, setCitations] = useState<CitationBundle | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const retryCitation = useCallback(() => setAttempt(value => value + 1), []);
+  const key = `${editionId ?? ""}:${page}:${attempt}`;
+  const [result, setResult] = useState<{ key: string; data: CitationBundle | null; error: string } | null>(null);
+  // A page change invalidates the old citation during render, before effects run.
+  const citations = result?.key === key ? result.data : null;
+  const citationError = result?.key === key ? result.error : "";
   useEffect(() => {
     if (!editionId) {
       return;
     }
-    let cancelled = false;
+    const request = new AbortController();
     apiRequest<CitationBundle>(
       `/catalog/editions/${editionId}/citations/?pdf_page=${page}`,
+      { signal: request.signal },
     )
       .then((payload) => {
-        if (!cancelled) setCitations(payload);
+        if (!request.signal.aborted) setResult({ key, data: payload, error: "" });
       })
-      .catch(() => {
-        if (!cancelled) setCitations(null);
+      .catch((reason: unknown) => {
+        if (!request.signal.aborted) setResult({ key, data: null, error: reason instanceof Error ? reason.message : "引用读取失败。" });
       });
     return () => {
-      cancelled = true;
+      request.abort();
     };
-  }, [editionId, page]);
+  }, [editionId, page, key]);
 
   async function copyCitation() {
     const text = citations?.[citationStyle];
     if (!text) {
-      setCopyStatus("引用数据尚未就绪");
-      setCopyStatusState("idle");
+      setCopyStatus(citationError || "当前页引用数据尚未就绪");
+      setCopyStatusState(citationError ? "error" : "idle");
       return;
     }
-    await navigator.clipboard.writeText(text);
-    setCopyStatus("引用已复制");
-    setCopyStatusState("success");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus("引用已复制");
+      setCopyStatusState("success");
+    } catch {
+      setCopyStatus("浏览器未允许复制，请选择引用文字手动复制。");
+      setCopyStatusState("error");
+    }
   }
 
-  return { citationStyle, setCitationStyle, citations, copyCitation };
+  return { citationStyle, setCitationStyle, citations, citationError, citationLoading: Boolean(editionId) && result?.key !== key, copyCitation, retryCitation };
 }

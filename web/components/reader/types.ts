@@ -1,6 +1,9 @@
 import type { CanonicalBlock } from "../pdf-canvas";
+import type { ReaderGeometryBox } from "@/lib/reader-coordinates";
 
 export type PagePayload = {
+  asset_id?: string;
+  document_revision_id?: string | null;
   page_id: string;
   page_index: number;
   printed_label: string;
@@ -10,6 +13,7 @@ export type PagePayload = {
   height: number;
   text: string;
   blocks: CanonicalBlock[];
+  geometry?: Record<string, unknown>;
 };
 
 export type ReaderAnnotation = {
@@ -83,13 +87,15 @@ export type SearchMatch = {
   snippet: string;
   width: number;
   height: number;
-  blocks: { bbox: number[]; text: string; order: number }[];
-  highlights?: { bbox: number[]; text: string; source: "pdf-text" | "ocr-estimate" }[];
+  blocks: (ReaderGeometryBox & { bbox: number[]; text: string; order: number })[];
+  highlights?: (ReaderGeometryBox & { bbox: number[]; text: string; source: "pdf-text" | "ocr-estimate" })[];
 };
 
-export type PassageFocus = {
+export type PassageFocus = ReaderGeometryBox & {
   id: string;
   asset_id: string;
+  document_revision_id?: string | null;
+  coordinate_space?: "displayed" | "pymupdf_unrotated";
   title: string;
   page_index: number;
   printed_label: string;
@@ -97,6 +103,7 @@ export type PassageFocus = {
   height: number;
   bbox: number[];
   text: string;
+  text_source?: string;
 };
 
 export type CitationStyle = "gbt7714-2025" | "apa" | "chicago" | "mla" | "harvard";

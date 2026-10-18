@@ -9,6 +9,7 @@ import type { TextLayer } from "pdfjs-dist/types/src/display/text_layer";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { CanonicalBlock, PageHighlight } from "./pdf-canvas";
+import { displayedHighlightBox, displayedReaderBox } from "@/lib/reader-coordinates";
 
 const pdfWorkerUrl = "/pdfjs/pdf.worker.min.js";
 
@@ -31,6 +32,7 @@ export type PdfScrollRequest = {
   page: number;
   sequence: number;
   behavior: ScrollBehavior;
+  position?: [number, number];
 };
 
 type PageSize = {
@@ -186,10 +188,6 @@ function ContinuousPdfPage({
   // mount. That shrank earlier pages after a sidebar resize and moved jumps
   // back by a page. The layout footprint always follows the current viewport.
   const displaySize = targetSize;
-  const scale = {
-    x: displaySize.width / Math.max(overlay?.sourceWidth ?? 0, 1),
-    y: displaySize.height / Math.max(overlay?.sourceHeight ?? 0, 1),
-  };
 
   return (
     <article
@@ -213,11 +211,12 @@ function ContinuousPdfPage({
             aria-label={`第 ${pageNumber} 页原生文字层`}
           />
         ) : null}
-        {active && useOcrTextLayer && overlay?.sourceWidth && overlay.sourceHeight ? (
+        {active && useOcrTextLayer && overlay ? (
           <div className="canonical-text-layer ocr-fallback" aria-label={`第 ${pageNumber} 页 OCR 可选择文字层`}>
             {overlay.canonicalBlocks.flatMap((block) => {
-              if (block.bbox.length !== 4) return null;
-              const [x0, y0, x1, y1] = block.bbox;
+              const box = displayedReaderBox(block, displaySize.width, displaySize.height);
+              if (!box) return null;
+              const [x0, y0, x1, y1] = box;
               const lines = block.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
               const visibleLines = lines.length ? lines : [block.text];
               const lineHeight = Math.max((y1 - y0) / visibleLines.length, 1);
@@ -227,11 +226,11 @@ function ContinuousPdfPage({
                   data-confidence={block.confidence}
                   key={`${block.id}-${lineIndex}`}
                   style={{
-                    left: x0 * scale.x,
-                    top: (y0 + lineIndex * lineHeight) * scale.y,
-                    width: Math.max((x1 - x0) * scale.x, 1),
-                    height: Math.max(lineHeight * scale.y, 1),
-                    fontSize: Math.max(Math.min(lineHeight * scale.y * 0.82, 18), 6),
+                    left: x0,
+                    top: y0 + lineIndex * lineHeight,
+                    width: Math.max(x1 - x0, 1),
+                    height: Math.max(lineHeight, 1),
+                    fontSize: Math.max(Math.min(lineHeight * 0.82, 18), 6),
                   }}
                 >
                   {line}
@@ -243,21 +242,19 @@ function ContinuousPdfPage({
         {active ? (
           <div className="pdf-search-highlights" aria-hidden="true">
             {(overlay?.highlights ?? []).map((highlight, index) => {
-              if (
-                highlight.bbox.length !== 4
-                || !overlay?.sourceWidth
-                || !overlay.sourceHeight
-              ) return null;
-              const [x0, y0, x1, y1] = highlight.bbox;
+              const box = displayedHighlightBox(highlight, displaySize.width, displaySize.height, overlay?.sourceWidth || 0, overlay?.sourceHeight || 0);
+              if (!box) return null;
+              const [x0, y0, x1, y1] = box;
               return (
                 <i
                   className={highlight.kind ?? "search"}
+                  data-source={highlight.source}
                   key={`${x0}-${y0}-${index}`}
                   style={{
-                    left: x0 * scale.x,
-                    top: y0 * scale.y,
-                    width: Math.max((x1 - x0) * scale.x, 3),
-                    height: Math.max((y1 - y0) * scale.y, 3),
+                    left: x0,
+                    top: y0,
+                    width: Math.max(x1 - x0, 3),
+                    height: Math.max(y1 - y0, 3),
                   }}
                 />
               );
@@ -499,7 +496,7 @@ export function PdfContinuousViewer({
       );
       if (!target) return;
       scrollRoot.scrollTo({
-        top: Math.max(target.offsetTop - 22, 0),
+        top: Math.max(target.offsetTop + (scrollRequest.position?.[1] ?? 0) * (target.querySelector<HTMLElement>(".pdf-canvas-stage")?.offsetHeight ?? target.offsetHeight) - 22, 0),
         behavior: scrollRequest.behavior,
       });
     });

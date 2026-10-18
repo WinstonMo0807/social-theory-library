@@ -1,9 +1,36 @@
 import hmac
+import re
+from uuid import uuid4
 
 from django.conf import settings
 from django.http import HttpResponseForbidden
 
 from accounts.ownership import is_library_owner
+
+
+_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$")
+
+
+class ApiContractMiddleware:
+    """Attach cross-cutting metadata shared by every 4.0 API response."""
+
+    api_prefix = "/api/"
+    api_version = "4.0"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        supplied = str(request.META.get("HTTP_X_REQUEST_ID") or "").strip()
+        request_id = supplied if _REQUEST_ID_RE.fullmatch(supplied) else uuid4().hex
+        request.stl_request_id = request_id
+        response = self.get_response(request)
+        if request.path.startswith(self.api_prefix):
+            response["X-STL-API-Version"] = str(
+                getattr(settings, "API_CONTRACT_VERSION", self.api_version)
+            )
+            response["X-Request-ID"] = request_id
+        return response
 
 
 class TrustedLanHttpMiddleware:

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { readAllPages } from "@/lib/api/read-all-pages";
 import { useActionGuard } from "@/lib/use-action-guard";
 import type { ActionState } from "../action-feedback";
 import type {
@@ -17,6 +18,7 @@ type ReaderRecordsOptions = {
   assetId: string;
   initialFocus: string;
   readerAuthenticated: boolean;
+  readerId?: number;
   page: number;
   pagePayloads: Record<number, PagePayload>;
   captureSelection: (clientX?: number, clientY?: number) => SelectionSnapshot | null;
@@ -32,20 +34,32 @@ type ReaderRecordsOptions = {
 
 /** Private per-reader records retain the existing API, selectors and mutation guard. */
 export function useReaderRecords({
-  assetId, initialFocus, readerAuthenticated, page, pagePayloads, captureSelection,
+  assetId, initialFocus, readerAuthenticated, readerId, page, pagePayloads, captureSelection,
   setSelectionTools, setPage, jumpToPage, setLeftPanel, setSidebarTab, setGate,
   setCopyStatus, setCopyStatusState,
 }: ReaderRecordsOptions) {
   const [annotations, setAnnotations] = useState<ReaderAnnotation[]>([]);
   const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
+  const [loadedIdentity, setLoadedIdentity] = useState("");
+  const identity = readerAuthenticated ? `${readerId ?? ""}:${assetId}` : "";
+  const activeIdentity = useRef(identity);
+  useLayoutEffect(() => {
+    activeIdentity.current = identity;
+    return () => { activeIdentity.current = ""; };
+  }, [identity]);
   const [annotationDraft, setAnnotationDraft] = useState<AnnotationDraft | null>(null);
   const [focusedAnnotationId, setFocusedAnnotationId] = useState(initialFocus);
   const { pendingAction, startAction, finishAction } = useActionGuard();
   const currentPagePayload = pagePayloads[page] ?? null;
   const bookmarkedPage = Boolean(
-    currentPagePayload &&
+    identity && loadedIdentity === identity && currentPagePayload &&
     bookmarks.some((bookmark) => bookmark.page === currentPagePayload.page_id),
   );
+
+  useEffect(() => {
+    // A draft belongs to the previous authenticated owner just like saved records.
+    queueMicrotask(() => { setAnnotationDraft(null); setFocusedAnnotationId(initialFocus); });
+  }, [identity, initialFocus]);
 
   useEffect(() => {
     if (!readerAuthenticated) {
@@ -57,25 +71,26 @@ export function useReaderRecords({
     }
     const token = getServerSessionCredential();
     if (!token) return;
-    let cancelled = false;
+    const request = new AbortController();
     Promise.all([
-      apiRequest<{ results: ReaderAnnotation[] }>(
+      readAllPages<ReaderAnnotation>(
         `/reading/annotations/?asset=${encodeURIComponent(assetId)}`,
-        {},
         token,
+        request.signal,
       ),
-      apiRequest<{ results: ReaderBookmark[] }>(
+      readAllPages<ReaderBookmark>(
         `/reading/bookmarks/?asset=${encodeURIComponent(assetId)}`,
-        {},
         token,
+        request.signal,
       ),
     ])
       .then(([annotationPayload, bookmarkPayload]) => {
-        if (cancelled) return;
-        setAnnotations(annotationPayload.results);
-        setBookmarks(bookmarkPayload.results);
+        if (request.signal.aborted) return;
+        setAnnotations(annotationPayload);
+        setBookmarks(bookmarkPayload);
+        setLoadedIdentity(identity);
         if (initialFocus) {
-          const focused = annotationPayload.results.find((item) => item.id === initialFocus);
+          const focused = annotationPayload.find((item) => item.id === initialFocus);
           if (focused) {
             jumpToPage(focused.selector.page_index || 1, "auto");
             setSidebarTab(focused.kind === "note" ? "notes" : "highlights");
@@ -84,11 +99,15 @@ export function useReaderRecords({
           }
         }
       })
-      .catch(() => undefined);
+      .catch((reason: unknown) => {
+        if (request.signal.aborted) return;
+        setCopyStatus(reason instanceof Error ? reason.message : "个人阅读记录读取失败，请重新打开文档后重试。");
+        setCopyStatusState("error");
+      });
     return () => {
-      cancelled = true;
+      request.abort();
     };
-  }, [initialFocus, jumpToPage, readerAuthenticated, setLeftPanel, setSidebarTab, assetId]);
+  }, [initialFocus, jumpToPage, readerAuthenticated, readerId, identity, setLeftPanel, setSidebarTab, setCopyStatus, setCopyStatusState, assetId]);
 
   function beginAnnotation(
     kind: AnnotationDraft["kind"],
@@ -125,6 +144,11 @@ export function useReaderRecords({
       setGate(draft.kind === "note" ? "笔记" : draft.kind === "underline" ? "划线" : "高亮");
       return;
     }
+    if (loadedIdentity !== identity) {
+      setCopyStatus("个人阅读记录尚未完整读取，请稍后重试。");
+      setCopyStatusState("idle");
+      return;
+    }
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = "save-annotation";
@@ -153,6 +177,7 @@ export function useReaderRecords({
         },
         token,
       );
+      if (activeIdentity.current !== identity) return;
       setAnnotations((items) => [created, ...items]);
       setAnnotationDraft(null);
       setFocusedAnnotationId(created.id);
@@ -160,6 +185,7 @@ export function useReaderRecords({
       setCopyStatusState("success");
       window.getSelection()?.removeAllRanges();
     } catch (error) {
+      if (activeIdentity.current !== identity) return;
       setCopyStatus(error instanceof Error ? error.message : "批注保存失败");
       setCopyStatusState("error");
     } finally {
@@ -172,7 +198,7 @@ export function useReaderRecords({
   }
 
   async function deleteAnnotation(annotationId: string) {
-    if (!readerAuthenticated) return;
+    if (!readerAuthenticated || loadedIdentity !== identity) return;
     const annotation = annotations.find((item) => item.id === annotationId);
     if (!annotation || !window.confirm(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`)) {
       return;
@@ -185,11 +211,13 @@ export function useReaderRecords({
     setCopyStatusState("pending");
     try {
       await apiRequest(`/reading/annotations/${annotationId}/`, { method: "DELETE" }, token);
+      if (activeIdentity.current !== identity) return;
       setAnnotations((items) => items.filter((item) => item.id !== annotationId));
       if (focusedAnnotationId === annotationId) setFocusedAnnotationId("");
       setCopyStatus("个人阅读记录已删除");
       setCopyStatusState("success");
     } catch (error) {
+      if (activeIdentity.current !== identity) return;
       setCopyStatus(error instanceof Error ? error.message : "删除失败");
       setCopyStatusState("error");
     } finally {
@@ -198,7 +226,7 @@ export function useReaderRecords({
   }
 
   async function deleteBookmark(bookmarkId: string) {
-    if (!readerAuthenticated) return;
+    if (!readerAuthenticated || loadedIdentity !== identity) return;
     if (!window.confirm("确定删除这个书签吗？")) return;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -208,10 +236,12 @@ export function useReaderRecords({
     setCopyStatusState("pending");
     try {
       await apiRequest(`/reading/bookmarks/${bookmarkId}/`, { method: "DELETE" }, token);
+      if (activeIdentity.current !== identity) return;
       setBookmarks((items) => items.filter((item) => item.id !== bookmarkId));
       setCopyStatus("书签已删除");
       setCopyStatusState("success");
     } catch (error) {
+      if (activeIdentity.current !== identity) return;
       setCopyStatus(error instanceof Error ? error.message : "书签删除失败");
       setCopyStatusState("error");
     } finally {
@@ -222,6 +252,11 @@ export function useReaderRecords({
   async function toggleBookmark(snapshot?: SelectionSnapshot | null) {
     if (!readerAuthenticated) {
       setGate("书签");
+      return;
+    }
+    if (loadedIdentity !== identity) {
+      setCopyStatus("书签尚未完整读取，请稍后重试，避免重复保存。");
+      setCopyStatusState("idle");
       return;
     }
     const token = getServerSessionCredential();
@@ -250,6 +285,7 @@ export function useReaderRecords({
           { method: "DELETE" },
           token,
         );
+        if (activeIdentity.current !== identity) return;
         setBookmarks((items) => items.filter((bookmark) => bookmark.id !== existing.id));
         setCopyStatus("书签已移除");
         setCopyStatusState("success");
@@ -266,12 +302,14 @@ export function useReaderRecords({
           },
           token,
         );
+        if (activeIdentity.current !== identity) return;
         setBookmarks((items) => [created, ...items]);
         setCopyStatus("书签已保存");
         setCopyStatusState("success");
       }
       setSelectionTools(null);
     } catch (error) {
+      if (activeIdentity.current !== identity) return;
       setCopyStatus(error instanceof Error ? error.message : "书签操作失败");
       setCopyStatusState("error");
     } finally {
@@ -310,9 +348,9 @@ export function useReaderRecords({
   }
 
   return {
-    annotations,
-    bookmarks,
-    annotationDraft,
+    annotations: identity && loadedIdentity === identity ? annotations : [],
+    bookmarks: identity && loadedIdentity === identity ? bookmarks : [],
+    annotationDraft: identity && loadedIdentity === identity ? annotationDraft : null,
     setAnnotationDraft,
     focusedAnnotationId,
     setFocusedAnnotationId,

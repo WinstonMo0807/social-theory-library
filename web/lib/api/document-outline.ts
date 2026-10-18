@@ -1,0 +1,80 @@
+export type OutlineGeometry = { pdf_width?: number; pdf_height?: number; rotation?: number; cropbox?: number[] };
+export type OutlineNode = {
+  id?: string;
+  parent_id?: string | null;
+  title?: string;
+  chapter_title: string;
+  index: number;
+  pdf_page?: number | null;
+  printed_label: string;
+  level?: number;
+  position?: number;
+  pdf_position?: number[];
+  normalized_position?: number[];
+  coordinate_space?: string;
+  source_locator?: { bbox?: number[]; coordinate_space?: string; source_width?: number; source_height?: number; page_geometry?: OutlineGeometry };
+  page_geometry?: OutlineGeometry;
+  outline_revision_id?: string;
+};
+
+export type ReaderOutlineNode = OutlineNode & { id: string; title: string; level: number };
+
+export function prepareOutline(nodes: OutlineNode[]): ReaderOutlineNode[] {
+  return nodes.map((node, index) => ({ ...node, id: node.id || `legacy-${index}-${node.index}`,
+    title: node.title || node.chapter_title, level: Math.max(1, node.level || 1) }));
+}
+
+export function filterOutline(nodes: ReaderOutlineNode[], query: string, collapsed: ReadonlySet<string>) {
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const needle = query.trim().toLocaleLowerCase();
+  const matches = new Set<string>();
+  if (needle) {
+    for (const node of nodes) {
+      if (!`${node.title} ${node.printed_label} ${node.index}`.toLocaleLowerCase().includes(needle)) continue;
+      let current: ReaderOutlineNode | undefined = node;
+      const visited = new Set<string>();
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id); matches.add(current.id);
+        current = current.parent_id ? byId.get(current.parent_id) : undefined;
+      }
+    }
+  }
+  return nodes.filter(node => {
+    if (needle) return matches.has(node.id);
+    let parent = node.parent_id;
+    const visited = new Set<string>();
+    while (parent && !visited.has(parent)) {
+      if (collapsed.has(parent)) return false;
+      visited.add(parent); parent = byId.get(parent)?.parent_id;
+    }
+    return true;
+  });
+}
+
+/** A normalized displayed-page point, only when its coordinate space is known. */
+export function outlinePosition(node: OutlineNode): [number, number] | undefined {
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const relative = node.normalized_position;
+  if (relative?.length === 2 && relative.every(Number.isFinite)) return [clamp(relative[0]), clamp(relative[1])];
+  const width = node.page_geometry?.pdf_width || 0;
+  const height = node.page_geometry?.pdf_height || 0;
+  const point = node.pdf_position;
+  if (point?.length === 2 && point.every(Number.isFinite) && width > 0 && height > 0 &&
+      ["displayed_pdf_crop", "pymupdf_toc"].includes(node.coordinate_space || "")) {
+    return [clamp(point[0] / width), clamp(point[1] / height)];
+  }
+  const source = node.source_locator;
+  if (!source?.bbox || source.bbox.length !== 4 || !source.bbox.every(Number.isFinite) ||
+      !source.source_width || !source.source_height) return undefined;
+  const x = source.bbox[0] / source.source_width;
+  const y = source.bbox[1] / source.source_height;
+  if (source.coordinate_space === "ocr_rendered_page") return [clamp(x), clamp(y)];
+  if (source.coordinate_space !== "pymupdf_unrotated") return undefined;
+  switch ((node.page_geometry || source.page_geometry)?.rotation) {
+    case 0: return [clamp(x), clamp(y)];
+    case 90: return [clamp(1 - y), clamp(x)];
+    case 180: return [clamp(1 - x), clamp(1 - y)];
+    case 270: return [clamp(y), clamp(1 - x)];
+    default: return undefined;
+  }
+}

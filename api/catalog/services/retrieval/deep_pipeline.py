@@ -286,28 +286,32 @@ def _configured_service_url(setting_name: str, path: str) -> str:
 
 def _parse_order(payload: dict, rows: list[dict]) -> tuple[list[dict], dict[int, float]]:
     values = payload.get("results")
-    if not isinstance(values, list):
+    if not isinstance(values, list) or len(values) != len(rows):
         raise ValueError("deep service results are invalid")
     ordered: list[dict] = []
     scores: dict[int, float] = {}
     used: set[int] = set()
     for item in values:
-        if not isinstance(item, dict):
-            continue
+        if not isinstance(item, dict) or type(item.get("index")) is not int:
+            raise ValueError("deep service result index is invalid")
         try:
-            index = int(item.get("index"))
-            score = float(item.get("relevance_score", 0.0))
+            index = item["index"]
+            score = float(item["relevance_score"])
         except (TypeError, ValueError):
-            continue
+            raise ValueError("deep service score is invalid")
         if not math.isfinite(score) or not 0 <= index < len(rows) or index in used:
-            continue
+            raise ValueError("deep service result is incomplete or invalid")
         ordered.append(rows[index])
         scores[index] = score
         used.add(index)
-    if not ordered:
-        raise ValueError("deep service returned no usable order")
-    ordered.extend(rows[index] for index in range(len(rows)) if index not in used)
     return ordered, scores
+
+
+def _validate_service_identity(payload: dict, artifact: str) -> None:
+    generation = str(getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")).strip()
+    if (payload.get("status") != "completed" or not artifact or not generation
+            or payload.get("artifact_id") != artifact or payload.get("generation") != generation):
+        raise ValueError("deep service identity does not match the configured bundle")
 
 
 def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[dict]]:
@@ -354,7 +358,7 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
         if service_status in {"pending", "unavailable", "degraded", "disabled"}:
             warnings.append(_warning(
                 "deep_bge_pending" if service_status == "pending" else "deep_bge_unavailable",
-                "BGE 深度重排尚未就绪，已保留 mMARCO 顺序。",
+                "深度排序尚未就绪，已保留已有原文顺序。",
             ))
             return rows, {
                 "status": "disabled" if service_status == "disabled" else "degraded",
@@ -364,11 +368,14 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
                 "service_status": service_status,
                 "top_k": len(candidates),
             }, warnings
+        _validate_service_identity(payload, config["artifact"])
+        if str(payload.get("model") or "").casefold() != config["model"].casefold():
+            raise ValueError("deep reranker model does not match")
         ordered, scores = _parse_order(payload, candidates)
+        scores_by_id = {_identity(candidates[index]): score for index, score in scores.items()}
         for rank, row in enumerate(ordered, 1):
-            row = row
             row["deep_rank"] = rank
-            row["deep_score"] = scores.get(candidates.index(row))
+            row["deep_score"] = scores_by_id[_identity(row)]
         ordered.extend(rows[len(candidates):])
         return ordered, {
             "status": "completed",
@@ -379,7 +386,7 @@ def _bge_rerank(query: str, rows: list[dict]) -> tuple[list[dict], dict, list[di
         }, warnings
     except (ValueError, TypeError, KeyError) as exc:
         logger.warning("Deep BGE reranker unavailable: %s", type(exc).__name__)
-        warnings.append(_warning("deep_bge_unavailable", "BGE 深度重排暂不可用，已保留 mMARCO 顺序。"))
+        warnings.append(_warning("deep_bge_unavailable", "深度排序暂不可用，已保留已有原文顺序。"))
         return rows, {
             "status": "degraded",
             "provider": "local_http",
@@ -458,7 +465,7 @@ def _convmemory_organize(query: str, rows: list[dict]) -> tuple[list[dict], dict
         if service_status in {"pending", "unavailable", "degraded", "disabled"}:
             warnings.append(_warning(
                 "deep_convmemory_pending" if service_status == "pending" else "deep_convmemory_unavailable",
-                "连续上下文组织尚未就绪，已保留 BGE 结果和邻近证据。",
+                "连续上下文整理尚未就绪，已保留原文结果和邻近证据。",
             ))
             return rows, {
                 "status": "disabled" if service_status == "disabled" else "degraded",
@@ -469,11 +476,31 @@ def _convmemory_organize(query: str, rows: list[dict]) -> tuple[list[dict], dict
                 "artifact": payload.get("artifact_id", ""),
                 "generation": payload.get("generation", ""),
             }, warnings
-        ordered, _scores = _parse_order(payload, selected)
-        for rank, row in enumerate(ordered, 1):
-            row["deep_rank"] = rank
-        ordered.extend(rows[len(selected):])
-        return ordered, {
+        _validate_service_identity(payload, artifact)
+        if str(payload.get("model") or "").casefold() != "purdy0228/convmemory-v2-evidence-reranker":
+            raise ValueError("context model does not match")
+        values = payload.get("results")
+        if not isinstance(values, list) or len(values) != len(selected):
+            raise ValueError("context service results are incomplete")
+        annotations = []
+        ranks = set()
+        for index, (row, value) in enumerate(zip(selected, values)):
+            if (not isinstance(value, dict) or type(value.get("index")) is not int
+                    or value["index"] != index or value.get("id") != _identity(row)):
+                raise ValueError("context service changed the input identity or order")
+            score, rank = float(value["context_score"]), value["context_rank"]
+            if (not math.isfinite(score) or type(rank) is not int
+                    or not 1 <= rank <= len(selected) or rank in ranks):
+                raise ValueError("context service score is invalid")
+            ranks.add(rank)
+            annotations.append({"context_score": score, "context_rank": rank,
+                                "truncated": bool(value.get("truncated")),
+                                "query_truncated": bool(value.get("query_truncated"))})
+        # Context selection is supplementary. It must not overwrite the BGE
+        # relevance order or replace quotations with service-provided text.
+        for row, annotation in zip(selected, annotations):
+            row["deep_context"] = {**(row.get("deep_context") or {}), **annotation}
+        return rows, {
             "status": "completed",
             "provider": "convmemory-v2",
             "model": model,
@@ -482,7 +509,7 @@ def _convmemory_organize(query: str, rows: list[dict]) -> tuple[list[dict], dict
         }, warnings
     except (ValueError, TypeError, KeyError) as exc:
         logger.warning("ConvMemory context organization unavailable: %s", type(exc).__name__)
-        warnings.append(_warning("deep_convmemory_unavailable", "连续上下文组织暂不可用，已保留 BGE 结果和邻近证据。"))
+        warnings.append(_warning("deep_convmemory_unavailable", "连续上下文整理暂不可用，已保留原文结果和邻近证据。"))
         return rows, {
             "status": "degraded",
             "provider": "convmemory-v2",
@@ -515,7 +542,8 @@ def run_deep_pipeline(
             "warnings": [],
         }
     warnings: list[dict] = []
-    rows = [dict(row) for row in baseline_rows[:MAX_DEEP_CANDIDATES] if _identity(row)]
+    baseline = [dict(row) for row in baseline_rows[:MAX_DEEP_CANDIDATES] if _identity(row)]
+    rows = baseline
     if not rows:
         return {
             "rows": [],
@@ -580,8 +608,17 @@ def run_deep_pipeline(
         return {"rows": [], "status": "canceled", "pipeline_version": PIPELINE_VERSION, "warnings": warnings}
     rows, bge_state, bge_warnings = _bge_rerank(query, rows)
     warnings.extend(bge_warnings)
+    ranking_applied = bge_state.get("status") == "completed"
+    if not ranking_applied:
+        # RRF/EG2 candidates have not completed the required deep ranker. The
+        # visible fallback remains the unchanged first-screen mMARCO order.
+        rows = baseline
+    if is_current and not is_current():
+        return {"rows": [], "status": "canceled", "pipeline_version": PIPELINE_VERSION, "warnings": warnings}
     rows, context_state, context_warnings = _attach_adjacent_context(rows, access_statuses)
     warnings.extend(context_warnings)
+    if is_current and not is_current():
+        return {"rows": [], "status": "canceled", "pipeline_version": PIPELINE_VERSION, "warnings": warnings}
     rows, conv_state, conv_warnings = _convmemory_organize(query, rows)
     warnings.extend(conv_warnings)
     annotations = {
@@ -595,8 +632,9 @@ def run_deep_pipeline(
     rows = validate_discovery_results("passages", rows, access_statuses)
     for row in rows:
         row.update(annotations.get(_identity(row), {}))
-    for rank, row in enumerate(rows[:MAX_DEEP_CANDIDATES], 1):
-        row.setdefault("deep_rank", rank)
+    if ranking_applied:
+        for rank, row in enumerate(rows[:MAX_DEEP_CANDIDATES], 1):
+            row.setdefault("deep_rank", rank)
     states = [lexicon_state, embedding_state, bge_state, context_state, conv_state]
     # BGE is the required deep stage; ConvMemory may fall back to the
     # validated adjacent EvidenceSpan context without changing relevance.
@@ -612,6 +650,7 @@ def run_deep_pipeline(
     return {
         "rows": rows[:MAX_DEEP_CANDIDATES],
         "status": status,
+        "ranking_applied": ranking_applied,
         "pipeline_version": PIPELINE_VERSION,
         "query_lexicon": lexicon_state,
         "embedding": embedding_state,

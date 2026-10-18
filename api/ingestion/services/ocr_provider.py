@@ -50,14 +50,20 @@ def _parse_endpoint(base_url: str):
 
 
 def _request_document_gateway(
-    path: str | Path,
+    path: str | Path | None,
     *,
     base_url: str,
     model: str = "",
     api_key: str = "",
     page_numbers: list[int] | None = None,
+    pdf_bytes: bytes | None = None,
+    timeout_seconds: int | None = None,
+    request_headers: dict | None = None,
+    transport: httpx.BaseTransport | None = None,
 ):
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    if request_headers:
+        headers.update(request_headers)
     data = {
         "languages": "ch,en,chinese_cht",
         "layout": "true",
@@ -74,7 +80,7 @@ def _request_document_gateway(
             # for every page. The temporary request contains only this batch;
             # response indexes are mapped back to the immutable source file.
             selected = sorted(set(page_numbers))
-            source = stack.enter_context(fitz.open(str(path)))
+            source = stack.enter_context(fitz.open(stream=pdf_bytes, filetype="pdf") if pdf_bytes is not None else fitz.open(str(path)))
             subset = stack.enter_context(fitz.open())
             for index in selected:
                 if index < 1 or index > source.page_count:
@@ -83,15 +89,19 @@ def _request_document_gateway(
             page_map = {index + 1: original for index, original in enumerate(selected)}
             data["page_numbers"] = ",".join(str(index) for index in page_map)
             handle = stack.enter_context(BytesIO(subset.tobytes(garbage=3, deflate=True, no_new_id=True)))
+        elif pdf_bytes is not None:
+            handle = stack.enter_context(BytesIO(pdf_bytes))
         else:
             handle = stack.enter_context(Path(path).open("rb"))
-        response = httpx.post(
+        post = httpx.post if transport is None else stack.enter_context(httpx.Client(
+            transport=transport, trust_env=False, follow_redirects=False)).post
+        response = post(
             _parse_endpoint(base_url),
-            files={"file": (Path(path).name, handle, "application/pdf")},
+            files={"file": ("private-document.pdf" if pdf_bytes is not None else Path(path).name, handle, "application/pdf")},
             data=data,
             headers=headers,
-            timeout=httpx.Timeout(settings.OCR_REQUEST_TIMEOUT_SECONDS, connect=10),
-            trust_env=False,
+            timeout=httpx.Timeout(timeout_seconds if timeout_seconds is not None else settings.OCR_REQUEST_TIMEOUT_SECONDS, connect=10),
+            **({"trust_env": False, "follow_redirects": False} if transport is None else {}),
         )
     response.raise_for_status()
     payload = response.json()

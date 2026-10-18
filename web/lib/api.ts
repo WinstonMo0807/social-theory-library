@@ -141,7 +141,7 @@ function nextRefreshRevision() {
 
 async function withBrowserRefreshLock<T>(callback: () => Promise<T>) {
   if (typeof navigator === "undefined" || !navigator.locks) return callback();
-  return navigator.locks.request("social-theory-library-auth-refresh", callback);
+  return navigator.locks.request("social-theory-library-auth-refresh", { signal: AbortSignal.timeout(30000) }, callback);
 }
 
 async function refreshAccessToken() {
@@ -159,6 +159,7 @@ async function refreshAccessToken() {
       try {
         response = await fetch(apiEndpoint("/auth/token/refresh/"), {
           method: "POST",
+          signal: AbortSignal.timeout(15000),
           headers: {
             "Content-Type": "application/json",
             ...(csrfToken() ? { "X-CSRFToken": csrfToken() } : {}),

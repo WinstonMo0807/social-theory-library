@@ -3,6 +3,13 @@
 import { useMemo } from "react";
 import type { PdfPageOverlay } from "../pdf-continuous-viewer";
 import type { PagePayload, PassageFocus, ReaderAnnotation, SearchMatch } from "./types";
+import { validatedNormalizedBox, type ReaderGeometryBox } from "@/lib/reader-coordinates";
+
+function evidenceHighlight(source?: ReaderGeometryBox & { source?: "pdf-text" | "ocr-estimate" }) {
+  if (!source) return [];
+  const box = validatedNormalizedBox(source);
+  return box ? [{ bbox: [], normalized_bbox: box, geometry_status: "validated" as const, kind: "search" as const, source: source.source }] : [];
+}
 
 export function formatReaderTimestamp(value?: string) {
   if (!value) return "保存时间未知";
@@ -22,16 +29,18 @@ type ReaderPageOverlayOptions = {
   focusedAnnotationId: string;
   pagePayloads: Record<number, PagePayload>;
   passageFocus: PassageFocus | null;
+  researchAnchors?: PassageFocus[];
   query: string;
   searchMatches: SearchMatch[];
 };
 
-export function buildReaderPageOverlays({ annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches }: ReaderPageOverlayOptions) {
+export function buildReaderPageOverlays({ annotations, focusedAnnotationId, pagePayloads, passageFocus, researchAnchors = [], query, searchMatches }: ReaderPageOverlayOptions) {
   const result: Record<number, PdfPageOverlay> = {};
   const pageIndexes = new Set<number>([
     ...Object.keys(pagePayloads).map(Number),
     ...(query.trim() ? searchMatches.map((match) => match.page_index) : []),
     ...(passageFocus ? [passageFocus.page_index] : []),
+    ...researchAnchors.map(anchor => anchor.page_index),
     ...annotations
       .map((annotation) => annotation.selector.page_index)
       .filter((index): index is number => Boolean(index)),
@@ -44,21 +53,15 @@ export function buildReaderPageOverlays({ annotations, focusedAnnotationId, page
     const focusedPassage = passageFocus?.page_index === pageIndex
       ? passageFocus
       : undefined;
+    const researchAnchor = researchAnchors.find(anchor => anchor.page_index === pageIndex);
     result[pageIndex] = {
-      sourceWidth: payload?.width || match?.width || focusedPassage?.width || 0,
-      sourceHeight: payload?.height || match?.height || focusedPassage?.height || 0,
+      sourceWidth: payload?.width || match?.width || focusedPassage?.width || researchAnchor?.width || 0,
+      sourceHeight: payload?.height || match?.height || focusedPassage?.height || researchAnchor?.height || 0,
       canonicalBlocks: payload?.blocks ?? [],
       highlights: [
-        ...(focusedPassage?.bbox?.length === 4
-          ? [{
-              bbox: focusedPassage.bbox,
-              kind: "search" as const,
-            }]
-          : []),
-        ...(match?.highlights ?? []).map((highlight) => ({
-          bbox: highlight.bbox,
-          kind: "search" as const,
-        })),
+        ...researchAnchors.filter(anchor => anchor.page_index === pageIndex).flatMap(evidenceHighlight),
+        ...evidenceHighlight(focusedPassage),
+        ...(match?.highlights ?? []).flatMap(evidenceHighlight),
         ...annotations
           .filter((annotation) => annotation.selector.page_index === pageIndex)
           .flatMap((annotation) =>
@@ -87,8 +90,8 @@ export function buildReaderPageOverlays({ annotations, focusedAnnotationId, page
   return result;
 }
 
-export function useReaderPageOverlays({ annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches }: ReaderPageOverlayOptions) {
+export function useReaderPageOverlays({ annotations, focusedAnnotationId, pagePayloads, passageFocus, researchAnchors, query, searchMatches }: ReaderPageOverlayOptions) {
   return useMemo(() => buildReaderPageOverlays({
-    annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches,
-  }), [annotations, focusedAnnotationId, pagePayloads, passageFocus, query, searchMatches]);
+    annotations, focusedAnnotationId, pagePayloads, passageFocus, researchAnchors, query, searchMatches,
+  }), [annotations, focusedAnnotationId, pagePayloads, passageFocus, researchAnchors, query, searchMatches]);
 }

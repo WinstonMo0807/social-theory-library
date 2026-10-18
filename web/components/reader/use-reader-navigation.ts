@@ -30,13 +30,14 @@ export function useReaderNavigation({ initialPage, initialPageCount, accessPageC
     behavior: "auto",
   });
   const totalPages = Math.max(documentPages, accessPageCount, initialPageCount, 1);
-  const jumpToPage = useCallback((target: number, behavior: ScrollBehavior = "smooth") => {
+  const jumpToPage = useCallback((target: number, behavior: ScrollBehavior = "smooth", position?: [number, number]) => {
     const nextPage = clampReaderPage(target, totalPages);
     setPage(nextPage);
     setScrollRequest((current) => ({
       page: nextPage,
       sequence: current.sequence + 1,
       behavior,
+      position,
     }));
   }, [totalPages]);
   const changeZoom = useCallback((delta: number) => {

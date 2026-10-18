@@ -18,6 +18,7 @@ export async function loadReaderManifestResult(assetId: string): Promise<ReaderM
         pages: payload.page_count,
       },
       outline: payload.outline,
+      documentRevisionId: payload.document_revision_id,
       scholars: payload.related_scholars.flatMap((scholar) => typeof scholar.slug === "string" && scholar.slug ? [{ ...scholar, slug: scholar.slug }] : []),
       theories: payload.related_theories,
       topics: payload.related_topics,
