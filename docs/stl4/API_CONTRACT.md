@@ -1,6 +1,12 @@
 # STL 4.0 当前接口契约
 
-更新时间：2026-10-15。本文先记录 U01 首页已经接入的稳定边界；全站领域契约继续以 `docs/stl-4.0/API_CONTRACT.md` 的历史归一记录、源码和生成 schema 为准，不能把本文件当成全站验收通过。
+更新时间：2026-10-18。当前接口以本文件、相关单元接入记录、实际源码和生成schema为准。`docs/stl-4.0/API_CONTRACT.md`只保留历史追溯，不再作为独立主线；本文不代表全站验收通过。
+
+## 2026-10-18 稿件版本与目录校准
+
+- 稿件版本新增本人`GET/POST /reading/citation-audits/{id}/versions/`，POST使用multipart与request_id、expected_revision、check_changed_only。每版独立加密保存，严格增量比较与恢复时来源复核；详细字段及边界见[CITATION_VERSIONS_20261018.md](CITATION_VERSIONS_20261018.md)。
+- 目录沿`/catalog/admin/assets/{id}/outline/`接入当前文件摘要、候选来源及历史；edit新增base_revision_id、逐节点calibration_status和clear_position。保存候选、明确采用、历史恢复分别执行；详细契约见[OUTLINE_CALIBRATION_20261018.md](OUTLINE_CALIBRATION_20261018.md)。
+- 前后端类型与OpenAPI已同步。两项均不新增数据库表/迁移，不连接生产，不启动检索质量评测；运行与视觉验收仍待统一阶段。
 
 ## U01 公共首页聚合
 

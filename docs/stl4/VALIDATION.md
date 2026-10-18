@@ -64,3 +64,16 @@
 新增后端test_citation_atlas_20261018.py共11项，前端citation-audit-workspace.spec.ts共6项、citation-audit-upload.spec.ts共3项；旧扫描用例按显式scan_ocr/旧记录兼容更新。均仅编写，未执行。重点覆盖批量原子性/owner、检查项、同请求指纹、失败恢复容量、人工历史、撤回来源、409输入保留和打印快照清理。真实锁并发、NAS负载、OCR/Provider、打印、路由与209视图仍待统一验收。第三步检索质量评测、迁移、部署和清理未运行。
 
 本单元37文件提交前的 `git diff --cached --check` 退出0；ATLAS_INDEX静态比对确认仅208–215八行语义变更、仍为209行22列，来源身份及其他行保留。源码检查点50cf8ed；后续仅补记提交号。
+
+### 2026-10-18 稿件版本与目录校准静态记录
+
+- `node node_modules/typescript/bin/tsc --noEmit --pretty false`，web目录：最终退出0。
+- `node node_modules/eslint/bin/eslint.js components/admin/library/document-outline-workspace.tsx components/admin/library/outline-edit-state.ts components/admin/library/outline-pdf-preview.tsx components/admin/library/work-library.tsx components/pdf-canvas.tsx lib/api/document-outline.ts lib/api/curation-workspace.client.ts components/research/citation-audit-versions.tsx components/research/citation-audit-report.tsx components/research/citation-audit-issue.tsx lib/api/research.client.ts tests/citation-audit-versions.spec.ts tests/document-outline-workspace.spec.ts playwright.auth.config.ts 'app/admin/library/assets/[assetId]/outline/page.tsx'`：发现并修正函数名被识别为hook、props重新赋值和memo依赖规则后，目标文件检查最终0错误/0警告，退出0。
+- `.venv/Scripts/python.exe -m compileall -q api/reading/citation_audit.py api/reading/research.py api/reading/research_views.py api/reading/research_serializers.py api/catalog/outline_views.py api/catalog/services/document_outline.py api/tests/test_citation_versions_20261018.py api/tests/test_outline_atlas_20261018.py api/tests/test_document_outline_20261013.py`：退出0；仅语法编译。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-versions-outline-schema.json --validate`：使用.venv Python及进程环境DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true；退出0，0 errors/10条既有类型提示。随后openapi-typescript/astToString同步api/openapi/schema.json和web/lib/api/generated/schema.ts，退出0。
+- PostCSS解析document-outline.module.css与citation-audit.css：退出0。限定本轮文件`git diff --check`退出0，仅已有换行提示。
+- ATLAS_INDEX静态比较：209行/22列、UTF8 BOM保留，仅112–115/211/212/215七行语义改变，图片身份/哈希/来源页及其他行均保留。211打印缺口按已存在的实际实现修正，不表示打印运行通过。
+
+新增citation版本13个测试函数/14参数案例、outline12个单例及3个clear_position参数案例，共29个后端场景；前端版本3项、目录6项，共9项。仅编写，未执行。沿用并保留旧目录测试，原明确采用输入补充confirmed。新spec已加入playwright.auth.config.ts。不存在本轮正式测试通过、浏览器通过、真实OCR/Provider/NAS可用或像素一致的结论。未运行迁移、部署、数据清理和检索质量评测。
+
+稿件版本12文件检查点45c669a、目录校准18文件检查点0fe3a8e分别保存。两批提交前的`git diff --cached --check`均退出0；明确文件清单之外的历史未提交成果保留，未做reset/clean。

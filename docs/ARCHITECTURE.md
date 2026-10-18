@@ -1,5 +1,13 @@
 # Social Theory Library 架构
 
+## 2026-10-18 稿件版本与目录校准接入
+
+稿件新版继续复用CitationAudit，每次上传创建独立加密原稿与报告，通过加密payload记录本人版本关系及冻结比较基线；不复制原始文件到公共资料库，不新增模型或服务。精确上下文/书目及公开来源身份决定可复用范围，OCR再解析与任务恢复均保留人工历史并重新检查失效依据。基线不随读回/导出暴露。
+
+管理目录工作台新增`/admin/library/assets/[assetId]/outline`，复用DocumentOutlineRevision、ProcessingJob、既有后台文件预览与PdfCanvas。候选保存不直接改变active目录；明确采用或恢复才新增采用修订。编辑基准与全局并发revision分开传递，单节点确认、旧定位清除和409另存均明确持久化。自动提取不覆盖人工目录，候选来源只供后台，不进入公开Reader导航。
+
+详细实现及未验收边界见docs/stl4/CITATION_VERSIONS_20261018.md和OUTLINE_CALIBRATION_20261018.md。下方记录中的“新稿件版本未接入”已由本条更新；私人来源匹配与三栏稿件解析等缺口继续保留。
+
 ## 2026-10-18 引文体检上传、报告与核验工作台
 
 R25–R27继续使用同一CitationAudit加密记录、Django/Celery任务、私人OCR适配层、公开馆藏与Reader；本单元不新增业务表、迁移或服务。检查项、范围、稿件统计和历史保存在原加密payload。上传、人工命令与失败任务恢复统一先锁账户再锁体检记录，保证本人最多两项活动任务；worker沿generation/task_id核验，满额的失败记录不消耗恢复次数。
