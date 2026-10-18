@@ -32,6 +32,7 @@ import {
 import { adaptApiWork as adaptWork } from "@/lib/public-data-adapters";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import { readAllPages } from "@/lib/api/read-all-pages";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
@@ -161,7 +162,7 @@ export function ReaderCenter() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { state: session, retry: retrySession } = useSessionBootstrap();
-  const [active, setActive] = useState(() => (searchParams.get("section") === "lists" ? "书单" : "概览"));
+  const [active, setActive] = useState(() => (searchParams.get("section") === "lists" ? "书单" : searchParams.get("section") === "settings" ? "账户设置" : "概览"));
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);
@@ -382,11 +383,11 @@ export function ReaderCenter() {
 
   async function exportReaderData() {
     const token = getServerSessionCredential();
-    if (!token) return;
+    if (!token || session.status !== "authenticated" || !session.user) return;
     const actionKey = "export-reader-data";
     if (!beginReaderAction(actionKey, "正在导出个人数据……")) return;
     try {
-      const payload = await apiRequest<Record<string, unknown>>("/reading/export/", {}, token);
+      const payload = await withPrivateOwner(String(session.user.id), () => apiRequest<Record<string, unknown>>("/reading/export/", { cache: "no-store" }, token));
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json;charset=utf-8",
       });
@@ -396,7 +397,7 @@ export function ReaderCenter() {
       link.download = `社会理论书库-个人数据-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      finishReaderAction(actionKey, "success", "个人数据已导出。");
+      finishReaderAction(actionKey, "success", "个人数据文件已准备，已开始下载。");
     } catch (error) {
       finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "个人数据导出失败。");
     }
@@ -801,6 +802,7 @@ export function ReaderCenter() {
             <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "update-profile"}>保存名称</ActionButton></form>
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>
+            <Link className="button secondary" href="/account/settings/privacy"><Settings size={16} /> 隐私与资料</Link>
             <ActionButton className="button secondary" type="button" state={pendingAction === "export-reader-data" ? "pending" : "idle"} pendingLabel="正在导出" disabled={Boolean(pendingAction) && pendingAction !== "export-reader-data"} onClick={() => void exportReaderData()}><Download size={16} /> 导出个人数据</ActionButton>
           </DataPanel>
         ) : null}

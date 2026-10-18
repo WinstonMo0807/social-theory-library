@@ -134,7 +134,10 @@ class AnnotationSerializer(OwnedSerializer):
             raise serializers.ValidationError("该文献当前不可批注。")
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
+        from .privacy import require_retention
+        require_retention(self.context["request"].user, "personal_notes")
         body = validated_data.pop("body", "")
         validated_data["body_ciphertext"] = encrypt_private_text(body)
         validated_data["asset_sha256"] = validated_data["asset"].sha256
@@ -281,6 +284,12 @@ class SavedTopicSerializer(OwnedSerializer):
         if value.editorial_status != "published":
             raise serializers.ValidationError("该主题当前不可收藏。")
         return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        from .privacy import require_retention
+        require_retention(self.context["request"].user, "followed_topics")
+        return super().create(validated_data)
 
 
 class ReadingListItemSerializer(serializers.ModelSerializer):

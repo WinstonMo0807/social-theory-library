@@ -2,6 +2,20 @@
 
 当前阶段：功能开发。全站正式功能、视觉、权限、迁移、性能验收全部待核实；未部署。
 
+## 2026-10-18 反证、隐私和页码映射静态收口
+
+- 最终PDF198–200、223–225、116–118均已实际渲染读取；没有实施页截图或浏览器操作。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web）：最终退出0。先前一次退出1仅为并行DOCX新文件缺PdfCanvas回调，补实际页数回调后本次重跑退出0；DOCX新单元尚未纳本检查点。
+- `node node_modules/eslint/bin/eslint.js components/research/counter-evidence-workspace.tsx components/research/counter-evidence-editor.tsx components/research/counter-evidence-actions.tsx lib/api/counter-evidence.client.ts app/account/research/[id]/counter-evidence/page.tsx tests/counter-evidence.spec.ts components/research/research-session-detail.tsx lib/api/research.client.ts components/admin/library/page-mapping-workspace.tsx components/admin/library/page-mapping-thumbnails.ts components/admin/library/outline-pdf-preview.tsx components/admin/library/work-library.tsx lib/api/page-mapping.client.ts app/admin/library/assets/[assetId]/page-mapping/page.tsx components/reader-center.tsx components/research/privacy-workspace.tsx lib/api/privacy.client.ts tests/privacy-workspace.spec.ts app/account/settings/privacy/page.tsx app/account/settings/privacy/export/page.tsx playwright.auth.config.ts tests/page-mapping-workspace.spec.ts`（web）：退出0，22文件、0 errors/1条隐私封面no-img-element提示。
+- `.venv/Scripts/python.exe -m compileall -q api/catalog/models.py api/catalog/migrations/0068_page_mapping_revision.py api/catalog/page_mapping_views.py api/catalog/services/page_mapping.py api/catalog/services/page_label_metadata.py api/catalog/services/knowledge_publication.py api/catalog/urls.py api/catalog/views.py api/catalog/public_response_serializers.py api/catalog/serializers.py api/catalog/services/search_geometry.py api/catalog/services/evidence_envelope.py api/catalog/services/document_intelligence.py api/distribution/serializers.py api/distribution/services.py api/ingestion/tasks.py api/reading/research.py api/reading/research_serializers.py api/reading/research_views.py api/reading/tasks.py api/reading/citation_audit.py api/tests/test_counter_evidence_atlas_20261018.py api/tests/test_page_mapping_20261018.py api/tests/test_resilient_publication_v260.py api/config/settings.py api/config/schema_urls.py api/reading/privacy.py api/reading/privacy_views.py api/reading/privacy_serializers.py api/reading/research_models.py api/reading/models.py api/reading/urls.py api/reading/views.py api/reading/serializers.py api/reading/migrations/0011_reader_privacy_operations.py api/catalog/services/discovery_sessions.py api/tests/test_privacy_atlas_20261018.py`：退出0，37文件；另单独编译api/distribution/views.py退出0，总38文件仅语法。
+- PostCSS对counter-evidence.css、privacy.module.css、page-mapping.module.css执行parse：退出0，顶层节点分别122/141/96。
+- 使用仅本进程的DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true执行`.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/counter-privacy-pages-20261018.openapi.json --validate`：最终退出0、10条既有serializer类型提示、0 errors；初次多1条export/erase枚举碰撞，命名ReaderPrivacyOperationKindEnum后消除。更新双页历史来源和可空条件后重新生成，结果相同。
+- 用openapi-typescript的openapiTS/astToString同步api/openapi/schema.json及web/lib/api/generated/schema.ts，退出0。全量TypeScript最终检查在此生成之后。
+- ATLAS_INDEX记录9个视图，仍为209行×22列，逐项核对page/id/image_path/image_sha256未变。索引只记录源码接入，视觉正式验收仍待核实。
+- 新增后端43函数/46参数案例与前端24合成场景仅编写；旧页码73案例保持并适配新流程。没有运行pytest/Playwright/构建/正式E2E/视觉回归、数据库迁移、真实OCR/模型/NAS、检索质量测评或生产动作。静态结果不证明运行行为。
+- 提交前核对79个明确路径（78整文件、distribution/views仅Reader相关hunk）；限定git diff --check退出0，来源身份与209×22结构不变，选定私钥/GitHub Token/OpenAI Key模式未命中。继承备份dispatch修改留在工作区，不纳入本单元；该有限模式扫描不等于全仓安全审计。
+
+
 ## 开发期检查
 
 只记录实际完成的命令、退出码和范围。静态成功不能证明服务、数据库、NAS、Provider或公网可用。历史测试报告不覆盖本轮修改。

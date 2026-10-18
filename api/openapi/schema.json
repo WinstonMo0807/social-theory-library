@@ -115,6 +115,127 @@
                 }
             }
         },
+        "/api/catalog/admin/assets/{asset_id}/page-mapping/": {
+            "get": {
+                "operationId": "catalog_admin_assets_page_mapping_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "revision_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MappingReadResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_assets_page_mapping_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MappingCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MappingCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MappingCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MappingCommandResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MappingState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/bibliographic-candidates/": {
             "post": {
                 "operationId": "catalog_admin_bibliographic_candidates_create",
@@ -5691,6 +5812,351 @@
                 }
             }
         },
+        "/api/reading/privacy/": {
+            "get": {
+                "operationId": "reading_privacy_retrieve",
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacySummaryOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_privacy_partial_update",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPrivacyPreferencesInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPrivacyPreferencesInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPrivacyPreferencesInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacySummaryOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/privacy/items/": {
+            "get": {
+                "operationId": "reading_privacy_items_retrieve",
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyItemsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/privacy/operations/": {
+            "get": {
+                "operationId": "reading_privacy_operations_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedPrivacyOperationsPageList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_privacy_operations_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyOperationInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyOperationInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyOperationInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyOperationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/privacy/operations/{id}/": {
+            "get": {
+                "operationId": "reading_privacy_operations_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reader data operation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyOperationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/privacy/operations/{id}/command/": {
+            "post": {
+                "operationId": "reading_privacy_operations_command_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reader data operation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyOperationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/privacy/operations/{id}/download/": {
+            "get": {
+                "operationId": "reading_privacy_operations_download_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reader data operation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/reading-plans/": {
             "get": {
                 "operationId": "reading_reading_plans_list",
@@ -6999,6 +7465,33 @@
                         "required": true
                     },
                     {
+                        "in": "query",
+                        "name": "mode",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "search",
+                                "counterargument"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `search` - search\n* `counterargument` - counterargument"
+                    },
+                    {
+                        "in": "query",
+                        "name": "order",
+                        "schema": {
+                            "enum": [
+                                "oldest",
+                                "newest"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `oldest` - oldest\n* `newest` - newest"
+                    },
+                    {
                         "name": "ordering",
                         "required": false,
                         "in": "query",
@@ -7768,6 +8261,14 @@
                     "upcoming"
                 ]
             },
+            "AnalysisDecisionInputActionEnum": {
+                "enum": [
+                    "confirm",
+                    "clear"
+                ],
+                "type": "string",
+                "description": "* `confirm` - confirm\n* `clear` - clear"
+            },
             "AnalysisDecisionInputRequest": {
                 "type": "object",
                 "properties": {
@@ -7780,18 +8281,35 @@
                         "minLength": 1,
                         "description": "分析候选 id，来自轮次返回值。"
                     },
+                    "action": {
+                        "$ref": "#/components/schemas/AnalysisDecisionInputActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "幂等请求；同时保存本人笔记时必需。"
+                    },
                     "relation": {
                         "$ref": "#/components/schemas/RelationEnum"
                     },
                     "note": {
                         "type": "string",
                         "maxLength": 4000
+                    },
+                    "attribution": {
+                        "$ref": "#/components/schemas/AttributionEnum"
+                    },
+                    "scope_note": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
+                    "save_as_note": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
                     "expected_revision",
-                    "id",
-                    "relation"
+                    "id"
                 ]
             },
             "ApiError": {
@@ -7888,6 +8406,18 @@
                 ],
                 "type": "string",
                 "description": "* `original` - 原始文件\n* `normalized` - 规范阅读文件\n* `ocr_pdf` - OCR 阅读文件\n* `web_derivative` - 网页阅读派生文件"
+            },
+            "AttributionEnum": {
+                "enum": [
+                    "author_claim",
+                    "quoted_claim",
+                    "reported_claim",
+                    "criticized_claim",
+                    "historical_description",
+                    "uncertain"
+                ],
+                "type": "string",
+                "description": "* `author_claim` - author_claim\n* `quoted_claim` - quoted_claim\n* `reported_claim` - reported_claim\n* `criticized_claim` - criticized_claim\n* `historical_description` - historical_description\n* `uncertain` - uncertain"
             },
             "AuditCapabilitiesOutput": {
                 "type": "object",
@@ -8581,6 +9111,28 @@
                 ],
                 "type": "string",
                 "description": "* `upload` - 上传文献\n* `manual` - 手工编目\n* `import` - 导入书目\n* `existing` - 编辑馆藏"
+            },
+            "CategoriesEnum": {
+                "enum": [
+                    "research",
+                    "notes",
+                    "plans",
+                    "audits"
+                ],
+                "type": "string",
+                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits"
+            },
+            "CategoryEnum": {
+                "enum": [
+                    "reading_history",
+                    "search_history",
+                    "annotations",
+                    "memories",
+                    "plans",
+                    "followed_topics"
+                ],
+                "type": "string",
+                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `plans` - plans\n* `followed_topics` - followed_topics"
             },
             "ChangeEnum": {
                 "enum": [
@@ -11185,6 +11737,854 @@
                     "preview_url"
                 ]
             },
+            "MappingAsset": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "sha256": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "validation_status": {
+                        "type": "string"
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "source_current": {
+                        "type": "boolean"
+                    },
+                    "source_error": {
+                        "type": "string"
+                    },
+                    "original_filename": {
+                        "type": "string"
+                    },
+                    "document_revision_id": {
+                        "type": "string"
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "publication_state": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "cover_url",
+                    "document_revision_id",
+                    "document_type",
+                    "edition_id",
+                    "edition_label",
+                    "id",
+                    "is_current",
+                    "original_filename",
+                    "page_count",
+                    "preview_url",
+                    "publication_state",
+                    "publication_year",
+                    "reader_url",
+                    "sha256",
+                    "source_current",
+                    "source_error",
+                    "status",
+                    "title",
+                    "validation_status",
+                    "work_id"
+                ]
+            },
+            "MappingChange": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "before": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "after": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "page_type_before": {
+                        "type": "string"
+                    },
+                    "page_type_after": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "manual_before": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "after",
+                    "before",
+                    "manual_before",
+                    "note",
+                    "page_type_after",
+                    "page_type_before",
+                    "pdf_page"
+                ]
+            },
+            "MappingCommandActionEnum": {
+                "enum": [
+                    "save",
+                    "analyze",
+                    "segment",
+                    "restore",
+                    "prepare",
+                    "publish"
+                ],
+                "type": "string",
+                "description": "* `save` - save\n* `analyze` - analyze\n* `segment` - segment\n* `restore` - restore\n* `prepare` - prepare\n* `publish` - publish"
+            },
+            "MappingCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/MappingCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "source_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/MappingDataRequest"
+                    },
+                    "segment": {
+                        "$ref": "#/components/schemas/MappingSegmentRequest"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "prepared_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision",
+                    "source_fingerprint"
+                ]
+            },
+            "MappingCommandResponse": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/MappingState"
+                    },
+                    {
+                        "$ref": "#/components/schemas/MappingPreview"
+                    }
+                ]
+            },
+            "MappingData": {
+                "type": "object",
+                "properties": {
+                    "pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingPage"
+                        }
+                    },
+                    "segments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingSegment"
+                        }
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingMissing"
+                        }
+                    }
+                },
+                "required": [
+                    "missing",
+                    "pages",
+                    "segments"
+                ]
+            },
+            "MappingDataRequest": {
+                "type": "object",
+                "properties": {
+                    "pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingPageRequest"
+                        }
+                    },
+                    "segments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingSegmentRequest"
+                        }
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingMissingRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "missing",
+                    "pages",
+                    "segments"
+                ]
+            },
+            "MappingDiagnostics": {
+                "type": "object",
+                "properties": {
+                    "unconfirmed_pages": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "duplicate_labels": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingDuplicate"
+                        }
+                    },
+                    "spreads": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "unconfirmed_missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "missing_present": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "duplicate_labels",
+                    "missing_present",
+                    "spreads",
+                    "unconfirmed_missing",
+                    "unconfirmed_pages"
+                ]
+            },
+            "MappingDuplicate": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "pdf_pages": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "acknowledged": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "acknowledged",
+                    "label",
+                    "pdf_pages"
+                ]
+            },
+            "MappingMissing": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "after_pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "after_pdf_page",
+                    "id",
+                    "label"
+                ]
+            },
+            "MappingMissingRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                    },
+                    "after_pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "after_pdf_page",
+                    "id",
+                    "label"
+                ]
+            },
+            "MappingPage": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 40
+                        },
+                        "maxItems": 2
+                    },
+                    "page_type": {
+                        "$ref": "#/components/schemas/PageTypeEnum"
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "override_manual": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SourceEnum"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "labels",
+                    "page_type",
+                    "pdf_page"
+                ]
+            },
+            "MappingPageRequest": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                        },
+                        "maxItems": 2
+                    },
+                    "page_type": {
+                        "$ref": "#/components/schemas/PageTypeEnum"
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "override_manual": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SourceEnum"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "labels",
+                    "page_type",
+                    "pdf_page"
+                ]
+            },
+            "MappingPrecedingRevision": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "revision",
+                    "revision_id"
+                ]
+            },
+            "MappingPreview": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "prepared_fingerprint": {
+                        "type": "string"
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingChange"
+                        }
+                    },
+                    "changed_page_count": {
+                        "type": "integer"
+                    },
+                    "missing_before": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingMissing"
+                        }
+                    },
+                    "missing_after": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingMissing"
+                        }
+                    },
+                    "segments_before": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingSegment"
+                        }
+                    },
+                    "segments_after": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingSegment"
+                        }
+                    },
+                    "diagnostics": {
+                        "$ref": "#/components/schemas/MappingDiagnostics"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "can_apply": {
+                        "type": "boolean"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/MappingPreviewModeEnum"
+                    }
+                },
+                "required": [
+                    "blockers",
+                    "can_apply",
+                    "changed_page_count",
+                    "changes",
+                    "diagnostics",
+                    "missing_after",
+                    "missing_before",
+                    "mode",
+                    "prepared_fingerprint",
+                    "revision_id",
+                    "segments_after",
+                    "segments_before",
+                    "source_fingerprint"
+                ]
+            },
+            "MappingPreviewModeEnum": {
+                "enum": [
+                    "publish",
+                    "apply_draft"
+                ],
+                "type": "string",
+                "description": "* `publish` - publish\n* `apply_draft` - apply_draft"
+            },
+            "MappingPublication": {
+                "type": "object",
+                "properties": {
+                    "event_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision_status": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "error",
+                    "event_id",
+                    "revision_id",
+                    "revision_status",
+                    "status"
+                ]
+            },
+            "MappingReadResponse": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/MappingState"
+                    },
+                    {
+                        "$ref": "#/components/schemas/MappingRevision"
+                    }
+                ]
+            },
+            "MappingRevision": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "origin": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "restored_from_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "applied_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "applied_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "publication": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingPublication"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/MappingData"
+                    },
+                    "diagnostics": {
+                        "$ref": "#/components/schemas/MappingDiagnostics"
+                    }
+                },
+                "required": [
+                    "applied_asset_id",
+                    "applied_at",
+                    "created_at",
+                    "created_by_id",
+                    "id",
+                    "origin",
+                    "publication",
+                    "restored_from_id",
+                    "revision",
+                    "source_fingerprint"
+                ]
+            },
+            "MappingSegment": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "start": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "start_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "style": {
+                        "$ref": "#/components/schemas/MappingSegmentStyleEnum"
+                    }
+                },
+                "required": [
+                    "end",
+                    "id",
+                    "name",
+                    "start",
+                    "start_label",
+                    "style"
+                ]
+            },
+            "MappingSegmentRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "start": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "start_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "style": {
+                        "$ref": "#/components/schemas/MappingSegmentStyleEnum"
+                    }
+                },
+                "required": [
+                    "end",
+                    "id",
+                    "name",
+                    "start",
+                    "start_label",
+                    "style"
+                ]
+            },
+            "MappingSegmentStyleEnum": {
+                "enum": [
+                    "arabic",
+                    "roman_lower",
+                    "roman_upper",
+                    "custom",
+                    "none"
+                ],
+                "type": "string",
+                "description": "* `arabic` - arabic\n* `roman_lower` - roman_lower\n* `roman_upper` - roman_upper\n* `custom` - custom\n* `none` - none"
+            },
+            "MappingState": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "$ref": "#/components/schemas/MappingAsset"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer"
+                    },
+                    "source_fingerprint": {
+                        "type": "string"
+                    },
+                    "current": {
+                        "$ref": "#/components/schemas/MappingData"
+                    },
+                    "latest": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingRevision"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingRevision"
+                        }
+                    },
+                    "history_count": {
+                        "type": "integer"
+                    },
+                    "history_page": {
+                        "type": "integer"
+                    },
+                    "history_next_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "preceding_revision": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingPrecedingRevision"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "result": {
+                        "$ref": "#/components/schemas/MappingRevision"
+                    }
+                },
+                "required": [
+                    "asset",
+                    "asset_id",
+                    "current",
+                    "expected_revision",
+                    "history",
+                    "history_count",
+                    "history_next_page",
+                    "history_page",
+                    "latest",
+                    "preceding_revision",
+                    "source_fingerprint"
+                ]
+            },
             "MediaAsset": {
                 "type": "object",
                 "properties": {
@@ -12149,6 +13549,17 @@
                     "title"
                 ]
             },
+            "PageTypeEnum": {
+                "enum": [
+                    "front",
+                    "body",
+                    "appendix",
+                    "other",
+                    "blank"
+                ],
+                "type": "string",
+                "description": "* `front` - front\n* `body` - body\n* `appendix` - appendix\n* `other` - other\n* `blank` - blank"
+            },
             "PaginatedBackupJobList": {
                 "type": "object",
                 "required": [
@@ -12207,6 +13618,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/MemoryListOutput"
+                        }
+                    }
+                }
+            },
+            "PaginatedPrivacyOperationsPageList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyOperationsPage"
                         }
                     }
                 }
@@ -12468,6 +13910,21 @@
                     "remove_related_prerequisites": {
                         "type": "boolean",
                         "description": "替换材料时，明确同意移除仅与被替换材料相关的先修关系；其他关系保留。"
+                    }
+                }
+            },
+            "PatchedPrivacyPreferencesInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "retention": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
                     }
                 }
             },
@@ -13839,6 +15296,338 @@
                     "work_id"
                 ]
             },
+            "PrintedLabelPrecisionEnum": {
+                "enum": [
+                    "spread",
+                    "page",
+                    "unknown"
+                ],
+                "type": "string",
+                "description": "* `spread` - spread\n* `page` - page\n* `unknown` - unknown"
+            },
+            "PrivacyCommandInputActionEnum": {
+                "enum": [
+                    "confirm",
+                    "cancel",
+                    "retry"
+                ],
+                "type": "string",
+                "description": "* `confirm` - confirm\n* `cancel` - cancel\n* `retry` - retry"
+            },
+            "PrivacyCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/PrivacyCommandInputActionEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision"
+                ]
+            },
+            "PrivacyItemsOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "PrivacyOperationInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderPrivacyOperationKindEnum"
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CategoriesEnum"
+                        },
+                        "maxItems": 4
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyTargetInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "kind",
+                    "request_id"
+                ]
+            },
+            "PrivacyOperationOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderPrivacyOperationKindEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PrivacyOperationOutputStatusEnum"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "completed": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "remaining": {
+                        "type": "integer"
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "preview": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "error_code": {
+                        "type": "string"
+                    },
+                    "download_available": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "categories",
+                    "completed",
+                    "created_at",
+                    "download_available",
+                    "error_code",
+                    "failed",
+                    "finished_at",
+                    "id",
+                    "kind",
+                    "notice",
+                    "owner_id",
+                    "preview",
+                    "remaining",
+                    "results",
+                    "revision",
+                    "status",
+                    "total",
+                    "updated_at"
+                ]
+            },
+            "PrivacyOperationOutputStatusEnum": {
+                "enum": [
+                    "preview",
+                    "queued",
+                    "running",
+                    "completed",
+                    "partial",
+                    "failed",
+                    "canceled"
+                ],
+                "type": "string",
+                "description": "* `preview` - preview\n* `queued` - queued\n* `running` - running\n* `completed` - completed\n* `partial` - partial\n* `failed` - failed\n* `canceled` - canceled"
+            },
+            "PrivacyOperationsPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyOperationOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
+            "PrivacySummaryOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "retention": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
+                    },
+                    "automatic_memory_use": {
+                        "type": "boolean"
+                    },
+                    "confirmed_notes": {
+                        "type": "integer"
+                    },
+                    "authorized_contexts": {
+                        "type": "integer"
+                    },
+                    "export_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "erase_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "operations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyOperationOutput"
+                        }
+                    },
+                    "preference_history": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "max_operation_items": {
+                        "type": "integer"
+                    },
+                    "export_formats": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authorized_contexts",
+                    "automatic_memory_use",
+                    "confirmed_notes",
+                    "erase_counts",
+                    "export_counts",
+                    "export_formats",
+                    "max_operation_items",
+                    "notice",
+                    "operations",
+                    "owner_id",
+                    "preference_history",
+                    "retention",
+                    "revision"
+                ]
+            },
+            "PrivacyTargetInputRequest": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "$ref": "#/components/schemas/CategoryEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    }
+                },
+                "required": [
+                    "category",
+                    "id",
+                    "revision"
+                ]
+            },
             "PrivateRecord": {
                 "type": "object",
                 "properties": {
@@ -15070,6 +16859,15 @@
                     "printed_label": {
                         "type": "string"
                     },
+                    "printed_labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "printed_label_precision": {
+                        "$ref": "#/components/schemas/PrintedLabelPrecisionEnum"
+                    },
                     "citation_page_label": {
                         "type": "string"
                     },
@@ -15129,6 +16927,14 @@
                     "text_source",
                     "width"
                 ]
+            },
+            "ReaderPrivacyOperationKindEnum": {
+                "enum": [
+                    "export",
+                    "erase"
+                ],
+                "type": "string",
+                "description": "* `export` - export\n* `erase` - erase"
             },
             "ReaderRelatedLink": {
                 "type": "object",
@@ -15570,10 +17376,11 @@
                     "different_conclusion",
                     "qualification",
                     "reframe",
-                    "insufficient_evidence"
+                    "insufficient_evidence",
+                    "unrelated"
                 ],
                 "type": "string",
-                "description": "* `support` - support\n* `different_conclusion` - different_conclusion\n* `qualification` - qualification\n* `reframe` - reframe\n* `insufficient_evidence` - insufficient_evidence"
+                "description": "* `support` - support\n* `different_conclusion` - different_conclusion\n* `qualification` - qualification\n* `reframe` - reframe\n* `insufficient_evidence` - insufficient_evidence\n* `unrelated` - unrelated"
             },
             "RelationTypeEnum": {
                 "enum": [
@@ -16514,6 +18321,19 @@
                     "edit_version"
                 ]
             },
+            "SourceEnum": {
+                "enum": [
+                    "manual",
+                    "pdf_page_labels",
+                    "embedded_text",
+                    "ocr",
+                    "sequence",
+                    "file_index",
+                    "unknown"
+                ],
+                "type": "string",
+                "description": "* `manual` - manual\n* `pdf_page_labels` - pdf_page_labels\n* `embedded_text` - embedded_text\n* `ocr` - ocr\n* `sequence` - sequence\n* `file_index` - file_index\n* `unknown` - unknown"
+            },
             "StatementInputRequest": {
                 "type": "object",
                 "properties": {
@@ -16523,23 +18343,19 @@
                         "maxLength": 1200
                     },
                     "subject": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "predicate": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "object": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "polarity": {
                         "$ref": "#/components/schemas/PolarityEnum"
                     },
                     "modality": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "qualifiers": {
                         "type": "array",
@@ -16565,23 +18381,19 @@
                         "maxLength": 1200
                     },
                     "subject": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "predicate": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "object": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "polarity": {
                         "$ref": "#/components/schemas/PolarityEnum"
                     },
                     "modality": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                     },
                     "qualifiers": {
                         "type": "array",

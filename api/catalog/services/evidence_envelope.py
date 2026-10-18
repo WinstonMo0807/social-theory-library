@@ -12,6 +12,7 @@ from catalog.models import (
     EvidenceSpan,
 )
 from catalog.services.semantic_search import viewer_access_statuses
+from catalog.services.text import page_text_range
 from catalog.services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_revision_q,
@@ -90,6 +91,7 @@ def evidence_span_envelope(
             "printed_page_label": span.printed_page_label,
             "start_offset": span.start_offset,
             "end_offset": span.end_offset,
+            "page_text_range": page_text_range(span.page.text, span.original_text, span.start_offset, span.end_offset),
             "bbox": span.bbox,
             "section": span.section,
         },

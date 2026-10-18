@@ -865,7 +865,7 @@ def create_catalog_publication_event(
         fields = sorted(set(fields).union(*(
             set(row.changed_fields or []) for row in pending_revisions
         )))
-    system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance"}
+    system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance", "page_mapping"}
     shared_work_update = (provenance or {}).get("source") == "shared_work_publication"
     bundle = None if restored is not None else (
         pending_base.bundle if shared_work_update and pending_base is not None
@@ -1411,6 +1411,11 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
         if reader_pdf:
             Asset.objects.filter(edition=edition, kind=Asset.Kind.OCR_PDF, is_current=True).exclude(pk=reader_pdf.pk).update(is_current=False, updated_at=now)
             Asset.objects.filter(pk=reader_pdf.pk).update(is_current=True, updated_at=now)
+    if (revision.provenance or {}).get("source") == "page_mapping":
+        # A candidate is not ready until this exact interpretation becomes public.
+        from catalog.models import PageLabelStatus
+        edition.page_label_status = PageLabelStatus.READY
+        edition.save(update_fields=["page_label_status", "updated_at"])
     # Work names are derived from the activated snapshot. Sync in the same
     # database transaction, after moving the pointer, so readers never get a
     # new title from the lexicon with the old public catalog revision.

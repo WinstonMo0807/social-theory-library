@@ -251,6 +251,14 @@ def process_external_enrichment_job(self, job_id):
 
 
 @shared_task(bind=True, ignore_result=True)
+def process_outline_job(self, job_id):
+    from catalog.services.document_outline import run_outline_job
+
+    job = run_outline_job(str(job_id), task_id=str(self.request.id or ""))
+    return {"id": str(job.pk), "status": job.status, "attempt": job.attempt}
+
+
+@shared_task(bind=True, ignore_result=True)
 def process_page_label_job(self, job_id):
     job = run_page_label_job(str(job_id), task_id=str(self.request.id or ""))
     return {"id": str(job.id), "status": job.status, "attempt": job.attempt}

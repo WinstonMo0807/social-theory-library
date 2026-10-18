@@ -90,3 +90,24 @@ class ResearchMemory(PrivateResearchRecord):
         abstract = False
         indexes = [models.Index(fields=["user", "state"], name="memory_owner_state_idx")]
         constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="research_memory_request_unique")]
+
+
+class ReaderDataOperation(PrivateResearchRecord):
+    """Durable owner-only export preparation / explicitly confirmed erasure."""
+    kind = models.CharField(max_length=12, choices=[("export", "Export"), ("erase", "Erase")])
+    status = models.CharField(max_length=16, default="preview", db_index=True)
+    generation = models.PositiveIntegerField(default=1)
+    task_id = models.CharField(max_length=64, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(PrivateResearchRecord.Meta):
+        abstract = False
+        constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="reader_data_request_unique")]
+
+
+class ReaderSearchRecord(PrivateResearchRecord):
+    """Opt-in encrypted history, independent of short-lived working sessions."""
+
+    class Meta(PrivateResearchRecord.Meta):
+        abstract = False
+        constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="reader_search_request_unique")]

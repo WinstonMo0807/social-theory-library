@@ -485,6 +485,10 @@ def test_searchable_ocr_pdf_is_versioned_and_keeps_mixed_language_text(
     document = fitz.open()
     page = document.new_page(width=595, height=842)
     page.draw_rect(fitz.Rect(40, 40, 555, 802), color=(0.2, 0.2, 0.2))
+    geometry = {"schema": 1, "coordinate_space": "rendered_pixels", "render_dpi": 72,
+        "render_matrix": [1, 0, 0, 1, 0, 0], "render_width": 595, "render_height": 842,
+        "pixmap_origin": [0, 0], "page_rect": list(page.rect),
+        "crop_box": list(page.cropbox), "rotation": page.rotation}
     payload = document.tobytes()
     document.close()
     digest = sha256(payload).hexdigest()
@@ -521,6 +525,7 @@ def test_searchable_ocr_pdf_is_versioned_and_keeps_mixed_language_text(
         asset=normalized,
         index=1,
         text="布迪厄 Bourdieu 1958 1962 INSEE",
+        geometry=geometry,
         normalized_text="布迪厄 bourdieu 1958 1962 insee",
         text_source=Page.TextSource.OCR,
         confidence=0.98,
@@ -568,9 +573,8 @@ def test_page_segment_maps_pdf_page_73_to_printed_page_50(
         tmp_path,
         title="真实页码测试",
     )
-    edition.state = PublicationState.PUBLISHED
     edition.citation_data = {"type": "book", "title": edition.work.title}
-    edition.save(update_fields=["state", "citation_data", "updated_at"])
+    edition.save(update_fields=["citation_data", "updated_at"])
     normalized.page_count = 73
     normalized.save(update_fields=["page_count", "updated_at"])
     Page.objects.bulk_create(
@@ -589,28 +593,43 @@ def test_page_segment_maps_pdf_page_73_to_printed_page_50(
 
     api_client.force_authenticate(admin_user)
     endpoint = f"/api/catalog/admin/assets/{normalized.id}/page-mapping/"
+    from uuid import uuid4
+    state = api_client.get(endpoint).data
     response = api_client.post(
         endpoint,
         {
-            "action": "create_segment",
-            "start_file_page_index": 24,
-            "end_file_page_index": 73,
-            "start_label": "1",
-            "style": "arabic",
+            "action": "segment", "request_id": str(uuid4()),
+            "expected_revision": state["expected_revision"], "source_fingerprint": state["source_fingerprint"],
+            "segment": {"id": "body", "name": "正文", "start": 24, "end": 73, "start_label": "1", "style": "arabic"},
         },
         format="json",
     )
     assert response.status_code == 200
-    assert response.data["updated_pages"] == 50
+    assert response.data["latest"]["data"]["pages"][72]["labels"] == ["50"]
+    assert normalized.pages.get(index=73).printed_label == ""
+    state = response.data
+    draft = state["latest"]["data"]
+    for row in draft["pages"]:
+        row["confirmed"] = True
+    response = api_client.post(endpoint, {"action": "save", "request_id": str(uuid4()),
+        "expected_revision": state["expected_revision"], "source_fingerprint": state["source_fingerprint"], "data": draft}, format="json")
+    assert response.status_code == 200
+    state = response.data
+    base = {"expected_revision": state["expected_revision"], "source_fingerprint": state["source_fingerprint"], "revision_id": state["latest"]["id"]}
+    prepared = api_client.post(endpoint, {**base, "action": "prepare"}, format="json")
+    assert prepared.status_code == 200
+    assert prepared.data["can_apply"] is True
+    response = api_client.post(endpoint, {**base, "action": "publish", "request_id": str(uuid4()),
+        "prepared_fingerprint": prepared.data["prepared_fingerprint"]}, format="json")
+    assert response.status_code == 200
     page_73 = normalized.pages.get(index=73)
     assert page_73.printed_label == "50"
     assert page_73.is_label_manual is True
-
-    response = api_client.post(endpoint, {"action": "confirm"}, format="json")
-    assert response.status_code == 200
     edition.refresh_from_db()
     assert edition.page_label_status == PageLabelStatus.READY
 
+    edition.state = PublicationState.PUBLISHED
+    edition.save(update_fields=["state", "updated_at"])
     activate_catalog_revision(edition, reader_asset=normalized, fulltext_ready=False)
     api_client.force_authenticate(user=None)
     page = api_client.get(f"/api/catalog/assets/{normalized.id}/pages/73/")

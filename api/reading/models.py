@@ -267,4 +267,5 @@ class LibraryMessageSource(UUIDTimeStampedModel):
 
 
 # Register the private research models without expanding the legacy reader file.
-from .research_models import CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn  # noqa: E402,F401
+from .research_models import (CitationAudit, PersonalReadingPlan, ReaderDataOperation, ReaderSearchRecord,
+                              ResearchMemory, ResearchProject, ResearchTurn)  # noqa: E402,F401

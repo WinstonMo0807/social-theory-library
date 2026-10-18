@@ -16,6 +16,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/assets/{asset_id}/page-mapping/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_assets_page_mapping_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_assets_page_mapping_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/bibliographic-candidates/": {
         parameters: {
             query?: never;
@@ -1513,6 +1529,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/privacy/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_privacy_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reading_privacy_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/privacy/items/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_privacy_items_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/privacy/operations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_privacy_operations_list"];
+        put?: never;
+        post: operations["reading_privacy_operations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/privacy/operations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_privacy_operations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/privacy/operations/{id}/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_privacy_operations_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/privacy/operations/{id}/download/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_privacy_operations_download_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/reading-plans/": {
         parameters: {
             query?: never;
@@ -1973,12 +2085,27 @@ export interface components {
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
         };
+        /**
+         * @description * `confirm` - confirm
+         *     * `clear` - clear
+         * @enum {string}
+         */
+        AnalysisDecisionInputActionEnum: "confirm" | "clear";
         AnalysisDecisionInputRequest: {
             expected_revision: number;
             /** @description 分析候选 id，来自轮次返回值。 */
             id: string;
-            relation: components["schemas"]["RelationEnum"];
+            action?: components["schemas"]["AnalysisDecisionInputActionEnum"];
+            /**
+             * Format: uuid
+             * @description 幂等请求；同时保存本人笔记时必需。
+             */
+            request_id?: string;
+            relation?: components["schemas"]["RelationEnum"];
             note?: string;
+            attribution?: components["schemas"]["AttributionEnum"];
+            scope_note?: string;
+            save_as_note?: boolean;
         };
         ApiError: {
             code: string;
@@ -2012,6 +2139,16 @@ export interface components {
          * @enum {string}
          */
         AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
+        /**
+         * @description * `author_claim` - author_claim
+         *     * `quoted_claim` - quoted_claim
+         *     * `reported_claim` - reported_claim
+         *     * `criticized_claim` - criticized_claim
+         *     * `historical_description` - historical_description
+         *     * `uncertain` - uncertain
+         * @enum {string}
+         */
+        AttributionEnum: "author_claim" | "quoted_claim" | "reported_claim" | "criticized_claim" | "historical_description" | "uncertain";
         AuditCapabilitiesOutput: {
             readonly max_upload_bytes: number;
             readonly max_pdf_pages: number;
@@ -2261,6 +2398,24 @@ export interface components {
          * @enum {string}
          */
         CatalogingSourceTypeEnum: "upload" | "manual" | "import" | "existing";
+        /**
+         * @description * `research` - research
+         *     * `notes` - notes
+         *     * `plans` - plans
+         *     * `audits` - audits
+         * @enum {string}
+         */
+        CategoriesEnum: "research" | "notes" | "plans" | "audits";
+        /**
+         * @description * `reading_history` - reading_history
+         *     * `search_history` - search_history
+         *     * `annotations` - annotations
+         *     * `memories` - memories
+         *     * `plans` - plans
+         *     * `followed_topics` - followed_topics
+         * @enum {string}
+         */
+        CategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "plans" | "followed_topics";
         /**
          * @description * `unchanged` - unchanged
          *     * `added` - added
@@ -3082,6 +3237,230 @@ export interface components {
             editor_url: string;
             fingerprint: string;
         };
+        MappingAsset: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            title: string;
+            authors: string[];
+            edition_label: string;
+            publication_year: number | null;
+            document_type: string;
+            page_count: number;
+            sha256: string;
+            status: string;
+            validation_status: string;
+            is_current: boolean;
+            source_current: boolean;
+            source_error: string;
+            original_filename: string;
+            document_revision_id: string;
+            preview_url: string;
+            reader_url: string;
+            cover_url: string;
+            publication_state: string;
+        };
+        MappingChange: {
+            pdf_page: number;
+            before: string[];
+            after: string[];
+            page_type_before: string;
+            page_type_after: string;
+            note: string;
+            manual_before: boolean;
+        };
+        /**
+         * @description * `save` - save
+         *     * `analyze` - analyze
+         *     * `segment` - segment
+         *     * `restore` - restore
+         *     * `prepare` - prepare
+         *     * `publish` - publish
+         * @enum {string}
+         */
+        MappingCommandActionEnum: "save" | "analyze" | "segment" | "restore" | "prepare" | "publish";
+        MappingCommandRequest: {
+            action: components["schemas"]["MappingCommandActionEnum"];
+            /** Format: uuid */
+            request_id?: string;
+            expected_revision: number;
+            source_fingerprint: string;
+            data?: components["schemas"]["MappingDataRequest"];
+            segment?: components["schemas"]["MappingSegmentRequest"];
+            /** Format: uuid */
+            revision_id?: string;
+            prepared_fingerprint?: string;
+        };
+        MappingCommandResponse: components["schemas"]["MappingState"] | components["schemas"]["MappingPreview"];
+        MappingData: {
+            pages: components["schemas"]["MappingPage"][];
+            segments: components["schemas"]["MappingSegment"][];
+            missing: components["schemas"]["MappingMissing"][];
+        };
+        MappingDataRequest: {
+            pages: components["schemas"]["MappingPageRequest"][];
+            segments: components["schemas"]["MappingSegmentRequest"][];
+            missing: components["schemas"]["MappingMissingRequest"][];
+        };
+        MappingDiagnostics: {
+            unconfirmed_pages: number[];
+            duplicate_labels: components["schemas"]["MappingDuplicate"][];
+            spreads: number[];
+            unconfirmed_missing: string[];
+            missing_present: string[];
+        };
+        MappingDuplicate: {
+            label: string;
+            pdf_pages: number[];
+            acknowledged: boolean;
+        };
+        MappingMissing: {
+            id: string;
+            label: string;
+            after_pdf_page: number;
+            /** @default  */
+            note: string;
+            /** @default false */
+            confirmed: boolean;
+        };
+        MappingMissingRequest: {
+            id: string;
+            label: string;
+            after_pdf_page: number;
+            /** @default  */
+            note: string;
+            /** @default false */
+            confirmed: boolean;
+        };
+        MappingPage: {
+            pdf_page: number;
+            labels: string[];
+            page_type: components["schemas"]["PageTypeEnum"];
+            /** @default false */
+            confirmed: boolean;
+            /** @default  */
+            note: string;
+            /** @default false */
+            override_manual: boolean;
+            source?: components["schemas"]["SourceEnum"];
+            /** Format: double */
+            confidence?: number;
+        };
+        MappingPageRequest: {
+            pdf_page: number;
+            labels: string[];
+            page_type: components["schemas"]["PageTypeEnum"];
+            /** @default false */
+            confirmed: boolean;
+            /** @default  */
+            note: string;
+            /** @default false */
+            override_manual: boolean;
+            source?: components["schemas"]["SourceEnum"];
+            /** Format: double */
+            confidence?: number;
+        };
+        MappingPrecedingRevision: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            revision_id: string;
+            revision: number;
+        };
+        MappingPreview: {
+            /** Format: uuid */
+            revision_id: string;
+            source_fingerprint: string;
+            prepared_fingerprint: string;
+            changes: components["schemas"]["MappingChange"][];
+            changed_page_count: number;
+            missing_before: components["schemas"]["MappingMissing"][];
+            missing_after: components["schemas"]["MappingMissing"][];
+            segments_before: components["schemas"]["MappingSegment"][];
+            segments_after: components["schemas"]["MappingSegment"][];
+            diagnostics: components["schemas"]["MappingDiagnostics"];
+            blockers: string[];
+            can_apply: boolean;
+            mode: components["schemas"]["MappingPreviewModeEnum"];
+        };
+        /**
+         * @description * `publish` - publish
+         *     * `apply_draft` - apply_draft
+         * @enum {string}
+         */
+        MappingPreviewModeEnum: "publish" | "apply_draft";
+        MappingPublication: {
+            /** Format: uuid */
+            event_id: string;
+            status: string;
+            /** Format: uuid */
+            revision_id: string;
+            revision_status: string;
+            error: string;
+        };
+        MappingReadResponse: components["schemas"]["MappingState"] | components["schemas"]["MappingRevision"];
+        MappingRevision: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            origin: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by_id: number | null;
+            /** Format: uuid */
+            restored_from_id: string | null;
+            source_fingerprint: string;
+            /** Format: date-time */
+            applied_at: string | null;
+            /** Format: uuid */
+            applied_asset_id: string | null;
+            publication: components["schemas"]["MappingPublication"] | null;
+            data?: components["schemas"]["MappingData"];
+            diagnostics?: components["schemas"]["MappingDiagnostics"];
+        };
+        MappingSegment: {
+            id: string;
+            name: string;
+            start: number;
+            end: number;
+            start_label: string;
+            style: components["schemas"]["MappingSegmentStyleEnum"];
+        };
+        MappingSegmentRequest: {
+            id: string;
+            name: string;
+            start: number;
+            end: number;
+            start_label: string;
+            style: components["schemas"]["MappingSegmentStyleEnum"];
+        };
+        /**
+         * @description * `arabic` - arabic
+         *     * `roman_lower` - roman_lower
+         *     * `roman_upper` - roman_upper
+         *     * `custom` - custom
+         *     * `none` - none
+         * @enum {string}
+         */
+        MappingSegmentStyleEnum: "arabic" | "roman_lower" | "roman_upper" | "custom" | "none";
+        MappingState: {
+            asset: components["schemas"]["MappingAsset"];
+            /** Format: uuid */
+            asset_id: string;
+            expected_revision: number;
+            source_fingerprint: string;
+            current: components["schemas"]["MappingData"];
+            latest: components["schemas"]["MappingRevision"] | null;
+            history: components["schemas"]["MappingRevision"][];
+            history_count: number;
+            history_page: number;
+            history_next_page: number | null;
+            preceding_revision: components["schemas"]["MappingPrecedingRevision"] | null;
+            result?: components["schemas"]["MappingRevision"];
+        };
         MediaAsset: {
             /** Format: uuid */
             readonly id: string;
@@ -3371,6 +3750,15 @@ export interface components {
             clear_position?: boolean;
             calibration_status?: components["schemas"]["CalibrationStatusEnum"];
         };
+        /**
+         * @description * `front` - front
+         *     * `body` - body
+         *     * `appendix` - appendix
+         *     * `other` - other
+         *     * `blank` - blank
+         * @enum {string}
+         */
+        PageTypeEnum: "front" | "body" | "appendix" | "other" | "blank";
         PaginatedBackupJobList: {
             /** @example 123 */
             count: number;
@@ -3400,6 +3788,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["MemoryListOutput"][];
+        };
+        PaginatedPrivacyOperationsPageList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["PrivacyOperationsPage"][];
         };
         PaginatedPrivateRecordList: {
             /** @example 123 */
@@ -3486,6 +3889,12 @@ export interface components {
             preview?: boolean;
             /** @description 替换材料时，明确同意移除仅与被替换材料相关的先修关系；其他关系保留。 */
             remove_related_prerequisites?: boolean;
+        };
+        PatchedPrivacyPreferencesInputRequest: {
+            expected_revision?: number;
+            retention?: {
+                [key: string]: boolean;
+            };
         };
         PatchedProjectUpdateInputRequest: {
             expected_revision?: number;
@@ -3911,6 +4320,116 @@ export interface components {
             requires_work_id: string;
             reference: components["schemas"]["EvidenceReferenceInputRequest"];
         };
+        /**
+         * @description * `spread` - spread
+         *     * `page` - page
+         *     * `unknown` - unknown
+         * @enum {string}
+         */
+        PrintedLabelPrecisionEnum: "spread" | "page" | "unknown";
+        /**
+         * @description * `confirm` - confirm
+         *     * `cancel` - cancel
+         *     * `retry` - retry
+         * @enum {string}
+         */
+        PrivacyCommandInputActionEnum: "confirm" | "cancel" | "retry";
+        PrivacyCommandInputRequest: {
+            expected_revision: number;
+            action: components["schemas"]["PrivacyCommandInputActionEnum"];
+        };
+        PrivacyItemsOutput: {
+            owner_id: string;
+            count: number;
+            page: number;
+            page_size: number;
+            results: {
+                [key: string]: unknown;
+            }[];
+        };
+        PrivacyOperationInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            kind: components["schemas"]["ReaderPrivacyOperationKindEnum"];
+            categories?: components["schemas"]["CategoriesEnum"][];
+            targets?: components["schemas"]["PrivacyTargetInputRequest"][];
+        };
+        PrivacyOperationOutput: {
+            /** Format: uuid */
+            id: string;
+            owner_id: string;
+            revision: number;
+            kind: components["schemas"]["ReaderPrivacyOperationKindEnum"];
+            status: components["schemas"]["PrivacyOperationOutputStatusEnum"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            total: number;
+            completed: number;
+            failed: number;
+            remaining: number;
+            categories: string[];
+            results: {
+                [key: string]: unknown;
+            }[];
+            preview: {
+                [key: string]: unknown;
+            }[];
+            error_code: string;
+            download_available: boolean;
+            notice: string;
+        };
+        /**
+         * @description * `preview` - preview
+         *     * `queued` - queued
+         *     * `running` - running
+         *     * `completed` - completed
+         *     * `partial` - partial
+         *     * `failed` - failed
+         *     * `canceled` - canceled
+         * @enum {string}
+         */
+        PrivacyOperationOutputStatusEnum: "preview" | "queued" | "running" | "completed" | "partial" | "failed" | "canceled";
+        PrivacyOperationsPage: {
+            count: number;
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["PrivacyOperationOutput"][];
+        };
+        PrivacySummaryOutput: {
+            owner_id: string;
+            revision: number;
+            retention: {
+                [key: string]: boolean;
+            };
+            automatic_memory_use: boolean;
+            confirmed_notes: number;
+            authorized_contexts: number;
+            export_counts: {
+                [key: string]: number;
+            };
+            erase_counts: {
+                [key: string]: number;
+            };
+            operations: components["schemas"]["PrivacyOperationOutput"][];
+            preference_history: {
+                [key: string]: unknown;
+            }[];
+            max_operation_items: number;
+            export_formats: string[];
+            notice: string;
+        };
+        PrivacyTargetInputRequest: {
+            category: components["schemas"]["CategoryEnum"];
+            /** Format: uuid */
+            id: string;
+            revision: string;
+        };
         PrivateRecord: {
             /** Format: uuid */
             readonly id: string;
@@ -4259,6 +4778,8 @@ export interface components {
             page_index: number;
             file_page_index: number;
             printed_label: string;
+            printed_labels?: string[];
+            printed_label_precision?: components["schemas"]["PrintedLabelPrecisionEnum"];
             citation_page_label: string;
             label_source: string;
             /** Format: double */
@@ -4275,6 +4796,12 @@ export interface components {
             text: string;
             blocks: components["schemas"]["ReaderTextBlock"][];
         };
+        /**
+         * @description * `export` - export
+         *     * `erase` - erase
+         * @enum {string}
+         */
+        ReaderPrivacyOperationKindEnum: "export" | "erase";
         ReaderRelatedLink: {
             name: string;
             slug: string;
@@ -4406,9 +4933,10 @@ export interface components {
          *     * `qualification` - qualification
          *     * `reframe` - reframe
          *     * `insufficient_evidence` - insufficient_evidence
+         *     * `unrelated` - unrelated
          * @enum {string}
          */
-        RelationEnum: "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence";
+        RelationEnum: "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence" | "unrelated";
         /**
          * @description * `teaching` - teaching
          *     * `cooperation` - cooperation
@@ -4665,6 +5193,17 @@ export interface components {
             about_blocks: components["schemas"]["AboutPageBlockRequest"][];
             edit_version: string;
         };
+        /**
+         * @description * `manual` - manual
+         *     * `pdf_page_labels` - pdf_page_labels
+         *     * `embedded_text` - embedded_text
+         *     * `ocr` - ocr
+         *     * `sequence` - sequence
+         *     * `file_index` - file_index
+         *     * `unknown` - unknown
+         * @enum {string}
+         */
+        SourceEnum: "manual" | "pdf_page_labels" | "embedded_text" | "ocr" | "sequence" | "file_index" | "unknown";
         StatementInputRequest: {
             proposition: string;
             subject?: string;
@@ -4897,6 +5436,65 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    catalog_admin_assets_page_mapping_retrieve: {
+        parameters: {
+            query?: {
+                history_page?: number;
+                revision_id?: string;
+            };
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingReadResponse"];
+                };
+            };
+        };
+    };
+    catalog_admin_assets_page_mapping_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MappingCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MappingCommandRequest"];
+                "multipart/form-data": components["schemas"]["MappingCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingCommandResponse"];
+                };
+            };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingState"];
                 };
             };
         };
@@ -7743,6 +8341,194 @@ export interface operations {
             };
         };
     };
+    reading_privacy_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacySummaryOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedPrivacyPreferencesInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedPrivacyPreferencesInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedPrivacyPreferencesInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacySummaryOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_items_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyItemsOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_operations_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPrivacyOperationsPageList"];
+                };
+            };
+        };
+    };
+    reading_privacy_operations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyOperationInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PrivacyOperationInputRequest"];
+                "multipart/form-data": components["schemas"]["PrivacyOperationInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyOperationOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_operations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reader data operation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyOperationOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_operations_command_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reader data operation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PrivacyCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["PrivacyCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyOperationOutput"];
+                };
+            };
+        };
+    };
+    reading_privacy_operations_download_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reader data operation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     reading_reading_plans_list: {
         parameters: {
             query?: {
@@ -8422,6 +9208,17 @@ export interface operations {
     reading_research_projects_turns_list: {
         parameters: {
             query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `search` - search
+                 *     * `counterargument` - counterargument
+                 */
+                mode?: "all" | "search" | "counterargument";
+                /**
+                 * @description * `oldest` - oldest
+                 *     * `newest` - newest
+                 */
+                order?: "oldest" | "newest";
                 /** @description 用于排序结果的字段。 */
                 ordering?: string;
                 /** @description 分页结果集中的页码。 */

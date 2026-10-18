@@ -1,5 +1,13 @@
 # Social Theory Library 架构
 
+## 2026-10-18 反证、隐私与页码解释
+
+反证继续复用ResearchProject/ResearchTurn与Discovery，结构化条件进入真实检索；本人决定与系统候选分别保存，显式保存笔记与决定同一事务，笔记仍为proposed且不自动授权。双页映射信息沿公共Page内容、EvidenceReference与引文体检传递，不从同一扫描页推定具体印刷半页。
+
+ReaderDataOperation与ReaderSearchRecord继承本人加密记录。偏好使用ReaderProfile既有JSON及修订；新搜索记录默认关闭，并在搜索事务提交后保存，避免turn→user反向锁序。资料删除按owner→contexts→target锁定并逐项事务化，公开文件与账户不属于删除目标；导出不快照存储失效原文，下载时复核版本和来源。0011迁移尚未执行。
+
+PageMappingRevision保存不可原位覆盖的候选、幂等请求及采用历史；公开采用复用stage_document_asset、synchronize_document_revision与CatalogPublicationRevision发布，不改变旧公开Asset或未发布元数据。0068迁移只编写。Reader几何与OCR阅读副本来源守卫、自动目录任务注册一并保存为关联继承实现。DOCX派生预览独立单元尚在实施，未包含于本单元恢复证据。
+
 ## 2026-10-18 笔记明确授权与私人体检材料
 
 已确认笔记仍存于ResearchMemory；研究/计划加密payload中的明确ID名单持久化使用范围，不建平行记忆库。确认、授权分别操作，正文/分类/来源变化撤销旧范围，删除保留独立原始Annotation。turn只返回仍获授权且同修订的本人提醒，不将私人正文混入公开Discovery查询。

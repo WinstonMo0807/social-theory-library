@@ -8,8 +8,9 @@ import { PdfCanvas } from "@/components/pdf-canvas";
 import type { OutlineAsset } from "@/lib/api/curation-workspace.client";
 import styles from "./document-outline.module.css";
 
-export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTarget }: {
+export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTarget, onFileReady }: {
   asset: OutlineAsset; ownerId: string; page: number; setPage: (page: number) => void; navigationTarget?: [number, number];
+  onFileReady?: (url: string) => void;
 }) {
   const [file, setFile] = useState<{ key: string; url: string } | null>(null);
   const [error, setError] = useState("");
@@ -27,14 +28,14 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
   const onLoad = useCallback((count: number) => setActualPages(count), []);
   useEffect(() => {
     let alive = true, objectUrl = "";
-    const clear = () => { alive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); setFile(null); };
+    const clear = () => { alive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); setFile(null); onFileReady?.(""); };
     const unsubscribe = subscribeToSessionChanges(clear);
     void withPrivateOwner(ownerId, () => apiBlob(asset.preview_url, getServerSessionCredential())).then(blob => {
       if (!alive) return;
-      objectUrl = URL.createObjectURL(blob); setFile({ key, url: objectUrl }); setError("");
+      objectUrl = URL.createObjectURL(blob); setFile({ key, url: objectUrl }); setError(""); onFileReady?.(objectUrl);
     }).catch((reason: unknown) => { if (alive) setError(reason instanceof Error ? reason.message : "阅读文件暂时无法预览。"); });
-    return () => { alive = false; unsubscribe(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [ownerId, asset.preview_url, key, attempt]);
+    return () => { alive = false; unsubscribe(); if (objectUrl) URL.revokeObjectURL(objectUrl); onFileReady?.(""); };
+  }, [ownerId, asset.preview_url, key, attempt, onFileReady]);
   return <section className={styles.preview} aria-label="对应页面预览">
     <header><h2>对应页面预览</h2><span>PDF 第 {page} 页 / 共 {total || "—"} 页</span></header>
     <div className={styles.pdfToolbar}>

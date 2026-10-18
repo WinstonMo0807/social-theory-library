@@ -29,8 +29,10 @@ from .runtime_views import (
 )
 from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
+from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
 
 router = DefaultRouter()
+router.register("privacy/operations", ReaderDataOperationViewSet, basename="reader-data-operations")
 router.register("research-projects", ResearchProjectViewSet, basename="research-projects")
 router.register("research-turns", ResearchTurnViewSet, basename="research-turns")
 router.register("citation-audits", CitationAuditViewSet, basename="citation-audits")
@@ -51,6 +53,8 @@ router.register(
 )
 
 urlpatterns = [
+    path("privacy/", ReaderPrivacyView.as_view(), name="reader-privacy"),
+    path("privacy/items/", ReaderPrivacyItemsView.as_view(), name="reader-privacy-items"),
     path("research-account/", ResearchAccountView.as_view(), name="research-account"),
     path("", include(router.urls)),
     path("export/", ReaderDataExportView.as_view(), name="reader-data-export"),

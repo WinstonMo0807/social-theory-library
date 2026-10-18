@@ -21,7 +21,7 @@ from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, Researc
 from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonInput,
     MemoryCreateInput, MemoryListInput, MemorySearchInput, MemoryUpdateInput, MemoryUsageInput, PlanCreateInput, PlanUpdateInput,
     PlanCommandInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
-    SubclaimsInput, TurnExpandInput, TurnRetryInput)
+    SubclaimsInput, TurnExpandInput, TurnListInput, TurnRetryInput)
 
 
 class PrivateRecordSerializer(serializers.Serializer):
@@ -166,7 +166,7 @@ class ResearchProjectViewSet(PrivateRecordViewSet):
     def comparison(self, request, pk=None):
         return Response(research.serialize_record(research.save_comparison(request.user, pk, command(request, ComparisonInput)), request.user))
 
-    @extend_schema(methods=["GET"], responses=PrivateRecordSerializer(many=True))
+    @extend_schema(methods=["GET"], parameters=[TurnListInput], responses=PrivateRecordSerializer(many=True))
     @extend_schema(request=TurnCreateInput, methods=["POST"], responses={202: PrivateRecordSerializer})
     @action(detail=True, methods=["get", "post"])
     def turns(self, request, pk=None):
@@ -174,8 +174,16 @@ class ResearchProjectViewSet(PrivateRecordViewSet):
         if request.method == "POST":
             turn = research.start_turn(request, project.id, command(request, TurnCreateInput))
             return Response(research.serialize_record(turn, request.user), status=202)
-        page = self.paginate_queryset(project.turns.all())
-        rows = page if page is not None else project.turns.all()
+        filters = TurnListInput(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        mode = filters.validated_data.get("mode", "all")
+        newest = filters.validated_data.get("order") == "newest"
+        rows = project.turns.order_by("-created_at" if newest else "created_at", "-id" if newest else "id")
+        if mode != "all":
+            # Mode is part of the existing encrypted payload; inspect only this owner's project.
+            rows = [row for row in rows.iterator(chunk_size=100) if research.unpack(row).get("mode", "search") == mode]
+        page = self.paginate_queryset(rows)
+        rows = page if page is not None else rows
         data = [research.serialize_record(row, request.user) for row in rows]
         return self.get_paginated_response(data) if page is not None else Response(data)
 

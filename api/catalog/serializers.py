@@ -869,14 +869,9 @@ class WorkDetailSerializer(WorkCardSerializer):
         ).first()
         if not asset:
             return []
-        return [
-            {
-                "index": page.index,
-                "printed_label": clean_page_label(page.printed_label),
-                "chapter_title": page.chapter_title,
-            }
-            for page in asset.pages.exclude(chapter_title="").order_by("index")
-        ]
+        from catalog.services.document_outline import public_outline
+
+        return public_outline(asset, access_statuses=_viewer_asset_statuses(self.context))
 
     @extend_schema_field(PublicTheoryAssociationSerializer(many=True))
     def get_theory_associations(self, obj):
@@ -884,6 +879,7 @@ class WorkDetailSerializer(WorkCardSerializer):
             review_status=RelationReviewStatus.APPROVED,
             file__kind=Asset.Kind.NORMALIZED,
             file__status=Asset.Status.READY,
+            file__validation_status=Asset.ValidationStatus.VALID,
             file__access_status__in=_viewer_asset_statuses(self.context),
         ).select_related("file")
         preview_edition = self.context.get("preview_edition")

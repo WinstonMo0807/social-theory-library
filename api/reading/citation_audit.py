@@ -522,13 +522,16 @@ def check_occurrence(occurrence, entries, user):
         label_match = re.search(r"(?:[pP]{1,2}\.?|第)\s*(\d{1,5})(?:\s*页)?", occurrence["context"])
         claimed_label = label_match.group(1) if label_match else None
         resolved = [resolve_reference(ref, user) for ref in matches]
-        same_page = not claimed_label or any(anchor.get("printed_label") == claimed_label
-            for ref in resolved for anchor in ref.get("anchors", [ref]))
+        from catalog.services.page_label_metadata import claimed_page_status
+        page_status = claimed_page_status(resolved, claimed_label)
+        spread_match = any(anchor.get("printed_label_precision") == "spread" for ref in resolved
+            for anchor in ref.get("anchors", [ref]))
         findings.append({"kind": "direct_quote", "status": "text_match" if matches else "unverified",
             "edition_id": edition_id, "references": matches, "claimed_printed_label": claimed_label,
-            "page_status": "matched" if claimed_label and matches and same_page else "needs_review" if claimed_label else "not_specified",
+            "page_status": page_status,
             "match_limits": {"max_adjacent_spans": 5, "max_matches": 10},
-            "message": "已找到规范化文字匹配，仍须核对上下文、版本和转引。" if matches else "未命中原文；可能存在超出连续5段的引文、OCR 差异或版本差异，不能据此判为错误。"})
+            "message": ("文字匹配仅定位到同一双页扫描页，尚不能区分左右印刷页；仍须核对上下文、版本和转引。" if spread_match
+                else "已找到规范化文字匹配，仍须核对上下文、版本和转引。") if matches else "未命中原文；可能存在超出连续5段的引文、OCR 差异或版本差异，不能据此判为错误。"})
     return findings
 
 

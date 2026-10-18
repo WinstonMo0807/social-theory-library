@@ -9,6 +9,7 @@ from typing import Iterable
 from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
+from catalog.services.page_geometry import validated_geometry
 
 from catalog.models import (
     Asset,
@@ -152,11 +153,15 @@ def document_text_checksum(asset: Asset) -> str:
             "normalized_text",
             "text_source",
             "confidence",
+            "geometry",
         )
     )
     for row in page_rows.iterator(chunk_size=200):
-        for value in row:
+        for value in row[:-1]:
             _hash_value(digest, value)
+        # Preserve all existing fingerprints for unknown historical geometry.
+        if row[-1]:
+            _hash_value(digest, {"geometry": row[-1]})
     passage_rows = (
         Passage.objects.filter(page__asset=asset)
         .order_by("page__index", "order")
@@ -355,6 +360,11 @@ def _sync_evidence_spans(revision: DocumentRevision) -> int:
                 "model": revision.ocr_model,
                 "version": revision.ocr_version,
             }
+        geometry = validated_geometry(page.geometry)
+        if geometry:
+            # Retain extraction coordinates with the immutable evidence source,
+            # including native PDF spans despite this legacy JSON field name.
+            ocr_provenance["geometry"] = geometry
         defaults = {
             "passage": passage,
             "page_number": page.index,
@@ -776,8 +786,14 @@ def synchronize_document_revision(
                 page_indexes=page_indexes,
             )
         )
+    outline_job = None
+    if locked_asset.status == Asset.Status.READY and locked_asset.file and locked_asset.page_count:
+        from catalog.services.document_outline import queue_outline_rebuild
+
+        outline_job = queue_outline_rebuild(locked_asset.pk, actor=actor, automatic=True)
     return {
         "status": "ready",
+        "outline_job_id": str(outline_job.pk) if outline_job else None,
         "revision_id": str(active.pk),
         "revision": active.revision,
         "created": created,

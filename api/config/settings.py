@@ -194,6 +194,7 @@ SPECTACULAR_SETTINGS = {
         "ResearchMemoryContextKindEnum": ["project", "plan"],
         "ResearchMemoryUsageActionEnum": ["grant", "revoke", "revoke_all"],
         "CitationSourceCommandActionEnum": ["cancel", "retry"],
+        "ReaderPrivacyOperationKindEnum": ["export", "erase"],
         "EditorialSourceKindEnum": ["catalog", "planned"],
         "EditorialTextKindEnum": ["paragraph", "heading"],
         "ContentReferenceTypeEnum": ["work", "edition", "node", "span"],

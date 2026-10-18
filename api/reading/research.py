@@ -129,7 +129,8 @@ def resolve_reference(raw, user, *, strict=False):
                 "reference_id": reference_identity({"anchors": resolved}),
                 "source_status": "available" if available else "unavailable", "locator_precision": "multi_anchor",
                 "quote": "\n".join(item["quote"] for item in resolved) if available else "",
-                "title": first.get("title", ""), "reader_url": first.get("reader_url") if available else None}
+                **{key: first.get(key) for key in ("title", "authors", "publication_year", "cover_url", "citation")},
+                "reader_url": first.get("reader_url") if available else None}
     span_id = raw.get("evidence_span_id")
     stale = {"schema_version": 1, "source_kind": "catalog", "source_status": "unavailable",
              "reference_id": reference_identity(raw),
@@ -167,20 +168,26 @@ def resolve_reference(raw, user, *, strict=False):
             raise ValidationError({"reference": "原文已变化、撤回或不可访问，请重新选择。"})
         return stale
     snapshot = edition.active_catalog_revision.snapshot or {}
+    from catalog.services.page_label_metadata import structured_page_labels
     from catalog.services.page_geometry import locator_geometry, validated_geometry
     from catalog.services.text import page_text_range
     geometry = validated_geometry((span.ocr_provenance or {}).get("geometry") if span else page.geometry)
     from catalog.services.citations import format_gbt_7714_2025
     authors = [str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
                for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"]
+    cover = (snapshot.get("work") or {}).get("cover_media") or {}
+    cover_url = (reverse("public-work-cover", kwargs={"work_id": str(edition.work_id)})
+        + (f"?rendition={cover['primary_rendition_id']}" if cover.get("primary_rendition_id") else "")) if cover or (snapshot.get("work") or {}).get("cover") else None
     return {"schema_version": 1, "source_kind": "catalog", "source_status": "available",
             "reference_id": str(span.id) if span else f"{asset_id}:{page_number}",
             "evidence_span_id": str(span.id) if span else None,
             "work_id": str(edition.work_id), "edition_id": str(edition.id), "asset_id": asset_id,
             "document_revision_id": revision_id, "pdf_page": page_number,
             "printed_label": span.printed_page_label if span else page.printed_label,
+            **structured_page_labels(page),
             "content_hash": digest, "title": (snapshot.get("work") or {}).get("title", ""),
             "authors": [value for value in authors if value],
+            "publication_year": (snapshot.get("edition") or {}).get("publication_year"), "cover_url": cover_url,
             "citation": format_gbt_7714_2025(edition, page.printed_label, snapshot=snapshot),
             "quote": span.original_text if span else page.text,
             "start_offset": span.start_offset if span else 0, "end_offset": span.end_offset if span else len(page.text),
@@ -470,6 +477,24 @@ def save_comparison(user, pk, data):
     return save_data(project, payload)
 
 
+def counterargument_query(statement, question):
+    """Explicit subject/time/place describe the query, never publication filters."""
+    parts = [question]
+    for key, label in (("subject", "对象"), ("object", "涉及内容"), ("population_scope", "研究对象"),
+                       ("geographic_scope", "地区"), ("temporal_scope", "研究时间"), ("qualifiers", "条件")):
+        value = statement.get(key)
+        if value in (None, "", [], {}):
+            continue
+        value = value.strip() if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
+        if value:
+            parts.append(f"{label}：{value}")
+    query = "\n".join(parts)
+    if len(query) > 1200:
+        raise ValidationError({"statement": "原命题与检索条件合计不能超过1200字符，请缩短条件后再检索；输入不会被自动截断。"})
+    return {"query": query, "method": "explicit_conditions" if len(parts) > 1 else "original_proposition",
+        "notice": "对象、地区、时间和条件用于检索语境与原文比较，不是出版年份过滤，也不证明结果符合条件。"}
+
+
 @transaction.atomic
 def start_turn(request, project_id, data):
     project = owned(ResearchProject, request.user, project_id, lock=True)
@@ -509,10 +534,12 @@ def start_turn(request, project_id, data):
             raise ValidationError({"active_subclaim_id": "请选择本轮反证研究中本人明确保存的子命题。"})
         statement = {key: value for key, value in chosen.items() if key != "id"}
     reminders = plan_memory_rows(request.user, payload)
+    search_question = statement["proposition"] if active_subclaim_id else question
+    query_plan = counterargument_query(statement, search_question) if mode == "counterargument" else None
     turn = ResearchTurn.objects.create(project=project, parent=parent, request_id=request_id,
         task_id=str(uuid4()), data_ciphertext=pack({"request_fingerprint": fingerprint, "question": question, "scope": scope, "mode": mode,
         "statement": statement, "subclaims": subclaims, "active_subclaim_id": active_subclaim_id,
-        "search_question": statement["proposition"] if active_subclaim_id else question,
+        "search_question": search_question, **({"query_plan": query_plan} if query_plan else {}),
         "analysis_statement": statement, "input_revision": project.revision, "selected_refs": payload.get("selections", []),
         "result_refs": unpack(parent).get("result_refs", []) if parent and data.get("expand_from_parent") is True else [],
         "analysis": [], "warnings": [], "parent_id": str(parent.id) if parent else None,
@@ -604,20 +631,62 @@ def analyze_references(statement, refs, user):
 
 @transaction.atomic
 def decide_analysis(user, pk, data):
+    # Same user -> project -> turn order as deletion and explicit note creation.
+    from django.contrib.auth import get_user_model
+    get_user_model().objects.select_for_update().get(pk=user.pk)
+    owner_turn = owned(ResearchTurn, user, pk)
+    owned(ResearchProject, user, owner_turn.project_id, lock=True)
     turn = owned(ResearchTurn, user, pk, lock=True)
+    payload = unpack(turn)
+    request_id = identifier(data["request_id"], "request_id") if data.get("request_id") else None
+    fingerprint = request_fingerprint(data, ("id", "action", "relation", "note", "attribution", "scope_note", "save_as_note"))
+    receipt = next((item for item in payload.get("analysis_requests", []) if item["request_id"] == request_id), None) if request_id else None
+    if receipt:
+        if receipt["fingerprint"] != fingerprint:
+            raise ResearchConflict("该请求标识已用于其他分类决定，请为新决定使用新标识。")
+        return turn
     expect(turn, data.get("expected_revision"))
     if turn.status in ACTIVE:
         raise ResearchConflict("请等待本轮结束后确认，已得到的材料会保留。")
-    payload = unpack(turn)
-    relation = data.get("relation")
-    if relation not in {"support", "different_conclusion", "qualification", "reframe", "insufficient_evidence"}:
-        raise ValidationError({"relation": "关系类型无效。"})
+    action = data.get("action", "confirm")
+    if action not in {"confirm", "clear"}:
+        raise ValidationError({"action": "支持确认或撤销本人决定。"})
     row = next((row for row in payload.get("analysis", []) if row["id"] == data.get("id")), None)
     if row is None:
         raise NotFound("分析候选不存在。")
-    resolve_reference(row["reference"], user, strict=True)
-    row.update(relation=relation, status="user_confirmed", decision={"by": "owner", "at": timezone.now().isoformat(),
-        "note": text(data.get("note", ""), "note", 4000)})
+    memory_id = None
+    decision = None
+    relation = "insufficient_evidence"
+    if action == "confirm":
+        from catalog.models import DerivedClaim
+        relation = data.get("relation")
+        if relation not in {"support", "different_conclusion", "qualification", "reframe", "insufficient_evidence", "unrelated"}:
+            raise ValidationError({"relation": "关系类型无效。"})
+        current = resolve_reference(row["reference"], user, strict=True)
+        note = text(data.get("note", ""), "note", 4000, True)
+        attribution = data.get("attribution", "uncertain")
+        if attribution not in DerivedClaim.Attribution.values:
+            raise ValidationError({"attribution": "归属类型无效。"})
+        scope_note = text(data.get("scope_note", ""), "scope_note", 4000)
+        if "save_as_note" in data and not isinstance(data["save_as_note"], bool):
+            raise ValidationError({"save_as_note": "需要布尔值。"})
+        if data.get("save_as_note"):
+            if not request_id:
+                raise ValidationError({"request_id": "同时保存本人笔记须提供幂等请求标识。"})
+            memory = create_memory(user, {"request_id": request_id, "body": note, "kind": "observation",
+                "project_id": str(turn.project_id), "turn_id": str(turn.id), "sources": [compact_reference(current)]})
+            memory_id = str(memory.id)
+        decision = {"by": "owner", "at": timezone.now().isoformat(), "relation": relation,
+            "note": note, "attribution": attribution, "scope_note": scope_note,
+            **({"memory_id": memory_id} if memory_id else {})}
+    elif data.get("save_as_note"):
+        raise ValidationError({"save_as_note": "撤销分类不会新建笔记；已有本人笔记独立保留。"})
+    if row.get("decision"):
+        row.setdefault("decision_history", []).append({"revision": turn.revision, "at": timezone.now().isoformat(),
+            "relation": row.get("relation"), "decision": row["decision"], "action": action})
+    row.update(relation=relation, status="user_confirmed" if decision else "needs_review", decision=decision)
+    if request_id:
+        payload.setdefault("analysis_requests", []).append({"request_id": request_id, "fingerprint": fingerprint, "memory_id": memory_id})
     return save_data(turn, payload)
 
 
@@ -633,6 +702,7 @@ def serialize_record(record, user, *, memory_context_rows=None):
     payload.pop("version_baseline", None)
     payload.pop("version_children", None)
     payload.pop("text_units", None)
+    payload.pop("analysis_requests", None)
     if "ocr_units" in payload:
         payload["ocr_units"] = {key: {name: value for name, value in unit.items() if name not in {"text", "blocks"}}
                                 for key, unit in payload["ocr_units"].items()}
@@ -766,8 +836,10 @@ def serialize_record(record, user, *, memory_context_rows=None):
                                 page_status="needs_review", message="原文已变化、撤回或不可访问；原匹配记录保留，当前需重新核对。")
                         elif finding.get("claimed_printed_label"):
                             # A different surviving text match cannot support the old page claim.
-                            finding["page_status"] = "matched" if any(anchor.get("printed_label") == finding["claimed_printed_label"]
-                                for ref in available for anchor in ref.get("anchors", [ref])) else "needs_review"
+                            from catalog.services.page_label_metadata import claimed_page_status
+                            finding["page_status"] = claimed_page_status(available, finding["claimed_printed_label"])
+                            if any(anchor.get("printed_label_precision") == "spread" for ref in available for anchor in ref.get("anchors", [ref])):
+                                finding["message"] = "原文位于双页扫描的同一PDF页；尚不能确定所引文字属于哪一印刷页，请查看原件核对。"
                 analysis = version.get("support_analysis")
                 if analysis:
                     analysis["reference"] = resolve_reference(analysis["reference"], user)
@@ -986,6 +1058,8 @@ def create_memory(user, data):
     fingerprint = request_fingerprint(data, ("body", "kind", "project_id", "turn_id", "annotation_id", "sources"))
     if existing:
         return same_request(existing, fingerprint)
+    from .privacy import require_retention
+    require_retention(user, "personal_notes")
     project = source_project(user, data)
     kind = data.get("kind", "understanding")
     if kind not in MEMORY_KINDS:

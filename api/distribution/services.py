@@ -15,6 +15,26 @@ class CloudNotReady(RuntimeError):
     pass
 
 
+def validated_ocr_rendition(anchor):
+    """Resolve an OCR derivative from this exact reader's provenance, never merely its Edition."""
+    from catalog.models import Asset
+    source_ids = {anchor.pk, anchor.source_asset_id} - {None}
+    candidates = anchor.edition.assets.filter(kind=Asset.Kind.OCR_PDF, status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID, is_current=True, source_asset_id__in=source_ids).order_by("-version", "-created_at")
+    for candidate in candidates:
+        details = candidate.validation_details or {}
+        if not isinstance(details, dict):
+            continue
+        if details.get("source_normalized_asset_id") and details["source_normalized_asset_id"] != str(anchor.pk):
+            continue
+        if details.get("visual_source_sha256") and details["visual_source_sha256"] != anchor.sha256:
+            continue
+        if candidate.page_count and anchor.page_count and candidate.page_count != anchor.page_count:
+            continue
+        return candidate
+    return None
+
+
 def s3_client(provider: CloudProvider):
     prefix = provider.credential_reference.strip() or "S3"
     access_key = os.getenv(

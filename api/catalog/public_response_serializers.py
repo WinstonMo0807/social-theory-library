@@ -50,6 +50,22 @@ class PublicContributionSnapshotSerializer(serializers.Serializer):
 
 
 class PublicOutlineItemSerializer(serializers.Serializer):
+    id = serializers.UUIDField(required=False)
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+    position = serializers.IntegerField(required=False)
+    level = serializers.IntegerField(required=False)
+    title = serializers.CharField(required=False)
+    pdf_page = serializers.IntegerField(required=False)
+    pdf_position = serializers.ListField(child=serializers.FloatField(), required=False)
+    coordinate_unit = serializers.CharField(required=False)
+    coordinate_space = serializers.CharField(required=False)
+    source_locator = serializers.JSONField(required=False)
+    page_geometry = serializers.JSONField(required=False)
+    normalized_position = serializers.ListField(child=serializers.FloatField(), required=False)
+    precision = serializers.CharField(required=False)
+    source = serializers.CharField(required=False)
+    calibration_status = serializers.CharField(required=False)
+    outline_revision_id = serializers.UUIDField(required=False)
     index = serializers.IntegerField()
     file_page_index = serializers.IntegerField(required=False)
     printed_label = serializers.CharField(allow_blank=True)
@@ -93,6 +109,7 @@ class ReaderRelatedScholarSerializer(ReaderRelatedLinkSerializer):
 class ReaderManifestBaseSerializer(serializers.Serializer):
     asset_id = serializers.UUIDField()
     edition_id = serializers.UUIDField()
+    document_revision_id = serializers.UUIDField(allow_null=True)
     page_count = serializers.IntegerField()
     publication_status = serializers.CharField()
     ocr_status = serializers.CharField()
@@ -105,7 +122,13 @@ class ReaderManifestBaseSerializer(serializers.Serializer):
     related_topics = ReaderRelatedLinkSerializer(many=True)
 
 
-class ReaderTextBlockSerializer(serializers.Serializer):
+class ReaderLocatorSerializer(serializers.Serializer):
+    normalized_bbox = serializers.ListField(child=serializers.FloatField(),
+        help_text="[x0,y0,x1,y1] in displayed cropped/rotated page fractions, or [] when coordinates are unknown.")
+    geometry_status = serializers.CharField(help_text="validated only proves the coordinate transform; otherwise unknown.")
+
+
+class ReaderTextBlockSerializer(ReaderLocatorSerializer):
     id = serializers.UUIDField()
     order = serializers.IntegerField()
     type = serializers.CharField()
@@ -115,10 +138,14 @@ class ReaderTextBlockSerializer(serializers.Serializer):
 
 
 class ReaderPageContentSerializer(serializers.Serializer):
+    asset_id = serializers.UUIDField()
+    document_revision_id = serializers.UUIDField(allow_null=True)
     page_id = serializers.UUIDField()
     page_index = serializers.IntegerField()
     file_page_index = serializers.IntegerField()
     printed_label = serializers.CharField(allow_blank=True)
+    printed_labels = serializers.ListField(child=serializers.CharField(), required=False)
+    printed_label_precision = serializers.ChoiceField(choices=["spread", "page", "unknown"], required=False)
     citation_page_label = serializers.CharField()
     label_source = serializers.CharField()
     label_confidence = serializers.FloatField()
@@ -127,6 +154,7 @@ class ReaderPageContentSerializer(serializers.Serializer):
     text_source = serializers.ChoiceField(choices=Page.TextSource.choices)
     width = serializers.FloatField()
     height = serializers.FloatField()
+    geometry = serializers.JSONField(help_text="Versioned extraction coordinates, or {} for unknown historical units.")
     text = serializers.CharField(allow_blank=True)
     blocks = ReaderTextBlockSerializer(many=True)
 
@@ -153,3 +181,41 @@ class ReaderAssetAccessSerializer(serializers.Serializer):
     ocr_text_available = serializers.BooleanField()
     page_label_status = serializers.CharField()
     semantic_index_status = serializers.CharField()
+
+
+class ReaderFocusSerializer(ReaderLocatorSerializer):
+    id = serializers.UUIDField()
+    asset_id = serializers.UUIDField()
+    document_revision_id = serializers.UUIDField()
+    text_source = serializers.ChoiceField(choices=Page.TextSource.choices)
+    title = serializers.CharField(allow_blank=True)
+    page_index = serializers.IntegerField()
+    printed_label = serializers.CharField(allow_blank=True)
+    width = serializers.FloatField()
+    height = serializers.FloatField()
+    bbox = serializers.JSONField()
+    geometry = serializers.JSONField()
+    text = serializers.CharField(allow_blank=True)
+    locator_kind = serializers.CharField(required=False)
+    locators = serializers.ListField(child=serializers.JSONField(), required=False)
+
+
+class ReaderSearchMatchSerializer(serializers.Serializer):
+    page_id = serializers.UUIDField()
+    page_index = serializers.IntegerField()
+    printed_label = serializers.CharField(allow_blank=True)
+    snippet = serializers.CharField(allow_blank=True)
+    width = serializers.FloatField()
+    height = serializers.FloatField()
+    geometry = serializers.JSONField()
+    blocks = serializers.ListField(child=serializers.JSONField())
+    highlights = serializers.ListField(child=serializers.JSONField())
+    rank = serializers.IntegerField()
+    occurrence_count = serializers.IntegerField()
+
+
+class ReaderDocumentSearchSerializer(serializers.Serializer):
+    asset_id = serializers.UUIDField()
+    document_revision_id = serializers.UUIDField()
+    query = serializers.CharField(allow_blank=True)
+    matches = ReaderSearchMatchSerializer(many=True)

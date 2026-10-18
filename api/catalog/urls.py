@@ -1,5 +1,6 @@
 from django.urls import path
 from .home_views import HomeView
+from .page_mapping_views import AdminPageMappingWorkspaceView
 from .feedback_views import PublicFeedbackView
 from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
     AdminOutlineRebuildBatchView, AdminOutlineJobView)
@@ -740,7 +741,7 @@ urlpatterns = [
     path("admin/usage-analytics/", AdminUsageAnalyticsView.as_view(), name="admin-usage-analytics"),
     path(
         "admin/assets/<uuid:asset_id>/page-mapping/",
-        AdminPageMappingView.as_view(),
+        AdminPageMappingWorkspaceView.as_view(),
         name="admin-page-mapping",
     ),
     path(

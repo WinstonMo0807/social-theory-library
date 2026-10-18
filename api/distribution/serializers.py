@@ -2,7 +2,18 @@ from django.db import transaction
 from django.db.models import Count
 from rest_framework import serializers
 
+from catalog.models import ReaderRenditionPolicy
 from .models import BackupJob, CloudBudgetPolicy, CloudObject, CloudProvider, CloudUsageSnapshot
+
+
+class ReaderRenditionPolicyInputSerializer(serializers.Serializer):
+    policy = serializers.ChoiceField(choices=ReaderRenditionPolicy.choices)
+
+
+class ReaderRenditionPolicyResultSerializer(ReaderRenditionPolicyInputSerializer):
+    validated_ocr_pdf_available = serializers.BooleanField()
+    effective_rendition = serializers.ChoiceField(choices=["ocr_pdf", "normalized"])
+    fallback_active = serializers.BooleanField()
 
 
 class CloudBudgetInputSerializer(serializers.Serializer):

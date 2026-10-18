@@ -8,7 +8,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Case, Count, IntegerField, Max, Q, Sum, Value, When
+from django.db.models import Case, Count, F, IntegerField, Max, Q, Sum, Value, When
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -19,7 +19,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
-from .public_response_serializers import ReaderPageContentSerializer
+from distribution.serializers import ReaderRenditionPolicyInputSerializer, ReaderRenditionPolicyResultSerializer
+from .public_response_serializers import ReaderPageContentSerializer, ReaderFocusSerializer, ReaderDocumentSearchSerializer
+from .services.page_geometry import locator_geometry, validated_geometry
 from .serializers import ReaderManifestSerializer
 from urllib.parse import urlparse
 
@@ -34,6 +36,7 @@ from .models import (
     Edition,
     EvidenceSpan,
     KnowledgePublicationStatus,
+    KnowledgeNode,
     LegacyKnowledgeMapping,
     Page,
     PageLabelSegment,
@@ -836,7 +839,9 @@ class SiteStatsView(APIView):
                 "documents": published.count(),
                 "scholars": public_scholar_queryset().count(),
                 "knowledge_objects": (
-                    TheorySchool.objects.filter(editorial_status="published").count()
+                    KnowledgeNode.objects.filter(status="published").exclude(
+                        node_type__in=["discipline", "subdiscipline", "topic"]
+                    ).count()
                     + Topic.objects.filter(editorial_status="published").count()
                 ),
                 "last_updated": last_updated,
@@ -2278,6 +2283,12 @@ class GlobalSearchView(APIView):
 class SemanticSearchView(APIView):
     permission_classes = [AllowAny]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        from catalog.services.api_contract import annotate_response, CANONICAL_SEMANTIC_ENDPOINT
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        return annotate_response(response, canonical_endpoint=CANONICAL_SEMANTIC_ENDPOINT, deprecated=True)
+
     def get_throttles(self):
         self.throttle_scope = "semantic_search_user" if self.request.user.is_authenticated else "semantic_search_anon"
         return super().get_throttles()
@@ -2343,7 +2354,10 @@ class SemanticSearchView(APIView):
         ) as acquired:
             if not acquired:
                 response = Response(
-                    {"detail": "观点检索正在处理其他请求，请稍后重试。", "retry_after": 3},
+                    {
+                        "detail": "观点检索正在处理其他请求，请稍后重试。",
+                        "retry_after": 3,
+                    },
                     status=429,
                 )
                 response["Retry-After"] = "3"
@@ -2952,6 +2966,7 @@ class AdminPageMappingView(APIView):
 class AdminReaderRenditionPolicyView(APIView):
     permission_classes = [IsLibraryAdmin]
 
+    @extend_schema(request=ReaderRenditionPolicyInputSerializer, responses=ReaderRenditionPolicyResultSerializer)
     def put(self, request, edition_id):
         edition = get_object_or_404(Edition, pk=edition_id)
         policy = str(request.data.get("policy") or "").strip()
@@ -2959,12 +2974,9 @@ class AdminReaderRenditionPolicyView(APIView):
             return Response({"policy": ["请选择自动、原始 PDF 或 OCR PDF。"]}, status=400)
         edition.reader_rendition_policy = policy
         edition.save(update_fields=["reader_rendition_policy", "updated_at"])
-        validated_ocr = edition.assets.filter(
-            kind=Asset.Kind.OCR_PDF,
-            status=Asset.Status.READY,
-            validation_status=Asset.ValidationStatus.VALID,
-            is_current=True,
-        ).exists()
+        from distribution.services import validated_ocr_rendition
+        anchor = edition.active_catalog_revision.reader_asset if edition.active_catalog_revision else None
+        validated_ocr = anchor is not None and validated_ocr_rendition(anchor) is not None
         return Response(
             {
                 "policy": policy,
@@ -3050,38 +3062,9 @@ class HotSearchView(APIView):
             limit = min(30, max(1, int(request.query_params.get("limit", "10"))))
         except ValueError:
             return Response({"detail": "统计天数和数量必须是整数。"}, status=400)
-        since = timezone.localdate() - timedelta(days=days - 1)
-        rows = (
-            SearchQueryAggregate.objects.filter(
-                period="day",
-                period_start__gte=since,
-                excluded=False,
-            )
-            .values("normalized_query")
-            .annotate(
-                search_count=Sum("search_count"),
-                unique_sessions=Sum("unique_sessions"),
-                click_count=Sum("click_count"),
-                zero_result_count=Sum("zero_result_count"),
-            )
-            .filter(unique_sessions__gte=3, search_count__gte=3)
-            .order_by("-search_count", "normalized_query")[:limit]
-        )
-        return Response(
-            {
-                "period_days": days,
-                "results": [
-                    {
-                        "query": row["normalized_query"],
-                        "search_count": row["search_count"],
-                        "unique_sessions": row["unique_sessions"],
-                        "click_count": row["click_count"],
-                        "zero_result_count": row["zero_result_count"],
-                    }
-                    for row in rows
-                ],
-            }
-        )
+        from .services.analytics import public_hot_searches
+
+        return Response(public_hot_searches(days=days, limit=limit))
 
 
 class AdminUsageAnalyticsView(APIView):
@@ -3166,10 +3149,12 @@ def _viewer_asset_access_statuses(request) -> list[str]:
 class PassageFocusView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=ReaderFocusSerializer)
     def get(self, request, pk):
         allowed_access_statuses = _viewer_asset_access_statuses(request)
         passage = Passage.objects.select_related("page__asset__edition__work").filter(
             pk=pk,
+            page__asset__edition__active_catalog_revision__document_revision__asset_id=F("page__asset_id"),
             page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
@@ -3180,6 +3165,8 @@ class PassageFocusView(APIView):
                 {
                     "id": str(passage.id),
                     "asset_id": str(passage.page.asset_id),
+                    "document_revision_id": str(passage.page.asset.edition.active_catalog_revision.document_revision_id),
+                    "text_source": passage.page.text_source,
                     "title": _active_edition_work_title(
                         passage.page.asset.edition,
                         require_fulltext=True,
@@ -3189,6 +3176,8 @@ class PassageFocusView(APIView):
                     "width": passage.page.width,
                     "height": passage.page.height,
                     "bbox": passage.bbox_union,
+                    "geometry": validated_geometry(passage.page.geometry),
+                    **locator_geometry(passage.bbox_union, passage.page.geometry),
                     "text": passage.text,
                 }
             )
@@ -3198,6 +3187,8 @@ class PassageFocusView(APIView):
         ).filter(
             pk=pk,
             is_stale=False,
+            page__asset_id=F("document_revision__asset_id"),
+            page_number=F("page__index"),
             page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
@@ -3219,6 +3210,8 @@ class PassageFocusView(APIView):
                 {
                     "id": str(span.id),
                     "asset_id": str(span.page.asset_id),
+                    "document_revision_id": str(span.document_revision_id),
+                    "text_source": span.page.text_source,
                     "title": _active_edition_work_title(
                         span.page.asset.edition,
                         require_fulltext=True,
@@ -3229,6 +3222,8 @@ class PassageFocusView(APIView):
                     "width": span.page.width,
                     "height": span.page.height,
                     "bbox": raw_bbox if isinstance(raw_bbox, list) else [],
+                    "geometry": validated_geometry((span.ocr_provenance or {}).get("geometry")),
+                    **locator_geometry(raw_bbox, (span.ocr_provenance or {}).get("geometry")),
                     "text": span.original_text,
                     "locator_kind": "evidence_span",
                 }
@@ -3238,6 +3233,7 @@ class PassageFocusView(APIView):
                 active_document_q(asset_prefix="asset")
             ),
             pk=pk,
+            asset__edition__active_catalog_revision__document_revision__asset_id=F("asset_id"),
             asset__edition__is_primary=True,
             asset__kind=Asset.Kind.NORMALIZED,
             asset__status=Asset.Status.READY,
@@ -3249,6 +3245,8 @@ class PassageFocusView(APIView):
             {
                 "id": str(chunk.id),
                 "asset_id": str(chunk.asset_id),
+                "document_revision_id": str(chunk.asset.edition.active_catalog_revision.document_revision_id),
+                "text_source": page.text_source if page else Page.TextSource.NONE,
                 "title": _active_edition_work_title(
                     chunk.asset.edition,
                     require_fulltext=True,
@@ -3258,8 +3256,11 @@ class PassageFocusView(APIView):
                 "width": page.width if page else 0,
                 "height": page.height if page else 0,
                 "bbox": locator.get("bbox", []),
+                "geometry": validated_geometry(locator.get("geometry")),
+                **locator_geometry(locator.get("bbox", []), locator.get("geometry")),
                 "text": chunk.original_text,
-                "locators": chunk.locators,
+                "locators": [{**row, **locator_geometry(row.get("bbox"), row.get("geometry"))}
+                             for row in chunk.locators if isinstance(row, dict)],
             }
         )
 
@@ -3278,14 +3279,18 @@ class PublicAssetManifestView(APIView):
             status=Asset.Status.READY,
             access_status__in=_viewer_asset_access_statuses(request),
         )
-        chapter_pages = asset.pages.exclude(chapter_title="").order_by("index")
+        from catalog.services.document_outline import public_outline
         snapshot = active_catalog_snapshot(asset.edition)
         contributors = snapshot.get("contributions") or []
         knowledge = snapshot.get("knowledge") or {}
+        document_revision_id = Asset.objects.filter(active_document_q(asset_prefix=""), pk=asset.pk,
+            edition__active_catalog_revision__document_revision__asset_id=asset.pk).values_list(
+            "edition__active_catalog_revision__document_revision_id", flat=True).first()
         return Response(
             {
                 "asset_id": str(asset.id),
                 "edition_id": str(asset.edition_id),
+                "document_revision_id": str(document_revision_id) if document_revision_id else None,
                 "page_count": asset.page_count,
                 "publication_status": asset.edition.state,
                 "ocr_status": asset.edition.ocr_status,
@@ -3296,15 +3301,7 @@ class PublicAssetManifestView(APIView):
                     asset.edition.work,
                     context={"request": request},
                 ).data,
-                "outline": [
-                    {
-                        "index": page.index,
-                        "file_page_index": page.index,
-                        "printed_label": clean_page_label(page.printed_label),
-                        "chapter_title": page.chapter_title,
-                    }
-                    for page in chapter_pages
-                ],
+                "outline": public_outline(asset, access_statuses=_viewer_asset_access_statuses(request)),
                 "related_scholars": [
                     {
                         "name": (row.get("person") or {}).get("preferred_name")
@@ -3357,15 +3354,20 @@ class PublicPageContentView(APIView):
         page = get_object_or_404(asset.pages, index=page_index)
         # Page anchors and dimensions remain usable for an approved PDF before
         # full-text publication. Unactivated OCR text must not leave this API.
-        text_available = Asset.objects.filter(
-            active_document_q(asset_prefix=""), pk=asset.pk,
-        ).exists()
+        document_revision_id = Asset.objects.filter(
+            active_document_q(asset_prefix=""), pk=asset.pk, edition__active_catalog_revision__document_revision__asset_id=asset.pk,
+        ).values_list("edition__active_catalog_revision__document_revision_id", flat=True).first()
+        text_available = document_revision_id is not None
+        from catalog.services.page_label_metadata import structured_page_labels
         return Response(
             {
+                "asset_id": str(asset.id),
+                "document_revision_id": str(document_revision_id) if document_revision_id else None,
                 "page_id": str(page.id),
                 "page_index": page.index,
                 "file_page_index": page.index,
                 "printed_label": clean_page_label(page.printed_label),
+                **structured_page_labels(page),
                 "citation_page_label": clean_page_label(page.printed_label) or str(page.index),
                 "label_source": page.label_source,
                 "label_confidence": page.label_confidence,
@@ -3374,6 +3376,7 @@ class PublicPageContentView(APIView):
                 "text_source": page.text_source if text_available else Page.TextSource.NONE,
                 "width": page.width,
                 "height": page.height,
+                "geometry": validated_geometry(page.geometry) if text_available else {},
                 "text": page.text if text_available else "",
                 "blocks": [
                     {
@@ -3382,6 +3385,7 @@ class PublicPageContentView(APIView):
                         "type": block.block_type,
                         "text": block.text,
                         "bbox": block.bbox,
+                        **locator_geometry(block.bbox, page.geometry),
                         "confidence": block.confidence,
                     }
                     for block in page.blocks.exclude(block_type__in=["header", "footer"])
@@ -3397,17 +3401,21 @@ class DocumentSearchView(APIView):
         self.throttle_scope = "exact_search_user" if self.request.user.is_authenticated else "exact_search_anon"
         return super().get_throttles()
 
+    @extend_schema(responses=ReaderDocumentSearchSerializer)
     def get(self, request, asset_id):
         query = request.query_params.get("q", "").strip()[:500]
         asset = get_object_or_404(
             Asset.objects.filter(active_document_q(asset_prefix="")),
             pk=asset_id,
+            edition__active_catalog_revision__document_revision__asset_id=F("pk"),
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             access_status__in=_viewer_asset_access_statuses(request),
         )
+        source = {"asset_id": str(asset.pk),
+                  "document_revision_id": str(asset.edition.active_catalog_revision.document_revision_id)}
         if not query:
-            return Response({"query": "", "matches": []})
+            return Response({**source, "query": "", "matches": []})
         external_result = external_passage_ids(query, limit=200, asset_id=str(asset.id))
         # An available Meilisearch service can still have an empty or stale
         # passages index during an upgrade/reindex.  The reader must continue
@@ -3424,8 +3432,10 @@ class DocumentSearchView(APIView):
                     "snippet": passage_snippet(page.text, query),
                     "width": page.width,
                     "height": page.height,
+                    "geometry": validated_geometry(page.geometry),
                     "blocks": [
-                        {"bbox": block.bbox, "text": block.text, "order": block.order}
+                        {"bbox": block.bbox, "text": block.text, "order": block.order,
+                         **locator_geometry(block.bbox, page.geometry)}
                         for block in page.blocks.filter(
                             normalized_text__icontains=normalize_search_text(query)
                         )
@@ -3459,12 +3469,14 @@ class DocumentSearchView(APIView):
                         "snippet": passage_snippet(passage.page.text, query),
                         "width": passage.page.width,
                         "height": passage.page.height,
+                        "geometry": validated_geometry(passage.page.geometry),
                         "blocks": [],
                     },
                 )
                 page_data["blocks"].append(
                     {
                         "bbox": passage.bbox_union,
+                        **locator_geometry(passage.bbox_union, passage.page.geometry),
                         "text": passage.text,
                         "order": passage.order,
                     }
@@ -3478,7 +3490,7 @@ class DocumentSearchView(APIView):
                 1,
                 len(page_data["highlights"]) or len(page_data["blocks"]),
             )
-        return Response({"query": query, "matches": data})
+        return Response({**source, "query": query, "matches": data})
 
 
 class CitationView(APIView):

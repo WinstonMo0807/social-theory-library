@@ -1,5 +1,12 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-18 反证、资料操作与页码映射
+
+- 研究轮次GET支持mode=all/search/counterargument及order=oldest/newest，在本人项目内解密筛选后分页。反证命题与条件合计最多1200字符；可选文本条件允许清空。decision支持confirm/clear、request_id、relation、note、attribution、scope_note、save_as_note；显式保存笔记与本人决定原子持久化，理由必填，request_id异内容409，旧决定留历史。
+- `/reading/privacy/` GET/PATCH本人保留偏好、真实计数和任务，PATCH须expected_revision；`items/?category=&page=`返回真实对象revision。`operations/` POST仅导出或创建删除预览；`command/` confirm/cancel/retry按修订执行；`download/`再次核对本人资料、研究子轮次及公开来源。最多2活动任务、500项/25MiB，失败逐项保存，删除重试重新预览，取消不恢复已完成删除。
+- `/catalog/admin/assets/{id}/page-mapping/` GET当前数据/候选/历史、可选revision_id；POST save/analyze/segment/restore/prepare/publish。携带expected_revision/source_fingerprint，写操作携带request_id，publish还需revision_id/prepared_fingerprint。候选不改变当前公开Page；采用有发布权限，公开文件复制正文解释并走既有发布。缺页只为元数据，双页最多两个标签，不生成不存在的物理页。公开Page/EvidenceReference新增printed_labels与printed_label_precision=spread/page/unknown，体检对spread保留页码待核对。
+- 输入、State/Revision/Preview响应、枚举、API schema与前端生成类型同步。详情与保护边界见对应单元文档，正式运行和视觉验收仍待核实。
+
 ## 2026-10-18 笔记授权与私人来源
 
 - 笔记新增服务端筛选/计数、origin_note/source_summaries、usage GET/POST、revision删除和研究memory_reminders。实际内容/类型/来源变化撤销旧范围；确认不等于授权。完整字段见[CONFIRMED_NOTES_20261018.md](CONFIRMED_NOTES_20261018.md)。

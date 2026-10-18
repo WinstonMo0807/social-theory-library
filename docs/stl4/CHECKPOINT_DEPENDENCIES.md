@@ -1,5 +1,11 @@
 # 2026-10-18 检查点依赖核对
 
+## 2026-10-18 页码与Reader继承依赖补存
+
+逐文件读diff后，将本单元必需的既有修改一并保存：catalog/views/public_response_serializers/serializers（公开目录、坐标、修订/来源身份、OCR阅读策略）；distribution/serializers/services（策略契约及同源OCR副本守卫）；catalog/search_geometry/evidence_envelope/document_intelligence（坐标缓存身份、文字范围、几何摘要与不可变证据）；ingestion/tasks的process_outline_job（已提交目录服务的实际Celery入口）。geometry/public_outline/public_hot_searches等引用的实现已在HEAD，不重复新建。
+
+distribution/views仅保存经审查的同源OCR副本选择和Range/OpenAPI相关差异；继承的备份dispatch差异仍留工作区，与本单元不混存。test_resilient_publication_v260保留既有几何fixture补充，同时将页73回归改为新候选→prepare→明确采用契约。schema_urls保存与实际业务路由一致的既有入口及本轮新增入口。以上为源码恢复依赖，不称本轮新功能或正式验收；未启动任务、备份或服务。
+
 本轮只静态核对源码与 Git。HEAD 321787d 的研究、Reader 和 API 已引用工作区未提交/未跟踪实现；旧提交不能单独作为完整恢复证据。以下源码保留原实现并纳入恢复检查点，不代表功能验收通过。
 
 | 已提交调用方 | 必需的既有工作区实现 |

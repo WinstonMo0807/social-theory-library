@@ -16,6 +16,12 @@ from .research import (ACTIVE, access_for, analyze_references, compact_reference
 logger = logging.getLogger(__name__)
 
 
+@shared_task(soft_time_limit=480, time_limit=540)
+def run_reader_data_operation(operation_id, generation, task_id):
+    from .privacy import run_operation
+    run_operation(operation_id, generation, task_id)
+
+
 def enqueue_research_turn(turn_id, generation, task_id, countdown=0):
     try:
         collect_research_turn.apply_async(args=[str(turn_id), generation, task_id], task_id=task_id, countdown=countdown)
@@ -47,7 +53,10 @@ def collect_research_turn(turn_id, generation, task_id):
             if turn.discovery_session_id is None:
                 search_question = payload.get("search_question", payload["question"])
                 query_plan = {"query": search_question, "method": "explicit_subclaim" if payload.get("active_subclaim_id") else "original_question"}
-                if turn.parent_id:
+                if payload.get("mode") == "counterargument":
+                    from .research import counterargument_query
+                    query_plan = counterargument_query(payload.get("analysis_statement", payload["statement"]), search_question)
+                elif turn.parent_id:
                     from .local_analysis import plan_followup
                     history, parent = [], turn.parent
                     for _ in range(3):

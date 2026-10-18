@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Count, F, Max, OuterRef, Subquery
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -40,7 +41,20 @@ class OwnedModelViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        rows = self.queryset.filter(user=self.request.user)
+        return rows.select_for_update(of=("self",)) if getattr(self, "action", None) in {"update", "partial_update", "destroy"} else rows
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        from .privacy import lock_owner
+        lock_owner(request.user)
+        return super().update(request, *args, **kwargs)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        from .privacy import lock_owner
+        lock_owner(request.user)
+        return super().destroy(request, *args, **kwargs)
 
 
 class ReaderRecordPagination(PageNumberPagination):
@@ -81,6 +95,19 @@ class AnnotationViewSet(OwnedModelViewSet):
     serializer_class = AnnotationSerializer
     filterset_fields = ("asset", "page", "kind")
     pagination_class = ReaderRecordPagination
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        from . import research
+        self._privacy_contexts = research.memory_contexts(request.user, lock=True)
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        from . import research
+        from .privacy import linked_memories
+        for memory in linked_memories(self.request.user, instance.id):
+            research.revoke_memory_contexts(memory, self._privacy_contexts)
+        instance.delete()
 
     @action(detail=False, methods=["get"], url_path="note-groups")
     def note_groups(self, request):
@@ -175,13 +202,29 @@ class ReadingHistoryViewSet(
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
 
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        from .privacy import lock_owner, retention_enabled
+        lock_owner(request.user)
+        if not retention_enabled(request.user, "reading_history"):
+            return Response({"recorded": False, "reason": "reading_history_disabled"})
+        return super().create(request, *args, **kwargs)
+
 
 class ReaderDataExportView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        response["Vary"] = "Cookie, Authorization"
+        return response
+
     def get(self, request):
         context = {"request": request}
-        from .research import research_export
+        from .research import research_export, serialize_record
+        from .privacy import annotation_export, operation_output, profile_data
+        from .models import ReaderDataOperation, ReaderSearchRecord
         conversations = request.user.library_conversations.prefetch_related(
             "messages__sources__asset",
             "messages__sources__edition",
@@ -189,22 +232,21 @@ class ReaderDataExportView(APIView):
         return Response(
             {
                 "research_data": research_export(request.user),
+                "search_history": [serialize_record(row, request.user) for row in ReaderSearchRecord.objects.filter(user=request.user)],
+                "data_operations": [operation_output(row) for row in ReaderDataOperation.objects.filter(user=request.user)],
                 "profile": {
                     "email": request.user.email,
                     "display_name": request.user.display_name,
                     "created_at": request.user.date_joined,
-                    "reading_preferences": request.user.reader_profile.reading_preferences,
+                    "reading_preferences": profile_data(request.user),
                 },
                 "progress": ReadingProgressSerializer(
                     request.user.reading_progress.all(),
                     many=True,
                     context=context,
                 ).data,
-                "annotations": AnnotationSerializer(
-                    request.user.annotations.all(),
-                    many=True,
-                    context=context,
-                ).data,
+                "annotations": [annotation_export(request.user, row) for row in
+                    request.user.annotations.select_related("asset", "page").all()],
                 "bookmarks": BookmarkSerializer(
                     request.user.bookmarks.all(),
                     many=True,

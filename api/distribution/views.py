@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.types import OpenApiTypes
 
 from catalog.models import Asset, OcrStatus, ReaderRenditionPolicy
 from catalog.public_response_serializers import ReaderAssetAccessSerializer
@@ -29,7 +30,7 @@ from common.permissions import (
 
 from .models import BackupJob, CloudBudgetPolicy, CloudObject, CloudProvider, CloudUsageSnapshot
 from .serializers import BackupJobSerializer, CloudProviderSerializer, CloudUsageSnapshotSerializer
-from .services import CloudNotReady, signed_read_url
+from .services import CloudNotReady, signed_read_url, validated_ocr_rendition
 
 
 def _public_asset(asset_id, request=None):
@@ -64,12 +65,7 @@ def _public_asset(asset_id, request=None):
 def _reader_file_asset(anchor: Asset) -> tuple[Asset, str]:
     policy = anchor.edition.reader_rendition_policy
     if policy == ReaderRenditionPolicy.OCR:
-        ocr_asset = anchor.edition.assets.filter(
-            kind=Asset.Kind.OCR_PDF,
-            status=Asset.Status.READY,
-            validation_status=Asset.ValidationStatus.VALID,
-            is_current=True,
-        ).order_by("-version", "-created_at").first()
+        ocr_asset = validated_ocr_rendition(anchor)
         if ocr_asset is not None:
             return ocr_asset, ""
         return anchor, "管理员指定了 OCR PDF，但没有通过验证的版本，已回退到原始阅读副本。"
@@ -80,12 +76,7 @@ def _reader_file_asset(anchor: Asset) -> tuple[Asset, str]:
 
 def _download_file_asset(anchor: Asset) -> tuple[Asset, str]:
     if anchor.edition.ocr_status == OcrStatus.SUCCEEDED:
-        ocr_asset = anchor.edition.assets.filter(
-            kind=Asset.Kind.OCR_PDF,
-            status=Asset.Status.READY,
-            validation_status=Asset.ValidationStatus.VALID,
-            is_current=True,
-        ).order_by("-version", "-created_at").first()
+        ocr_asset = validated_ocr_rendition(anchor)
         if ocr_asset is not None:
             return ocr_asset, ""
         return anchor, "OCR 文字已完成，但可搜索下载副本尚未通过验证，已提供原始 PDF。"
@@ -336,6 +327,7 @@ class AssetFileView(APIView):
     def _response_access_status(self, anchor: Asset) -> str:
         return anchor.access_status
 
+    @extend_schema(responses={200: None})
     def head(self, request, asset_id):
         if not self._local_file_available():
             return Response({"detail": "本地阅读副本未开放。"}, status=404)
@@ -362,6 +354,18 @@ class AssetFileView(APIView):
             response["Content-Disposition"] = disposition
         return response
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("download", str, OpenApiParameter.QUERY, enum=["1", "true", "original"]),
+            OpenApiParameter("Range", str, OpenApiParameter.HEADER, description="One bytes range; unsupported or unsatisfiable ranges return 416."),
+            OpenApiParameter("Accept-Ranges", str, OpenApiParameter.HEADER, response=[200, 206, 416]),
+            OpenApiParameter("Content-Range", str, OpenApiParameter.HEADER, response=[206, 416]),
+            OpenApiParameter("Content-Length", int, OpenApiParameter.HEADER, response=[200, 206]),
+            OpenApiParameter("ETag", str, OpenApiParameter.HEADER, response=[200, 206]),
+        ],
+        responses={(200, "application/pdf"): OpenApiTypes.BINARY,
+                   (206, "application/pdf"): OpenApiTypes.BINARY, 416: None},
+    )
     def get(self, request, asset_id):
         if not self._local_file_available():
             return Response({"detail": "本地阅读副本未开放。"}, status=404)

@@ -9,6 +9,7 @@ import tempfile
 
 import fitz
 from django.core.cache import cache
+from catalog.services.page_geometry import locator_geometry, native_geometry
 
 
 MAX_HIGHLIGHTS_PER_PAGE = 200
@@ -127,7 +128,7 @@ def _pdf_text_highlights(
     page_indexes = tuple(sorted({int(row["page_index"]) for row in page_rows}))
     query_digest = sha256(query.encode("utf-8")).hexdigest()[:20]
     pages_digest = sha256(",".join(map(str, page_indexes)).encode("ascii")).hexdigest()[:16]
-    cache_key = f"pdf-highlight:{asset.sha256}:{query_digest}:{pages_digest}"
+    cache_key = f"pdf-highlight-geometry-v2:{asset.sha256}:{query_digest}:{pages_digest}"
     cached = cache.get(cache_key)
     if isinstance(cached, dict):
         return {int(key): value for key, value in cached.items()}
@@ -163,6 +164,7 @@ def _pdf_text_highlights(
                             ],
                             "text": query,
                             "source": "pdf-text",
+                            **locator_geometry(list(rect), native_geometry(pdf_page)),
                         }
                     )
                     if len(rectangles) >= MAX_HIGHLIGHTS_PER_PAGE:
@@ -195,6 +197,7 @@ def search_highlights(asset, query: str, page_rows: list[dict]) -> dict[int, lis
                         "bbox": bbox,
                         "text": query,
                         "source": "ocr-estimate",
+                        **locator_geometry(bbox, row.get("geometry")),
                     }
                 )
                 if len(estimated) >= MAX_HIGHLIGHTS_PER_PAGE:

@@ -65,11 +65,11 @@ class ComparisonInput(RevisionInput):
 
 class StatementInput(serializers.Serializer):
     proposition = serializers.CharField(max_length=1200)
-    subject = serializers.CharField(required=False)
-    predicate = serializers.CharField(required=False)
-    object = serializers.CharField(required=False)
+    subject = serializers.CharField(required=False, allow_blank=True)
+    predicate = serializers.CharField(required=False, allow_blank=True)
+    object = serializers.CharField(required=False, allow_blank=True)
     polarity = serializers.ChoiceField(choices=["positive", "negative", "mixed", "uncertain"], required=False)
-    modality = serializers.CharField(required=False)
+    modality = serializers.CharField(required=False, allow_blank=True)
     qualifiers = serializers.ListField(child=serializers.CharField(), required=False)
     temporal_scope = serializers.JSONField(required=False)
     geographic_scope = serializers.JSONField(required=False)
@@ -98,6 +98,11 @@ class TurnCreateInput(RevisionInput):
 
 class TurnRetryInput(RevisionInput):
     request_id = serializers.UUIDField()
+
+
+class TurnListInput(serializers.Serializer):
+    mode = serializers.ChoiceField(choices=["all", "search", "counterargument"], required=False)
+    order = serializers.ChoiceField(choices=["oldest", "newest"], required=False)
 
 
 class TurnExpandInput(TurnRetryInput):
@@ -138,8 +143,13 @@ class ProjectImportInput(serializers.Serializer):
 
 class AnalysisDecisionInput(RevisionInput):
     id = serializers.CharField(help_text="分析候选 id，来自轮次返回值。")
-    relation = serializers.ChoiceField(choices=["support", "different_conclusion", "qualification", "reframe", "insufficient_evidence"])
+    action = serializers.ChoiceField(choices=["confirm", "clear"], required=False)
+    request_id = serializers.UUIDField(required=False, help_text="幂等请求；同时保存本人笔记时必需。")
+    relation = serializers.ChoiceField(choices=["support", "different_conclusion", "qualification", "reframe", "insufficient_evidence", "unrelated"], required=False)
     note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    attribution = serializers.ChoiceField(choices=["author_claim", "quoted_claim", "reported_claim", "criticized_claim", "historical_description", "uncertain"], required=False)
+    scope_note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    save_as_note = serializers.BooleanField(required=False)
 
 
 class MemoryCreateInput(serializers.Serializer):

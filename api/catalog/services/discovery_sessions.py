@@ -196,6 +196,9 @@ def _create_session(request, query: str, filters: dict) -> tuple[DiscoverySearch
             channels={**{channel: {"status": "pending"} for channel in CHANNELS},
                       DEEP_CHANNEL: {"status": "pending"}},
             expires_at=now + timedelta(hours=24))
+        from reading.privacy import remember_search_after_commit, retention_enabled
+        if owner and retention_enabled(owner, "search_history"):
+            transaction.on_commit(lambda: remember_search_after_commit(owner, session.id, query, filters))
         transaction.on_commit(lambda: _enqueue(session.id, session.generation, task_id))
     session.refresh_from_db()
     return session, token

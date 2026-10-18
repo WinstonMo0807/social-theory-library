@@ -542,6 +542,42 @@ class DocumentOutlineRevision(UUIDTimeStampedModel):
         ]
 
 
+class PageMappingRevision(UUIDTimeStampedModel):
+    """Append-only page-label candidates; publication keeps its own immutable asset."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="page_mapping_revisions")
+    revision = models.PositiveIntegerField()
+    source_fingerprint = models.CharField(max_length=64)
+    data = models.JSONField(default=dict)
+    origin = models.CharField(max_length=20, default="manual")
+    request_id = models.UUIDField()
+    request_fingerprint = models.CharField(max_length=64)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_page_mapping_revisions")
+    restored_from = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="restorations")
+    applied_asset = models.ForeignKey(Asset, null=True, blank=True, on_delete=models.PROTECT, related_name="applied_page_mappings")
+    publication_event = models.ForeignKey("KnowledgePublicationEvent", null=True, blank=True, on_delete=models.PROTECT, related_name="page_mappings")
+    apply_request_id = models.UUIDField(null=True, blank=True)
+    apply_fingerprint = models.CharField(max_length=64, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        immutable = ("asset_id", "revision", "source_fingerprint", "data", "origin", "request_id", "request_fingerprint", "restored_from_id")
+        fields = set(kwargs.get("update_fields") or ())
+        if not self._state.adding and (not fields or fields.intersection(immutable)):
+            before = type(self).objects.filter(pk=self.pk).values(*immutable).first()
+            if before and any(before[key] != getattr(self, key) for key in immutable):
+                raise ValidationError("页码候选不可原位改写，请保存新修订。")
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["-revision"]
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "revision"], name="unique_page_mapping_revision"),
+            models.UniqueConstraint(fields=["asset", "request_id"], name="unique_page_mapping_request"),
+            models.UniqueConstraint(fields=["asset", "apply_request_id"], name="unique_page_mapping_apply"),
+        ]
+
+
 class TextBlock(UUIDTimeStampedModel):
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="blocks")
     order = models.PositiveIntegerField()

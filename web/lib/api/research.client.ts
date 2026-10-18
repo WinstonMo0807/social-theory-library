@@ -10,6 +10,7 @@ export type EvidenceReference = EvidenceAnchor & { anchors?: EvidenceAnchor[] };
 export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
   reference_id?: string; id?: string; source_status: string; text?: string; reader_url?: string | null;
   work_id?: string; edition_id?: string; title?: string; printed_label?: string;
+  printed_labels?: string[]; printed_label_precision?: "spread" | "page" | "unknown";
   quote?: string; citation?: string; authors?: string[]; locator_precision?: string;
   bbox?: number[]; start_offset?: number; end_offset?: number;
   coordinate_space?: { width: number; height: number; text_source: string; requires_reader_transform: boolean };
