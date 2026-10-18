@@ -1353,6 +1353,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/citation-audits/{id}/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_audits_versions_retrieve"];
+        put?: never;
+        post: operations["reading_citation_audits_versions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/citation-audits/capabilities/": {
         parameters: {
             query?: never;
@@ -1905,6 +1921,42 @@ export interface components {
             checks?: components["schemas"]["ChecksEnum"][];
             scope?: components["schemas"]["ScopeEnum"];
         };
+        AuditVersionInputRequest: {
+            expected_revision: number;
+            /** Format: uuid */
+            request_id: string;
+            /**
+             * Format: binary
+             * @description 新版本 DOCX/PDF，最大 12 MiB；原稿与旧报告保持独立。
+             */
+            file: string;
+            /**
+             * @description 默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。
+             * @default true
+             */
+            check_changed_only: boolean;
+        };
+        AuditVersionSummary: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly revision: number;
+            readonly manuscript_revision: number;
+            readonly filename: string;
+            readonly status: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly finished_at: string | null;
+            /** Format: uuid */
+            readonly parent_audit_id: string | null;
+        };
+        AuditVersionsOutput: {
+            /** Format: uuid */
+            readonly current_id: string;
+            readonly versions: components["schemas"]["AuditVersionSummary"][];
+            readonly notice: string;
+            readonly truncated: boolean;
+        };
         /**
          * @description * `draft` - 草稿
          *     * `needs_review` - 待消歧
@@ -1967,6 +2019,16 @@ export interface components {
          * @enum {string}
          */
         BlockTypeEnum: "intro" | "stat" | "feature" | "process" | "principle" | "notice" | "action" | "footer";
+        /**
+         * @description * `unverified` - unverified
+         *     * `needs_review` - needs_review
+         *     * `confirmed` - confirmed
+         *     * `native` - native
+         *     * `matched` - matched
+         *     * `generated` - generated
+         * @enum {string}
+         */
+        CalibrationStatusEnum: "unverified" | "needs_review" | "confirmed" | "native" | "matched" | "generated";
         /**
          * @description * `link_existing` - link_existing
          *     * `create_draft` - create_draft
@@ -3068,6 +3130,8 @@ export interface components {
             /** Format: uuid */
             revision_id?: string;
             /** Format: uuid */
+            base_revision_id?: string | null;
+            /** Format: uuid */
             request_id?: string;
             nodes?: components["schemas"]["OutlineNodeRequest"][];
         };
@@ -3091,6 +3155,8 @@ export interface components {
             pdf_position?: number[];
             normalized_position?: number[];
             contents_page?: number | null;
+            clear_position?: boolean;
+            calibration_status?: components["schemas"]["CalibrationStatusEnum"];
         };
         PaginatedBackupJobList: {
             /** @example 123 */
@@ -7128,6 +7194,54 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_citation_audits_versions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditVersionsOutput"];
+                };
+            };
+        };
+    };
+    reading_citation_audits_versions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AuditVersionInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
                 };
             };
         };

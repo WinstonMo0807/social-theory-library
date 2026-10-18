@@ -5,6 +5,7 @@ candidates. No parser candidate overwrites a human-calibrated directory.
 """
 from collections import defaultdict
 from hashlib import sha256
+from itertools import islice
 import json
 import math
 import re
@@ -21,7 +22,7 @@ from catalog.services.text import sanitize_unicode
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v1"
+PARSER_VERSION = "outline-v2"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*录|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(r"^(?P<title>.+?)\s*(?:[.．·…_]{2,}|\s{2,}|\t)\s*(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
@@ -70,6 +71,20 @@ def _node(asset, ordinal, title, page, *, level=1, source, label="", position=No
         "source": source, "calibration_status": "unverified",
         "contents_page": contents_page,
     }
+
+
+def _candidate(node):
+    """An observed source, never a fabricated score or an inferred offset."""
+    fields = ("id", "source", "title", "pdf_page", "printed_label", "contents_page",
+              "pdf_position", "normalized_position", "coordinate_unit", "coordinate_space",
+              "source_locator", "page_geometry", "calibration_status", "precision")
+    return {key: node[key] for key in fields if key in node}
+
+
+def _with_candidates(node):
+    candidates = node.get("candidate_sources") or [_candidate(node)]
+    return {**node, "candidate_sources": candidates,
+            "candidate_sources_count": max(len(candidates), node.get("candidate_sources_count", 0))}
 
 
 def _parents(nodes):
@@ -122,6 +137,8 @@ def extract_outline(asset, path, *, progress=None):
     if progress:
         progress("bookmarks", 0, asset.page_count)
     with fitz.open(str(path)) as document:
+        if len(document) != asset.page_count:
+            raise OutlineConflict("实际 PDF 页数与文件校验记录不一致，请重新校验文件后生成目录。")
         for number, pdf_page in enumerate(document, start=1):
             geometry[number] = {"pdf_width": pdf_page.rect.width, "pdf_height": pdf_page.rect.height,
                                 "rotation": pdf_page.rotation, "cropbox": list(pdf_page.cropbox)}
@@ -145,7 +162,7 @@ def extract_outline(asset, path, *, progress=None):
                 diagnostics.append({"code": "invalid_bookmark", "node_id": node["id"], "message": "书签标题或落点需要校准。"})
     _parents(nodes)
 
-    pages = list(asset.pages.order_by("index").values("index", "printed_label", "text"))
+    pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "text"))
     labels, titles = defaultdict(list), defaultdict(list)
     for page in pages:
         if page["printed_label"]:
@@ -182,7 +199,7 @@ def extract_outline(asset, path, *, progress=None):
     # PaddleOCR returns rendered pixmap pixels. Native text blocks use MuPDF's
     # unrotated points. Keep their actual space and reference geometry; the
     # Reader adapter must not consume either as a naked PDF-point coordinate.
-    for block in asset.pages.exclude(index__in=contents_pages).values("index", "width", "height", "text_source", "blocks__text", "blocks__bbox"):
+    for block in asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "text_source", "blocks__text", "blocks__bbox"):
         title = _title(block["blocks__text"])
         box = block["blocks__bbox"]
         if title and len(title) <= 180 and isinstance(box, list) and len(box) == 4 and all(type(value) in {int, float} and math.isfinite(value) for value in box):
@@ -219,15 +236,16 @@ def extract_outline(asset, path, *, progress=None):
         parent = printed_stack[-1][1] if printed_stack else None
         counterpart = next((row for row in native_by_target[(_match_key(title), page)]
                             if row["id"] not in matched_native and row["parent_id"] == parent), None) if page else None
-        if counterpart:
-            matched_native.add(counterpart["id"])
-            printed_stack.append((level, counterpart["id"]))
-            last_page = page
-            continue
         node = _node(asset, ordinal, title, page, source="printed_contents", label=label,
                      level=level, locator=locator, contents_page=contents_page)
         node["parent_id"] = parent
         node["calibration_status"] = status
+        if counterpart:
+            counterpart.setdefault("candidate_sources", [_candidate(counterpart)]).append(_candidate(node))
+            matched_native.add(counterpart["id"])
+            printed_stack.append((level, counterpart["id"]))
+            last_page = page
+            continue
         nodes.append(node)
         printed_stack.append((level, node["id"]))
         if page:
@@ -235,15 +253,22 @@ def extract_outline(asset, path, *, progress=None):
         if status == "needs_review":
             diagnostics.append({"code": "contents_target_uncertain", "node_id": node["id"], "message": "目录页与正文落点需要人工核对。"})
     existing_targets = {(_match_key(node["title"]), node["pdf_page"]) for node in nodes}
+    existing_by_target = defaultdict(list)
+    for node in nodes:
+        existing_by_target[(_match_key(node["title"]), node["pdf_page"])].append(node)
     generated, had_formal = [], bool(nodes)
     for ordinal, (title, page) in enumerate(headings):
+        locators = [hit[1] for hit in titles[_match_key(title)] if hit[0] == page and hit[1]]
+        node = _node(asset, ordinal, title, page, source="generated_heading", level=_level(title),
+                     locator=locators[0] if locators else {})
+        node["calibration_status"] = "needs_review" if had_formal else "generated"
         if (_match_key(title), page) not in existing_targets:
-            locators = [hit[1] for hit in titles[_match_key(title)] if hit[0] == page and hit[1]]
-            node = _node(asset, ordinal, title, page, source="generated_heading", level=_level(title),
-                         locator=locators[0] if locators else {})
-            node["calibration_status"] = "needs_review" if had_formal else "generated"
             generated.append(node)
             existing_targets.add((_match_key(title), page))
+            existing_by_target[(_match_key(title), page)].append(node)
+        else:
+            for existing in existing_by_target[(_match_key(title), page)]:
+                existing.setdefault("candidate_sources", [_candidate(existing)]).append(_candidate(node))
     # Heading candidates form their own tree. No guessed graft onto the last
     # native chapter, including when a native parent has an unknown target.
     nodes.extend(_parents(generated))
@@ -254,6 +279,22 @@ def extract_outline(asset, path, *, progress=None):
                             "message": "这是从正文标题生成的章节导航。" if nodes else "尚未找到可用目录；请完成 OCR 或人工添加目录。"})
     if len(nodes) > 20000:
         raise ValueError("自动目录超过 20000 项，需要分段校准，未保存截断结果。")
+    # Same titles on different pages remain distinct nodes. Their actual
+    # observations are available side by side; no candidate is silently chosen.
+    by_title = defaultdict(dict)
+    for node in nodes:
+        for candidate in node.get("candidate_sources") or [_candidate(node)]:
+            by_title[_match_key(node["title"])][candidate["id"]] = candidate
+    for node in nodes:
+        candidates = by_title[_match_key(node["title"])]
+        # Bound repeated-title expansion without losing the distinct tree
+        # entries. Counts disclose when comparison needs a narrower selection.
+        own = {row["id"]: row for row in node.get("candidate_sources") or [_candidate(node)]}
+        comparison = dict(islice(own.items(), 50))
+        for identifier, candidate in islice(((key, row) for key, row in candidates.items() if key not in comparison), max(0, 50 - len(comparison))):
+            comparison[identifier] = candidate
+        node["candidate_sources"] = list(comparison.values())
+        node["candidate_sources_count"] = len(candidates)
     return _tree_order(nodes), diagnostics
 
 
@@ -275,12 +316,11 @@ def _source_current(asset):
     raise OutlineConflict("文件已更换；旧目录和原文仍保留，请选择当前文件。")
 
 
-def validate_nodes(asset, nodes):
+def validate_nodes(asset, nodes, *, base_revision=None):
     if not isinstance(nodes, list) or len(nodes) > 20000:
         raise ValueError("目录必须为节点列表，最多 20000 项。")
-    active = asset.outline_revisions.filter(is_active=True).first()
-    latest = asset.outline_revisions.first()
-    prior_nodes = {node["id"]: node for revision in (active, latest) if revision for node in revision.nodes}
+    base_revision = base_revision or asset.outline_revisions.first()
+    prior_nodes = {node["id"]: node for node in base_revision.nodes} if base_revision else {}
     seen, levels, result = set(), {}, []
     for position, raw in enumerate(nodes):
         if not isinstance(raw, dict):
@@ -295,17 +335,22 @@ def validate_nodes(asset, nodes):
         page = raw.get("pdf_page")
         if page is not None and (type(page) is not int or not 1 <= page <= asset.page_count):
             raise ValueError("目录物理页必须在 PDF 页数范围内。")
-        point = raw.get("pdf_position") or []
-        if not isinstance(point, list) or len(point) not in {0, 2} or any(type(value) not in {int, float} or not math.isfinite(value) or value < 0 for value in point):
-            raise ValueError("页内落点必须为非负 PDF 点坐标 [x, y]。")
         prior = prior_nodes.get(identifier, {})
         same_page = prior.get("pdf_page") == page
+        clear_position = raw.get("clear_position", False)
+        if type(clear_position) is not bool:
+            raise ValueError("clear_position 必须为布尔值。")
+        point = [] if clear_position else raw.get("pdf_position", prior.get("pdf_position", []) if same_page else []) or []
+        if not isinstance(point, list) or len(point) not in {0, 2} or any(type(value) not in {int, float} or not math.isfinite(value) or value < 0 for value in point):
+            raise ValueError("页内落点必须为非负 PDF 点坐标 [x, y]。")
         geometry = prior.get("page_geometry", {}) if same_page else {}
-        relative = raw.get("normalized_position") or []
+        relative = raw.get("normalized_position", prior.get("normalized_position", []) if same_page and not clear_position else []) or []
         if not isinstance(relative, list) or len(relative) not in {0, 2} or any(type(value) not in {int, float} or not math.isfinite(value) or not 0 <= value <= 1 for value in relative):
             raise ValueError("相对落点必须为显示页面内的比例坐标 [x, y]，各值在 0—1 之间。")
         if relative:
             point = []
+        if (point or relative) and page is None:
+            raise ValueError("请先选择物理页，再设置页内落点。")
         if point and page:
             if not geometry:
                 raise ValueError("此节点没有可验证的 PDF 坐标空间，请使用 normalized_position 比例落点。")
@@ -314,18 +359,37 @@ def validate_nodes(asset, nodes):
         level = levels.get(parent, 0) + 1
         if level > 32:
             raise ValueError("目录层级最多 32 层。")
-        contents_page = raw.get("contents_page")
+        contents_page = raw.get("contents_page", prior.get("contents_page"))
         if contents_page is not None and (type(contents_page) is not int or not 1 <= contents_page <= asset.page_count):
             raise ValueError("目录原页超出 PDF 页数范围。")
-        source_locator = prior.get("source_locator", {}) if same_page and not relative and not point else {}
+        same_position = (not clear_position and same_page and point == prior.get("pdf_position", [])
+                         and relative == prior.get("normalized_position", []))
+        source_locator = prior.get("source_locator", {}) if same_position else {}
         coordinate_space = prior.get("coordinate_space", "") if point and point == prior.get("pdf_position") and same_page else "displayed_pdf_crop" if point else ""
-        result.append({"id": identifier, "parent_id": parent, "position": position, "level": level,
-                       "title": title, "pdf_page": page, "printed_label": _title(raw.get("printed_label"))[:40],
-                       "pdf_position": point, "coordinate_unit": "pdf_points" if point else "", "source": "manual",
+        label = _title(raw.get("printed_label", prior.get("printed_label", "")))[:40]
+        unchanged = bool(prior) and same_position and all((
+            title == prior.get("title"), parent == prior.get("parent_id"),
+            label == prior.get("printed_label", ""), contents_page == prior.get("contents_page")))
+        status = raw.get("calibration_status")
+        if status not in {None, "unverified", "needs_review", "confirmed", "native", "matched", "generated"}:
+            raise ValueError("目录核验状态无效。")
+        if status in {"native", "matched", "generated"} and (not unchanged or status != prior.get("calibration_status")):
+            raise ValueError("自动来源状态只能保留，不能由人工编辑伪造；请标为待核对或明确确认。")
+        if status == "confirmed" and page is None:
+            raise ValueError("人工确认必须具有有效的物理页落点。")
+        # A full-tree save is not a review of every row. Only an explicitly
+        # requested confirmed status records a new human confirmation.
+        status = status or (prior.get("calibration_status", "unverified") if unchanged else "unverified" if page else "needs_review")
+        node = {"id": identifier, "parent_id": parent, "position": position, "level": level,
+                       "title": title, "pdf_page": page, "printed_label": label,
+                       "pdf_position": point, "coordinate_unit": "pdf_points" if point else "", "source": prior.get("source", "manual") if unchanged else "manual",
                        "coordinate_space": coordinate_space, "page_geometry": geometry,
                        "normalized_position": relative, "source_locator": source_locator,
                        "precision": "position" if point or relative or source_locator else "page",
-                       "calibration_status": "confirmed" if page else "needs_review", "contents_page": contents_page})
+                       "calibration_status": status, "contents_page": contents_page}
+        node["candidate_sources"] = prior.get("candidate_sources") or ([_candidate(prior)] if prior else [])
+        node["candidate_sources_count"] = prior.get("candidate_sources_count", len(node["candidate_sources"]))
+        result.append(node)
         seen.add(identifier)
         levels[identifier] = level
     return result
@@ -338,19 +402,43 @@ def revision_payload(revision, *, nodes=True):
             "document_revision_id": str(revision.document_revision_id or ""), "origin": revision.origin,
             "is_active": revision.is_active, "reviewed": revision.reviewed,
             "diagnostics": revision.diagnostics, "created_at": revision.created_at,
-            "node_count": len(revision.nodes)}
+            "node_count": len(revision.nodes), "source_checksum": revision.source_checksum,
+            "parser_version": revision.parser_version,
+            "restored_from_id": str(revision.restored_from_id) if revision.restored_from_id else None}
     if nodes:
-        data["nodes"] = revision.nodes
+        data["nodes"] = [_with_candidates(node) for node in revision.nodes]
     return data
 
 
 def outline_state(asset, *, history_page=1):
+    from catalog.services.publication_eligibility import active_asset_q
+
     revisions = asset.outline_revisions.all()
     latest = revisions.first()
     count = revisions.count()
     history_page = min(max(1, history_page), max(1, (count + 49) // 50))
     start = (history_page - 1) * 50
-    return {"asset_id": str(asset.pk), "expected_revision": latest.revision if latest else 0,
+    try:
+        _source_current(asset)
+        source_current, source_error = True, ""
+    except OutlineConflict as exc:
+        source_current, source_error = False, str(exc)
+    readable = Asset.objects.filter(pk=asset.pk, kind="normalized", status="ready", validation_status="valid",
+                                    access_status__in=["inherit", "public"]).filter(active_asset_q(asset_prefix="")).exists()
+    edition = asset.edition
+    work = edition.work
+    document = asset.document_revisions.filter(is_active=True).first()
+    summary = {"id": str(asset.pk), "edition_id": str(edition.pk), "work_id": str(work.pk),
+               "title": work.title, "authors": list(edition.contributions.filter(role="author").order_by("order").values_list("person__preferred_name", flat=True)),
+               "edition_label": edition.version_label, "publication_year": edition.publication_year,
+               "document_type": work.document_type, "page_count": asset.page_count, "sha256": asset.sha256,
+               "status": asset.status, "validation_status": asset.validation_status, "is_current": asset.is_current,
+               "source_current": source_current, "source_error": source_error, "original_filename": asset.original_filename,
+               "document_revision_id": str(document.pk) if document else "",
+               "preview_url": f"/distribution/admin/assets/{asset.pk}/preview/" if asset.is_current and asset.status == "ready" and asset.file else "",
+               "reader_url": f"/reader/{asset.pk}" if readable else "",
+               "cover_url": work.cover.url if work.cover else ""}
+    return {"asset_id": str(asset.pk), "asset": summary, "expected_revision": latest.revision if latest else 0,
             "active": revision_payload(revisions.filter(is_active=True).first()),
             "latest": revision_payload(latest),
             "history": [revision_payload(row, nodes=False) for row in revisions[start:start + 50]],
@@ -371,6 +459,7 @@ def _new_revision(asset, *, nodes, diagnostics=(), actor=None, origin="automatic
     next_number = (asset.outline_revisions.aggregate(value=Max("revision"))["value"] or 0) + 1
     return DocumentOutlineRevision.objects.create(
         asset=asset, revision=next_number, source_checksum=asset.sha256,
+        parser_version=PARSER_VERSION,
         document_revision=document_revision or asset.document_revisions.filter(is_active=True).first(),
         nodes=nodes, diagnostics=list(diagnostics), origin=origin, created_by=actor, restored_from=restored_from)
 
@@ -387,15 +476,24 @@ def _write_receipt(asset, *, actor, action, request_id, payload):
 
 
 @transaction.atomic
-def edit_outline(asset_id, *, nodes, expected_revision, actor, request_id=None):
+def edit_outline(asset_id, *, nodes, expected_revision, actor, request_id=None, base_revision_id=None):
     asset = Asset.objects.select_for_update().get(pk=asset_id)
+    payload = {"nodes": nodes, "expected_revision": expected_revision}
+    if base_revision_id:
+        payload["base_revision_id"] = str(base_revision_id)
     identity, fingerprint, replay = _write_receipt(asset, actor=actor, action="outline.saved", request_id=request_id,
-        payload={"nodes": nodes, "expected_revision": expected_revision})
+        payload=payload)
     if replay:
         return replay
     _source_current(asset)
     _assert_expected(asset, expected_revision)
-    revision = _new_revision(asset, nodes=validate_nodes(asset, nodes), actor=actor, origin="manual")
+    base = asset.outline_revisions.filter(pk=base_revision_id).first() if base_revision_id else asset.outline_revisions.first()
+    if base_revision_id and base is None:
+        raise ValueError("编辑依据的修订不属于当前文件。")
+    current_document = asset.document_revisions.filter(is_active=True).first()
+    if base and (base.source_checksum != asset.sha256 or (base.document_revision_id and (not current_document or base.document_revision_id != current_document.pk))):
+        raise OutlineConflict("编辑依据对应旧的正文解释，请保留输入并选择当前来源修订。")
+    revision = _new_revision(asset, nodes=validate_nodes(asset, nodes, base_revision=base), actor=actor, origin="manual")
     AuditEvent.objects.create(actor=actor, action="outline.saved", object_type="Asset", object_id=str(asset.pk), request_id=identity, after={"revision_id": str(revision.pk), "fingerprint": fingerprint})
     return revision
 
@@ -414,8 +512,12 @@ def adopt_outline(asset_id, *, revision_id, expected_revision, actor, restore=Fa
     current_document = asset.document_revisions.filter(is_active=True).first()
     if revision.source_checksum != asset.sha256 or (revision.document_revision_id and (not current_document or revision.document_revision_id != current_document.pk)):
         raise OutlineConflict("这份目录对应旧的正文解释，请先重建或重新校准。")
-    if any(not node.get("pdf_page") for node in revision.nodes):
-        raise ValueError("仍有目录项缺少物理页落点，请先逐项校准。")
+    if not revision.nodes:
+        raise ValueError("目录为空，请先添加并确认有效目录项。")
+    if any(type(node.get("pdf_page")) is not int or not 1 <= node["pdf_page"] <= asset.page_count for node in revision.nodes):
+        raise ValueError("仍有目录项缺少有效物理页落点，请先逐项校准。")
+    if any(node.get("calibration_status") not in {"confirmed", "native"} for node in revision.nodes):
+        raise ValueError("仍有目录项未经明确确认，请核对候选后再采用。")
     # Adoption changes the edit precondition too. Otherwise two windows can
     # both adopt different candidates with the same expected_revision value.
     revision = _new_revision(asset, nodes=revision.nodes, diagnostics=revision.diagnostics,
@@ -446,7 +548,10 @@ def public_outline(asset, *, access_statuses=None):
         # the exact formal text revision or a human adoption decision.
         visible = revision.nodes if fulltext_ready or revision.reviewed else [node for node in revision.nodes if node["source"] == "pdf_bookmark"]
         identifiers = {node["id"] for node in visible}
-        visible = [{**node, "parent_id": node["parent_id"] if node["parent_id"] in identifiers else None} for node in visible]
+        # Source comparisons include unadopted OCR/heading observations and
+        # belong only to the private editor, even alongside a public bookmark.
+        visible = [{**{key: value for key, value in node.items() if key not in {"candidate_sources", "candidate_sources_count"}},
+                    "parent_id": node["parent_id"] if node["parent_id"] in identifiers else None} for node in visible]
         return [{**node, "index": node["pdf_page"], "file_page_index": node["pdf_page"], "chapter_title": node["title"],
                  "outline_revision_id": str(revision.pk)} for node in visible if node.get("pdf_page")]
     return [{"id": str(page.pk), "parent_id": None, "position": position, "level": 1,
@@ -469,7 +574,7 @@ def queue_outline_rebuild(asset_id, *, actor=None, request_id=None, automatic=Fa
     identity = sha256(f"{asset.pk}:{source_key if automatic else request_key}".encode()).hexdigest()
     existing = ProcessingJob.objects.filter(idempotency_key=f"outline:{identity}").first()
     if existing:
-        if not automatic and existing.stats.get("source_sha256") != asset.sha256:
+        if not automatic and (existing.stats.get("source_sha256") != asset.sha256 or str(existing.stats.get("document_revision_id") or "") != str(document.pk if document else "")):
             raise OutlineConflict("这个请求已绑定原文件，请重新确认当前 PDF。")
         return existing
     job = ProcessingJob.objects.create(
@@ -554,7 +659,7 @@ def run_outline_job(job_id, *, task_id):
             revision = _new_revision(asset, nodes=nodes, diagnostics=diagnostics, actor=job.created_by, document_revision=document)
             active = asset.outline_revisions.filter(is_active=True).first()
             # Preserve manual calibration even when a newer parser finds more nodes.
-            if nodes and not any(node["calibration_status"] == "needs_review" for node in nodes) and not (active and active.reviewed):
+            if nodes and all(node["calibration_status"] == "native" for node in nodes) and not (active and active.reviewed):
                 asset.outline_revisions.filter(is_active=True).update(is_active=False, updated_at=timezone.now())
                 revision.is_active = True
                 revision.save(update_fields=["is_active", "updated_at"])

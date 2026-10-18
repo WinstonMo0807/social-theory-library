@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["auth-bootstrap.spec.ts", "reading-plan-workspace.spec.ts", "citation-audit-workspace.spec.ts", "citation-audit-upload.spec.ts"],
+  testMatch: ["auth-bootstrap.spec.ts", "reading-plan-workspace.spec.ts", "citation-audit-workspace.spec.ts", "citation-audit-upload.spec.ts", "citation-audit-versions.spec.ts", "document-outline-workspace.spec.ts"],
   timeout: 45_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,

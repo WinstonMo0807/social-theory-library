@@ -1,4 +1,17 @@
 export type OutlineGeometry = { pdf_width?: number; pdf_height?: number; rotation?: number; cropbox?: number[] };
+export type OutlineCandidate = {
+  source: string;
+  title: string;
+  pdf_page?: number | null;
+  printed_label?: string;
+  contents_page?: number | null;
+  pdf_position?: number[];
+  normalized_position?: number[];
+  coordinate_space?: string;
+  source_locator?: OutlineNode["source_locator"];
+  page_geometry?: OutlineGeometry;
+  calibration_status?: string;
+};
 export type OutlineNode = {
   id?: string;
   parent_id?: string | null;
@@ -15,6 +28,12 @@ export type OutlineNode = {
   source_locator?: { bbox?: number[]; coordinate_space?: string; source_width?: number; source_height?: number; page_geometry?: OutlineGeometry };
   page_geometry?: OutlineGeometry;
   outline_revision_id?: string;
+  source?: string;
+  calibration_status?: string;
+  contents_page?: number | null;
+  candidate_sources?: OutlineCandidate[];
+  candidate_sources_count?: number;
+  clear_position?: boolean;
 };
 
 export type ReaderOutlineNode = OutlineNode & { id: string; title: string; level: number };

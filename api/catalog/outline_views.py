@@ -32,12 +32,16 @@ class OutlineNodeSerializer(serializers.Serializer):
     pdf_position = serializers.ListField(child=serializers.FloatField(min_value=0), required=False)
     normalized_position = serializers.ListField(child=serializers.FloatField(min_value=0, max_value=1), required=False)
     contents_page = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    clear_position = serializers.BooleanField(required=False)
+    calibration_status = serializers.ChoiceField(
+        choices=["unverified", "needs_review", "confirmed", "native", "matched", "generated"], required=False)
 
 
 class OutlineCommandSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["rebuild", "edit", "adopt", "restore"])
     expected_revision = serializers.IntegerField(min_value=0, required=False)
     revision_id = serializers.UUIDField(required=False)
+    base_revision_id = serializers.UUIDField(required=False, allow_null=True)
     request_id = serializers.UUIDField(required=False)
     nodes = OutlineNodeSerializer(many=True, required=False)
 
@@ -84,7 +88,8 @@ class AdminDocumentOutlineView(AdminPrivateResponseMixin, APIView):
             if action == "edit":
                 if "nodes" not in data:
                     return Response({"detail": "请提供目录节点列表。"}, status=400)
-                edit_outline(asset.pk, nodes=data["nodes"], expected_revision=data["expected_revision"], actor=request.user, request_id=data["request_id"])
+                edit_outline(asset.pk, nodes=data["nodes"], expected_revision=data["expected_revision"], actor=request.user,
+                             request_id=data["request_id"], base_revision_id=data.get("base_revision_id"))
             else:
                 if not data.get("revision_id"):
                     return Response({"detail": "请选择采用或恢复的目录修订。"}, status=400)

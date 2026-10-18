@@ -5150,6 +5150,94 @@
                 }
             }
         },
+        "/api/reading/citation-audits/{id}/versions/": {
+            "get": {
+                "operationId": "reading_citation_audits_versions_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuditVersionsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_citation_audits_versions_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuditVersionInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/citation-audits/capabilities/": {
             "get": {
                 "operationId": "reading_citation_audits_capabilities_retrieve",
@@ -7370,6 +7458,118 @@
                     "request_id"
                 ]
             },
+            "AuditVersionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "新版本 DOCX/PDF，最大 12 MiB；原稿与旧报告保持独立。"
+                    },
+                    "check_changed_only": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。"
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "file",
+                    "request_id"
+                ]
+            },
+            "AuditVersionSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "manuscript_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "parent_audit_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "filename",
+                    "finished_at",
+                    "id",
+                    "manuscript_revision",
+                    "parent_audit_id",
+                    "revision",
+                    "status"
+                ]
+            },
+            "AuditVersionsOutput": {
+                "type": "object",
+                "properties": {
+                    "current_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "versions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuditVersionSummary"
+                        },
+                        "readOnly": true
+                    },
+                    "notice": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "current_id",
+                    "notice",
+                    "truncated",
+                    "versions"
+                ]
+            },
             "AuthorityStatusEnum": {
                 "enum": [
                     "draft",
@@ -7515,6 +7715,18 @@
                 ],
                 "type": "string",
                 "description": "* `intro` - 简介\n* `stat` - 数据\n* `feature` - 功能\n* `process` - 入库步骤\n* `principle` - 开放原则\n* `notice` - 提示\n* `action` - 操作入口\n* `footer` - 页脚信息"
+            },
+            "CalibrationStatusEnum": {
+                "enum": [
+                    "unverified",
+                    "needs_review",
+                    "confirmed",
+                    "native",
+                    "matched",
+                    "generated"
+                ],
+                "type": "string",
+                "description": "* `unverified` - unverified\n* `needs_review` - needs_review\n* `confirmed` - confirmed\n* `native` - native\n* `matched` - matched\n* `generated` - generated"
             },
             "CatalogingCandidateDecisionActionEnum": {
                 "enum": [
@@ -10998,6 +11210,11 @@
                         "type": "string",
                         "format": "uuid"
                     },
+                    "base_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
                     "request_id": {
                         "type": "string",
                         "format": "uuid"
@@ -11079,6 +11296,12 @@
                         "type": "integer",
                         "minimum": 1,
                         "nullable": true
+                    },
+                    "clear_position": {
+                        "type": "boolean"
+                    },
+                    "calibration_status": {
+                        "$ref": "#/components/schemas/CalibrationStatusEnum"
                     }
                 },
                 "required": [
