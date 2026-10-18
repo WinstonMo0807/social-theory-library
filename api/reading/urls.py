@@ -27,13 +27,14 @@ from .runtime_views import (
     ReaderAIConnectionTestView,
     ReaderAIConnectionView,
 )
-from .research_views import (CitationAuditViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
+from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 
 router = DefaultRouter()
 router.register("research-projects", ResearchProjectViewSet, basename="research-projects")
 router.register("research-turns", ResearchTurnViewSet, basename="research-turns")
 router.register("citation-audits", CitationAuditViewSet, basename="citation-audits")
+router.register("citation-sources", CitationSourceViewSet, basename="citation-sources")
 router.register("reading-plans", PersonalReadingPlanViewSet, basename="personal-reading-plans")
 router.register("research-memories", ResearchMemoryViewSet, basename="research-memories")
 router.register("progress", ReadingProgressViewSet, basename="progress")

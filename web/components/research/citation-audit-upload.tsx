@@ -10,6 +10,7 @@ import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/priva
 import { isTaskRunning } from "@/lib/api/task-polling";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { AuditBreadcrumb, AuditFrame, AuditGate, AuditProgress, auditStatuses } from "./citation-audit-shared";
+import { CitationPrivateSourcePicker } from "./citation-private-sources";
 
 const DEFAULT_CHECKS: AuditCheck[] = ["citation_identification", "bibliography_identity", "version_page"];
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
@@ -27,6 +28,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
   const [file, setFile] = useState<File | null>(null);
   const [checks, setChecks] = useState<AuditCheck[]>(DEFAULT_CHECKS);
   const [scope, setScope] = useState("public_library");
+  const [privateSourceIds, setPrivateSourceIds] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -47,7 +49,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
     const clearPrivateInput = () => {
       alive.current = false;
       request.current = { file: null, fingerprint: "", id: "" };
-      setFile(null); setSubmitted(null); setError(""); setActionError(""); setBusy(false);
+      setFile(null); setPrivateSourceIds([]); setSubmitted(null); setError(""); setActionError(""); setBusy(false);
       if (input.current) input.current.value = "";
     };
     let verifying = false;
@@ -70,7 +72,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
 
   const options = capabilities.data?.checks || [];
   const enabledChecks = checks.filter(check => options.some(option => option.id === check && option.available));
-  const fingerprint = JSON.stringify({ checks: enabledChecks, scope });
+  const fingerprint = JSON.stringify({ checks: enabledChecks, scope, private_source_ids: scope === "private_materials" ? [...privateSourceIds].sort() : [] });
   const alreadySubmitted = submitted?.fingerprint === fingerprint;
   const limit = Math.min(MAX_UPLOAD_BYTES, capabilities.data?.max_upload_bytes || MAX_UPLOAD_BYTES);
   const allChecked = options.filter(option => option.available && option.id !== "deep_analysis").every(option => enabledChecks.includes(option.id as AuditCheck));
@@ -117,10 +119,11 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
     if (!enabledChecks.includes("citation_identification") || !capabilities.data.scopes.some(option => option.id === scope && option.available)) {
       setError("当前检查项或来源范围不可用，请重新读取可用能力后提交。"); return;
     }
+    if (scope === "private_materials" && !privateSourceIds.length) { setError("请明确勾选至少一份已解析的本人来源，或选择仅馆藏范围。"); return; }
     pending.current = true; setBusy(true); setError("");
     if (request.current.file !== file || request.current.fingerprint !== fingerprint) request.current = { file, fingerprint, id: crypto.randomUUID() };
     try {
-      const record = await withPrivateOwner(ownerId, () => createCitationAudit(file, request.current.id, undefined, { checks: enabledChecks, scope }));
+      const record = await withPrivateOwner(ownerId, () => createCitationAudit(file, request.current.id, undefined, { checks: enabledChecks, scope, private_source_ids: scope === "private_materials" ? privateSourceIds : [] }));
       if (!alive.current) return;
       setSubmitted({ id: record.id, fingerprint }); setPage(1); tasks.reload();
     } catch (reason) { if (alive.current) handleFailure(reason, "稿件未能提交，文件与检查项仍保留，请重试。"); }
@@ -170,9 +173,10 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
         <section aria-labelledby="audit-scope-title">
           <h2 id="audit-scope-title" className="stl4-audit-step-title"><span>3</span>选择来源范围</h2>
           <div className="stl4-audit-scope-options">{capabilities.data?.scopes.map(option => <label key={option.id} className={!option.available ? "is-unavailable" : ""}><input type="radio" name="audit-scope" value={option.id} checked={scope === option.id && option.available} disabled={!option.available || busy || Boolean(action)} onChange={() => setScope(option.id)} /><span><strong>{option.label}</strong><small>{option.description}</small></span></label>)}</div>
+          {scope === "private_materials" ? <CitationPrivateSourcePicker ownerId={ownerId} selectedIds={privateSourceIds} onChange={setPrivateSourceIds} disabled={busy || Boolean(action)} /> : null}
         </section>
         {error ? <div className="stl4-audit-upload-error" role="alert">{error}</div> : null}
-        {submitted && alreadySubmitted ? <div className="stl4-audit-upload-success" role="status"><Check size={16} />稿件已提交，任务和解析结果会持续保存。<Link href={`/account/citation-audits/${submitted.id}`}>查看任务 <ArrowRight size={13} /></Link></div> : null}
+        {submitted && alreadySubmitted ? <div className="stl4-audit-upload-success" role="status"><Check size={16} />稿件已提交，任务和解析结果会持续保存。<Link href={`/account/citation-audits/${submitted.id}/parse`}>查看任务 <ArrowRight size={13} /></Link></div> : null}
         <div className="stl4-audit-upload-submit"><button type="submit" className="is-primary" disabled={!file || !capabilities.data || Boolean(capabilities.error) || busy || Boolean(action) || alreadySubmitted}>{busy ? "正在提交稿件…" : alreadySubmitted ? "已提交检查" : "提交检查"}<ArrowRight size={16} /></button><span>本地服务处理，会使用设备资源。取消后保留已完成结果。</span></div>
       </form>
       <aside className="stl4-audit-upload-tasks" aria-labelledby="audit-tasks-title">
@@ -183,7 +187,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
           <div className="stl4-audit-task-file"><FileText size={23} aria-hidden="true" /><div><h3>{record.data.filename}</h3><p>{typeof record.data.file_size_bytes === "number" ? fileSize(record.data.file_size_bytes) : record.data.filetype?.toUpperCase()}<time dateTime={record.created_at}>{new Date(record.created_at).toLocaleDateString("zh-CN")}</time></p></div></div>
           {isTaskRunning(record.status) ? <AuditProgress record={record} /> : <div className={`stl4-audit-task-status${record.status === "completed" ? " is-complete" : ""}`}><span aria-hidden="true">{record.status === "completed" ? <Check size={15} /> : "·"}</span><strong>{auditStatuses[record.status || ""] || "任务已保存"}</strong></div>}
           {record.status === "partial" ? <p className="stl4-audit-task-hint">已解析内容保留，未识别或未匹配的部分可在报告中继续核对。</p> : record.status === "failed" ? <p className="stl4-audit-task-hint">本次处理未完成，已保存结果保留。可以重试或先查看。</p> : null}
-          <div className="stl4-audit-task-actions"><Link href={`/account/citation-audits/${record.id}`}>{isTaskRunning(record.status) ? "查看任务" : record.status === "completed" || record.status === "partial" ? "查看报告" : "查看已保存结果"}</Link>{isTaskRunning(record.status) ? <button type="button" className="is-cancel" disabled={Boolean(action) || busy} onClick={() => void command(record, "cancel")}>{action === record.id ? "正在取消…" : "取消任务"}</button> : ["failed", "canceled", "cancelled", "partial"].includes(record.status || "") ? <button type="button" disabled={Boolean(action) || busy} onClick={() => void command(record, "retry")}>{action === record.id ? "正在重试…" : "重试任务"}</button> : null}</div>
+          <div className="stl4-audit-task-actions"><Link href={`/account/citation-audits/${record.id}${isTaskRunning(record.status) ? "/parse" : ""}`}>{isTaskRunning(record.status) ? "查看任务" : record.status === "completed" || record.status === "partial" ? "查看报告" : "查看已保存结果"}</Link>{isTaskRunning(record.status) ? <button type="button" className="is-cancel" disabled={Boolean(action) || busy} onClick={() => void command(record, "cancel")}>{action === record.id ? "正在取消…" : "取消任务"}</button> : ["failed", "canceled", "cancelled", "partial"].includes(record.status || "") ? <button type="button" disabled={Boolean(action) || busy} onClick={() => void command(record, "retry")}>{action === record.id ? "正在重试…" : "重试任务"}</button> : null}</div>
         </article>)}</div> : !tasks.error ? <div className="stl4-audit-upload-empty"><FileText size={26} aria-hidden="true" /><h3>还没有引文体检任务</h3><p>上传稿件并选择检查项，任务会保存在这里。</p></div> : null}
         {tasks.data && (page > 1 || tasks.data.next) ? <nav className="stl4-audit-task-pagination" aria-label="任务分页"><button type="button" disabled={page <= 1 || Boolean(action)} onClick={() => setPage(value => Math.max(1, value - 1))}>上一页</button><span>第 {page} 页</span><button type="button" disabled={!tasks.data.next || Boolean(action)} onClick={() => setPage(value => value + 1)}>下一页</button></nav> : null}
         <p className="stl4-audit-upload-notice">处理期间可以离开页面。系统按实际阶段显示进度，不承诺固定完成时间。</p>

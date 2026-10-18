@@ -77,3 +77,16 @@
 新增citation版本13个测试函数/14参数案例、outline12个单例及3个clear_position参数案例，共29个后端场景；前端版本3项、目录6项，共9项。仅编写，未执行。沿用并保留旧目录测试，原明确采用输入补充confirmed。新spec已加入playwright.auth.config.ts。不存在本轮正式测试通过、浏览器通过、真实OCR/Provider/NAS可用或像素一致的结论。未运行迁移、部署、数据清理和检索质量评测。
 
 稿件版本12文件检查点45c669a、目录校准18文件检查点0fe3a8e分别保存。两批提交前的`git diff --cached --check`均退出0；明确文件清单之外的历史未提交成果保留，未做reset/clean。
+
+### 2026-10-18 笔记授权、私人来源与解析工作台静态记录
+
+仅实际读取final-r2的205–210页及此前已读取的211–215页。没有打开实现浏览器或进行正式逐图对比。
+
+- `node node_modules/typescript/bin/tsc --noEmit --pretty false`（web）：退出0，含新页面、客户端和全部新增回归源码；生成契约同步后再次检查退出0。
+- 目标ESLint覆盖confirmed-notes-workspace、research-memory-reminders、research-session-detail、memory.client、research.client、confirmed-notes路由、citation组件/路由、两项新spec/旧upload spec及playwright.auth.config：退出0，1条真实封面no-img-element警告。
+- `.venv/Scripts/python.exe -m compileall -q`覆盖config/settings、reading的citation_audit/citation_sources/research/research_models/research_serializers/research_views/urls/tasks、0010，以及test_citation_private_sources_20261018/test_citation_atlas_20261018/test_citation_versions_20261018/test_confirmed_memory_atlas_20261018/test_private_research/test_private_research_completion_20261014，16文件退出0。
+- Node/PostCSS parse：confirmed-notes.module.css 103个顶层节点、research.css 230、citation-audit.css 245，全部退出0。仅语法证据。
+- 进程环境DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8，执行`api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-memory-private-schema-20261018.json --validate`，最终退出0、10条既有serializer提示/0 errors。新增kind/action枚举歧义用明确Enum名称修正，openapi-typescript同步成功。
+- 新后端笔记14函数/17参数案例、私人来源13函数/18参数案例；新前端笔记6场景、解析/来源11场景，仅编写。旧private_research/citation/version/upload用例保留并适配明确授权、purpose与实际依据契约。
+
+未执行正式测试、浏览器、构建、视觉回归、OCR/模型/NAS、检索质量评测、迁移、部署或清理。静态检查和检查点不等于B01–B06或209视图验收通过。

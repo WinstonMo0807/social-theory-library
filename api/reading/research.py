@@ -28,6 +28,7 @@ MAX_REFS = 400
 PLAN_POLICY_FIELDS = ("time_budget", "budget_minutes", "session_minutes", "reading_level", "reading_pace", "prefer_unread",
     "item_estimates", "weekly_minutes", "duration_weeks", "language_preference")
 PLAN_MEMORY_FIELDS = ("use_confirmed_memories", "confirmed_memory_ids")
+MEMORY_KINDS = {"concept", "understanding", "question", "method", "observation", "contradiction"}
 PLAN_REQUEST_FIELDS = ("goal", "background", "project_id", "turn_id", "reading_path_id", "references",
     "prerequisites", "scope", *PLAN_POLICY_FIELDS, *PLAN_MEMORY_FIELDS)
 
@@ -258,7 +259,8 @@ def create_project(user, data):
     payload = {"request_fingerprint": fingerprint, "title": text(data.get("title", "新的研究"), "title", 240, True),
                "question": text(data.get("question", ""), "question"),
                "scope": scope_snapshot(data.get("scope", {}), user), "selections": [],
-               "removed_selections": [], "comparison": {"dimensions": [], "cells": []}, "notes": "", "layout": {}}
+               "removed_selections": [], "comparison": {"dimensions": [], "cells": []}, "notes": "", "layout": {},
+               "use_confirmed_memories": False, "confirmed_memory_ids": []}
     return ResearchProject.objects.create(user=user, request_id=request_id, conversation=conversation, data_ciphertext=pack(payload))
 
 
@@ -506,6 +508,7 @@ def start_turn(request, project_id, data):
         if chosen is None or mode != "counterargument":
             raise ValidationError({"active_subclaim_id": "请选择本轮反证研究中本人明确保存的子命题。"})
         statement = {key: value for key, value in chosen.items() if key != "id"}
+    reminders = plan_memory_rows(request.user, payload)
     turn = ResearchTurn.objects.create(project=project, parent=parent, request_id=request_id,
         task_id=str(uuid4()), data_ciphertext=pack({"request_fingerprint": fingerprint, "question": question, "scope": scope, "mode": mode,
         "statement": statement, "subclaims": subclaims, "active_subclaim_id": active_subclaim_id,
@@ -513,6 +516,7 @@ def start_turn(request, project_id, data):
         "analysis_statement": statement, "input_revision": project.revision, "selected_refs": payload.get("selections", []),
         "result_refs": unpack(parent).get("result_refs", []) if parent and data.get("expand_from_parent") is True else [],
         "analysis": [], "warnings": [], "parent_id": str(parent.id) if parent else None,
+        "memory_reminder_revisions": {str(row.id): row.revision for row in reminders},
         "branch_id": str(parent.id) if parent else str(uuid4()), "return_context": data.get("return_context", {})}))
     payload["last_turn_id"] = str(turn.id)
     save_data(project, payload)
@@ -617,7 +621,7 @@ def decide_analysis(user, pk, data):
     return save_data(turn, payload)
 
 
-def serialize_record(record, user):
+def serialize_record(record, user, *, memory_context_rows=None):
     if hasattr(record, "status") and record.status in ACTIVE and timezone.now() - record.updated_at > timedelta(minutes=30):
         type(record).objects.filter(pk=record.id, generation=record.generation, status__in=ACTIVE,
             updated_at__lt=timezone.now() - timedelta(minutes=30)).update(
@@ -628,6 +632,7 @@ def serialize_record(record, user):
     # Immutable input for incremental processing, not a second report/export.
     payload.pop("version_baseline", None)
     payload.pop("version_children", None)
+    payload.pop("text_units", None)
     if "ocr_units" in payload:
         payload["ocr_units"] = {key: {name: value for name, value in unit.items() if name not in {"text", "blocks"}}
                                 for key, unit in payload["ocr_units"].items()}
@@ -671,6 +676,19 @@ def serialize_record(record, user):
         output["project_id"] = str(record.project_id) if record.project_id else None
     if isinstance(record, ResearchProject):
         output["conversation_id"] = str(record.conversation_id) if record.conversation_id else None
+        payload.setdefault("use_confirmed_memories", False)
+        payload.setdefault("confirmed_memory_ids", [])
+    if isinstance(record, ResearchTurn):
+        # Rehydrate only the original revision still authorized in this project now.
+        project = ResearchProject.objects.filter(pk=record.project_id, user=user).first()
+        current = {str(row.id): row for row in plan_memory_rows(user, unpack(project))} if project else {}
+        versions = payload.get("memory_reminder_revisions", {})
+        payload["memory_reminders"] = [{"id": key, "revision": row.revision,
+            "body": unpack(row).get("body", ""), "kind": unpack(row).get("kind", "understanding"),
+            "notice": "本人已确认的私人笔记提醒，不是公开文献证据。"}
+            for key, row in current.items() if versions.get(key) == row.revision]
+        payload["memory_reminders_status"] = ("current" if len(payload["memory_reminders"]) == len(versions)
+            else "authorization_changed") if versions else "not_requested"
     if isinstance(record, PersonalReadingPlan):
         payload.setdefault("use_confirmed_memories", False)
         payload.setdefault("confirmed_memory_ids", [])
@@ -720,13 +738,22 @@ def serialize_record(record, user):
                 payload["enhancement_status"] = "unavailable"
                 output.update(enhancement_status="unavailable", poll_after_ms=None)
     if isinstance(record, ResearchMemory):
+        payload.update(memory_source_details(user, payload))
+        payload["usage_scopes"] = [row for row in memory_usage_targets(user, record, contexts=memory_context_rows) if row["selected"]]
         for snapshot in payload.get("history", []):
             snapshot["data"]["sources"] = [resolve_reference(ref, user) for ref in snapshot["data"].get("sources", [])]
+            snapshot["data"].update(memory_source_details(user, snapshot["data"]))
     if hasattr(record, "content_hash"):
         from .citation_audit import UPLOAD_CHECKS, refresh_bibliography_sources
+        from .citation_sources import refresh_private_sources
+        payload["purpose"] = record.purpose
+        if record.purpose == "private_source":
+            payload["source_generation"] = record.generation
         payload.setdefault("checks", list(UPLOAD_CHECKS))
         payload.setdefault("scope", "public_library")
         refresh_bibliography_sources(payload)
+        if record.purpose == "manuscript":
+            refresh_private_sources(payload, user)
         occurrences = [*payload.get("occurrences", []), *(row for report in payload.get("parse_history", []) for row in report.get("occurrences", []))]
         for occurrence in occurrences:
             for version in [occurrence, *occurrence.get("history", [])]:
@@ -755,6 +782,201 @@ def source_project(user, data):
     return owned(ResearchProject, user, data["project_id"]) if data.get("project_id") else None
 
 
+def annotation_source(user, note):
+    if note.orphaned or note.asset_sha256 != note.asset.sha256 or note.page.asset_id != note.asset_id:
+        return None
+    edition = source_queryset("edition", access_for(user)).filter(
+        active_catalog_revision__reader_asset_id=note.asset_id).first()
+    if edition is None:
+        return None
+    ref = resolve_reference({"asset_id": str(note.asset_id), "pdf_page": note.page.index,
+        "document_revision_id": str(edition.active_catalog_revision.document_revision_id)}, user)
+    if note.quote and note.quote not in ref.get("quote", ""):
+        return None
+    return compact_reference(ref) if ref["source_status"] == "available" else None
+
+
+def memory_source_details(user, payload):
+    """Resolve live public sources; private authored text survives source withdrawal."""
+    statuses, summaries = [], []
+    for raw in payload.get("sources", []):
+        current = resolve_reference(raw, user)
+        edition = source_queryset("edition", access_for(user)).filter(pk=current.get("edition_id")).first() if current.get("edition_id") else None
+        status = current["source_status"]
+        if status != "available" and edition is not None:
+            revision = edition.active_catalog_revision
+            if (str(revision.document_revision_id) != str(current.get("document_revision_id"))
+                    or str(revision.reader_asset_id) != str(current.get("asset_id"))):
+                status = "updated"
+            elif current.get("content_hash"):
+                # An exact locator/hash no longer resolves on the serving revision.
+                status = "updated"
+        statuses.append(status)
+        summary = {"source_status": status, "reference_id": reference_identity(raw),
+            "asset_id": current.get("asset_id"), "edition_id": current.get("edition_id"),
+            "pdf_page": current.get("pdf_page"), "reader_url": current.get("reader_url")}
+        if edition is not None:
+            snapshot = edition.active_catalog_revision.snapshot or {}
+            work, version = snapshot.get("work") or {}, snapshot.get("edition") or {}
+            media = work.get("cover_media") or {}
+            summary.update(title=work.get("title", ""),
+                authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
+                    for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"],
+                edition=version.get("version_label") or version.get("publisher") or "",
+                publication_year=version.get("publication_year"),
+                printed_label=current.get("printed_label") if status == "available" else None,
+                cover_url=(reverse("public-work-cover", kwargs={"work_id": edition.work_id})
+                    + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else "")) if media or work.get("cover") else None,
+                current_reader_url=f"/reader/{edition.active_catalog_revision.reader_asset_id}?revision={edition.active_catalog_revision.document_revision_id}")
+        summaries.append(summary)
+    origin = payload.get("origin", {})
+    origin_note = None
+    if origin.get("annotation_id"):
+        note = Annotation.objects.select_related("asset", "page").filter(pk=origin["annotation_id"], user=user).first()
+        origin_note = {"id": origin["annotation_id"], "available": note is not None, "source_status": "unavailable"}
+        if note:
+            current = annotation_source(user, note)
+            saved = resolve_reference(origin["source"], user) if origin.get("source") else None
+            readable = (current is not None and saved is not None and saved["source_status"] == "available"
+                and all(str(current.get(key)) == str(saved.get(key)) for key in
+                    ("asset_id", "document_revision_id", "pdf_page", "content_hash")))
+            origin_note.update(body=decrypt_private_text(note.body_ciphertext), kind=note.kind,
+                asset_id=str(note.asset_id), pdf_page=note.page.index,
+                quote=note.quote if readable else "", reader_url=saved.get("reader_url") if readable else None,
+                source_status="available" if readable else "updated" if current else "unavailable",
+                created_at=note.created_at.isoformat(), updated_at=note.updated_at.isoformat())
+            if summaries:
+                origin_note.update({key: value for key, value in summaries[0].items()
+                    if key in {"title", "authors", "edition", "publication_year", "cover_url", "printed_label"}})
+        if not statuses:
+            statuses.append(origin_note["source_status"])
+    source_status = ("unavailable" if "unavailable" in statuses else "updated" if "updated" in statuses
+        else "available" if statuses else "no_source")
+    return {"source_status": source_status, "source_summaries": summaries, "origin_note": origin_note}
+
+
+def memory_contexts(user, *, lock=False):
+    # ponytail: owner-local encrypted scan; add indexed grant records only if account scale requires it.
+    if lock:
+        from django.contrib.auth import get_user_model
+        # Serialize scope creation with revoke-all; lock contexts before any memory.
+        get_user_model().objects.select_for_update().get(pk=user.pk)
+    output = []
+    for kind, model in (("project", ResearchProject), ("plan", PersonalReadingPlan)):
+        rows = model.objects.filter(user=user).order_by("id")
+        output.extend((kind, row) for row in (rows.select_for_update() if lock else rows))
+    return output
+
+
+def memory_usage_targets(user, memory, *, contexts=None):
+    targets = []
+    for kind, record in contexts if contexts is not None else memory_contexts(user):
+        payload = unpack(record)
+        enabled = payload.get("use_confirmed_memories") is True
+        targets.append({"kind": kind, "id": str(record.id), "revision": record.revision,
+            "title": (payload.get("title") if kind == "project" else payload.get("goal")) or "未命名",
+            "enabled": enabled, "selected": enabled and memory.state == "confirmed"
+                and str(memory.id) in payload.get("confirmed_memory_ids", []),
+            "archived": bool(getattr(record, "archived", False))})
+    return targets
+
+
+def revoke_memory_contexts(memory, contexts):
+    for _, record in contexts:
+        payload = unpack(record)
+        ids = payload.get("confirmed_memory_ids", [])
+        if str(memory.id) not in ids:
+            continue
+        payload["confirmed_memory_ids"] = [key for key in ids if key != str(memory.id)]
+        payload["use_confirmed_memories"] = bool(payload["confirmed_memory_ids"])
+        if isinstance(record, PersonalReadingPlan):
+            invalidate_plan_suggestions(payload, "authorization_changed")
+        save_data(record, payload)
+
+
+@transaction.atomic
+def update_memory_usage(user, pk, data):
+    # Contexts precede memories, matching plan workers' lock order.
+    contexts = memory_contexts(user, lock=True)
+    memory = owned(ResearchMemory, user, pk, lock=True)
+    expect(memory, data.get("expected_revision"))
+    action = data.get("action")
+    if action not in {"grant", "revoke", "revoke_all"}:
+        raise ValidationError({"action": "授权操作无效。"})
+    if action == "grant" and memory.state != "confirmed":
+        raise ValidationError({"state": "请先由本人确认笔记，再明确选择使用范围。"})
+    targets = bounded_list(data.get("targets", []), "targets", 100)
+    if action != "revoke_all" and not targets:
+        raise ValidationError({"targets": "请明确选择研究或阅读计划。"})
+    selected, seen = [], set()
+    available = {(kind, str(record.id)): record for kind, record in contexts}
+    for target in targets:
+        key = (target.get("kind"), identifier(target.get("id")))
+        if key not in available:
+            raise NotFound("使用范围不存在。")
+        if key in seen:
+            raise ValidationError({"targets": "使用范围不能重复。"})
+        seen.add(key)
+        record = available[key]
+        expect(record, target.get("expected_revision"))
+        if action == "grant" and getattr(record, "archived", False):
+            raise ValidationError({"targets": "已归档研究不能新增授权，请先恢复。"})
+        selected.append(record)
+    if action == "revoke_all":
+        seen = {(kind, str(record.id)) for kind, record in contexts
+            if str(memory.id) in unpack(record).get("confirmed_memory_ids", [])}
+        revoke_memory_contexts(memory, contexts)
+    else:
+        for record in selected:
+            payload = unpack(record)
+            ids = list(payload.get("confirmed_memory_ids", []))
+            if action == "grant":
+                if payload.get("use_confirmed_memories") is not True:
+                    ids = []
+                ids = list(dict.fromkeys([*ids, str(memory.id)]))
+                if len(ids) > 40:
+                    raise ValidationError({"targets": "每个研究或计划最多授权 40 条笔记。"})
+            else:
+                ids = [key for key in ids if key != str(memory.id)]
+            payload.update(confirmed_memory_ids=ids, use_confirmed_memories=bool(ids))
+            if isinstance(record, PersonalReadingPlan):
+                invalidate_plan_suggestions(payload, "authorization_changed")
+            save_data(record, payload)
+    payload = unpack(memory)
+    payload.setdefault("usage_history", []).append({"at": timezone.now().isoformat(), "action": action,
+        "targets": [{"kind": kind, "id": key} for kind, key in sorted(seen)]})
+    return save_data(memory, payload)
+
+
+@transaction.atomic
+def delete_memory(user, pk, revision):
+    contexts = memory_contexts(user, lock=True)
+    memory = owned(ResearchMemory, user, pk, lock=True)
+    expect(memory, revision)
+    revoke_memory_contexts(memory, contexts)
+    memory.delete()
+
+
+def list_memories(user, filters):
+    """Exact encrypted owner search, counted before state filter, never page-local counts."""
+    query = filters.get("q", "").casefold().strip()
+    rows = ResearchMemory.objects.filter(user=user).order_by("-created_at" if filters.get("order") == "newest" else "-updated_at", "id")
+    matches, counts = [], {"total": 0, "confirmed": 0, "proposed": 0, "ignored": 0}
+    for row in rows.iterator(chunk_size=100):
+        payload = unpack(row)
+        if filters.get("kind", "all") != "all" and payload.get("kind") != filters["kind"]:
+            continue
+        if query and query not in payload.get("body", "").casefold():
+            continue
+        if filters.get("source_status", "all") != "all" and memory_source_details(user, payload)["source_status"] != filters["source_status"]:
+            continue
+        counts["total"] += 1
+        counts[row.state] = counts.get(row.state, 0) + 1
+        if filters.get("state", "all") in {"all", row.state}:
+            matches.append(row)
+    return matches, counts
+
+
 @transaction.atomic
 def create_memory(user, data):
     request_id = identifier(data.get("request_id"), "request_id")
@@ -766,16 +988,20 @@ def create_memory(user, data):
         return same_request(existing, fingerprint)
     project = source_project(user, data)
     kind = data.get("kind", "understanding")
-    if kind not in {"understanding", "question", "contradiction"}:
+    if kind not in MEMORY_KINDS:
         raise ValidationError({"kind": "认识类型无效。"})
     body = text(data.get("body", ""), "body", 20000, True)
     sources = references(data.get("sources", []), user)
     origin = {}
     if data.get("annotation_id"):
-        note = Annotation.objects.filter(pk=identifier(data["annotation_id"]), user=user).first()
+        note = Annotation.objects.select_related("asset", "page").filter(pk=identifier(data["annotation_id"]), user=user).first()
         if note is None:
             raise NotFound("笔记不存在。")
         origin["annotation_id"] = str(note.id)
+        ref = annotation_source(user, note)
+        if ref:
+            origin["source"] = ref
+            sources = [ref, *[item for item in sources if reference_identity(item) != reference_identity(ref)]]
     if data.get("turn_id"):
         turn = owned(ResearchTurn, user, data["turn_id"])
         if project and turn.project_id != project.id:
@@ -789,30 +1015,71 @@ def create_memory(user, data):
 
 @transaction.atomic
 def update_memory(user, pk, data):
+    contexts = memory_contexts(user, lock=True)
     memory = owned(ResearchMemory, user, pk, lock=True)
     expect(memory, data.get("expected_revision"))
     payload = unpack(memory)
-    state = data.get("state", memory.state)
-    if state not in {"proposed", "confirmed", "ignored"}:
-        raise ValidationError({"state": "状态无效；遗忘请使用删除操作。"})
-    old = {key: payload[key] for key in ("body", "kind", "sources")}
+    if "refresh_origin" in data and not isinstance(data["refresh_origin"], bool):
+        raise ValidationError({"refresh_origin": "需要布尔值。"})
+    old = {"body": payload.get("body", ""), "kind": payload.get("kind", "understanding"),
+        "sources": payload.get("sources", []), "origin": payload.get("origin", {})}
+    old["state"] = memory.state
     if "body" in data:
         payload["body"] = text(data["body"], "body", 20000, True)
     if "sources" in data:
         payload["sources"] = references(data["sources"], user)
-    payload["history"].append({"revision": memory.revision, "at": timezone.now().isoformat(), "data": old})
+    if "kind" in data:
+        if data["kind"] not in MEMORY_KINDS:
+            raise ValidationError({"kind": "认识类型无效。"})
+        payload["kind"] = data["kind"]
+    if data.get("refresh_origin") is True:
+        note = Annotation.objects.select_related("asset", "page").filter(
+            pk=payload.get("origin", {}).get("annotation_id"), user=user).first()
+        ref = annotation_source(user, note) if note else None
+        if not ref:
+            raise ValidationError({"refresh_origin": "原笔记来源当前不可用，不能自动改指其他版本。"})
+        old_origin_source = payload.get("origin", {}).get("source")
+        replaced = {reference_identity(ref)}
+        if old_origin_source:
+            replaced.add(reference_identity(old_origin_source))
+        payload["sources"] = [ref, *[item for item in payload.get("sources", [])
+            if reference_identity(item) not in replaced]]
+        payload["origin"] = {**payload.get("origin", {}), "source": ref}
+    content_changed = any(payload.get(key, old[key]) != old[key] for key in ("body", "kind", "sources", "origin"))
+    state = data.get("state", "proposed" if content_changed else memory.state)
+    if state not in {"proposed", "confirmed", "ignored"}:
+        raise ValidationError({"state": "状态无效；遗忘请使用删除操作。"})
+    # Confirmation applies to this content revision; it does not grant the edited
+    # body/source to contexts authorized for the previous revision.
+    if content_changed or state != "confirmed":
+        revoke_memory_contexts(memory, contexts)
+    payload.setdefault("history", []).append({"revision": memory.revision, "state": memory.state,
+        "at": timezone.now().isoformat(), "data": old})
     memory.state, memory.embedding_ciphertext, memory.embedding_artifact = state, b"", ""
     return save_data(memory, payload, fields=["state", "embedding_ciphertext", "embedding_artifact"])
 
 
-def search_memories(user, query, *, semantic=False, allowed_ids=None):
+def search_memories(user, query, *, semantic=False, allowed_ids=None, context=None):
     query = text(query, "q", 1200, True)
-    preference = getattr(getattr(user, "reader_profile", None), "reading_preferences", {}) or {}
-    if preference.get("research_personalization", True) is False:
-        return {"results": [], "mode": "disabled", "notice": "已关闭私人记忆提醒。"}
+    if context is not None:
+        model = {"project": ResearchProject, "plan": PersonalReadingPlan}.get(context.get("kind"))
+        if model is None:
+            raise ValidationError({"context": "使用范围无效。"})
+        scope_record = owned(model, user, context.get("id"))
+        authorized = {str(row.id) for row in plan_memory_rows(user, unpack(scope_record))}
+        allowed_ids = list(authorized if allowed_ids is None else authorized & set(map(str, allowed_ids)))
+    if not allowed_ids:
+        return {"results": [], "mode": "disabled", "notice": "尚未明确授权此轮使用任何已确认笔记。"}
     rows = ResearchMemory.objects.filter(user=user, state="confirmed")
     if allowed_ids is not None:
         rows = rows.filter(pk__in=[identifier(value) for value in bounded_list(allowed_ids, "allowed_ids")])
+
+    def current_rows():
+        if context is None:
+            return rows
+        latest_scope = owned(model, user, context.get("id"))
+        ids = [row.id for row in plan_memory_rows(user, unpack(latest_scope))]
+        return rows.filter(pk__in=ids)
     # ponytail: exact owner-local scan; use a private ANN index only after measured scale warrants it.
     tokens = set(re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]", query.casefold()))
     candidates = []
@@ -848,6 +1115,10 @@ def search_memories(user, query, *, semantic=False, allowed_ids=None):
                             scored.append((sum(a * b for a, b in zip(query_vector, vector)), memory))
                 for offset in range(0, len(pending), 8):
                     batch = pending[offset:offset + 8]
+                    fresh = {row.id: row for row in current_rows().filter(pk__in=[row.id for row in batch])}
+                    batch = [fresh[row.id] for row in batch if row.id in fresh and fresh[row.id].revision == row.revision]
+                    if not batch:
+                        continue
                     try:
                         result = embed_texts([unpack(memory)["body"] for memory in batch], expected_artifact=artifact, transport=transport)
                         encoded = list(zip(batch, result["vectors"]))
@@ -856,6 +1127,8 @@ def search_memories(user, query, *, semantic=False, allowed_ids=None):
                             raise
                         encoded = []
                         for memory in batch:
+                            if not current_rows().filter(pk=memory.id, revision=memory.revision).exists():
+                                continue
                             try:
                                 result = embed_texts([unpack(memory)["body"]], expected_artifact=artifact, transport=transport)
                                 encoded.append((memory, result["vectors"][0]))
@@ -875,7 +1148,7 @@ def search_memories(user, query, *, semantic=False, allowed_ids=None):
         except (DiscoveryInferenceError, AIServiceError):
             warning = "本地语义模型不可用，已使用本人范围的文字匹配。"
     # Recheck state/revision after inference so a concurrent forget/rewrite cannot return an old understanding.
-    current = {row.id: row for row in rows.filter(pk__in=[memory.id for _, memory in candidates])}
+    current = {row.id: row for row in current_rows().filter(pk__in=[memory.id for _, memory in candidates])}
     candidates = [(score, current[memory.id]) for score, memory in candidates
                   if memory.id in current and current[memory.id].revision == memory.revision]
     return {"results": [{**serialize_record(memory, user), "match_reason": "与当前问题存在文字或语义联系；不代表观点一致。"}
@@ -901,9 +1174,7 @@ def plan_memory_permissions(user, data, previous=None):
 
 def plan_memory_rows(user, payload, *, lock=False):
     """An explicit owner-confirmed allowlist; never search all private memories."""
-    from accounts.models import ReaderProfile
-    preferences = ReaderProfile.objects.filter(user=user).values_list("reading_preferences", flat=True).first() or {}
-    if payload.get("use_confirmed_memories") is not True or preferences.get("research_personalization", True) is False:
+    if payload.get("use_confirmed_memories") is not True:
         return []
     ids = payload.get("confirmed_memory_ids", [])
     if not isinstance(ids, list) or len(ids) > 40:
@@ -1251,5 +1522,6 @@ def research_export(user):
         "turns": [serialize_record(row, user) for row in ResearchTurn.objects.filter(project__user=user)],
         "plans": [serialize_record(row, user) for row in PersonalReadingPlan.objects.filter(user=user)],
         "memories": [serialize_record(row, user) for row in ResearchMemory.objects.filter(user=user)],
-        "audits": [serialize_record(row, user) for row in CitationAudit.objects.filter(user=user)],
+        "audits": [serialize_record(row, user) for row in CitationAudit.objects.filter(user=user, purpose="manuscript")],
+        "citation_sources": [serialize_record(row, user) for row in CitationAudit.objects.filter(user=user, purpose="private_source")],
         "notice": "不包含 PDF 原件或向量；删除不立即移除受既有保留期管理的备份。"}

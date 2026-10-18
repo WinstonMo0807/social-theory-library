@@ -49,6 +49,8 @@ class ResearchTurn(UUIDTimeStampedModel):
 
 
 class CitationAudit(PrivateResearchRecord):
+    purpose = models.CharField(max_length=20, default="manuscript", choices=[("manuscript", "Manuscript"), ("private_source", "Private source")])
+    file_size_bytes = models.PositiveIntegerField(default=0)
     project = models.ForeignKey(ResearchProject, null=True, blank=True, on_delete=models.SET_NULL, related_name="audits")
     request_id = models.UUIDField(default=uuid.uuid4)
     original_ciphertext = models.BinaryField(default=bytes)
@@ -63,6 +65,7 @@ class CitationAudit(PrivateResearchRecord):
 
     class Meta(PrivateResearchRecord.Meta):
         abstract = False
+        indexes = [models.Index(fields=["user", "purpose", "-updated_at"], name="citation_owner_purpose_idx")]
         constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="citation_audit_request_unique")]
 
 

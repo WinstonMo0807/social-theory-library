@@ -179,6 +179,8 @@ def test_source_withdrawal_forces_recheck_and_does_not_transfer_old_confirmation
     finish(base)
     first = research.unpack(base)["occurrences"][0]
     assert first["findings"][0]["status"] == "text_match"
+    base = citation_audit.update_audit(reader_user, base.pk, {"expected_revision": base.revision, "action": "decision",
+        "occurrence_id": first["id"], "decision": "accepted"})
     edition.state = "withdrawn"
     edition.save(update_fields=["state"])
     child = finish(new_version(reader_user, base, blob))
@@ -266,6 +268,8 @@ def test_retry_revalidates_reused_sources_before_using_empty_resume_targets(read
     base = citation_audit.update_audit(reader_user, base.pk, {"expected_revision": base.revision, "action": "match",
         "entry_id": entry["id"], "edition_id": str(edition.pk)})
     finish(base)
+    base = citation_audit.update_audit(reader_user, base.pk, {"expected_revision": base.revision, "action": "decision",
+        "occurrence_id": research.unpack(base)["occurrences"][0]["id"], "decision": "accepted"})
     child = finish(new_version(reader_user, base, blob))
     previous = research.unpack(child)
     reused = previous["occurrences"][0]

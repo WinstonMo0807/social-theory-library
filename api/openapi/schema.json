@@ -5069,6 +5069,46 @@
                 }
             }
         },
+        "/api/reading/citation-audits/{id}/manuscript/": {
+            "get": {
+                "operationId": "reading_citation_audits_manuscript_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationTextUnitsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/citation-audits/{id}/ocr/": {
             "get": {
                 "operationId": "reading_citation_audits_ocr_retrieve",
@@ -5258,6 +5298,391 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/AuditCapabilitiesOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/": {
+            "get": {
+                "operationId": "reading_citation_sources_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedPrivateRecordList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_citation_sources_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationSourceCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/": {
+            "get": {
+                "operationId": "reading_citation_sources_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_citation_sources_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/command/": {
+            "post": {
+                "operationId": "reading_citation_sources_command_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationSourceCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationSourceCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationSourceCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/export/": {
+            "get": {
+                "operationId": "reading_citation_sources_export_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecordExport"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/ocr/": {
+            "get": {
+                "operationId": "reading_citation_sources_ocr_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationOCROutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/original/": {
+            "get": {
+                "operationId": "reading_citation_sources_original_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-sources/{id}/segments/": {
+            "get": {
+                "operationId": "reading_citation_sources_segments_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 citation audit 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationTextUnitsOutput"
                                 }
                             }
                         },
@@ -5685,6 +6110,37 @@
                 "operationId": "reading_research_memories_list",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "concept",
+                                "understanding",
+                                "question",
+                                "method",
+                                "observation",
+                                "contradiction"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `concept` - concept\n* `understanding` - understanding\n* `question` - question\n* `method` - method\n* `observation` - observation\n* `contradiction` - contradiction"
+                    },
+                    {
+                        "in": "query",
+                        "name": "order",
+                        "schema": {
+                            "enum": [
+                                "updated_at",
+                                "newest"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `updated_at` - updated_at\n* `newest` - newest"
+                    },
+                    {
                         "name": "ordering",
                         "required": false,
                         "in": "query",
@@ -5703,6 +6159,14 @@
                         }
                     },
                     {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 1200
+                        }
+                    },
+                    {
                         "name": "search",
                         "required": false,
                         "in": "query",
@@ -5710,6 +6174,37 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source_status",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "available",
+                                "updated",
+                                "unavailable",
+                                "no_source"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `available` - available\n* `updated` - updated\n* `unavailable` - unavailable\n* `no_source` - no_source"
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "proposed",
+                                "confirmed",
+                                "ignored"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `proposed` - proposed\n* `confirmed` - confirmed\n* `ignored` - ignored"
                     }
                 ],
                 "tags": [
@@ -5728,7 +6223,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedPrivateRecordList"
+                                    "$ref": "#/components/schemas/PaginatedMemoryListOutputList"
                                 }
                             }
                         },
@@ -5943,6 +6438,105 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PrivateRecordExport"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/research-memories/{id}/usage/": {
+            "get": {
+                "operationId": "reading_research_memories_usage_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research memory 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_research_memories_usage_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research memory 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MemoryUsageInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MemoryUsageInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MemoryUsageInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
                                 }
                             }
                         },
@@ -7339,6 +7933,9 @@
                     },
                     "analysis": {
                         "readOnly": true
+                    },
+                    "private_sources": {
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -7351,6 +7948,7 @@
                     "max_pdf_pages",
                     "max_upload_bytes",
                     "ocr",
+                    "private_sources",
                     "scopes"
                 ]
             },
@@ -7358,13 +7956,15 @@
                 "enum": [
                     "cancel",
                     "match",
+                    "match_private",
+                    "sources",
                     "link",
                     "decision",
                     "analyze",
                     "retry"
                 ],
                 "type": "string",
-                "description": "* `cancel` - cancel\n* `match` - match\n* `link` - link\n* `decision` - decision\n* `analyze` - analyze\n* `retry` - retry"
+                "description": "* `cancel` - cancel\n* `match` - match\n* `match_private` - match_private\n* `sources` - sources\n* `link` - link\n* `decision` - decision\n* `analyze` - analyze\n* `retry` - retry"
             },
             "AuditCommandInputRequest": {
                 "type": "object",
@@ -7375,6 +7975,18 @@
                     },
                     "action": {
                         "$ref": "#/components/schemas/AuditCommandInputActionEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "private_source_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 4
                     },
                     "entry_id": {
                         "type": "string",
@@ -7451,6 +8063,14 @@
                     },
                     "scope": {
                         "$ref": "#/components/schemas/ScopeEnum"
+                    },
+                    "private_source_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 4
                     }
                 },
                 "required": [
@@ -7477,7 +8097,7 @@
                     "check_changed_only": {
                         "type": "boolean",
                         "default": true,
-                        "description": "默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。"
+                        "description": "默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与明确选择的来源范围。"
                     }
                 },
                 "required": [
@@ -7998,6 +8618,124 @@
                 "required": [
                     "progress",
                     "unit",
+                    "units"
+                ]
+            },
+            "CitationSourceCommandActionEnum": {
+                "enum": [
+                    "cancel",
+                    "retry"
+                ],
+                "type": "string",
+                "description": "* `cancel` - cancel\n* `retry` - retry"
+            },
+            "CitationSourceCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/CitationSourceCommandActionEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision"
+                ]
+            },
+            "CitationSourceCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "本人私人来源 PDF/DOCX，最大 12 MiB，不进入公开馆藏或索引。"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "citation": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "scan_ocr": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "file",
+                    "request_id"
+                ]
+            },
+            "CitationTextUnitsOutput": {
+                "type": "object",
+                "properties": {
+                    "audit_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "manuscript_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "generation": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "page": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "units": {
+                        "readOnly": true
+                    },
+                    "notice": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "audit_id",
+                    "count",
+                    "generation",
+                    "manuscript_revision",
+                    "next_page",
+                    "notice",
+                    "page",
+                    "revision",
+                    "source_id",
+                    "status",
                     "units"
                 ]
             },
@@ -10857,6 +11595,22 @@
                     "image"
                 ]
             },
+            "MemoryContextInputRequest": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ResearchMemoryContextKindEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind"
+                ]
+            },
             "MemoryCreateInputRequest": {
                 "type": "object",
                 "properties": {
@@ -10901,6 +11655,49 @@
                     "request_id"
                 ]
             },
+            "MemoryListOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "next": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivateRecord"
+                        },
+                        "readOnly": true
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "readOnly": true,
+                        "description": "q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。"
+                    }
+                },
+                "required": [
+                    "count",
+                    "counts",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
             "MemorySearchInputRequest": {
                 "type": "object",
                 "properties": {
@@ -10920,6 +11717,14 @@
                             "format": "uuid"
                         },
                         "maxItems": 400
+                    },
+                    "context": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MemoryContextInputRequest"
+                            }
+                        ],
+                        "description": "仅从此本人研究或计划的显式授权范围中检索。"
                     }
                 },
                 "required": [
@@ -11127,6 +11932,49 @@
                 "type": "string",
                 "description": "* `proposed` - proposed\n* `confirmed` - confirmed\n* `ignored` - ignored"
             },
+            "MemoryUsageInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ResearchMemoryUsageActionEnum"
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MemoryUsageTargetInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision"
+                ]
+            },
+            "MemoryUsageTargetInputRequest": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ResearchMemoryContextKindEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "id",
+                    "kind"
+                ]
+            },
             "MetadataDecisionActionEnum": {
                 "enum": [
                     "reject",
@@ -11230,19 +12078,11 @@
                     "action"
                 ]
             },
-            "OutlineJobCommandActionEnum": {
-                "enum": [
-                    "retry",
-                    "cancel"
-                ],
-                "type": "string",
-                "description": "* `retry` - retry\n* `cancel` - cancel"
-            },
             "OutlineJobCommandRequest": {
                 "type": "object",
                 "properties": {
                     "action": {
-                        "$ref": "#/components/schemas/OutlineJobCommandActionEnum"
+                        "$ref": "#/components/schemas/CitationSourceCommandActionEnum"
                     }
                 },
                 "required": [
@@ -11336,6 +12176,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/BackupJob"
+                        }
+                    }
+                }
+            },
+            "PaginatedMemoryListOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MemoryListOutput"
                         }
                     }
                 }
@@ -11471,6 +12342,9 @@
                         "minLength": 1,
                         "maxLength": 20000
                     },
+                    "kind": {
+                        "$ref": "#/components/schemas/ResearchMemoryKindEnum"
+                    },
                     "sources": {
                         "type": "array",
                         "items": {
@@ -11479,6 +12353,10 @@
                     },
                     "state": {
                         "$ref": "#/components/schemas/MemoryUpdateInputStateEnum"
+                    },
+                    "refresh_origin": {
+                        "type": "boolean",
+                        "description": "本人已对照当前原笔记后明确更新来源身份；不修改原笔记。"
                     }
                 }
             },
@@ -14766,14 +15644,34 @@
                     "preferences"
                 ]
             },
+            "ResearchMemoryContextKindEnum": {
+                "enum": [
+                    "project",
+                    "plan"
+                ],
+                "type": "string",
+                "description": "* `project` - project\n* `plan` - plan"
+            },
             "ResearchMemoryKindEnum": {
                 "enum": [
+                    "concept",
                     "understanding",
                     "question",
+                    "method",
+                    "observation",
                     "contradiction"
                 ],
                 "type": "string",
-                "description": "* `understanding` - understanding\n* `question` - question\n* `contradiction` - contradiction"
+                "description": "* `concept` - concept\n* `understanding` - understanding\n* `question` - question\n* `method` - method\n* `observation` - observation\n* `contradiction` - contradiction"
+            },
+            "ResearchMemoryUsageActionEnum": {
+                "enum": [
+                    "grant",
+                    "revoke",
+                    "revoke_all"
+                ],
+                "type": "string",
+                "description": "* `grant` - grant\n* `revoke` - revoke\n* `revoke_all` - revoke_all"
             },
             "ResearchPreferenceInput": {
                 "type": "object",
@@ -15092,10 +15990,11 @@
             },
             "ScopeEnum": {
                 "enum": [
-                    "public_library"
+                    "public_library",
+                    "private_materials"
                 ],
                 "type": "string",
-                "description": "* `public_library` - public_library"
+                "description": "* `public_library` - public_library\n* `private_materials` - private_materials"
             },
             "SelectionInputActionEnum": {
                 "enum": [

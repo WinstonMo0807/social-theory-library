@@ -123,9 +123,10 @@ def test_memory_revisions_owner_search_and_forget(reader_user, admin_user):
     assert not memory.embedding_ciphertext and not memory.embedding_artifact
     assert research.unpack(memory)["history"][0]["data"]["body"] == "制度与社会关系"
     assert research.search_memories(admin_user, "制度", allowed_ids=[str(memory.id)])["results"] == []
-    assert len(research.search_memories(reader_user, "制度")["results"]) == 1
+    assert len(research.search_memories(reader_user, "制度", allowed_ids=[str(memory.id)])["results"]) == 1
+    memory_id = str(memory.id)
     memory.delete()
-    assert research.search_memories(reader_user, "制度")["results"] == []
+    assert research.search_memories(reader_user, "制度", allowed_ids=[memory_id])["results"] == []
 
 
 def test_rules_are_never_marked_confirmed_counterevidence(reader_user):
@@ -281,7 +282,7 @@ def test_private_memory_embedding_rejects_remote_endpoint_before_sending_text(
     monkeypatch.setattr("catalog.services.discovery_inference.embed_texts", lambda *args, **kwargs: (
         _ for _ in ()).throw(AssertionError("Private text must not reach the embedding client")))
 
-    result = research.search_memories(reader_user, "制度", semantic=True)
+    result = research.search_memories(reader_user, "制度", semantic=True, allowed_ids=[str(memory.id)])
 
     assert result["mode"] == "local_lexical"
     assert result["warning"]
@@ -338,7 +339,7 @@ def test_private_memory_embedding_ignores_proxy_environment_and_rejects_redirect
 
     # Exercise the actual catalog client contract without opening a socket.
     monkeypatch.setattr("catalog.services.discovery_inference.httpx.Client", FakeClient)
-    result = research.search_memories(reader_user, "制度", semantic=True)
+    result = research.search_memories(reader_user, "制度", semantic=True, allowed_ids=[str(memory.id)])
 
     assert client_options
     assert all(method == "POST" and url == "http://127.0.0.1:8091/embed" for method, url, _payload in calls)

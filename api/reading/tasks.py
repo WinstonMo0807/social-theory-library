@@ -203,11 +203,16 @@ def enhance_reading_plan(plan_id, revision):
         save_data(plan, payload)
         revision = plan.revision
     try:
-        payload = unpack(plan)
+        # A scope may be revoked while the queued job is starting. Do not decrypt
+        # reminders from the stale snapshot after that explicit authorization change.
+        current = PersonalReadingPlan.objects.filter(pk=plan_id, user=plan.user, revision=revision).first()
+        if current is None or unpack(current).get("enhancement_status") != "running":
+            return
+        payload = unpack(current)
         invalidate_plan_suggestions(payload, "running")
         reminders = plan_memory_rows(plan.user, payload)
         memory_data = [{"id": str(row.id), "body": unpack(row)["body"]} for row in reminders]
-        current_data = serialize_record(plan, plan.user)["data"]
+        current_data = serialize_record(current, plan.user)["data"]
         current_data["items"] = [row for row in current_data.get("items", []) if row.get("available") and row.get("status") != "completed"]
         suggestions, model = propose_plan_labels(current_data, memory_data)
         by_id = {row["item_id"]: row for row in suggestions}

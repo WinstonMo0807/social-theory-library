@@ -73,7 +73,7 @@ test("audit check dependencies are explicit and a successful submit cannot dupli
   await expect(page.getByRole("checkbox", { name: /书目身份/ })).toBeChecked();
   await page.getByRole("button", { name: "提交检查", exact: true }).click();
   await expect(page.getByRole("button", { name: "已提交检查", exact: true })).toBeDisabled();
-  await expect(page.getByRole("link", { name: "查看任务" })).toHaveAttribute("href", `/account/citation-audits/${auditId}`);
+  await expect(page.getByRole("link", { name: "查看任务" })).toHaveAttribute("href", `/account/citation-audits/${auditId}/parse`);
   expect(state.requests).toHaveLength(1);
 });
 

@@ -1321,6 +1321,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/citation-audits/{id}/manuscript/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_audits_manuscript_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/citation-audits/{id}/ocr/": {
         parameters: {
             query?: never;
@@ -1377,6 +1393,118 @@ export interface paths {
             cookie?: never;
         };
         get: operations["reading_citation_audits_capabilities_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_list"];
+        put?: never;
+        post: operations["reading_citation_sources_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_citation_sources_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_citation_sources_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/ocr/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_ocr_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/original/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_original_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-sources/{id}/segments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_sources_segments_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1507,6 +1635,22 @@ export interface paths {
         get: operations["reading_research_memories_export_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/research-memories/{id}/usage/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_research_memories_usage_retrieve"];
+        put?: never;
+        post: operations["reading_research_memories_usage_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1879,20 +2023,26 @@ export interface components {
             readonly scopes: unknown;
             readonly ocr: unknown;
             readonly analysis: unknown;
+            readonly private_sources: unknown;
         };
         /**
          * @description * `cancel` - cancel
          *     * `match` - match
+         *     * `match_private` - match_private
+         *     * `sources` - sources
          *     * `link` - link
          *     * `decision` - decision
          *     * `analyze` - analyze
          *     * `retry` - retry
          * @enum {string}
          */
-        AuditCommandInputActionEnum: "cancel" | "match" | "link" | "decision" | "analyze" | "retry";
+        AuditCommandInputActionEnum: "cancel" | "match" | "match_private" | "sources" | "link" | "decision" | "analyze" | "retry";
         AuditCommandInputRequest: {
             expected_revision: number;
             action: components["schemas"]["AuditCommandInputActionEnum"];
+            /** Format: uuid */
+            source_id?: string;
+            private_source_ids?: string[];
             /** Format: uuid */
             entry_id?: string;
             /** Format: uuid */
@@ -1920,6 +2070,7 @@ export interface components {
             /** @description multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。 */
             checks?: components["schemas"]["ChecksEnum"][];
             scope?: components["schemas"]["ScopeEnum"];
+            private_source_ids?: string[];
         };
         AuditVersionInputRequest: {
             expected_revision: number;
@@ -1931,7 +2082,7 @@ export interface components {
              */
             file: string;
             /**
-             * @description 默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。
+             * @description 默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与明确选择的来源范围。
              * @default true
              */
             check_changed_only: boolean;
@@ -2130,6 +2281,44 @@ export interface components {
             readonly progress: unknown;
             readonly units: unknown;
             readonly unit: unknown;
+        };
+        /**
+         * @description * `cancel` - cancel
+         *     * `retry` - retry
+         * @enum {string}
+         */
+        CitationSourceCommandActionEnum: "cancel" | "retry";
+        CitationSourceCommandInputRequest: {
+            expected_revision: number;
+            action: components["schemas"]["CitationSourceCommandActionEnum"];
+        };
+        CitationSourceCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /**
+             * Format: binary
+             * @description 本人私人来源 PDF/DOCX，最大 12 MiB，不进入公开馆藏或索引。
+             */
+            file: string;
+            title?: string;
+            citation?: string;
+            /** @default false */
+            scan_ocr: boolean;
+        };
+        CitationTextUnitsOutput: {
+            /** Format: uuid */
+            readonly audit_id: string;
+            /** Format: uuid */
+            readonly source_id: string;
+            readonly manuscript_revision: number;
+            readonly generation: number;
+            readonly revision: number;
+            readonly status: string;
+            readonly count: number;
+            readonly page: number;
+            readonly next_page: number | null;
+            readonly units: unknown;
+            readonly notice: string;
         };
         ComparisonCellInputRequest: {
             dimension: string;
@@ -3012,6 +3201,11 @@ export interface components {
             /** Format: binary */
             image: string;
         };
+        MemoryContextInputRequest: {
+            kind: components["schemas"]["ResearchMemoryContextKindEnum"];
+            /** Format: uuid */
+            id: string;
+        };
         MemoryCreateInputRequest: {
             /** Format: uuid */
             request_id: string;
@@ -3026,11 +3220,25 @@ export interface components {
             annotation_id?: string;
             sources?: components["schemas"]["EvidenceReferenceInputRequest"][];
         };
+        MemoryListOutput: {
+            readonly count: number;
+            /** Format: uri */
+            readonly next: string | null;
+            /** Format: uri */
+            readonly previous: string | null;
+            readonly results: components["schemas"]["PrivateRecord"][];
+            /** @description q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。 */
+            readonly counts: {
+                [key: string]: number;
+            };
+        };
         MemorySearchInputRequest: {
             q: string;
             /** @default false */
             semantic: boolean;
             allowed_ids?: string[];
+            /** @description 仅从此本人研究或计划的显式授权范围中检索。 */
+            context?: components["schemas"]["MemoryContextInputRequest"];
         };
         MemorySearchOutput: {
             readonly results: components["schemas"]["MemorySearchResult"][];
@@ -3087,6 +3295,17 @@ export interface components {
          * @enum {string}
          */
         MemoryUpdateInputStateEnum: "proposed" | "confirmed" | "ignored";
+        MemoryUsageInputRequest: {
+            expected_revision: number;
+            action: components["schemas"]["ResearchMemoryUsageActionEnum"];
+            targets?: components["schemas"]["MemoryUsageTargetInputRequest"][];
+        };
+        MemoryUsageTargetInputRequest: {
+            kind: components["schemas"]["ResearchMemoryContextKindEnum"];
+            /** Format: uuid */
+            id: string;
+            expected_revision: number;
+        };
         /**
          * @description * `reject` - reject
          *     * `reopen` - reopen
@@ -3135,14 +3354,8 @@ export interface components {
             request_id?: string;
             nodes?: components["schemas"]["OutlineNodeRequest"][];
         };
-        /**
-         * @description * `retry` - retry
-         *     * `cancel` - cancel
-         * @enum {string}
-         */
-        OutlineJobCommandActionEnum: "retry" | "cancel";
         OutlineJobCommandRequest: {
-            action: components["schemas"]["OutlineJobCommandActionEnum"];
+            action: components["schemas"]["CitationSourceCommandActionEnum"];
         };
         OutlineNodeRequest: {
             /** Format: uuid */
@@ -3172,6 +3385,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["BackupJob"][];
+        };
+        PaginatedMemoryListOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["MemoryListOutput"][];
         };
         PaginatedPrivateRecordList: {
             /** @example 123 */
@@ -3221,8 +3449,11 @@ export interface components {
         PatchedMemoryUpdateInputRequest: {
             expected_revision?: number;
             body?: string;
+            kind?: components["schemas"]["ResearchMemoryKindEnum"];
             sources?: components["schemas"]["EvidenceReferenceInputRequest"][];
             state?: components["schemas"]["MemoryUpdateInputStateEnum"];
+            /** @description 本人已对照当前原笔记后明确更新来源身份；不修改原笔记。 */
+            refresh_origin?: boolean;
         };
         PatchedPlanUpdateInputRequest: {
             expected_revision?: number;
@@ -4200,12 +4431,28 @@ export interface components {
             readonly deletion_notice: string;
         };
         /**
-         * @description * `understanding` - understanding
+         * @description * `project` - project
+         *     * `plan` - plan
+         * @enum {string}
+         */
+        ResearchMemoryContextKindEnum: "project" | "plan";
+        /**
+         * @description * `concept` - concept
+         *     * `understanding` - understanding
          *     * `question` - question
+         *     * `method` - method
+         *     * `observation` - observation
          *     * `contradiction` - contradiction
          * @enum {string}
          */
-        ResearchMemoryKindEnum: "understanding" | "question" | "contradiction";
+        ResearchMemoryKindEnum: "concept" | "understanding" | "question" | "method" | "observation" | "contradiction";
+        /**
+         * @description * `grant` - grant
+         *     * `revoke` - revoke
+         *     * `revoke_all` - revoke_all
+         * @enum {string}
+         */
+        ResearchMemoryUsageActionEnum: "grant" | "revoke" | "revoke_all";
         ResearchPreferenceInput: {
             research_personalization: boolean;
         };
@@ -4299,9 +4546,10 @@ export interface components {
         };
         /**
          * @description * `public_library` - public_library
+         *     * `private_materials` - private_materials
          * @enum {string}
          */
-        ScopeEnum: "public_library";
+        ScopeEnum: "public_library" | "private_materials";
         /**
          * @description * `add` - add
          *     * `remove` - remove
@@ -7154,6 +7402,28 @@ export interface operations {
             };
         };
     };
+    reading_citation_audits_manuscript_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationTextUnitsOutput"];
+                };
+            };
+        };
+    };
     reading_citation_audits_ocr_retrieve: {
         parameters: {
             query?: never;
@@ -7261,6 +7531,214 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditCapabilitiesOutput"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPrivateRecordList"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["CitationSourceCreateInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_citation_sources_command_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CitationSourceCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CitationSourceCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["CitationSourceCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecordExport"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_ocr_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationOCROutput"];
+                };
+            };
+        };
+    };
+    reading_citation_sources_original_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_citation_sources_segments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 citation audit 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationTextUnitsOutput"];
                 };
             };
         };
@@ -7492,12 +7970,43 @@ export interface operations {
     reading_research_memories_list: {
         parameters: {
             query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `concept` - concept
+                 *     * `understanding` - understanding
+                 *     * `question` - question
+                 *     * `method` - method
+                 *     * `observation` - observation
+                 *     * `contradiction` - contradiction
+                 */
+                kind?: "all" | "concept" | "understanding" | "question" | "method" | "observation" | "contradiction";
+                /**
+                 * @description * `updated_at` - updated_at
+                 *     * `newest` - newest
+                 */
+                order?: "updated_at" | "newest";
                 /** @description 用于排序结果的字段。 */
                 ordering?: string;
                 /** @description 分页结果集中的页码。 */
                 page?: number;
+                q?: string;
                 /** @description 搜索关键词。 */
                 search?: string;
+                /**
+                 * @description * `all` - all
+                 *     * `available` - available
+                 *     * `updated` - updated
+                 *     * `unavailable` - unavailable
+                 *     * `no_source` - no_source
+                 */
+                source_status?: "all" | "available" | "updated" | "unavailable" | "no_source";
+                /**
+                 * @description * `all` - all
+                 *     * `proposed` - proposed
+                 *     * `confirmed` - confirmed
+                 *     * `ignored` - ignored
+                 */
+                state?: "all" | "proposed" | "confirmed" | "ignored";
             };
             header?: never;
             path?: never;
@@ -7510,7 +8019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedPrivateRecordList"];
+                    "application/json": components["schemas"]["PaginatedMemoryListOutputList"];
                 };
             };
         };
@@ -7629,6 +8138,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateRecordExport"];
+                };
+            };
+        };
+    };
+    reading_research_memories_usage_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 research memory 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    reading_research_memories_usage_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 research memory 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryUsageInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MemoryUsageInputRequest"];
+                "multipart/form-data": components["schemas"]["MemoryUsageInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
                 };
             };
         };

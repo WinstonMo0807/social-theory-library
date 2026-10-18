@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
-import { ReaderCollectionList } from "@/components/research/reader-collection-list";
+import { ConfirmedNotesWorkspace } from "@/components/research/confirmed-notes-workspace";
 export const metadata: Metadata = { title: "已确认笔记" };
-export default function ConfirmedNotesPage() { return <><ReaderCollectionList kind="confirmed" /><SiteFooter /></>; }
+export default function ConfirmedNotesPage() { return <><ConfirmedNotesWorkspace /><SiteFooter /></>; }

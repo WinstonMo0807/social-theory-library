@@ -15,9 +15,11 @@ from rest_framework.views import APIView
 
 from . import research
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
+from .citation_sources import paginated_units
+from .research_serializers import CitationSourceCreateInput, CitationSourceCommandInput, CitationTextUnitsOutput
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
 from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonInput,
-    MemoryCreateInput, MemorySearchInput, MemoryUpdateInput, PlanCreateInput, PlanUpdateInput,
+    MemoryCreateInput, MemoryListInput, MemorySearchInput, MemoryUpdateInput, MemoryUsageInput, PlanCreateInput, PlanUpdateInput,
     PlanCommandInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
     SubclaimsInput, TurnExpandInput, TurnRetryInput)
 
@@ -63,6 +65,15 @@ class MemorySearchOutput(serializers.Serializer):
     semantic_evaluated_count = serializers.IntegerField(read_only=True, allow_null=True, required=False)
     semantic_excluded_count = serializers.IntegerField(read_only=True, allow_null=True, required=False)
     semantic_scope_complete = serializers.BooleanField(read_only=True, required=False)
+
+
+class MemoryListOutput(serializers.Serializer):
+    count = serializers.IntegerField(read_only=True)
+    next = serializers.URLField(read_only=True, allow_null=True, required=False)
+    previous = serializers.URLField(read_only=True, allow_null=True, required=False)
+    results = PrivateRecordSerializer(many=True, read_only=True)
+    counts = serializers.DictField(child=serializers.IntegerField(), read_only=True,
+        help_text="q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。")
 
 
 class PrivateResponses:
@@ -219,6 +230,18 @@ class ResearchTurnViewSet(PrivateRecordViewSet):
 class ResearchMemoryViewSet(PrivateRecordViewSet):
     model = ResearchMemory
 
+    @extend_schema(parameters=[MemoryListInput], responses=MemoryListOutput)
+    def list(self, request):
+        schema = MemoryListInput(data=request.query_params)
+        schema.is_valid(raise_exception=True)
+        rows, counts = research.list_memories(request.user, schema.validated_data)
+        page = self.paginate_queryset(rows)
+        contexts = research.memory_contexts(request.user)
+        data = [research.serialize_record(row, request.user, memory_context_rows=contexts) for row in (page if page is not None else rows)]
+        response = self.get_paginated_response(data) if page is not None else Response({"results": data, "count": len(rows)})
+        response.data["counts"] = counts
+        return response
+
     @extend_schema(request=MemoryCreateInput, responses={201: PrivateRecordSerializer})
     def create(self, request):
         memory = research.create_memory(request.user, command(request, MemoryCreateInput))
@@ -228,6 +251,26 @@ class ResearchMemoryViewSet(PrivateRecordViewSet):
     def partial_update(self, request, pk=None):
         return Response(research.serialize_record(research.update_memory(request.user, pk, command(request, MemoryUpdateInput)), request.user))
 
+    @extend_schema(request=RevisionInput, responses={204: None})
+    def destroy(self, request, pk=None):
+        data = command(request, RevisionInput)
+        research.delete_memory(request.user, pk, data.get("expected_revision"))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @action(detail=True, methods=["get"])
+    def usage(self, request, pk=None):
+        memory = self.get_object()
+        return Response({"memory_id": str(memory.id), "revision": memory.revision,
+            "targets": research.memory_usage_targets(request.user, memory),
+            "notice": "本人确认不等于授权；仅在明确选择的研究与阅读计划内使用。"})
+
+    @extend_schema(request=MemoryUsageInput, responses=PrivateRecordSerializer)
+    @usage.mapping.post
+    def update_usage(self, request, pk=None):
+        memory = research.update_memory_usage(request.user, pk, command(request, MemoryUsageInput))
+        return Response(research.serialize_record(memory, request.user))
+
     @extend_schema(request=MemorySearchInput, responses=MemorySearchOutput)
     @action(detail=False, methods=["post"])
     def search(self, request):
@@ -235,7 +278,7 @@ class ResearchMemoryViewSet(PrivateRecordViewSet):
         if "semantic" in data and not isinstance(data["semantic"], bool):
             raise ValidationError({"semantic": "需要布尔值。"})
         return Response(research.search_memories(request.user, data.get("q"), semantic=data.get("semantic", False),
-                                                allowed_ids=data.get("allowed_ids")))
+                                                allowed_ids=data.get("allowed_ids"), context=data.get("context")))
 
 
 class PersonalReadingPlanViewSet(PrivateRecordViewSet):
@@ -260,6 +303,9 @@ class PersonalReadingPlanViewSet(PrivateRecordViewSet):
 
 class CitationAuditViewSet(PrivateRecordViewSet):
     model = CitationAudit
+
+    def get_queryset(self):
+        return super().get_queryset().filter(purpose="manuscript").defer("original_ciphertext")
 
     @extend_schema(responses=AuditCapabilitiesOutput)
     @action(detail=False, methods=["get"])
@@ -317,6 +363,40 @@ class CitationAuditViewSet(PrivateRecordViewSet):
             for key, unit in units.items()]})
 
 
+    @extend_schema(responses=CitationTextUnitsOutput)
+    @action(detail=True, methods=["get"])
+    def manuscript(self, request, pk=None):
+        return Response(paginated_units(self.get_object(), request.query_params))
+
+
+class CitationSourceViewSet(PrivateRecordViewSet):
+    model = CitationAudit
+
+    def get_queryset(self):
+        return super().get_queryset().filter(purpose="private_source").defer("original_ciphertext")
+
+    @extend_schema(request={"multipart/form-data": CitationSourceCreateInput}, responses={202: PrivateRecordSerializer})
+    def create(self, request):
+        schema = CitationSourceCreateInput(data=request.data)
+        schema.is_valid(raise_exception=True)
+        source = create_audit(request.user, request.FILES.get("file"), schema.validated_data, purpose="private_source")
+        return Response(research.serialize_record(source, request.user), status=202)
+
+    @extend_schema(request=CitationSourceCommandInput)
+    @action(detail=True, methods=["post"])
+    def command(self, request, pk=None):
+        source = update_audit(request.user, pk, command(request, CitationSourceCommandInput), purpose="private_source")
+        return Response(research.serialize_record(source, request.user))
+
+    original = CitationAuditViewSet.original
+    ocr = CitationAuditViewSet.ocr
+
+    @extend_schema(responses=CitationTextUnitsOutput)
+    @action(detail=True, methods=["get"])
+    def segments(self, request, pk=None):
+        return Response(paginated_units(self.get_object(), request.query_params))
+
+
 class ResearchAccountView(PrivateResponses, APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ResearchAccountOutput
@@ -326,8 +406,8 @@ class ResearchAccountView(PrivateResponses, APIView):
         user = request.user
         return Response({"counts": {"research": ResearchProject.objects.filter(user=user).count(),
             "memories": ResearchMemory.objects.filter(user=user).count(), "plans": PersonalReadingPlan.objects.filter(user=user).count(),
-            "audits": CitationAudit.objects.filter(user=user).count()},
-            "preferences": (user.reader_profile.reading_preferences or {}).get("research_personalization", True),
+            "audits": CitationAudit.objects.filter(user=user, purpose="manuscript").count()},
+            "preferences": (user.reader_profile.reading_preferences or {}).get("research_personalization", False),
             "deletion_notice": "删除同步移除该记录及其派生向量；独立来源笔记保留。备份按原有保留期清理。"})
 
     @extend_schema(request=ResearchPreferenceInput, responses=ResearchPreferenceInput)
@@ -338,7 +418,16 @@ class ResearchAccountView(PrivateResponses, APIView):
         value = data.get("research_personalization")
         if not isinstance(value, bool):
             raise ValidationError({"research_personalization": "需要布尔值。"})
+        contexts = research.memory_contexts(request.user, lock=True) if value is False else []
         profile = ReaderProfile.objects.select_for_update().get(user=request.user)
         profile.reading_preferences = {**(profile.reading_preferences or {}), "research_personalization": value}
         profile.save(update_fields=["reading_preferences"])
+        if value is False:
+            for _, record in contexts:
+                payload = research.unpack(record)
+                if payload.get("use_confirmed_memories") or payload.get("confirmed_memory_ids"):
+                    payload.update(use_confirmed_memories=False, confirmed_memory_ids=[])
+                    if isinstance(record, PersonalReadingPlan):
+                        research.invalidate_plan_suggestions(payload, "authorization_changed")
+                    research.save_data(record, payload)
         return Response({"research_personalization": value})

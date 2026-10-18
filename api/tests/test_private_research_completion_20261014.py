@@ -201,8 +201,8 @@ def test_semantic_memory_can_recall_without_shared_words_and_respects_owner(read
         assert "private forbidden" not in texts
         return {"artifact_id": "test-model", "vectors": [[1.0, 0.0] for _ in texts]}
     monkeypatch.setattr("catalog.services.discovery_inference.embed_texts", encode)
-    assert research.search_memories(reader_user, "collective action")["results"] == []
-    result = research.search_memories(reader_user, "collective action", semantic=True)
+    assert research.search_memories(reader_user, "collective action", allowed_ids=[str(target.id)])["results"] == []
+    result = research.search_memories(reader_user, "collective action", semantic=True, allowed_ids=[str(target.id)])
     assert result["mode"] == "local_semantic_owner_candidates" and result["semantic_scope_complete"]
     assert [row["id"] for row in result["results"]] == [str(target.id)]
     assert len(calls) == 2 and ResearchMemory.objects.get(pk=target.id).embedding_ciphertext
@@ -221,7 +221,7 @@ def test_semantic_memory_ignores_record_forgotten_during_inference(reader_user, 
             ResearchMemory.objects.filter(pk=memory.id).delete()
         return {"artifact_id": "test-model", "vectors": [[1.0, 0.0] for _ in texts]}
     monkeypatch.setattr("catalog.services.discovery_inference.embed_texts", encode)
-    assert research.search_memories(reader_user, "制度", semantic=True)["results"] == []
+    assert research.search_memories(reader_user, "制度", semantic=True, allowed_ids=[str(memory.id)])["results"] == []
 
 
 def citation_candidate(author, year, version="第二版", doi=""):

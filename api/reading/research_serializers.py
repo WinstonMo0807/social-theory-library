@@ -145,7 +145,7 @@ class AnalysisDecisionInput(RevisionInput):
 class MemoryCreateInput(serializers.Serializer):
     request_id = serializers.UUIDField()
     body = serializers.CharField(max_length=20000)
-    kind = serializers.ChoiceField(choices=["understanding", "question", "contradiction"], default="understanding")
+    kind = serializers.ChoiceField(choices=["concept", "understanding", "question", "method", "observation", "contradiction"], default="understanding")
     project_id = serializers.UUIDField(required=False)
     turn_id = serializers.UUIDField(required=False)
     annotation_id = serializers.UUIDField(required=False)
@@ -154,14 +154,39 @@ class MemoryCreateInput(serializers.Serializer):
 
 class MemoryUpdateInput(RevisionInput):
     body = serializers.CharField(max_length=20000, required=False)
+    kind = serializers.ChoiceField(choices=["concept", "understanding", "question", "method", "observation", "contradiction"], required=False)
     sources = EvidenceReferenceInput(many=True, required=False)
     state = serializers.ChoiceField(choices=["proposed", "confirmed", "ignored"], required=False)
+    refresh_origin = serializers.BooleanField(required=False, help_text="本人已对照当前原笔记后明确更新来源身份；不修改原笔记。")
+
+
+class MemoryContextInput(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["project", "plan"])
+    id = serializers.UUIDField()
+
+
+class MemoryUsageTargetInput(MemoryContextInput):
+    expected_revision = serializers.IntegerField(min_value=1)
+
+
+class MemoryUsageInput(RevisionInput):
+    action = serializers.ChoiceField(choices=["grant", "revoke", "revoke_all"])
+    targets = MemoryUsageTargetInput(many=True, required=False)
+
+
+class MemoryListInput(serializers.Serializer):
+    q = serializers.CharField(max_length=1200, required=False, allow_blank=True)
+    state = serializers.ChoiceField(choices=["all", "proposed", "confirmed", "ignored"], required=False)
+    kind = serializers.ChoiceField(choices=["all", "concept", "understanding", "question", "method", "observation", "contradiction"], required=False)
+    source_status = serializers.ChoiceField(choices=["all", "available", "updated", "unavailable", "no_source"], required=False)
+    order = serializers.ChoiceField(choices=["updated_at", "newest"], required=False)
 
 
 class MemorySearchInput(serializers.Serializer):
     q = serializers.CharField(max_length=1200)
     semantic = serializers.BooleanField(default=False)
     allowed_ids = serializers.ListField(child=serializers.UUIDField(), max_length=400, required=False)
+    context = MemoryContextInput(required=False, help_text="仅从此本人研究或计划的显式授权范围中检索。")
 
 
 class PrerequisiteInput(serializers.Serializer):
@@ -243,14 +268,41 @@ class AuditCreateInput(serializers.Serializer):
     project_id = serializers.UUIDField(required=False)
     checks = serializers.ListField(child=serializers.ChoiceField(choices=["citation_identification", "bibliography_identity", "version_page", "scan_ocr"]),
         max_length=4, allow_empty=False, required=False, help_text="multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。")
-    scope = serializers.ChoiceField(choices=["public_library"], required=False)
+    scope = serializers.ChoiceField(choices=["public_library", "private_materials"], required=False)
+    private_source_ids = serializers.ListField(child=serializers.UUIDField(), max_length=4, required=False)
+
+
+class CitationSourceCreateInput(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    file = serializers.FileField(help_text="本人私人来源 PDF/DOCX，最大 12 MiB，不进入公开馆藏或索引。")
+    title = serializers.CharField(max_length=240, required=False, allow_blank=True)
+    citation = serializers.CharField(max_length=2000, required=False, allow_blank=True)
+    scan_ocr = serializers.BooleanField(default=False)
+
+
+class CitationSourceCommandInput(RevisionInput):
+    action = serializers.ChoiceField(choices=["cancel", "retry"])
+
+
+class CitationTextUnitsOutput(serializers.Serializer):
+    audit_id = serializers.UUIDField(read_only=True, required=False)
+    source_id = serializers.UUIDField(read_only=True, required=False)
+    manuscript_revision = serializers.IntegerField(read_only=True, required=False)
+    generation = serializers.IntegerField(read_only=True)
+    revision = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    count = serializers.IntegerField(read_only=True)
+    page = serializers.IntegerField(read_only=True)
+    next_page = serializers.IntegerField(read_only=True, allow_null=True)
+    units = serializers.JSONField(read_only=True)
+    notice = serializers.CharField(read_only=True)
 
 
 class AuditVersionInput(RevisionInput):
     request_id = serializers.UUIDField()
     file = serializers.FileField(help_text="新版本 DOCX/PDF，最大 12 MiB；原稿与旧报告保持独立。")
     check_changed_only = serializers.BooleanField(default=True,
-        help_text="默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与公开馆藏范围。")
+        help_text="默认仅重查不能安全复用的引文；取消后检查全部引文。继承原检查项与明确选择的来源范围。")
 
 
 class AuditVersionSummary(serializers.Serializer):
@@ -282,10 +334,13 @@ class AuditCapabilitiesOutput(serializers.Serializer):
     scopes = serializers.JSONField(read_only=True)
     ocr = serializers.JSONField(read_only=True)
     analysis = serializers.JSONField(read_only=True)
+    private_sources = serializers.JSONField(read_only=True)
 
 
 class AuditCommandInput(RevisionInput):
-    action = serializers.ChoiceField(choices=["cancel", "match", "link", "decision", "analyze", "retry"])
+    action = serializers.ChoiceField(choices=["cancel", "match", "match_private", "sources", "link", "decision", "analyze", "retry"])
+    source_id = serializers.UUIDField(required=False)
+    private_source_ids = serializers.ListField(child=serializers.UUIDField(), max_length=4, required=False)
     entry_id = serializers.UUIDField(required=False)
     edition_id = serializers.UUIDField(required=False)
     occurrence_id = serializers.UUIDField(required=False)

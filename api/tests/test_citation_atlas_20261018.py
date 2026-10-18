@@ -37,7 +37,8 @@ def test_capabilities_are_private_configuration_eligibility(api_client, reader_u
     assert response.data["ocr"]["available"] is False
     assert response.data["analysis"]["available"] is False
     assert response.data["analysis"]["service_verified"] is False
-    assert next(row for row in response.data["scopes"] if row["id"] == "private_materials")["available"] is False
+    assert next(row for row in response.data["scopes"] if row["id"] == "private_materials")["available"] is True
+    assert response.data["private_sources"]["max_selected"] == 4
 
 
 def test_multipart_check_selection_is_enforced_and_bound_to_request(api_client, reader_user, monkeypatch):

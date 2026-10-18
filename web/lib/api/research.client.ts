@@ -31,7 +31,7 @@ export type ProjectData = {
 };
 export type Statement = { proposition: string; subject?: string; predicate?: string; object?: string; polarity?: "positive" | "negative" | "mixed" | "uncertain"; modality?: string; qualifiers?: string[]; temporal_scope?: unknown; geographic_scope?: unknown; population_scope?: unknown };
 export type AnalysisRelation = "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence";
-export type TurnData = { question: string; scope: QueryScope; mode: "search" | "counterargument"; result_refs?: ResolvedEvidence[]; selected_refs?: ResolvedEvidence[]; return_context?: Record<string, unknown>; analysis?: Array<{ id: string; reference: ResolvedEvidence; status: string; [key: string]: unknown }>; [key: string]: unknown };
+export type TurnData = { question: string; scope: QueryScope; mode: "search" | "counterargument"; result_refs?: ResolvedEvidence[]; selected_refs?: ResolvedEvidence[]; return_context?: Record<string, unknown>; analysis?: Array<{ id: string; reference: ResolvedEvidence; status: string; [key: string]: unknown }>; memory_reminders?: Array<{ id: string; revision: number; body: string; kind: string; notice?: string }>; memory_reminders_status?: string; [key: string]: unknown };
 export type MemoryData = { body: string; kind: "understanding" | "question" | "contradiction"; sources: ResolvedEvidence[]; [key: string]: unknown };
 export type PlanLevel = "beginner" | "intermediate" | "advanced";
 export type PlanPolicy = {
@@ -79,6 +79,11 @@ export type AuditCapabilities = {
   [key: string]: unknown;
 };
 export type AuditLocation = { part?: string; paragraph?: number | null; note_id?: string | number | null; pdf_page?: number | null; start?: number; end?: number; xml_node?: string; end_paragraph?: number };
+export type AuditTextUnit = { id: string; index: number; text: string; location: AuditLocation; matchable?: boolean; coverage_status?: "parsed_text" | "unread_content" };
+export type AuditTextPage = { audit_id?: string; source_id?: string; manuscript_revision?: number; generation?: number; status?: string; revision: number; count: number; page: number; next_page: number | null; units: AuditTextUnit[]; notice?: string };
+export type PrivateCitationSourceData = { purpose: "private_source"; filename: string; filetype: "pdf" | "docx"; title?: string; citation?: string; parsed?: boolean; source_generation?: number; segment_count?: number; matchable_segment_count?: number; stage?: string; file_size_bytes?: number; manuscript_stats?: AuditData["manuscript_stats"]; warnings?: AuditData["warnings"] };
+export type PrivateCitationCandidate = { source_id: string; kind?: "private_source"; source_generation?: number; title?: string; filename?: string; citation?: string; source_status?: string };
+export type PrivateCitationReference = { source_id: string; source_generation: number; unit_id: string; content_hash?: string; quote?: string; location?: AuditLocation; source_status: string; title?: string; filename?: string; citation?: string; original_url?: string | null };
 export type AuditCandidate = {
   edition_id: string; work_id?: string; title: string; year?: number | null; version_label?: string; citation?: string;
   basis?: string; similarity?: number | null; review_fields?: string[]; source_status?: string;
@@ -88,9 +93,11 @@ export type AuditCandidate = {
 export type AuditEntry = { id: string; label?: string; raw: string; doi?: string; location?: AuditLocation;
   identity_status: string; candidates: AuditCandidate[]; selected_edition_id?: string | null;
   selected_source_status?: string;
+  private_candidates?: PrivateCitationCandidate[]; selected_private_source_id?: string | null; selected_private_source_status?: string;
   history?: Array<{ at: string; selected_edition_id?: string | null; identity_status?: string }> };
 export type AuditDecision = { value: "accepted" | "ignored" | "corrected" | "needs_review"; note: string; at: string; corrected_text?: string };
 export type AuditFinding = { kind: string; status: string; source_status?: string; message?: string; edition_id?: string; references?: ResolvedEvidence[];
+  private_references?: PrivateCitationReference[];
   claimed_printed_label?: string | null; page_status?: string };
 export type AuditOccurrence = {
   id: string; raw: string; quote?: string; context: string; note_text?: string; location: AuditLocation; entry_ids: string[];
@@ -112,6 +119,7 @@ export type AuditVersionComparison = {
 export type AuditData = {
   filename: string; filetype: "pdf" | "docx"; manuscript_revision?: number; stage?: string; parsed?: boolean;
   bibliography: AuditEntry[]; occurrences: AuditOccurrence[]; checks?: AuditCheck[]; scope?: string;
+  private_source_ids?: string[]; private_sources?: PrivateCitationCandidate[];
   warnings?: Array<{ code: string; message: string }>; report_notice?: string; location_notice?: string;
   file_size_bytes?: number;
   manuscript_stats?: { file_size_bytes?: number; paragraph_count?: number; char_count?: number; pdf_page_count?: number | null; embedded_image_count?: number; occurrence_count?: number; bibliography_count?: number };
@@ -205,13 +213,14 @@ export function commandReadingPlan(id: string, data: Revision & { action: "cance
 export function readAuditCapabilities(signal?: AbortSignal) {
   return privateRequest<AuditCapabilities>(`${researchRecordPath("citation-audits")}capabilities/`, { signal });
 }
-export function createCitationAudit(file: File, requestId: string, projectId?: string, options?: { checks: AuditCheck[]; scope: string }) {
+export function createCitationAudit(file: File, requestId: string, projectId?: string, options?: { checks: AuditCheck[]; scope: string; private_source_ids?: string[] }) {
   const body = new FormData(); body.set("file", file); body.set("request_id", requestId);
   if (projectId) body.set("project_id", projectId);
   if (options) { for (const check of options.checks) body.append("checks", check); body.set("scope", options.scope); }
+  for (const id of options?.private_source_ids || []) body.append("private_source_ids", id);
   return privateRequest<ResearchRecord<AuditData>>(researchRecordPath("citation-audits"), { method: "POST", body });
 }
-export function commandCitationAudit(id: string, data: Revision & { action: "cancel" | "match" | "link" | "decision" | "analyze" | "retry"; entry_id?: string; edition_id?: string; occurrence_id?: string; occurrence_ids?: string[]; entry_ids?: string[]; decision?: "accepted" | "ignored" | "corrected" | "needs_review"; note?: string; corrected_text?: string; reference?: EvidenceReference }) {
+export function commandCitationAudit(id: string, data: Revision & { action: "cancel" | "match" | "match_private" | "sources" | "link" | "decision" | "analyze" | "retry"; entry_id?: string; edition_id?: string; source_id?: string; private_source_ids?: string[]; occurrence_id?: string; occurrence_ids?: string[]; entry_ids?: string[]; decision?: "accepted" | "ignored" | "corrected" | "needs_review"; note?: string; corrected_text?: string; reference?: EvidenceReference }) {
   return write<ResearchRecord<AuditData>>(`${researchRecordPath("citation-audits", id)}command/`, data);
 }
 export function createCitationAuditVersion(id: string, file: File, data: Revision & { request_id: string; check_changed_only: boolean }) {
@@ -225,6 +234,23 @@ export function readCitationOCR(id: string, unit?: string, signal?: AbortSignal)
 export async function downloadAuditOriginal(id: string) {
   const response = await apiStreamRequest(`${researchRecordPath("citation-audits", id)}original/`, { cache: "no-store", signal: AbortSignal.timeout(300000) }, getServerSessionCredential());
   if (!response.ok) throw new Error(`原稿下载失败（${response.status}），请核对登录状态后重试。`);
+  return { blob: await response.blob(), disposition: response.headers.get("Content-Disposition") };
+}
+export const privateCitationSourcePath = (id?: string) => `/reading/citation-sources/${id ? `${encodeURIComponent(id)}/` : ""}`;
+export function createPrivateCitationSource(file: File, data: NewRequest & { title?: string; citation?: string; scan_ocr: boolean }) {
+  const body = new FormData(); body.set("file", file); body.set("request_id", data.request_id); body.set("scan_ocr", String(data.scan_ocr));
+  if (data.title) body.set("title", data.title); if (data.citation) body.set("citation", data.citation);
+  return privateRequest<ResearchRecord<PrivateCitationSourceData>>(privateCitationSourcePath(), { method: "POST", body });
+}
+export function commandPrivateCitationSource(id: string, data: Revision & { action: "cancel" | "retry" }) {
+  return write<ResearchRecord<PrivateCitationSourceData>>(`${privateCitationSourcePath(id)}command/`, data);
+}
+export function deletePrivateCitationSource(id: string, revision: number) {
+  return write<void>(privateCitationSourcePath(id), { expected_revision: revision }, "DELETE");
+}
+export async function downloadPrivateCitationSource(id: string) {
+  const response = await apiStreamRequest(`${privateCitationSourcePath(id)}original/`, { cache: "no-store", signal: AbortSignal.timeout(300000) }, getServerSessionCredential());
+  if (!response.ok) throw new Error(`私人来源读取失败（${response.status}），请核对登录与来源状态。`);
   return { blob: await response.blob(), disposition: response.headers.get("Content-Disposition") };
 }
 export function readResearchAccount(signal?: AbortSignal) {

@@ -1,9 +1,9 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import type { AuditData, AuditEntry, AuditFinding, AuditOccurrence, ResearchRecord, ResolvedEvidence } from "@/lib/api/research.client";
+import type { AuditData, AuditEntry, AuditFinding, AuditOccurrence, PrivateCitationReference, ResearchRecord, ResolvedEvidence } from "@/lib/api/research.client";
 import { researchEvidenceKey, researchReaderHref } from "@/lib/api/research-evidence";
-import { auditCategories, auditCategory, auditDecisions, auditFindingNames, auditLocation, auditStatuses } from "./citation-audit-shared";
+import { AuditEvidenceNotice, auditCategories, auditCategory, auditDecisions, auditFindingNames, auditLocation, auditStatuses } from "./citation-audit-shared";
 
 const checkNames: Record<string, string> = { citation_identification: "识别引文", bibliography_identity: "书目身份匹配", version_page: "版本与页码核对", scan_ocr: "扫描文字识别" };
 const relationNames: Record<string, string> = { support: "支持", different_conclusion: "不同结论", qualification: "限定条件", reframe: "转换解释", insufficient_evidence: "证据不足" };
@@ -29,15 +29,23 @@ function Findings({ findings }: { findings: AuditFinding[] }) {
     {finding.message ? <p>{finding.message}</p> : null}
     {finding.page_status ? <p>页码核对：{finding.page_status === "matched" ? "已匹配" : finding.page_status === "not_specified" ? "稿件未指定印刷页码" : "待核对"}{finding.claimed_printed_label ? `；稿件标注 ${finding.claimed_printed_label}` : ""}</p> : null}
     {finding.references?.map((reference, n) => <SourceReference key={`${researchEvidenceKey(reference)}:${n}`} reference={reference} />)}
+    {finding.private_references?.map((reference, n) => <PrivateSourceReference key={`${reference.source_id}:${reference.unit_id}:${n}`} reference={reference} />)}
   </section>)}</> : <p>尚未形成检查结果。</p>;
+}
+
+function PrivateSourceReference({ reference }: { reference: PrivateCitationReference }) {
+  if (reference.source_status !== "available") return <p className="stl4-audit-print-note">私人来源已移除、变化或不可访问；不展示旧片段。</p>;
+  return <div className="stl4-audit-print-source"><p><strong>{reference.title || reference.filename || "本人来源文件"}</strong> · 本人选定来源</p>{reference.citation ? <p>{reference.citation}</p> : null}<p>{auditLocation(reference.location)}</p>{reference.quote ? <blockquote>{reference.quote}</blockquote> : <p>当前未提供可显示的原文文字。</p>}<p className="stl4-audit-print-note">此来源仅本人可见，未进入公共馆藏。文字匹配仍须核对版本、页码与上下文。</p></div>;
 }
 
 function Bibliography({ entries }: { entries: AuditEntry[] }) {
   return <section><h2>参考文献与版本对应</h2>{entries.length ? entries.map((entry, index) => {
     const selected = entry.selected_source_status === "available" ? entry.candidates.find(candidate => candidate.edition_id === entry.selected_edition_id && candidate.source_status === "available") : undefined;
+    const privateSource = entry.selected_private_source_status === "available" ? entry.private_candidates?.find(candidate => candidate.source_id === entry.selected_private_source_id && candidate.source_status === "available") : undefined;
     return <section key={entry.id} className="stl4-audit-print-entry"><h3>{index + 1}. 稿件书目</h3><p>{entry.raw}</p>
-      <p>{entry.identity_status === "user_confirmed" ? "本人已确认版本" : entry.identity_status === "identifier_matched" ? "标识匹配，仍需核对" : "版本身份待核对"}</p>
+      <p>{entry.identity_status === "private_confirmed" ? "本人已确认私人来源" : entry.identity_status === "user_confirmed" ? "本人已确认版本" : entry.identity_status === "identifier_matched" ? "标识匹配，仍需核对" : "版本身份待核对"}</p>
       {selected ? <p>对应馆藏：{selected.citation || [selected.title, selected.authors?.join("、"), selected.year, selected.version_label].filter(Boolean).join(" · ")}</p> : <p>{entry.selected_edition_id ? "已选馆藏版本当前不可用，请重新核对。" : "尚未选定馆藏版本。"}</p>}
+      {entry.selected_private_source_id ? <p>{privateSource ? `本人已确认的私人来源：${privateSource.citation || privateSource.title || privateSource.filename}` : "已选私人来源当前不可用，请重新核对。"}</p> : null}
     </section>;
   }) : <p>当前未识别到参考文献。</p>}</section>;
 }
@@ -53,7 +61,7 @@ function Occurrences({ rows, entries }: { rows: AuditOccurrence[]; entries: Audi
     {row.support_analysis ? <section><h4>论断关系建议</h4><SourceReference reference={row.support_analysis.reference} />
       {sourceAvailable(row.support_analysis.reference) ? row.support_analysis.suggestions.map((suggestion, n) => <p key={n}>{relationNames[suggestion.relation || ""] || "待核对建议"}：{suggestion.reason || "尚未提供说明。"}</p>) : null}
       <p className="stl4-audit-print-note">关系建议需要本人回到原文判断，不能视为已确认结论。</p></section> : null}
-    <h4>人工决定与修正</h4>{row.decision ? <><p>{auditDecisions[row.decision.value]} · {timestamp(row.decision.at)}</p><p>{row.decision.note || "未填写补充说明。"}</p>{row.decision.corrected_text ? <blockquote>本人校正：{row.decision.corrected_text}</blockquote> : null}</> : <p>尚未保存人工决定。</p>}
+    <h4>人工决定与修正</h4><AuditEvidenceNotice row={row} />{row.decision ? <><p>{auditDecisions[row.decision.value]} · {timestamp(row.decision.at)}</p><p>{row.decision.note || "未填写补充说明。"}</p>{row.decision.corrected_text ? <blockquote>本人校正：{row.decision.corrected_text}</blockquote> : null}</> : <p>尚未保存人工决定。</p>}
     {row.decision_history?.length ? <section><h4>前次人工决定</h4>{row.decision_history.map((decision, n) => <div key={n}><p>{auditDecisions[decision.value]} · {timestamp(decision.at)}</p><p>{decision.note || "无附注"}</p>{decision.corrected_text ? <blockquote>本人校正：{decision.corrected_text}</blockquote> : null}</div>)}</section> : null}
     {row.history?.length ? <section><h4>前次核验记录</h4>{row.history.map((version, n) => <div key={n}><p>第 {n + 1} 次 · {timestamp(version.checked_at)}</p><Findings findings={version.findings} /></div>)}</section> : null}
   </section>)}</>;

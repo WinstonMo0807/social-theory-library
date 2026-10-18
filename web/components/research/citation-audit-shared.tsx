@@ -9,13 +9,25 @@ import type { AuditData, AuditLocation, AuditOccurrence, ResearchRecord } from "
 
 export const auditStatuses: Record<string, string> = { queued: "排队中", running: "处理中", completed: "检查已完成", partial: "部分结果待核对", failed: "处理未完成", canceled: "已取消", cancelled: "已取消" };
 export const auditDecisions = { accepted: "已核对", ignored: "暂时忽略", corrected: "已记录修正", needs_review: "仍待核对" };
-export const auditFindingNames: Record<string, string> = { identity: "书目身份", fulltext: "原文可用性", support: "论断关系", direct_quote: "引文文字", page: "页码" };
+export const auditFindingNames: Record<string, string> = { identity: "书目身份", fulltext: "原文可用性", support: "论断关系", direct_quote: "引文文字", private_quote: "本人来源文字", page: "页码" };
 export const auditCategories = { all: "全部", text_match: "文字已匹配", unverified: "待核对", unavailable: "原文不可用", corrected: "本人已修正", accepted: "本人已核对", ignored: "暂时忽略" };
 export type AuditCategory = keyof typeof auditCategories;
 
+export function auditEvidenceChanged(row: AuditOccurrence) {
+  const unavailable = (reference: { source_status: string; anchors?: { source_status: string }[] }) => reference.source_status !== "available" || reference.anchors?.some(anchor => anchor.source_status !== "available");
+  return row.findings.some(finding => finding.status === "source_unavailable" || finding.source_status === "source_unavailable"
+    || finding.references?.some(unavailable) || finding.private_references?.some(unavailable))
+    || Boolean(row.support_analysis?.reference && unavailable(row.support_analysis.reference));
+}
+export function AuditEvidenceNotice({ row }: { row: AuditOccurrence }) {
+  return row.decision && auditEvidenceChanged(row) ? <p className="stl4-audit-caption" role="alert">核对依据已变化或不可用，需重新核对。前次人工决定与校正文案保留。</p> : null;
+}
 export function auditCategory(row: AuditOccurrence): AuditCategory {
-  if (row.decision && row.decision.value !== "needs_review") return row.decision.value;
-  if (row.findings.some(finding => finding.kind === "fulltext" || finding.status === "source_unavailable" || finding.source_status === "source_unavailable")) return "unavailable";
+  if (row.decision) {
+    if (row.decision.value === "needs_review" || auditEvidenceChanged(row)) return "unverified";
+    return row.decision.value;
+  }
+  if (auditEvidenceChanged(row) || row.findings.some(finding => finding.kind === "fulltext")) return "unavailable";
   if (row.findings.length && row.findings.every(finding => finding.status === "text_match" && finding.page_status !== "needs_review")) return "text_match";
   return "unverified";
 }
@@ -39,8 +51,8 @@ export function AuditGate({ next, children }: { next: string; children: (ownerId
   if (state.status !== "authenticated" || !state.user) return <AuditFrame><div className="stl4-research-state" role="status">正在核对登录状态…</div></AuditFrame>;
   return <div key={state.user.id}>{children(String(state.user.id), retry)}</div>;
 }
-export function AuditBreadcrumb({ id, issue }: { id?: string; issue?: boolean }) {
-  return <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/account">读者中心</Link><span>/</span><Link href="/account/citation-audits">引文体检</Link>{id ? <><span>/</span>{issue ? <Link href={`/account/citation-audits/${id}`}>体检报告</Link> : <span>体检报告</span>}</> : null}{issue ? <><span>/</span><span>原文核验</span></> : null}<span className="stl4-audit-private"><LockKeyhole size={12} />仅本人可见</span></nav>;
+export function AuditBreadcrumb({ id, issue, parse }: { id?: string; issue?: boolean; parse?: boolean }) {
+  return <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/account">读者中心</Link><span>/</span><Link href="/account/citation-audits">引文体检</Link>{id ? <><span>/</span>{issue ? <Link href={`/account/citation-audits/${id}`}>体检报告</Link> : <span>{parse ? "解析与核对" : "体检报告"}</span>}</> : null}{issue ? <><span>/</span><span>原文核验</span></> : null}<span className="stl4-audit-private"><LockKeyhole size={12} />仅本人可见</span></nav>;
 }
 export function AuditProgress({ record }: { record: ResearchRecord<AuditData> }) {
   const active = isTaskRunning(record.status);

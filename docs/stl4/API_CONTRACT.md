@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-18 笔记授权与私人来源
+
+- 笔记新增服务端筛选/计数、origin_note/source_summaries、usage GET/POST、revision删除和研究memory_reminders。实际内容/类型/来源变化撤销旧范围；确认不等于授权。完整字段见[CONFIRMED_NOTES_20261018.md](CONFIRMED_NOTES_20261018.md)。
+- 私人来源使用citation-sources集合/原件/文字/OCR/命令接口；稿件manuscript分页、private_source_ids、sources和match_private命令接入真实来源。来源ID/generation/hash/覆盖断点独立校验，公开EvidenceReference不混用。详见[CITATION_PRIVATE_SOURCES_20261018.md](CITATION_PRIVATE_SOURCES_20261018.md)。
+- 前后端及OpenAPI同步。0010迁移只编写，未执行；数据/权限/设备负载与视觉验收仍待核实。
+
 更新时间：2026-10-18。当前接口以本文件、相关单元接入记录、实际源码和生成schema为准。`docs/stl-4.0/API_CONTRACT.md`只保留历史追溯，不再作为独立主线；本文不代表全站验收通过。
 
 ## 2026-10-18 稿件版本与目录校准

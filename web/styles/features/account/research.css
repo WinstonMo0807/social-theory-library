@@ -1,4 +1,11 @@
 /* STL 4.0 research list: paper, ink and restrained gold, with real private states. */
+.stl4-research-memory-reminders { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e1ddd4; }
+.stl4-research-memory-reminders h3 { margin: 0 0 8px; color: #393630; font: 500 16px/1.5 var(--serif); }
+.stl4-research-memory-reminders > p, .stl4-research-memory-reminders li p { margin: 6px 0; color: #777166; font: 12px/1.7 var(--serif); white-space: pre-wrap; }
+.stl4-research-memory-reminders ul { padding: 0; margin: 10px 0; list-style: none; }
+.stl4-research-memory-reminders li { padding: 8px 0; border-bottom: 1px solid #eee8df; }
+.stl4-research-memory-reminders small { color: #948a7b; font: 10px/1.5 var(--sans); }
+.stl4-research-memory-reminders > a { color: #8e7045; font: 12px var(--sans); }
 .stl4-research-page { min-height: calc(100vh - var(--header-height)); padding: 38px 44px 74px; background: #f7f4ee; color: #24221f; }
 .stl4-research-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 34px; max-width: 1240px; margin: 0 auto; }
 .stl4-research-main { min-width: 0; }

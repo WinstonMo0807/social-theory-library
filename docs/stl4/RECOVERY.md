@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 最新接续：2026-10-18 笔记与私人来源
+
+从CURRENT_PROGRESS顶部、CONFIRMED_NOTES_20261018.md和CITATION_PRIVATE_SOURCES_20261018.md恢复。205–210已接入，新增路由/接口/迁移0010/生成契约/用例必须共同保留；迁移和用例未执行。下一单元是198–200反证、223–225隐私/导出和116–118页码校准，DOCX精确排版仍有缺口。检查点号码见当前进度。不要再次清理旧业务、重做全量历史审计或进行第三步检索质量评测。用户已授权持续开发至完成。
+
 1. 完整读根AGENTS及Ponytail，再读CURRENT_PROGRESS顶部与本目录PROGRESS；读本轮实际需要的开发规则。
 2. `git status --short --branch`、`git log -3 --oneline`；先保留所有未提交内容。不能pull/reset覆盖当前单主线。
 3. 以MASTER_SPEC和最终PDF为目标；ATLAS_INDEX是209有效视图索引，旧审核标记不是完成证据。只按CSV的最终页码渲染唯一终稿PDF；不读取历史独立图作为视觉替代。
