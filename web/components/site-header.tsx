@@ -3,7 +3,9 @@
 import Link from "next/link";
 import {
   ArrowUpRight,
-  BookOpen,
+  ArrowLeft,
+  ChevronRight,
+  CircleHelp,
   CircleUserRound,
   LogOut,
   Menu,
@@ -12,11 +14,12 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { useActionGuard } from "@/lib/use-action-guard";
+import { usePublicNavigationReturn } from "@/lib/public-navigation-return";
 import { ActionButton, AsyncStatus } from "./action-feedback";
 import { DisplayPreferences } from "./display-preferences";
 import { usePublicSession } from "./public-session-provider";
@@ -57,6 +60,7 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
 
 export function SiteHeader({ config = defaultSiteConfig, preview = false }: { config?: SiteConfig; preview?: boolean }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
   const [open, setOpen] = useState(false);
@@ -66,6 +70,11 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
   const user = session.status === "authenticated" && session.user ? session.user : null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const navigationReturn = usePublicNavigationReturn(`${pathname}${searchParams.size ? `?${searchParams}` : ""}`, menuButtonRef);
+  const [menuSearch, setMenuSearch] = useState("");
+  const isActive = (href: string) => href === "/" ? pathname === "/"
+    : href === "/theories" ? /^\/(theories|theory-schools)(\/|$)/.test(pathname)
+    : pathname === href || pathname.startsWith(`${href}/`);
   const navigation = [
     ["/", config.navigation.home],
     ["/explore", config.navigation.explore],
@@ -82,6 +91,12 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
 
   function closeMenu() {
     setOpen(false);
+  }
+
+  function enterAccount(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    navigationReturn.remember();
+    closeMenu();
   }
 
   async function logout() {
@@ -114,11 +129,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {navigation.map(([href, label]) => {
-          const active = href === "/"
-            ? pathname === "/"
-            : href === "/theories"
-              ? pathname.startsWith("/theories") || pathname.startsWith("/theory-schools")
-              : pathname.startsWith(href);
+          const active = isActive(href);
           return (
             <Link
               aria-current={active ? "page" : undefined}
@@ -133,6 +144,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
         })}
       </nav>
       <div className="header-actions">
+        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
         <Link className="header-search" href="/explore" prefetch={false}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
@@ -149,48 +161,53 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
           {open ? <X size={25} /> : <Menu size={25} />}
         </IconButton>
       </div>
+      {navigationReturn.returned ? <p className="site-navigation-returned" role="status">已返回先前页面</p> : null}
       {open ? (
         <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
           <button className="site-menu-backdrop" type="button" aria-label="关闭菜单" onClick={closeMenu} />
           <aside className="site-menu-panel" aria-labelledby="site-menu-title">
             <header className="site-menu-head">
-              <div>
-                <p>Social Theory Library</p>
-                <strong id="site-menu-title">书库导航</strong>
-              </div>
+              <Link href="/" prefetch={false} onClick={closeMenu}><Wordmark config={config} /><span className="sr-only" id="site-menu-title">书库导航</span></Link>
               <IconButton ref={closeButtonRef} aria-label="关闭菜单" onClick={closeMenu}>
                 <X size={25} />
               </IconButton>
             </header>
 
+            <form action="/explore" className="site-menu-search" role="search" aria-label="菜单内搜索" onSubmit={closeMenu}>
+              <Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor="menu-search-input">搜索书名、作者、概念、主题</label>
+              <input id="menu-search-input" type="search" name="q" maxLength={500} value={menuSearch} onChange={event => setMenuSearch(event.target.value)} placeholder="搜索书名、作者、概念、主题…" />
+              <button type="submit" aria-label="提交菜单搜索"><ChevronRight size={16} /></button>
+            </form>
+
             <nav className="site-menu-nav" aria-label="书库导航">
-              {navigation.map(([href, label], index) => (
-                <Link href={href} key={href} prefetch={false} onClick={closeMenu}>
-                  <span>0{index + 1}</span>
+              {navigation.map(([href, label]) => (
+                <Link href={href} key={href} prefetch={false} onClick={closeMenu} aria-current={isActive(href) ? "page" : undefined}>
                   <strong>{label}</strong>
-                  <ArrowUpRight size={18} />
+                  <ChevronRight size={15} />
                 </Link>
               ))}
             </nav>
 
             <div className="site-menu-tools">
-              <p>读者与管理</p>
               <div>
-                <Link href="/account" prefetch={false} onClick={closeMenu}>
-                  <BookOpen size={18} />
-                  <span><strong>读者中心</strong><small>进度、收藏、笔记与导出</small></span>
+                <Link href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") !== "settings" ? "page" : undefined}>
+                  <CircleUserRound size={18} />
+                  <span><strong>我的资料</strong></span><ChevronRight size={15} />
                 </Link>
-                <Link href="/admin" prefetch={false} onClick={closeMenu}>
+                <Link href="/account?section=settings" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") === "settings" ? "page" : undefined}>
                   <Settings size={18} />
-                  <span><strong>管理后台</strong><small>入库、复核、馆藏与设置</small></span>
+                  <span><strong>账户设置</strong></span><ChevronRight size={15} />
                 </Link>
+                {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>管理后台</strong></span><ChevronRight size={15} /></Link> : null}
+                <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>帮助与支持</strong></span><ChevronRight size={15} /></Link>
+                <Link href="/about" prefetch={false} onClick={closeMenu} aria-current={isActive("/about") ? "page" : undefined}><ArrowUpRight size={18} /><span><strong>关于我们</strong></span><ChevronRight size={15} /></Link>
                 {!user ? (
                   <>
-                    <Link href="/login" prefetch={false} onClick={closeMenu}>
+                    <Link href="/login?next=/account" prefetch={false} onClick={enterAccount}>
                       <CircleUserRound size={18} />
                       <span><strong>登录</strong><small>同步个人阅读资料</small></span>
                     </Link>
-                    <Link href="/register" prefetch={false} onClick={closeMenu}>
+                    <Link href="/register" prefetch={false} onClick={enterAccount}>
                       <UserPlus size={18} />
                       <span><strong>注册</strong><small>创建免费读者账户</small></span>
                     </Link>

@@ -2,6 +2,13 @@
 
 当前阶段：功能开发。全站正式功能、视觉、权限、迁移、性能验收全部待核实；未部署。
 
+## 2026-10-18 公共导航静态收口
+
+- `node node_modules/eslint/bin/eslint.js components/site-header.tsx components/ui/dialog.tsx components/reader-center.tsx components/public/site-footer-view.tsx lib/public-navigation-return.ts tests/public-navigation.spec.ts`（web）：退出0，6文件，0警告。
+- PostCSS解析styles/layout/site-menu.css与public-responsive.css：退出0，32/5节点，仅语法。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web）：退出0。上一在途检查被会话中断后进程不可读取，没有把它当作通过；本次重新取得明确退出0。较早检索新文件曾报4条可空类型错误，修正后本次通过。
+- 5个导航合成用例仅编写，未运行。最终PDF18已实际读取，不曾浏览器截图或正式视觉比对。检查点只纳导航白名单与ReaderCenter的section段，不含正在开发的检索/来源/反馈；所有生产操作未执行。
+
 ## 2026-10-18 文件、OCR与DOCX静态收口
 
 - 唯一终稿PDF95–98、109–111及209实际读图。没有浏览器/实施页截图/正式逐图回归。本单元为源码接入，实际服务及全站验收尚未执行。

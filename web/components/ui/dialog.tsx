@@ -28,7 +28,7 @@ export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDow
       frame = window.requestAnimationFrame(() => enter());
     } else if (!open && dialog.open) {
       dialog.close();
-      if (openerRef.current?.isConnected) openerRef.current.focus();
+      if (openerRef.current?.isConnected) openerRef.current.focus({ preventScroll: true });
       openerRef.current = null;
     }
     return () => window.cancelAnimationFrame(frame);
@@ -38,7 +38,7 @@ export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDow
     const dialog = dialogRef.current;
     return () => {
       if (dialog?.open) dialog.close();
-      if (openerRef.current?.isConnected) openerRef.current.focus();
+      if (openerRef.current?.isConnected) openerRef.current.focus({ preventScroll: true });
     };
   }, []);
 

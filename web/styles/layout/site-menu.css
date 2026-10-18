@@ -3,7 +3,7 @@
   inset: 0;
   z-index: var(--stl-z-menu);
   display: grid;
-  grid-template-columns: 1fr minmax(430px, 34vw);
+  grid-template-columns: minmax(32px, 1fr) min(430px, calc(100vw - 32px));
   animation: menu-fade-in var(--stl-motion-navigation) var(--ease-out);
 }
 
@@ -18,11 +18,14 @@
   display: flex;
   min-width: 0;
   height: 100vh;
+  height: 100dvh;
   flex-direction: column;
-  padding: 22px var(--stl-space-page-inline) var(--stl-space-5);
-  border-left: var(--stl-border-hairline) solid var(--ink);
+  padding: 22px 24px max(24px, env(safe-area-inset-bottom));
+  border-left: var(--stl-border-hairline) solid var(--line);
   overflow-y: auto;
-  background: var(--paper);
+  background: var(--surface);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   animation: menu-slide-in var(--stl-motion-panel) var(--ease-out);
 }
 
@@ -30,7 +33,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: var(--stl-space-6);
+  padding-bottom: 20px;
 }
 
 .site-menu-head p {
@@ -57,16 +60,17 @@
 .site-menu-nav {
   display: flex;
   flex-direction: column;
-  border-top: var(--stl-border-hairline) solid var(--ink);
+  padding-bottom: 14px;
+  border-bottom: var(--stl-border-hairline) solid var(--line);
 }
 
 .site-menu-nav a {
   display: grid;
-  grid-template-columns: 48px 1fr 24px;
+  grid-template-columns: 1fr 18px;
   align-items: center;
-  min-height: 62px;
-  padding: 0 var(--stl-space-1);
-  border-bottom: var(--stl-border-hairline) solid var(--line);
+  min-height: 44px;
+  padding: 9px 10px;
+  border-radius: 3px;
   transition: padding var(--stl-motion-control) var(--ease-out), background var(--stl-motion-control) var(--ease-out);
 }
 
@@ -83,12 +87,12 @@
 }
 
 .site-menu-nav a > strong {
-  font-size: calc(20px + var(--font-bump));
-  letter-spacing: -0.03em;
+  font-size: calc(15px + var(--font-bump));
+  font-weight: 450;
 }
 
 .site-menu-tools {
-  margin-top: var(--stl-space-6);
+  margin-top: 14px;
 }
 
 .site-menu-tools > p {
@@ -101,20 +105,18 @@
 
 .site-menu-tools > div {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: var(--stl-border-hairline) solid var(--line);
-  border-left: var(--stl-border-hairline) solid var(--line);
+  grid-template-columns: 1fr;
 }
 
 .site-menu-tools a,
 .site-menu-tools button {
   display: grid;
-  grid-template-columns: 25px 1fr;
+  grid-template-columns: 25px 1fr 18px;
+  align-items: center;
   min-width: 0;
-  min-height: 76px;
-  padding: var(--stl-space-admin) var(--stl-space-3);
-  border-right: var(--stl-border-hairline) solid var(--line);
-  border-bottom: var(--stl-border-hairline) solid var(--line);
+  min-height: 44px;
+  padding: 9px 10px;
+  border-radius: 3px;
   cursor: pointer;
   text-align: left;
   transition: background var(--stl-motion-control) var(--ease-out);
@@ -133,6 +135,7 @@
 
 .site-menu-tools strong {
   font-size: calc(var(--stl-type-label) + var(--font-bump));
+  font-weight: 450;
 }
 
 .site-menu-tools small {
@@ -163,6 +166,16 @@
   color: var(--ink);
   font-weight: 650;
 }
+
+.site-menu-search { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 16px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); }
+.site-menu-search input { min-width: 0; width: 100%; border: 0; outline-offset: 3px; background: transparent; font-size: 12px; }
+.site-menu-search button { display: grid; min-width: 30px; min-height: 30px; place-items: center; }
+.site-menu-nav a[aria-current="page"], .site-menu-tools a[aria-current="page"] { color: #77582b; background: #f4ebda; }
+.site-menu-nav a:focus-visible, .site-menu-tools a:focus-visible, .site-menu-search button:focus-visible { outline: 2px solid #aa884b; outline-offset: 2px; }
+.header-return { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.site-navigation-returned { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: var(--stl-z-menu); transform: translateX(-50%); margin: 0; padding: 10px 18px; border-radius: 5px; color: #fff; background: #292b28; box-shadow: 0 4px 18px #0002; font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .site-menu-layer, .site-menu-panel { animation: none; } }
 
 @keyframes menu-fade-in {
   from { opacity: 0; }

@@ -1,5 +1,9 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-18 公共导航
+
+最终PDF18实际读图后接通现有SiteHeader、手机菜单、独立滚动、当前栏目、搜索、账户settings与返回原页；详见PUBLIC_NAVIGATION_20261018。只有section同步纳入本检查点，后续帮助/反馈/来源关注、检索与收藏继续开发。6目标ESLint、两CSS语法及当前全量TypeScript退出0；5场景仅编写，正式运行/逐图验收未执行。
+
 ## 2026-10-18 版本文件、OCR质量与DOCX私有预览（源码已接入，统一验收待核实）
 
 - 从9a7c68c/56e7aac继续，仅依据实际读取的最终PDF95–98、109–111和209。新功能继续复用同一Work/Edition/Asset、UploadItem、ProcessingJob、文档修订、发布事件、Reader与本人加密CitationAudit。

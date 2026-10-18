@@ -162,7 +162,10 @@ export function ReaderCenter() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { state: session, retry: retrySession } = useSessionBootstrap();
-  const [active, setActive] = useState(() => (searchParams.get("section") === "lists" ? "书单" : searchParams.get("section") === "settings" ? "账户设置" : "概览"));
+  const section = searchParams.get("section");
+  const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
+  const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : "概览";
+  const setActive = (label: string) => selectTab({ section, label });
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-18 公共导航
+
+PDF18继续使用现有公开会话、GET /explore?q=、/account?section=settings与/logout行为，无新数据库/API。当前标签页仅保存允许的公共来源位置，30分钟到期；账户/后台/认证路径、未知参数、编码目录逃逸不进入返回链接。共享Dialog焦点恢复preventScroll。管理入口以access_back_office能力显示，原服务端权限不变。导航源码接入与静态检查不等于真实浏览器验收。
+
 ## 2026-10-18 文件工作台、OCR与私有预览
 
 - 文件接口 `/catalog/admin/works/{id}/files/`、同作品editions、edition files/requests/generate-reader/adopt/rights/prepare-public/content/impact.csv 同步前端和命名serializer；GET/HEAD与Range复用原文件权限，写入使用修订+nonce。采用/公开准备各自明确确认，独立于上传和主版本选择。详见WORK_FILES_20261018.md。
