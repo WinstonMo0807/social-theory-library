@@ -11,7 +11,7 @@ from rest_framework.exceptions import ValidationError
 from accounts.models import User
 from catalog.models import EvidencePack
 from reading import research
-from reading.citation_audit import create_audit, original_document, parse_manuscript, process_audit, update_audit
+from reading.citation_audit import UPLOAD_CHECKS, create_audit, original_document, parse_manuscript, process_audit, update_audit
 from reading.models import CitationAudit, ResearchMemory, ResearchProject, ResearchTurn
 from reading.services import decrypt_private_text
 from tests.test_discovery_sessions_v308 import fixture_source
@@ -544,7 +544,8 @@ def test_private_scan_checkpoint_token_resume_owner_and_original(reader_user, ad
     monkeypatch.setattr("reading.private_ocr._request_document_gateway", gateway)
     blob = scanned_pdf_bytes(5)
     before = (Asset.objects.count(), EvidencePack.objects.count())
-    audit = create_audit(reader_user, SimpleUploadedFile("私人扫描.pdf", blob), {"request_id": str(uuid4())})
+    audit = create_audit(reader_user, SimpleUploadedFile("私人扫描.pdf", blob),
+        {"request_id": str(uuid4()), "checks": list(UPLOAD_CHECKS)})
     old_token = audit.task_id
     process_audit(audit.id, audit.generation, old_token)
     audit.refresh_from_db()
@@ -594,7 +595,8 @@ def test_private_docx_image_is_derived_without_word_page_or_field_rewrite(reader
             assert len(image_pdf) == 1
         return {"pages": [{"index": 1, "blocks": [{"text": '图像引文“制度始终嵌入具体的社会关系”。[1]'}]}]}
     monkeypatch.setattr("reading.private_ocr._request_document_gateway", gateway)
-    audit = create_audit(reader_user, SimpleUploadedFile("图像稿件.docx", blob), {"request_id": str(uuid4())})
+    audit = create_audit(reader_user, SimpleUploadedFile("图像稿件.docx", blob),
+        {"request_id": str(uuid4()), "checks": list(UPLOAD_CHECKS)})
     process_audit(audit.id, audit.generation, audit.task_id)
     audit.refresh_from_db()
     payload = research.unpack(audit)
@@ -615,7 +617,14 @@ def test_private_ocr_remote_refusal_retry_and_decision_preservation(reader_user,
     calls = []
     monkeypatch.setattr("reading.private_ocr._request_document_gateway", lambda *args, **kwargs: calls.append(kwargs) or {
         "pages": [{"index": 1, "blocks": [{"text": '“制度始终嵌入具体的社会关系”。[1]\n参考文献\n[1] 作者. 制度研究. 2020.'}]}]})
+    with pytest.raises(ValidationError):
+        create_audit(reader_user, SimpleUploadedFile("扫描.pdf", scanned_pdf_bytes()),
+            {"request_id": str(uuid4()), "checks": list(UPLOAD_CHECKS)})
     audit = create_audit(reader_user, SimpleUploadedFile("扫描.pdf", scanned_pdf_bytes()), {"request_id": str(uuid4())})
+    # A persisted pre-options job retains its original OCR consent/processing path.
+    legacy_payload = research.unpack(audit)
+    legacy_payload.pop("checks")
+    research.save_data(audit, legacy_payload)
     process_audit(audit.id, audit.generation, audit.task_id)
     audit.refresh_from_db()
     assert audit.status == "partial" and not calls
@@ -816,7 +825,8 @@ def test_ocr_retry_preserves_owner_link_when_another_page_was_unavailable(reader
         value = '“制度始终嵌入具体的社会关系”。[1]\n参考文献\n[1] 甲. 第一材料. 2020.\n[2] 乙. 第二材料. 2021.' if page == 1 else "结束语"
         return {"pages": [{"index": page, "blocks": [{"text": value}]}]}
     monkeypatch.setattr("reading.private_ocr._request_document_gateway", gateway)
-    audit = create_audit(reader_user, SimpleUploadedFile("两页.pdf", scanned_pdf_bytes(2)), {"request_id": str(uuid4())})
+    audit = create_audit(reader_user, SimpleUploadedFile("两页.pdf", scanned_pdf_bytes(2)),
+        {"request_id": str(uuid4()), "checks": list(UPLOAD_CHECKS)})
     process_audit(audit.id, audit.generation, audit.task_id)
     audit.refresh_from_db()
     payload = research.unpack(audit)

@@ -46,3 +46,19 @@
 - 以进程环境 `DATABASE_URL=sqlite:///:memory:`、`PUBLIC_DEPLOYMENT_MODE=false` 运行 `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-plan-schema-20261018.json --validate`：退出0，0 schema errors、10条既有类型提示。随后openapi-typescript生成成功。未连接生产库。
 - Git依赖静态导入清单与45文件恢复检查点见CHECKPOINT_DEPENDENCIES；`git diff --check`与该批`--cached --check`退出0。
 - 后端 `test_reading_plan_atlas_20261018.py`、前端 `reading-plan-workspace.spec.ts` 与auth-bootstrap新增用例均只编写，未执行。B01/B02/B04新增行为与B06逐图对照仍待正式验收。
+
+### 2026-10-18 引文体检开发期静态记录
+
+实际参考：仅由最终PDF渲染并读取第208–215页。实现页未打开浏览器、未截图、未与PDF做正式视觉回归。
+
+| 命令/操作 | 结果 | 范围与限制 |
+|---|---|---|
+| `node node_modules/typescript/bin/tsc --noEmit --pretty false`（web目录） | 退出0 | 全量类型静态检查；最终含打印与上传源码 |
+| `node node_modules/eslint/bin/eslint.js 'components/research/citation-*.tsx' components/research/reader-collection-list.tsx lib/api/research.client.ts 'app/account/citation-audits/**/page.tsx' 'tests/citation-audit-*.spec.ts' playwright.auth.config.ts`（web目录） | 退出0，0警告 | 新页面/组件/API/回归用例与配置，只做静态检查 |
+| `.venv/Scripts/python.exe -m compileall -q api/reading/citation_audit.py api/reading/research.py api/reading/research_serializers.py api/reading/research_views.py api/reading/tasks.py api/tests/test_citation_atlas_20261018.py api/tests/test_private_research.py` | 退出0 | 不执行数据库、任务、OCR或模型 |
+| Node/PostCSS `parse` 读取citation-audit.css、citation-audit-upload.css、citation-source-preview.css | 退出0，123/84/40个顶层节点 | 语法可解析，不代表排版或打印效果通过 |
+| `.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-citation-schema-20261018.json --validate` | 退出0；0 errors，10条既有serializer类型提示 | 进程环境DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true；未连接生产库。openapi-typescript随后同步成功 |
+| `git diff --check -- <本单元明确文件清单>` | 退出0 | 仅换行提示，没有空白错误；检查点不包含其他继承改动 |
+| 限定检查点文件的private-key/provider-token/credential-url模式扫描 | 无命中 | 有限模式静态检查，不能代表所有秘密类型都已证明不存在 |
+
+新增后端test_citation_atlas_20261018.py共11项，前端citation-audit-workspace.spec.ts共6项、citation-audit-upload.spec.ts共3项；旧扫描用例按显式scan_ocr/旧记录兼容更新。均仅编写，未执行。重点覆盖批量原子性/owner、检查项、同请求指纹、失败恢复容量、人工历史、撤回来源、409输入保留和打印快照清理。真实锁并发、NAS负载、OCR/Provider、打印、路由与209视图仍待统一验收。第三步检索质量评测、迁移、部署和清理未运行。

@@ -100,3 +100,37 @@
 - 完成项保留原材料与位置，不能用同一请求降回pending后替换。替换普通材料时，如果有相关先修关系，必须显式 `remove_related_prerequisites=true`，只移除相关关系并保留原关系记录；其他关系保留。替换项回到pending。
 - 条目读回包含实际公开封面、作者、出版年、availability、来源与阅读URL；所有 URL 以当前发布修订核实，整文件 Reader 也绑定revision。失效材料不提供可点击阅读入口。先修来源也会重新解析。
 - `command/` 支持cancel/retry/enhance；`export/`重新校验来源并返回私人记录，浏览器提供打印/保存PDF。JSON与前端schema已重新生成；真实任务/打印分页和全部权限回归待统一验收。
+
+## 2026-10-18 引文体检（R25–R27，部分接入，待统一验收）
+
+视觉来源仅为最终 PDF `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf` 第208–215页的实际页面图像。此处记录已接入的源码契约与未覆盖需求，不把图集审核标签、控件存在或静态检查当作功能及视觉验收。
+
+### 路由、身份与任务
+
+- 前端 `/account/citation-audits` 对应三步上传与本人任务列表；`/account/citation-audits/{id}` 对应解析预览及报告总览；`/account/citation-audits/{id}/issues/{issueId}` 对应单条引文、候选版本、原文与人工核验。issueId 为同一 CitationAudit 的 occurrence ID，不另建报告库或馆藏。
+- API 基础路径 `/api/reading/citation-audits/`，列表分页、详情、原稿、OCR、导出及命令均要求登录并过滤本人。响应 `Cache-Control: private, no-store`，`Vary: Cookie, Authorization`。前端读写前后核对 cookie owner，身份变化清空私有视图、待上传文件和预览 URL；会话与权限回归仍待统一执行。
+- 复用现有加密 CitationAudit、Celery 任务及共享公开来源。记录有 `revision/status/generation/error_code/completed_units/total_units/poll_after_ms/created_at/updated_at/finished_at`；状态为 queued、running、completed、partial、failed、canceled。进度来自实际阶段 queued/parsing/ocr/matching/checking/report 和处理单元，不估算完成百分比或固定耗时。
+- 上传、排队命令及恢复按 owner 序列化，同一 owner 最多两项活动任务；超限返回409。取消增加 generation，使旧 worker 不能回写；已完成的解析、核验和人工决定保留。源码约束不等于真实设备并发与负载测量。
+
+### 能力与创建
+
+- `GET capabilities/` 返回 `accepted_filetypes/max_upload_bytes/max_pdf_pages/max_occurrences/max_active_jobs_per_owner/default_checks`，以及 `checks[]`、`scopes[]`、`ocr`、`analysis`。检查项包含 `id/label/available/required/description`，版本页码还声明 `requires`。本地 OCR/模型的 available 仅表示配置及允许的本地端点资格，`service_verified=false` 明确未进行运行健康探测，不可显示为服务已验收。
+- `POST /` 使用 multipart：`file`、UUID `request_id`、可选本人 `project_id`、重复的 `checks` 字段及 `scope`。接受 PDF/DOCX，最大12 MiB；文件签名、PDF页数、DOCX解包和文本规模沿现有解析边界校验。成功返回202及持久记录。幂等身份包括原稿内容摘要、名称、项目和显式选项；相同请求返回已有记录，复用请求ID但改变内容返回409。前端在失败时保留本地文件、选项和相同请求ID。
+- 默认检查项为 `citation_identification/bibliography_identity/version_page`。引文识别必选；版本与页码依赖书目身份；不选择某项就不执行相应自动核验。新上传的 `scan_ocr` 必须显式选择且本地 OCR 配置符合条件，默认不执行；未选择扫描识别的扫描部分保留为待核实。历史无 checks 记录沿原有行为兼容。
+- `scope` 默认且当前仅接受 `public_library`，使用当前公开且本人可访问的馆藏版本/原文。capabilities 中 `private_materials` 明确 unavailable，私人稿件仅用于本人检查，不进入公共馆藏。没有通过虚构私人来源能力提交范围。
+- `deep_analysis` 在上传阶段不可选。报告中须本人选择具体可访问 EvidenceReference，再用 `analyze` 单独发起本地关系分析；配置缺失则明确拒绝，已有结果保留。模型产出属于待核对候选，不替代人工结论。
+- `data` 保存 `filename/filetype/manuscript_revision/checks/scope/file_size_bytes/manuscript_stats/bibliography/occurrences/warnings/stage`。统计只记录实际解析的字节、文本单元、字符、PDF页数或DOCX段落/内嵌图像；不适用或尚未解析的统计不填演示值。PDF页码与DOCX XML部件、段落、字符位置分开，不把段落当作Word排版页码。
+
+### 人工决定、来源与局部重查
+
+- `POST {id}/command/` 必带 `expected_revision`，不匹配返回409。前端保留本地决定/校正文案，用户核对最新记录后再提交。活动任务期间除cancel外不能修改核验记录。
+- `decision` 接受单条 `occurrence_id` 或批量 `occurrence_ids`（二选一、1–1000项）。决定为 `accepted/ignored/corrected/needs_review`，`note`最多4000字符；任一ID不属于本稿件则整批不保存。`corrected_text`最多4000字符，非空值只允许单条corrected决定，作为本人的校正文案独立保存，不覆盖原稿、原始识别文字或旧决定。前次人工决定进入 `decision_history`。
+- `match` 用 `entry_id/edition_id` 确认当前公开的候选版本，保存旧选择并重查该书目关联的引文；`link` 用 `occurrence_id/entry_ids` 保存本人书目对应关系并重查该条。候选仅为身份提示，题名相似、书目存在不等于原文或论断通过。
+- `retry` 可带 `occurrence_ids` 仅重查已解析记录中的所选项；更换候选版本只影响相关引文。失败/取消后的重试保留已完成记录，OCR失败导致重新解析时保留 `parse_history` 和人工决定的稳定映射。该局部重查针对同一份原稿，并未实现上传新稿版本后的差异识别或增量重查。
+- 每次详情/导出重新核验候选版本的公开资格，以及当前与历史 findings 中 EvidenceReference 的权限、DocumentRevision、EvidenceSpan、页码和内容摘要。来源撤回或改变后清除过时公开正文、Reader链接与模型建议，标记需重新核对；原稿和本人已保存决定仍保留。原文预览复用 Reader/PdfCanvas，与有效来源修订及规范化坐标绑定，不能把失效缓存当成当前证据。
+
+### 预览、下载与未覆盖范围
+
+- `GET {id}/original/` 返回本人加密记录解密后的原始文件附件；按需 PDF 预览使用本地 blob URL 与已有 PdfCanvas，关闭或会话变化时回收。DOCX 预览只显示实际识别的引文附近文本和位置，精确字体/分页仍通过下载原稿查看，不调用外部文档预览服务。
+- `GET {id}/ocr/` 返回真实OCR进度和单元状态；带 `unit_id` 可取该单元解析记录。`GET {id}/export/` 返回 `schema_version=1` 的私人记录JSON并重新校验来源；前端保留报告JSON，并在重新核对owner后读取完整export快照，提供打印/保存PDF；打印包含全部引文、书目、实际来源、人工修正与历史，不受当前分页筛选限制。不可访问来源不打印旧片段，会话变化/权限失效/afterprint清除打印快照；打印版式与分页仍待统一验证，不写回Word/PDF原稿。
+- 待实施/待验证必须分开保留：私人材料匹配、稿件新版本差异及增量重查、DOCX精确排版/原稿编辑回写尚未覆盖；PDF209的完整三栏解析流程仍需逐图核实。真实设备内存与排队负载、真实OCR/模型、权限与恢复、导出内容及全部桌面/移动视觉验收未运行。B03、B04、B05、B06不能据本次源码接入标记通过。

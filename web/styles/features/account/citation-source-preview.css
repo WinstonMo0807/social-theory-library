@@ -1,0 +1,45 @@
+/* Final atlas PDF 213–215: source pane, shared Reader canvas and real page context. */
+.stl4-citation-source { min-width: 0; background: #fff; color: #292723; }
+.stl4-citation-source-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #e2ded5; }
+.stl4-citation-source-tabs button { position: relative; flex: 1 0 auto; padding: 11px 8px; border: 0; border-radius: 0; background: transparent; color: #777167; font: 11px/1.5 var(--sans); white-space: nowrap; cursor: pointer; }
+.stl4-citation-source-tabs button[aria-selected="true"] { color: #8c693a; }
+.stl4-citation-source-tabs button[aria-selected="true"]::after { position: absolute; right: 8px; bottom: 0; left: 8px; height: 2px; background: #ad8449; content: ""; }
+.stl4-citation-source-toolbar { display: flex; align-items: center; gap: 3px; padding: 6px; border-bottom: 1px solid #ded9d0; background: #f6f4ef; }
+.stl4-citation-source-toolbar :is(button,a) { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 27px; min-height: 28px; padding: 3px; border: 0; background: transparent; color: #575248; cursor: pointer; }
+.stl4-citation-source-toolbar button:disabled { opacity: .35; cursor: not-allowed; }
+.stl4-citation-source-toolbar a { margin-left: auto; }
+.stl4-citation-source-toolbar form { display: flex; align-items: center; gap: 4px; color: #777167; font: 10px/1.4 var(--sans); white-space: nowrap; }
+.stl4-citation-source-toolbar input { width: 37px; min-height: 26px; padding: 2px; border: 1px solid #dfdad1; border-radius: 2px; background: #fff; text-align: center; color: #292723; font: inherit; appearance: textfield; }
+.stl4-citation-source-toolbar input::-webkit-inner-spin-button { appearance: none; }
+.stl4-citation-source-toolbar select { max-width: 66px; min-height: 26px; padding: 2px; border: 1px solid #dfdad1; border-radius: 2px; color: #575248; background: #fff; font: 10px/1.4 var(--sans); }
+.stl4-citation-source-divider { width: 1px; height: 17px; margin: 0 3px; background: #ded9d0; }
+.stl4-citation-source-canvas { height: min(72vh, 760px); min-height: 360px; overflow: auto; padding: 12px; background: #eeece6; scrollbar-gutter: stable; }
+.stl4-citation-source-canvas .pdf-canvas-stage { margin-inline: auto; box-shadow: 0 1px 6px rgb(36 34 31 / 10%); }
+.stl4-citation-source .pdf-search-highlights i { background: rgb(201 164 93 / 24%); outline: 1px solid rgb(173 132 73 / 36%); border-radius: 0; }
+.stl4-citation-source .pdf-render-status { max-width: calc(100% - 20px); top: 10px; right: 10px; font-size: 11px; }
+.stl4-citation-source-context { max-height: min(72vh, 760px); overflow-y: auto; padding: 0 18px; }
+.stl4-citation-source-context section { padding-block: 18px; border-bottom: 1px solid #e2ded5; }
+.stl4-citation-source-context h4 { margin: 0 0 12px; font: 500 11px/1.6 var(--sans); color: #8c693a; }
+.stl4-citation-source-prose, .stl4-citation-source-text blockquote { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.9 var(--serif); }
+.stl4-citation-source-caption { color: #777167; font: 11px/1.6 var(--sans); }
+.stl4-citation-source-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 15px 20px; margin: 0; padding: 22px 18px; font: 12px/1.7 var(--sans); }
+.stl4-citation-source-facts dt { color: #777167; }
+.stl4-citation-source-facts dd { margin: 0; overflow-wrap: anywhere; }
+.stl4-citation-source-book, .stl4-citation-source-text { padding: 20px; }
+.stl4-citation-source-book h4 { margin: 0 0 12px; font: 600 17px/1.6 var(--serif); }
+.stl4-citation-source-book :is(p,blockquote), .stl4-citation-source-text > p { margin: 10px 0; color: #777167; font: 12px/1.8 var(--serif); overflow-wrap: anywhere; }
+.stl4-citation-source-book blockquote { color: #292723; }
+.stl4-citation-source-text > a { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 12px; }
+.stl4-citation-source-notice { min-height: 160px; padding: 24px 18px; color: #777167; font: 12px/1.8 var(--sans); }
+.stl4-citation-source-notice strong { color: #575248; font-weight: 500; }
+.stl4-citation-source :is(.stl4-citation-source-notice,.stl4-citation-source-context,footer) button { padding: 5px 9px; border: 1px solid #d8d2c7; border-radius: 2px; background: #fff; color: #575248; font: 11px/1.5 var(--sans); cursor: pointer; }
+.stl4-citation-source footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid #e2ded5; color: #777167; font: 10px/1.6 var(--sans); }
+.stl4-citation-source footer span { min-width: 0; overflow-wrap: anywhere; }
+.stl4-citation-source footer button { flex: none; }
+.stl4-citation-source :is(button,a,input,select):focus-visible, .stl4-citation-source-text a:focus-visible { outline: 2px solid #ad8449; outline-offset: 2px; }
+@media (max-width: 760px) {
+  .stl4-citation-source-canvas { height: 65svh; min-height: 320px; padding: 8px; }
+  .stl4-citation-source-toolbar :is(button,a) { min-width: 30px; min-height: 32px; }
+  .stl4-citation-source-tabs button { padding: 12px 8px; }
+  .stl4-citation-source-context { max-height: 65svh; padding-inline: 14px; }
+}

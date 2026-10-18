@@ -190,7 +190,7 @@ def resolve_reference(raw, user, *, strict=False):
             "coordinate_space": {"width": page.width, "height": page.height, "text_source": page.text_source,
                 "rotation": None, "crop_box": None, "requires_reader_transform": True},
             "locator_precision": "span" if span else "page",
-            "reader_url": f"/reader/{asset_id}?page={page_number}" + (f"&passage={span.passage_id or span.id}" if span else "")}
+            "reader_url": f"/reader/{asset_id}?page={page_number}&revision={revision_id}" + (f"&passage={span.passage_id or span.id}" if span else "")}
 
 
 def reference_identity(reference):
@@ -640,7 +640,7 @@ def serialize_record(record, user):
             # A saved judgment survives removal or withdrawal; its evidence status does not.
             cell["evidence_status"] = ("missing" if not ids else "selected" if readable == ids
                                        else "partial" if readable else "unavailable")
-    if "scope" in payload:
+    if isinstance(payload.get("scope"), dict):
         payload["scope"] = {**payload["scope"], "references": [resolve_reference(ref, user) for ref in payload["scope"].get("references", [])]}
     for row in payload.get("analysis", []):
         current = resolve_reference(row["reference"], user)
@@ -659,6 +659,8 @@ def serialize_record(record, user):
             output[key] = getattr(record, key)
     if hasattr(record, "status"):
         output["poll_after_ms"] = 2000 if record.status in ACTIVE else None
+    if hasattr(record, "finished_at"):
+        output["finished_at"] = record.finished_at.isoformat() if record.finished_at else None
     if isinstance(record, ResearchTurn):
         output.update(project_id=str(record.project_id), parent_id=str(record.parent_id) if record.parent_id else None,
                       discovery_session_id=str(record.discovery_session_id) if record.discovery_session_id else None)
@@ -718,12 +720,20 @@ def serialize_record(record, user):
         for snapshot in payload.get("history", []):
             snapshot["data"]["sources"] = [resolve_reference(ref, user) for ref in snapshot["data"].get("sources", [])]
     if hasattr(record, "content_hash"):
+        from .citation_audit import UPLOAD_CHECKS, refresh_bibliography_sources
+        payload.setdefault("checks", list(UPLOAD_CHECKS))
+        payload.setdefault("scope", "public_library")
+        refresh_bibliography_sources(payload)
         occurrences = [*payload.get("occurrences", []), *(row for report in payload.get("parse_history", []) for row in report.get("occurrences", []))]
         for occurrence in occurrences:
             for version in [occurrence, *occurrence.get("history", [])]:
                 for finding in version.get("findings", []):
                     if "references" in finding:
                         finding["references"] = [resolve_reference(ref, user) for ref in finding["references"]]
+                        available = [ref for ref in finding["references"] if ref["source_status"] == "available"]
+                        if finding["references"] and not available:
+                            finding.update(status="unverified", source_status="source_unavailable",
+                                page_status="needs_review", message="原文已变化、撤回或不可访问；原匹配记录保留，当前需重新核对。")
                 analysis = version.get("support_analysis")
                 if analysis:
                     analysis["reference"] = resolve_reference(analysis["reference"], user)

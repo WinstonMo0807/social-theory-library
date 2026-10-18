@@ -6,6 +6,7 @@ none are public catalog objects. The original package is retained byte-for-byte.
 from __future__ import annotations
 
 import base64
+from copy import deepcopy
 import hashlib
 from io import BytesIO
 import json
@@ -35,12 +36,73 @@ MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 MAX_XML_BYTES = 40 * 1024 * 1024
 MAX_TEXT_CHARS = 1_000_000
 MAX_OCCURRENCES = 1000
+MAX_PDF_PAGES = 1000
+MAX_ACTIVE_AUDITS_PER_OWNER = 2
+DEFAULT_CHECKS = ("citation_identification", "bibliography_identity", "version_page")
+UPLOAD_CHECKS = (*DEFAULT_CHECKS, "scan_ocr")
 WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", re.I)
 REFERENCE_RE = re.compile(r"^\s*(?:\[(\d{1,4})\]|(\d{1,4})[.、])\s*(.+)")
 CITE_RE = re.compile(r"\[(\d{1,4}(?:\s*[,，、-]\s*\d{1,4})*)\]|[（(]([^()（）\n]{1,100}?(?:18|19|20)\d{2}[a-z]?(?:[^()（）\n]{0,40}))[）)]")
 QUOTE_RE = re.compile(r"[“「『\"]([^”」』\"]{8,2000})[”」』\"]")
+
+
+def audit_capabilities():
+    """Configuration eligibility only; an available capability is not a health probe."""
+    from common.ai_runtime import AICapability
+    from .local_analysis import AIServiceError, current_ai_configuration, require_local_endpoint
+    from .private_ocr import UNITS_PER_ATTEMPT, _local_gateway
+    ocr_available, analysis_available = False, False
+    try:
+        gateway, allowed = _local_gateway()
+        require_local_endpoint(gateway, allowed_hosts=allowed)
+        ocr_available = True
+    except (AIServiceError, ValueError):
+        pass
+    try:
+        config = current_ai_configuration(AICapability.CLAIM_STANCE)
+        if config.enabled:
+            require_local_endpoint(config.base_url)
+            analysis_available = True
+    except (AIServiceError, ValueError):
+        pass
+    ocr_reason = ("已配置允许的本地 OCR；运行状态与识别结果在任务中确认。" if ocr_available
+                  else "未配置可用的本地 OCR 地址，扫描页会保留为待核实。")
+    return {"max_upload_bytes": MAX_UPLOAD_BYTES, "max_pdf_pages": MAX_PDF_PAGES,
+        "max_occurrences": MAX_OCCURRENCES, "max_active_jobs_per_owner": MAX_ACTIVE_AUDITS_PER_OWNER,
+        "accepted_filetypes": ["docx", "pdf"], "default_checks": list(DEFAULT_CHECKS),
+        "checks": [
+            {"id": "citation_identification", "label": "引文识别", "available": True, "required": True,
+                "description": "识别引文位置及参考文献，是其他检查的必要步骤。"},
+            {"id": "bibliography_identity", "label": "书目身份", "available": True, "required": False,
+                "description": "在已公开的馆藏版本中查找身份候选，题名相似不视为确认。"},
+            {"id": "version_page", "label": "版本与页码", "available": True, "required": False,
+                "requires": ["bibliography_identity"], "description": "依赖书目身份，核对可访问原文的文字及印刷页码。"},
+            {"id": "scan_ocr", "label": "扫描页识别", "available": ocr_available, "required": False, "description": ocr_reason},
+            {"id": "deep_analysis", "label": "深入关系分析", "available": False, "required": False,
+                "description": "上传时不自动执行；报告中明确选择原文后，按本地模型配置单独发起。"}],
+        "scopes": [
+            {"id": "public_library", "label": "馆藏公开资料", "available": True,
+                "description": "只核对当前公开且本人可访问的馆藏版本和原文。"},
+            {"id": "private_materials", "label": "馆藏及本人选定材料", "available": False,
+                "description": "私人证据材料匹配尚未接入；稿件仅由本人访问，不进入公共馆藏。"}],
+        "ocr": {"available": ocr_available, "reason": ocr_reason, "service_verified": False,
+            "units_per_attempt": UNITS_PER_ATTEMPT, "max_unit_timeout_seconds": 120},
+        "analysis": {"available": analysis_available, "service_verified": False,
+            "reason": "已配置允许的本地模型；分析仅为待核对候选。" if analysis_available else "未配置可用的本地关系分析模型。"}}
+
+
+def audit_options(data):
+    raw = data.getlist("checks") if hasattr(data, "getlist") and "checks" in data else data.get("checks", list(DEFAULT_CHECKS))
+    if not isinstance(raw, list) or not raw or len(raw) > len(UPLOAD_CHECKS) or any(check not in UPLOAD_CHECKS for check in raw):
+        raise ValidationError({"checks": "请选择已开放的检查项。"})
+    checks = [check for check in UPLOAD_CHECKS if check in raw]
+    if "citation_identification" not in checks or ("version_page" in checks and "bibliography_identity" not in checks):
+        raise ValidationError({"checks": "引文识别是必要步骤；版本与页码检查需要同时选择书目身份。"})
+    if data.get("scope", "public_library") != "public_library":
+        raise ValidationError({"scope": "当前仅支持馆藏公开资料，私人证据材料范围尚未开放。"})
+    return checks
 
 
 def parse_docx(blob):
@@ -146,7 +208,7 @@ def parse_pdf(blob):
     import fitz
     try:
         with fitz.open(stream=blob, filetype="pdf") as document:
-            if document.needs_pass or len(document) > 1000:
+            if document.needs_pass or len(document) > MAX_PDF_PAGES:
                 raise ValidationError({"file": "PDF 已加密或超过 1000 页上限。"})
             rows, text_chars = [], 0
             for index, page in enumerate(document):
@@ -159,7 +221,7 @@ def parse_pdf(blob):
                     raise ValidationError({"file": "稿件文字超过本轮处理上限；原稿保留。"})
                 compact = re.sub(r"\s+", "", content)
                 needs_ocr = (len(compact) < 40 and bool(images)) or "(cid:" in content or content.count("\ufffd") > max(3, len(content) // 20)
-                rows.append({"text": content, "native_text": content, "needs_ocr": needs_ocr,
+                rows.append({"text": content, "native_text": content, "needs_ocr": needs_ocr, "embedded_image_count": len(images),
                     "location": {"part": "pdf", "pdf_page": index + 1, "paragraph": None}, "fields": [], "note_refs": []})
             return rows
     except (RuntimeError, ValueError) as exc:
@@ -343,7 +405,7 @@ def match_bibliography(entry, editions):
     doi = entry.get("doi", "").casefold()
     identity_hints = _bibliography_identity(entry)
     entry["identity_hints"] = identity_hints
-    candidates = []
+    candidates, exact_count, exact_candidate = [], 0, None
     for edition in editions:
         snapshot = edition.active_catalog_revision.snapshot or {}
         work, values = snapshot.get("work") or {}, snapshot.get("edition") or {}
@@ -361,16 +423,20 @@ def match_bibliography(entry, editions):
         rank = 300 if doi_match or isbn_match else 200 if title_match else score
         rank += sum(20 if signal["status"] in {"matched", "mentioned"} else -20 if signal["status"] == "conflict" else 0
             for signal in signals.values())
-        candidates.append({"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": title_value,
+        candidate = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": title_value,
             "year": values.get("publication_year"), "version_label": values.get("version_label", ""),
             "basis": identity, "similarity": score if identity == "fuzzy_candidate" else None,
             "identity_signals": signals, "review_fields": conflicts,
-            "citation": format_gbt_7714_2025(edition, snapshot=snapshot), "_rank": rank})
-    candidates.sort(key=lambda row: -row["_rank"])
-    exact = [row for row in candidates if row["basis"] == "identifier"]
+            "citation": format_gbt_7714_2025(edition, snapshot=snapshot), "_rank": rank}
+        if identity == "identifier":
+            exact_count += 1
+            exact_candidate = candidate
+        candidates.append(candidate)
+        candidates.sort(key=lambda row: -row["_rank"])
+        del candidates[8:]
     entry["candidates"] = [{key: value for key, value in row.items() if key != "_rank"} for row in candidates[:8]]
-    if len(exact) == 1 and not exact[0]["review_fields"]:
-        entry["identity_status"], entry["selected_edition_id"] = "identifier_matched", exact[0]["edition_id"]
+    if exact_count == 1 and not exact_candidate["review_fields"]:
+        entry["identity_status"], entry["selected_edition_id"] = "identifier_matched", exact_candidate["edition_id"]
     else:
         entry["identity_status"] = "needs_review" if candidates else "not_matched_in_library"
         entry["selected_edition_id"] = None
@@ -456,6 +522,7 @@ def check_occurrence(occurrence, entries, user):
 
 @transaction.atomic
 def create_audit(user, upload, data):
+    checks = audit_options(data)
     if upload is None or upload.size > MAX_UPLOAD_BYTES:
         raise ValidationError({"file": "请上传不超过 12 MiB 的 DOCX 或 PDF。"})
     name = PurePath(str(upload.name)).name
@@ -470,18 +537,27 @@ def create_audit(user, upload, data):
     from django.contrib.auth import get_user_model
     get_user_model().objects.select_for_update().get(pk=user.pk)
     digest = hashlib.sha256(blob).hexdigest()
-    fingerprint = request_fingerprint({"filename": name, "content_hash": digest, "project_id": data.get("project_id")},
-                                      ("filename", "content_hash", "project_id"))
+    fingerprint_data = {"filename": name, "content_hash": digest, "project_id": data.get("project_id")}
+    # Keep legacy idempotency keys valid for unchanged default requests.
+    if "checks" in data or "scope" in data:
+        fingerprint_data.update(checks=checks, scope="public_library")
+    fingerprint = request_fingerprint(fingerprint_data, tuple(fingerprint_data))
     existing = CitationAudit.objects.filter(user=user, request_id=request_id).first()
     if existing:
         if existing.content_hash != digest:
             raise ResearchConflict("该请求标识已用于另一份稿件。")
         return same_request(existing, fingerprint)
+    if CitationAudit.objects.filter(user=user, status__in=ACTIVE).count() >= MAX_ACTIVE_AUDITS_PER_OWNER:
+        raise ResearchConflict("本人已有两项体检排队或运行，请等待完成或取消后再上传。")
+    if "scan_ocr" in checks and not audit_capabilities()["ocr"]["available"]:
+        raise ValidationError({"checks": "本地 OCR 暂不可用，请关闭扫描页识别或稍后重试。"})
     project = source_project(user, data)
     audit = CitationAudit.objects.create(user=user, project=project, request_id=request_id,
         content_hash=digest, task_id=str(uuid4()), original_ciphertext=encrypt_private_text(base64.b64encode(blob).decode("ascii")),
         data_ciphertext=pack({"request_fingerprint": fingerprint, "filename": name, "filetype": kind, "manuscript_revision": 1,
             "bibliography": [], "occurrences": [], "warnings": [], "external_metadata": False,
+            "checks": checks, "scope": "public_library", "file_size_bytes": len(blob),
+            "manuscript_stats": {"file_size_bytes": len(blob)},
             "checker_version": CHECKER_VERSION, "stage": "queued", "rerun_occurrence_ids": None}))
     from .tasks import enqueue_citation_audit
     transaction.on_commit(lambda: enqueue_citation_audit(audit.id, audit.generation, audit.task_id))
@@ -497,10 +573,18 @@ def process_audit(audit_id, generation, task_id):
     if audit is None:
         return
     payload = unpack(audit)
+    # Rows created before explicit options retain their original OCR behavior.
+    checks = payload.get("checks", list(UPLOAD_CHECKS))
     if not payload.get("parsed"):
         blob = base64.b64decode(decrypt_private_text(audit.original_ciphertext))
         if "source_paragraphs" not in payload:
             payload["source_paragraphs"] = parse_docx(blob) if payload["filetype"] == "docx" else parse_pdf(blob)
+            paragraphs = payload["source_paragraphs"]
+            payload["manuscript_stats"] = {"file_size_bytes": len(blob), "text_unit_count": len(paragraphs),
+                "paragraph_count": len(paragraphs) if payload["filetype"] == "docx" else None,
+                "char_count": sum(len(row["text"]) for row in paragraphs),
+                "pdf_page_count": len(paragraphs) if payload["filetype"] == "pdf" else None,
+                "embedded_image_count": sum(row.get("embedded_image_count", len(row.get("embedded_images", []))) for row in paragraphs)}
             if not _checkpoint(audit_id, generation, task_id, payload, 0, 0, "parsing"):
                 return
         from .private_ocr import enrich_private_manuscript
@@ -510,9 +594,14 @@ def process_audit(audit_id, generation, task_id):
             payload["ocr_progress"] = {"processed": completed, "total": total,
                 **{state: sum(row.get("status") == state for row in units.values()) for state in ("completed", "failed", "no_text")}}
             return _checkpoint(audit_id, generation, task_id, payload, completed, total, "ocr")
-        enriched = enrich_private_manuscript(blob=blob, kind=payload["filetype"], paragraphs=payload["source_paragraphs"],
-            cache=cache, generation=generation, checkpoint=checkpoint_ocr,
-            is_current=lambda: CitationAudit.objects.filter(pk=audit_id, generation=generation, task_id=task_id, status="running").exists())
+        if "scan_ocr" in checks:
+            enriched = enrich_private_manuscript(blob=blob, kind=payload["filetype"], paragraphs=payload["source_paragraphs"],
+                cache=cache, generation=generation, checkpoint=checkpoint_ocr,
+                is_current=lambda: CitationAudit.objects.filter(pk=audit_id, generation=generation, task_id=task_id, status="running").exists())
+        else:
+            needs_ocr = any(row.get("needs_ocr") or row.get("embedded_images") for row in payload["source_paragraphs"])
+            enriched = (payload["source_paragraphs"], [{"code": "scan_ocr_not_requested",
+                "message": "本次未选择扫描页识别；扫描页及嵌入图像未核查，请对照原稿。"}] if needs_ocr else [], False)
         if enriched is None:
             return
         paragraphs, ocr_warnings, remaining = enriched
@@ -530,10 +619,23 @@ def process_audit(audit_id, generation, task_id):
         payload.update(parsed)
         payload["warnings"] = [*payload["warnings"], *ocr_warnings]
         payload["parsed"] = True
-        editions = list(public_editions().all())
-        for entry in payload["bibliography"]:
-            if entry["identity_status"] != "user_confirmed":
-                match_bibliography(entry, editions)
+        payload.setdefault("manuscript_stats", {}).update(char_count=sum(len(row["text"]) for row in paragraphs),
+            occurrence_count=len(payload["occurrences"]), bibliography_count=len(payload["bibliography"]))
+        if not _checkpoint(audit_id, generation, task_id, payload, 0, len(payload["bibliography"]), "matching"):
+            return
+    # Pending identities survive cancellation or a matching failure; retries do not
+    # discard an already confirmed version or repeat completed catalog scans.
+    pending_entries = [entry for entry in payload["bibliography"] if entry["identity_status"] == "pending"]
+    for index, entry in enumerate(pending_entries):
+        if not CitationAudit.objects.filter(pk=audit_id, generation=generation, task_id=task_id, status="running").exists():
+            return
+        if "bibliography_identity" in checks:
+            # Stream catalog rows: the full published corpus must not reside in every private worker.
+            match_bibliography(entry, public_editions().iterator(chunk_size=200))
+        else:
+            entry["identity_status"] = "not_requested"
+        if not _checkpoint(audit_id, generation, task_id, payload, index + 1, len(pending_entries), "matching"):
+            return
     selected_ids = payload.get("rerun_occurrence_ids")
     selected = [row for row in payload["occurrences"] if selected_ids is None or row["id"] in selected_ids]
     total = len(selected)
@@ -547,7 +649,7 @@ def process_audit(audit_id, generation, task_id):
             occurrence.setdefault("history", []).append({"generation": occurrence.get("checked_generation", generation - 1),
                 "checked_at": occurrence["checked_at"], "findings": occurrence.get("findings", []),
                 "support_analysis": occurrence.get("support_analysis"), "decision": occurrence.get("decision")})
-        occurrence["findings"] = check_occurrence(occurrence, payload["bibliography"], audit.user)
+        occurrence["findings"] = check_occurrence(occurrence, payload["bibliography"], audit.user) if "version_page" in checks else []
         requested_ref = payload.get("support_requests", {}).get(occurrence["id"])
         if requested_ref:
             reference = resolve_reference(requested_ref, audit.user)
@@ -569,7 +671,10 @@ def process_audit(audit_id, generation, task_id):
     payload["report_notice"] = "没有总分；分别呈现书目身份、原文匹配、页码与论断关系。未命中不等于未收录，也不等于引文错误。"
     payload["rerun_occurrence_ids"] = None
     incomplete = bool(payload["warnings"]) or any(entry["identity_status"] in {"needs_review", "not_matched_in_library"} for entry in payload["bibliography"])
-    incomplete = incomplete or any(finding["status"] == "unverified" for row in payload["occurrences"] for finding in row["findings"])
+    incomplete = incomplete or any(finding["status"] == "unverified" or finding.get("page_status") == "needs_review"
+        for row in payload["occurrences"] for finding in row["findings"])
+    incomplete = incomplete or any(row.get("support_analysis", {}).get("status") in {"unverified", "source_unavailable", "needs_review"}
+        for row in payload["occurrences"])
     with transaction.atomic():
         current = CitationAudit.objects.select_for_update().filter(pk=audit_id, generation=generation, task_id=task_id, status="running").first()
         if current:
@@ -598,25 +703,28 @@ def _preserve_parser_decisions(parsed, previous):
         old = old_entries.get(key(entry))
         if old:
             id_map[entry["id"]] = old["id"]
-            entry.update({name: old[name] for name in ("id", "identity_status", "selected_edition_id", "history", "candidates") if name in old})
+            entry.update(deepcopy({name: old[name] for name in ("id", "identity_status", "selected_edition_id", "history", "candidates") if name in old}))
     old_occurrences = {key(row): row for row in previous.get("occurrences", [])}
     for occurrence in parsed["occurrences"]:
         occurrence["entry_ids"] = [id_map.get(value, value) for value in occurrence["entry_ids"]]
         old = old_occurrences.get(key(occurrence))
         if old:
-            occurrence.update({name: old[name] for name in ("id", "decision", "decision_history", "findings", "history", "checked_at", "checked_generation", "support_analysis", "entry_link", "link_history") if name in old})
+            occurrence.update(deepcopy({name: old[name] for name in ("id", "decision", "decision_history", "findings", "history", "checked_at", "checked_generation", "support_analysis", "entry_link", "link_history") if name in old}))
             if old.get("entry_link"):
                 available_ids = {entry["id"] for entry in parsed["bibliography"]}
                 selected = old["entry_link"]["entry_ids"]
                 occurrence["entry_ids"] = [value for value in selected if value in available_ids]
-                occurrence["entry_link"] = {**old["entry_link"], "status": "preserved" if set(selected).issubset(available_ids) else "needs_review"}
-    if previous.get("occurrences"):
-        previous.setdefault("parse_history", []).append({"bibliography": previous["bibliography"],
-            "occurrences": previous["occurrences"], "at": timezone.now().isoformat()})
+                occurrence["entry_link"] = {**deepcopy(old["entry_link"]), "status": "preserved" if set(selected).issubset(available_ids) else "needs_review"}
+    if previous.get("occurrences") or previous.get("bibliography"):
+        previous.setdefault("parse_history", []).append(deepcopy({"bibliography": previous.get("bibliography", []),
+            "occurrences": previous.get("occurrences", []), "at": timezone.now().isoformat()}))
 
 
 @transaction.atomic
 def update_audit(user, pk, data):
+    # Upload, commands and automatic recovery all serialize owner before audit.
+    from django.contrib.auth import get_user_model
+    get_user_model().objects.select_for_update().get(pk=user.pk)
     audit = owned(CitationAudit, user, pk, lock=True)
     expect(audit, data.get("expected_revision"))
     payload = unpack(audit)
@@ -641,16 +749,28 @@ def update_audit(user, pk, data):
         entry["selected_edition_id"], entry["identity_status"] = str(edition.id), "user_confirmed"
         payload["rerun_occurrence_ids"] = [row["id"] for row in payload["occurrences"] if entry["id"] in row["entry_ids"]]
     elif action == "decision":
-        row = next((row for row in payload["occurrences"] if row["id"] == data.get("occurrence_id")), None)
-        if row is None:
-            raise NotFound("引文位置不存在。")
+        if ("occurrence_id" in data) == ("occurrence_ids" in data):
+            raise ValidationError({"occurrence_ids": "请选择单条或批量引文位置，不能同时提交。"})
+        selected = data.get("occurrence_ids", [data.get("occurrence_id")])
+        if not isinstance(selected, list) or not selected or len(selected) > MAX_OCCURRENCES:
+            raise ValidationError({"occurrence_ids": "请选择 1—1000 个引文位置。"})
+        identifiers = {identifier(value, "occurrence_ids") for value in selected}
+        rows = [row for row in payload["occurrences"] if row["id"] in identifiers]
+        if len(rows) != len(identifiers):
+            raise NotFound("部分引文位置不存在；本次决定未保存。")
         decision = data.get("decision")
         if decision not in {"accepted", "ignored", "corrected", "needs_review"}:
             raise ValidationError({"decision": "决定类型无效。"})
         note = text(data.get("note", ""), "note", 4000)
-        if row.get("decision"):
-            row.setdefault("decision_history", []).append(row["decision"])
-        row["decision"] = {"value": decision, "note": note, "at": timezone.now().isoformat()}
+        corrected = text(data.get("corrected_text", ""), "corrected_text", 4000)
+        if corrected and (decision != "corrected" or len(rows) != 1):
+            raise ValidationError({"corrected_text": "校正文案仅用于单条引文的已校正决定。"})
+        for row in rows:
+            if row.get("decision"):
+                row.setdefault("decision_history", []).append(row["decision"])
+            row["decision"] = {"value": decision, "note": note, "at": timezone.now().isoformat()}
+            if "corrected_text" in data:
+                row["decision"]["corrected_text"] = corrected
         return save_data(audit, payload)
     elif action == "link":
         row = next((row for row in payload["occurrences"] if row["id"] == data.get("occurrence_id")), None)
@@ -665,6 +785,8 @@ def update_audit(user, pk, data):
         row = next((row for row in payload["occurrences"] if row["id"] == data.get("occurrence_id")), None)
         if row is None:
             raise NotFound("引文位置不存在。")
+        if not audit_capabilities()["analysis"]["available"]:
+            raise ValidationError({"action": "本地关系分析暂不可用；已保存的原稿和检查结果保留。"})
         reference = resolve_reference(data.get("reference"), user, strict=True)
         payload.setdefault("support_requests", {})[row["id"]] = compact_reference(reference)
         payload["rerun_occurrence_ids"] = [row["id"]]
@@ -687,12 +809,18 @@ def update_audit(user, pk, data):
             raise ValidationError({"occurrence_ids": "重跑范围无效。"})
     else:
         raise ValidationError({"action": "支持 cancel/match/link/decision/analyze/retry。"})
+    if CitationAudit.objects.filter(user=user, status__in=ACTIVE).exclude(pk=audit.pk).count() >= MAX_ACTIVE_AUDITS_PER_OWNER:
+        raise ResearchConflict("本人已有两项体检排队或运行，请等待完成或取消后再继续。")
     audit.status, audit.error_code, audit.finished_at = "queued", "", None
+    audit.completed_units = 0
+    selected_ids = payload.get("rerun_occurrence_ids")
+    audit.total_units = len(selected_ids) if selected_ids is not None else len(payload.get("occurrences", []))
+    payload["stage"] = "queued"
     payload["recovery_attempts"] = 0
     payload.pop("interrupted_generation", None)
     audit.generation += 1
     audit.task_id = str(uuid4())
-    save_data(audit, payload, fields=["status", "error_code", "finished_at", "generation", "task_id"])
+    save_data(audit, payload, fields=["status", "error_code", "finished_at", "generation", "task_id", "completed_units", "total_units"])
     from .tasks import enqueue_citation_audit
     transaction.on_commit(lambda: enqueue_citation_audit(audit.id, audit.generation, audit.task_id))
     return audit
@@ -700,3 +828,44 @@ def update_audit(user, pk, data):
 
 def original_document(audit):
     return base64.b64decode(decrypt_private_text(audit.original_ciphertext))
+
+
+def refresh_bibliography_sources(payload):
+    """Rehydrate public metadata on read; private raw entries and human choices remain intact."""
+    from django.urls import reverse
+    entries = [*payload.get("bibliography", []),
+        *(entry for report in payload.get("parse_history", []) for entry in report.get("bibliography", []))]
+    ids = {candidate["edition_id"] for entry in entries for candidate in entry.get("candidates", [])}
+    ids.update(entry["selected_edition_id"] for entry in entries if entry.get("selected_edition_id"))
+    editions = {str(row.id): row for row in public_editions().filter(pk__in=ids)}
+    for entry in entries:
+        candidates = list(entry.get("candidates", []))
+        selected = entry.get("selected_edition_id")
+        if selected and not any(candidate["edition_id"] == selected for candidate in candidates):
+            candidates.append({"edition_id": selected, "basis": "owner_selected"})
+        refreshed = []
+        for candidate in candidates:
+            edition = editions.get(candidate["edition_id"])
+            if edition is None:
+                refreshed.append({"edition_id": candidate["edition_id"], "source_status": "source_unavailable",
+                    "title": "该馆藏版本当前不可访问", "basis": candidate.get("basis", ""),
+                    "authors": [], "cover_url": None, "citation": "", "year": None, "version_label": ""})
+                continue
+            snapshot = edition.active_catalog_revision.snapshot or {}
+            work, values = snapshot.get("work") or {}, snapshot.get("edition") or {}
+            media = work.get("cover_media") or {}
+            authors = [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "")
+                for row in (snapshot.get("contributions", snapshot.get("contributors")) or [])
+                if isinstance(row, dict) and row.get("role") == "author"]
+            signals = _identity_signals(_bibliography_identity(entry), entry["raw"], snapshot)
+            refreshed.append({**candidate, "source_status": "available", "work_id": str(edition.work_id),
+                "title": work.get("title", ""), "authors": [value for value in authors if value],
+                "year": values.get("publication_year"), "version_label": values.get("version_label", ""),
+                "identity_signals": signals,
+                "review_fields": [key for key, signal in signals.items() if signal["status"] in {"conflict", "needs_review"}],
+                "citation": format_gbt_7714_2025(edition, snapshot=snapshot),
+                "cover_url": (reverse("public-work-cover", kwargs={"work_id": edition.work_id})
+                    + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else ""))
+                    if media or work.get("cover") else None})
+        entry["candidates"] = refreshed
+        entry["selected_source_status"] = "available" if selected in editions else "source_unavailable" if selected else "not_selected"

@@ -22,6 +22,7 @@ export type ResearchRecord<T = Record<string, unknown>> = {
   status?: string; state?: string; enhancement_status?: string; archived?: boolean; generation?: number;
   error_code?: string; poll_after_ms?: number | null; completed_units?: number; total_units?: number;
   project_id?: string | null; parent_id?: string | null; conversation_id?: string | null; discovery_session_id?: string | null;
+  finished_at?: string | null;
 };
 export type ComparisonCell = { dimension: string; column_id?: string; author?: string; reference_ids?: string[]; note?: string; evidence_status?: "selected" | "partial" | "unavailable" | "missing" };
 export type ProjectData = {
@@ -66,6 +67,48 @@ export type PlanData = {
 };
 type Revision = { expected_revision: number };
 type NewRequest = { request_id: string };
+
+export type AuditCheck = "citation_identification" | "bibliography_identity" | "version_page" | "scan_ocr";
+export type AuditCapabilities = {
+  max_upload_bytes: number; max_pdf_pages: number;
+  checks: Array<{ id: AuditCheck | "deep_analysis"; label: string; available: boolean; required?: boolean; requires?: AuditCheck[]; description: string }>;
+  scopes: Array<{ id: string; label: string; available: boolean; description: string }>;
+  default_checks?: AuditCheck[]; max_active_jobs_per_owner?: number;
+  ocr?: { available: boolean; reason: string; service_verified: boolean };
+  analysis?: { available: boolean; reason: string; service_verified: boolean };
+  [key: string]: unknown;
+};
+export type AuditLocation = { part?: string; paragraph?: number | null; note_id?: string | number | null; pdf_page?: number | null; start?: number; end?: number; xml_node?: string; end_paragraph?: number };
+export type AuditCandidate = {
+  edition_id: string; work_id?: string; title: string; year?: number | null; version_label?: string; citation?: string;
+  basis?: string; similarity?: number | null; review_fields?: string[]; source_status?: string;
+  cover_url?: string | null; authors?: string[];
+  identity_signals?: Record<string, { status: string; [key: string]: unknown }>;
+};
+export type AuditEntry = { id: string; label?: string; raw: string; doi?: string; location?: AuditLocation;
+  identity_status: string; candidates: AuditCandidate[]; selected_edition_id?: string | null;
+  selected_source_status?: string;
+  history?: Array<{ at: string; selected_edition_id?: string | null; identity_status?: string }> };
+export type AuditDecision = { value: "accepted" | "ignored" | "corrected" | "needs_review"; note: string; at: string; corrected_text?: string };
+export type AuditFinding = { kind: string; status: string; source_status?: string; message?: string; edition_id?: string; references?: ResolvedEvidence[];
+  claimed_printed_label?: string | null; page_status?: string };
+export type AuditOccurrence = {
+  id: string; raw: string; quote?: string; context: string; note_text?: string; location: AuditLocation; entry_ids: string[];
+  findings: AuditFinding[]; decision?: AuditDecision | null; decision_history?: AuditDecision[];
+  checked_at?: string; checked_generation?: number;
+  support_analysis?: { status: string; reference: ResolvedEvidence; suggestions: Array<{ relation?: string; reason?: string; [key: string]: unknown }> };
+  history?: Array<{ generation: number; checked_at: string; findings: AuditFinding[]; decision?: AuditDecision | null }>;
+};
+export type AuditData = {
+  filename: string; filetype: "pdf" | "docx"; manuscript_revision?: number; stage?: string; parsed?: boolean;
+  bibliography: AuditEntry[]; occurrences: AuditOccurrence[]; checks?: AuditCheck[]; scope?: string;
+  warnings?: Array<{ code: string; message: string }>; report_notice?: string; location_notice?: string;
+  file_size_bytes?: number;
+  manuscript_stats?: { file_size_bytes?: number; paragraph_count?: number; char_count?: number; pdf_page_count?: number | null; embedded_image_count?: number; occurrence_count?: number; bibliography_count?: number };
+  ocr_progress?: { processed?: number; total?: number; completed?: number; failed?: number; no_text?: number };
+  ocr_units?: Record<string, { status: string; pdf_page?: number; error?: string; [key: string]: unknown }>;
+  parse_history?: Array<{ occurrences?: AuditOccurrence[]; bibliography?: AuditEntry[]; [key: string]: unknown }>;
+};
 
 export const researchRecordPath = (collection: ResearchCollection, id?: string) => `/reading/${collection}/${id ? `${encodeURIComponent(id)}/` : ""}`;
 export function privateRequest<T>(path: string, options: RequestInit = {}) {
@@ -147,13 +190,17 @@ export function updateReadingPlan(id: string, data: Revision & PlanPolicy & { go
 export function commandReadingPlan(id: string, data: Revision & { action: "cancel" | "retry" | "enhance" }) {
   return write<ResearchRecord<PlanData>>(`${researchRecordPath("reading-plans", id)}command/`, data);
 }
-export function createCitationAudit(file: File, requestId: string, projectId?: string) {
+export function readAuditCapabilities(signal?: AbortSignal) {
+  return privateRequest<AuditCapabilities>(`${researchRecordPath("citation-audits")}capabilities/`, { signal });
+}
+export function createCitationAudit(file: File, requestId: string, projectId?: string, options?: { checks: AuditCheck[]; scope: string }) {
   const body = new FormData(); body.set("file", file); body.set("request_id", requestId);
   if (projectId) body.set("project_id", projectId);
-  return privateRequest<ResearchRecord>(researchRecordPath("citation-audits"), { method: "POST", body });
+  if (options) { for (const check of options.checks) body.append("checks", check); body.set("scope", options.scope); }
+  return privateRequest<ResearchRecord<AuditData>>(researchRecordPath("citation-audits"), { method: "POST", body });
 }
-export function commandCitationAudit(id: string, data: Revision & { action: "cancel" | "match" | "link" | "decision" | "analyze" | "retry"; entry_id?: string; edition_id?: string; occurrence_id?: string; occurrence_ids?: string[]; entry_ids?: string[]; decision?: "accepted" | "ignored" | "corrected" | "needs_review"; note?: string; reference?: EvidenceReference }) {
-  return write<ResearchRecord>(`${researchRecordPath("citation-audits", id)}command/`, data);
+export function commandCitationAudit(id: string, data: Revision & { action: "cancel" | "match" | "link" | "decision" | "analyze" | "retry"; entry_id?: string; edition_id?: string; occurrence_id?: string; occurrence_ids?: string[]; entry_ids?: string[]; decision?: "accepted" | "ignored" | "corrected" | "needs_review"; note?: string; corrected_text?: string; reference?: EvidenceReference }) {
+  return write<ResearchRecord<AuditData>>(`${researchRecordPath("citation-audits", id)}command/`, data);
 }
 export function readCitationOCR(id: string, unit?: string, signal?: AbortSignal) {
   return privateRequest<{ progress: Record<string, unknown>; units?: Array<Record<string, unknown>>; unit?: Record<string, unknown> }>(`${researchRecordPath("citation-audits", id)}ocr/${unit ? `?unit_id=${encodeURIComponent(unit)}` : ""}`, { signal });

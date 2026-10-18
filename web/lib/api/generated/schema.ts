@@ -1353,6 +1353,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/citation-audits/capabilities/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_citation_audits_capabilities_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/reading-plans/": {
         parameters: {
             query?: never;
@@ -1836,6 +1852,18 @@ export interface components {
          * @enum {string}
          */
         AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
+        AuditCapabilitiesOutput: {
+            readonly max_upload_bytes: number;
+            readonly max_pdf_pages: number;
+            readonly max_occurrences: number;
+            readonly max_active_jobs_per_owner: number;
+            readonly accepted_filetypes: string[];
+            readonly default_checks: string[];
+            readonly checks: unknown;
+            readonly scopes: unknown;
+            readonly ocr: unknown;
+            readonly analysis: unknown;
+        };
         /**
          * @description * `cancel` - cancel
          *     * `match` - match
@@ -1859,6 +1887,8 @@ export interface components {
             entry_ids?: string[];
             decision?: components["schemas"]["DecisionEnum"];
             note?: string;
+            /** @description 仅保存本人的校正文案，不改写上传原稿或原始识别文字。 */
+            corrected_text?: string;
             reference?: components["schemas"]["EvidenceReferenceInputRequest"];
         };
         AuditCreateInputRequest: {
@@ -1871,6 +1901,9 @@ export interface components {
             file: string;
             /** Format: uuid */
             project_id?: string;
+            /** @description multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。 */
+            checks?: components["schemas"]["ChecksEnum"][];
+            scope?: components["schemas"]["ScopeEnum"];
         };
         /**
          * @description * `draft` - 草稿
@@ -2023,6 +2056,14 @@ export interface components {
          * @enum {string}
          */
         ChangeEnum: "unchanged" | "added" | "removed" | "changed";
+        /**
+         * @description * `citation_identification` - citation_identification
+         *     * `bibliography_identity` - bibliography_identity
+         *     * `version_page` - version_page
+         *     * `scan_ocr` - scan_ocr
+         * @enum {string}
+         */
+        ChecksEnum: "citation_identification" | "bibliography_identity" | "version_page" | "scan_ocr";
         CitationOCROutput: {
             readonly progress: unknown;
             readonly units: unknown;
@@ -2973,6 +3014,8 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            /** Format: date-time */
+            readonly finished_at: string | null;
             readonly match_reason: string;
         };
         /**
@@ -3597,6 +3640,8 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            /** Format: date-time */
+            readonly finished_at: string | null;
         };
         PrivateRecordExport: {
             /** Format: uuid */
@@ -3624,6 +3669,8 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            /** Format: date-time */
+            readonly finished_at: string | null;
             readonly schema_version: number;
             readonly turns: components["schemas"]["PrivateRecord"][];
         };
@@ -4184,6 +4231,11 @@ export interface components {
             source: string;
             edit_version?: string;
         };
+        /**
+         * @description * `public_library` - public_library
+         * @enum {string}
+         */
+        ScopeEnum: "public_library";
         /**
          * @description * `add` - add
          *     * `remove` - remove
@@ -7076,6 +7128,25 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_citation_audits_capabilities_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditCapabilitiesOutput"];
                 };
             };
         };

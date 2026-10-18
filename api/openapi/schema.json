@@ -5150,6 +5150,34 @@
                 }
             }
         },
+        "/api/reading/citation-audits/capabilities/": {
+            "get": {
+                "operationId": "reading_citation_audits_capabilities_retrieve",
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuditCapabilitiesOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/reading-plans/": {
             "get": {
                 "operationId": "reading_reading_plans_list",
@@ -7179,6 +7207,65 @@
                 "type": "string",
                 "description": "* `original` - 原始文件\n* `normalized` - 规范阅读文件\n* `ocr_pdf` - OCR 阅读文件\n* `web_derivative` - 网页阅读派生文件"
             },
+            "AuditCapabilitiesOutput": {
+                "type": "object",
+                "properties": {
+                    "max_upload_bytes": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "max_pdf_pages": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "max_occurrences": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "max_active_jobs_per_owner": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "accepted_filetypes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "default_checks": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "checks": {
+                        "readOnly": true
+                    },
+                    "scopes": {
+                        "readOnly": true
+                    },
+                    "ocr": {
+                        "readOnly": true
+                    },
+                    "analysis": {
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "accepted_filetypes",
+                    "analysis",
+                    "checks",
+                    "default_checks",
+                    "max_active_jobs_per_owner",
+                    "max_occurrences",
+                    "max_pdf_pages",
+                    "max_upload_bytes",
+                    "ocr",
+                    "scopes"
+                ]
+            },
             "AuditCommandInputActionEnum": {
                 "enum": [
                     "cancel",
@@ -7218,20 +7305,27 @@
                         "items": {
                             "type": "string",
                             "format": "uuid"
-                        }
+                        },
+                        "maxItems": 1000
                     },
                     "entry_ids": {
                         "type": "array",
                         "items": {
                             "type": "string",
                             "format": "uuid"
-                        }
+                        },
+                        "maxItems": 1000
                     },
                     "decision": {
                         "$ref": "#/components/schemas/DecisionEnum"
                     },
                     "note": {
                         "type": "string",
+                        "maxLength": 4000
+                    },
+                    "corrected_text": {
+                        "type": "string",
+                        "description": "仅保存本人的校正文案，不改写上传原稿或原始识别文字。",
                         "maxLength": 4000
                     },
                     "reference": {
@@ -7258,6 +7352,17 @@
                     "project_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "checks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ChecksEnum"
+                        },
+                        "description": "multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。",
+                        "maxItems": 4
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/ScopeEnum"
                     }
                 },
                 "required": [
@@ -7654,6 +7759,16 @@
                 ],
                 "type": "string",
                 "description": "* `unchanged` - unchanged\n* `added` - added\n* `removed` - removed\n* `changed` - changed"
+            },
+            "ChecksEnum": {
+                "enum": [
+                    "citation_identification",
+                    "bibliography_identity",
+                    "version_page",
+                    "scan_ocr"
+                ],
+                "type": "string",
+                "description": "* `citation_identification` - citation_identification\n* `bibliography_identity` - bibliography_identity\n* `version_page` - version_page\n* `scan_ocr` - scan_ocr"
             },
             "CitationOCROutput": {
                 "type": "object",
@@ -10757,6 +10872,12 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "match_reason": {
                         "type": "string",
                         "readOnly": true
@@ -10771,6 +10892,7 @@
                     "discovery_session_id",
                     "enhancement_status",
                     "error_code",
+                    "finished_at",
                     "generation",
                     "id",
                     "match_reason",
@@ -12701,6 +12823,12 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -12712,6 +12840,7 @@
                     "discovery_session_id",
                     "enhancement_status",
                     "error_code",
+                    "finished_at",
                     "generation",
                     "id",
                     "parent_id",
@@ -12810,6 +12939,12 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "schema_version": {
                         "type": "integer",
                         "readOnly": true
@@ -12831,6 +12966,7 @@
                     "discovery_session_id",
                     "enhancement_status",
                     "error_code",
+                    "finished_at",
                     "generation",
                     "id",
                     "parent_id",
@@ -14730,6 +14866,13 @@
                     "summary",
                     "target_scholar"
                 ]
+            },
+            "ScopeEnum": {
+                "enum": [
+                    "public_library"
+                ],
+                "type": "string",
+                "description": "* `public_library` - public_library"
             },
             "SelectionInputActionEnum": {
                 "enum": [

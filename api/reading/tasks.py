@@ -245,8 +245,18 @@ def recover_private_research_tasks():
         ids = list(model.objects.filter(eligible, updated_at__lt=cutoff).order_by("updated_at").values_list("pk", flat=True)[:50])
         for record_id in ids:
             with transaction.atomic():
+                if model is CitationAudit:
+                    from django.contrib.auth import get_user_model
+                    from .citation_audit import MAX_ACTIVE_AUDITS_PER_OWNER
+                    owner_id = CitationAudit.objects.filter(pk=record_id).values_list("user_id", flat=True).first()
+                    if owner_id is None or get_user_model().objects.select_for_update().filter(pk=owner_id).first() is None:
+                        continue
                 record = model.objects.select_for_update().filter(eligible, pk=record_id, updated_at__lt=cutoff).first()
                 if record is None:
+                    continue
+                if (model is CitationAudit and record.status not in ACTIVE
+                        and CitationAudit.objects.filter(user_id=record.user_id, status__in=ACTIVE).count() >= MAX_ACTIVE_AUDITS_PER_OWNER):
+                    # Keep the failed record, attempt budget and lease untouched until capacity returns.
                     continue
                 payload = unpack(record)
                 attempts = int(payload.get("recovery_attempts", 0))
@@ -265,7 +275,14 @@ def recover_private_research_tasks():
                 record.generation += 1
                 record.task_id = str(uuid4())
                 record.status, record.error_code, record.finished_at = "queued", "", None
-                save_data(record, payload, fields=["generation", "task_id", "status", "error_code", "finished_at"])
+                fields = ["generation", "task_id", "status", "error_code", "finished_at"]
+                if model is CitationAudit:
+                    payload["stage"] = "queued"
+                    record.completed_units = 0
+                    selected = payload.get("rerun_occurrence_ids")
+                    record.total_units = len(selected) if selected is not None else len(payload.get("occurrences", []))
+                    fields.extend(["completed_units", "total_units"])
+                save_data(record, payload, fields=fields)
                 transaction.on_commit(lambda pk=record.id, generation=record.generation, token=record.task_id, send=enqueue:
                     send(pk, generation, token))
                 summary[key] += 1

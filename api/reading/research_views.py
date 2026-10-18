@@ -14,9 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import research
-from .citation_audit import create_audit, original_document, update_audit
+from .citation_audit import audit_capabilities, create_audit, original_document, update_audit
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
-from .research_serializers import (AnalysisDecisionInput, AuditCommandInput, AuditCreateInput, CitationOCROutput, ComparisonInput,
+from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, CitationOCROutput, ComparisonInput,
     MemoryCreateInput, MemorySearchInput, MemoryUpdateInput, PlanCreateInput, PlanUpdateInput,
     PlanCommandInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
     SubclaimsInput, TurnExpandInput, TurnRetryInput)
@@ -41,6 +41,7 @@ class PrivateRecordSerializer(serializers.Serializer):
     discovery_session_id = serializers.UUIDField(read_only=True, allow_null=True, required=False)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+    finished_at = serializers.DateTimeField(read_only=True, allow_null=True, required=False)
 
 
 class PrivateRecordExportSerializer(PrivateRecordSerializer):
@@ -259,6 +260,11 @@ class PersonalReadingPlanViewSet(PrivateRecordViewSet):
 
 class CitationAuditViewSet(PrivateRecordViewSet):
     model = CitationAudit
+
+    @extend_schema(responses=AuditCapabilitiesOutput)
+    @action(detail=False, methods=["get"])
+    def capabilities(self, request):
+        return Response(audit_capabilities())
 
     @extend_schema(request={"multipart/form-data": AuditCreateInput}, responses={202: PrivateRecordSerializer})
     def create(self, request):

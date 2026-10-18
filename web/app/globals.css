@@ -33,6 +33,9 @@
 @import "../styles/features/account/responsive.css";
 @import "../styles/features/account/research.css";
 @import "../styles/features/account/reading-plans.css";
+@import "../styles/features/account/citation-audit.css";
+@import "../styles/features/account/citation-audit-upload.css";
+@import "../styles/features/account/citation-source-preview.css";
 @import "../styles/features/support.css";
 @import "../styles/layout/admin-shell.css";
 @import "../styles/features/admin/dashboard.css";

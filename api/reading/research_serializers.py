@@ -241,6 +241,22 @@ class AuditCreateInput(serializers.Serializer):
     request_id = serializers.UUIDField()
     file = serializers.FileField(help_text="DOCX/PDF，最大 12 MiB，仅保存在本人的加密记录中。")
     project_id = serializers.UUIDField(required=False)
+    checks = serializers.ListField(child=serializers.ChoiceField(choices=["citation_identification", "bibliography_identity", "version_page", "scan_ocr"]),
+        max_length=4, allow_empty=False, required=False, help_text="multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。")
+    scope = serializers.ChoiceField(choices=["public_library"], required=False)
+
+
+class AuditCapabilitiesOutput(serializers.Serializer):
+    max_upload_bytes = serializers.IntegerField(read_only=True)
+    max_pdf_pages = serializers.IntegerField(read_only=True)
+    max_occurrences = serializers.IntegerField(read_only=True)
+    max_active_jobs_per_owner = serializers.IntegerField(read_only=True)
+    accepted_filetypes = serializers.ListField(child=serializers.CharField(), read_only=True)
+    default_checks = serializers.ListField(child=serializers.CharField(), read_only=True)
+    checks = serializers.JSONField(read_only=True)
+    scopes = serializers.JSONField(read_only=True)
+    ocr = serializers.JSONField(read_only=True)
+    analysis = serializers.JSONField(read_only=True)
 
 
 class AuditCommandInput(RevisionInput):
@@ -248,10 +264,12 @@ class AuditCommandInput(RevisionInput):
     entry_id = serializers.UUIDField(required=False)
     edition_id = serializers.UUIDField(required=False)
     occurrence_id = serializers.UUIDField(required=False)
-    occurrence_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
-    entry_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    occurrence_ids = serializers.ListField(child=serializers.UUIDField(), max_length=1000, required=False)
+    entry_ids = serializers.ListField(child=serializers.UUIDField(), max_length=1000, required=False)
     decision = serializers.ChoiceField(choices=["accepted", "ignored", "corrected", "needs_review"], required=False)
     note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    corrected_text = serializers.CharField(max_length=4000, required=False, allow_blank=True,
+        help_text="仅保存本人的校正文案，不改写上传原稿或原始识别文字。")
     reference = EvidenceReferenceInput(required=False)
 
 

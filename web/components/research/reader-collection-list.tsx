@@ -11,10 +11,9 @@ import type { MemoryData, ResearchRecord } from "@/lib/api/research.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ResearchCenterNav, type ReaderCenterSection } from "./research-center-nav";
 
-type CollectionKind = "notes" | "citation" | "confirmed";
+type CollectionKind = "notes" | "confirmed";
 const config: Record<CollectionKind, { title: string; subtitle: string; endpoint: string; route: string; nav: ReaderCenterSection; empty: string }> = {
   notes: { title: "笔记", subtitle: "你保存的高亮、摘录和阅读笔记。", endpoint: "/reading/annotations/", route: "/account/notes", nav: "notes", empty: "还没有保存笔记或批注。" },
-  citation: { title: "引文核验", subtitle: "你的文稿体检任务和可追溯的原文核验记录。", endpoint: "/reading/citation-audits/", route: "/account/citation-audits", nav: "citation", empty: "还没有引文核验任务。" },
   confirmed: { title: "已确认笔记", subtitle: "只有你主动确认的内容才会进入个人学术记忆。", endpoint: "/reading/research-memories/", route: "/account/confirmed-notes", nav: "confirmed", empty: "还没有已确认笔记。" },
 };
 
@@ -25,10 +24,6 @@ type AnnotationRow = {
 type CollectionRow = {
   id: string; title: string; text?: string; quote?: string; updatedAt: string; status: string;
   href?: string; linkLabel?: string; summary?: string;
-};
-const statusLabels: Record<string, string> = {
-  queued: "等待处理", running: "处理中", completed: "已完成", partial: "部分完成", failed: "处理失败",
-  cancelled: "已取消", canceled: "已取消", confirmed: "已确认", proposed: "待确认", ignored: "已忽略",
 };
 
 async function loadCollection(kind: CollectionKind, credential: string, signal: AbortSignal): Promise<CollectionRow[]> {
@@ -57,14 +52,7 @@ async function loadCollection(kind: CollectionKind, credential: string, signal: 
         status: "已确认", href, linkLabel: source ? "查看原文" : "返回研究" };
     });
   }
-  const rows = await readAllPages<ResearchRecord>(endpoint, credential, signal);
-  return rows.map((row) => ({
-    id: row.id, title: typeof row.data.filename === "string" && row.data.filename.trim() ? row.data.filename : "未命名文稿",
-    updatedAt: row.updated_at, status: statusLabels[row.status || row.state || ""] || "已保存",
-    summary: typeof row.total_units === "number" && typeof row.completed_units === "number"
-      ? `已处理 ${row.completed_units} / ${row.total_units} 个任务单元。` : "当前记录尚未提供任务进度。",
-    text: typeof row.data.notice === "string" ? row.data.notice : undefined,
-  }));
+  return [];
 }
 
 export function ReaderCollectionList({ kind }: { kind: CollectionKind }) {
