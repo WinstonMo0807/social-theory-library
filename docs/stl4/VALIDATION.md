@@ -90,3 +90,5 @@
 - 新后端笔记14函数/17参数案例、私人来源13函数/18参数案例；新前端笔记6场景、解析/来源11场景，仅编写。旧private_research/citation/version/upload用例保留并适配明确授权、purpose与实际依据契约。
 
 未执行正式测试、浏览器、构建、视觉回归、OCR/模型/NAS、检索质量评测、迁移、部署或清理。静态检查和检查点不等于B01–B06或209视图验收通过。
+
+本单元51文件准确白名单核验及`git diff --cached --check`退出0；限定private-key/provider-token/credential-url模式扫描无命中。ATLAS_INDEX保持209行22字段，仅205–215记录更新，图像来源身份字段与其他行不变。检查点1d19dd5。
