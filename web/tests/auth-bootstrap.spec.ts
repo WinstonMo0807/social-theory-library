@@ -309,3 +309,67 @@ test("storage loss revalidates the server cookie while logout propagates to anot
   await tabA.evaluate(() => localStorage.removeItem("library_session_active"));
   await expect(tabB).toHaveURL(/\/login\?next=%2Fadmin|\/login\?next=\/admin/);
 });
+
+for (const initialStatus of [403, 500]) {
+  test(`research list exposes initial auth ${initialStatus} and retries authentication`, async ({ page }) => {
+    const options: MockAuthOptions = { meStatus: initialStatus };
+    await mockApi(page, options);
+    await page.goto("/account/research", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "研究会话暂时不可用" })).toBeVisible();
+    await expect(page.getByText("正在读取你的研究会话……")).toHaveCount(0);
+
+    options.meStatus = 200;
+    await page.getByRole("button", { name: "重试", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "还没有研究会话" })).toBeVisible();
+  });
+}
+
+test("research list hides old-owner rows during account changes and authoritative focus checks", async ({ page }) => {
+  await mockApi(page);
+  let owner = 11;
+  let authenticated = true;
+  let resourceStatus = 200;
+  let releaseRows: (() => void) | undefined;
+  let holdRows = false;
+  const requestOwners: number[] = [];
+  await page.route("**/api/auth/me/", (route) => fulfillJson(route, authenticated ? 200 : 401, {
+    id: owner, email: `owner-${owner}@example.test`, display_name: `Owner ${owner}`, role: "reader",
+  }));
+  await page.route("**/api/auth/token/refresh/", (route) => fulfillJson(route, authenticated ? 200 : 401, {}));
+  await page.route("**/api/reading/research-projects/", async (route) => {
+    const requestedOwner = owner;
+    requestOwners.push(requestedOwner);
+    if (holdRows) await new Promise<void>((resolve) => { releaseRows = resolve; });
+    await fulfillJson(route, resourceStatus, resourceStatus === 200 ? [{
+      id: `private-project-${requestedOwner}`, revision: 1,
+      created_at: "2026-10-17T00:00:00Z", updated_at: "2026-10-17T00:00:00Z",
+      data: { title: `Private research ${requestedOwner}`, question: "", selections: [] },
+    }] : { detail: "This account cannot access its research." });
+  });
+  await page.goto("/account/research", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Private research 11" })).toBeVisible();
+
+  owner = 22;
+  holdRows = true;
+  await page.evaluate(() => window.dispatchEvent(new StorageEvent("storage", { key: "library_session_active" })));
+  await expect(page.getByRole("heading", { name: "Private research 11" })).toHaveCount(0);
+  await expect.poll(() => requestOwners.at(-1)).toBe(22);
+  await expect(page.getByText("正在读取你的研究会话……")).toBeVisible();
+  holdRows = false;
+  releaseRows?.();
+  await expect(page.getByRole("heading", { name: "Private research 22" })).toBeVisible();
+
+  resourceStatus = 403;
+  await page.evaluate(() => {
+    const originalNow = Date.now;
+    Date.now = () => originalNow() + 31_000;
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect(page.getByRole("heading", { name: "研究会话暂时不可用" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Private research 22" })).toHaveCount(0);
+
+  authenticated = false;
+  await page.evaluate(() => window.dispatchEvent(new StorageEvent("storage", { key: "library_session_active" })));
+  await expect(page).toHaveURL(/\/login\?next=(?:%2F|\/)account(?:%2F|\/)research/);
+  await expect(page.getByText("Private research 22", { exact: true })).toHaveCount(0);
+});

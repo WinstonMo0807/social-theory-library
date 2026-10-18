@@ -90,3 +90,13 @@
 - `completed` 或 `partial` 的深度排序只有在再次通过发布资格、访问权限、DocumentRevision、EvidenceSpan/页码和原文指纹核对后，才会用于首屏 `passages`；深度服务缺失、超时、取消或任务排队失败时继续返回基础结果。
 - `retrieval_identity` 只记录实际返回的索引、embedding、reranker 制品和版本。未配置或未加载的模型保持空值，不把 pipeline 版本写成索引代次，不把 mMARCO 冒充 BGE。
 - 该契约不提供模型管理或第三步质量评测页面；生产启用需要隔离制品、generation、allowlist 和服务健康证据。
+
+## 2026-10-18 个人阅读计划（R21）
+
+- `POST /api/reading/reading-plans/` 使用幂等 `request_id`。目标无选材时复用 Discovery；显式 EvidenceReference 或公共路径仍沿同一公开修订身份。创建界面可读取本人研究选材，不写入示例书目。
+- `PATCH /api/reading/reading-plans/{id}/` 必带 `expected_revision`。支持目标、基础、预算、顺序、状态、笔记、替换、本人估计和明确采纳建议；`preview=true` 只返回计算结果，不保存、不换revision、不排任务。确认预览仍以原revision再次提交，冲突返回409。
+- `weekly_minutes` 1–10080 与 `duration_weeks` 1–52 形成总预算，乘积最多100000分钟；也可使用 `budget_minutes` 或原 `time_budget`。修改预算方式清除旧方式的遮蔽字段。`language_preference`最多160字符，只用于导读提示，不声称已做语言硬筛选。
+- `use_confirmed_memories`默认false；`confirmed_memory_ids`最多40，仅本人仍confirmed的笔记。保存、执行任务、写回和读取时检查授权和版本；旧候选撤销状态为 `authorization_changed`。未授权时不会查询所有笔记。本人已明确采纳的文字与完成记录作为人工结果保留。
+- 完成项保留原材料与位置，不能用同一请求降回pending后替换。替换普通材料时，如果有相关先修关系，必须显式 `remove_related_prerequisites=true`，只移除相关关系并保留原关系记录；其他关系保留。替换项回到pending。
+- 条目读回包含实际公开封面、作者、出版年、availability、来源与阅读URL；所有 URL 以当前发布修订核实，整文件 Reader 也绑定revision。失效材料不提供可点击阅读入口。先修来源也会重新解析。
+- `command/` 支持cancel/retry/enhance；`export/`重新校验来源并返回私人记录，浏览器提供打印/保存PDF。JSON与前端schema已重新生成；真实任务/打印分页和全部权限回归待统一验收。

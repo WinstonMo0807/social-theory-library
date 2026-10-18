@@ -32,8 +32,38 @@ export type Statement = { proposition: string; subject?: string; predicate?: str
 export type AnalysisRelation = "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence";
 export type TurnData = { question: string; scope: QueryScope; mode: "search" | "counterargument"; result_refs?: ResolvedEvidence[]; selected_refs?: ResolvedEvidence[]; return_context?: Record<string, unknown>; analysis?: Array<{ id: string; reference: ResolvedEvidence; status: string; [key: string]: unknown }>; [key: string]: unknown };
 export type MemoryData = { body: string; kind: "understanding" | "question" | "contradiction"; sources: ResolvedEvidence[]; [key: string]: unknown };
-export type PlanPolicy = { time_budget?: string; budget_minutes?: number | null; session_minutes?: number; reading_level?: "beginner" | "intermediate" | "advanced"; reading_pace?: { cjk_chars_per_minute?: number; words_per_minute?: number; fallback_minutes_per_page?: number }; prefer_unread?: boolean; item_estimates?: Array<{ work_id: string; difficulty?: "beginner" | "intermediate" | "advanced"; minutes?: number }> };
-export type PlanData = { goal: string; background?: string; items: Array<{ id: string; work_id: string; title?: string; status: "pending" | "reading" | "completed" | "skipped"; reference?: ResolvedEvidence; reader_url?: string | null; available?: boolean; [key: string]: unknown }>; [key: string]: unknown };
+export type PlanLevel = "beginner" | "intermediate" | "advanced";
+export type PlanPolicy = {
+  time_budget?: string; budget_minutes?: number | null; session_minutes?: number; reading_level?: PlanLevel;
+  weekly_minutes?: number; duration_weeks?: number; language_preference?: string;
+  use_confirmed_memories?: boolean; confirmed_memory_ids?: string[];
+  reading_pace?: { cjk_chars_per_minute?: number; words_per_minute?: number; fallback_minutes_per_page?: number };
+  prefer_unread?: boolean; item_estimates?: Array<{ work_id: string; difficulty?: PlanLevel; minutes?: number }>;
+};
+export type PlanItem = {
+  id: string; work_id: string; title?: string; status: "pending" | "reading" | "completed" | "skipped";
+  reference?: ResolvedEvidence | null; reader_url?: string | null; available?: boolean; cover_url?: string | null;
+  authors?: string[]; publication_year?: number | null; stage?: string; reason?: string; learning_goal?: string;
+  note?: string; estimated_minutes?: number | null; reading_scope?: string;
+  difficulty?: { level: PlanLevel | null; basis?: string; notice?: string };
+  budget_assignment?: { included: boolean; reason: string; planned_minutes: number | null };
+  planning_estimate?: { method?: string; total_pages?: number; sampled_pages?: number[]; limits?: string };
+  prior_reading?: { recorded?: boolean; progress_ratio?: number | null };
+  model_suggestion?: { stage: string; reason: string; learning_goal: string };
+  suggestion_adopted_at?: string; [key: string]: unknown;
+};
+export type PlanData = {
+  goal: string; background?: string; time_budget?: string; items: PlanItem[]; notice?: string;
+  generation_status?: string; enhancement_status?: string; error_code?: string;
+  use_confirmed_memories?: boolean; confirmed_memory_ids?: string[];
+  planning_inputs?: PlanPolicy;
+  planning_policy?: PlanPolicy & { budget_period?: string; notice?: string; pace?: PlanPolicy["reading_pace"]; personalization_enabled?: boolean };
+  schedule?: { budget_minutes: number | null; planned_minutes: number; unknown_duration_count: number;
+    deferred_item_ids: string[]; sessions: Array<{ index: number; minutes: number; items: Array<{ item_id: string; planned_minutes: number }> }>;
+    unscheduled_minutes?: number; notice?: string };
+  prerequisites?: Array<{ work_id: string; requires_work_id: string; reference: ResolvedEvidence }>;
+  origin?: { reading_path_id?: string; turn_id?: string }; [key: string]: unknown;
+};
 type Revision = { expected_revision: number };
 type NewRequest = { request_id: string };
 
@@ -111,7 +141,7 @@ export function searchResearchMemories(data: { q: string; semantic?: boolean; al
 export function createReadingPlan(data: NewRequest & PlanPolicy & { goal: string; background?: string; project_id?: string; turn_id?: string; reading_path_id?: string; references?: EvidenceReference[]; prerequisites?: Array<{ work_id: string; requires_work_id: string; reference: EvidenceReference }>; scope?: QueryScope }) {
   return write<ResearchRecord<PlanData>>(researchRecordPath("reading-plans"), data);
 }
-export function updateReadingPlan(id: string, data: Revision & PlanPolicy & { order?: string[]; item_id?: string; status?: PlanData["items"][number]["status"]; note?: string; reference?: EvidenceReference; adopt_suggestion?: boolean; optimize_order?: boolean }) {
+export function updateReadingPlan(id: string, data: Revision & PlanPolicy & { goal?: string; background?: string; order?: string[]; item_id?: string; status?: PlanItem["status"]; note?: string; reference?: EvidenceReference; adopt_suggestion?: boolean; optimize_order?: boolean; preview?: boolean; remove_related_prerequisites?: boolean }) {
   return write<ResearchRecord<PlanData>>(researchRecordPath("reading-plans", id), data, "PATCH");
 }
 export function commandReadingPlan(id: string, data: Revision & { action: "cancel" | "retry" | "enhance" }) {

@@ -190,6 +190,13 @@ class PlanPolicyInput(serializers.Serializer):
     reading_pace = ReadingPaceInput(required=False)
     prefer_unread = serializers.BooleanField(required=False)
     item_estimates = ItemEstimateInput(many=True, required=False)
+    weekly_minutes = serializers.IntegerField(min_value=1, max_value=10080, required=False,
+        help_text="与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。")
+    duration_weeks = serializers.IntegerField(min_value=1, max_value=52, required=False)
+    language_preference = serializers.CharField(max_length=160, required=False, allow_blank=True,
+        help_text="用于导读提示，不自动排除已选材料。")
+    use_confirmed_memories = serializers.BooleanField(required=False, help_text="默认关闭，仅使用显式选择的本人已确认笔记。")
+    confirmed_memory_ids = serializers.ListField(child=serializers.UUIDField(), max_length=40, required=False)
 
 
 class PlanCreateInput(PlanPolicyInput):
@@ -206,6 +213,8 @@ class PlanCreateInput(PlanPolicyInput):
 
 
 class PlanUpdateInput(RevisionInput, PlanPolicyInput):
+    goal = serializers.CharField(max_length=4000, required=False)
+    background = serializers.CharField(max_length=4000, required=False, allow_blank=True)
     order = serializers.ListField(child=serializers.UUIDField(), required=False)
     item_id = serializers.UUIDField(required=False)
     status = serializers.ChoiceField(choices=["pending", "reading", "completed", "skipped"], required=False)
@@ -213,6 +222,9 @@ class PlanUpdateInput(RevisionInput, PlanPolicyInput):
     reference = EvidenceReferenceInput(required=False)
     adopt_suggestion = serializers.BooleanField(required=False)
     optimize_order = serializers.BooleanField(required=False)
+    preview = serializers.BooleanField(required=False, help_text="只计算调整预览，不写入或增加 revision；确认时以原 revision 再提交。")
+    remove_related_prerequisites = serializers.BooleanField(required=False,
+        help_text="替换材料时，明确同意移除仅与被替换材料相关的先修关系；其他关系保留。")
 
 
 class PlanCommandInput(RevisionInput):

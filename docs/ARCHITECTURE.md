@@ -1,5 +1,46 @@
 # Social Theory Library 架构
 
+## 2026-10-18 个人阅读计划与身份边界
+
+个人阅读计划沿用加密 PersonalReadingPlan，与同一 Discovery、公开修订与 Reader 共用来源身份。周预算/周期、只读预览和人工调整通过既有 PATCH 协议传递，不新增平行馆藏或业务表。计划级笔记使用默认关闭，显式owner+confirmed名单及版本用于生成前、写回与读时校验；未采纳候选在撤销后失效，已人工采纳结果保留。前端通用私人工作区在读写前后核对cookie owner，避免跨账号响应落到旧工作区。完整行为与迁移/权限验收仍待统一执行。
+
+## 2026-10-15 STL 4.0 空馆藏运行边界
+
+公网 PostgreSQL 已完成账号保留型重置：账号、ReaderProfile、恢复码、角色/权限及 Django schema 元数据继续由现有 Django 单体负责；馆藏 Work 到 EvidenceSpan 的业务数据、公开文件、OCR 派生数据和检索投影已清空。Redis/Meilisearch 仍是同一生产服务，只清空数据内容，不建立第二套书库。服务启动产生的健康检查和入库来源记录属于运行时运维状态。
+
+后端兼容入口仍由同一服务提供，`viewpoint-search` 与同步 `semantic-search` 只作为过渡层，响应带 4.0 canonical endpoint，最终视觉接入使用异步 Discovery 身份链。模型目录和隔离实验不属于生产馆藏，也不得写入生产活动索引。
+
+## 2026-10-15 视觉接入前的第一推荐检索目标（隔离实施，未切生产）
+
+下一阶段以同一 Django 模块化单体、PostgreSQL、Redis、Celery、Meilisearch、PaddleOCR、PDF Reader 为基础，采用分层检索链：QueryLexicon 双语/别名扩展与范围约束，Meilisearch 关键词召回和 EmbeddingGemma 2 768 维 dynamic-int8 Dense 召回，RRF 融合后按 Work/Edition/DocumentRevision 去重和覆盖控制，再由现有 mMARCO 做快速初排，BGE-reranker-v2-m3 对默认前20候选深排，ConvMemory-v2 只对前5—10条组织邻近段落、章节标题和研究会话上下文，最终统一经过 EvidenceSpan、字符偏移、正式PDF页码和修订身份复核后交给 Reader、连续研究和观点分组。
+
+即时层先返回关键词/Dense/RRF/mMARCO结果；BGE和上下文组织通过可追踪的异步任务补充，不让页面等待慢模型才有首屏，也不把处理中状态写成完成。E5-small与mMARCO继续作为原始基线，EmbeddingGemma、Qwen3-Embedding和BGE-M3保持独立向量空间与索引版本；Qwen3-Reranker-0.6B只保留为隔离的极限研究模式，ConvMemory不单独决定证据相关性。模型实验、索引、缓存键和任务状态必须与生产活动索引隔离，完成真实比较和统一视觉/API验收前不得切换生产。
+
+Discovery generation 记录 `pipeline` 与 `dimensions`，索引、向量缓存和 Meilisearch embedder 按同一 generation 校验；默认 E5 384 维回退不与 EG2 的768/512/256/128空间混用。生产推理使用代码内固定 model lock，模型包 lock 仅供显式隔离实验容器读取。
+
+源码地图、视觉接入顺序、NAS实况和未完成边界见[最终开发与视觉接入交接](FINAL_DEVELOPMENT_HANDOFF_20261015.md)。
+
+## 2026-10-13 本轮非视觉架构增量
+
+沿Django模块化单体与同一馆藏、任务、索引及存储。reading新增五类加密owner记录承载持续研究/体检/个人计划/记忆，公共EvidencePack不保存私人稿件；私人扫描稿以bytes适配既有OCR gateway，单页加密检查点与代次恢复，不进入公共入库。PrivateLocalTransport固定验证后的本地IP并保留Host/TLS，拒绝代理/重定向/跨来源。计划估时为有依据可编辑的规则假设，非真实质量评估。
+
+catalog复用EditorialRevision实现页面编排和类型化策划块；本地outline/guide/comparison沿ProcessingJob生成候选，采用只改草稿。目录用DocumentOutlineRevision保留来源、层级、同页顺序与人工修订。Ask和Discovery共享检索函数与读时资格复验。迁移为catalog0064/0065、reading0008、ingestion0020，仅在隔离验收库执行；生产未应用。
+
+行为、责任与限制见[覆盖矩阵](implementation/FEATURE_COVERAGE_20261013.md)及[后端集中验收](implementation/BACKEND_ACCEPTANCE_RESULTS_20261013.md)。正式前端接入待视觉确认。
+
+
+2026-10-13 新视觉待确认期间的非视觉增量（代码已写入，尚未验收/部署）：目录复用 Asset/DocumentRevision 与 ProcessingJob，新增 DocumentOutlineRevision 保存完整树与采用历史；OCR 与目录共用 source_identity 识别当前、合法staging及授权待替换文件。reading 保存本人加密研究、轮次、稿件体检、个人计划与记忆，复用 Discovery/本地AI/现有加密及资格服务，不写公共 EvidencePack。内容编排扩展既有 EditorialRevision 的 content_placement 目标类型并复用 AuditEvent 回执，不建第二CMS或馆藏。分别见 [来源与目录](implementation/SOURCES_20261013.md)、[编排与知识](implementation/CURATION_20261013.md)；私人研究文档随收口补入。正式前端待视觉确认后接入，新增接口不能作为Reader端或真实模型已可用的证明。
+
+2026-10-13 最新技术交接：[主手册](NEXT_DEVELOPMENT_MANUAL.md) 已压缩为技术总纲，按对话决定、模块归属、共享契约和 16 功能模块组织；接入附录按需查，不预载全部历史。最终图片包是严格视觉目标；完整实现后统一测试和逐图对照，取代旧的分段验收顺序。这是开发约定更新，不表示业务架构已经完成迁移。
+
+2026-10-13：下一轮设计以 [开发手册](NEXT_DEVELOPMENT_MANUAL.md) 和 [接入附录](NEXT_DEVELOPMENT_MAP.md) 为准。用户撤销本对话全部既有视觉，改由新图片决定外观；保留全部功能目标。目标采用现有 Django 内的模块化职责、统一原文定位/检索/任务接口，联动持续研究、目录、策划，以及新增引文体检、智能阅读路线、反证搜索和私人记忆。当前仅完成文档设计，没有新增模型、服务或部署。下列 C 原型与旧版本条目均为历史实现记录，不构成下一轮视觉约束。
+
+2026-10-12：新增 C 方案本地交互入口 `web/c-preview`，采用仓库现有 React/Vite 与 `components/pdf-canvas.tsx`，不替换生产 Next/Vinext 路由。固定 `books.winstonmo.com` 数据桥仅转发公开读取及正常读者 Discovery 创建/扩大/取消；不携带登录凭据，不接受管理写入。localStorage 保存版本化体验记录，IndexedDB 保存用户本机导入 PDF；这不是需要与 NAS 同步的第二套生产主库。研究保存问题/父轮次/范围/选材/候选身份，策划保存草稿及独立发布快照。新模型、OCR、Qdrant/LangGraph 仍为后续架构设计，未在本轮部署。实现与边界见 [C 本地入口](../web/c-preview/README.md)。
+
+2026-10-03：3.0.9 管理端在原视觉与处理架构上增加只读的今日工作 OCR/索引提醒。DashboardView 复用 catalog_availability、Edition OCR/semantic 状态和现有 UploadItem 预检摘要，区分 OCR 完成与公开观点投影就绪；Processing Center 仍是唯一修复入口。上传 pipeline 将逐页预检原因计数和决策写入既有 JSON 摘要，不新增表、队列、索引或客户端 PDF 解析。当前仅本地实现，未部署。
+
+2026-09-28本地候选增加只读Discovery A/B管理命令及推理可选contexts契约，未上线。复用原证据、模型、索引与评测工具，独立评测环境中比较片段/邻文排序；不建立第二套权威馆藏，不改变默认公开检索或Ask，不新增数据库schema。已保留模型输入预算、撤回/修订校验及人工PDF标注门槛，真实精度待评测。详见[实现边界](VIEWPOINT_QUALITY_IMPLEMENTATION_2026-09-28.md)。
+
 2026-09-23的3.0.8.1增加统一RecycleEntry和默认可见性Manager，覆盖19类管理记录；对象及历史外键继续存在，恢复不自动发布。catalog0063移除长文本B-tree，保留现有搜索索引职责。ProcessingJob新增heartbeat_at，OCR按单页提交并以稳定请求身份去重；15秒心跳与服务活动分开，页数仅按落库结果前进。API保留三个worker并启用预加载，推理减少中间复制且权重不变。完整范围、测量限制与实际发布见[V3.0.8.1交付记录](V3.0.8.1_COMPLETION_RELEASE.md)。以下版本条目为对应时点记录。
 
 2026-09-22追加：Processing Center的OCR控制复用ProcessingJob与原断点恢复服务，以ocr_monitor=1读取6项分页持久状态，不触发健康探针或旧暂停任务全量分类。显式手工重试记录旧错误和尝试次数，保留页/任务身份并开启新一轮有上限尝试，失败后逐页保存；自动重试上限、文件版本、永久错误与权限保护保留。没有第二套任务存储或schema变化。

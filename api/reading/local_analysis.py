@@ -110,6 +110,7 @@ def propose_plan_labels(plan_data, memory_reminders):
             "不新造书名、阅读时间、先修关系或本人已经理解的内容；私人认识仅作可解释提醒，不视为正确答案。",
             payload={"goal": plan_data["goal"], "background": plan_data.get("background", ""),
                 "time_budget": plan_data.get("time_budget", ""),
+                "language_preference": plan_data.get("planning_policy", {}).get("language_preference", ""),
                 "items": [{"item_id": row["id"], "title": row["title"], "reason": row["reason"]} for row in plan_data["items"][:30]],
                 "memory_reminders": memory_reminders}, schema=schema)
     except AIServiceError:

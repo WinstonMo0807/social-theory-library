@@ -7682,9 +7682,13 @@
                         "minLength": 1,
                         "maxLength": 160
                     },
+                    "column_id": {
+                        "type": "string",
+                        "description": "当前选材的 edition:/work:/asset: 身份，或原比较格的文献身份。",
+                        "maxLength": 160
+                    },
                     "author": {
                         "type": "string",
-                        "minLength": 1,
                         "maxLength": 160
                     },
                     "reference_ids": {
@@ -11170,6 +11174,43 @@
                             "$ref": "#/components/schemas/ItemEstimateInputRequest"
                         }
                     },
+                    "weekly_minutes": {
+                        "type": "integer",
+                        "maximum": 10080,
+                        "minimum": 1,
+                        "description": "与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。"
+                    },
+                    "duration_weeks": {
+                        "type": "integer",
+                        "maximum": 52,
+                        "minimum": 1
+                    },
+                    "language_preference": {
+                        "type": "string",
+                        "description": "用于导读提示，不自动排除已选材料。",
+                        "maxLength": 160
+                    },
+                    "use_confirmed_memories": {
+                        "type": "boolean",
+                        "description": "默认关闭，仅使用显式选择的本人已确认笔记。"
+                    },
+                    "confirmed_memory_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "goal": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                    },
+                    "background": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
                     "order": {
                         "type": "array",
                         "items": {
@@ -11196,6 +11237,14 @@
                     },
                     "optimize_order": {
                         "type": "boolean"
+                    },
+                    "preview": {
+                        "type": "boolean",
+                        "description": "只计算调整预览，不写入或增加 revision；确认时以原 revision 再提交。"
+                    },
+                    "remove_related_prerequisites": {
+                        "type": "boolean",
+                        "description": "替换材料时，明确同意移除仅与被替换材料相关的先修关系；其他关系保留。"
                     }
                 }
             },
@@ -12415,6 +12464,34 @@
                         "items": {
                             "$ref": "#/components/schemas/ItemEstimateInputRequest"
                         }
+                    },
+                    "weekly_minutes": {
+                        "type": "integer",
+                        "maximum": 10080,
+                        "minimum": 1,
+                        "description": "与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。"
+                    },
+                    "duration_weeks": {
+                        "type": "integer",
+                        "maximum": 52,
+                        "minimum": 1
+                    },
+                    "language_preference": {
+                        "type": "string",
+                        "description": "用于导读提示，不自动排除已选材料。",
+                        "maxLength": 160
+                    },
+                    "use_confirmed_memories": {
+                        "type": "boolean",
+                        "description": "默认关闭，仅使用显式选择的本人已确认笔记。"
+                    },
+                    "confirmed_memory_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
                     },
                     "request_id": {
                         "type": "string",

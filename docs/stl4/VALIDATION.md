@@ -37,3 +37,12 @@
 | 运维 | 备份隔离恢复、NAS资源与生产切换/回退 | 待核实 |
 
 最终视觉记录应逐行对应ATLAS_INDEX中的PDF页码、route和state，保存参考区域与实现截图位置、差异及复测结果，不以页面可打开算通过。
+
+### 2026-10-18 阅读计划开发期静态记录
+
+- `node node_modules/typescript/bin/tsc --noEmit --pretty false`：退出0。
+- 目标 ESLint（reading-plan-detail/form/plans、reader-collection-list、research-session-list、use-persistent-workspace、private-owner、research.client、reading-plan-workspace.spec）：退出0，1条no-img-element警告。
+- `.venv/Scripts/python.exe -m compileall -q api/reading/research.py api/reading/plan_rules.py api/reading/research_serializers.py api/reading/tasks.py api/reading/local_analysis.py api/tests/test_reading_plan_atlas_20261018.py`：退出0。
+- 以进程环境 `DATABASE_URL=sqlite:///:memory:`、`PUBLIC_DEPLOYMENT_MODE=false` 运行 `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-plan-schema-20261018.json --validate`：退出0，0 schema errors、10条既有类型提示。随后openapi-typescript生成成功。未连接生产库。
+- Git依赖静态导入清单与45文件恢复检查点见CHECKPOINT_DEPENDENCIES；`git diff --check`与该批`--cached --check`退出0。
+- 后端 `test_reading_plan_atlas_20261018.py`、前端 `reading-plan-workspace.spec.ts` 与auth-bootstrap新增用例均只编写，未执行。B01/B02/B04新增行为与B06逐图对照仍待正式验收。

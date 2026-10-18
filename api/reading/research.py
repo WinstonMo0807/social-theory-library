@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 
@@ -24,9 +25,11 @@ from .services import decrypt_private_text, encrypt_private_text
 ACTIVE = {"queued", "running"}
 ANALYSIS_VERSION = "private-claims-v1"
 MAX_REFS = 400
-PLAN_REQUEST_FIELDS = ("goal", "background", "time_budget", "project_id", "turn_id", "reading_path_id", "references",
-    "prerequisites", "scope", "budget_minutes", "session_minutes", "reading_level", "reading_pace", "prefer_unread", "item_estimates")
-PLAN_POLICY_FIELDS = ("time_budget", "budget_minutes", "session_minutes", "reading_level", "reading_pace", "prefer_unread", "item_estimates")
+PLAN_POLICY_FIELDS = ("time_budget", "budget_minutes", "session_minutes", "reading_level", "reading_pace", "prefer_unread",
+    "item_estimates", "weekly_minutes", "duration_weeks", "language_preference")
+PLAN_MEMORY_FIELDS = ("use_confirmed_memories", "confirmed_memory_ids")
+PLAN_REQUEST_FIELDS = ("goal", "background", "project_id", "turn_id", "reading_path_id", "references",
+    "prerequisites", "scope", *PLAN_POLICY_FIELDS, *PLAN_MEMORY_FIELDS)
 
 
 class ResearchConflict(APIException):
@@ -664,22 +667,45 @@ def serialize_record(record, user):
     if isinstance(record, ResearchProject):
         output["conversation_id"] = str(record.conversation_id) if record.conversation_id else None
     if isinstance(record, PersonalReadingPlan):
+        payload.setdefault("use_confirmed_memories", False)
+        payload.setdefault("confirmed_memory_ids", [])
+        if not plan_suggestions_current(user, payload):
+            invalidate_plan_suggestions(payload, "authorization_changed")
         if payload.get("generation_status") == "queued":
             source_turn = ResearchTurn.objects.filter(pk=payload.get("origin", {}).get("turn_id"), project__user=user).first()
             if (source_turn is None or source_turn.status in {"failed", "canceled"}
                     or timezone.now() - record.updated_at > timedelta(minutes=35)):
                 payload["generation_status"] = "failed"
                 payload["error_code"] = "source_research_incomplete"
+        for edge in payload.get("prerequisites", []):
+            edge["reference"] = resolve_reference(edge["reference"], user)
+        editions = {str(edition.id): edition for edition in source_queryset("edition", access_for(user)).filter(
+            pk__in=[item["edition_id"] for item in payload.get("items", [])]).select_related("active_catalog_revision")}
         for item in payload.get("items", []):
+            edition = editions.get(item["edition_id"])
+            current_edition = bool(edition and str(edition.active_catalog_revision.reader_asset_id) == item.get("asset_id")
+                and str(edition.active_catalog_revision.document_revision_id) == item.get("document_revision_id"))
             if item.get("reference"):
                 item["reference"] = resolve_reference(item["reference"], user)
                 item["available"] = item["reference"]["source_status"] == "available"
+                item["reader_url"] = item["reference"].get("reader_url") if item["available"] else None
             else:
-                item["available"] = source_queryset("edition", access_for(user)).filter(pk=item["edition_id"],
-                    active_catalog_revision__reader_asset_id=item.get("asset_id"),
-                    active_catalog_revision__document_revision_id=item.get("document_revision_id")).exists()
+                item["available"] = current_edition
+                item["reader_url"] = (f"/reader/{item['asset_id']}?page=1&revision={item['document_revision_id']}"
+                    if current_edition else None)
+            snapshot = edition.active_catalog_revision.snapshot if current_edition and item["available"] else {}
+            snapshot = snapshot or {}
+            work = snapshot.get("work") or {}
+            media = work.get("cover_media") or {}
+            item["authors"] = [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "")
+                for row in (snapshot.get("contributions", snapshot.get("contributors")) or [])
+                if isinstance(row, dict) and row.get("role") == "author"]
+            item["publication_year"] = (snapshot.get("edition") or {}).get("publication_year")
+            item["cover_url"] = (reverse("public-work-cover", kwargs={"work_id": item["work_id"]})
+                + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else "")) if media or work.get("cover") else None
             if not item["available"]:
                 item["reader_url"] = None
+                item.pop("model_suggestion", None)
         output["status"] = payload.get("generation_status", "completed")
         output["poll_after_ms"] = 2000 if output["status"] in ACTIVE else None
         output["enhancement_status"] = payload.get("enhancement_status", "not_requested")
@@ -844,6 +870,65 @@ def search_memories(user, query, *, semantic=False, allowed_ids=None):
             "semantic_scope_complete": mode == "local_semantic_owner_candidates" and semantic_evaluated_count == semantic_scope_count}
 
 
+def plan_memory_permissions(user, data, previous=None):
+    previous = previous or {}
+    enabled = data.get("use_confirmed_memories", previous.get("use_confirmed_memories", False))
+    if not isinstance(enabled, bool):
+        raise ValidationError({"use_confirmed_memories": "需要布尔值。"})
+    ids = list(dict.fromkeys(identifier(value, "confirmed_memory_ids") for value in bounded_list(
+        data.get("confirmed_memory_ids", previous.get("confirmed_memory_ids", [])), "confirmed_memory_ids", 40)))
+    if enabled and ResearchMemory.objects.filter(user=user, state="confirmed", pk__in=ids).count() != len(ids):
+        raise ValidationError({"confirmed_memory_ids": "仅能选择本人仍处于已确认状态的笔记。"})
+    return {"use_confirmed_memories": enabled, "confirmed_memory_ids": ids if enabled else []}
+
+
+def plan_memory_rows(user, payload, *, lock=False):
+    """An explicit owner-confirmed allowlist; never search all private memories."""
+    from accounts.models import ReaderProfile
+    preferences = ReaderProfile.objects.filter(user=user).values_list("reading_preferences", flat=True).first() or {}
+    if payload.get("use_confirmed_memories") is not True or preferences.get("research_personalization", True) is False:
+        return []
+    ids = payload.get("confirmed_memory_ids", [])
+    if not isinstance(ids, list) or len(ids) > 40:
+        return []
+    rows = ResearchMemory.objects.filter(user=user, state="confirmed", pk__in=ids).order_by("id")
+    return list(rows.select_for_update() if lock else rows)
+
+
+def plan_suggestions_current(user, payload, *, lock=False):
+    used = payload.get("memory_reminder_ids", [])
+    if not used:
+        return True
+    versions = payload.get("memory_reminder_revisions", {})
+    current = {str(row.id): row.revision for row in plan_memory_rows(user, payload, lock=lock)}
+    return all(key in current and current[key] == versions.get(key) for key in used)
+
+
+def invalidate_plan_suggestions(payload, status="skipped_after_edit"):
+    for item in payload.get("items", []):
+        item.pop("model_suggestion", None)
+    payload.pop("enhancement_model", None)
+    payload.pop("memory_reminder_ids", None)
+    payload.pop("memory_reminder_revisions", None)
+    payload["enhancement_status"] = status
+
+
+def plan_policy_inputs(data, previous=None):
+    inputs = {**(previous or {}), **{key: data[key] for key in PLAN_POLICY_FIELDS if key in data}}
+    if any(key in data for key in ("weekly_minutes", "duration_weeks")):
+        inputs.pop("budget_minutes", None)
+        inputs.pop("time_budget", None)
+    elif "budget_minutes" in data or "time_budget" in data:
+        inputs.pop("weekly_minutes", None)
+        inputs.pop("duration_weeks", None)
+        # A new human-readable budget must not be shadowed by the old numeric one.
+        if "time_budget" in data and "budget_minutes" not in data:
+            inputs.pop("budget_minutes", None)
+        elif "budget_minutes" in data and "time_budget" not in data:
+            inputs.pop("time_budget", None)
+    return inputs
+
+
 @transaction.atomic
 def generate_plan(user, data, *, existing=None):
     from .plan_rules import estimate_items, planning_policy, schedule_plan
@@ -857,8 +942,10 @@ def generate_plan(user, data, *, existing=None):
             return same_request(previous, fingerprint)
     else:
         fingerprint = unpack(existing).get("request_fingerprint")
-    planning_inputs = {**(unpack(existing).get("planning_inputs", {}) if existing else {}),
-                       **{key: data[key] for key in PLAN_POLICY_FIELDS if key in data}}
+    previous_payload = unpack(existing) if existing else {}
+    planning_inputs = previous_payload.get("planning_inputs", {}) if existing else plan_policy_inputs(data)
+    memory_permissions = ({"use_confirmed_memories": previous_payload.get("use_confirmed_memories", False),
+        "confirmed_memory_ids": previous_payload.get("confirmed_memory_ids", [])} if existing else plan_memory_permissions(user, data))
     policy = planning_policy(planning_inputs)
     project = source_project(user, data)
     goal = text(data.get("goal", ""), "goal", 4000, True)
@@ -916,7 +1003,7 @@ def generate_plan(user, data, *, existing=None):
     estimate_items(items, user, policy, overrides=planning_inputs.get("item_estimates", []))
     ordered, schedule = schedule_plan(items, prerequisites, policy)
     payload = {"request_fingerprint": fingerprint, "goal": goal, "background": text(data.get("background", ""), "background", 4000),
-        "time_budget": text(data.get("time_budget", ""), "time_budget", 160), "origin": origin,
+        "time_budget": text(planning_inputs.get("time_budget", ""), "time_budget", 160), "origin": origin, **memory_permissions,
         "items": ordered, "prerequisites": prerequisites, "planning_policy": policy, "planning_inputs": planning_inputs,
         "schedule": schedule,
         "method": "public_path_and_selected_discovery_material", "generation_status": "completed", "enhancement_status": "queued",
@@ -925,7 +1012,7 @@ def generate_plan(user, data, *, existing=None):
         with transaction.atomic():
             plan = owned(PersonalReadingPlan, user, existing.id, lock=True)
             previous = unpack(plan)
-            if previous.get("generation_status") != "queued":
+            if previous.get("generation_status") != "queued" or plan.revision != existing.revision:
                 return plan
             plan.project = project
             save_data(plan, payload, fields=["project"])
@@ -941,7 +1028,9 @@ def request_plan(request, data):
     if data.get("references") or data.get("turn_id") or data.get("reading_path_id"):
         return generate_plan(request.user, data)
     from .plan_rules import planning_policy
-    policy = planning_policy(data)
+    inputs = plan_policy_inputs(data)
+    policy = planning_policy(inputs)
+    memory_permissions = plan_memory_permissions(request.user, data)
     goal = text(data.get("goal"), "goal", 1200, True)
     request_id = identifier(data.get("request_id"), "request_id")
     from django.contrib.auth import get_user_model
@@ -963,7 +1052,7 @@ def request_plan(request, data):
         "request_fingerprint": fingerprint, "goal": goal, "background": text(data.get("background", ""), "background", 4000),
         "time_budget": text(data.get("time_budget", ""), "time_budget", 160), "items": [],
         "prerequisites": data.get("prerequisites", []),
-        "planning_policy": policy, "planning_inputs": {key: data[key] for key in PLAN_POLICY_FIELDS if key in data},
+        "planning_policy": policy, "planning_inputs": inputs, **memory_permissions,
         "origin": {"turn_id": str(turn.id)}, "generation_status": "queued"}))
     payload["plan_id"] = str(plan.id)
     save_data(turn, payload)
@@ -974,33 +1063,58 @@ def request_plan(request, data):
 def update_plan(user, pk, data):
     plan = owned(PersonalReadingPlan, user, pk, lock=True)
     expect(plan, data.get("expected_revision"))
-    if "optimize_order" in data and not isinstance(data["optimize_order"], bool):
-        raise ValidationError({"optimize_order": "需要布尔值。"})
+    for flag in ("optimize_order", "preview", "adopt_suggestion", "remove_related_prerequisites"):
+        if flag in data and not isinstance(data[flag], bool):
+            raise ValidationError({flag: "需要布尔值。"})
     payload = unpack(plan)
     if payload.get("generation_status") in ACTIVE:
         raise ResearchConflict("计划正在收集材料，暂不能修改。")
-    if payload.get("enhancement_status") in ACTIVE:
-        payload["enhancement_status"] = "skipped_after_edit"
+    if not plan_suggestions_current(user, payload):
+        invalidate_plan_suggestions(payload, "authorization_changed")
+    if payload.get("enhancement_status") in ACTIVE or any(key in data for key in (
+            "goal", "background", *PLAN_POLICY_FIELDS, *PLAN_MEMORY_FIELDS, "reference")):
+        invalidate_plan_suggestions(payload)
+    for field in ("goal", "background"):
+        if field in data:
+            payload[field] = text(data[field], field, 4000, field == "goal")
+    if any(key in data for key in PLAN_MEMORY_FIELDS):
+        payload.update(plan_memory_permissions(user, data, payload))
     by_id = {row["id"]: row for row in payload["items"]}
     if "order" in data:
         order = bounded_list(data["order"], "order")
         if len(order) != len(by_id) or set(order) != set(by_id):
             raise ValidationError({"order": "必须恰好包含全部计划项，每项一次。"})
+        if any(row.get("status") == "completed" and order[index] != row["id"] for index, row in enumerate(payload["items"])):
+            raise ResearchConflict("已完成的计划项保留原位置，请仅调整未完成材料。")
         positions = {by_id[key]["work_id"]: index for index, key in enumerate(order)}
-        if any(positions[edge["requires_work_id"]] > positions[edge["work_id"]] for edge in payload.get("prerequisites", [])):
+        completed_work_ids = {row["work_id"] for row in by_id.values() if row.get("status") == "completed"}
+        if any(positions[edge["requires_work_id"]] > positions[edge["work_id"]]
+                for edge in payload.get("prerequisites", [])
+                if edge["requires_work_id"] not in completed_work_ids and edge["work_id"] not in completed_work_ids):
             raise ValidationError({"order": "此顺序违反已确认先修关系，请先修改依赖。"})
         payload["items"] = [by_id[key] for key in order]
     if "item_id" in data:
         item = by_id.get(data["item_id"])
         if item is None:
             raise NotFound("计划项不存在。")
+        if item.get("status") == "completed" and ("reference" in data or data.get("adopt_suggestion") is True
+                or ("status" in data and data["status"] != "completed")):
+            raise ResearchConflict("已完成的计划项保留历史；可补充笔记，请仅调整未完成材料。")
         if "status" in data:
             if data["status"] not in {"pending", "reading", "completed", "skipped"}:
                 raise ValidationError({"status": "阅读进度无效。"})
             item["status"] = data["status"]
         if "note" in data:
             item["note"] = text(data["note"], "note", 4000)
-        if data.get("adopt_suggestion") is True and item.get("model_suggestion"):
+        if data.get("adopt_suggestion") is True:
+            if not item.get("model_suggestion"):
+                raise ResearchConflict("建议已失效或尚未生成，请重新生成导读后再采纳。")
+            if item.get("reference"):
+                resolve_reference(item["reference"], user, strict=True)
+            elif not source_queryset("edition", access_for(user)).filter(pk=item["edition_id"],
+                    active_catalog_revision__reader_asset_id=item.get("asset_id"),
+                    active_catalog_revision__document_revision_id=item.get("document_revision_id")).exists():
+                raise ResearchConflict("材料当前不可用，不能采纳旧导读建议。")
             suggestion = item["model_suggestion"]
             item.update(stage=suggestion["stage"], reason=suggestion["reason"], learning_goal=suggestion["learning_goal"])
             item["suggestion_adopted_at"] = timezone.now().isoformat()
@@ -1010,25 +1124,33 @@ def update_plan(user, pk, data):
             ref = resolve_reference(data["reference"], user, strict=True)
             if any(row["id"] != item["id"] and row["work_id"] == ref["work_id"] for row in payload["items"]):
                 raise ValidationError({"reference": "该作品已在本计划中，请调整已有计划项。"})
-            if payload.get("prerequisites"):
-                raise ResearchConflict("有关联先修关系时不能直接替换材料，请重新生成计划。")
             old_work_id = item["work_id"]
+            related = [edge for edge in payload.get("prerequisites", []) if old_work_id in (edge["work_id"], edge["requires_work_id"])]
+            if related and data.get("remove_related_prerequisites") is not True:
+                raise ResearchConflict("此材料有关联先修关系。替换前请明确确认移除这些关系，不会把旧依据套用到新材料。")
+            if related:
+                payload["prerequisites"] = [edge for edge in payload["prerequisites"] if edge not in related]
+                item["replaced_prerequisites"] = related
             item["replaced_from"] = {key: item.get(key) for key in ("work_id", "edition_id", "asset_id", "document_revision_id", "reference")}
-            for field in ("owner_estimate", "declared_difficulty", "difficulty_origin", "planning_estimate"):
+            for field in ("owner_estimate", "declared_difficulty", "difficulty_origin", "planning_estimate",
+                    "model_suggestion", "learning_goal", "suggestion_adopted_at"):
                 item.pop(field, None)
             if "planning_inputs" in payload:
                 payload["planning_inputs"]["item_estimates"] = [row for row in payload["planning_inputs"].get("item_estimates", []) if row.get("work_id") != old_work_id]
             item.update(reference=compact_reference(ref), work_id=ref["work_id"], edition_id=ref["edition_id"],
                         asset_id=ref["asset_id"], document_revision_id=ref["document_revision_id"],
-                        title=ref["title"], reader_url=ref["reader_url"])
+                        title=ref["title"], reader_url=ref["reader_url"], status="pending", reason="本人替换的阅读材料。")
     if (not payload.get("planning_policy") or any(key in data for key in (*PLAN_POLICY_FIELDS, "order", "status", "reference", "optimize_order"))):
         from .plan_rules import estimate_items, planning_policy, schedule_plan
-        inputs = {**payload.get("planning_inputs", {}), **{key: data[key] for key in PLAN_POLICY_FIELDS if key in data}}
+        inputs = plan_policy_inputs(data, payload.get("planning_inputs"))
         policy = planning_policy(inputs)
         estimate_items(payload["items"], user, policy, overrides=inputs.get("item_estimates", []))
         payload["items"], payload["schedule"] = schedule_plan(payload["items"], payload.get("prerequisites", []), policy,
             preserve_order=data.get("optimize_order") is not True)
-        payload.update(planning_inputs=inputs, planning_policy=policy, time_budget=inputs.get("time_budget", payload.get("time_budget", "")))
+        payload.update(planning_inputs=inputs, planning_policy=policy, time_budget=inputs.get("time_budget", ""))
+    if data.get("preview") is True:
+        plan.data_ciphertext = pack(payload)
+        return plan
     return save_data(plan, payload)
 
 
@@ -1065,7 +1187,7 @@ def command_plan(request, pk, data):
             raise ResearchConflict("请先收集可读材料并完成计划。")
         if payload.get("enhancement_status") in ACTIVE:
             raise ResearchConflict("计划建议正在处理中。")
-        payload["enhancement_status"] = "queued"
+        invalidate_plan_suggestions(payload, "queued")
         payload["recovery_attempts"] = 0
         save_data(plan, payload)
         from .tasks import enqueue_plan_enhancement
@@ -1080,9 +1202,10 @@ def command_plan(request, pk, data):
     if source_turn is None:
         raise ResearchConflict("原研究已删除，请从当前材料创建新计划。")
     previous = unpack(source_turn)
+    goal = text(payload.get("goal", previous["question"]), "goal", 1200, True)
     turn = start_turn(request, project.id, {"request_id": str(uuid4()), "expected_revision": project.revision,
-        "parent_id": str(source_turn.id), "question": previous["question"], "scope": previous["scope"],
-        "mode": previous.get("mode", "search"), "statement": previous.get("statement", {"proposition": previous["question"]}),
+        "parent_id": str(source_turn.id), "question": goal, "scope": previous["scope"],
+        "mode": "search", "statement": {"proposition": goal},
         "expand_from_parent": True})
     turn_data = unpack(turn)
     turn_data["plan_id"] = str(plan.id)

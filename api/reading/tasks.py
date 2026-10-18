@@ -190,7 +190,7 @@ def enqueue_plan_enhancement(plan_id, revision):
 @shared_task(soft_time_limit=240, time_limit=270)
 def enhance_reading_plan(plan_id, revision):
     from .models import PersonalReadingPlan
-    from .research import search_memories
+    from .research import (invalidate_plan_suggestions, plan_memory_rows, plan_suggestions_current, serialize_record)
     from .local_analysis import propose_plan_labels
     with transaction.atomic():
         plan = PersonalReadingPlan.objects.select_for_update().select_related("user").filter(pk=plan_id, revision=revision).first()
@@ -204,23 +204,29 @@ def enhance_reading_plan(plan_id, revision):
         revision = plan.revision
     try:
         payload = unpack(plan)
-        reminders = search_memories(plan.user, payload["goal"][:1200])["results"][:5]
-        memory_data = [{"id": row["id"], "body": row["data"]["body"]} for row in reminders]
-        suggestions, model = propose_plan_labels(payload, memory_data)
+        invalidate_plan_suggestions(payload, "running")
+        reminders = plan_memory_rows(plan.user, payload)
+        memory_data = [{"id": str(row.id), "body": unpack(row)["body"]} for row in reminders]
+        current_data = serialize_record(plan, plan.user)["data"]
+        current_data["items"] = [row for row in current_data.get("items", []) if row.get("available") and row.get("status") != "completed"]
+        suggestions, model = propose_plan_labels(current_data, memory_data)
         by_id = {row["item_id"]: row for row in suggestions}
         for item in payload["items"]:
-            if item["id"] in by_id:
+            if item["id"] in by_id and item.get("status") != "completed":
                 item["model_suggestion"] = by_id[item["id"]]
         payload["enhancement_status"] = model["status"]
         payload["enhancement_model"] = model
         payload["memory_reminder_ids"] = [row["id"] for row in memory_data]
+        payload["memory_reminder_revisions"] = {str(row.id): row.revision for row in reminders}
     except Exception as exc:
         logger.warning("Private plan enhancement failed (%s)", type(exc).__name__)
         payload = unpack(plan)
-        payload["enhancement_status"] = "unavailable"
+        invalidate_plan_suggestions(payload, "unavailable")
     with transaction.atomic():
         current = PersonalReadingPlan.objects.select_for_update().filter(pk=plan_id, revision=revision).first()
-        if current:
+        if current and unpack(current).get("enhancement_status") == "running":
+            if not plan_suggestions_current(plan.user, payload, lock=True):
+                invalidate_plan_suggestions(payload, "authorization_changed")
             save_data(current, payload)
 
 

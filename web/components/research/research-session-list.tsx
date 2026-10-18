@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { classifyClientError, getServerSessionCredential, isUnauthenticatedError, type ClientErrorCategory } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { classifyClientError, getServerSessionCredential, isUnauthenticatedError, subscribeToSessionChanges, type ClientErrorCategory } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
 import type { ProjectData, ResearchRecord } from "@/lib/api/research.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
@@ -46,56 +46,80 @@ function errorMessage(reason: unknown) {
 }
 
 export function ResearchSessionList() {
-  const { state: session } = useSessionBootstrap();
-  const [rows, setRows] = useState<ResearchRecord<ProjectData>[]>([]);
+  const { state: session, retry: retrySession } = useSessionBootstrap();
+  const [snapshot, setSnapshot] = useState<{ owner: number; rows: ResearchRecord<ProjectData>[] } | null>(null);
   const [state, setState] = useState<LoadState>("idle");
   const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
   const lastReadAt = useRef(0);
+  const epoch = useRef(0);
+  const ownerId = session.user?.id;
+
+  const clearPrivateState = useCallback(() => {
+    epoch.current += 1;
+    setSnapshot(null);
+    setState("idle");
+    setError("");
+    lastReadAt.current = 0;
+  }, []);
+
+  useEffect(() => subscribeToSessionChanges(clearPrivateState), [clearPrivateState]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const generation = ++epoch.current;
+    const current = () => !controller.signal.aborted && generation === epoch.current;
+    const cleanup = () => { controller.abort(); epoch.current += 1; };
     if (session.status === "unauthenticated") {
       window.location.replace("/login?next=/account/research");
-      return;
     }
-    if (session.status !== "authenticated" || !session.user) return;
+    if (session.status !== "authenticated" || ownerId === undefined) {
+      Promise.resolve().then(() => { if (current()) { setSnapshot(null); setState("idle"); setError(""); } });
+      return cleanup;
+    }
     const credential = getServerSessionCredential();
     if (!credential) {
       Promise.resolve().then(() => {
+        if (!current()) return;
+        setSnapshot(null);
         setState("error");
-        setError("登录状态只能在浏览器中验证，请重新打开此页面。 ");
+        setError("登录状态只能在浏览器中验证，请重新打开此页面。");
       });
-      return;
+      return cleanup;
     }
-    const controller = new AbortController();
     Promise.resolve().then(() => {
-      if (controller.signal.aborted) return;
+      if (!current()) return;
+      setSnapshot(null);
       setState("loading");
       setError("");
     });
     readAllPages<ResearchRecord<ProjectData>>("/reading/research-projects/", credential, controller.signal)
       .then((nextRows) => {
-        if (controller.signal.aborted) return;
-        setRows(nextRows.sort((left, right) => right.updated_at.localeCompare(left.updated_at)));
+        if (!current()) return;
+        setSnapshot({ owner: ownerId, rows: nextRows.sort((left, right) => right.updated_at.localeCompare(left.updated_at)) });
         lastReadAt.current = Date.now();
         setState("ready");
       })
       .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
+        if (!current()) return;
+        setSnapshot(null);
+        setState("error");
         if (isUnauthenticatedError(reason)) {
+          setError("登录已过期，请重新登录。");
           window.location.replace("/login?next=/account/research");
           return;
         }
-        setState("error");
         setError(errorMessage(reason));
       });
-    return () => controller.abort();
-  }, [attempt, session.status, session.user]);
+    return cleanup;
+  }, [session.status, ownerId]);
 
   useEffect(() => {
     const revalidate = () => {
       if (document.visibilityState !== "visible" || session.status !== "authenticated" || Date.now() - lastReadAt.current < 30_000) return;
-      setAttempt((value) => value + 1);
+      // Revalidate the cookie owner before attaching newly fetched private rows.
+      clearPrivateState();
+      lastReadAt.current = Date.now();
+      retrySession();
     };
     window.addEventListener("focus", revalidate);
     window.addEventListener("pageshow", revalidate);
@@ -105,18 +129,20 @@ export function ResearchSessionList() {
       window.removeEventListener("pageshow", revalidate);
       document.removeEventListener("visibilitychange", revalidate);
     };
-  }, [session.status]);
+  }, [session.status, clearPrivateState, retrySession]);
 
-  const countLabel = useMemo(() => `${rows.length} 个会话`, [rows.length]);
+  const retry = () => { clearPrivateState(); retrySession(); };
 
-  if (session.status === "loading" || session.status === "unknown" || state === "idle" || state === "loading") {
-    return <ResearchPageFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取你的研究会话……</p></div></ResearchPageFrame>;
+  if (session.status === "forbidden" || session.status === "temporary_error" || (session.status === "authenticated" && state === "error")) {
+    return <ResearchPageFrame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>研究会话暂时不可用</h2><p>{session.message || error || "登录状态暂时无法验证，请重试。"}</p><button type="button" onClick={retry}><RefreshCw size={15} />重试</button></div></ResearchPageFrame>;
   }
 
-  if (session.status === "forbidden" || state === "error") {
-    return <ResearchPageFrame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>研究会话暂时不可用</h2><p>{session.message || error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={15} />重试</button></div></ResearchPageFrame>;
+  if (session.status !== "authenticated" || state !== "ready" || !snapshot || snapshot.owner !== ownerId) {
+    return <ResearchPageFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>{session.status === "unauthenticated" ? "正在前往登录页面……" : "正在读取你的研究会话……"}</p></div></ResearchPageFrame>;
   }
 
+  const rows = snapshot.rows;
+  const countLabel = `${rows.length} 个会话`;
   return <ResearchPageFrame>
     <section className="stl4-research-main" aria-labelledby="research-title">
       <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>研究会话</strong></nav>
@@ -138,5 +164,5 @@ function ResearchSessionCard({ record }: { record: ResearchRecord<ProjectData> }
 }
 
 function ResearchPageFrame({ children }: { children: React.ReactNode }) {
-  return <div className="stl4-research-page">{children}<p className="stl4-research-footnote">/account/research　·　私人内容</p></div>;
+  return <div className="stl4-research-page">{children}</div>;
 }

@@ -27,7 +27,12 @@ def planning_policy(data):
     budget = data.get("budget_minutes")
     period = "total"
     label = str(data.get("time_budget", "") or "").strip()
-    if budget is None and label:
+    weekly, weeks = data.get("weekly_minutes"), data.get("duration_weeks")
+    if weekly is not None or weeks is not None:
+        weekly = _integer(weekly, "weekly_minutes", 1, 10080)
+        weeks = _integer(weeks, "duration_weeks", 1, 52)
+        budget = _integer(weekly * weeks, "budget_minutes", 1, 100000)
+    elif budget is None and label:
         match = re.fullmatch(r"(?:(每周|每天|总计|合计)\s*)?(\d+(?:\.\d+)?)\s*(分钟|分|minutes?|mins?|小时|hours?|hrs?|h)", label, re.I)
         if not match:
             raise ValidationError({"time_budget": "请给出明确分钟/小时，或用 budget_minutes 指定本轮预算。"})
@@ -42,7 +47,12 @@ def planning_policy(data):
     prefer_unread = data.get("prefer_unread", True)
     if not isinstance(prefer_unread, bool):
         raise ValidationError({"prefer_unread": "需要布尔值。"})
+    language = data.get("language_preference", "")
+    if not isinstance(language, str) or len(language) > 160:
+        raise ValidationError({"language_preference": "语言偏好最多 160 字符。"})
     return {"version": POLICY_VERSION, "reading_level": level, "budget_minutes": budget, "budget_period": period,
+        "weekly_minutes": weekly, "duration_weeks": weeks, "language_preference": language.strip(),
+        "language_preference_notice": "语言偏好用于导读提示，不自动排除已经选择的材料。",
         "session_minutes": _integer(data.get("session_minutes", 30), "session_minutes", 5, 480),
         "prefer_unread": prefer_unread,
         "pace": {"cjk_chars_per_minute": _integer(pace.get("cjk_chars_per_minute", 300), "cjk_chars_per_minute", 20, 3000),
@@ -179,13 +189,13 @@ def schedule_plan(items, prerequisites, policy, *, preserve_order=False):
         order.append(key)
         sorter.done(key)
     ordered = [by_work[key] for key in order]
-    # Completed records retain all material/progress/estimate fields and their
-    # relative order; only future material is rescheduled.
+    # Completed records keep their original slots; only future material moves.
     complete = [item for item in items if item.get("status") == "completed"]
-    ordered = complete + [item for item in ordered if item.get("status") != "completed"]
+    future = iter(item for item in ordered if item.get("status") != "completed")
+    ordered = [item if item.get("status") == "completed" else next(future) for item in items]
     available = policy["budget_minutes"]
     consumed = 0
-    selected, sessions, unknown, unscheduled_minutes = set(), [], 0, 0
+    selected, sessions, unknown, unscheduled_minutes = {item["work_id"] for item in complete}, [], 0, 0
     session_size = policy["session_minutes"]
     for item in ordered:
         key = item["work_id"]
@@ -216,16 +226,21 @@ def schedule_plan(items, prerequisites, policy, *, preserve_order=False):
         consumed += minutes
         remaining = minutes
         while remaining:
-            if not sessions or sessions[-1]["minutes"] >= session_size:
+            weekly = policy.get("weekly_minutes")
+            week = (consumed - remaining) // weekly + 1 if weekly else None
+            if not sessions or sessions[-1]["minutes"] >= session_size or sessions[-1].get("week") != week:
                 if len(sessions) >= MAX_SESSIONS:
                     unscheduled_minutes += remaining
                     break
-                sessions.append({"index": len(sessions) + 1, "minutes": 0, "items": []})
+                sessions.append({"index": len(sessions) + 1, "week": week, "minutes": 0, "items": []})
             amount = min(remaining, session_size - sessions[-1]["minutes"])
+            if weekly:
+                amount = min(amount, weekly - (consumed - remaining) % weekly)
             sessions[-1]["items"].append({"item_id": item["id"], "planned_minutes": amount})
             sessions[-1]["minutes"] += amount
             remaining -= amount
     return ordered, {"version": POLICY_VERSION, "budget_minutes": available, "budget_period": policy["budget_period"],
+        "weekly_minutes": policy.get("weekly_minutes"), "duration_weeks": policy.get("duration_weeks"),
         "planned_minutes": consumed, "unknown_duration_count": unknown,
         "deferred_item_ids": [item["id"] for item in ordered if not item["budget_assignment"]["included"]],
         "sessions": sessions, "session_limit": MAX_SESSIONS, "unscheduled_minutes": unscheduled_minutes,

@@ -2,76 +2,143 @@
 
 import Link from "next/link";
 import { ArrowRight, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
-import { getServerSessionCredential, isUnauthenticatedError } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getServerSessionCredential, isUnauthenticatedError, subscribeToSessionChanges } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
-import { createReadingPlan, type ResearchRecord } from "@/lib/api/research.client";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { researchReaderHref } from "@/lib/api/research-evidence";
+import type { MemoryData, ResearchRecord } from "@/lib/api/research.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ResearchCenterNav, type ReaderCenterSection } from "./research-center-nav";
 
-type CollectionKind = "notes" | "plans" | "citation" | "confirmed";
-const config: Record<CollectionKind, { title: string; subtitle: string; endpoint: string; nav: ReaderCenterSection; empty: string }> = {
-  notes: { title: "笔记", subtitle: "你保存的高亮、摘录和阅读笔记。", endpoint: "/reading/annotations/", nav: "notes", empty: "还没有保存笔记或批注。" },
-  plans: { title: "阅读计划", subtitle: "按照你设定的目标和规则继续阅读。", endpoint: "/reading/reading-plans/", nav: "plans", empty: "还没有阅读计划。" },
-  citation: { title: "引文核验", subtitle: "你的文稿体检任务和可追溯的原文核验记录。", endpoint: "/reading/citation-audits/", nav: "citation", empty: "还没有引文核验任务。" },
-  confirmed: { title: "已确认笔记", subtitle: "只有你主动确认的内容才会进入个人学术记忆。", endpoint: "/reading/research-memories/", nav: "confirmed", empty: "还没有已确认笔记。" },
+type CollectionKind = "notes" | "citation" | "confirmed";
+const config: Record<CollectionKind, { title: string; subtitle: string; endpoint: string; route: string; nav: ReaderCenterSection; empty: string }> = {
+  notes: { title: "笔记", subtitle: "你保存的高亮、摘录和阅读笔记。", endpoint: "/reading/annotations/", route: "/account/notes", nav: "notes", empty: "还没有保存笔记或批注。" },
+  citation: { title: "引文核验", subtitle: "你的文稿体检任务和可追溯的原文核验记录。", endpoint: "/reading/citation-audits/", route: "/account/citation-audits", nav: "citation", empty: "还没有引文核验任务。" },
+  confirmed: { title: "已确认笔记", subtitle: "只有你主动确认的内容才会进入个人学术记忆。", endpoint: "/reading/research-memories/", route: "/account/confirmed-notes", nav: "confirmed", empty: "还没有已确认笔记。" },
 };
 
-function rowTitle(row: ResearchRecord<Record<string, unknown>>, index: number) {
-  const data = row.data || {};
-  for (const key of ["title", "goal", "body", "question"]) {
-    if (typeof data[key] === "string" && data[key].trim()) return data[key].trim();
+type AnnotationRow = {
+  id: string; asset?: string; work?: { title?: string }; kind: string; quote?: string; body_text?: string | null;
+  selector?: { page_index?: number }; orphaned?: boolean; created_at: string; updated_at?: string;
+};
+type CollectionRow = {
+  id: string; title: string; text?: string; quote?: string; updatedAt: string; status: string;
+  href?: string; linkLabel?: string; summary?: string;
+};
+const statusLabels: Record<string, string> = {
+  queued: "等待处理", running: "处理中", completed: "已完成", partial: "部分完成", failed: "处理失败",
+  cancelled: "已取消", canceled: "已取消", confirmed: "已确认", proposed: "待确认", ignored: "已忽略",
+};
+
+async function loadCollection(kind: CollectionKind, credential: string, signal: AbortSignal): Promise<CollectionRow[]> {
+  const endpoint = config[kind].endpoint;
+  if (kind === "notes") {
+    const rows = await readAllPages<AnnotationRow>(endpoint, credential, signal);
+    return rows.map((row) => {
+      const page = row.selector?.page_index;
+      const hasPage = Number.isInteger(page) && Number(page) > 0;
+      const href = row.asset && hasPage && !row.orphaned
+        ? `/reader/${encodeURIComponent(row.asset)}?page=${page}&focus=${encodeURIComponent(row.id)}`
+        : row.asset && row.kind === "note" ? `/account/notes/${encodeURIComponent(row.asset)}#note-${encodeURIComponent(row.id)}` : undefined;
+      return { id: row.id, title: row.work?.title?.trim() || "未命名文献", text: row.body_text?.trim() || undefined,
+        quote: row.quote?.trim() || undefined, updatedAt: row.updated_at || row.created_at,
+        status: row.orphaned ? "原文定位待核对" : row.kind === "note" ? "阅读笔记" : row.kind === "underline" ? "划线" : "高亮",
+        href, linkLabel: hasPage && !row.orphaned ? "打开原页" : "查看笔记" };
+    });
   }
-  return `未命名记录 ${index + 1}`;
+  if (kind === "confirmed") {
+    const rows = await readAllPages<ResearchRecord<MemoryData>>(endpoint, credential, signal);
+    // Filter after reading every page: a first page of suggestions is not an empty collection.
+    return rows.filter(row => row.state === "confirmed").map((row) => {
+      const source = row.data.sources?.find(reference => researchReaderHref(reference));
+      const href = source ? researchReaderHref(source) : row.project_id ? `/account/research/${encodeURIComponent(row.project_id)}` : undefined;
+      return { id: row.id, title: row.data.body?.trim() || "未填写正文的笔记", updatedAt: row.updated_at,
+        status: "已确认", href, linkLabel: source ? "查看原文" : "返回研究" };
+    });
+  }
+  const rows = await readAllPages<ResearchRecord>(endpoint, credential, signal);
+  return rows.map((row) => ({
+    id: row.id, title: typeof row.data.filename === "string" && row.data.filename.trim() ? row.data.filename : "未命名文稿",
+    updatedAt: row.updated_at, status: statusLabels[row.status || row.state || ""] || "已保存",
+    summary: typeof row.total_units === "number" && typeof row.completed_units === "number"
+      ? `已处理 ${row.completed_units} / ${row.total_units} 个任务单元。` : "当前记录尚未提供任务进度。",
+    text: typeof row.data.notice === "string" ? row.data.notice : undefined,
+  }));
 }
 
 export function ReaderCollectionList({ kind }: { kind: CollectionKind }) {
   const page = config[kind];
-  const { state: session } = useSessionBootstrap();
-  const [rows, setRows] = useState<ResearchRecord<Record<string, unknown>>[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { state: session, retry: retrySession } = useSessionBootstrap();
+  const ownerId = session.user?.id;
+  const [snapshot, setSnapshot] = useState<{ key: string; rows: CollectionRow[] } | null>(null);
   const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
-  const [goal, setGoal] = useState("");
-  const [creating, setCreating] = useState(false);
+  const epoch = useRef(0);
+  const lastReadAt = useRef(0);
+  const key = `${ownerId}:${kind}`;
+  const clearPrivateState = useCallback(() => {
+    epoch.current += 1;
+    setSnapshot(null); setError(""); lastReadAt.current = 0;
+  }, []);
+  useEffect(() => subscribeToSessionChanges(clearPrivateState), [clearPrivateState]);
   useEffect(() => {
-    if (session.status === "unauthenticated") { window.location.replace(`/login?next=/account/${kind === "citation" ? "citation-audits" : kind}`); return; }
-    if (session.status !== "authenticated") return;
-    const credential = getServerSessionCredential();
-    if (!credential) { Promise.resolve().then(() => setError("登录状态只能在浏览器中验证，请重新打开此页面。")); return; }
     const controller = new AbortController();
-    Promise.resolve().then(() => { if (!controller.signal.aborted) { setRows([]); setError(""); setLoading(true); } });
-    readAllPages<ResearchRecord<Record<string, unknown>>>(page.endpoint, credential, controller.signal)
-      .then((nextRows) => { if (!controller.signal.aborted) { setRows(nextRows); setLoading(false); } })
-      .catch((reason: unknown) => { if (controller.signal.aborted) return; if (isUnauthenticatedError(reason)) { window.location.replace(`/login?next=/account/${kind}`); return; } setError(reason instanceof Error ? reason.message : "资料暂时无法加载，请稍后重试。"); setLoading(false); });
-    return () => controller.abort();
-  }, [attempt, kind, page.endpoint, session.status]);
-
-  async function submitPlan(event: FormEvent) {
-    event.preventDefault();
-    const nextGoal = goal.trim();
-    if (kind !== "plans" || !nextGoal || creating) return;
-    setCreating(true);
-    setError("");
-    try {
-      const created = await createReadingPlan({ request_id: crypto.randomUUID(), goal: nextGoal });
-      setRows((current) => [created as ResearchRecord<Record<string, unknown>>, ...current]);
-      setGoal("");
-    } catch (reason) {
-      if (isUnauthenticatedError(reason)) {
-        window.location.replace("/login?next=/account/plans");
-        return;
-      }
-      setError(reason instanceof Error ? reason.message : "阅读计划暂时无法创建，请稍后重试。");
-    } finally {
-      setCreating(false);
+    const generation = ++epoch.current;
+    const current = () => !controller.signal.aborted && generation === epoch.current;
+    const cleanup = () => { controller.abort(); epoch.current += 1; };
+    Promise.resolve().then(() => { if (current()) { setSnapshot(null); setError(""); } });
+    if (session.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(page.route)}`);
+    if (session.status !== "authenticated" || ownerId === undefined) return cleanup;
+    const credential = getServerSessionCredential();
+    if (!credential) {
+      Promise.resolve().then(() => { if (current()) setError("登录状态只能在浏览器中验证，请重新打开此页面。"); });
+      return cleanup;
     }
-  }
+    withPrivateOwner(String(ownerId), () => loadCollection(kind, credential, controller.signal), controller.signal)
+      .then(rows => { if (current()) { setSnapshot({ key, rows }); lastReadAt.current = Date.now(); } })
+      .catch((reason: unknown) => {
+        if (!current()) return;
+        setSnapshot(null);
+        setError(reason instanceof Error ? reason.message : "资料暂时无法加载，请稍后重试。");
+        if (isUnauthenticatedError(reason)) window.location.replace(`/login?next=${encodeURIComponent(page.route)}`);
+      });
+    return cleanup;
+  }, [kind, page.route, session.status, ownerId, key]);
 
-  if (session.status === "loading" || session.status === "unknown" || loading) {
-    return <CollectionFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取{page.title}……</p></div></CollectionFrame>;
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState !== "visible" || session.status !== "authenticated" || Date.now() - lastReadAt.current < 30_000) return;
+      clearPrivateState(); lastReadAt.current = Date.now(); retrySession();
+    };
+    window.addEventListener("focus", revalidate);
+    window.addEventListener("pageshow", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => { window.removeEventListener("focus", revalidate); window.removeEventListener("pageshow", revalidate); document.removeEventListener("visibilitychange", revalidate); };
+  }, [session.status, clearPrivateState, retrySession]);
+
+  const retry = () => { clearPrivateState(); retrySession(); };
+  if (session.status === "forbidden" || session.status === "temporary_error" || session.status === "authenticated" && error) {
+    return <CollectionFrame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={22} /><h2>{page.title}暂时不可用</h2><p>{session.message || error || "登录状态暂时无法验证，请重试。"}</p><button type="button" onClick={retry}><RefreshCw size={14} />重试</button></div></CollectionFrame>;
   }
-  return <CollectionFrame><nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>{page.title}</strong></nav><header className="stl4-research-heading"><h1>{page.title}</h1><p>{page.subtitle}</p></header><section className="stl4-research-panel"><ResearchCenterNav active={page.nav} counts={{ [page.nav]: rows.length }} />{kind === "plans" ? <form className="stl4-plan-create" onSubmit={submitPlan}><label htmlFor="reading-plan-goal">新建阅读计划</label><div><input id="reading-plan-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="例如：梳理社会分层理论的经典争论" maxLength={4000} required /><button type="submit" disabled={creating || !goal.trim()}>{creating ? "正在创建…" : "创建计划"}</button></div></form> : null}{error ? <div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={22} /><p>{error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={14} />重试</button></div> : rows.length ? <div className="stl4-research-list">{rows.map((row, index) => <article className="stl4-research-card" key={row.id}><div className="stl4-research-card-copy"><h3>{rowTitle(row, index)}</h3><time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time></div><span className="stl4-research-status is-neutral"><i />{row.status || row.state || "已保存"}</span><Link className="stl4-research-open" href={kind === "plans" ? "/account/plans" : kind === "citation" ? `/account/citation-audits/${row.id}` : "/account"}>查看 <ArrowRight size={14} /></Link></article>)}</div> : <div className="stl4-research-empty"><h2>{page.empty}</h2><p>当前页面只显示属于你自己的资料。</p></div>}</section></CollectionFrame>;
+  if (session.status !== "authenticated" || snapshot?.key !== key) {
+    return <CollectionFrame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>{session.status === "unauthenticated" ? "正在前往登录页面……" : `正在读取${page.title}……`}</p></div></CollectionFrame>;
+  }
+  const rows = snapshot.rows;
+  return <CollectionFrame>
+    <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>{page.title}</strong></nav>
+    <header className="stl4-research-heading"><h1>{page.title}</h1><p>{page.subtitle}</p></header>
+    <section className="stl4-research-panel"><ResearchCenterNav active={page.nav} counts={{ [page.nav]: rows.length }} />
+      {rows.length ? <div className="stl4-research-list">{rows.map(row => <article className="stl4-research-card" key={row.id}>
+        <div className="stl4-research-card-copy"><h3>{row.title}</h3>{row.quote ? <blockquote>{row.quote}</blockquote> : null}{row.text ? <p>{row.text}</p> : null}
+          {row.summary ? <details><summary>查看任务记录</summary><p>{row.summary}</p></details> : null}
+          <time dateTime={row.updatedAt}>{Number.isNaN(Date.parse(row.updatedAt)) ? "更新时间未知" : new Date(row.updatedAt).toLocaleDateString("zh-CN")}</time></div>
+        <span className="stl4-research-status is-neutral"><i aria-hidden="true" />{row.status}</span>
+        {row.href ? <Link className="stl4-research-open" href={row.href}>{row.linkLabel} <ArrowRight size={14} /></Link> : null}
+      </article>)}</div> : <div className="stl4-research-empty"><h2>{page.empty}</h2><p>当前页面只显示属于你自己的资料。</p></div>}
+    </section>
+  </CollectionFrame>;
 }
 
-function CollectionFrame({ children }: { children: React.ReactNode }) { return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div><p className="stl4-research-footnote">读者中心　·　私人内容</p></div>; }
+function CollectionFrame({ children }: { children: React.ReactNode }) {
+  return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div></div>;
+}

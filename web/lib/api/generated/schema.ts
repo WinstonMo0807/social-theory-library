@@ -2030,6 +2030,8 @@ export interface components {
         };
         ComparisonCellInputRequest: {
             dimension: string;
+            /** @description 当前选材的 edition:/work:/asset: 身份，或原比较格的文献身份。 */
+            column_id?: string;
             author?: string;
             reference_ids?: string[];
             note?: string;
@@ -3122,6 +3124,16 @@ export interface components {
             reading_pace?: components["schemas"]["ReadingPaceInputRequest"];
             prefer_unread?: boolean;
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
+            /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
+            weekly_minutes?: number;
+            duration_weeks?: number;
+            /** @description 用于导读提示，不自动排除已选材料。 */
+            language_preference?: string;
+            /** @description 默认关闭，仅使用显式选择的本人已确认笔记。 */
+            use_confirmed_memories?: boolean;
+            confirmed_memory_ids?: string[];
+            goal?: string;
+            background?: string;
             order?: string[];
             /** Format: uuid */
             item_id?: string;
@@ -3130,6 +3142,10 @@ export interface components {
             reference?: components["schemas"]["EvidenceReferenceInputRequest"];
             adopt_suggestion?: boolean;
             optimize_order?: boolean;
+            /** @description 只计算调整预览，不写入或增加 revision；确认时以原 revision 再提交。 */
+            preview?: boolean;
+            /** @description 替换材料时，明确同意移除仅与被替换材料相关的先修关系；其他关系保留。 */
+            remove_related_prerequisites?: boolean;
         };
         PatchedProjectUpdateInputRequest: {
             expected_revision?: number;
@@ -3494,6 +3510,14 @@ export interface components {
             reading_pace?: components["schemas"]["ReadingPaceInputRequest"];
             prefer_unread?: boolean;
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
+            /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
+            weekly_minutes?: number;
+            duration_weeks?: number;
+            /** @description 用于导读提示，不自动排除已选材料。 */
+            language_preference?: string;
+            /** @description 默认关闭，仅使用显式选择的本人已确认笔记。 */
+            use_confirmed_memories?: boolean;
+            confirmed_memory_ids?: string[];
             /** Format: uuid */
             request_id: string;
             /** @description 无材料时先启动 Discovery；此时问题最多 1200 字符。 */
