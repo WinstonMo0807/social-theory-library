@@ -2,7 +2,7 @@
 
 ## 最新接续：2026-10-18 反证、隐私与页码
 
-先读CURRENT_PROGRESS顶部及COUNTER_EVIDENCE_20261018.md、PRIVACY_OPERATIONS_20261018.md、PAGE_MAPPING_20261018.md。198–200/223–225/116–118源码接入、迁移0068/0011仅编写；代码、路由、任务、生成类型和回归文件须一起恢复。检查点编号见CURRENT_PROGRESS。新增已审查继承依赖登记在CHECKPOINT_DEPENDENCIES，剩余历史未提交成果继续保留。
+先读CURRENT_PROGRESS顶部及COUNTER_EVIDENCE_20261018.md、PRIVACY_OPERATIONS_20261018.md、PAGE_MAPPING_20261018.md。198–200/223–225/116–118源码接入、迁移0068/0011仅编写；代码、路由、任务、生成类型和回归文件须一起恢复。本单元79路径检查点9a7c68c，检查点不代表运行验收。新增已审查继承依赖登记在CHECKPOINT_DEPENDENCIES，剩余历史未提交成果继续保留。
 
 下一步PDF209 DOCX私人派生分页预览已由代理开始独立源码，尚未接线的文件不属于本单元已完成；PDF95–98已实际读图并调查edition_files/pipeline/WorkflowEditor，继续按真实公开文件与引用保护完成。用户授权持续工作至全站开发完成；不要回到旧全量历史审计、重复清理或另行检索质量评测。
 

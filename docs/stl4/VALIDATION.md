@@ -13,7 +13,7 @@
 - 用openapi-typescript的openapiTS/astToString同步api/openapi/schema.json及web/lib/api/generated/schema.ts，退出0。全量TypeScript最终检查在此生成之后。
 - ATLAS_INDEX记录9个视图，仍为209行×22列，逐项核对page/id/image_path/image_sha256未变。索引只记录源码接入，视觉正式验收仍待核实。
 - 新增后端43函数/46参数案例与前端24合成场景仅编写；旧页码73案例保持并适配新流程。没有运行pytest/Playwright/构建/正式E2E/视觉回归、数据库迁移、真实OCR/模型/NAS、检索质量测评或生产动作。静态结果不证明运行行为。
-- 提交前核对79个明确路径（78整文件、distribution/views仅Reader相关hunk）；限定git diff --check退出0，来源身份与209×22结构不变，选定私钥/GitHub Token/OpenAI Key模式未命中。继承备份dispatch修改留在工作区，不纳入本单元；该有限模式扫描不等于全仓安全审计。
+- 提交前核对79个明确路径（78整文件、distribution/views仅Reader相关hunk）；限定git diff --check退出0，来源身份与209×22结构不变，选定私钥/GitHub Token/OpenAI Key模式未命中。继承备份dispatch修改留在工作区，不纳入本单元；该有限模式扫描不等于全仓安全审计。暂存后再次核对79路径、整文件内容及cached diff --check退出0；检查点9a7c68c成功，备份hunk仍保留未暂存。
 
 
 ## 开发期检查
