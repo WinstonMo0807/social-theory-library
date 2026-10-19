@@ -6,7 +6,9 @@ export async function evidenceIdentity(reference: EvidenceReference): Promise<st
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identities.join("|")));
     return `anchors:${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
   }
-  return reference.evidence_span_id || `${reference.asset_id}:${reference.pdf_page}`;
+  const identity = reference.evidence_span_id || `${reference.asset_id}:${reference.pdf_page}`;
+  return reference.selection_start !== undefined && reference.selection_end !== undefined
+    ? `${identity}:range:${reference.selection_start}:${reference.selection_end}` : identity;
 }
 
 export function safeResearchReturn(value?: string) {

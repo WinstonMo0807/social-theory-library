@@ -43,6 +43,8 @@ import { BookCover } from "./ui";
 import { UsageTracker } from "./usage-tracker";
 import { AskLibraryLink } from "./ask-library-link";
 import { Dialog } from "./ui/dialog";
+import { SharedCitationButton, SharedCitationOverlay } from "./shared-citation-overlay";
+import type { SharedCitationInput } from "@/lib/api/shared-citation.client";
 import type { CitationStyle, SidebarTab } from "./reader/types";
 import { useReaderNavigation } from "./reader/use-reader-navigation";
 import { useReaderSelection } from "./reader/use-reader-selection";
@@ -134,6 +136,7 @@ export function ReaderShell({
   const [gate, setGate] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [copyStatusState, setCopyStatusState] = useState<ActionState>("idle");
+  const [sharedCitation, setSharedCitation] = useState<SharedCitationInput | null>(null);
   const [pageInput, setPageInput] = useState<string | null>(null);
   const {
     page, setPage, zoom, totalPages, progress, thumbnailPages, scrollRequest,
@@ -477,6 +480,9 @@ export function ReaderShell({
           onMouseDown={(event) => event.preventDefault()}
         >
           <button type="button" onClick={() => void cleanCopy(selectionTools.quote)}><Copy size={15} />复制</button>
+          <button type="button" onClick={() => { setSharedCitation({ editionId: access?.edition_id,
+            reference: { asset_id: work.id, document_revision_id: documentRevisionId, pdf_page: selectionTools.pageIndex },
+            selectedText: selectionTools.quote }); setSelectionTools(null); }}><Copy size={15} />引用与选材</button>
           <button type="button" onClick={() => beginAnnotation("highlight", selectionTools)}><Highlighter size={15} />高亮</button>
           <button type="button" onClick={() => beginAnnotation("underline", selectionTools)}><Underline size={15} />划线</button>
           <button type="button" onClick={() => beginAnnotation("note", selectionTools)}><StickyNote size={15} />笔记</button>
@@ -484,6 +490,8 @@ export function ReaderShell({
           <button className="close" type="button" aria-label="关闭所选文字菜单" onClick={() => setSelectionTools(null)}><X size={14} /></button>
         </div>
       ) : null}
+
+      {sharedCitation ? <SharedCitationOverlay {...sharedCitation} open onClose={() => setSharedCitation(null)} /> : null}
 
       <aside className="reader-right" inert={!effectiveRightOpen} aria-hidden={!effectiveRightOpen}>
         <button className="panel-close" type="button" aria-label="关闭信息侧栏" onClick={() => setRightPanel(false)}><X size={18} /></button>
@@ -521,6 +529,8 @@ export function ReaderShell({
           <p role={citationError ? "alert" : undefined}>{citations?.[citationStyle] || citationError || "正在根据馆藏元数据生成本页引用……"}</p>
           {citationError ? <button type="button" onClick={retryCitation}>重试读取当前页引用</button> : null}
           <button className="button secondary" type="button" disabled={!citations?.[citationStyle]} onClick={copyCitation}><Copy size={14} /> 复制引用</button>
+          <SharedCitationButton className="button secondary" editionId={access?.edition_id}
+            reference={documentRevisionId ? { asset_id: work.id, document_revision_id: documentRevisionId, pdf_page: page } : undefined}>选材与多格式导出</SharedCitationButton>
         </section>
         <section>
           <h2>相关理论流派</h2>

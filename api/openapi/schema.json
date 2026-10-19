@@ -2927,6 +2927,196 @@
                 }
             }
         },
+        "/api/catalog/admin/public-feedback/": {
+            "get": {
+                "operationId": "catalog_admin_public_feedback_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "content",
+                                "function",
+                                "usage",
+                                "suggestion",
+                                "citation",
+                                "accessibility",
+                                "other"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `content` - content\n* `function` - function\n* `usage` - usage\n* `suggestion` - suggestion\n* `citation` - citation\n* `accessibility` - accessibility\n* `other` - other"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "submitted",
+                                "reviewing",
+                                "resolved"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `submitted` - submitted\n* `reviewing` - reviewing\n* `resolved` - resolved"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeedbackListOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/public-feedback/{feedback_id}/": {
+            "get": {
+                "operationId": "catalog_admin_public_feedback_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "feedback_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeedbackDetailOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_public_feedback_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "feedback_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedFeedbackUpdateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedFeedbackUpdateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedFeedbackUpdateInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeedbackUpdateOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendation-issues/": {
             "get": {
                 "operationId": "catalog_admin_recommendation_issues_list",
@@ -4734,6 +4924,65 @@
                 }
             }
         },
+        "/api/catalog/feedback/": {
+            "post": {
+                "operationId": "catalog_feedback_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicFeedbackInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicFeedbackInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicFeedbackInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicFeedbackReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicFeedbackReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/home/": {
             "get": {
                 "operationId": "catalog_home",
@@ -6392,6 +6641,54 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/AuditCapabilitiesOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/citation-preview/": {
+            "post": {
+                "operationId": "reading_citation_preview_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicCitationInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicCitationInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicCitationInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicCitationOutput"
                                 }
                             }
                         },
@@ -9183,6 +9480,191 @@
                     }
                 }
             }
+        },
+        "/api/reading/source-follows/": {
+            "get": {
+                "operationId": "reading_source_follows_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SourceFollowsPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_source_follows_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceFollowCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceFollowCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceFollowCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SourceFollowOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/source-follows/{id}/": {
+            "get": {
+                "operationId": "reading_source_follows_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SourceFollowOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/source-status/": {
+            "get": {
+                "operationId": "reading_source_status_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "path",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicSourceStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -10234,22 +10716,11 @@
                     "research",
                     "notes",
                     "plans",
-                    "audits"
+                    "audits",
+                    "source_follows"
                 ],
                 "type": "string",
-                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits"
-            },
-            "CategoryEnum": {
-                "enum": [
-                    "reading_history",
-                    "search_history",
-                    "annotations",
-                    "memories",
-                    "plans",
-                    "followed_topics"
-                ],
-                "type": "string",
-                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `plans` - plans\n* `followed_topics` - followed_topics"
+                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows"
             },
             "ChangeEnum": {
                 "enum": [
@@ -12099,6 +12570,14 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 64
+                    },
+                    "selection_start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "selection_end": {
+                        "type": "integer",
+                        "minimum": 1
                     }
                 }
             },
@@ -12194,6 +12673,14 @@
                         "minLength": 1,
                         "maxLength": 64
                     },
+                    "selection_start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "selection_end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
                     "anchors": {
                         "type": "array",
                         "items": {
@@ -12211,6 +12698,344 @@
                 ],
                 "type": "string",
                 "description": "* `pdf` - pdf\n* `docx` - docx\n* `tiff` - tiff"
+            },
+            "FeedbackCounts": {
+                "type": "object",
+                "properties": {
+                    "total": {
+                        "type": "integer"
+                    },
+                    "submitted": {
+                        "type": "integer"
+                    },
+                    "reviewing": {
+                        "type": "integer"
+                    },
+                    "resolved": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "resolved",
+                    "reviewing",
+                    "submitted",
+                    "total"
+                ]
+            },
+            "FeedbackDetailOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "category": {
+                        "$ref": "#/components/schemas/PublicFeedbackCategoryEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicFeedbackStatusEnum"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "follow_up": {
+                        "type": "boolean"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "contact": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "consent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "consent_version": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "handled_by": {
+                        "type": "string"
+                    },
+                    "can_follow_up": {
+                        "type": "boolean"
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/FeedbackHistoryOutput"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/FeedbackSourceOutput"
+                    }
+                },
+                "required": [
+                    "body",
+                    "can_follow_up",
+                    "category",
+                    "consent_at",
+                    "consent_version",
+                    "contact",
+                    "created_at",
+                    "excerpt",
+                    "follow_up",
+                    "handled_by",
+                    "history",
+                    "id",
+                    "note",
+                    "path",
+                    "revision",
+                    "source",
+                    "status",
+                    "updated_at"
+                ]
+            },
+            "FeedbackHandlingState": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/PublicFeedbackStatusEnum"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "follow_up": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "follow_up",
+                    "note",
+                    "revision",
+                    "status"
+                ]
+            },
+            "FeedbackHistoryEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "before": {
+                        "$ref": "#/components/schemas/FeedbackHandlingState"
+                    },
+                    "after": {
+                        "$ref": "#/components/schemas/FeedbackHandlingState"
+                    }
+                },
+                "required": [
+                    "actor",
+                    "after",
+                    "before",
+                    "created_at",
+                    "id"
+                ]
+            },
+            "FeedbackHistoryOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FeedbackHistoryEntry"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "FeedbackListOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "$ref": "#/components/schemas/FeedbackCounts"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FeedbackSummary"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "counts",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "FeedbackSourceOutput": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/PublicSourceAvailabilityEnum"
+                    },
+                    "canonical_path": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "source_type": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "location": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "canonical_path",
+                    "checked_at",
+                    "cover_url",
+                    "location",
+                    "notice",
+                    "reader_url",
+                    "source_type",
+                    "status",
+                    "title",
+                    "updated_at",
+                    "version_label"
+                ]
+            },
+            "FeedbackSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "category": {
+                        "$ref": "#/components/schemas/PublicFeedbackCategoryEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicFeedbackStatusEnum"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "follow_up": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "category",
+                    "created_at",
+                    "excerpt",
+                    "follow_up",
+                    "id",
+                    "revision",
+                    "status",
+                    "updated_at"
+                ]
+            },
+            "FeedbackUpdateOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "accepted_revision": {
+                        "type": "integer"
+                    },
+                    "record": {
+                        "$ref": "#/components/schemas/FeedbackDetailOutput"
+                    }
+                },
+                "required": [
+                    "accepted_revision",
+                    "record",
+                    "request_id"
+                ]
             },
             "FileAdoptionInputRequest": {
                 "type": "object",
@@ -15752,6 +16577,29 @@
                     }
                 }
             },
+            "PatchedFeedbackUpdateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicFeedbackStatusEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "follow_up": {
+                        "type": "boolean"
+                    }
+                }
+            },
             "PatchedMediaMetadataRequest": {
                 "type": "object",
                 "properties": {
@@ -17572,7 +18420,7 @@
                         "items": {
                             "$ref": "#/components/schemas/CategoriesEnum"
                         },
-                        "maxItems": 4
+                        "maxItems": 5
                     },
                     "targets": {
                         "type": "array",
@@ -17802,11 +18650,24 @@
                     "revision"
                 ]
             },
+            "PrivacyTargetInputCategoryEnum": {
+                "enum": [
+                    "reading_history",
+                    "search_history",
+                    "annotations",
+                    "memories",
+                    "plans",
+                    "followed_topics",
+                    "source_follows"
+                ],
+                "type": "string",
+                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows"
+            },
             "PrivacyTargetInputRequest": {
                 "type": "object",
                 "properties": {
                     "category": {
-                        "$ref": "#/components/schemas/CategoryEnum"
+                        "$ref": "#/components/schemas/PrivacyTargetInputCategoryEnum"
                     },
                     "id": {
                         "type": "string",
@@ -18070,6 +18931,10 @@
             "ProjectCreateInputRequest": {
                 "type": "object",
                 "properties": {
+                    "expected_owner_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
                     "request_id": {
                         "type": "string",
                         "format": "uuid",
@@ -18150,6 +19015,44 @@
                     "local_id",
                     "request_id",
                     "schema_version"
+                ]
+            },
+            "PublicCitationInputRequest": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reference": {
+                        "$ref": "#/components/schemas/EvidenceReferenceInputRequest"
+                    },
+                    "selected_text": {
+                        "type": "string",
+                        "maxLength": 20000
+                    }
+                }
+            },
+            "PublicCitationOutput": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "readOnly": true
+                    },
+                    "reference": {
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "citations": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "citations",
+                    "reference",
+                    "source"
                 ]
             },
             "PublicClassificationLink": {
@@ -18264,6 +19167,107 @@
                     "name",
                     "slug"
                 ]
+            },
+            "PublicFeedbackCategoryEnum": {
+                "enum": [
+                    "content",
+                    "function",
+                    "usage",
+                    "suggestion",
+                    "citation",
+                    "accessibility",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `content` - 内容\n* `function` - 功能\n* `usage` - 使用咨询\n* `suggestion` - 改进建议\n* `citation` - 引用\n* `accessibility` - 无障碍\n* `other` - 其他"
+            },
+            "PublicFeedbackInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "category": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicFeedbackCategoryEnum"
+                            }
+                        ],
+                        "default": "other"
+                    },
+                    "body": {
+                        "type": "string",
+                        "minLength": 4,
+                        "maxLength": 500
+                    },
+                    "contact": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "default": "",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "path": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 400
+                    },
+                    "consent": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "body",
+                    "consent",
+                    "request_id"
+                ]
+            },
+            "PublicFeedbackReceipt": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicFeedbackStatusEnum"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "message",
+                    "request_id",
+                    "status"
+                ]
+            },
+            "PublicFeedbackStatusEnum": {
+                "enum": [
+                    "submitted",
+                    "reviewing",
+                    "resolved"
+                ],
+                "type": "string",
+                "description": "* `submitted` - 已提交\n* `reviewing` - 处理中\n* `resolved` - 已处理"
             },
             "PublicJournalContent": {
                 "type": "object",
@@ -18453,6 +19457,115 @@
                 "required": [
                     "id",
                     "preferred_name"
+                ]
+            },
+            "PublicSourceAvailabilityEnum": {
+                "enum": [
+                    "available",
+                    "replaced",
+                    "unavailable",
+                    "page"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `replaced` - replaced\n* `unavailable` - unavailable\n* `page` - page"
+            },
+            "PublicSourceStatus": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string"
+                    },
+                    "canonical_path": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicSourceAvailabilityEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "source_type": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "location": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "can_subscribe": {
+                        "type": "boolean"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "can_subscribe",
+                    "canonical_path",
+                    "catalog_revision_id",
+                    "checked_at",
+                    "cover_url",
+                    "document_revision_id",
+                    "edition_id",
+                    "location",
+                    "notice",
+                    "path",
+                    "reader_url",
+                    "source_type",
+                    "status",
+                    "title",
+                    "updated_at",
+                    "version_label",
+                    "work_id"
                 ]
             },
             "PublicTheoryAssociation": {
@@ -20016,6 +21129,26 @@
                         "type": "integer",
                         "minimum": 1
                     },
+                    "expected_owner_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "未知响应重试沿用原标识；旧客户端可省略。"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "notes": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "maxLength": 200
+                        }
+                    },
                     "action": {
                         "$ref": "#/components/schemas/SelectionInputActionEnum"
                     },
@@ -20529,6 +21662,213 @@
                 ],
                 "type": "string",
                 "description": "* `manual` - manual\n* `pdf_page_labels` - pdf_page_labels\n* `embedded_text` - embedded_text\n* `ocr` - ocr\n* `sequence` - sequence\n* `file_index` - file_index\n* `unknown` - unknown"
+            },
+            "SourceEventOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/SourceEventOutputActionEnum"
+                    },
+                    "before_status": {
+                        "type": "string"
+                    },
+                    "after_status": {
+                        "type": "string"
+                    },
+                    "observed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "action",
+                    "after_status",
+                    "before_status",
+                    "id",
+                    "observed_at",
+                    "revision"
+                ]
+            },
+            "SourceEventOutputActionEnum": {
+                "enum": [
+                    "subscribe",
+                    "unsubscribe",
+                    "mark_read",
+                    "changed"
+                ],
+                "type": "string",
+                "description": "* `subscribe` - subscribe\n* `unsubscribe` - unsubscribe\n* `mark_read` - mark_read\n* `changed` - changed"
+            },
+            "SourceFollowCommandActionEnum": {
+                "enum": [
+                    "subscribe",
+                    "unsubscribe",
+                    "mark_read"
+                ],
+                "type": "string",
+                "description": "* `subscribe` - subscribe\n* `unsubscribe` - unsubscribe\n* `mark_read` - mark_read"
+            },
+            "SourceFollowCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/SourceFollowCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision",
+                    "path",
+                    "request_id"
+                ]
+            },
+            "SourceFollowOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_checked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "check_error": {
+                        "type": "string"
+                    },
+                    "unread_count": {
+                        "type": "integer"
+                    },
+                    "updates_paused": {
+                        "type": "boolean"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/PublicSourceStatus"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/SourceHistoryOutput"
+                    }
+                },
+                "required": [
+                    "active",
+                    "check_error",
+                    "created_at",
+                    "history",
+                    "id",
+                    "last_checked_at",
+                    "notice",
+                    "owner_id",
+                    "path",
+                    "revision",
+                    "source",
+                    "unread_count",
+                    "updated_at",
+                    "updates_paused"
+                ]
+            },
+            "SourceFollowsPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SourceFollowOutput"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "notice",
+                    "owner_id",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "SourceHistoryOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SourceEventOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
             },
             "StatementInputRequest": {
                 "type": "object",

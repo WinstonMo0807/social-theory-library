@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-19 公共交互检查点
+
+新增SourceFollow/Event在原reading数据库，公开来源解析只读取当前激活修订；定时任务复用Celery每15分钟最多200项并按检查时间轮转。反馈管理复用PublicFeedback/AuditEvent；共享引用复用EvidenceReference/ResearchProject/原引用格式，不建平行馆藏或检索服务。来源记录加入现有隐私分类；访客选材仅在明确操作后保存来源身份与备注，原文/题名不在浏览器持久化，导出时重新核对。迁移未应用，部署未执行。
+
 ## 2026-10-18 文件与人工正文、私人分页预览
 
 新的版本/文件工作台沿原Work→Edition→Asset/UploadItem，新增staged分支仅生成独立阅读副本，不自动书目增强或公开。CloudObject仍是唯一分发任务记录；显式准备命令关闭旧发布续跑回调。当前管理选择和活动CatalogPublicationRevision分别读取。

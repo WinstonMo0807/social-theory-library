@@ -14,17 +14,18 @@ from . import research
 from .models import (Annotation, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
                      ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic)
 from .services import decrypt_private_text
+from .source_models import SourceFollow
 
-RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True}
-RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题"}
+RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True}
+RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题", "source_follows": "来源订阅"}
 EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories"),
-                 "plans": ("plans",), "audits": ("audits", "citation_sources")}
+                 "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",)}
 ERASE_GROUPS = {"reading_history": ("reading_history",), "search_history": ("search_history",),
                 "personal_notes": ("annotations", "memories"), "reading_plans": ("plans",),
-                "followed_topics": ("followed_topics",)}
+                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",)}
 MODELS = {"research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
-          "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic}
+          "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic, "source_follows": SourceFollow}
 MAX_ITEMS = 500
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -153,6 +154,9 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category == "source_follows":
+        from .source_follow import output
+        return output(row, export=True)
     if category == "annotations":
         return annotation_export(user, row)
     result = research.serialize_record(row, user)
@@ -180,7 +184,8 @@ def erase_impact(user, category, row, *, contexts=None):
                "plans": "删除此阅读计划与计划内建议；原文、独立研究和笔记保留，未完成计划任务将失效。",
                "reading_history": "删除此条阅读历史；阅读进度、笔记和馆藏原件保留。",
                "search_history": "删除这条主动保存的检索记录；当前检索与研究所需临时会话不受影响。",
-               "followed_topics": "取消关注此主题；主题和公开馆藏保留。"}[category]
+               "followed_topics": "取消关注此主题；主题和公开馆藏保留。",
+               "source_follows": "删除此来源订阅、站内更新与状态历史，停止后续检查；公开馆藏保留。"}[category]
     return {"message": message, "memories": affected, "scope_count": sum(len(value["scopes"]) for value in affected)}
 
 
@@ -202,6 +207,10 @@ def describe_item(user, category, row):
         snapshot = edition.active_catalog_revision.snapshot if edition else {}
         source = {"title": (snapshot.get("work") or {}).get("title", "来源当前不可用"),
                   "edition": (snapshot.get("edition") or {}).get("version_label", ""), "pdf_page": row.page_index}
+        title = source["title"]
+    elif category == "source_follows":
+        from .source_follow import resolve_public_source
+        source = resolve_public_source(row.path)
         title = source["title"]
     elif category == "followed_topics":
         title = row.topic.name

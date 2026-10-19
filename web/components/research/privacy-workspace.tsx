@@ -14,12 +14,12 @@ import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import styles from "./privacy.module.css";
 
-const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", followed_topics: "关注的主题" };
-const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记与个人认识，已有内容仍可编辑。", followed_topics: "允许新增关注，已有关注不会自动删除。" };
-const exportLabels: Record<ExportCategory, string> = { research: "研究资料", notes: "笔记内容", plans: "阅读计划", audits: "引文报告" };
-const exportCopy: Record<ExportCategory, string> = { research: "研究问题、选材与轮次（含来源与版本）", notes: "个人笔记与已保存认识（含创建时间）", plans: "我创建的阅读计划与阅读清单", audits: "引文报告与本人来源信息（不含原件）" };
-const eraseLabels: Record<EraseCategory, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划", followed_topics: "关注的主题" };
-const leafLabels: Record<string, string> = { reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", plans: "阅读计划", followed_topics: "关注的主题", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息" };
+const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", followed_topics: "关注的主题", source_follows: "来源订阅" };
+const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记与个人认识，已有内容仍可编辑。", followed_topics: "允许新增关注，已有关注不会自动删除。", source_follows: "允许订阅与保存后续来源变化。关闭后停止记录更新，已有记录仍保留。" };
+const exportLabels: Record<ExportCategory, string> = { research: "研究资料", notes: "笔记内容", plans: "阅读计划", audits: "引文报告", source_follows: "来源订阅" };
+const exportCopy: Record<ExportCategory, string> = { research: "研究问题、选材与轮次（含来源与版本）", notes: "个人笔记与已保存认识（含创建时间）", plans: "我创建的阅读计划与阅读清单", audits: "引文报告与本人来源信息（不含原件）", source_follows: "本人订阅与站内状态历史（不含原文）" };
+const eraseLabels: Record<EraseCategory, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅" };
+const leafLabels: Record<string, string> = { reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息" };
 const statusLabels: Record<PrivacyOperation["status"], string> = { preview: "等待确认影响", queued: "等待处理", running: "处理中", completed: "已完成", partial: "部分完成", failed: "未能完成", canceled: "已取消" };
 const failureLabels: Record<string, string> = { revision_changed: "内容已修改，请重新预览", record_unavailable: "资料已删除或不可用", content_limit: "内容超过单次限制", preparation_failed: "处理失败，可重试", queue_unavailable: "任务暂未进入队列，可重试", task_interrupted: "处理已中断，可恢复剩余项目" };
 const dateLabel = (value: string) => Number.isNaN(Date.parse(value)) ? "时间未记录" : new Date(value).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" });

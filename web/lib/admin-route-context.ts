@@ -51,6 +51,7 @@ export function adminLoginHref(pathname: string, search: string, hash = "") {
 }
 
 export function adminTaskScope(pathname: string) {
+  if (/^\/admin\/support\/feedback(?:\/|$)/.test(pathname)) return { title: "反馈处理", detail: "保留读者原始提交，记录内部处理过程；状态更新不会自动发送邮件。" };
   if (/^\/admin\/(uploads|review|publication|cataloging|intake)(?:\/|$)/.test(pathname) || pathname === "/admin") return { title: "待办与上架", detail: "上传来源、作品与出版版本分别保留。保存草稿、确认发布和公开结果各自核验；不会仅凭任务已接收显示完成。" };
   if (/^\/admin\/(library|media)(?:\/|$)/.test(pathname)) return { title: "馆藏", detail: "文件和阅读操作以当前出版版本为准。原件、历史文件、人工确认和读者私人记录保留；媒体上传不自动公开。" };
   if (/^\/admin\/(reading-paths|recommendations|about)(?:\/|$)/.test(pathname)) return { title: pathname.startsWith("/admin/about") ? "网站与关于书库" : "推荐与策展", detail: "保存草稿、实时预览与正式发布分别处理。" };

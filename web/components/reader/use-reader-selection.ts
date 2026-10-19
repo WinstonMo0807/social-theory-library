@@ -55,6 +55,13 @@ export function useReaderSelection({ page, pagePayloads, requestPagePayload, set
       return null;
     }
     const range = selection.getRangeAt(0);
+    const endElement = range.endContainer instanceof Element ? range.endContainer : range.endContainer.parentElement;
+    const startElement = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+    if (startElement?.closest(".pdf-canvas-stage") !== stage || endElement?.closest(".pdf-canvas-stage") !== stage) {
+      setCopyStatus("跨页文字仍可直接复制；引用与笔记请逐页选择，避免页码与选文错配。");
+      setCopyStatusState("idle");
+      return null;
+    }
     const stageRect = stage.getBoundingClientRect();
     const rangeRects = Array.from(range.getClientRects())
       .filter((rect) => (
@@ -142,9 +149,15 @@ export function useReaderSelection({ page, pagePayloads, requestPagePayload, set
       setCopyStatus("已清理并复制");
       setCopyStatusState("success");
     } catch {
-      await navigator.clipboard.writeText(cleanTextLocally(selected));
-      setCopyStatus("已在浏览器中清理并复制");
-      setCopyStatusState("success");
+      try {
+        await navigator.clipboard.writeText(cleanTextLocally(selected));
+        setCopyStatus("已在浏览器中清理并复制");
+        setCopyStatusState("success");
+      } catch {
+        setCopyStatus("浏览器未允许复制，选文已保留，请使用系统复制操作。");
+        setCopyStatusState("error");
+        return;
+      }
     }
     setSelectionTools(null);
     window.getSelection()?.removeAllRanges();

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { ArrowRight, BookOpen, Search, Shuffle } from "lucide-react";
+import { ArrowRight, BookOpen, LoaderCircle, Search, Shuffle } from "lucide-react";
 import { usePublicSession } from "@/components/public-session-provider";
 import { ScholarPortrait } from "@/components/ui";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import type { Scholar, Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import type { LibraryTopic } from "@/lib/api/topics.types";
@@ -29,7 +29,7 @@ export function HomeSearch() {
     <input type="hidden" name="context" value="global" />
     <label><Search size={19} aria-hidden="true" /><span className="sr-only">搜索书名、作者、概念或主题</span><input name="q" type="search" required autoComplete="off" placeholder="搜索书名、作者、概念、主题…" /></label>
     <button type="submit" disabled={pending}>{pending ? "搜索中…" : "搜索"}</button>
-    <span className="sr-only" role="status">{pending ? "正在打开检索结果，已保留输入内容。" : ""}</span>
+    {pending ? <span className="stl4-home-search-pending" role="status"><LoaderCircle size={16} aria-hidden="true" />正在打开检索结果，已保留输入内容。</span> : null}
   </form>;
 }
 
@@ -57,7 +57,7 @@ export function HomeRandomBook({ works, section }: { works: Work[]; section?: Ho
   return <section className="stl4-home-random" aria-label="随机荐读"><div><h2>{work?.title || "遇见一本好书"}</h2><p aria-live="polite">{work ? `${work.author} · ${work.year}` : section?.status === "unavailable" ? section.message : works.length ? "从已发布馆藏中，开始一次新的阅读。" : "馆藏发布后，即可随机发现一本书。"}</p></div><button type="button" disabled={!works.length} onClick={() => setIndex(current => current === null ? Math.floor(Math.random() * works.length) : works.length < 2 ? 0 : (current + 1 + Math.floor(Math.random() * (works.length - 1))) % works.length)}><Shuffle size={16} />{work ? "再换一本" : "随机推荐"}</button>{work ? <Link href={`/works/${work.slug}`}>查看馆藏 <ArrowRight size={16} /></Link> : null}</section>;
 }
 
-type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; work: ApiWork };
+type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; updated_at?: string; work: ApiWork };
 export function HomeContinueReading() {
   const { state: session } = usePublicSession();
   const userId = session.status === "authenticated" ? session.user?.id : undefined;
@@ -66,14 +66,15 @@ export function HomeContinueReading() {
   useEffect(() => {
     if (userId === undefined) return;
     const controller = new AbortController();
-    apiRequest<{ results: ProgressRow[] }>("/reading/progress/", { signal: controller.signal }, getServerSessionCredential())
+    const unsubscribe = subscribeToSessionChanges(() => { controller.abort(); setResult(null); });
+    apiRequest<{ results: ProgressRow[] }>("/reading/progress/", { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]), cache: "no-store" }, getServerSessionCredential(), false)
       .then(data => { if (!controller.signal.aborted) setResult({ owner: userId, row: data.results[0] }); })
       .catch(() => { if (!controller.signal.aborted) setResult({ owner: userId, error: "阅读进度暂时无法加载。" }); });
-    return () => controller.abort();
+    return () => { controller.abort(); unsubscribe(); };
   }, [userId, attempt]);
   // Do not show the previous account's private row while a new session loads.
   if (userId === undefined || result?.owner !== userId || (!result.row && !result.error)) return null;
   if (result.error) return <aside className="stl4-continue" role="status"><p>{result.error}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>重试</button></aside>;
   const row = result.row!;
-  return <aside className="stl4-continue"><div><span>继续阅读 <small>仅本人可见</small></span><h2>{row.work.title}</h2><p>第 {row.current_page} 页 · 已读 {Math.round(Math.min(1, Math.max(0, row.progress_ratio)) * 100)}%</p></div><Link href={`/reader/${encodeURIComponent(row.asset)}?page=${row.current_page}`}>继续阅读 <ArrowRight size={16} /></Link></aside>;
+  return <aside className="stl4-continue"><span className="stl4-continue-cover">{row.work.cover ? <img src={row.work.cover} alt={`${row.work.title}封面`} width={44} height={64} /> : <BookOpen size={24} aria-label="尚未提供封面" />}</span><div><span>继续阅读 <small>仅本人可见</small></span><h2>{row.work.title}</h2><p>PDF 第 {row.current_page} 页 · 已读 {Math.round(Math.min(1, Math.max(0, row.progress_ratio)) * 100)}%{row.updated_at && Number.isFinite(Date.parse(row.updated_at)) ? <> · 上次阅读 <time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time></> : null}</p></div><Link href={`/reader/${encodeURIComponent(row.asset)}?page=${row.current_page}`}>继续阅读 <ArrowRight size={16} /></Link></aside>;
 }

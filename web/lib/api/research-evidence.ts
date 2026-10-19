@@ -8,7 +8,8 @@ export function researchEvidenceKey(reference: ResolvedEvidence): string {
 export function researchEvidenceReference(reference: ResolvedEvidence): EvidenceReference {
   if (reference.anchors?.length) return { anchors: reference.anchors.map(researchEvidenceReference) };
   return { asset_id: reference.asset_id, document_revision_id: reference.document_revision_id,
-    pdf_page: reference.pdf_page, evidence_span_id: reference.evidence_span_id, content_hash: reference.content_hash };
+    pdf_page: reference.pdf_page, evidence_span_id: reference.evidence_span_id, content_hash: reference.content_hash,
+    ...(reference.selection_start !== undefined ? { selection_start: reference.selection_start, selection_end: reference.selection_end } : {}) };
 }
 
 export function researchScopeLabel(scope?: QueryScope): string {

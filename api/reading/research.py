@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.exceptions import APIException, NotFound, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from catalog.models import EvidenceSpan, Page
 from catalog.services.discovery_sources import source_queryset
@@ -135,7 +135,7 @@ def resolve_reference(raw, user, *, strict=False):
     stale = {"schema_version": 1, "source_kind": "catalog", "source_status": "unavailable",
              "reference_id": reference_identity(raw),
              **{key: raw[key] for key in ("evidence_span_id", "document_revision_id", "asset_id", "pdf_page", "content_hash",
-                                         "work_id", "edition_id") if key in raw}}
+                                         "work_id", "edition_id", "selection_start", "selection_end") if key in raw}}
     span = None
     if span_id:
         span = EvidenceSpan.objects.select_related("document_revision__asset", "page").filter(
@@ -167,6 +167,18 @@ def resolve_reference(raw, user, *, strict=False):
         if strict:
             raise ValidationError({"reference": "原文已变化、撤回或不可访问，请重新选择。"})
         return stale
+    source_text = span.original_text if span else page.text
+    selected_range = {}
+    if "selection_start" in raw or "selection_end" in raw:
+        start, end = raw.get("selection_start"), raw.get("selection_end")
+        if (isinstance(start, bool) or isinstance(end, bool) or not isinstance(start, int)
+                or not isinstance(end, int) or not 0 <= start < end <= len(source_text)
+                or end - start > 20000 or not raw.get("content_hash")):
+            if strict:
+                raise ValidationError({"reference": "选文范围无效，请从当前原文重新选择。"})
+            return stale
+        selected_range = {"selection_start": start, "selection_end": end}
+        source_text = source_text[start:end]
     snapshot = edition.active_catalog_revision.snapshot or {}
     from catalog.services.page_label_metadata import structured_page_labels
     from catalog.services.page_geometry import locator_geometry, validated_geometry
@@ -179,7 +191,8 @@ def resolve_reference(raw, user, *, strict=False):
     cover_url = (reverse("public-work-cover", kwargs={"work_id": str(edition.work_id)})
         + (f"?rendition={cover['primary_rendition_id']}" if cover.get("primary_rendition_id") else "")) if cover or (snapshot.get("work") or {}).get("cover") else None
     return {"schema_version": 1, "source_kind": "catalog", "source_status": "available",
-            "reference_id": str(span.id) if span else f"{asset_id}:{page_number}",
+            "reference_id": reference_identity({"evidence_span_id": str(span.id) if span else None,
+                "asset_id": asset_id, "pdf_page": page_number, **selected_range}), **selected_range,
             "evidence_span_id": str(span.id) if span else None,
             "work_id": str(edition.work_id), "edition_id": str(edition.id), "asset_id": asset_id,
             "document_revision_id": revision_id, "pdf_page": page_number,
@@ -189,10 +202,13 @@ def resolve_reference(raw, user, *, strict=False):
             "authors": [value for value in authors if value],
             "publication_year": (snapshot.get("edition") or {}).get("publication_year"), "cover_url": cover_url,
             "citation": format_gbt_7714_2025(edition, page.printed_label, snapshot=snapshot),
-            "quote": span.original_text if span else page.text,
-            "start_offset": span.start_offset if span else 0, "end_offset": span.end_offset if span else len(page.text),
-            "page_text_range": page_text_range(page.text, span.original_text if span else page.text,
-                span.start_offset if span else 0, span.end_offset if span else len(page.text)),
+            "quote": source_text,
+            "start_offset": (span.start_offset if span else 0) + selected_range.get("selection_start", 0),
+            "end_offset": ((span.start_offset if span else 0) + selected_range["selection_end"] if selected_range
+                else span.end_offset if span else len(page.text)),
+            "page_text_range": page_text_range(page.text, source_text,
+                (span.start_offset if span else 0) + selected_range.get("selection_start", 0),
+                (span.start_offset if span else 0) + selected_range["selection_end"] if selected_range else span.end_offset if span else len(page.text)),
             "bbox": span.bbox if span else [], "bbox_unit": "source_page_coordinates",
             "geometry": geometry, **locator_geometry(span.bbox if span else [], geometry),
             "coordinate_space": {"width": page.width, "height": page.height, "text_source": page.text_source,
@@ -204,13 +220,16 @@ def resolve_reference(raw, user, *, strict=False):
 def reference_identity(reference):
     if reference.get("anchors"):
         return "anchors:" + hashlib.sha256("|".join(reference_identity(row) for row in reference["anchors"]).encode()).hexdigest()
-    return str(reference.get("evidence_span_id") or f"{reference.get('asset_id')}:{reference.get('pdf_page')}")
+    identity = str(reference.get("evidence_span_id") or f"{reference.get('asset_id')}:{reference.get('pdf_page')}")
+    if "selection_start" in reference and "selection_end" in reference:
+        identity += f":range:{reference['selection_start']}:{reference['selection_end']}"
+    return identity
 
 
 def compact_reference(reference):
     # Identity only: future reads must rehydrate rather than leak cached withdrawn text.
     output = {key: reference[key] for key in ("schema_version", "source_kind", "evidence_span_id", "work_id",
-            "edition_id", "asset_id", "document_revision_id", "pdf_page", "content_hash") if key in reference}
+            "edition_id", "asset_id", "document_revision_id", "pdf_page", "content_hash", "selection_start", "selection_end") if key in reference}
     if reference.get("anchors"):
         output["anchors"] = [compact_reference(row) for row in reference["anchors"]]
         output.pop("evidence_span_id", None)
@@ -248,6 +267,8 @@ def scope_snapshot(raw, user):
 
 @transaction.atomic
 def create_project(user, data):
+    if "expected_owner_id" in data and (type(data["expected_owner_id"]) is not int or data["expected_owner_id"] != user.pk):
+        raise PermissionDenied("登录账户已变化，请重新选择本人研究。")
     request_id = identifier(data.get("request_id"), "request_id")
     from django.contrib.auth import get_user_model
     get_user_model().objects.select_for_update().get(pk=user.pk)
@@ -389,15 +410,35 @@ def update_project(user, pk, data):
 
 @transaction.atomic
 def change_selection(user, pk, data):
+    if "expected_owner_id" in data and (type(data["expected_owner_id"]) is not int or data["expected_owner_id"] != user.pk):
+        raise PermissionDenied("登录账户已变化，请重新选择本人研究。")
     project = owned(ResearchProject, user, pk, lock=True)
-    expect(project, data.get("expected_revision"))
     payload = unpack(project)
+    request_id = identifier(data["request_id"], "request_id") if data.get("request_id") else None
+    fingerprint = request_fingerprint(data, ("action", "references", "reference_id", "order", "note", "notes"))
+    if request_id:
+        previous = next((row for row in payload.get("selection_requests", []) if row["id"] == request_id), None)
+        if previous:
+            if previous["fingerprint"] != fingerprint:
+                raise ResearchConflict("该选材请求标识已用于不同内容。请保留输入，使用新操作标识。")
+            return project
+    expect(project, data.get("expected_revision"))
     selected = payload.setdefault("selections", [])
     action = data.get("action")
     if action == "add":
         new_refs = references(data.get("references", []), user)
         seen = {reference_identity(row) for row in selected}
-        selected.extend(row for row in new_refs if reference_identity(row) not in seen)
+        added = [row for row in new_refs if reference_identity(row) not in seen]
+        selected.extend(added)
+        note = text(data.get("note", ""), "note", 200)
+        item_notes = data.get("notes", {})
+        if not isinstance(item_notes, dict) or len(item_notes) > MAX_REFS or any(key not in {reference_identity(row) for row in new_refs} for key in item_notes):
+            raise ValidationError({"notes": "备注只能对应本次选材。"})
+        item_notes = {key: text(value, "note", 200) for key, value in item_notes.items()}
+        if note or item_notes:
+            notes = payload.setdefault("selection_notes", {})
+            for row in added:
+                notes[reference_identity(row)] = item_notes.get(reference_identity(row), note)
         bounded_list(selected, "selections")
     elif action == "remove":
         key = str(data.get("reference_id", ""))
@@ -410,7 +451,11 @@ def change_selection(user, pk, data):
     elif action == "undo":
         removed = payload.get("removed_selections", [])
         if removed:
-            previous = removed.pop()
+            key = data.get("reference_id")
+            position = next((i for i in reversed(range(len(removed))) if not key or reference_identity(removed[i]["reference"]) == key), None)
+            if position is None:
+                raise NotFound("该选材的移除记录已不存在。")
+            previous = removed.pop(position)
             resolve_reference(previous["reference"], user, strict=True)
             if reference_identity(previous["reference"]) not in {reference_identity(row) for row in selected}:
                 if len(selected) >= MAX_REFS:
@@ -424,6 +469,12 @@ def change_selection(user, pk, data):
         payload["selections"] = [by_id[key] for key in order]
     else:
         raise ValidationError({"action": "支持 add/remove/undo/reorder。"})
+    if request_id:
+        payload["selection_requests"] = [*payload.get("selection_requests", []), {"id": request_id, "fingerprint": fingerprint}][-100:]
+    retained_ids = {reference_identity(row) for row in payload.get("selections", [])}
+    retained_ids.update(reference_identity(row["reference"]) for row in payload.get("removed_selections", []))
+    if "selection_notes" in payload:
+        payload["selection_notes"] = {key: value for key, value in payload["selection_notes"].items() if key in retained_ids}
     return save_data(project, payload)
 
 
@@ -703,6 +754,7 @@ def serialize_record(record, user, *, memory_context_rows=None):
     payload.pop("version_children", None)
     payload.pop("text_units", None)
     payload.pop("analysis_requests", None)
+    payload.pop("selection_requests", None)
     if "ocr_units" in payload:
         payload["ocr_units"] = {key: {name: value for name, value in unit.items() if name not in {"text", "blocks"}}
                                 for key, unit in payload["ocr_units"].items()}

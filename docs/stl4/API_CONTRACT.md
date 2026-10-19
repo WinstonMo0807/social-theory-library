@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-19 公共交互检查点
+
+- POST /catalog/feedback/匿名回执；GET/PATCH /catalog/admin/public-feedback/及详情严格管理权限。GET /reading/source-status/匿名复核公开状态；source-follows列表/详情本人隔离，POST要求X-Reader-Owner、nonce与expected_revision。完整字段见对应单元文档。
+- POST /reading/citation-preview/公开来源预览，selected_text唯一匹配到真实范围，复用citation_bundle。研究新建/选材增加expected_owner_id，选材增加request_id/note/notes，旧客户端兼容。公开预览不回传未发布或私有正文。
+- Schema新增7路径至148，保留原141路径，明确反馈类别/状态/公开来源状态枚举和列表operation ID，前端生成类型同步。隐私分类增加source_follows。源码契约不代表联调或上线通过。
+
 ## 2026-10-18 公共导航
 
 PDF18继续使用现有公开会话、GET /explore?q=、/account?section=settings与/logout行为，无新数据库/API。当前标签页仅保存允许的公共来源位置，30分钟到期；账户/后台/认证路径、未知参数、编码目录逃逸不进入返回链接。共享Dialog焦点恢复preventScroll。管理入口以access_back_office能力显示，原服务端权限不变。导航源码接入与静态检查不等于真实浏览器验收。

@@ -5,6 +5,7 @@ import type { ReaderGeometryBox } from "../reader-coordinates";
 
 export type EvidenceAnchor = {
   evidence_span_id?: string; asset_id?: string; document_revision_id?: string; pdf_page?: number; content_hash?: string;
+  selection_start?: number; selection_end?: number;
 };
 export type EvidenceReference = EvidenceAnchor & { anchors?: EvidenceAnchor[] };
 export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
@@ -28,6 +29,7 @@ export type ResearchRecord<T = Record<string, unknown>> = {
 export type ComparisonCell = { dimension: string; column_id?: string; author?: string; reference_ids?: string[]; note?: string; evidence_status?: "selected" | "partial" | "unavailable" | "missing" };
 export type ProjectData = {
   title: string; question: string; notes?: string; scope: QueryScope; selections: ResolvedEvidence[];
+  selection_notes?: Record<string, string>;
   comparison?: { dimensions: string[]; cells: ComparisonCell[] }; layout?: Record<string, unknown>; last_turn_id?: string;
 };
 export type Statement = { proposition: string; subject?: string; predicate?: string; object?: string; polarity?: "positive" | "negative" | "mixed" | "uncertain"; modality?: string; qualifiers?: string[]; temporal_scope?: unknown; geographic_scope?: unknown; population_scope?: unknown };
@@ -152,8 +154,9 @@ export function exportResearchRecord<T>(collection: ResearchCollection, id: stri
 export function deleteResearchRecord(collection: Exclude<ResearchCollection, "research-turns">, id: string, revision: number) {
   return write<void>(researchRecordPath(collection, id), { expected_revision: revision }, "DELETE");
 }
-export function createResearchProject(data: NewRequest & { title?: string; question?: string; conversation_id?: string; scope?: QueryScope }) {
-  return write<ResearchRecord<ProjectData>>(researchRecordPath("research-projects"), data);
+export function createResearchProject(data: NewRequest & { expected_owner_id?: number; title?: string; question?: string; conversation_id?: string; scope?: QueryScope }) {
+  return apiRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects"), { method: "POST", body: JSON.stringify(data),
+    signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential(), false);
 }
 export type LocalResearchImport = NewRequest & {
   schema_version: 1; local_id: string; title?: string; question?: string; scope?: QueryScope; selections?: EvidenceReference[];
@@ -166,8 +169,9 @@ export function importLocalResearch(data: LocalResearchImport) {
 export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }) {
   return write<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), data, "PATCH");
 }
-export function changeResearchSelection(id: string, data: Revision & { action: "add" | "remove" | "undo" | "reorder"; references?: EvidenceReference[]; reference_id?: string; order?: string[] }) {
-  return write<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}selections/`, data);
+export function changeResearchSelection(id: string, data: Revision & { expected_owner_id?: number; request_id?: string; note?: string; notes?: Record<string, string>; action: "add" | "remove" | "undo" | "reorder"; references?: EvidenceReference[]; reference_id?: string; order?: string[] }) {
+  return apiRequest<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}selections/`, { method: "POST", body: JSON.stringify(data),
+    signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential(), false);
 }
 export function saveResearchComparison(id: string, data: Revision & { dimensions: string[]; cells: ComparisonCell[] }) {
   return write<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}comparison/`, data);

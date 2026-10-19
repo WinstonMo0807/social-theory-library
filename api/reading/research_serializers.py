@@ -8,6 +8,8 @@ class EvidenceAnchorInput(serializers.Serializer):
     document_revision_id = serializers.UUIDField(required=False)
     pdf_page = serializers.IntegerField(min_value=1, required=False)
     content_hash = serializers.CharField(max_length=64, required=False)
+    selection_start = serializers.IntegerField(min_value=0, required=False)
+    selection_end = serializers.IntegerField(min_value=1, required=False)
 
 
 class EvidenceReferenceInput(EvidenceAnchorInput):
@@ -26,6 +28,7 @@ class RevisionInput(serializers.Serializer):
 
 
 class ProjectCreateInput(serializers.Serializer):
+    expected_owner_id = serializers.IntegerField(min_value=1, required=False)
     request_id = serializers.UUIDField(help_text="客户端每次新操作生成，重试沿用。")
     title = serializers.CharField(max_length=240, required=False)
     question = serializers.CharField(max_length=4000, required=False, allow_blank=True)
@@ -43,6 +46,10 @@ class ProjectUpdateInput(RevisionInput):
 
 
 class SelectionInput(RevisionInput):
+    expected_owner_id = serializers.IntegerField(min_value=1, required=False)
+    request_id = serializers.UUIDField(required=False, help_text="未知响应重试沿用原标识；旧客户端可省略。")
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    notes = serializers.DictField(child=serializers.CharField(max_length=200, allow_blank=True), required=False)
     action = serializers.ChoiceField(choices=["add", "remove", "undo", "reorder"])
     references = EvidenceReferenceInput(many=True, required=False)
     reference_id = serializers.CharField(required=False)

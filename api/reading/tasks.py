@@ -13,6 +13,7 @@ from .models import CitationAudit, ResearchTurn
 from .research import (ACTIVE, access_for, analyze_references, compact_reference,
                        pack, reference_identity, resolve_reference, save_data, unpack)
 from .document_preview import render_document_preview  # noqa: F401; register the isolated preview task.
+from .source_follow import refresh_source_follows  # noqa: F401; bounded public-status checks only.
 
 logger = logging.getLogger(__name__)
 

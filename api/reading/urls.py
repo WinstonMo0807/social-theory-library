@@ -31,6 +31,8 @@ from .research_views import (CitationAuditViewSet, CitationSourceViewSet, Person
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
+from .shared_citation_views import PublicCitationPreviewView
+from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView
 
 router = DefaultRouter()
 router.register("privacy/operations", ReaderDataOperationViewSet, basename="reader-data-operations")
@@ -54,6 +56,10 @@ router.register(
 )
 
 urlpatterns = [
+    path("citation-preview/", PublicCitationPreviewView.as_view(), name="public-citation-preview"),
+    path("source-status/", PublicSourceStatusView.as_view(), name="public-source-status"),
+    path("source-follows/", SourceFollowsView.as_view(), name="source-follows"),
+    path("source-follows/<uuid:pk>/", SourceFollowDetailView.as_view(), name="source-follow-detail"),
     path("citation-audits/<uuid:pk>/preview/", CitationPreviewView.as_view(), name="citation-preview"),
     path("citation-audits/<uuid:pk>/preview/file/", CitationPreviewFileView.as_view(), name="citation-preview-file"),
     path("citation-sources/<uuid:pk>/preview/", CitationPreviewView.as_view(purpose="private_source"), name="citation-source-preview"),

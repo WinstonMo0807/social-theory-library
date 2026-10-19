@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type ReaderCenterSection = "research" | "notes" | "plans" | "lists" | "citation" | "confirmed";
+export type ReaderCenterSection = "research" | "notes" | "plans" | "lists" | "citation" | "confirmed" | "sources";
 export type ReaderCenterCounts = Partial<Record<ReaderCenterSection, number>>;
 
 const sections: Array<{ key: ReaderCenterSection; label: string; href: string }> = [
@@ -10,6 +10,7 @@ const sections: Array<{ key: ReaderCenterSection; label: string; href: string }>
   { key: "lists", label: "书单", href: "/account?section=lists" },
   { key: "citation", label: "引文核验", href: "/account/citation-audits" },
   { key: "confirmed", label: "已确认笔记", href: "/account/confirmed-notes" },
+  { key: "sources", label: "来源更新", href: "/account/source-updates" },
 ];
 
 export function ResearchCenterNav({ active, counts }: { active: ReaderCenterSection; counts?: ReaderCenterCounts }) {

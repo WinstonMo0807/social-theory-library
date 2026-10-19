@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-19 公共交互检查点
+
+- 各单元目标ESLint、Python AST、CSS解析记录见HOME_SUPPORT_IMPLEMENTATION_20261018、PUBLIC_FEEDBACK_20261018、SOURCE_UPDATES_20261019、SHARED_CITATION_20261019，均只静态检查。合成后端/浏览器用例仅编写，未执行。
+- 本进程DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8；`.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/public-interactions-openapi.json --validate`最终退出0，0错误/10条旧Home/Scholar/Topic类型提示。新增枚举和列表ID碰撞已消除；第一次类内枚举路径解析失败，改为明确模块常量后重跑成功，未忽略错误。
+- `openapi-typescript`的openapiTS/astToString同步schema.json和generated/schema.ts，退出0。原141 paths全部保留，新增7 paths至148；原研究/隐私组件按本单元扩展。
+- 全量TS最后运行退出1，包含并行观点入口/证据新文件未完成诊断；不能标为本轮全量通过。冻结的共享引用单元原nullable与fixture错误已修，继续开发后集中重跑。
+- tmp/checkpoint-public-interactions.py只将四文档白名单、共享入口、契约与全局记录暂存；读取暂存Python AST和whitespace检查，不运行测试/浏览器/构建/迁移/真实服务/生产操作。ATLAS保持209行22列及原始身份列。
+
 当前阶段：功能开发。全站正式功能、视觉、权限、迁移、性能验收全部待核实；未部署。
 
 ## 2026-10-18 公共导航静态收口

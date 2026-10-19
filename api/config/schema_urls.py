@@ -11,6 +11,7 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 
 VERIFIED_NAMES = {
+    "catalog-feedback", "catalog-admin-public-feedback", "catalog-admin-public-feedback-detail",
     "catalog-home",
     "admin-discovery-index",
     "discovery-search", "discovery-search-detail", "discovery-search-expand", "discovery-search-cancel", "discovery-search-retry", "discovery-search-context",
@@ -55,5 +56,6 @@ urlpatterns = [
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
+        "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail",
     }])),
 ]

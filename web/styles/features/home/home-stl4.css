@@ -34,6 +34,8 @@
 .stl4-home-search label { display: flex; gap: 10px; align-items: center; padding: 0 12px; min-width: 0; flex: 1; }
 .stl4-home-search input[type=search] { background: transparent; border: 0; font: 13px var(--sans); color: var(--ink); width: 100%; min-width: 0; padding: 10px 0; }
 .stl4-home-search button { background: var(--ink); color: #fff; border: 0; padding: 0 25px; border-radius: 2px; font: 14px var(--sans); min-width: 78px; }
+.stl4-home-search:has(.stl4-home-search-pending) { flex-wrap: wrap; }
+.stl4-home-search-pending { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 100%; padding: 12px; border-top: 1px solid var(--line); background: var(--paper); color: var(--muted); font: 12px/1.6 var(--sans); }
 .stl4-hot-searches { display: flex; flex-wrap: wrap; gap: 7px 12px; margin-top: 10px; font-size: 11px; }
 .stl4-hot-searches > span { color: #846435; }
 .stl4-small-status { font-size: 12px; color: var(--muted); }
@@ -74,7 +76,7 @@
 .stl4-topic-card { grid-column: span 2; }
 .stl4-topic-card:nth-child(n+4) { grid-column: span 3; }
 .stl4-topic-card > img, .stl4-topic-card > .stl4-image-missing { width: 100%; height: 200px; object-fit: cover; display: block; }
-.stl4-topic-card:nth-child(n+4) > img { height: 180px; }
+.stl4-topic-card:nth-child(n+4) > img, .stl4-topic-card:nth-child(n+4) > .stl4-image-missing { height: 180px; }
 .stl4-topic-card p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .stl4-image-missing { background: #eeebe5; color: #928a7e; display: grid !important; place-items: center; }
 .stl4-home-state { border: 1px solid var(--line); min-height: 150px; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; padding: 25px; color: var(--muted); text-align: center; }
@@ -93,6 +95,8 @@
 .stl4-home-random p, .stl4-continue p { margin: 0; font-size: 13px; color: var(--muted); }
 .stl4-home-random :is(button, a), .stl4-continue :is(button, a) { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--line); background: #fff; padding: 10px 16px; font-size: 13px; color: var(--ink); }
 .stl4-continue { margin: 20px 0 0; }
+.stl4-continue .stl4-continue-cover { display: grid; place-items: center; width: 44px; height: 64px; flex: none; background: #eeebe5; color: #928a7e; }
+.stl4-continue-cover img { width: 100%; height: 100%; object-fit: contain; }
 .stl4-continue span { font: 14px var(--serif); color: #846435; }
 .stl4-continue small { margin-left: 12px; font: 11px var(--sans); color: var(--muted); }
 .stl4-mobile-more { display: none; }

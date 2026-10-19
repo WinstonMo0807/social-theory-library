@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PublicFeedbackCategoryEnum": "catalog.feedback_serializers.PUBLIC_FEEDBACK_CATEGORIES",
+        "PublicFeedbackStatusEnum": "catalog.feedback_serializers.PUBLIC_FEEDBACK_STATUSES",
+        "PublicSourceAvailabilityEnum": ["available", "replaced", "unavailable", "page"],
         "CatalogingSourceTypeEnum": "catalog.services.cataloging_sessions.CATALOGING_SOURCE_TYPES",
         "MediaSourceTypeEnum": "catalog.services.media.MEDIA_SOURCE_TYPES",
         "ResearchScopeKindEnum": ["library", "works", "passages", "filtered"],
@@ -368,6 +371,7 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "refresh-source-follows": {"task": "reading.refresh_source_follows", "schedule": 15 * 60},
     "recover-private-research-tasks": {
         "task": "reading.tasks.recover_private_research_tasks", "schedule": 120,
         "options": {"queue": "celery", "expires": 110},

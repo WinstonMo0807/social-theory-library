@@ -737,6 +737,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/public-feedback/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_public_feedback_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/public-feedback/{feedback_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_public_feedback_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["catalog_admin_public_feedback_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/": {
         parameters: {
             query?: never;
@@ -1185,6 +1217,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/feedback/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_feedback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/home/": {
         parameters: {
             query?: never;
@@ -1619,6 +1667,22 @@ export interface paths {
         get: operations["reading_citation_audits_capabilities_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/citation-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_citation_preview_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2265,6 +2329,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/source-follows/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_source_follows_list"];
+        put?: never;
+        post: operations["reading_source_follows_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/source-follows/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_source_follows_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/source-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_source_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2643,19 +2755,10 @@ export interface components {
          *     * `notes` - notes
          *     * `plans` - plans
          *     * `audits` - audits
+         *     * `source_follows` - source_follows
          * @enum {string}
          */
-        CategoriesEnum: "research" | "notes" | "plans" | "audits";
-        /**
-         * @description * `reading_history` - reading_history
-         *     * `search_history` - search_history
-         *     * `annotations` - annotations
-         *     * `memories` - memories
-         *     * `plans` - plans
-         *     * `followed_topics` - followed_topics
-         * @enum {string}
-         */
-        CategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "plans" | "followed_topics";
+        CategoriesEnum: "research" | "notes" | "plans" | "audits" | "source_follows";
         /**
          * @description * `unchanged` - unchanged
          *     * `added` - added
@@ -3259,6 +3362,8 @@ export interface components {
             document_revision_id?: string;
             pdf_page?: number;
             content_hash?: string;
+            selection_start?: number;
+            selection_end?: number;
         };
         EvidenceCuration: {
             /** Format: uuid */
@@ -3285,6 +3390,8 @@ export interface components {
             document_revision_id?: string;
             pdf_page?: number;
             content_hash?: string;
+            selection_start?: number;
+            selection_end?: number;
             /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
             anchors?: components["schemas"]["EvidenceAnchorInputRequest"][];
         };
@@ -3295,6 +3402,99 @@ export interface components {
          * @enum {string}
          */
         ExtensionEnum: "pdf" | "docx" | "tiff";
+        FeedbackCounts: {
+            total: number;
+            submitted: number;
+            reviewing: number;
+            resolved: number;
+        };
+        FeedbackDetailOutput: {
+            /** Format: uuid */
+            id: string;
+            category: components["schemas"]["PublicFeedbackCategoryEnum"];
+            status: components["schemas"]["PublicFeedbackStatusEnum"];
+            excerpt: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            revision: number;
+            follow_up: boolean;
+            body: string;
+            contact: string;
+            path: string;
+            /** Format: date-time */
+            consent_at: string | null;
+            consent_version: string;
+            note: string;
+            handled_by: string;
+            can_follow_up: boolean;
+            history: components["schemas"]["FeedbackHistoryOutput"];
+            source: components["schemas"]["FeedbackSourceOutput"];
+        };
+        FeedbackHandlingState: {
+            status: components["schemas"]["PublicFeedbackStatusEnum"];
+            note: string;
+            follow_up: boolean;
+            revision: number;
+        };
+        FeedbackHistoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            actor: string;
+            before: components["schemas"]["FeedbackHandlingState"];
+            after: components["schemas"]["FeedbackHandlingState"];
+        };
+        FeedbackHistoryOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["FeedbackHistoryEntry"][];
+        };
+        FeedbackListOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            counts: components["schemas"]["FeedbackCounts"];
+            results: components["schemas"]["FeedbackSummary"][];
+        };
+        FeedbackSourceOutput: {
+            status: components["schemas"]["PublicSourceAvailabilityEnum"];
+            canonical_path: string;
+            title: string;
+            authors: string[];
+            cover_url: string;
+            source_type: string;
+            version_label: string;
+            location: string;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** Format: date-time */
+            checked_at: string;
+            reader_url: string;
+            notice: string;
+        };
+        FeedbackSummary: {
+            /** Format: uuid */
+            id: string;
+            category: components["schemas"]["PublicFeedbackCategoryEnum"];
+            status: components["schemas"]["PublicFeedbackStatusEnum"];
+            excerpt: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            revision: number;
+            follow_up: boolean;
+        };
+        FeedbackUpdateOutput: {
+            /** Format: uuid */
+            request_id: string;
+            accepted_revision: number;
+            record: components["schemas"]["FeedbackDetailOutput"];
+        };
         FileAdoptionInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -4350,6 +4550,14 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["WorkCard"][];
         };
+        PatchedFeedbackUpdateInputRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            expected_revision?: number;
+            status?: components["schemas"]["PublicFeedbackStatusEnum"];
+            note?: string;
+            follow_up?: boolean;
+        };
         PatchedMediaMetadataRequest: {
             /** Format: date-time */
             expected_updated_at?: string;
@@ -4985,8 +5193,19 @@ export interface components {
             export_formats: string[];
             notice: string;
         };
+        /**
+         * @description * `reading_history` - reading_history
+         *     * `search_history` - search_history
+         *     * `annotations` - annotations
+         *     * `memories` - memories
+         *     * `plans` - plans
+         *     * `followed_topics` - followed_topics
+         *     * `source_follows` - source_follows
+         * @enum {string}
+         */
+        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "plans" | "followed_topics" | "source_follows";
         PrivacyTargetInputRequest: {
-            category: components["schemas"]["CategoryEnum"];
+            category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
             id: string;
             revision: string;
@@ -5052,6 +5271,7 @@ export interface components {
             readonly turns: components["schemas"]["PrivateRecord"][];
         };
         ProjectCreateInputRequest: {
+            expected_owner_id?: number;
             /**
              * Format: uuid
              * @description 客户端每次新操作生成，重试沿用。
@@ -5076,6 +5296,19 @@ export interface components {
             layout?: unknown;
             comparison?: components["schemas"]["ImportedComparisonInputRequest"];
             turns?: components["schemas"]["ImportedTurnInputRequest"][];
+        };
+        PublicCitationInputRequest: {
+            /** Format: uuid */
+            edition_id?: string;
+            reference?: components["schemas"]["EvidenceReferenceInputRequest"];
+            selected_text?: string;
+        };
+        PublicCitationOutput: {
+            readonly source: unknown;
+            readonly reference: unknown;
+            readonly citations: {
+                [key: string]: unknown;
+            };
         };
         PublicClassificationLink: {
             /** Format: uuid */
@@ -5108,6 +5341,45 @@ export interface components {
             name: string;
             slug: string;
         };
+        /**
+         * @description * `content` - 内容
+         *     * `function` - 功能
+         *     * `usage` - 使用咨询
+         *     * `suggestion` - 改进建议
+         *     * `citation` - 引用
+         *     * `accessibility` - 无障碍
+         *     * `other` - 其他
+         * @enum {string}
+         */
+        PublicFeedbackCategoryEnum: "content" | "function" | "usage" | "suggestion" | "citation" | "accessibility" | "other";
+        PublicFeedbackInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** @default other */
+            category: components["schemas"]["PublicFeedbackCategoryEnum"];
+            body: string;
+            contact?: string;
+            /** @default  */
+            path: string;
+            consent: boolean;
+        };
+        PublicFeedbackReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            request_id: string;
+            status: components["schemas"]["PublicFeedbackStatusEnum"];
+            /** Format: date-time */
+            created_at: string;
+            message: string;
+        };
+        /**
+         * @description * `submitted` - 已提交
+         *     * `reviewing` - 处理中
+         *     * `resolved` - 已处理
+         * @enum {string}
+         */
+        PublicFeedbackStatusEnum: "submitted" | "reviewing" | "resolved";
         PublicJournalContent: {
             /** Format: uuid */
             id?: string | null;
@@ -5165,6 +5437,42 @@ export interface components {
             /** @description Historical snapshot media is retained as JSON. */
             portrait_media?: unknown;
             scholar_slug?: string | null;
+        };
+        /**
+         * @description * `available` - available
+         *     * `replaced` - replaced
+         *     * `unavailable` - unavailable
+         *     * `page` - page
+         * @enum {string}
+         */
+        PublicSourceAvailabilityEnum: "available" | "replaced" | "unavailable" | "page";
+        PublicSourceStatus: {
+            path: string;
+            canonical_path: string;
+            status: components["schemas"]["PublicSourceAvailabilityEnum"];
+            title: string;
+            authors: string[];
+            cover_url: string;
+            source_type: string;
+            version_label: string;
+            location: string;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** Format: date-time */
+            checked_at: string;
+            can_subscribe: boolean;
+            reader_url: string;
+            /** Format: uuid */
+            work_id: string | null;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            catalog_revision_id: string | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            notice: string;
         };
         PublicTheoryAssociation: {
             /** Format: uuid */
@@ -5649,6 +5957,16 @@ export interface components {
         SelectionInputActionEnum: "add" | "remove" | "undo" | "reorder";
         SelectionInputRequest: {
             expected_revision: number;
+            expected_owner_id?: number;
+            /**
+             * Format: uuid
+             * @description 未知响应重试沿用原标识；旧客户端可省略。
+             */
+            request_id?: string;
+            note?: string;
+            notes?: {
+                [key: string]: string;
+            };
             action: components["schemas"]["SelectionInputActionEnum"];
             references?: components["schemas"]["EvidenceReferenceInputRequest"][];
             reference_id?: string;
@@ -5765,6 +6083,72 @@ export interface components {
          * @enum {string}
          */
         SourceEnum: "manual" | "pdf_page_labels" | "embedded_text" | "ocr" | "sequence" | "file_index" | "unknown";
+        SourceEventOutput: {
+            /** Format: uuid */
+            id: string;
+            action: components["schemas"]["SourceEventOutputActionEnum"];
+            before_status: string;
+            after_status: string;
+            /** Format: date-time */
+            observed_at: string;
+            revision: number;
+        };
+        /**
+         * @description * `subscribe` - subscribe
+         *     * `unsubscribe` - unsubscribe
+         *     * `mark_read` - mark_read
+         *     * `changed` - changed
+         * @enum {string}
+         */
+        SourceEventOutputActionEnum: "subscribe" | "unsubscribe" | "mark_read" | "changed";
+        /**
+         * @description * `subscribe` - subscribe
+         *     * `unsubscribe` - unsubscribe
+         *     * `mark_read` - mark_read
+         * @enum {string}
+         */
+        SourceFollowCommandActionEnum: "subscribe" | "unsubscribe" | "mark_read";
+        SourceFollowCommandRequest: {
+            path: string;
+            action: components["schemas"]["SourceFollowCommandActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            expected_revision: number;
+        };
+        SourceFollowOutput: {
+            /** Format: uuid */
+            id: string;
+            owner_id: string;
+            path: string;
+            active: boolean;
+            revision: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            last_checked_at: string | null;
+            check_error: string;
+            unread_count: number;
+            updates_paused: boolean;
+            source: components["schemas"]["PublicSourceStatus"];
+            notice: string;
+            history: components["schemas"]["SourceHistoryOutput"];
+        };
+        SourceFollowsPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            owner_id: string;
+            results: components["schemas"]["SourceFollowOutput"][];
+            notice: string;
+        };
+        SourceHistoryOutput: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["SourceEventOutput"][];
+        };
         StatementInputRequest: {
             proposition: string;
             subject?: string;
@@ -7587,6 +7971,96 @@ export interface operations {
             };
         };
     };
+    catalog_admin_public_feedback_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `content` - content
+                 *     * `function` - function
+                 *     * `usage` - usage
+                 *     * `suggestion` - suggestion
+                 *     * `citation` - citation
+                 *     * `accessibility` - accessibility
+                 *     * `other` - other
+                 */
+                category?: "" | "content" | "function" | "usage" | "suggestion" | "citation" | "accessibility" | "other";
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `` -
+                 *     * `submitted` - submitted
+                 *     * `reviewing` - reviewing
+                 *     * `resolved` - resolved
+                 */
+                status?: "" | "submitted" | "reviewing" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackListOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_public_feedback_retrieve: {
+        parameters: {
+            query?: {
+                history_page?: number;
+            };
+            header?: never;
+            path: {
+                feedback_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackDetailOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_public_feedback_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                feedback_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedFeedbackUpdateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedFeedbackUpdateInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedFeedbackUpdateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackUpdateOutput"];
+                };
+            };
+        };
+    };
     catalog_admin_recommendation_issues_list: {
         parameters: {
             query?: never;
@@ -8467,6 +8941,39 @@ export interface operations {
             };
         };
     };
+    catalog_feedback_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicFeedbackInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicFeedbackInputRequest"];
+                "multipart/form-data": components["schemas"]["PublicFeedbackInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFeedbackReceipt"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFeedbackReceipt"];
+                };
+            };
+        };
+    };
     catalog_home: {
         parameters: {
             query?: never;
@@ -9297,6 +9804,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditCapabilitiesOutput"];
+                };
+            };
+        };
+    };
+    reading_citation_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PublicCitationInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicCitationInputRequest"];
+                "multipart/form-data": components["schemas"]["PublicCitationInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCitationOutput"];
                 };
             };
         };
@@ -10737,6 +11269,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_source_follows_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFollowsPage"];
+                };
+            };
+        };
+    };
+    reading_source_follows_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceFollowCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SourceFollowCommandRequest"];
+                "multipart/form-data": components["schemas"]["SourceFollowCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFollowOutput"];
+                };
+            };
+        };
+    };
+    reading_source_follows_retrieve: {
+        parameters: {
+            query?: {
+                history_page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFollowOutput"];
+                };
+            };
+        };
+    };
+    reading_source_status_retrieve: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSourceStatus"];
                 };
             };
         };

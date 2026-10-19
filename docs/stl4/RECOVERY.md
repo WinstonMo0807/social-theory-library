@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-19 公共交互检查点
+
+先看CURRENT_PROGRESS与HOME_SUPPORT_IMPLEMENTATION、PUBLIC_FEEDBACK、SOURCE_UPDATES、SHARED_CITATION四份单元记录。帮助/反馈/来源/共享引用须整组恢复，反馈模型10行已在e310536，本组配0070迁移，0013亦未执行。原未提交成果继续保留。下一步保存已收口catalog后端及前端，再完成PDF28–32观点入口、真实证据结果与上下文。正式功能/视觉验收仍在全量实施之后，无需等待用户重复“继续”。
+
 ## 最新接续：2026-10-18 公共导航
 
 PDF18导航独立保存，见PUBLIC_NAVIGATION_20261018及CURRENT_PROGRESS顶部；ReaderCenter本次仅纳入section同步，后续来源入口/收藏变更仍留工作区。6目标ESLint、导航CSS及当前全量TypeScript通过，不代表浏览器或正式视觉验收。下一步收口10–17帮助/反馈/来源关注、20–22共享引用与23–27馆藏查询。本次检查点记录的0070模型/迁移跨批次问题须在反馈单元配齐，不改写旧提交、不应用迁移。
