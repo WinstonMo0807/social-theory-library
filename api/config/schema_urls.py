@@ -11,6 +11,7 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 
 VERIFIED_NAMES = {
+    "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
     "local-theory-graph",

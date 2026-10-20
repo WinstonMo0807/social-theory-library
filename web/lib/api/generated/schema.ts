@@ -1410,6 +1410,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/subdisciplines/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_subdisciplines_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/subdisciplines/{slug}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_subdisciplines_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/theory-system/directory/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_theory_system_directory_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/theory-system/evidence/{id}/focus/": {
         parameters: {
             query?: never;
@@ -3800,6 +3848,59 @@ export interface components {
          * @enum {string}
          */
         DecisionEnum: "accepted" | "ignored" | "corrected" | "needs_review";
+        DirectoryDiscipline: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+        };
+        DirectoryGroup: {
+            /** Format: uuid */
+            id: string | null;
+            title: string;
+            parent: components["schemas"]["DirectoryIdentity"] | null;
+            items: components["schemas"]["DirectoryItem"][];
+        };
+        DirectoryIdentity: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            kind: string;
+            href: string;
+        };
+        DirectoryItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            kind: string;
+            href: string;
+            summary: string;
+            cover_url: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            child_count: number;
+        };
+        Discipline: {
+            /** Format: uuid */
+            readonly id: string;
+            code: string;
+            name: string;
+            foreign_name?: string;
+            slug: string;
+            description?: string;
+            introduction?: string;
+            /** Format: uri */
+            hero_image?: string | null;
+            /** Format: int64 */
+            sort_order?: number;
+            readonly theory_count: number;
+            readonly subdiscipline_count: number;
+            readonly topic_count: number;
+            readonly work_count: number;
+            readonly scholar_count: number;
+        };
         DisciplineCompact: {
             /** Format: uuid */
             readonly id: string;
@@ -4925,10 +5026,12 @@ export interface components {
             source_node: string;
             readonly source_name: string;
             readonly source_slug: string;
+            readonly source_node_type: string;
             /** Format: uuid */
             target_node: string;
             readonly target_name: string;
             readonly target_slug: string;
+            readonly target_node_type: string;
             relation_type: components["schemas"]["KnowledgeRelationRelationTypeEnum"];
             readonly relation_label: string;
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
@@ -6088,6 +6191,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ReadingProgress"][];
+        };
+        PaginatedSubdisciplineListList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SubdisciplineList"][];
         };
         PaginatedWorkCardList: {
             /** @example 123 */
@@ -8594,6 +8712,214 @@ export interface components {
             /** @description 本人明确拆分的 0—12 个子命题；不自动认定为作者主张或有效反证。 */
             subclaims: components["schemas"]["SubclaimInputRequest"][];
         };
+        Subdiscipline: {
+            /** Format: uuid */
+            readonly id: string;
+            name: string;
+            foreign_name?: string;
+            slug: string;
+            description?: string;
+            /** Format: uri */
+            hero_image?: string | null;
+            readonly discipline: components["schemas"]["Discipline"] | null;
+            readonly parent: components["schemas"]["SubdisciplineLink"] | null;
+            research_object?: string;
+            core_questions?: unknown;
+            formation_period?: string;
+            research_directions?: unknown;
+            methods?: unknown;
+            representative_issues?: unknown;
+            readonly theories: components["schemas"]["SubdisciplineTheory"][];
+            readonly topics: components["schemas"]["SubdisciplineTopic"][];
+            readonly works: components["schemas"]["SubdisciplineWorkCard"][];
+            readonly scholars: components["schemas"]["SubdisciplineScholar"][];
+            readonly featured: boolean;
+            readonly href: string;
+            readonly children: components["schemas"]["SubdisciplineLink"][];
+            readonly key_questions: components["schemas"]["SubdisciplineQuestion"][];
+            readonly core_works: components["schemas"]["SubdisciplineWork"][];
+            readonly works_pagination: components["schemas"]["SubdisciplineWorksPagination"];
+            readonly reading_paths: components["schemas"]["SubdisciplineReadingPath"][];
+            readonly sources: components["schemas"]["SubdisciplineSource"][];
+        };
+        SubdisciplineCanonicalTarget: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            href: string;
+        };
+        SubdisciplineDiscipline: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+        };
+        SubdisciplineLegacyIdentity: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            role: string;
+            source: string;
+        };
+        SubdisciplineLink: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            href: string;
+        };
+        SubdisciplineList: {
+            /** Format: uuid */
+            readonly id: string;
+            name: string;
+            slug: string;
+            description?: string;
+            /** Format: uri */
+            hero_image?: string | null;
+            research_object?: string;
+            readonly featured: boolean;
+            readonly href: string;
+            readonly discipline: components["schemas"]["SubdisciplineDiscipline"] | null;
+        };
+        SubdisciplineQuestion: {
+            /** Format: uuid */
+            id: string | null;
+            title: string;
+            description: string;
+            href: string | null;
+            source: string;
+        };
+        SubdisciplineReadingPath: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            href: string;
+            introduction: string;
+            relation_label: string;
+        };
+        SubdisciplineScholar: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            href: string;
+            /** Format: uuid */
+            person_id: string;
+            source_label: string;
+            reason: string;
+            /** Format: double */
+            confidence: number;
+            approved: boolean;
+            portrait_url: string;
+            summary: string;
+            relation_label: string;
+            source_href: string | null;
+        };
+        SubdisciplineSource: {
+            /** Format: uuid */
+            id: string;
+            source_kind: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            title: string;
+            edition_label: string;
+            quote: string;
+            pdf_page: number;
+            printed_page_label: string;
+            reader_href: string;
+        };
+        SubdisciplineTheory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            role: string;
+            source: string;
+            kind: string;
+            node_type: string | null;
+            href: string;
+            summary: string;
+            cover_url: string;
+            canonical_target: components["schemas"]["SubdisciplineCanonicalTarget"] | null;
+            legacy_identities: components["schemas"]["SubdisciplineLegacyIdentity"][];
+        };
+        SubdisciplineTopic: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            href: string;
+            relation_label: string;
+            description: string;
+            hero_image: string;
+            source: string;
+        };
+        SubdisciplineWork: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            subtitle: string;
+            document_type: string;
+            language: string;
+            author: string;
+            year: number | null;
+            publisher: string;
+            cover_url: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            catalog_revision_id: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            source_status: string;
+            /** Format: uuid */
+            asset_id: string | null;
+            reader_href: string | null;
+            detail_href: string;
+            relation_label: string;
+            source: string;
+            evidence: components["schemas"]["SubdisciplineSource"] | null;
+        };
+        /** @description Keep the old card contract while allowing a formal secondary edition. */
+        SubdisciplineWorkCard: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["EditionCompact"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+        };
+        SubdisciplineWorksPagination: {
+            count: number;
+            page: number;
+            total_pages: number;
+        };
         /**
          * @description * `none` - 尚无文字
          *     * `embedded` - PDF 原生文本
@@ -8606,6 +8932,18 @@ export interface components {
             theory_traditions: number;
             subdisciplines: number;
             debates: number;
+        };
+        TheoryDirectory: {
+            disciplines: components["schemas"]["DirectoryDiscipline"][];
+            kind: string;
+            discipline: string | null;
+            parent: components["schemas"]["DirectoryIdentity"] | null;
+            breadcrumbs: components["schemas"]["DirectoryIdentity"][];
+            hierarchy_truncated: boolean;
+            count: number;
+            page: number;
+            total_pages: number;
+            groups: components["schemas"]["DirectoryGroup"][];
         };
         TheoryOverviewDiscipline: {
             /** Format: uuid */
@@ -11816,6 +12154,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GlobalSearchOutput"];
+                };
+            };
+        };
+    };
+    catalog_subdisciplines_list: {
+        parameters: {
+            query?: {
+                /** @description 已公开学科的 slug 或 UUID */
+                discipline?: string;
+                /** @description true 仅策展精选，false 仅非精选；省略返回全部 */
+                featured?: boolean;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 子学科名称、已确认关联概念或已公开主题 */
+                q?: string;
+                /** @description q 的兼容别名 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSubdisciplineListList"];
+                };
+            };
+        };
+    };
+    catalog_subdisciplines_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 关联文献页码，正整数；每页48条，默认1。无效值400，越界404。 */
+                works_page?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subdiscipline"];
+                };
+            };
+        };
+    };
+    catalog_theory_system_directory_retrieve: {
+        parameters: {
+            query?: {
+                discipline?: string;
+                page?: number;
+                /** @description A published parent UUID or slug; absence shows all current-page groups. */
+                parent?: string;
+                q?: string;
+                type?: "concept" | "debate" | "research_problem" | "subdiscipline" | "theory_tradition";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TheoryDirectory"];
                 };
             };
         };

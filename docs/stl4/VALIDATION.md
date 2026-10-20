@@ -1,5 +1,18 @@
 # 验收记录
 
+## 2026-10-20 PDF50/51/54子学科与目录静态收口
+
+- 实际读取唯一final-r2 PDF50/51/54及下一单元52/53/55–57原图；13张装饰裁片逐项查看，仅纯照片，不是实施页截图。
+- `ast.parse`检查本单元白名单15个Python源码/用例/夹具，最终退出0（d82d58）。最初计数辅助脚本对`"x"*241`做literal_eval报错，源码AST本身已全部通过；改为只数AST列表成员后c32465及最终检查通过。没有执行测试函数。
+- `node node_modules/eslint/bin/eslint.js app/subdisciplines/page.tsx "app/subdisciplines/[slug]/page.tsx" app/theories/directory/page.tsx components/public/subdiscipline-public-view.tsx components/theory/theory-directory.tsx components/admin/preview/knowledge-page-preview.tsx lib/api/taxonomy.server.ts lib/api/taxonomy.types.ts lib/api/theory-directory.server.ts lib/api/theory-directory.types.ts lib/api/knowledge.types.ts tests/theory-directory-v306.spec.ts tests/theory-overview-v306.spec.ts tests/subdiscipline-v306.spec.ts`（web）：最终f5c25d退出0，14文件、0错误/4条动态图片优化建议。
+- PostCSS parse两CSS最终95ec97退出0，subdiscipline.module.css135节点、theory-directory.module.css102节点。只验证语法，不证明实际布局。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web）：初次44169退出1，因目录status将两个判别值写在同一union成员，导致收窄失败；拆为两个成员后84244退出0。补轻量列表、真实文献分页并生成最终契约后75884退出0（1dc355）。
+- 本进程`DATABASE_URL=sqlite:///:memory:`、`PUBLIC_DEPLOYMENT_MODE=false`、`DJANGO_DEBUG=true`、`PYTHONIOENCODING=utf-8`执行`.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-subdiscipline-schema-20261020.json --validate`：最终ed08cd退出0，0错误/10条既有Home/Scholar/Topic类型提示。原185路径全部保留，增3条至188。
+- 使用openapi-typescript的openapiTS/astToString同步api/openapi/schema.json与web/lib/api/generated/schema.ts，最终eebb32退出0。没有连接真实数据库或运行迁移。
+- 新增目录10函数/18参数案例、子学科17函数/27参数案例，合计27函数/45案例；目录8个真实隔离API浏览器场景、子学科20个，共28个，只编写未运行。既有理论总览用例同步目录新标题，夹具启动器接seed_subdisciplines但未执行。
+- 交叉审查修复轻量列表、文献48项真实分页、次版证据独立身份、直属条目展开关键词、手机抽屉同条目重开与公开来源收严。ATLAS只标记50/51/54源码接入，正式验收仍待核实。
+- 没有正式测试、浏览器、构建、迁移、真实OCR/模型/NAS、检索质量评测、生产清理或部署。检查点只保存本单元57路径，其他继承修改保留。
+
 ## 2026-10-20 PDF45–49理论条目静态记录
 
 - 从本单元精确白名单取27个Python文件，`ast.parse`全部退出0；包括0016、两隔离启动/夹具脚本和三份新后端用例。未执行Python业务或测试。

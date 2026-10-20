@@ -112,9 +112,11 @@ export type NormalizedKnowledgeRelation = {
   source_node: string;
   source_name: string;
   source_slug: string;
+  source_node_type?: string;
   target_node: string;
   target_name: string;
   target_slug: string;
+  target_node_type?: string;
   relation_type: string;
   relation_label: string;
   direction: string;

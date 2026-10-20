@@ -528,8 +528,10 @@ class TheoryWorkGroupsSerializer(serializers.Serializer):
 class KnowledgeRelationSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source="source_node.canonical_name_zh", read_only=True)
     source_slug = serializers.CharField(source="source_node.slug", read_only=True)
+    source_node_type = serializers.CharField(source="source_node.node_type", read_only=True)
     target_name = serializers.CharField(source="target_node.canonical_name_zh", read_only=True)
     target_slug = serializers.CharField(source="target_node.slug", read_only=True)
+    target_node_type = serializers.CharField(source="target_node.node_type", read_only=True)
     relation_label = serializers.CharField(source="get_relation_type_display", read_only=True)
     evidence = serializers.SerializerMethodField()
 
@@ -540,9 +542,11 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
             "source_node",
             "source_name",
             "source_slug",
+            "source_node_type",
             "target_node",
             "target_name",
             "target_slug",
+            "target_node_type",
             "relation_type",
             "relation_label",
             "direction",

@@ -1,33 +1,37 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Search } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
-import { KnowledgeNodeCard, TheoryEmpty, nodeTypeLabels } from "@/components/theory-system-ui";
-import { loadDisciplines } from "@/lib/api/taxonomy.server";
-import { loadTheorySystemNodesPage } from "@/lib/api/knowledge.server";
+import { TheoryDirectory } from "@/components/theory/theory-directory";
+import { loadTheoryDirectory, loadTheoryDirectorySelection } from "@/lib/api/theory-directory.server";
+import { theoryDirectoryKinds, type TheoryDirectoryFailure, type TheoryDirectoryFilters, type TheoryDirectoryKind, type TheoryDirectorySelectionState } from "@/lib/api/theory-directory.types";
+import { ServerApiError } from "@/lib/api/server-request";
 import { searchPage } from "@/lib/search-context";
-import { ScopedSearchPagination } from "@/components/scoped-search";
 
-export const metadata: Metadata = { title: "理论知识目录", description: "浏览公开的理论传统、子学科、概念、争论和研究问题。" };
+export const metadata: Metadata = { title: "理论目录", description: "按真实学科、条目层级与理论关系查找已公开资料。" };
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)?.trim() || "";
 
-const allowedTypes = ["theory_tradition", "subdiscipline", "concept", "debate", "research_problem"] as const;
-
-export default async function TheoryDirectoryPage({ searchParams }: { searchParams: Promise<{ type?: string; discipline?: string; q?: string; sort?: string; page?: string }> }) {
+export default async function TheoryDirectoryPage({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const params = await searchParams;
-  const nodeType = allowedTypes.includes(params.type as typeof allowedTypes[number]) ? params.type! : "theory_tradition";
-  const page = searchPage(params.page);
-  const sort = params.sort === "updated" ? "updated" : "name";
-  const [nodePage, disciplines] = await Promise.all([loadTheorySystemNodesPage({ type: nodeType, discipline: params.discipline, q: params.q, sort }, page), loadDisciplines()]);
-  const nodes = nodePage.results;
-  const filters = {discipline: params.discipline, q: params.q, sort};
-  const tabHref = (type: string) => { const query = new URLSearchParams({type, sort}); if(params.q)query.set("q",params.q); if(params.discipline)query.set("discipline",params.discipline); return `/theories/directory?${query}`; };
-  return <><main className="page-shell theory-system-page theory-directory-page v307-knowledge">
-    <div className="theory-breadcrumb"><Link href="/theories">探索理论流派</Link><span>/</span><strong>理论知识目录</strong></div>
-    <header><p className="eyebrow">规范知识节点</p><h1>{nodeTypeLabels[nodeType]}</h1><p>只展示已经审核并发布的规范条目。别名会指向同一个知识节点。</p></header>
-    <nav className="theory-tab-list" aria-label="知识类型">{allowedTypes.map((value) => <Link className={nodeType === value ? "active" : ""} aria-current={nodeType === value ? "page" : undefined} href={tabHref(value)} key={value}>{nodeTypeLabels[value]}</Link>)}</nav>
-    <form className="theory-directory-filters" action="/theories/directory"><input type="hidden" name="type" value={nodeType} /><label><span>所属学科</span><select name="discipline" defaultValue={params.discipline || ""}><option value="">全部学科</option>{disciplines.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}</select></label><label className="directory-search"><Search size={17} /><input name="q" defaultValue={params.q || ""} placeholder="搜索名称、别名或外文名" aria-label="搜索知识条目" /></label><label><span>排序</span><select name="sort" defaultValue={sort}><option value="name">按名称</option><option value="updated">最近更新</option></select></label><button type="submit">应用筛选</button></form>
-    <p className="knowledge-result-count">共 {nodePage.count} 个公开条目</p>
-    {nodes.length ? <section className="theory-node-grid">{nodes.map((node) => <KnowledgeNodeCard key={node.id} node={node} />)}</section> : <TheoryEmpty title="没有符合条件的公开条目" detail="调整学科或关键词后再次查询。" />}
-    <ScopedSearchPagination path="/theories/directory" context="theories" page={page} totalPages={nodePage.totalPages} params={{...filters, type:nodeType}}/>
-  </main><SiteFooter /></>;
+  const requestedKind = first(params.type);
+  const filters: TheoryDirectoryFilters = {
+    type: theoryDirectoryKinds.includes(requestedKind as TheoryDirectoryKind) ? requestedKind as TheoryDirectoryKind : "theory_tradition",
+    discipline: first(params.discipline), parent: first(params.parent), q: first(params.q),
+    selected: first(params.selected), page: searchPage(params.page),
+  };
+  const [directoryResult, selectionResult] = await Promise.allSettled([
+    loadTheoryDirectory(filters),
+    filters.selected ? loadTheoryDirectorySelection(filters.type, filters.selected) : Promise.resolve(null),
+  ]);
+  const directory = directoryResult.status === "fulfilled" ? directoryResult.value : null;
+  let failure: TheoryDirectoryFailure = null;
+  if (directoryResult.status === "rejected") {
+    const error = directoryResult.reason;
+    failure = error instanceof ServerApiError && error.status === 404 ? "unavailable"
+      : error instanceof ServerApiError && error.status === 400 ? "invalid" : "error";
+  }
+  const selection: TheoryDirectorySelectionState = !filters.selected ? { status: "none" }
+    : selectionResult.status === "rejected" ? { status: "error" }
+      : selectionResult.value ? { status: "available", data: selectionResult.value } : { status: "unavailable" };
+  return <><TheoryDirectory directory={directory} failure={failure} filters={filters} selection={selection} /><SiteFooter /></>;
 }

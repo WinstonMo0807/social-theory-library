@@ -12,6 +12,7 @@ from catalog.models import (
     Edition,
     KnowledgeNode,
     KnowledgeNodeAlias,
+    KnowledgeNodeSubdiscipline,
     LegacyKnowledgeMapping,
     Person,
     PersonNodeRelation,
@@ -22,6 +23,7 @@ from catalog.models import (
     Subdiscipline,
     TheorySchool,
     Topic,
+    TopicSubdisciplineRelation,
     Work,
 )
 from catalog.services.query_lexicon.normalization import normalize_term
@@ -356,6 +358,28 @@ class SearchService:
                 person__scholar_profile__editorial_status="published",
             ).values("node_id")
             contains_q |= Q(pk__in=verified_aliases) | Q(pk__in=representatives)
+        if context == SearchContext.SUBDISCIPLINES:
+            public = visibility == SearchVisibility.PUBLIC
+            aliases = KnowledgeNodeAlias.objects.filter(
+                Q(alias__icontains=query) | Q(normalized_alias__icontains=normalize_term(query)),
+            )
+            if public:
+                aliases = aliases.filter(is_verified=True)
+            related_nodes = KnowledgeNodeSubdiscipline.objects.filter(
+                Q(node__canonical_name_zh__icontains=query)
+                | Q(node__canonical_name_en__icontains=query)
+                | Q(node_id__in=aliases.values("node_id")),
+            )
+            related_topics = TopicSubdisciplineRelation.objects.filter(
+                Q(topic__name__icontains=query) | Q(topic__description__icontains=query),
+            )
+            if public:
+                related_nodes = related_nodes.filter(
+                    status="published", node__status="published", node__node_type__in=THEORY_NODE_TYPES,
+                )
+                related_topics = related_topics.filter(review_status="approved", topic__editorial_status="published")
+            contains_q |= Q(pk__in=related_nodes.values("subdiscipline_id"))
+            contains_q |= Q(pk__in=related_topics.values("subdiscipline_id"))
         entity_type = _entity_type_for_context(context)
         if entity_type:
             ids = _lexicon_entity_ids(
@@ -398,6 +422,9 @@ class SearchService:
             visibility=visibility,
         )
         queryset = self.apply_filters(queryset, context, filters or {})
+        if (context == SearchContext.SUBDISCIPLINES and visibility == SearchVisibility.PUBLIC
+                and _filter_value(filters or {}, "discipline")):
+            queryset = queryset.filter(discipline__editorial_status="published")
         return self.apply_query(
             queryset,
             context,
@@ -595,7 +622,7 @@ class SearchService:
             total = queryset.count()
             start = 0 if global_mode else (search_request.page - 1) * search_request.limit
             selected = list(queryset[start : start + search_request.limit])
-        results = [self._result(context, row, search_request.query) for row in selected]
+        results = [self._result(context, row, search_request.query, visibility=search_request.visibility) for row in selected]
         payload = {
             "context": context.value,
             "label": CONTEXT_LABELS[context],
@@ -612,7 +639,7 @@ class SearchService:
             }
         return payload
 
-    def _result(self, context: SearchContext, row, query: str) -> dict:
+    def _result(self, context: SearchContext, row, query: str, *, visibility=SearchVisibility.PUBLIC) -> dict:
         rank = int(getattr(row, "_search_rank", 4))
         match_type = {0: "exact", 1: "verified_alias", 2: "prefix", 3: "text"}.get(
             rank,
@@ -678,10 +705,9 @@ class SearchService:
                 metadata={"slug": row.slug},
             )
         elif context == SearchContext.SUBDISCIPLINES:
-            mapping = self.canonical_mapping("Subdiscipline", row.id)
             result.update(
-                entity_type="knowledge_node" if mapping else "subdiscipline",
-                id=str(mapping.node_id if mapping else row.id),
+                entity_type="subdiscipline",
+                id=str(row.id),
                 title=row.name,
                 subtitle=row.foreign_name,
                 description=row.description or row.research_object,
@@ -690,7 +716,9 @@ class SearchService:
                     "presentation_model": "Subdiscipline",
                     "presentation_id": str(row.id),
                     "slug": row.slug,
-                    "discipline": row.discipline.name,
+                    "discipline": row.discipline.name if row.discipline and (
+                        visibility == SearchVisibility.ADMIN or row.discipline.editorial_status == "published"
+                    ) else None,
                 },
             )
         elif context == SearchContext.THEORIES and isinstance(row, KnowledgeNode):

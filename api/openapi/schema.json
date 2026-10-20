@@ -5741,6 +5741,208 @@
                 }
             }
         },
+        "/api/catalog/subdisciplines/": {
+            "get": {
+                "operationId": "catalog_subdisciplines_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "discipline",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "已公开学科的 slug 或 UUID"
+                    },
+                    {
+                        "in": "query",
+                        "name": "featured",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "true 仅策展精选，false 仅非精选；省略返回全部"
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "子学科名称、已确认关联概念或已公开主题"
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "q 的兼容别名"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedSubdisciplineListList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/subdisciplines/{slug}/": {
+            "get": {
+                "operationId": "catalog_subdisciplines_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "works_page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "关联文献页码，正整数；每页48条，默认1。无效值400，越界404。"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subdiscipline"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/directory/": {
+            "get": {
+                "operationId": "catalog_theory_system_directory_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "discipline",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "parent",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "A published parent UUID or slug; absence shows all current-page groups."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "concept",
+                                "debate",
+                                "research_problem",
+                                "subdiscipline",
+                                "theory_tradition"
+                            ]
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheoryDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/theory-system/evidence/{id}/focus/": {
             "get": {
                 "operationId": "catalog_theory_system_evidence_focus_retrieve",
@@ -15375,6 +15577,210 @@
                 "type": "string",
                 "description": "* `accepted` - accepted\n* `ignored` - ignored\n* `corrected` - corrected\n* `needs_review` - needs_review"
             },
+            "DirectoryDiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "DirectoryGroup": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DirectoryIdentity"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DirectoryItem"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "items",
+                    "parent",
+                    "title"
+                ]
+            },
+            "DirectoryIdentity": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "kind",
+                    "name",
+                    "slug"
+                ]
+            },
+            "DirectoryItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "child_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "child_count",
+                    "cover_url",
+                    "href",
+                    "id",
+                    "kind",
+                    "name",
+                    "parent_id",
+                    "slug",
+                    "summary"
+                ]
+            },
+            "Discipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "maxLength": 80,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "foreign_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "theory_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "subdiscipline_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "topic_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "work_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "scholar_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
+                    "name",
+                    "scholar_count",
+                    "slug",
+                    "subdiscipline_count",
+                    "theory_count",
+                    "topic_count",
+                    "work_count"
+                ]
+            },
             "DisciplineCompact": {
                 "type": "object",
                 "properties": {
@@ -19073,6 +19479,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "source_node_type": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "target_node": {
                         "type": "string",
                         "format": "uuid"
@@ -19082,6 +19492,10 @@
                         "readOnly": true
                     },
                     "target_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node_type": {
                         "type": "string",
                         "readOnly": true
                     },
@@ -19142,9 +19556,11 @@
                     "relation_type",
                     "source_name",
                     "source_node",
+                    "source_node_type",
                     "source_slug",
                     "target_name",
                     "target_node",
+                    "target_node_type",
                     "target_slug",
                     "updated_at"
                 ]
@@ -22788,6 +23204,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/ReadingProgress"
+                        }
+                    }
+                }
+            },
+            "PaginatedSubdisciplineListList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineList"
                         }
                     }
                 }
@@ -31101,6 +31548,853 @@
                     "subclaims"
                 ]
             },
+            "Subdiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "foreign_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Discipline"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SubdisciplineLink"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "research_object": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "formation_period": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "research_directions": {},
+                    "methods": {},
+                    "representative_issues": {},
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineTheory"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineTopic"
+                        },
+                        "readOnly": true
+                    },
+                    "works": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineWorkCard"
+                        },
+                        "readOnly": true
+                    },
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineScholar"
+                        },
+                        "readOnly": true
+                    },
+                    "featured": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "href": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "children": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineLink"
+                        },
+                        "readOnly": true
+                    },
+                    "key_questions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineQuestion"
+                        },
+                        "readOnly": true
+                    },
+                    "core_works": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineWork"
+                        },
+                        "readOnly": true
+                    },
+                    "works_pagination": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SubdisciplineWorksPagination"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "reading_paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineReadingPath"
+                        },
+                        "readOnly": true
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineSource"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "children",
+                    "core_works",
+                    "discipline",
+                    "featured",
+                    "href",
+                    "id",
+                    "key_questions",
+                    "name",
+                    "parent",
+                    "reading_paths",
+                    "scholars",
+                    "slug",
+                    "sources",
+                    "theories",
+                    "topics",
+                    "works",
+                    "works_pagination"
+                ]
+            },
+            "SubdisciplineCanonicalTarget": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "slug"
+                ]
+            },
+            "SubdisciplineDiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "SubdisciplineLegacyIdentity": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "role",
+                    "slug",
+                    "source"
+                ]
+            },
+            "SubdisciplineLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "SubdisciplineList": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "research_object": {
+                        "type": "string"
+                    },
+                    "featured": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "href": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SubdisciplineDiscipline"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "discipline",
+                    "featured",
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "SubdisciplineQuestion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "description",
+                    "href",
+                    "id",
+                    "source",
+                    "title"
+                ]
+            },
+            "SubdisciplineReadingPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "introduction",
+                    "relation_label",
+                    "slug",
+                    "title"
+                ]
+            },
+            "SubdisciplineScholar": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_label": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "approved": {
+                        "type": "boolean"
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "source_href": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "approved",
+                    "confidence",
+                    "href",
+                    "id",
+                    "name",
+                    "person_id",
+                    "portrait_url",
+                    "reason",
+                    "relation_label",
+                    "slug",
+                    "source_href",
+                    "source_label",
+                    "summary"
+                ]
+            },
+            "SubdisciplineSource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "edition_id",
+                    "edition_label",
+                    "id",
+                    "pdf_page",
+                    "printed_page_label",
+                    "quote",
+                    "reader_href",
+                    "source_kind",
+                    "title",
+                    "work_id"
+                ]
+            },
+            "SubdisciplineTheory": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "canonical_target": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SubdisciplineCanonicalTarget"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "legacy_identities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SubdisciplineLegacyIdentity"
+                        }
+                    }
+                },
+                "required": [
+                    "canonical_target",
+                    "cover_url",
+                    "href",
+                    "id",
+                    "kind",
+                    "legacy_identities",
+                    "name",
+                    "node_type",
+                    "role",
+                    "slug",
+                    "source",
+                    "summary"
+                ]
+            },
+            "SubdisciplineTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "description",
+                    "hero_image",
+                    "href",
+                    "id",
+                    "name",
+                    "relation_label",
+                    "slug",
+                    "source"
+                ]
+            },
+            "SubdisciplineWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "type": "string"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail_href": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SubdisciplineSource"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "author",
+                    "catalog_revision_id",
+                    "cover_url",
+                    "detail_href",
+                    "document_revision_id",
+                    "document_type",
+                    "edition_id",
+                    "evidence",
+                    "id",
+                    "language",
+                    "publisher",
+                    "reader_href",
+                    "relation_label",
+                    "slug",
+                    "source",
+                    "source_status",
+                    "subtitle",
+                    "title",
+                    "year"
+                ]
+            },
+            "SubdisciplineWorkCard": {
+                "type": "object",
+                "description": "Keep the old card contract while allowing a formal secondary edition.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "cover": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_image": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "recommendation_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditionCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover",
+                    "cover_media",
+                    "disciplines",
+                    "document_type",
+                    "edition",
+                    "id",
+                    "recommendation_image",
+                    "recommendation_media",
+                    "subdisciplines",
+                    "theories",
+                    "title",
+                    "topics"
+                ]
+            },
+            "SubdisciplineWorksPagination": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "total_pages"
+                ]
+            },
             "TextSourceEnum": {
                 "enum": [
                     "none",
@@ -31131,6 +32425,71 @@
                     "debates",
                     "subdisciplines",
                     "theory_traditions"
+                ]
+            },
+            "TheoryDirectory": {
+                "type": "object",
+                "properties": {
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DirectoryDiscipline"
+                        }
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "discipline": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DirectoryIdentity"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "breadcrumbs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DirectoryIdentity"
+                        }
+                    },
+                    "hierarchy_truncated": {
+                        "type": "boolean"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DirectoryGroup"
+                        }
+                    }
+                },
+                "required": [
+                    "breadcrumbs",
+                    "count",
+                    "discipline",
+                    "disciplines",
+                    "groups",
+                    "hierarchy_truncated",
+                    "kind",
+                    "page",
+                    "parent",
+                    "total_pages"
                 ]
             },
             "TheoryOverviewDiscipline": {

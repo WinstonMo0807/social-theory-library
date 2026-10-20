@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 子学科与真实目录
+
+新增GET catalog/theory-system/directory：type/discipline/parent/q/page，公开真实父级分组与返回路径、每页20条、总数、直属子项数和循环截断提示。无效400、未公开筛选或越界404、真实空结果200。规范关系补source_node_type/target_node_type，不从名称判断概念类型。
+
+既有subdisciplines列表改轻量9字段，featured=true/false在分页前过滤；详情增加公开关联、独立来源与阅读路径，works_page每页48，works_pagination返回count/page/total_pages。非法页400、越界404；同页core_works/works和关系来源一致，编排来源独立。详情discipline/parent可空，列表discipline仅公开id/name/slug。证据版与默认卡片版独立，准确asset/revision/page/edition_label随各自入口。
+
+OpenAPI188路径保留原185路径，前端生成类型同步；没有重复运行路由、新迁移或实际数据修改。详见SUBDISCIPLINE_DIRECTORY_20261020。
+
 ## 2026-10-20 PDF45–49理论条目收口
 
 既有content-placements/node/{id}公开响应新增public_detail：确认用法、真实归属、title/explanatory_object/period/context以及准确span/asset/document_revision/page/reader_url；来源失效只计unavailable_usage_count，不回旧正文。规范理论公开书目增加edition_id/document_revision_id/source_status，关系增加逐项复核evidence；has_works在分页前过滤。

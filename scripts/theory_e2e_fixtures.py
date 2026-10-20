@@ -32,6 +32,9 @@ IDS = {
     "relation_related": "45000000-0000-4000-8000-000000000051",
     "relation_distinct": "45000000-0000-4000-8000-000000000052",
     "relation_evidence": "45000000-0000-4000-8000-000000000061",
+    "directory_parent": "45000000-0000-4000-8000-000000000071",
+    "directory_child": "45000000-0000-4000-8000-000000000072",
+    "directory_draft": "45000000-0000-4000-8000-000000000073",
 }
 
 
@@ -82,6 +85,22 @@ def seed_theory(actor):
                 primary_discipline=disciplines["discipline"], status=status)
             KnowledgeNodeDiscipline.objects.create(node=nodes[key], discipline=disciplines["discipline"],
                 relation_type="primary", status="published")
+        parent = KnowledgeNode.objects.create(
+            id=IDS["directory_parent"], node_type="theory_tradition", canonical_name_zh="E2E已确认层级",
+            slug="e2e-directory-parent", summary="明确设置的合成目录父级，不从名称或年份推断。",
+            primary_discipline=disciplines["discipline"], status="published",
+        )
+        nodes["theory"].parent = parent
+        nodes["theory"].save(update_fields=["parent", "updated_at"])
+        for key, name, slug, status in [
+            ("directory_child", "E2E目录子流派", "e2e-directory-child", "published"),
+            ("directory_draft", "E2E未公开层级条目", "e2e-directory-draft", "draft"),
+        ]:
+            KnowledgeNode.objects.create(
+                id=IDS[key], node_type="theory_tradition", canonical_name_zh=name, slug=slug,
+                summary="仅用于隔离验收的真实父级字段测试。", parent=parent,
+                primary_discipline=disciplines["discipline"], status=status,
+            )
         KnowledgeNodeAlias.objects.create(node=nodes["concept"], alias="E2E概念别名",
             is_verified=True, source_kind="editorial", created_by=actor)
         KnowledgeNodeAlias.objects.create(node=nodes["concept"], alias="ＰＡＲＡＬＬＥＬ",

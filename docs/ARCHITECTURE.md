@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-20 子学科与目录投影
+
+Subdiscipline、Discipline、Topic保持独立实体，目录是原有实体/正式知识节点的有界公开投影，不另建分类库。子学科轻量列表与详情分开，后者复用既有人工关系、内容编排、正式发布快照与准确来源。core_works及旧works共用真实分页，来源仍按自身版本读回；可靠旧映射保留原身份，不凭名字合并。目录按真实parent呈现并保护未公开层级，详细契约见stl4/SUBDISCIPLINE_DIRECTORY_20261020。没有新迁移。
+
 ## 2026-10-20 PDF45–49理论条目收口
 
 概念用法继续使用现有content_placements账本与EvidenceSpan，不建平行用法或原文表。规范理论及兼容旧接口统一服从当前发布快照/文件/人物权限；UI只消费经复核的投影。Subdiscipline等独立分类身份继续保留。

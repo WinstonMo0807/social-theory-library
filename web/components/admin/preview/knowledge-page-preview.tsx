@@ -105,7 +105,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
     }
     case "subdiscipline": {
       const item = data as Subdiscipline;
-      return <SubdisciplinePublicView item={{ ...item, works: (item.works ?? []).map(adaptApiWork) }} footer={footer} />;
+      return <SubdisciplinePublicView preview item={{ ...item, works: (item.works ?? []).map(adaptApiWork) }} footer={footer} />;
     }
     case "scholar": {
       const item = data as ApiScholar;

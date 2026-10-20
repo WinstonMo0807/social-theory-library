@@ -12,10 +12,12 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
 from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
@@ -67,6 +69,7 @@ from .serializers import (
     AdminWorkTheoryRelationSerializer,
     DisciplineSerializer,
     RecommendationPolicySerializer,
+    SubdisciplineListSerializer,
     SubdisciplineSerializer,
     TheoryTimelineEventSerializer,
 )
@@ -105,14 +108,19 @@ class DisciplineDetailView(generics.RetrieveAPIView):
     queryset = Discipline.objects.filter(editorial_status="published")
 
 
+@extend_schema_view(get=extend_schema(parameters=[
+    OpenApiParameter("q", str, description="子学科名称、已确认关联概念或已公开主题"),
+    OpenApiParameter("search", str, description="q 的兼容别名"),
+    OpenApiParameter("discipline", str, description="已公开学科的 slug 或 UUID"),
+    OpenApiParameter("featured", bool, description="true 仅策展精选，false 仅非精选；省略返回全部"),
+]))
 class SubdisciplineListView(generics.ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = SubdisciplineSerializer
+    serializer_class = SubdisciplineListSerializer
 
     def get_queryset(self):
         queryset = Subdiscipline.objects.filter(editorial_status="published").select_related(
             "discipline",
-            "parent",
         )
         query = (
             self.request.query_params.get("q", "").strip()
@@ -120,19 +128,31 @@ class SubdisciplineListView(generics.ListAPIView):
         )
         discipline = self.request.query_params.get("discipline", "").strip()
         if discipline:
+            queryset = queryset.filter(discipline__editorial_status="published")
             queryset = filter_slug_or_uuid(
                 queryset,
                 discipline,
                 slug_field="discipline__slug",
                 id_field="discipline_id",
             )
-        return SearchService(request=self.request).queryset(
+        featured = self.request.query_params.get("featured", "").strip().lower()
+        if featured not in {"", "true", "false"}:
+            raise ValidationError({"featured": "请选择 true 或 false。"})
+        if featured:
+            queryset = queryset.filter(curation_level__gt=0) if featured == "true" else queryset.filter(curation_level=0)
+        result = SearchService(request=self.request).queryset(
             SearchContext.SUBDISCIPLINES,
             query,
             base_queryset=queryset,
         )
+        if featured == "true" and not query:
+            result = result.order_by("-curation_level", "name", "pk")
+        return result
 
 
+@extend_schema_view(get=extend_schema(parameters=[
+    OpenApiParameter("works_page", int, description="关联文献页码，正整数；每页48条，默认1。无效值400，越界404。"),
+]))
 class SubdisciplineDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     serializer_class = SubdisciplineSerializer
@@ -141,6 +161,13 @@ class SubdisciplineDetailView(generics.RetrieveAPIView):
         "discipline",
         "parent",
     )
+
+    def get_serializer_context(self):
+        from .services.subdiscipline_publication import works_page_number
+        return {
+            **super().get_serializer_context(),
+            "works_page": works_page_number(self.request.query_params.get("works_page", "1")),
+        }
 
 
 class KnowledgeMatrixView(APIView):

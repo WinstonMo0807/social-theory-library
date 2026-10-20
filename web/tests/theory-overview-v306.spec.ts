@@ -128,9 +128,9 @@ test("a real out-of-range API page is shown as a read failure rather than empty 
 
 test("further browsing preserves actual directory routes and type filters", async ({ page }) => {
   for (const [title, href, heading] of [
-    ["理论传统", "/theories/directory?type=theory_tradition", "理论传统"],
+    ["理论传统", "/theories/directory?type=theory_tradition", "理论目录"],
     ["子学科", "/subdisciplines", "子学科"],
-    ["关键争论", "/theories/directory?type=debate", "理论争论"],
+    ["关键争论", "/theories/directory?type=debate", "理论目录"],
   ]) {
     await page.goto("/theories");
     const link = page.getByRole("navigation", { name: "进一步浏览", exact: true }).getByRole("link", { name: new RegExp(`^${title}`) });

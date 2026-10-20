@@ -50,6 +50,7 @@ from .models import (
     PersonNodeRelation,
     PublicationState,
     ReadingPath,
+    Subdiscipline,
     RelationReviewStatus,
     TheoryReviewTask,
     TheoryTimelineEvent,
@@ -315,7 +316,9 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
             ).values("work_id").distinct()
             counts = {
                 "theory_traditions": nodes.filter(node_type="theory_tradition").count(),
-                "subdisciplines": nodes.filter(node_type="subdiscipline").count(),
+                "subdisciplines": Subdiscipline.objects.filter(
+                    discipline=discipline, editorial_status="published",
+                ).count(),
                 "works": work_ids.count(),
             }
             discipline_rows.append(
@@ -376,9 +379,7 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
                     "theory_traditions": _published_node_queryset()
                     .filter(node_type="theory_tradition")
                     .count(),
-                    "subdisciplines": _published_node_queryset()
-                    .filter(node_type="subdiscipline")
-                    .count(),
+                    "subdisciplines": Subdiscipline.objects.filter(editorial_status="published").count(),
                     "debates": _published_node_queryset().filter(node_type="debate").count(),
                 },
                 "reading_paths": ReadingPathSerializer(
@@ -492,7 +493,9 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
         )
         counts = {
             "theory_traditions": nodes.filter(node_type="theory_tradition").count(),
-            "subdisciplines": nodes.filter(node_type="subdiscipline").count(),
+            "subdisciplines": Subdiscipline.objects.filter(
+                discipline=discipline, editorial_status="published",
+            ).count(),
             "debates": nodes.filter(node_type="debate").count(),
             "scholars": scholar_ids.count(),
             "works": work_ids.count(),

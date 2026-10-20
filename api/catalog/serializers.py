@@ -72,6 +72,12 @@ from .services.publication_eligibility import (
     public_edition_q,
 )
 from .services.text import clean_page_label, normalize_search_text
+from .subdiscipline_public_schema import (
+    SubdisciplineDisciplineSerializer, SubdisciplineLinkSerializer, SubdisciplineQuestionSerializer,
+    SubdisciplineReadingPathSerializer, SubdisciplineScholarSerializer,
+    SubdisciplineSourceSerializer, SubdisciplineTheorySerializer,
+    SubdisciplineTopicSerializer, SubdisciplineWorkSerializer, SubdisciplineWorksPaginationSerializer,
+)
 
 
 def _available_slug(model, value: str, instance=None) -> str:
@@ -1834,35 +1840,94 @@ class DisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerial
             "scholar_count",
         )
 
-    def get_theory_count(self, obj):
-        return obj.theory_relations.filter(
-            review_status=RelationReviewStatus.APPROVED,
-            theory_school__editorial_status="published",
-        ).values("theory_school_id").distinct().count()
+    def get_theory_count(self, obj) -> int:
+        from .services.subdiscipline_publication import discipline_theory_count
+        return discipline_theory_count(obj)
 
-    def get_subdiscipline_count(self, obj):
+    def get_subdiscipline_count(self, obj) -> int:
         return obj.subdisciplines.filter(editorial_status="published").count()
 
-    def get_topic_count(self, obj):
+    def get_topic_count(self, obj) -> int:
         return obj.topic_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
             topic__editorial_status="published",
         ).values("topic_id").distinct().count()
 
-    def get_work_count(self, obj):
+    def get_work_count(self, obj) -> int:
         return obj.work_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
         ).filter(public_edition_q(prefix="work__editions")).values(
             "work_id"
         ).distinct().count()
 
-    def get_scholar_count(self, obj):
+    def get_scholar_count(self, obj) -> int:
         direct = obj.person_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
             person__scholar_profile__editorial_status="published",
             person__authority_status=Person.AuthorityStatus.VERIFIED,
         ).values("person_id")
         return direct.distinct().count()
+
+
+class SubdisciplineWorkCardSerializer(WorkCardSerializer):
+    """Keep the old card contract while allowing a formal secondary edition."""
+
+    def _public_catalog(self, obj):
+        if not hasattr(self, "_public_catalog_cache"):
+            self._public_catalog_cache = {}
+        if obj.pk not in self._public_catalog_cache:
+            edition = public_editions().filter(work=obj).order_by(
+                "-is_primary", "-published_at", "id",
+            ).first()
+            self._public_catalog_cache[obj.pk] = edition, active_catalog_snapshot(edition)
+        return self._public_catalog_cache[obj.pk]
+
+    def get_cover(self, obj) -> str:
+        edition, snapshot = self._public_catalog(obj)
+        work_data = snapshot.get("work") or {}
+        if edition and (work_data.get("cover") or work_data.get("cover_media")):
+            return reverse("public-work-cover", kwargs={"work_id": obj.pk}) + f"?edition_id={edition.pk}"
+        return ""
+
+    @extend_schema_field(EditionCompactSerializer(allow_null=True))
+    def get_edition(self, obj):
+        edition = self._public_edition(obj)
+        if edition is None:
+            return None
+        data = EditionCompactSerializer(edition, context=self.context).data
+        asset = edition.active_catalog_revision.reader_asset
+        if not (
+            asset and asset.edition_id == edition.pk and asset.kind == Asset.Kind.NORMALIZED
+            and asset.status == Asset.Status.READY and asset.validation_status == Asset.ValidationStatus.VALID
+            and asset.access_status in _viewer_asset_statuses(self.context) and asset.file
+        ):
+            data["readable_asset"] = None
+        return data
+
+
+class SubdisciplineListSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
+    discipline = serializers.SerializerMethodField()
+    featured = serializers.SerializerMethodField()
+    href = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subdiscipline
+        fields = (
+            "id", "name", "slug", "description", "hero_image", "research_object",
+            "featured", "href", "discipline",
+        )
+
+    @extend_schema_field(SubdisciplineDisciplineSerializer(allow_null=True))
+    def get_discipline(self, obj):
+        if obj.discipline is None or obj.discipline.editorial_status != "published":
+            return None
+        return {"id": str(obj.discipline_id), "name": obj.discipline.name, "slug": obj.discipline.slug}
+
+    def get_featured(self, obj) -> bool:
+        return obj.curation_level > 0
+
+    def get_href(self, obj) -> str:
+        return f"/subdisciplines/{obj.slug}"
 
 
 class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
@@ -1872,6 +1937,14 @@ class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSer
     topics = serializers.SerializerMethodField()
     works = serializers.SerializerMethodField()
     scholars = serializers.SerializerMethodField()
+    featured = serializers.SerializerMethodField()
+    href = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+    key_questions = serializers.SerializerMethodField()
+    core_works = serializers.SerializerMethodField()
+    works_pagination = serializers.SerializerMethodField()
+    reading_paths = serializers.SerializerMethodField()
+    sources = serializers.SerializerMethodField()
 
     class Meta:
         model = Subdiscipline
@@ -1894,8 +1967,21 @@ class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSer
             "topics",
             "works",
             "scholars",
+            "featured",
+            "href",
+            "children",
+            "key_questions",
+            "core_works",
+            "works_pagination",
+            "reading_paths",
+            "sources",
         )
 
+    def _public_data(self, obj):
+        from .services.subdiscipline_publication import public_subdiscipline_data
+        return public_subdiscipline_data(obj, self.context)
+
+    @extend_schema_field(DisciplineSerializer(allow_null=True))
     def get_discipline(self, obj):
         if obj.discipline is None or (
             not self.context.get("include_unpublished_items")
@@ -1904,56 +1990,64 @@ class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSer
             return None
         return DisciplineSerializer(obj.discipline, context=self.context).data
 
+    @extend_schema_field(SubdisciplineLinkSerializer(allow_null=True))
     def get_parent(self, obj):
         if not obj.parent or (
             not self.context.get("include_unpublished_items")
             and obj.parent.editorial_status != "published"
         ):
             return None
-        return {"id": str(obj.parent_id), "name": obj.parent.name, "slug": obj.parent.slug}
+        from .services.subdiscipline_publication import entity_link
+        return entity_link(obj.parent)
 
+    @extend_schema_field(SubdisciplineTheorySerializer(many=True))
     def get_theories(self, obj):
-        return [
-            {
-                "id": str(relation.theory_school_id),
-                "name": relation.theory_school.name,
-                "slug": relation.theory_school.slug,
-                "role": relation.role,
-            }
-            for relation in obj.theory_relations.filter(
-                review_status=RelationReviewStatus.APPROVED,
-                theory_school__editorial_status="published",
-            ).select_related("theory_school")
-        ]
+        return self._public_data(obj)["theories"]
 
+    @extend_schema_field(SubdisciplineTopicSerializer(many=True))
     def get_topics(self, obj):
-        return [
-            {
-                "id": str(relation.topic_id),
-                "name": relation.topic.name,
-                "slug": relation.topic.slug,
-                "relation_label": relation.relation_label,
-            }
-            for relation in obj.topic_relations.filter(
-                review_status=RelationReviewStatus.APPROVED,
-                topic__editorial_status="published",
-            ).select_related("topic")
-        ]
+        return self._public_data(obj)["topics"]
 
+    @extend_schema_field(SubdisciplineWorkCardSerializer(many=True))
     def get_works(self, obj):
-        works = public_work_queryset().filter(
-            subdiscipline_relations__subdiscipline=obj,
-            subdiscipline_relations__review_status=RelationReviewStatus.APPROVED,
-        ).distinct()[:48]
-        return WorkCardSerializer(works, many=True, context=self.context).data
+        return SubdisciplineWorkCardSerializer(
+            self._public_data(obj)["work_objects"], many=True, context=self.context,
+        ).data
 
+    @extend_schema_field(SubdisciplineScholarSerializer(many=True))
     def get_scholars(self, obj):
-        profiles = ScholarProfile.objects.filter(
-            person__subdiscipline_relations__subdiscipline=obj,
-            person__subdiscipline_relations__review_status=RelationReviewStatus.APPROVED,
-            editorial_status="published",
-        )
-        return _scholar_rows(profiles, reason="管理员确认的子学科关联")
+        return self._public_data(obj)["scholars"]
+
+    def get_featured(self, obj) -> bool:
+        return obj.curation_level > 0
+
+    def get_href(self, obj) -> str:
+        return f"/subdisciplines/{obj.slug}"
+
+    @extend_schema_field(SubdisciplineLinkSerializer(many=True))
+    def get_children(self, obj):
+        from .services.subdiscipline_publication import entity_link
+        return [entity_link(row) for row in obj.children.filter(editorial_status="published").order_by("name", "pk")]
+
+    @extend_schema_field(SubdisciplineQuestionSerializer(many=True))
+    def get_key_questions(self, obj):
+        return self._public_data(obj)["key_questions"]
+
+    @extend_schema_field(SubdisciplineWorkSerializer(many=True))
+    def get_core_works(self, obj):
+        return self._public_data(obj)["core_works"]
+
+    @extend_schema_field(SubdisciplineWorksPaginationSerializer)
+    def get_works_pagination(self, obj):
+        return self._public_data(obj)["works_pagination"]
+
+    @extend_schema_field(SubdisciplineReadingPathSerializer(many=True))
+    def get_reading_paths(self, obj):
+        return self._public_data(obj)["reading_paths"]
+
+    @extend_schema_field(SubdisciplineSourceSerializer(many=True))
+    def get_sources(self, obj):
+        return self._public_data(obj)["sources"]
 
 
 class TheoryTimelineEventSerializer(serializers.ModelSerializer):

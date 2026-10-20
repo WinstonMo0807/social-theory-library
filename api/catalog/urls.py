@@ -1,6 +1,7 @@
 from django.urls import path
 from .home_views import HomeView
 from .knowledge_citation_views import KnowledgeEntryCitationView
+from .theory_directory_views import TheoryDirectoryView
 from .parallel_views import ParallelVersionsView, ParallelSegmentsView, ParallelCandidatesView
 from .page_mapping_views import AdminPageMappingWorkspaceView
 from .feedback_views import AdminFeedbackDetailView, AdminFeedbackListView, PublicFeedbackView
@@ -225,6 +226,7 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("theory-system/directory/", TheoryDirectoryView.as_view(), name="theory-system-directory"),
     path("admin/discovery-index/", DiscoveryIndexView.as_view(), name="admin-discovery-index"),
     path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/", AdminEvidenceCurationView.as_view(), name="admin-evidence-curation"),
