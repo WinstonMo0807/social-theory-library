@@ -1,4 +1,4 @@
-/* Explore landing aligned to final-r2 PDF page 23. The image is a real local site asset; all controls remain HTML. */
+/* Decorative crops extracted from final-r2 PDF23; all interface and text remain HTML. */
 .stl4-explore-page {
   --stl4-paper: #f7f4ee;
   --stl4-surface: #fff;
@@ -15,7 +15,7 @@
 .stl4-explore-page a { color: inherit; text-decoration: none; }
 .stl4-explore-page :is(a, button, input):focus-visible { outline: 2px solid #a48146; outline-offset: 4px; }
 .stl4-explore-hero { position: relative; display: grid; grid-template-columns: 44% 56%; min-height: 340px; margin: 0 -36px 0; overflow: hidden; border-bottom: 1px solid var(--stl4-line); background: var(--stl4-paper); }
-.stl4-explore-hero-media { grid-area: 1 / 2; min-width: 0; background: url("/editorial/stl4-reading-room.png") center / cover no-repeat; }
+.stl4-explore-hero-media { grid-area: 1 / 2; min-width: 0; background: url("/editorial/stl4-explore-hero.png") center / cover no-repeat; }
 .stl4-explore-hero-copy { grid-area: 1 / 1; position: relative; z-index: 1; align-self: center; min-width: 0; padding: 28px 12px 28px 46px; }
 .stl4-explore-hero-copy h1 { margin: 0 0 13px; font: 700 clamp(31px, 3.4vw, 49px)/1.22 var(--serif); letter-spacing: -.045em; }
 .stl4-explore-hero-copy p { max-width: 460px; margin: 0 0 16px; font: 16px/1.65 var(--serif); color: var(--stl4-muted); }
@@ -30,10 +30,10 @@
 .stl4-explore-entry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .stl4-explore-entry { display: block; min-width: 0; overflow: hidden; border: 1px solid var(--stl4-line); background: var(--stl4-surface); transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
 .stl4-explore-entry:hover { border-color: #8e877c; box-shadow: 0 9px 22px rgb(36 34 31 / 8%); transform: translateY(-2px); }
-.stl4-explore-entry-image { display: block; height: 132px; background-image: url("/editorial/stl4-reading-room.png"); background-repeat: no-repeat; background-size: cover; }
-.stl4-explore-entry-image.book { background-position: 20% 80%; }
-.stl4-explore-entry-image.shelves { background-position: 92% 28%; }
-.stl4-explore-entry-image.desk { background-position: 50% 78%; }
+.stl4-explore-entry-image { display: block; height: 132px; background-position: center; background-repeat: no-repeat; background-size: cover; }
+.stl4-explore-entry-image.book { background-image: url("/editorial/stl4-explore-books.png"); }
+.stl4-explore-entry-image.shelves { background-image: url("/editorial/stl4-explore-shelves.png"); }
+.stl4-explore-entry-image.desk { background-image: url("/editorial/stl4-explore-desk.png"); }
 .stl4-explore-entry-body { position: relative; display: block; min-height: 101px; padding: 11px 35px 15px 13px; }
 .stl4-explore-entry-body strong { display: block; margin-bottom: 5px; font: 700 19px/1.4 var(--serif); }
 .stl4-explore-entry-body > span { display: block; color: var(--stl4-muted); font: 12px/1.6 var(--serif); }
@@ -48,7 +48,7 @@
 @media (max-width: 700px) {
   .stl4-explore-page { padding: 0 18px 30px; }
   .stl4-explore-hero { display: flex; flex-direction: column; min-height: 0; margin-inline: -18px; }
-  .stl4-explore-hero-media { order: 0; min-height: 196px; width: 100%; background-position: 55% center; }
+  .stl4-explore-hero-media { order: 0; min-height: 196px; width: 100%; background-image: url("/editorial/stl4-explore-hero-mobile.png"); }
   .stl4-explore-hero-copy { order: 1; padding: 20px 18px 16px; }
   .stl4-explore-hero-copy h1 { margin-bottom: 9px; font-size: clamp(27px, 8vw, 36px); }
   .stl4-explore-hero-copy p { margin-bottom: 12px; font-size: 14px; }
@@ -61,6 +61,9 @@
   .stl4-explore-entry-grid { grid-template-columns: 1fr; gap: 12px; }
   .stl4-explore-entry { display: grid; grid-template-columns: 92px minmax(0, 1fr); }
   .stl4-explore-entry-image { height: auto; min-height: 92px; }
+  .stl4-explore-entry-image.book { background-image: url("/editorial/stl4-explore-books-mobile.png"); }
+  .stl4-explore-entry-image.shelves { background-image: url("/editorial/stl4-explore-shelves-mobile.png"); }
+  .stl4-explore-entry-image.desk { background-image: url("/editorial/stl4-explore-desk-mobile.png"); }
   .stl4-explore-entry-body { min-height: 0; padding: 10px 35px 13px 12px; }
   .stl4-explore-entry-body > svg { top: 12px; right: 11px; bottom: auto; }
   .stl4-explore-entry-body strong { font-size: 18px; }

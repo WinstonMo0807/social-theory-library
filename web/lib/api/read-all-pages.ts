@@ -16,7 +16,8 @@ export function nextCollectionPath(firstPath: string, next: string): string {
   return `${first.pathname}${target.search}`;
 }
 
-export async function readAllPages<T>(path: string, credential: string, signal?: AbortSignal): Promise<T[]> {
+export async function readAllPages<T>(path: string, credential: string, signal: AbortSignal | undefined, expectedOwner: string): Promise<T[]> {
+  if (!expectedOwner) throw new Error("请先确认登录账户，再读取私人资料。");
   const rows: T[] = [];
   const seen = new Set<string>();
   let current = path;
@@ -26,7 +27,10 @@ export async function readAllPages<T>(path: string, credential: string, signal?:
     seen.add(current);
     const deadline = AbortSignal.timeout(30000);
     const pageSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
-    const payload = await apiRequest<Paginated<T> | T[]>(current, { signal: pageSignal, cache: "no-store" }, credential);
+    const payload = await apiRequest<Paginated<T> | T[]>(current, {
+      signal: pageSignal, cache: "no-store",
+      headers: { "X-Reader-Owner": expectedOwner },
+    }, credential, false);
     if (Array.isArray(payload)) return [...rows, ...payload];
     rows.push(...payload.results);
     current = payload.next ? nextCollectionPath(path, payload.next) : "";

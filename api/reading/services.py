@@ -3,9 +3,13 @@ import hashlib
 
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.db.models import CharField, F, Value
+from django.db.models.fields.json import KeyTextTransform, KeyTransform
+from django.db.models.functions import Cast, Replace
 
 from catalog.models import Asset
 from catalog.services.publication_eligibility import active_asset_q
+from catalog.services.semantic_search import viewer_access_statuses
 
 from .models import ReadingProgress
 
@@ -35,26 +39,40 @@ def decrypt_private_text(value: bytes) -> str:
     return _fernet().decrypt(bytes(value)).decode("utf-8")
 
 
+def _reader_access_statuses(user):
+    # Match the Reader file endpoint: Django admin access alone is not a library role.
+    return viewer_access_statuses(
+        authenticated=bool(user and user.is_authenticated),
+        staff=getattr(user, "role", "") in {"admin", "editor", "reviewer"},
+    )
+
+
+def readable_assets_for_user(user):
+    """Require the activated source and snapshot identity, with caller access."""
+    return Asset.objects.filter(
+        active_asset_q(asset_prefix=""),
+        kind=Asset.Kind.NORMALIZED,
+        status=Asset.Status.READY,
+        validation_status=Asset.ValidationStatus.VALID,
+        access_status__in=_reader_access_statuses(user),
+    ).exclude(file="").alias(
+        reader_asset_identity=Replace(Cast("pk", CharField()), Value("-"), Value("")),
+        snapshot_asset_identity=Replace(KeyTextTransform("asset_id", KeyTransform(
+            "document", F("edition__active_catalog_revision__snapshot"),
+        )), Value("-"), Value("")),
+    ).filter(reader_asset_identity=F("snapshot_asset_identity"))
+
+
 def readable_progress_for_user(user):
-    """Return progress rows that still point to a usable public reader asset."""
-
-    return ReadingProgress.objects.filter(
-        user=user,
-        asset__kind=Asset.Kind.NORMALIZED,
-        asset__status=Asset.Status.READY,
-    ).filter(active_asset_q(asset_prefix="asset"))
+    """Return progress rows that still point to a usable published reader asset."""
+    return ReadingProgress.objects.filter(user=user, asset__in=readable_assets_for_user(user))
 
 
-def current_reader_asset_for_work(work):
+def current_reader_asset_for_work(work, *, user=None):
     """Select the preferred readable asset without changing any stored record."""
 
     return (
-        Asset.objects.filter(
-            edition__work=work,
-            kind=Asset.Kind.NORMALIZED,
-            status=Asset.Status.READY,
-        )
-        .filter(active_asset_q(asset_prefix=""))
+        readable_assets_for_user(user).filter(edition__work=work)
         .order_by(
             "-edition__is_primary",
             "-edition__last_published_at",
@@ -83,7 +101,11 @@ def ensure_saved_work_progress(*, user, work, fallback_asset=None):
     if existing is not None:
         return existing
 
-    asset = fallback_asset or current_reader_asset_for_work(work)
+    asset = fallback_asset or current_reader_asset_for_work(work, user=user)
+    if asset is not None and not readable_assets_for_user(user).filter(
+        pk=asset.pk, edition__work=work,
+    ).exists():
+        asset = current_reader_asset_for_work(work, user=user)
     if asset is None:
         return None
     progress, _ = ReadingProgress.objects.get_or_create(

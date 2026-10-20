@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-20 检索与本人记录接续
+
+PDF23–31源码接入，恢复时读CATALOG_SEARCH、DISCOVERY_PRESENTATION、DISCOVERY_SESSION_CONTROLS三份20261019记录及OPINION_ENTRY、SAVED_READER_BOUNDARIES两份20261020记录。两新接口、生成契约、私人分页所有调用者和9个源PDF装饰素材必须共同恢复。全量TS/静态已通过，正式验收未开始。
+
+下一项是PDF32真实逐文献状态/范围移除及PDF33–35作品详情；不得把通道或索引进度冒充逐书检索完成。不中断等待重复确认，不运行质量测评或再清理生产；其余历史未提交文件保留。
+
 ## 2026-10-19 公共交互检查点
 
 先看CURRENT_PROGRESS与HOME_SUPPORT_IMPLEMENTATION、PUBLIC_FEEDBACK、SOURCE_UPDATES、SHARED_CITATION四份单元记录。帮助/反馈/来源/共享引用须整组恢复，反馈模型10行已在e310536，本组配0070迁移，0013亦未执行。原未提交成果继续保留。下一步保存已收口catalog后端及前端，再完成PDF28–32观点入口、真实证据结果与上下文。正式功能/视觉验收仍在全量实施之后，无需等待用户重复“继续”。

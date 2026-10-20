@@ -26,10 +26,10 @@ type CollectionRow = {
   href?: string; linkLabel?: string; summary?: string;
 };
 
-async function loadCollection(kind: CollectionKind, credential: string, signal: AbortSignal): Promise<CollectionRow[]> {
+async function loadCollection(kind: CollectionKind, credential: string, signal: AbortSignal, owner: string): Promise<CollectionRow[]> {
   const endpoint = config[kind].endpoint;
   if (kind === "notes") {
-    const rows = await readAllPages<AnnotationRow>(endpoint, credential, signal);
+    const rows = await readAllPages<AnnotationRow>(endpoint, credential, signal, owner);
     return rows.map((row) => {
       const page = row.selector?.page_index;
       const hasPage = Number.isInteger(page) && Number(page) > 0;
@@ -43,7 +43,7 @@ async function loadCollection(kind: CollectionKind, credential: string, signal: 
     });
   }
   if (kind === "confirmed") {
-    const rows = await readAllPages<ResearchRecord<MemoryData>>(endpoint, credential, signal);
+    const rows = await readAllPages<ResearchRecord<MemoryData>>(endpoint, credential, signal, owner);
     // Filter after reading every page: a first page of suggestions is not an empty collection.
     return rows.filter(row => row.state === "confirmed").map((row) => {
       const source = row.data.sources?.find(reference => researchReaderHref(reference));
@@ -82,7 +82,7 @@ export function ReaderCollectionList({ kind }: { kind: CollectionKind }) {
       Promise.resolve().then(() => { if (current()) setError("登录状态只能在浏览器中验证，请重新打开此页面。"); });
       return cleanup;
     }
-    withPrivateOwner(String(ownerId), () => loadCollection(kind, credential, controller.signal), controller.signal)
+    withPrivateOwner(String(ownerId), () => loadCollection(kind, credential, controller.signal, String(ownerId)), controller.signal)
       .then(rows => { if (current()) { setSnapshot({ key, rows }); lastReadAt.current = Date.now(); } })
       .catch((reason: unknown) => {
         if (!current()) return;

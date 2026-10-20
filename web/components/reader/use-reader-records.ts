@@ -62,7 +62,7 @@ export function useReaderRecords({
   }, [identity, initialFocus]);
 
   useEffect(() => {
-    if (!readerAuthenticated) {
+    if (!readerAuthenticated || readerId === undefined) {
       queueMicrotask(() => {
         setAnnotations([]);
         setBookmarks([]);
@@ -77,11 +77,13 @@ export function useReaderRecords({
         `/reading/annotations/?asset=${encodeURIComponent(assetId)}`,
         token,
         request.signal,
+        String(readerId),
       ),
       readAllPages<ReaderBookmark>(
         `/reading/bookmarks/?asset=${encodeURIComponent(assetId)}`,
         token,
         request.signal,
+        String(readerId),
       ),
     ])
       .then(([annotationPayload, bookmarkPayload]) => {

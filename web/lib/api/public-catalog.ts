@@ -1,12 +1,14 @@
 import type { Work } from "../data";
 import type { components } from "./generated/schema";
+import type { OutlineNode } from "./document-outline";
 
 export type PublicWorkCard = components["schemas"]["WorkCard"];
 export type PublicWorkDetail = components["schemas"]["WorkDetail"];
 export type PublicEdition = components["schemas"]["EditionCompact"];
 export type ReaderAssetAccess = components["schemas"]["ReaderAssetAccess"];
 export type ReaderPageContent = components["schemas"]["ReaderPageContent"];
-export type ReaderManifestPayload = components["schemas"]["ReaderManifest"];
+// The directory service's source-locator JSON has a narrower runtime contract than OpenAPI's unknown field.
+export type ReaderManifestPayload = Omit<components["schemas"]["ReaderManifest"], "outline"> & { outline: OutlineNode[]; document_revision_id?: string | null };
 export type ReaderOutlineItem = components["schemas"]["PublicOutlineItem"];
 
 // Core catalog fields are generated. The existing rich curation presentation
@@ -22,6 +24,7 @@ type LinkedReaderScholar = Omit<ReaderManifestPayload["related_scholars"][number
 // Work formatting. Keep these distinctions outside the network contract.
 export type ReaderManifest = {
   work: Work;
+  documentRevisionId?: string | null;
   outline: ReaderManifestPayload["outline"];
   scholars: LinkedReaderScholar[];
   theories: ReaderManifestPayload["related_theories"];

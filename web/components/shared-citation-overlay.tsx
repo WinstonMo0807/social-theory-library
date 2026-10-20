@@ -103,7 +103,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
     const controller = new AbortController();
     const credential = getServerSessionCredential();
     if (!credential) return;
-    void readAllPages<ResearchRecord<ProjectData>>("/reading/research-projects/", credential, controller.signal)
+    void readAllPages<ResearchRecord<ProjectData>>("/reading/research-projects/", credential, controller.signal, String(ownerId))
       .then(async rows => {
         const current = await bootstrapSession();
         if (controller.signal.aborted) return;

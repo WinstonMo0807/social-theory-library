@@ -1,5 +1,5 @@
 import { apiRequest, getServerSessionCredential } from "../api";
-import type { DiscoveryContext, DiscoveryCoverage, DiscoveryFilters, DiscoveryPassage, DiscoverySearch } from "./discovery.types";
+import type { DiscoveryContext, DiscoveryCoverage, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "./discovery.types";
 
 export function canKeepDiscoveryContext(item: DiscoveryPassage, next: DiscoverySearch) {
   return !next.source_changed && next.passages.some(row => row.id === item.id && row.asset_id === item.asset_id &&
@@ -21,16 +21,17 @@ async function request<T>(path: string, options: RequestInit = {}, accessToken =
   const headers = new Headers(options.headers);
   if (accessToken) headers.set("X-Discovery-Token", accessToken);
   try {
-    return await apiRequest<T>(path, { ...options, headers, signal: controller.signal, cache: "no-store" }, getServerSessionCredential());
+    return await apiRequest<T>(path, { ...options, headers, signal: controller.signal, cache: "no-store" }, getServerSessionCredential(), !options.method || options.method === "GET");
   } finally { clearTimeout(timeout); }
 }
 export function createDiscoverySearch(q: string, filters: DiscoveryFilters) {
   return request<DiscoverySearch>(endpoint, { method: "POST", body: JSON.stringify({ q, filters }) });
 }
-export function readDiscoverySearch(id: string, accessToken: string, options: { cursor?: string; limit?: number } = {}) {
+export function readDiscoverySearch(id: string, accessToken: string, options: { cursor?: string; limit?: number; sort?: DiscoverySort } = {}) {
   const params = new URLSearchParams();
   if (options.cursor) params.set("cursor", options.cursor);
   if (options.limit) params.set("limit", String(options.limit));
+  if (options.sort) params.set("sort", options.sort);
   return request<DiscoverySearch>(`${endpoint}${encodeURIComponent(id)}/?${params}`, {}, accessToken);
 }
 export function actOnDiscoverySearch(id: string, accessToken: string, action: "expand" | "cancel" | "retry", expectedGeneration?: number) {

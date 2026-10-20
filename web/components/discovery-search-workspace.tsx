@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, ChevronDown, FileSearch, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch } from "@/lib/api/discovery.client";
-import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch } from "@/lib/api/discovery.types";
+import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
-import { SearchModeSwitch } from "./search-mode-switch";
+import { EvidenceContextBody, EvidenceResultCard, EvidenceSummary } from "./discovery-evidence-detail";
+import { SavedWorkStatusProvider } from "./save-work-button";
 import { Dialog } from "./ui/dialog";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
@@ -16,16 +17,25 @@ const running = (status?: string) => status === "queued" || status === "running"
 const statusLabels: Record<string, string> = { queued: "已排队", running: "正在检索", partial: "部分完成", completed: "检索完成", failed: "检索未完成", canceled: "已取消" };
 const deepStatusLabels: Record<string, string> = { baseline_ready: "基础结果已就绪", deep_queued: "深度整理已排队", deep_running: "正在深度整理", completed: "深度结果已完成", partial: "深度结果部分完成", unavailable: "深度层暂不可用", pending: "深度整理待启动", queued: "深度整理已排队", running: "正在深度整理", degraded: "深度结果部分完成", disabled: "深度层暂不可用", skipped: "深度层暂跳过", failed: "深度层暂不可用" };
 const kindLabels: Record<string, string> = { scholar: "学者", scholar_profile: "学者", theory: "理论", topic: "主题", concept: "概念", discipline: "学科", subdiscipline: "子学科", knowledge_node: "知识条目", timeline: "时间线", timeline_event: "历史事件", reading_path: "阅读路径", recommendation: "推荐书目" };
-const filterLabels: Record<string, string> = { work_id: "指定作品", author: "责任者", scholar: "学者", theory: "理论", topic: "主题", concept: "概念", language: "语言", year: "出版年", year_min: "起始年", year_max: "截止年", document_type: "文献类型", source_type: "来源类型", access: "访问范围" };
+const filterLabels: Record<string, string> = { work_ids: "指定作品", authors: "责任者", topic_ids: "主题", theory_node_ids: "理论", topics: "主题", theories: "理论流派", concepts: "概念", document_types: "文献类型", languages: "语言", years: "出版年", source_types: "来源类型", work_id: "指定作品", author: "责任者", scholar: "学者", theory: "理论", topic: "主题", concept: "概念", language: "语言", year: "出版年", year_min: "起始年", year_max: "截止年", document_type: "文献类型", source_type: "来源类型", access: "访问范围" };
 const channelLabels: Record<string, string> = { passages: "原文", entities: "知识", curation: "策展", deep: "材料整理" };
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] || "" : value || "";
-const internalHref = (value: string) => value.startsWith("/") && !value.startsWith("//") ? value : "";
+const internalHref = (value: string) => value.startsWith("/") && !value.startsWith("//") && !/[\\\u0000-\u001f\u007f]/.test(value) ? value : "";
+// Disposable navigation state holds identifiers only, never stored excerpts or search history.
+const returnSessions = new Map<string, { id: string; token: string; limit: number; sort: DiscoverySort; at: number }>();
 const errorMessage = (reason: unknown) => reason instanceof Error ? reason.message : "请求未完成，请重试。";
 const invalidSession = (reason: unknown) => reason instanceof ApiRequestError && [401, 403, 404, 410].includes(reason.status);
 
 export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyRelation = false }: {
   initialQuery: string; initialFilters: DiscoveryFilters; legacyRelation?: boolean;
 }) {
+  const cacheKey = JSON.stringify([initialQuery, initialFilters]);
+  const [selectedId, setSelectedId] = useState("");
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryHidden, setSummaryHidden] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [view, setView] = useState<"list" | "grid">("list");
+  const restored = useRef(false);
   const [result, setResult] = useState<DiscoverySearch | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(initialQuery ? "create" : "");
@@ -41,6 +51,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const resultRef = useRef<DiscoverySearch | null>(null);
   const tokenRef = useRef("");
   const shownRef = useRef(3);
+  const sortRef = useRef<DiscoverySort>("relevance");
   const actionRef = useRef("");
   const requestRevision = useRef(0);
   const contextRevision = useRef(0);
@@ -53,26 +64,46 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     contextItemRef.current = null;
     resultRef.current = null;
     tokenRef.current = "";
-    setContextItem(null); setContext(null); setResult(null);
-  }, []);
+    returnSessions.delete(cacheKey);
+    setContextItem(null); setContext(null); setResult(null); setSelectedId(""); setSummaryOpen(false);
+  }, [cacheKey]);
 
   const accept = useCallback((next: DiscoverySearch) => {
     if (next.access_token) tokenRef.current = next.access_token;
+    if (next.sort) sortRef.current = next.sort;
     resultRef.current = next;
     setResult(next);
+    returnSessions.set(cacheKey, { id: next.id, token: tokenRef.current, limit: shownRef.current, sort: sortRef.current, at: Date.now() });
+    if (returnSessions.size > 10) returnSessions.delete(returnSessions.keys().next().value!);
     // Context text is also a permission-sensitive snapshot. Close it whenever
     // a fresh response removes its source, rather than retaining revoked text.
     if (contextItemRef.current && !canKeepDiscoveryContext(contextItemRef.current, next)) {
-      contextRevision.current += 1;
-      contextItemRef.current = null;
-      setContext(null); setContextItem(null);
+      const item = contextItemRef.current;
+      const revision = ++contextRevision.current;
+      setContext(null);
+      if (next.source_changed || next.passages.some(row => row.id === item.id)) {
+        contextItemRef.current = null; setContextItem(null);
+      } else {
+        // A same-book candidate may sit beyond the loaded result prefix.
+        // Revalidate its identity instead of treating pagination as withdrawal.
+        setContextBusy(true); setContextError("");
+        void readDiscoveryContext(next.id, tokenRef.current, item.id).then(value => {
+          if (revision === contextRevision.current) setContext(value);
+        }).catch(reason => { if (revision === contextRevision.current) setContextError(errorMessage(reason)); })
+          .finally(() => { if (revision === contextRevision.current) setContextBusy(false); });
+      }
     }
-  }, []);
+  }, [cacheKey]);
 
   useEffect(() => {
     if (!initialQuery) return;
     let active = true;
     const revision = requestRevision.current;
+    const saved = returnSessions.get(cacheKey);
+    if (!createRef.current && saved && Date.now() - saved.at < 30 * 60 * 1000) {
+      tokenRef.current = saved.token; shownRef.current = saved.limit; sortRef.current = saved.sort;
+      createRef.current = readDiscoverySearch(saved.id, saved.token, { limit: saved.limit, sort: saved.sort });
+    }
     createRef.current ??= createDiscoverySearch(initialQuery, initialFilters);
     void createRef.current.then(next => {
       if (!active || revision !== requestRevision.current) return;
@@ -81,7 +112,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       setError("");
     }).catch(reason => { if (active) setError(errorMessage(reason)); }).finally(() => { if (active) setBusy(""); });
     return () => { active = false; };
-  }, [initialQuery, initialFilters, accept]);
+  }, [initialQuery, initialFilters, cacheKey, accept]);
 
   const refresh = useCallback(async () => {
     const current = resultRef.current;
@@ -89,7 +120,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     refreshInFlight.current = true;
     const revision = requestRevision.current;
     try {
-      const next = await readDiscoverySearch(current.id, tokenRef.current, { limit: shownRef.current });
+      const next = await readDiscoverySearch(current.id, tokenRef.current, { limit: shownRef.current, sort: sortRef.current });
       if (revision !== requestRevision.current || resultRef.current?.id !== current.id) return;
       accept(next);
       setError("");
@@ -103,6 +134,18 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
 
   const resultId = result?.id;
   const resultStatus = result?.status;
+  useEffect(() => {
+    if (restored.current || !result?.passages.length) return;
+    const hash = window.location.hash.slice(1);
+    const item = result.passages.find(row => `material-${row.id}` === hash);
+    if (!item) return;
+    restored.current = true;
+    const frame = window.requestAnimationFrame(() => {
+      setSelectedId(item.id);
+      document.getElementById(hash)?.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [result]);
   useEffect(() => {
     if (!resultId || !running(resultStatus) || pollPaused) return;
     let active = true;
@@ -122,7 +165,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     const sessionChanged = () => {
       requestRevision.current += 1;
       // Never leave authenticated excerpts visible after a logout.
-      discard(); setFacets(null);
+      returnSessions.clear(); discard(); setFacets(null);
       setError("登录状态已变化，请重新检索以使用当前访问权限。");
     };
     window.addEventListener("focus", revalidate);
@@ -131,17 +174,18 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     return () => { window.removeEventListener("focus", revalidate); document.removeEventListener("visibilitychange", revalidate); unsubscribe(); };
   }, [refresh, discard]);
 
-  async function sessionAction(action: "more" | "expand" | "cancel" | "refresh" | "retry") {
+  async function sessionAction(action: "more" | "expand" | "cancel" | "refresh" | "retry" | "sort", nextSort?: DiscoverySort) {
     const current = resultRef.current;
     if (!current || actionRef.current) return;
     actionRef.current = action;
     const revision = ++requestRevision.current;
     setBusy(action); setError("");
     try {
-      let limit = shownRef.current;
+      let limit = action === "sort" ? 3 : shownRef.current;
+      const sort = nextSort || sortRef.current;
       if (action === "more") {
         if (!current.next_cursor) return;
-        const page = await readDiscoverySearch(current.id, tokenRef.current, { cursor: current.next_cursor, limit: 3 });
+        const page = await readDiscoverySearch(current.id, tokenRef.current, { cursor: current.next_cursor, limit: 3, sort });
         limit = Math.min(440, shownRef.current + page.passages.length);
       } else if (action === "expand" || action === "cancel" || action === "retry") {
         await actOnDiscoverySearch(current.id, tokenRef.current, action, current.generation ?? current.task_progress?.generation);
@@ -149,7 +193,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       if (revision !== requestRevision.current || resultRef.current?.id !== current.id) return;
       // Reload the displayed prefix so every previously shown result is checked
       // against current permissions, including during pagination and expansion.
-      const next = await readDiscoverySearch(current.id, tokenRef.current, { limit });
+      const next = await readDiscoverySearch(current.id, tokenRef.current, { limit, sort });
       if (revision !== requestRevision.current || resultRef.current?.id !== current.id) return;
       shownRef.current = limit;
       pollStarted.current = Date.now();
@@ -163,6 +207,25 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     finally { actionRef.current = ""; setBusy(""); }
   }
 
+  async function restart() {
+    if (actionRef.current || running(resultRef.current?.status)) return;
+    actionRef.current = "restart";
+    const revision = ++requestRevision.current;
+    setBusy("restart"); setError("");
+    try {
+      const pending = createDiscoverySearch(initialQuery, initialFilters);
+      const next = await pending;
+      if (revision !== requestRevision.current) return;
+      createRef.current = pending;
+      tokenRef.current = ""; shownRef.current = 3; sortRef.current = "relevance";
+      contextRevision.current += 1; contextItemRef.current = null;
+      setContextItem(null); setContext(null); setSelectedId(""); setSummaryOpen(false);
+      pollStarted.current = Date.now(); setPollPaused(false);
+      accept(next);
+    } catch (reason) { if (revision === requestRevision.current) setError(errorMessage(reason)); }
+    finally { actionRef.current = ""; setBusy(""); }
+  }
+
   async function openContext(item: DiscoveryPassage) {
     const current = resultRef.current;
     if (!current) return;
@@ -171,7 +234,16 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     setContextItem(item); setContext(null); setContextError(""); setContextBusy(true);
     try {
       const next = await readDiscoveryContext(current.id, tokenRef.current, item.id);
-      if (contextRevision.current === revision) setContext(next);
+      if (contextRevision.current !== revision) return;
+      setContext(next);
+      if (!current.passages.some(row => row.id === item.id)) {
+        // An explicitly selected same-book candidate can be beyond the current
+        // prefix. Load that bounded result set so Reader can return to its row.
+        const expanded = await readDiscoverySearch(current.id, tokenRef.current, { limit: 440, sort: sortRef.current });
+        if (contextRevision.current !== revision || resultRef.current?.id !== current.id) return;
+        shownRef.current = 440;
+        accept(expanded);
+      }
     } catch (reason) {
       if (contextRevision.current === revision) {
         setContextError(errorMessage(reason));
@@ -189,7 +261,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     setFacetBusy(true); setFacetError("");
     try {
-      const payload = await apiRequest<SearchPayload>("/catalog/search/?context=global&page_size=1", { signal: controller.signal }, getServerSessionCredential());
+      const payload = await apiRequest<SearchPayload>("/catalog/search/?context=global&scope=catalog&page_size=1", { signal: controller.signal }, getServerSessionCredential());
       if (revision === requestRevision.current) setFacets(payload.facets);
     } catch (reason) { setFacetError(errorMessage(reason)); }
     finally { window.clearTimeout(timeout); setFacetBusy(false); }
@@ -201,30 +273,47 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   for (const [name, value] of Object.entries(initialFilters)) {
     for (const entry of Array.isArray(value) ? value : [value]) if (entry) retryParams.append(name, entry);
   }
-  const retryHref = initialQuery ? `/explore/opinions?${retryParams}` : "/explore/opinions";
+  const selected = result?.passages.find(item => item.id === selectedId) || result?.passages[0] || null;
+  const returnTo = (item: DiscoveryPassage) => `/explore/evidence?${retryParams}#material-${item.id}`;
+  function selectEvidence(item: DiscoveryPassage) {
+    setSelectedId(item.id); setSummaryHidden(false);
+    if (window.matchMedia("(max-width: 1000px)").matches) setSummaryOpen(true);
+  }
+  const retryHref = initialQuery ? `/explore/evidence?${retryParams}` : "/explore/opinions";
   const closeContext = () => { contextRevision.current += 1; contextItemRef.current = null; setContextItem(null); setContext(null); };
+  function toggleFilter(name: string, value: string, checked: boolean) {
+    setFilters(current => {
+      const values = Array.isArray(current[name]) ? current[name] : current[name] ? [current[name]] : [];
+      const next = { ...current, [name]: checked ? [...new Set([...values, value])] : values.filter(entry => entry !== value) };
+      if (!next[name].length) delete next[name];
+      return next;
+    });
+  }
+  const checked = (name: string, value: string) => (Array.isArray(filters[name]) ? filters[name] : [filters[name]]).includes(value);
   const filterFields = <>
-          <div className={styles.filterGrid}>
-            <label><span>文献类型</span><select name="document_type" value={first(filters.document_type)} onChange={e => setFilters(current => ({ ...current, document_type: e.target.value }))}><option value="">全部文献</option><option value="book">图书</option><option value="journal_article">期刊论文</option><option value="journal_issue">期刊整期</option><option value="thesis">学位论文</option><option value="report">研究报告</option></select></label>
-            {([ ["author", "责任者", facets?.authors], ["theory", "理论", facets?.theories], ["topic", "主题", facets?.topics], ["concept", "概念", facets?.concepts], ["language", "文献语言", facets?.languages] ] as const).map(([name, label, options]) => <label key={name}><span>{label}</span><select name={name} value={first(filters[name])} onChange={e => setFilters(current => ({ ...current, [name]: e.target.value }))}><option value="">不限</option>{first(filters[name]) && !options?.some(row => row.value === first(filters[name])) ? <option value={first(filters[name])}>当前选择</option> : null}{options?.map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label>)}
-            <label><span>出版年起</span><input type="number" name="year_min" min="1" max="3000" value={first(filters.year_min)} onChange={e => setFilters(current => ({ ...current, year_min: e.target.value }))} placeholder="不限" /></label>
-            <label><span>出版年止</span><input type="number" name="year_max" min="1" max="3000" value={first(filters.year_max)} onChange={e => setFilters(current => ({ ...current, year_max: e.target.value }))} placeholder="不限" /></label>
-          </div>
-          {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theory", "topic", "concept", "language", "year_min", "year_max"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{filterLabels[name] || "已有范围"}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={`取消${filterLabels[name] || "已有范围"}筛选`} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
-          <p className={styles.help}>筛选由你选择。没有人工标签的文献仍参与全库正文检索；混合语言内容默认一并查找。</p>
-          {facetBusy ? <p role="status">正在读取馆内筛选项……</p> : null}
-          {facetError ? <p role="alert">{facetError}<button type="button" className="text-link" onClick={() => void loadFacets()}>重试读取筛选项</button></p> : null}
-          <div className={styles.actions}><button className="button secondary" type="submit">应用范围并检索</button>{selectedCount ? <Link href={initialQuery ? `/explore/opinions?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>清除全部筛选</Link> : null}</div>
+    <div className={styles.filterGrid}>
+      {([ ["document_type", "文献类型", facets?.document_types], ["theories", "理论流派", facets?.theories], ["language", "文献语言", facets?.languages] ] as const).map(([name, label, options]) => <fieldset key={name}><legend>{label}</legend>
+        <label><input type="checkbox" checked={!first(filters[name])} onChange={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })} />全部</label>
+        {options?.map(row => <label key={row.value}><input type="checkbox" name={name} value={row.value} checked={checked(name, row.value)} onChange={event => toggleFilter(name, row.value, event.target.checked)} /><span>{row.label}</span><small>{row.count}</small></label>)}
+        {(Array.isArray(filters[name]) ? filters[name] : [filters[name]]).filter(Boolean).filter(value => !options?.some(row => row.value === value)).map(value => <label key={value}><input type="checkbox" name={name} value={value} checked onChange={() => toggleFilter(name, value, false)} />当前范围</label>)}
+      </fieldset>)}
+      <fieldset><legend>年份</legend><div className={styles.yearRange}><label><span className="sr-only">起始年</span><input type="number" name="year_min" min="1" max="3000" value={first(filters.year_min)} onChange={e => setFilters(current => ({ ...current, year_min: e.target.value }))} placeholder="起始年" /></label><label><span className="sr-only">结束年</span><input type="number" name="year_max" min="1" max="3000" value={first(filters.year_max)} onChange={e => setFilters(current => ({ ...current, year_max: e.target.value }))} placeholder="结束年" /></label></div></fieldset>
+      {([ ["author", "责任者", facets?.authors], ["topics", "主题", facets?.topics], ["concept", "概念", facets?.concepts] ] as const).map(([name, label, options]) => <label key={name}><span>{label}</span><select name={name} value={first(filters[name])} onChange={event => setFilters(current => ({ ...current, [name]: event.target.value }))}><option value="">不限</option>{first(filters[name]) && !options?.some(row => row.value === first(filters[name])) ? <option value={first(filters[name])}>当前选择</option> : null}{options?.map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select>{Array.isArray(filters[name]) ? filters[name].slice(1).map(value => <input key={value} type="hidden" name={name} value={value} />) : null}</label>)}
+    </div>
+    {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{filterLabels[name] || "已有范围"}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={`取消${filterLabels[name] || "已有范围"}筛选`} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
+    <p className={styles.help}>选项数量是公开馆藏作品数。原文结果只来自当前可访问、正文已就绪的材料。</p>
+    {facetBusy ? <p role="status">正在读取馆内筛选项……</p> : null}
+    {facetError ? <p role="alert">{facetError}<button type="button" className="text-link" onClick={() => void loadFacets()}>重试读取筛选项</button></p> : null}
+    <div className={styles.actions}><button className="button secondary" type="submit">应用范围并检索</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>清除全部筛选</Link> : null}</div>
   </>;
-  return <div className={`page-shell explore-page ${styles.page}`}>
-    <header className="explore-workbench-head exact-workbench-head viewpoint-workbench-head">
-      <div className="explore-workbench-title"><h1>观点检索</h1><p>从概念、问题或记忆中的表述，找到馆藏原文、知识入口与阅读推荐。</p></div>
-      <div className="explore-query-column"><form className={styles.searchForm} action="/explore/opinions">
-        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input id="discovery-query" type="search" name="q" required minLength={2} maxLength={1200} defaultValue={initialQuery} placeholder="输入概念、研究问题或观点线索" /><button className="button" type="submit">开始检索 <ArrowRight size={15} /></button></div>
+  return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div className={`page-shell ${styles.page}`}>
+    <header className={styles.evidenceHead}>
+      <p className={styles.breadcrumb}><Link href="/explore">探索</Link><span>/</span><Link href="/explore/opinions">观点检索</Link><span>/</span>原文证据</p>
+      <h1>原文证据结果</h1>
+      <form className={styles.searchForm} action="/explore/evidence">
+        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input id="discovery-query" type="search" name="q" required minLength={2} maxLength={500} defaultValue={initialQuery} placeholder="输入概念、研究问题或观点线索" /><button className="button" type="submit">搜索</button></div>
         {Object.entries(filters).flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter(Boolean).map(entry => <input type="hidden" key={`${name}-${entry}`} name={name} value={entry} />))}
-
-      </form></div>
-      <SearchModeSwitch mode="semantic" query={initialQuery} />
+      </form>
     </header>
 
     {legacyRelation ? <p className={styles.notice}>这个旧链接中的问题和文献筛选已保留。新版按相关原文、知识与策展呈现，不再按支持或相斥分类。</p> : null}
@@ -232,27 +321,31 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     {result?.warnings?.length ? <div className={styles.notice} role="status">{result.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}</div> : null}
     {result?.source_changed ? <p className={styles.notice}>资料或访问范围已有变化，已重新核验当前结果。重新检索可使用最新馆藏与策展内容。</p> : null}
 
-    <details className={styles.mobileFilters} onToggle={event => { if (event.currentTarget.open) void loadFacets(); }}><summary><SlidersHorizontal size={14} />筛选馆藏原文{selectedCount ? ` · ${selectedCount} 项` : ""}</summary><form action="/explore/opinions"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></details>
-    <nav className={styles.channelIndex} aria-label="检索结果分类"><a href="#discovery-passages">馆藏原文 <strong>{result?.count ?? "—"}</strong></a><a href="#discovery-entities">相关知识 <strong>{result?.entities.length ?? "—"}</strong></a><a href="#discovery-curation">策展推荐 <strong>{result?.curation.length ?? "—"}</strong></a></nav>
-    <div className={styles.resultLayout}>
-      <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/opinions"><div className={styles.filterTitle}><strong>筛选馆藏原文{selectedCount ? ` · ${selectedCount}` : ""}</strong></div><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
+    <div className={styles.mobileFilters}><button type="button" onClick={() => { setFilterOpen(true); void loadFacets(); }}><SlidersHorizontal size={14} />筛选{selectedCount ? ` · ${selectedCount} 项` : ""}</button><span>{result ? `${result.count ?? result.passages.length} 条原文` : "正在读取"}</span></div>
+    <Dialog open={filterOpen} onRequestClose={() => setFilterOpen(false)} className={styles.filterDialog} aria-labelledby="evidence-filter-title"><header className={styles.dialogHeader}><h2 id="evidence-filter-title">筛选原文材料</h2><button type="button" onClick={() => setFilterOpen(false)} aria-label="关闭筛选"><X size={18} /></button></header><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></Dialog>
+    <div className={`${styles.resultLayout} ${summaryHidden ? styles.summaryHidden : ""}`}>
+      <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/evidence"><div className={styles.filterTitle}><strong>筛选馆藏原文{selectedCount ? ` · ${selectedCount}` : ""}</strong></div><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
       <section className={styles.results} id="discovery-passages" aria-label="原文检索结果">
-        <header className={styles.resultsHeader}><div><p>馆藏原文</p><h2>原文材料</h2></div><span>{result ? `${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""} 段` : initialQuery ? "等待检索结果" : "等待输入"}</span></header>
+        <header className={styles.resultsHeader}><div><h2>检索结果</h2><span>{result ? `已显示 ${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""} 段` : initialQuery ? "等待检索结果" : "等待输入"}</span></div><div className={styles.viewControls}><label><span className="sr-only">结果排序</span><select aria-label="结果排序" value={result?.sort || "relevance"} disabled={!result || Boolean(busy)} onChange={event => void sessionAction("sort", event.target.value as DiscoverySort)}><option value="relevance">相关性排序</option><option value="year_desc">出版年份从新到旧</option><option value="year_asc">出版年份从旧到新</option></select></label><button type="button" aria-label="列表视图" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={17} /></button><button type="button" aria-label="网格视图" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button></div></header>
         {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? "正在创建检索" : result?.expansion_count ? "正在扩大研究范围" : statusLabels[result?.status || "running"]}</strong><p>{result?.status_message || "后台正在查找并排序材料。你可以先阅读已找到的结果。"}</p>{result?.completed_channels?.length ? <small>已完成：{result.completed_channels.map(name => channelLabels[name] || name).join("、")}</small> : null}{result ? <DiscoveryDeepProgress result={result} /> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>取消检索</button> : null}</div> : null}
         {pollPaused && isRunning ? <div className={styles.notice}><p>自动更新已暂停，后台任务可能仍在继续。可重新读取进度或取消任务。</p><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>继续读取进度</button></div> : null}
         {result && !isRunning ? <><p className={styles.resultStatus} role="status">{statusLabels[result.status]}{result.mode === "expanded" ? " · 已扩大检索预算" : ""}{result.status_message ? ` · ${result.status_message}` : ""}</p><DiscoveryDeepProgress result={result} /></> : null}
-        <div className={styles.cardList}>{result?.passages.map((item, index) => <DiscoveryPassageCard key={item.id} item={item} index={index} onContext={() => void openContext(item)} />)}</div>
+        {(result?.added_count || 0) > 0 ? <p className={styles.resultStatus} role="status">本轮新增 {result?.added_count} 段可阅读原文</p> : null}
+        <div className={`${styles.cardList} ${view === "grid" ? styles.resultGrid : ""}`}>{result?.passages.map((item, index) => <EvidenceResultCard key={item.id} item={item} index={index} selected={selected?.id === item.id && !summaryHidden} fresh={item.is_new === true} onSelect={() => selectEvidence(item)} onContext={() => void openContext(item)} />)}</div>
         {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? "从你关心的问题开始" : result?.status === "failed" ? "原文通道暂未完成" : result?.status === "canceled" ? "本次检索已取消" : error ? "还没有可显示的结果" : "本次未找到可展示的原文"}</h3><p>{!initialQuery ? "输入概念、开放问题或近似引句。结果直接回到馆内材料，你也可以沿知识与策展线索继续阅读。" : "没有结果不代表馆内不存在相关讨论。可调整问题、扩大研究范围，或继续查看相关知识与策展。"}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">转到原文检索 <ArrowRight size={14} /></Link> : null}</section> : null}
-        {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? "正在读取" : "查看更多材料"}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? "正在重试" : "重试当前范围"}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? "正在提交" : "扩大研究范围"}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />刷新本次结果</button> : null}</div><p>默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。</p></footer> : null}
+        {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? "正在读取" : "查看更多材料"}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? "正在重试" : result.status === "canceled" ? "基于保留材料继续检索" : "重试当前范围"}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? "正在提交" : "扩大研究范围"}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />刷新本次结果</button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void restart()}>{busy === "restart" ? "正在重新开始" : "重新开始检索"}</button> : null}</div><p>默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。</p></footer> : null}
       </section>
-      <aside className={styles.inspector} aria-label="相关知识与策展推荐">
+      {!summaryHidden ? <aside className={styles.evidenceInspector} aria-labelledby="evidence-summary-title"><header><h2 id="evidence-summary-title">证据摘要</h2><button type="button" aria-label="关闭证据摘要" onClick={() => setSummaryHidden(true)}><X size={18} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => void openContext(selected)} /> : <p className={styles.help}>结果出现后，选择原文查看来源、页码和回读入口。</p>}</aside> : null}
+    </div>
+    <div className={styles.inspector} aria-label="相关知识与策展推荐">
         <section id="discovery-entities"><header><h2>相关知识</h2><span>{result?.entities.length || 0}</span></header><p className={styles.help}>馆内已有的学者、理论与主题入口。关联线索不代表观点最早归属。</p>{result?.entities.map(item => <DiscoveryEntityCard key={`${item.kind}-${item.id}`} item={item} />)}{!result?.entities.length ? <p className={styles.sideEmpty}>{isRunning ? "知识通道正在查找。" : initialQuery ? "本次暂无相关知识入口。" : "检索后在这里查看相关知识。"}</p> : null}</section>
         <section id="discovery-curation"><header><h2>策展推荐</h2><span>{result?.curation.length || 0}</span></header><p className={styles.help}>管理员已发布的导读和推荐理由，独立标明来源。</p>{result?.curation.map(item => <DiscoveryCurationCard key={item.id} item={item} />)}{!result?.curation.length ? <p className={styles.sideEmpty}>{isRunning ? "策展通道正在查找。" : initialQuery ? "本次暂无相关策展推荐。" : "检索后在这里查看阅读推荐。"}</p> : null}</section>
         <DiscoveryCoverageDetails result={result} />
-      </aside>
     </div>
-    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><div><p>连续上下文</p><h2 id="discovery-context-title">{contextItem?.work.title || "原文上下文"}</h2></div><button type="button" aria-label="关闭上下文" onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <p role="status">正在从同一修订读取上下文……</p> : contextError ? <div role="alert"><p>{contextError}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>重试读取上下文</button></div> : context ? <><p className={styles.help}>{context.notice || "以下内容来自同一正文修订，按原有次序展示。"}</p>{context.blocks?.length ? context.blocks.map((block, index) => <section key={`${block.pdf_page}-${index}`} className={(block.role === "hit" || block.role === "match") ? styles.contextMatch : styles.contextBlock}><small>PDF 第 {block.pdf_page} 页{(block.role === "hit" || block.role === "match") ? " · 命中段落" : ""}</small><p>{block.text}</p></section>) : <><p>{context.before}</p><blockquote>{context.excerpt}</blockquote><p>{context.after}</p></>}<p className={styles.help}>{context.locator_precision === "exact" ? "可在原始 PDF 中核对定位。" : "当前按页定位，请在原始 PDF 中核对具体位置。"}</p>{internalHref(context.reader_url) ? <CollectionLink className="button" href={context.reader_url}>阅读原始 PDF <BookOpen size={15} /></CollectionLink> : null}</> : null}</div></Dialog>
-  </div>;
+    <Dialog open={summaryOpen && Boolean(selected)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">证据摘要</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label="关闭证据摘要"><X size={20} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => { setSummaryOpen(false); void openContext(selected); }} /> : null}</Dialog>
+    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">原文上下文</h2><button type="button" aria-label="关闭上下文" onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <p role="status">正在读取原文上下文……</p> : contextError ? <div role="alert"><p>{contextError}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>重试读取上下文</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
+  </div></SavedWorkStatusProvider>;
+
 }
 
 export function DiscoveryPassageCard({ item, index, onContext }: { item: DiscoveryPassage; index: number; onContext: () => void }) {

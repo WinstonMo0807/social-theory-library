@@ -29,8 +29,8 @@ type AnnotationRow = {
   created_at: string;
 };
 
-async function loadAllBookNotes(assetId: string, token: string) {
-  return readAllPages<AnnotationRow>(`/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note`, token);
+async function loadAllBookNotes(assetId: string, token: string, owner: string) {
+  return readAllPages<AnnotationRow>(`/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note`, token, undefined, owner);
 }
 
 export function ReaderBookNotes({ assetId }: { assetId: string }) {
@@ -50,7 +50,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
   }, [assetId, session.status]);
 
   useEffect(() => {
-    if (session.status !== "authenticated") return;
+    if (session.status !== "authenticated" || !session.user) return;
     const credential = getServerSessionCredential();
     if (!credential) return;
     let mounted = true;
@@ -61,7 +61,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
       setMessage("");
       setMessageState("pending");
     });
-    loadAllBookNotes(assetId, credential)
+    loadAllBookNotes(assetId, credential, String(session.user.id))
       .then((rows) => {
         if (mounted) {
           setNotes(rows);
@@ -84,7 +84,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     return () => {
       mounted = false;
     };
-  }, [assetId, loadAttempt, session.status, session.user?.id]);
+  }, [assetId, loadAttempt, session.status, session.user]);
 
   async function deleteNote(id: string) {
     if (!window.confirm("确定删除这条笔记吗？")) return;

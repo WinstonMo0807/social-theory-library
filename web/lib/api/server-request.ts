@@ -10,10 +10,9 @@ const SERVER_API =
 
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN ?? "";
 
-export const allowDemoFallback = (
-  process.env.NODE_ENV !== "production"
-  && process.env.ALLOW_DEMO_FALLBACK !== "false"
-);
+// STL 4.0: runtime content always reflects the API, including in development.
+// Fixtures remain available to isolated tests, never as a response to an outage.
+export const allowDemoFallback = false;
 
 export class ServerApiError extends Error {
   readonly status: number;

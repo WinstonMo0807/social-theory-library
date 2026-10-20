@@ -19,6 +19,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
+from .search_schema import global_search_schema
 from distribution.serializers import ReaderRenditionPolicyInputSerializer, ReaderRenditionPolicyResultSerializer
 from .public_response_serializers import ReaderPageContentSerializer, ReaderFocusSerializer, ReaderDocumentSearchSerializer
 from .services.page_geometry import locator_geometry, validated_geometry
@@ -2032,7 +2033,15 @@ class GlobalSearchView(APIView):
         self.throttle_scope = "exact_search_user" if self.request.user.is_authenticated else "exact_search_anon"
         return super().get_throttles()
 
+    @global_search_schema
     def get(self, request):
+        if request.query_params.get("scope") == "catalog":
+            if request.query_params.get("context", "global") != "global":
+                return Response({"context": ["馆藏检索使用 global 范围。"]}, status=400)
+            from .services.catalog_search import search_catalog
+            response = Response(search_catalog(request))
+            response["Cache-Control"] = "private, no-store"
+            return response
         query = request.query_params.get("q", "").strip()
         requested_context = request.query_params.get("context", "").strip()
         if requested_context:

@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from catalog.services.discovery_sessions import (
     cancel_session, create_session, expand_session, get_session, normalize_filters,
-    serialize_session, session_access, retry_session,
+    serialize_session, session_access, retry_session, DISPLAY_SORTS,
 )
 from catalog.services.api_contract import (
     CANONICAL_DISCOVERY_ENDPOINT,
@@ -82,8 +82,26 @@ class DiscoveryWorkSerializer(serializers.Serializer):
     slug = serializers.CharField(required=False)
 
 
+class DiscoveryBibliographySerializer(serializers.Serializer):
+    cover_url = serializers.CharField(allow_blank=True)
+    original_title = serializers.CharField(allow_blank=True)
+    publication_year = serializers.IntegerField(allow_null=True)
+    publisher = serializers.CharField(allow_blank=True)
+    language = serializers.CharField(allow_blank=True)
+    page_count = serializers.IntegerField(allow_null=True)
+    version_label = serializers.CharField(allow_blank=True)
+    document_type = serializers.CharField(allow_blank=True)
+
+
+class DiscoveryAttributionSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    label = serializers.CharField()
+    notice = serializers.CharField()
+
+
 class DiscoveryPassageSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    is_new = serializers.BooleanField(required=False)
     excerpt = serializers.CharField()
     work = DiscoveryWorkSerializer()
     authors = serializers.ListField(child=serializers.CharField())
@@ -103,10 +121,14 @@ class DiscoveryPassageSerializer(serializers.Serializer):
     deep_rank = serializers.IntegerField(required=False, min_value=1)
     deep_score = serializers.FloatField(required=False, allow_null=True)
     deep_context = serializers.DictField(required=False)
+    bibliography = DiscoveryBibliographySerializer(required=False)
+    section_title = serializers.CharField(required=False, allow_blank=True)
+    attribution = DiscoveryAttributionSerializer(required=False)
 
 
 class DiscoveryEntitySerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    is_new = serializers.BooleanField(required=False)
     kind = serializers.CharField()
     title = serializers.CharField()
     url = serializers.CharField()
@@ -117,6 +139,7 @@ class DiscoveryEntitySerializer(serializers.Serializer):
 
 class DiscoveryCurationSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    is_new = serializers.BooleanField(required=False)
     title = serializers.CharField()
     source_title = serializers.CharField()
     source_kind = serializers.CharField()
@@ -134,6 +157,8 @@ class DiscoveryWarningSerializer(serializers.Serializer):
 
 class DiscoveryResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    sort = serializers.ChoiceField(choices=DISPLAY_SORTS)
+    added_count = serializers.IntegerField(min_value=0, help_text="本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。")
     query = serializers.CharField()
     status = serializers.CharField(help_text="queued, running, partial, completed, failed or canceled")
     access_token = serializers.CharField(required=False)
@@ -184,6 +209,11 @@ class DiscoveryContextSerializer(serializers.Serializer):
     locator_precision = serializers.CharField()
     source_kind = serializers.CharField()
     notice = serializers.CharField()
+    source = DiscoveryPassageSerializer(required=False)
+    same_work_count = serializers.IntegerField(required=False)
+    same_work_results = DiscoveryPassageSerializer(many=True, required=False)
+    previous_result_id = serializers.UUIDField(allow_null=True, required=False)
+    next_result_id = serializers.UUIDField(allow_null=True, required=False)
 
 
 SESSION_TOKEN = OpenApiParameter("X-Discovery-Token", str, OpenApiParameter.HEADER,
@@ -215,6 +245,7 @@ class DiscoveryView(APIView):
             session_access(session, request),
             cursor=request.query_params.get("cursor", ""),
             limit=limit,
+            sort=request.query_params.get("sort", "relevance"),
         )
         payload["api_version"] = api_version()
         payload["canonical_endpoint"] = CANONICAL_DISCOVERY_ENDPOINT
@@ -238,7 +269,9 @@ class DiscoverySearchView(DiscoveryView):
 
 
 class DiscoverySearchDetailView(DiscoveryView):
-    @extend_schema(parameters=[SESSION_TOKEN, OpenApiParameter("cursor", str), OpenApiParameter("limit", int)],
+    @extend_schema(parameters=[SESSION_TOKEN, OpenApiParameter("cursor", str), OpenApiParameter("limit", int),
+                               OpenApiParameter("sort", str, enum=DISPLAY_SORTS, default="relevance",
+                                                description="仅排序本次已取得且重新核验的材料，不触发新检索。")],
                    responses=DiscoveryResponseSerializer)
     def get(self, request, session_id):
         return Response(self.payload(request, get_session(request, session_id)))

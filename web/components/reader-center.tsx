@@ -62,7 +62,7 @@ type ProgressSnapshot = {
 type ProgressRow = ProgressSnapshot & { work: ApiWork };
 type SavedRow = {
   id: string;
-  work_data: ApiWork;
+  work_data: ApiWork | null;
   reading_progress: ProgressSnapshot | null;
   created_at: string;
 };
@@ -220,9 +220,11 @@ export function ReaderCenter() {
   }, [session.status, session.user]);
 
   useEffect(() => {
-    if (session.status !== "authenticated") return;
+    if (session.status !== "authenticated" || !session.user) return;
     const credential = getServerSessionCredential();
     if (!credential) return;
+    const owner = String(session.user.id);
+    const controller = new AbortController();
     let mounted = true;
     Promise.resolve().then(() => {
       if (!mounted) return;
@@ -231,23 +233,23 @@ export function ReaderCenter() {
     });
 
     const requests: Promise<{ key: ReaderResourceKey; label: string; results: unknown[] }>[] = [
-      readAllPages<ProgressRow>("/reading/progress/", credential)
+      readAllPages<ProgressRow>("/reading/progress/", credential, controller.signal, owner)
         .then((results) => ({ key: "progress", label: "阅读进度", results })),
-      readAllPages<SavedRow>("/reading/saved/", credential)
+      readAllPages<SavedRow>("/reading/saved/", credential, controller.signal, owner)
         .then((results) => ({ key: "saved", label: "文献收藏", results })),
-      readAllPages<SavedTopicRow>("/reading/saved-topics/", credential)
+      readAllPages<SavedTopicRow>("/reading/saved-topics/", credential, controller.signal, owner)
         .then((results) => ({ key: "savedTopics", label: "主题收藏", results })),
-      readAllPages<AnnotationRow>("/reading/annotations/", credential)
+      readAllPages<AnnotationRow>("/reading/annotations/", credential, controller.signal, owner)
         .then((results) => ({ key: "annotations", label: "高亮与笔记", results })),
-      readAllPages<NoteGroupRow>("/reading/annotations/note-groups/", credential)
+      readAllPages<NoteGroupRow>("/reading/annotations/note-groups/", credential, controller.signal, owner)
         .then((results) => ({ key: "noteGroups", label: "作品笔记", results })),
-      readAllPages<BookmarkRow>("/reading/bookmarks/", credential)
+      readAllPages<BookmarkRow>("/reading/bookmarks/", credential, controller.signal, owner)
         .then((results) => ({ key: "bookmarks", label: "书签", results })),
-      readAllPages<ReadingListRow>("/reading/lists/", credential)
+      readAllPages<ReadingListRow>("/reading/lists/", credential, controller.signal, owner)
         .then((results) => ({ key: "lists", label: "书单", results })),
-      readAllPages<HistoryRow>("/reading/history/", credential)
+      readAllPages<HistoryRow>("/reading/history/", credential, controller.signal, owner)
         .then((results) => ({ key: "history", label: "阅读历史", results })),
-      readAllPages<PlanRow>("/reading/reading-plans/", credential)
+      readAllPages<PlanRow>("/reading/reading-plans/", credential, controller.signal, owner)
         .then((results) => ({ key: "plans", label: "阅读计划", results })),
     ];
 
@@ -311,8 +313,9 @@ export function ReaderCenter() {
 
     return () => {
       mounted = false;
+      controller.abort();
     };
-  }, [resourceAttempt, session.status, session.user?.id]);
+  }, [resourceAttempt, session.status, session.user]);
 
   const recentProgress = useMemo(
     () => [...readerData.progress]
@@ -320,7 +323,8 @@ export function ReaderCenter() {
       .slice(0, 5),
     [readerData.progress],
   );
-  const savedWorks = readerData.saved.map((item, index) => adaptWork(item.work_data, index));
+  const savedWorks = readerData.saved.flatMap((item, index) => item.work_data ? [adaptWork(item.work_data, index)] : []);
+  const recentSavedWork = readerData.saved.find(item => item.work_data)?.work_data;
   const pendingTasks = useMemo(
     () => readerData.plans.flatMap((plan) => (plan.data?.items ?? [])
       .filter((item) => item.status === "pending" || item.status === "reading")
@@ -332,10 +336,10 @@ export function ReaderCenter() {
     () => [
       ...readerData.saved.slice(0, 4).map((item) => ({
         id: `saved-${item.id}`,
-        title: item.work_data.title,
+        title: item.work_data?.title ?? "来源暂不可用",
         kind: "收藏",
         updated: item.created_at,
-        href: item.reading_progress
+        href: item.work_data && item.reading_progress
           ? `/reader/${item.reading_progress.asset}?page=${item.reading_progress.current_page}`
           : "/account",
       })),
@@ -408,7 +412,8 @@ export function ReaderCenter() {
 
   async function deleteRecord(kind: "saved" | "saved-topics" | "annotations" | "bookmarks", id: string) {
     const token = getServerSessionCredential();
-    if (!token) return;
+    const owner = session.user?.id;
+    if (!token || owner === undefined) return;
     if (!window.confirm("确定删除这条个人阅读记录吗？")) return;
     const actionKey = `delete-record:${kind}:${id}`;
     if (!beginReaderAction(actionKey, "正在删除个人阅读记录……")) return;
@@ -425,6 +430,8 @@ export function ReaderCenter() {
         const groups = await readAllPages<NoteGroupRow>(
           "/reading/annotations/note-groups/",
           token,
+          undefined,
+          String(owner),
         );
         setNoteGroups(groups);
       }
@@ -660,19 +667,19 @@ export function ReaderCenter() {
                   <strong>{topic.name}</strong><span>收藏主题</span><ArrowRight size={14} />
                 </Link>
               ))}
-              {!savedWorks.length && !readerData.savedTopics.length ? <p className="empty-state">你还没有收藏文献或主题。</p> : null}
+              {!readerData.saved.length && !readerData.savedTopics.length ? <p className="empty-state">你还没有收藏文献或主题。</p> : null}
             </section>
           </>
         ) : null}
 
         {active === "收藏" ? (
           <DataPanel title="收藏">
-            {savedWorks.map((work, index) => {
-              const saved = readerData.saved[index];
-              const progress = saved.reading_progress;
+            {readerData.saved.map((saved) => {
+              const work = saved.work_data ? adaptWork(saved.work_data) : null;
+              const progress = work ? saved.reading_progress : null;
               return (
-                <div className="reader-saved-row" key={work.id}>
-                  <BookCard work={work} dense />
+                <div className="reader-saved-row" key={saved.id}>
+                  {work ? <BookCard work={work} dense /> : <p>来源暂不可用。收藏记录保留，可由你移除。</p>}
                   <span className="reader-saved-actions">
                     {progress ? (
                       <CollectionLink href={`/reader/${progress.asset}?page=${progress.current_page}`}>
@@ -694,7 +701,7 @@ export function ReaderCenter() {
                 </span>
               </article>
             ))}
-            {!savedWorks.length && !readerData.savedTopics.length ? <p className="empty-state">你还没有收藏文献或主题。</p> : null}
+            {!readerData.saved.length && !readerData.savedTopics.length ? <p className="empty-state">你还没有收藏文献或主题。</p> : null}
           </DataPanel>
         ) : null}
 
@@ -767,7 +774,7 @@ export function ReaderCenter() {
               <article className="reader-data-row" key={list.id}>
                 <List size={17} /><div><strong>{list.title}</strong><p>{list.description}</p><small>{list.items.length} 部文献</small>{list.items.map((item) => <span className="reading-list-item" key={item.id}>{item.title}</span>)}</div>
                 <span className="reader-data-actions">
-                  {readerData.saved[0] ? <ActionButton type="button" state={pendingAction === `add-to-list:${list.id}:${readerData.saved[0].work_data.id}` ? "pending" : "idle"} pendingLabel="加入中" disabled={Boolean(pendingAction) && pendingAction !== `add-to-list:${list.id}:${readerData.saved[0].work_data.id}`} onClick={() => void addSavedWorkToList(list.id, readerData.saved[0].work_data.id)}>加入最近收藏</ActionButton> : null}
+                  {recentSavedWork ? <ActionButton type="button" state={pendingAction === `add-to-list:${list.id}:${recentSavedWork.id}` ? "pending" : "idle"} pendingLabel="加入中" disabled={Boolean(pendingAction) && pendingAction !== `add-to-list:${list.id}:${recentSavedWork.id}`} onClick={() => void addSavedWorkToList(list.id, recentSavedWork.id)}>加入最近收藏</ActionButton> : null}
                   <ActionButton type="button" state={pendingAction === `delete-reading-list:${list.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-list:${list.id}`} onClick={() => void deleteReadingList(list.id)}>删除</ActionButton>
                 </span>
               </article>
@@ -806,6 +813,7 @@ export function ReaderCenter() {
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>
             <Link className="button secondary" href="/account/settings/privacy"><Settings size={16} /> 隐私与资料</Link>
+            <Link className="button secondary" href="/account/source-updates"><RefreshCw size={16} /> 来源更新</Link>
             <ActionButton className="button secondary" type="button" state={pendingAction === "export-reader-data" ? "pending" : "idle"} pendingLabel="正在导出" disabled={Boolean(pendingAction) && pendingAction !== "export-reader-data"} onClick={() => void exportReaderData()}><Download size={16} /> 导出个人数据</ActionButton>
           </DataPanel>
         ) : null}

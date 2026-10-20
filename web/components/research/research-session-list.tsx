@@ -92,7 +92,7 @@ export function ResearchSessionList() {
       setState("loading");
       setError("");
     });
-    readAllPages<ResearchRecord<ProjectData>>("/reading/research-projects/", credential, controller.signal)
+    readAllPages<ResearchRecord<ProjectData>>("/reading/research-projects/", credential, controller.signal, String(ownerId))
       .then((nextRows) => {
         if (!current()) return;
         setSnapshot({ owner: ownerId, rows: nextRows.sort((left, right) => right.updated_at.localeCompare(left.updated_at)) });

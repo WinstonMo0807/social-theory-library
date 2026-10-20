@@ -12,7 +12,7 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 VERIFIED_NAMES = {
     "catalog-feedback", "catalog-admin-public-feedback", "catalog-admin-public-feedback-detail",
-    "catalog-home",
+    "catalog-home", "global-search",
     "admin-discovery-index",
     "discovery-search", "discovery-search-detail", "discovery-search-expand", "discovery-search-cancel", "discovery-search-retry", "discovery-search-context",
     "admin-curation-sources", "admin-evidence-curation", "admin-evidence-curation-publish", "public-evidence-curation",
@@ -54,7 +54,7 @@ urlpatterns = [
         pattern for pattern in reading_router.urls
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
-        "research-account", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
+        "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
         "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail",
     }])),

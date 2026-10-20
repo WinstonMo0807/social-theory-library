@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "GlobalSearchContextEnum": ["global"],
+        "SearchContextEnum": ["works", "scholars", "disciplines", "subdisciplines", "theories", "topics", "reading_paths", "global"],
+        "ScopedSearchContextEnum": ["works", "scholars", "disciplines", "subdisciplines", "theories", "topics", "reading_paths"],
         "PublicFeedbackCategoryEnum": "catalog.feedback_serializers.PUBLIC_FEEDBACK_CATEGORIES",
         "PublicFeedbackStatusEnum": "catalog.feedback_serializers.PUBLIC_FEEDBACK_STATUSES",
         "PublicSourceAvailabilityEnum": ["available", "replaced", "unavailable", "page"],

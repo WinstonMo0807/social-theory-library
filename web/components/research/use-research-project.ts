@@ -29,13 +29,13 @@ export function useResearchProject(id: string, includeTurns = false) {
 
   const load = useCallback(async (signal?: AbortSignal) => {
     const credential = getServerSessionCredential();
-    if (!credential) throw new Error("请重新登录后读取研究资料。");
+    if (!credential || ownerId === undefined) throw new Error("请重新登录后读取研究资料。");
     const [project, rows] = await Promise.all([
       readResearchRecord<ProjectData>("research-projects", id, signal),
-      includeTurns ? readAllPages<ResearchRecord<TurnData>>(`/reading/research-projects/${encodeURIComponent(id)}/turns/`, credential, signal) : Promise.resolve([]),
+      includeTurns ? readAllPages<ResearchRecord<TurnData>>(`/reading/research-projects/${encodeURIComponent(id)}/turns/`, credential, signal, String(ownerId)) : Promise.resolve([]),
     ]);
     return { project, rows };
-  }, [id, includeTurns]);
+  }, [id, includeTurns, ownerId]);
   const accept = useCallback(({ project, rows }: Awaited<ReturnType<typeof load>>) => {
     snapshotIdentity.current = `${ownerId}:${project.id}`;
     lastReadAt.current = Date.now();

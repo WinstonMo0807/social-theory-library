@@ -1329,6 +1329,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description This endpoint preserves three response branches. scope=catalog (context omitted or global) returns CatalogSearchOutput. Other explicit non-global contexts, or context=global&envelope=1, return ScopedSearchOutput. Remaining requests return LegacyGlobalSearchOutput; omitting context also emits Deprecation and Warning headers. Catalog filters use repeated query parameters, AND across fields and OR within a field, on the same activated public edition. Parameter defaults and validation differ by branch; see each parameter description. */
+        get: operations["catalog_search_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/theory-system/evidence/{id}/focus/": {
         parameters: {
             query?: never;
@@ -2329,6 +2346,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/search-records/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_search_records_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/source-follows/": {
         parameters: {
             query?: never;
@@ -2558,9 +2591,15 @@ export interface components {
             project_id?: string;
             /** @description multipart 使用重复 checks 字段；默认前三项，扫描 OCR 必须显式选择。 */
             checks?: components["schemas"]["ChecksEnum"][];
-            scope?: components["schemas"]["ScopeEnum"];
+            scope?: components["schemas"]["AuditCreateInputScopeEnum"];
             private_source_ids?: string[];
         };
+        /**
+         * @description * `public_library` - public_library
+         *     * `private_materials` - private_materials
+         * @enum {string}
+         */
+        AuditCreateInputScopeEnum: "public_library" | "private_materials";
         AuditVersionInputRequest: {
             expected_revision: number;
             /** Format: uuid */
@@ -2607,6 +2646,11 @@ export interface components {
          * @enum {string}
          */
         AuthorityStatusEnum: "draft" | "needs_review" | "verified" | "rejected" | "merged" | "archived";
+        /**
+         * @description * `database` - database
+         * @enum {string}
+         */
+        BackendEnum: "database";
         BackupJob: {
             /** Format: uuid */
             readonly id: string;
@@ -2669,6 +2713,125 @@ export interface components {
          * @enum {string}
          */
         CalibrationStatusEnum: "unverified" | "needs_review" | "confirmed" | "native" | "matched" | "generated";
+        CatalogCounts: {
+            works: number;
+            books: number;
+            articles: number;
+            theses: number;
+            reports: number;
+            scholars: number;
+            topics: number;
+            theories: number;
+            passages: number;
+        };
+        CatalogEdition: {
+            /** Format: uuid */
+            readonly id: string;
+            public_slug?: (string) | null;
+            version_label?: string;
+            readonly edition_statement: string;
+            /** Format: date */
+            publication_date?: string | null;
+            /** Format: int64 */
+            publication_year?: number | null;
+            publisher?: string;
+            readonly publisher_verbatim: string;
+            /** Format: uuid */
+            publisher_authority?: string | null;
+            publication_place?: string;
+            readonly publication_place_verbatim: string;
+            distribution_place?: string;
+            distributor?: string;
+            manufacture_place?: string;
+            manufacturer?: string;
+            journal_title?: string;
+            readonly journal_contents: components["schemas"]["PublicJournalContent"][];
+            volume?: string;
+            issue?: string;
+            page_range?: string;
+            isbn?: string;
+            isbn10?: string;
+            isbn13?: string;
+            doi?: string;
+            series?: string;
+            extent?: string;
+            responsibility_statement?: string;
+            readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
+            readonly readable_asset: components["schemas"]["AssetCompact"] | null;
+            readonly language: string;
+            readonly availability: string;
+        };
+        CatalogFacet: {
+            value: string;
+            label: string;
+            count: number;
+        };
+        CatalogFacets: {
+            document_types: components["schemas"]["CatalogFacet"][];
+            authors: components["schemas"]["CatalogFacet"][];
+            years: components["schemas"]["CatalogFacet"][];
+            languages: components["schemas"]["CatalogFacet"][];
+            access: components["schemas"]["CatalogFacet"][];
+            theories: components["schemas"]["CatalogFacet"][];
+            topics: components["schemas"]["CatalogFacet"][];
+            concepts: components["schemas"]["CatalogFacet"][];
+            year_histogram: components["schemas"]["CatalogYearCount"][];
+        };
+        CatalogPagination: {
+            page: number;
+            page_size: number;
+            total: number;
+            total_pages: number;
+        };
+        CatalogSearchOutput: {
+            context: components["schemas"]["GlobalSearchContextEnum"];
+            query: string;
+            scope: components["schemas"]["CatalogSearchOutputScopeEnum"];
+            counts: components["schemas"]["CatalogCounts"];
+            works: components["schemas"]["CatalogWork"][];
+            facets: components["schemas"]["CatalogFacets"];
+            pagination: components["schemas"]["CatalogPagination"];
+            scholars: unknown[];
+            topics: unknown[];
+            theories: unknown[];
+            passages: unknown[];
+        };
+        /**
+         * @description * `catalog` - catalog
+         * @enum {string}
+         */
+        CatalogSearchOutputScopeEnum: "catalog";
+        CatalogWork: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["CatalogEdition"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly editions: components["schemas"]["CatalogEdition"][];
+            readonly matched_edition_ids: string[];
+        };
+        CatalogYearCount: {
+            year: number;
+            count: number;
+        };
         /**
          * @description * `link_existing` - link_existing
          *     * `create_draft` - create_draft
@@ -2976,6 +3139,21 @@ export interface components {
          * @enum {string}
          */
         DirectionEnum: "directed" | "bidirectional" | "undirected";
+        DiscoveryAttribution: {
+            status: string;
+            label: string;
+            notice: string;
+        };
+        DiscoveryBibliography: {
+            cover_url: string;
+            original_title: string;
+            publication_year: number | null;
+            publisher: string;
+            language: string;
+            page_count: number | null;
+            version_label: string;
+            document_type: string;
+        };
         DiscoveryContext: {
             /** Format: uuid */
             result_id: string;
@@ -2993,6 +3171,13 @@ export interface components {
             locator_precision: string;
             source_kind: string;
             notice: string;
+            source?: components["schemas"]["DiscoveryPassage"];
+            same_work_count?: number;
+            same_work_results?: components["schemas"]["DiscoveryPassage"][];
+            /** Format: uuid */
+            previous_result_id?: string | null;
+            /** Format: uuid */
+            next_result_id?: string | null;
         };
         DiscoveryCreateRequest: {
             q: string;
@@ -3003,6 +3188,7 @@ export interface components {
         DiscoveryCuration: {
             /** Format: uuid */
             id: string;
+            is_new?: boolean;
             title: string;
             source_title: string;
             source_kind: string;
@@ -3052,6 +3238,7 @@ export interface components {
         DiscoveryEntity: {
             /** Format: uuid */
             id: string;
+            is_new?: boolean;
             kind: string;
             title: string;
             url: string;
@@ -3062,6 +3249,7 @@ export interface components {
         DiscoveryPassage: {
             /** Format: uuid */
             id: string;
+            is_new?: boolean;
             excerpt: string;
             work: components["schemas"]["DiscoveryWork"];
             authors: string[];
@@ -3089,10 +3277,16 @@ export interface components {
             deep_context?: {
                 [key: string]: unknown;
             };
+            bibliography?: components["schemas"]["DiscoveryBibliography"];
+            section_title?: string;
+            attribution?: components["schemas"]["DiscoveryAttribution"];
         };
         DiscoveryResponse: {
             /** Format: uuid */
             id: string;
+            sort: components["schemas"]["SortEnum"];
+            /** @description 本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。 */
+            added_count: number;
             query: string;
             /** @description queued, running, partial, completed, failed or canceled */
             status: string;
@@ -3353,6 +3547,13 @@ export interface components {
          * @enum {string}
          */
         EffectiveRenditionEnum: "ocr_pdf" | "normalized";
+        /**
+         * @description * `tradition` - 理论传统
+         *     * `school` - 流派
+         *     * `branch` - 分支
+         * @enum {string}
+         */
+        EntityLevelEnum: "tradition" | "school" | "branch";
         EvidenceAnchorInputRequest: {
             /** Format: uuid */
             evidence_span_id?: string;
@@ -3574,9 +3775,15 @@ export interface components {
             /** Format: date-time */
             expected_asset_updated_at: string;
         };
+        /**
+         * @description * `global` - global
+         * @enum {string}
+         */
+        GlobalSearchContextEnum: "global";
+        GlobalSearchOutput: components["schemas"]["CatalogSearchOutput"] | components["schemas"]["LegacyGlobalSearchOutput"] | components["schemas"]["ScopedSearchOutput"];
         HomeResponse: {
             schema_version: string;
-            visibility: components["schemas"]["VisibilityEnum"];
+            visibility: components["schemas"]["HomeResponseVisibilityEnum"];
             status: components["schemas"]["HomeResponseStatusEnum"];
             config: components["schemas"]["SiteConfig"] | null;
             works: components["schemas"]["WorkCard"][];
@@ -3597,6 +3804,11 @@ export interface components {
          * @enum {string}
          */
         HomeResponseStatusEnum: "ready" | "empty" | "partial" | "unavailable";
+        /**
+         * @description * `public` - public
+         * @enum {string}
+         */
+        HomeResponseVisibilityEnum: "public";
         HomeSection: {
             status: components["schemas"]["HomeSectionStatusEnum"];
             source: string;
@@ -3796,6 +4008,141 @@ export interface components {
          * @enum {string}
          */
         LanguagesEnum: "ch" | "en" | "chinese_cht";
+        LegacyGlobalFacets: {
+            document_types: components["schemas"]["CatalogFacet"][];
+            authors: components["schemas"]["CatalogFacet"][];
+            years: components["schemas"]["CatalogFacet"][];
+            languages: components["schemas"]["CatalogFacet"][];
+            access: components["schemas"]["CatalogFacet"][];
+            theories: components["schemas"]["CatalogFacet"][];
+            topics: components["schemas"]["CatalogFacet"][];
+            concepts: components["schemas"]["CatalogFacet"][];
+        };
+        LegacyGlobalPassage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            work_id: string;
+            edition_slug: string;
+            /** Format: uuid */
+            asset_id: string;
+            title: string;
+            page_index: number;
+            printed_label: string;
+            snippet: string;
+            bbox: unknown;
+            query: string;
+        };
+        LegacyGlobalSearchOutput: {
+            context: components["schemas"]["GlobalSearchContextEnum"];
+            query: string;
+            counts: components["schemas"]["CatalogCounts"];
+            facets: components["schemas"]["LegacyGlobalFacets"];
+            pagination: components["schemas"]["CatalogPagination"];
+            works: components["schemas"]["WorkCard"][];
+            scholars: components["schemas"]["LegacySearchScholar"][];
+            topics: components["schemas"]["LegacySearchTopic"][];
+            theories: components["schemas"]["LegacySearchTheory"][];
+            passages: components["schemas"]["LegacyGlobalPassage"][];
+        };
+        LegacySearchScholar: {
+            /** Format: uuid */
+            readonly id: string;
+            slug: string;
+            person: components["schemas"]["PersonCompact"];
+            short_description?: string;
+            affiliations?: unknown;
+            key_concerns?: unknown;
+            timeline?: unknown;
+            featured_quote?: string;
+            quote_source?: string;
+            readonly works: components["schemas"]["WorkCard"][];
+            readonly curated: {
+                [key: string]: unknown;
+            };
+            readonly curated_claims: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
+            readonly knowledge_nodes: {
+                [key: string]: unknown;
+            }[];
+        };
+        LegacySearchTheory: {
+            /** Format: uuid */
+            readonly id: string;
+            name: string;
+            slug: string;
+            description?: string;
+            symbol?: string;
+            foreign_name?: string;
+            entity_level?: components["schemas"]["EntityLevelEnum"];
+            formation_period?: string;
+            core_questions?: unknown;
+            key_themes?: unknown;
+            /** Format: uri */
+            hero_image?: string | null;
+            readonly disciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly subdisciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly hierarchy: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
+            readonly relations: {
+                [key: string]: unknown;
+            }[];
+            readonly timeline: {
+                [key: string]: unknown;
+            }[];
+            readonly work_count: number;
+            readonly scholar_count: number;
+            readonly curated: {
+                [key: string]: unknown;
+            };
+        };
+        LegacySearchTopic: {
+            /** Format: uuid */
+            readonly id: string;
+            name: string;
+            slug: string;
+            description?: string;
+            problem_statement?: string;
+            core_questions?: unknown;
+            research_dimensions?: unknown;
+            methods?: unknown;
+            formation_context?: string;
+            key_concepts?: unknown;
+            timeline?: unknown;
+            /** Format: uri */
+            hero_image?: string | null;
+            readonly disciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly subdisciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly linked_theories: {
+                [key: string]: unknown;
+            }[];
+            readonly knowledge_nodes: {
+                [key: string]: unknown;
+            }[];
+            readonly work_count: number;
+            readonly curated: {
+                [key: string]: unknown;
+            };
+            readonly curated_claims: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
+        };
         MappingAsset: {
             /** Format: uuid */
             id: string;
@@ -5942,11 +6289,105 @@ export interface components {
             edit_version?: string;
         };
         /**
-         * @description * `public_library` - public_library
-         *     * `private_materials` - private_materials
+         * @description * `works` - works
+         *     * `scholars` - scholars
+         *     * `disciplines` - disciplines
+         *     * `subdisciplines` - subdisciplines
+         *     * `theories` - theories
+         *     * `topics` - topics
+         *     * `reading_paths` - reading_paths
          * @enum {string}
          */
-        ScopeEnum: "public_library" | "private_materials";
+        ScopedSearchContextEnum: "works" | "scholars" | "disciplines" | "subdisciplines" | "theories" | "topics" | "reading_paths";
+        ScopedSearchGroup: {
+            context: components["schemas"]["ScopedSearchContextEnum"];
+            label: string;
+            backend: components["schemas"]["BackendEnum"];
+            count: number;
+            results: components["schemas"]["ScopedSearchResult"][];
+            /** @description Present only for a non-global scoped search. */
+            pagination?: components["schemas"]["ScopedSearchPagination"];
+        };
+        ScopedSearchMatch: {
+            type: components["schemas"]["ScopedSearchMatchTypeEnum"];
+            query: string;
+            highlights: string[];
+        };
+        /**
+         * @description * `exact` - exact
+         *     * `verified_alias` - verified_alias
+         *     * `prefix` - prefix
+         *     * `text` - text
+         *     * `browse` - browse
+         * @enum {string}
+         */
+        ScopedSearchMatchTypeEnum: "exact" | "verified_alias" | "prefix" | "text" | "browse";
+        ScopedSearchOutput: {
+            implementation_version: string;
+            context: components["schemas"]["SearchContextEnum"];
+            visibility: components["schemas"]["ScopedSearchOutputVisibilityEnum"];
+            query: string;
+            groups: components["schemas"]["ScopedSearchGroup"][];
+            total: number;
+            pagination: components["schemas"]["ScopedSearchPagination"];
+            /** Format: double */
+            latency_ms: number;
+        };
+        /**
+         * @description * `public` - public
+         *     * `admin` - admin
+         * @enum {string}
+         */
+        ScopedSearchOutputVisibilityEnum: "public" | "admin";
+        ScopedSearchPagination: {
+            page: number;
+            limit: number;
+            total: number;
+            total_pages: number;
+        };
+        ScopedSearchResult: {
+            context: components["schemas"]["ScopedSearchContextEnum"];
+            entity_type: string;
+            /** Format: uuid */
+            id: string;
+            title: string;
+            subtitle: string;
+            description: string;
+            url: string;
+            match: components["schemas"]["ScopedSearchMatch"];
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * @description * `works` - works
+         *     * `scholars` - scholars
+         *     * `disciplines` - disciplines
+         *     * `subdisciplines` - subdisciplines
+         *     * `theories` - theories
+         *     * `topics` - topics
+         *     * `reading_paths` - reading_paths
+         *     * `global` - global
+         * @enum {string}
+         */
+        SearchContextEnum: "works" | "scholars" | "disciplines" | "subdisciplines" | "theories" | "topics" | "reading_paths" | "global";
+        SearchRecordOutput: {
+            /** Format: uuid */
+            id: string;
+            query: string;
+            filters: unknown;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SearchRecordsPage: {
+            owner_id: string;
+            recording_enabled: boolean;
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["SearchRecordOutput"][];
+            notice: string;
+        };
         /**
          * @description * `add` - add
          *     * `remove` - remove
@@ -6072,6 +6513,13 @@ export interface components {
             about_blocks: components["schemas"]["AboutPageBlockRequest"][];
             edit_version: string;
         };
+        /**
+         * @description * `relevance` - relevance
+         *     * `year_desc` - year_desc
+         *     * `year_asc` - year_asc
+         * @enum {string}
+         */
+        SortEnum: "relevance" | "year_desc" | "year_asc";
         /**
          * @description * `manual` - manual
          *     * `pdf_page_labels` - pdf_page_labels
@@ -6245,11 +6693,6 @@ export interface components {
             /** Format: uuid */
             request_id: string;
         };
-        /**
-         * @description * `public` - public
-         * @enum {string}
-         */
-        VisibilityEnum: "public";
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -8785,6 +9228,8 @@ export interface operations {
             query?: {
                 cursor?: string;
                 limit?: number;
+                /** @description 仅排序本次已取得且重新核验的材料，不触发新检索。 */
+                sort?: "relevance" | "year_asc" | "year_desc";
             };
             header?: {
                 /** @description Anonymous search capability returned once at creation; do not put in URLs. */
@@ -9098,6 +9543,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationPage"];
+                };
+            };
+        };
+    };
+    catalog_search_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Catalog: readable or metadata. Legacy global: online or download. */
+                access?: string[];
+                author?: string[];
+                concept?: string[];
+                /**
+                 * @description scope=catalog accepts global only. Other non-global contexts return the scoped envelope. Omitting context uses the deprecated legacy global response.
+                 *
+                 *     * `works` - works
+                 *     * `scholars` - scholars
+                 *     * `disciplines` - disciplines
+                 *     * `subdisciplines` - subdisciplines
+                 *     * `theories` - theories
+                 *     * `topics` - topics
+                 *     * `reading_paths` - reading_paths
+                 *     * `global` - global
+                 */
+                context?: "works" | "scholars" | "disciplines" | "subdisciplines" | "theories" | "topics" | "reading_paths" | "global";
+                /** @description Scoped subdisciplines, theories, topics or reading_paths only. */
+                discipline?: string;
+                document_type?: string[];
+                /** @description With an explicit global context, the literal value 1 selects the scoped envelope. Ignored for scope=catalog. */
+                envelope?: string;
+                language?: string[];
+                /** @description Scoped envelope page limit, default 24. Ignored by catalog and legacy global. */
+                limit?: number;
+                /** @description Catalog only. Repeat the parameter for multiple values. Defaults to title, author, keyword, abstract. */
+                match?: ("title" | "author" | "keyword" | "abstract" | "fulltext")[];
+                /** @description Scoped theories only, when type is absent. */
+                node_type?: string;
+                /** @description Defaults to 1. Catalog rejects values over 100000; legacy/scoped branches normalize invalid values. */
+                page?: number;
+                /** @description Catalog defaults to 24. Legacy defaults to 8 for scope=all, otherwise 24. Scoped envelope uses this only when limit is absent. */
+                page_size?: number;
+                /** @description Catalog and explicit context searches accept at most 500 characters; catalog also limits whitespace-separated terms to 20. */
+                q?: string;
+                /** @description catalog selects the snapshot-backed catalog response. Legacy global uses all by default, or book, article, thesis, report, scholar, topic, theory, fulltext to select pagination totals. */
+                scope?: string;
+                /**
+                 * @description Catalog and legacy global only; defaults to relevance.
+                 *
+                 *     * `relevance` - relevance
+                 *     * `newest` - newest
+                 *     * `year` - year
+                 */
+                sort?: "relevance" | "newest" | "year";
+                /** @description Legacy global only. */
+                tag?: string[];
+                theory?: string[];
+                topic?: string[];
+                /** @description Scoped theories node type; takes precedence over node_type. */
+                type?: string;
+                /**
+                 * @description Scoped envelope only. admin is honored only for authorized staff or admin/editor/reviewer accounts; otherwise public is used.
+                 *
+                 *     * `public` - public
+                 *     * `admin` - admin
+                 */
+                visibility?: "public" | "admin";
+                /** @description Catalog/legacy year buckets: before-1900, 1900-1949, 1950-1999, 2000-2009, 2010-2019, 2020-now. */
+                year?: string[];
+                /** @description Catalog only; inclusive upper bound, not less than year_min. */
+                year_max?: number;
+                /** @description Catalog only; inclusive lower bound. */
+                year_min?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSearchOutput"];
                 };
             };
         };
@@ -11269,6 +11798,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_search_records_retrieve: {
+        parameters: {
+            query: {
+                owner_id: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchRecordsPage"];
                 };
             };
         };

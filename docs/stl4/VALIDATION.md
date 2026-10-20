@@ -1,5 +1,18 @@
 # 验收记录
 
+## 2026-10-20 检索单元静态收口
+
+- web下 `node node_modules/typescript/bin/tsc --noEmit --incremental false`，session37376，退出0。
+- web下 `node node_modules/eslint/bin/eslint.js` 检查opinion入口/client/hook/route/spec、save/add-list/read-all-pages及所有私人分页调用者，共16路径，退出0。两处新增useEffect依赖提示随后按真实user依赖修正；img提示仍待正式性能验收。此前14路径目录/原文检索ESLint退出0（2条img提示）。
+- Python ast.parse 本人历史、services/serializers/views/research_views及两新回归文件，共7路径，退出0；此前catalog/Discovery/提取脚本12路径AST退出0。
+- PostCSS parse四份CSS退出0，节点84/235/191/31。仅语法，不证明排版一致。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-search-20261019-schema.json --validate` 使用SQLite内存配置，0 schema errors/10条既有Home/Scholar/Topic提示，150paths；openapi-typescript同步生成。未连接生产、未应用迁移。
+- 已编写catalog后端11函数、收藏6函数/9案例、Discovery呈现7函数、控制6函数/8案例、观点历史4函数/6案例、私人边界3函数/16案例；浏览器catalog7、evidence8、opinion5及private分页4案例。均未运行。
+
+补充：两处Hook依赖修正后，目标ESLint无提示退出0；全量TS session64546退出0。85路径严格白名单、全部暂存Python AST、git diff --cached --check退出0，150路径保持全部原接口。
+
+完整功能、PostgreSQL/权限/并发、真实任务与资源、浏览器/逐图验收留待全量实施后；没有构建、检索质量评测、模型/OCR/NAS或生产操作。最终差异白名单与静态补充见本检查点及单元记录。
+
 ## 2026-10-19 公共交互检查点
 
 - 各单元目标ESLint、Python AST、CSS解析记录见HOME_SUPPORT_IMPLEMENTATION_20261018、PUBLIC_FEEDBACK_20261018、SOURCE_UPDATES_20261019、SHARED_CITATION_20261019，均只静态检查。合成后端/浏览器用例仅编写，未执行。

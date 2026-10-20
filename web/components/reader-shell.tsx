@@ -316,7 +316,7 @@ export function ReaderShell({
         </div>
         </div>
         <div className="reader-actions">
-          {safeResearchReturn(returnTo) ? <Link href={safeResearchReturn(returnTo)}>返回研究</Link> : null}
+          {safeResearchReturn(returnTo) ? <Link href={safeResearchReturn(returnTo)}>{safeResearchReturn(returnTo).startsWith("/explore/") ? "返回候选位置" : "返回研究"}</Link> : null}
           <AskLibraryLink
             context="works"
             ids={[work.workId]}

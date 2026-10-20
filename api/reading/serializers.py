@@ -6,10 +6,7 @@ from rest_framework import serializers
 
 from catalog.models import Asset, Page, Topic, Work
 from catalog.serializers import WorkCardSerializer
-from catalog.services.publication_eligibility import (
-    active_catalog_snapshot,
-    public_edition_q,
-)
+from catalog.services.publication_eligibility import public_edition_q
 
 from .models import (
     Annotation,
@@ -26,19 +23,24 @@ from .services import (
     decrypt_private_text,
     encrypt_private_text,
     ensure_saved_work_progress,
+    readable_assets_for_user,
     readable_progress_for_user,
 )
 
 
-def _reader_asset_available(asset: Asset) -> bool:
-    snapshot = active_catalog_snapshot(asset.edition)
-    return bool(
-        snapshot
-        and asset.edition.active_catalog_revision.reader_asset_id == asset.id
-        and asset.kind == Asset.Kind.NORMALIZED
-        and asset.status == Asset.Status.READY
-        and asset.is_current
-    )
+def _reader_asset_available(asset: Asset, user) -> bool:
+    return readable_assets_for_user(user).filter(pk=asset.pk).exists()
+
+
+def _reader_work_data(work, context):
+    data = WorkCardSerializer(work, context=context).data
+    edition = data.get("edition") or {}
+    asset = edition.get("readable_asset")
+    if asset and not readable_assets_for_user(getattr(context.get("request"), "user", None)).filter(
+        pk=asset["id"], edition_id=edition["id"], edition__work=work,
+    ).exists():
+        edition["readable_asset"] = None
+    return data
 
 
 class OwnedSerializer(serializers.ModelSerializer):
@@ -64,13 +66,10 @@ class ReadingProgressSerializer(OwnedSerializer):
         read_only_fields = ("id", "updated_at")
 
     def get_work(self, obj):
-        return WorkCardSerializer(
-            obj.asset.edition.work,
-            context=self.context,
-        ).data
+        return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate_asset(self, value):
-        if not _reader_asset_available(value):
+        if not _reader_asset_available(value, self.context["request"].user):
             raise serializers.ValidationError("该阅读文件不可用。")
         return value
 
@@ -120,17 +119,14 @@ class AnnotationSerializer(OwnedSerializer):
         return None
 
     def get_work(self, obj):
-        return WorkCardSerializer(
-            obj.asset.edition.work,
-            context=self.context,
-        ).data
+        return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate(self, attrs):
         asset = attrs.get("asset") or getattr(self.instance, "asset", None)
         page = attrs.get("page") or getattr(self.instance, "page", None)
         if asset is None or page is None or page.asset_id != asset.id:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
-        if not _reader_asset_available(asset):
+        if not _reader_asset_available(asset, self.context["request"].user):
             raise serializers.ValidationError("该文献当前不可批注。")
         return attrs
 
@@ -159,15 +155,12 @@ class BookmarkSerializer(OwnedSerializer):
         read_only_fields = ("id", "created_at")
 
     def get_work(self, obj):
-        return WorkCardSerializer(
-            obj.asset.edition.work,
-            context=self.context,
-        ).data
+        return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate(self, attrs):
         if attrs["page"].asset_id != attrs["asset"].id:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
-        if not _reader_asset_available(attrs["asset"]):
+        if not _reader_asset_available(attrs["asset"], self.context["request"].user):
             raise serializers.ValidationError("该阅读文件不可用。")
         return attrs
 
@@ -206,7 +199,7 @@ class SavedItemListSerializer(serializers.ListSerializer):
 
 
 class SavedItemSerializer(OwnedSerializer):
-    title = serializers.CharField(source="work.title", read_only=True)
+    title = serializers.SerializerMethodField()
     work_data = serializers.SerializerMethodField()
     reading_progress = serializers.SerializerMethodField()
 
@@ -224,17 +217,30 @@ class SavedItemSerializer(OwnedSerializer):
         list_serializer_class = SavedItemListSerializer
 
     def validate_work(self, value):
-        if not value.editions.filter(public_edition_q()).exists():
+        if not value.editions.filter(public_edition_q(), is_primary=True).exists():
             raise serializers.ValidationError("该文献当前不可收藏。")
-        self._validated_reader_asset = current_reader_asset_for_work(value)
-        if self._validated_reader_asset is None:
-            raise serializers.ValidationError("该文献当前没有可用的在线阅读文件。")
+        self._validated_reader_asset = current_reader_asset_for_work(value, user=self.context["request"].user)
         return value
 
     def get_work_data(self, obj):
-        return WorkCardSerializer(obj.work, context=self.context).data
+        cache = getattr(self, "_public_saved_works", None)
+        if cache is None:
+            cache = self._public_saved_works = {}
+        if obj.work_id not in cache:
+            cache[obj.work_id] = (
+                _reader_work_data(obj.work, self.context)
+                if obj.work.editions.filter(public_edition_q(), is_primary=True).exists()
+                else None
+            )
+        return cache[obj.work_id]
+
+    def get_title(self, obj):
+        data = self.get_work_data(obj)
+        return data["title"] if data else "来源暂不可用"
 
     def get_reading_progress(self, obj):
+        if self.get_work_data(obj) is None:
+            return None
         progress_by_work = getattr(self, "_saved_progress_by_work", None)
         if progress_by_work is not None:
             progress = progress_by_work.get(obj.work_id)
@@ -255,18 +261,18 @@ class SavedItemSerializer(OwnedSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        from .privacy import lock_owner
         user = self.context["request"].user
+        lock_owner(user)
         work = validated_data["work"]
-        saved_item = SavedItem.objects.create(user=user, **validated_data)
-        progress = ensure_saved_work_progress(
+        # Unknown responses can be retried without duplicating a collection.
+        self.validate_work(work)
+        saved_item, _ = SavedItem.objects.get_or_create(user=user, work=work)
+        ensure_saved_work_progress(
             user=user,
             work=work,
             fallback_asset=getattr(self, "_validated_reader_asset", None),
         )
-        if progress is None:
-            raise serializers.ValidationError(
-                {"work": "该文献当前没有可用的在线阅读文件。"}
-            )
         return saved_item
 
 
@@ -293,12 +299,22 @@ class SavedTopicSerializer(OwnedSerializer):
 
 
 class ReadingListItemSerializer(serializers.ModelSerializer):
-    title = serializers.CharField(source="work.title", read_only=True)
+    title = serializers.SerializerMethodField()
 
     class Meta:
         model = ReadingListItem
         fields = ("id", "work", "title", "order", "created_at")
         read_only_fields = ("id", "created_at")
+
+    def validate_work(self, value):
+        if not value.editions.filter(public_edition_q(), is_primary=True).exists():
+            raise serializers.ValidationError("该文献当前未公开，不能加入书单。")
+        return value
+
+    def get_title(self, obj):
+        if not obj.work.editions.filter(public_edition_q(), is_primary=True).exists():
+            return "来源暂不可用"
+        return WorkCardSerializer(obj.work, context=self.context).data["title"]
 
 
 class ReadingListSerializer(OwnedSerializer):
@@ -320,13 +336,10 @@ class ReadingHistorySerializer(OwnedSerializer):
         read_only_fields = ("id", "created_at")
 
     def get_work(self, obj):
-        return WorkCardSerializer(
-            obj.asset.edition.work,
-            context=self.context,
-        ).data
+        return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate_asset(self, value):
-        if not _reader_asset_available(value):
+        if not _reader_asset_available(value, self.context["request"].user):
             raise serializers.ValidationError("该阅读文件不可用。")
         return value
 

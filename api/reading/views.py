@@ -3,11 +3,13 @@ from django.db import transaction
 from django.db.models import Count, F, Max, OuterRef, Subquery
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from urllib.parse import quote
+from uuid import UUID
 
 from .models import (
     Annotation,
@@ -39,6 +41,17 @@ from .library_serializers import (
 
 class OwnedModelViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        expected = request.headers.get("X-Reader-Owner")
+        if expected is not None and expected != str(request.user.pk):
+            raise PermissionDenied("登录账户已变化，请重新读取当前账户的资料。")
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
     def get_queryset(self):
         rows = self.queryset.filter(user=self.request.user)
@@ -157,6 +170,21 @@ class SavedItemViewSet(OwnedModelViewSet):
     serializer_class = SavedItemSerializer
     filterset_fields = ("work",)
 
+    def get_queryset(self):
+        rows = super().get_queryset()
+        raw_ids = self.request.query_params.get("work_ids", "")
+        if raw_ids:
+            from rest_framework.exceptions import ValidationError
+            values = raw_ids.split(",")
+            if len(values) > 50:
+                raise ValidationError({"work_ids": "一次最多读取50部作品的收藏状态。"})
+            try:
+                ids = [UUID(value) for value in values]
+            except (ValueError, TypeError):
+                raise ValidationError({"work_ids": "作品标识格式不正确。"})
+            rows = rows.filter(work_id__in=ids)
+        return rows
+
 
 class SavedTopicViewSet(OwnedModelViewSet):
     queryset = SavedTopic.objects.select_related("topic")
@@ -168,8 +196,11 @@ class ReadingListViewSet(OwnedModelViewSet):
     queryset = ReadingList.objects.prefetch_related("items__work")
     serializer_class = ReadingListSerializer
 
+    @transaction.atomic
     @action(detail=True, methods=["post"])
     def add_item(self, request, pk=None):
+        from .privacy import lock_owner
+        lock_owner(request.user)
         reading_list = self.get_object()
         serializer = ReadingListItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -183,8 +214,11 @@ class ReadingListViewSet(OwnedModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
+    @transaction.atomic
     @action(detail=True, methods=["delete"], url_path=r"items/(?P<item_id>[^/.]+)")
     def remove_item(self, request, pk=None, item_id=None):
+        from .privacy import lock_owner
+        lock_owner(request.user)
         reading_list = self.get_object()
         reading_list.items.filter(pk=item_id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

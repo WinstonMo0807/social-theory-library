@@ -1,17 +1,24 @@
 export type DiscoveryStatus = "queued" | "running" | "partial" | "completed" | "failed" | "canceled";
+export type DiscoverySort = "relevance" | "year_desc" | "year_asc";
 export type DiscoveryDeepStatus = "baseline_ready" | "deep_queued" | "deep_running" | "completed" | "partial" | "unavailable" | "pending" | "queued" | "running" | "degraded" | "disabled" | "skipped" | "failed";
 export type DiscoveryFilters = Record<string, string | string[]>;
 export type DiscoveryPassage = {
   id: string; excerpt: string; work: { id: string; title: string; slug?: string }; authors: string[];
+  is_new?: boolean;
   asset_id: string; document_revision_id: string; evidence_span_id?: string; passage_id?: string; pdf_page: number; printed_page?: string;
   reader_url: string; context_reference?: string; source_kind: string; locator_precision: string; match_basis: string[];
+  edition_id?: string; section_title?: string;
+  bibliography?: { cover_url: string; original_title: string; publication_year: number | null; publisher: string; language: string; page_count: number | null; version_label: string; document_type: string };
+  attribution?: { status: string; label: string; notice: string };
   deep_rank?: number; deep_score?: number | null; deep_context?: { policy?: string; provider?: string; available?: boolean; before?: string; after?: string; blocks?: Array<Record<string, unknown>> };
 };
 export type DiscoveryEntity = {
   id: string; kind: string; title: string; url: string; excerpt?: string; portrait_url?: string; match_basis: string[];
+  is_new?: boolean;
 };
 export type DiscoveryCuration = {
   id: string; source_title: string; title?: string; recommendation_excerpt: string; url: string;
+  is_new?: boolean;
   source_kind?: string; match_basis: string[]; linked_work_ids?: string[];
 };
 export type DiscoveryCoverage = {
@@ -40,6 +47,7 @@ export type DiscoveryRetrievalIdentity = {
 };
 export type DiscoverySearch = {
   id: string; access_token?: string; query: string; status: DiscoveryStatus; status_message?: string;
+  sort?: DiscoverySort; added_count?: number;
   mode: "standard" | "expanded"; expansion_count: number; passages: DiscoveryPassage[];
   entities: DiscoveryEntity[]; curation: DiscoveryCuration[]; next_cursor: string | null; can_expand: boolean;
   count?: number; warnings: Array<string | { code: string; message: string; channel?: string }>; coverage_summary: DiscoveryCoverage; completed_channels: string[];
@@ -54,4 +62,6 @@ export type DiscoverySearch = {
 export type DiscoveryContext = {
   result_id: string; excerpt: string; before: string; after: string; reader_url: string; locator_precision: string;
   blocks: Array<{ text: string; pdf_page: number; role: string }>; notice?: string;
+  source?: DiscoveryPassage; previous_result_id?: string | null; next_result_id?: string | null;
+  same_work_count?: number; same_work_results?: DiscoveryPassage[];
 };

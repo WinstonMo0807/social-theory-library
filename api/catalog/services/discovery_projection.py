@@ -135,7 +135,7 @@ def validate_discovery_results(channel, rows, access_statuses):
     span_ids = [doc.payload.get("evidence_span_id") for doc in documents if doc.payload.get("evidence_span_id")]
     page_ids = [doc.payload.get("page_id") for doc in documents if not doc.payload.get("evidence_span_id") and doc.payload.get("page_id")]
     spans = {str(row["id"]): row for row in EvidenceSpan.objects.filter(pk__in=span_ids, is_stale=False).values(
-        "id", "document_revision_id", "page__asset_id", "original_text", "page__text", "start_offset", "end_offset")}
+        "id", "document_revision_id", "page__asset_id", "original_text", "page__text", "start_offset", "end_offset", "section")}
     pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "text")}
     for doc in documents:
         ref = refs[str(doc.pk)]
@@ -156,6 +156,10 @@ def validate_discovery_results(channel, rows, access_statuses):
                 original = unit["text"] if unit and str(unit["asset_id"]) == header["asset_id"] else None
             if original is None or fingerprint(original) != payload.get("unit_hash") or original[doc.start_offset:doc.end_offset] != doc.text:
                 continue
+            payload["section_title"] = str(unit.get("section") or "") if span_id else ""
+            # Indexed similarity is not an editorial attribution decision.
+            payload["attribution"] = {"status": "unknown", "label": "待人工核对",
+                "notice": "请结合上下文区分作者自述、转引与评论；检索相关性不证明观点归属。"}
             if span_id:
                 # The saved span and index may predate the corrected extractor.
                 # Never certify raw-page offsets solely from cached metadata.

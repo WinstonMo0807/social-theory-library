@@ -9,6 +9,7 @@ from itertools import islice
 from uuid import UUID
 
 from django.db.models import F, Q
+from django.urls import reverse
 from catalog.models import (Asset, Concept, Discipline, Edition, EvidenceCuration,
     EvidenceSpan, KnowledgeNode, ReadingPath, RecommendationIssue, ScholarProfile,
     Subdiscipline, TheoryTimelineEvent, Topic)
@@ -129,11 +130,20 @@ def edition_metadata_header(row, *, taxonomy=None):
             if isinstance(item, dict) and str(item.get("id")) in allowed]}
     work = snapshot.get("work") or {}
     edition = snapshot.get("edition") or {}
+    public_slug = str(edition.get("public_slug") or row.pk)
+    cover = work.get("cover_media") or {}
+    cover_url = reverse("public-work-cover", kwargs={"work_id": row.work_id}) if work.get("cover") or cover else ""
+    if cover_url and cover.get("primary_rendition_id"):
+        cover_url += f"?rendition={cover['primary_rendition_id']}"
     return dict(channel="passages", title=work.get("title", ""), source_kind="passage",
         edition_id=str(row.pk), work_id=str(row.work_id), asset_id=str(asset.pk) if asset else None,
-        access_status=asset.access_status if asset else "public", url=f"/works/{row.public_slug}",
+        access_status=asset.access_status if asset else "public", url=f"/works/{public_slug}",
         publication_year=edition.get("publication_year"), document_type=work.get("document_type", "book"),
-        work={"id": str(row.work_id), "title": work.get("title", ""), "slug": row.public_slug},
+        work={"id": str(row.work_id), "title": work.get("title", ""), "slug": public_slug},
+        bibliography={"cover_url": cover_url, "original_title": work.get("original_title", ""),
+            "publication_year": edition.get("publication_year"), "publisher": edition.get("publisher", ""),
+            "language": work.get("language", ""), "page_count": asset.page_count if asset and asset.page_count else None,
+            "version_label": edition.get("version_label", ""), "document_type": work.get("document_type", "")},
         authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
                  for item in snapshot.get("contributions", []) if item.get("role") == "author"],
         author_ids=[str(item.get("person_id") or (item.get("person") or {}).get("id") or "")

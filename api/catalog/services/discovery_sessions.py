@@ -32,6 +32,8 @@ CHANNELS = ("passages", "entities", "curation")
 DEEP_CHANNEL = "deep"
 DEEP_RESULTS_KEY = "passages_deep"
 DEEP_RANKED_KEY = "passages_deep_ranked"
+RESUME_KEY = "_resume"
+DISPLAY_SORTS = ("relevance", "year_desc", "year_asc")
 PIPELINE_VERSION = "discovery-3.0.8-1"
 CURSOR_SALT = "catalog.discovery.cursor.v1"
 ACTIVE = ("queued", "running")
@@ -250,16 +252,19 @@ def _resume_locked(session, access_statuses, *, expand, expected_generation):
         if not expand:
             # A repeated POST for the same observed attempt returns its current
             # state. It never creates a second task, even after that task ends.
-            if session.generation == expected_generation + 1:
+            resume = (session.results or {}).get(RESUME_KEY) or {}
+            if (session.generation == expected_generation + 1
+                    and resume.get("kind") == "retry"
+                    and resume.get("previous_generation") == expected_generation):
                 return session
             if session.generation != expected_generation:
                 raise ValidationError({"expected_generation": "检索轮次已改变，请刷新后重试。"})
-            if session.status not in {"failed", "partial"}:
-                raise ValidationError({"detail": "只有失败或部分完成的检索可以重试。"})
+            if session.status not in {"failed", "partial", "canceled"}:
+                raise ValidationError({"detail": "只有失败、部分完成或已取消的检索可以继续。"})
         if session.status in ACTIVE:
             raise ValidationError({"detail": "当前检索尚在进行，请等待完成后扩大范围。"})
-        if session.status == "canceled":
-            raise ValidationError({"detail": "已取消的检索不能继续，请重新检索。"})
+        if expand and session.status == "canceled":
+            raise ValidationError({"detail": "请先继续已取消的检索，再扩大范围。"})
         if expand and session.expansion_count >= 1:
             raise ValidationError({"detail": "本次检索已使用扩展预算，可调整问题后重新检索。"})
         _check_admission(session.owner_id, timezone.now())
@@ -274,6 +279,19 @@ def _resume_locked(session, access_statuses, *, expand, expected_generation):
             **(session.results or {}),
             DEEP_RANKED_KEY: (session.results or {}).get(
                 DEEP_RANKED_KEY, (previous_deep.get("bge") or {}).get("status") == "completed"),
+            # Only identities, never copied quotations or bibliography. A
+            # reread marks additions only while those sources remain valid.
+            RESUME_KEY: {
+                "kind": "expand" if expand else "retry",
+                "previous_generation": session.generation - 1,
+                "baseline": {
+                    channel: sorted({_resume_identity(ref) for ref in [
+                        *(session.results or {}).get(channel, [])[:MAX_MATERIALIZED],
+                        *((session.results or {}).get(DEEP_RESULTS_KEY, [])[:MAX_MATERIALIZED]
+                          if channel == "passages" else []),
+                    ] if _identity(ref)}) for channel in CHANNELS
+                },
+            },
         }
         session.channels = {
             **{channel: {"status": "pending"} for channel in CHANNELS},
@@ -303,6 +321,17 @@ def cancel_session(session: DiscoverySearchSession) -> DiscoverySearchSession:
 
 def _identity(row: dict) -> str:
     return str(row.get("id") or "")
+
+
+def _resume_identity(row: dict) -> str:
+    return f"{_identity(row)}:{row.get('source_revision') or ''}"
+
+
+def _mark_additions(session, channel: str, rows: list[dict]) -> list[dict]:
+    baseline = ((session.results or {}).get(RESUME_KEY) or {}).get("baseline")
+    previous = set(baseline.get(channel, [])) if isinstance(baseline, dict) else None
+    return [{**row, "is_new": previous is not None and _resume_identity(row) not in previous}
+            for row in rows]
 
 
 def _reference(row: dict) -> dict:
@@ -857,6 +886,7 @@ def _rehydrate(session, access_statuses) -> dict[str, list[dict]]:
                 row["_position"] = position
                 row["match_basis"] = ref.get("match_basis") or row.get("match_basis") or []
                 output[channel].append(row)
+        output[channel] = _mark_additions(session, channel, output[channel])
     return output
 
 
@@ -879,7 +909,7 @@ def _rehydrate_deep(session, access_statuses) -> list[dict]:
             if key in annotations:
                 row[key] = annotations[key]
         output.append(row)
-    return output
+    return _mark_additions(session, "passages", output)
 
 
 def _deep_order_token(session) -> str:
@@ -927,7 +957,7 @@ def _public_row(row: dict) -> dict:
                "linked_work_ids", "match_basis", "pdf_page", "page_number", "printed_page", "asset_id",
                "edition_id", "work_id", "document_revision_id", "evidence_span_id", "passage_id",
                "work", "authors", "locator_precision", "context_reference", "deep_rank", "deep_score",
-               "deep_context"}
+               "deep_context", "bibliography", "section_title", "attribution", "is_new"}
     output = {key: value for key, value in row.items() if key in allowed}
     metadata = row.get("metadata") or {}
     if "pdf_page" not in output:
@@ -1019,14 +1049,26 @@ def _deep_progress(session) -> dict:
     return payload
 
 
-def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
+def _year_order(row: dict, sort: str) -> tuple[int, int, int]:
+    year = (row.get("bibliography") or {}).get("publication_year")
+    known = type(year) is int and 1 <= year <= 3000
+    return (0 if known else 1, (-year if sort == "year_desc" else year) if known else 0,
+            row["_position"])
+
+
+def serialize_session(session, access_statuses, *, cursor="", limit=3, sort="relevance") -> dict:
+    if sort not in DISPLAY_SORTS:
+        raise ValidationError({"sort": "请选择相关度、出版年份从新到旧或从旧到新。"})
     offset = 0
+    after = None
     order = _deep_order_token(session)
     if cursor:
         try:
             signed = signing.loads(cursor, salt=CURSOR_SALT, max_age=24 * 60 * 60)
             if signed.get("id") != str(session.id):
                 raise ValueError("wrong session")
+            if signed.get("sort", "relevance") != sort:
+                raise ValueError("different sort")
             offset = int(signed["offset"])
             if not 0 <= offset <= MAX_VISIBLE_PASSAGES:
                 raise ValueError("bad offset")
@@ -1034,6 +1076,16 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
             if cursor_order != "baseline" and cursor_order != order:
                 raise ValueError("ranking changed")
             order = cursor_order
+            if sort != "relevance":
+                if signed.get("generation") != session.generation:
+                    raise ValueError("attempt changed")
+                after = signed.get("after")
+                if (not isinstance(after, list) or len(after) != 3
+                        or any(type(value) is not int for value in after)
+                        or after[0] not in (0, 1) or not -3000 <= after[1] <= 3000
+                        or not 0 <= after[2] < MAX_VISIBLE_PASSAGES):
+                    raise ValueError("invalid year position")
+                after = tuple(after)
         except (signing.BadSignature, ValueError, TypeError, KeyError):
             raise ValidationError({"cursor": "分页位置无效或已过期，请重新检索。"})
     limit = max(1, min(int(limit), MAX_VISIBLE_PASSAGES))
@@ -1042,12 +1094,20 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
     deep = _deep_progress(session)
     passage_rows = rehydrate_passages(session, access_statuses, baseline_only=order == "baseline",
                                      baseline_rows=visible["passages"], deep_rows=deep_visible)
-    remaining = [row for row in passage_rows if row["_position"] >= offset]
+    if sort == "relevance":
+        remaining = [row for row in passage_rows if row["_position"] >= offset]
+    else:
+        # Sort only revalidated, already materialized candidates; no retrieval
+        # or ranker is run here. Stable source positions break same-year ties.
+        passage_rows = sorted(passage_rows, key=lambda row: _year_order(row, sort))
+        remaining = [row for row in passage_rows if after is None or _year_order(row, sort) > after]
     page = remaining[:limit]
     next_cursor = None
     if len(remaining) > len(page) and page:
         next_cursor = signing.dumps({"id": str(session.id), "offset": page[-1]["_position"] + 1,
-                                     "order": order}, salt=CURSOR_SALT)
+                                     "order": order, "sort": sort,
+                                     **({"after": _year_order(page[-1], sort), "generation": session.generation}
+                                        if sort != "relevance" else {})}, salt=CURSOR_SALT)
     removed = any(len(visible[channel]) < len((session.results or {}).get(channel, [])) for channel in CHANNELS)
     deep_removed = len(deep_visible) < len((session.results or {}).get(DEEP_RESULTS_KEY, []))
     warnings = list(session.warnings or [])
@@ -1068,7 +1128,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
     return {
         "id": str(session.id), "query": session.query, "original_query": session.query,
         "status": session.status, "mode": "expanded" if session.expansion_count else "standard",
-        "can_retry": session.status in {"failed", "partial"},
+        "can_retry": session.status in {"failed", "partial", "canceled"},
         "task_progress": {
             "id": str(session.pk), "generation": session.generation, "status": session.status,
             "terminal": session.status not in ACTIVE,
@@ -1076,7 +1136,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
             "completed": sum(value.get("status") in {"completed", "degraded", "partial", "failed", "disabled", "skipped"}
                              for value in session.channels.values()),
             "total": len(CHANNELS) + int(DEEP_CHANNEL in session.channels), "unit": "channels",
-            "retryable": session.status in {"failed", "partial"},
+            "retryable": session.status in {"failed", "partial", "canceled"},
             "started_at": session.started_at.isoformat() if session.started_at else None,
             "updated_at": session.updated_at.isoformat(),
             "finished_at": session.finished_at.isoformat() if session.finished_at else None,
@@ -1100,6 +1160,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3) -> dict:
         "entities": [_public_row(row) for row in visible["entities"]],
         "curation": [_public_row(row) for row in visible["curation"]],
         "count": counts["passages"], "counts": counts, "next_cursor": next_cursor,
+        "sort": sort, "added_count": sum(bool(row.get("is_new")) for row in passage_rows),
         "can_expand": session.status not in (*ACTIVE, "canceled") and session.expansion_count < 1,
         "completed_channels": [key for key, value in session.channels.items() if value.get("status") in {"completed", "degraded"}],
         "channels": session.channels, "coverage_summary": coverage, "warnings": warnings,

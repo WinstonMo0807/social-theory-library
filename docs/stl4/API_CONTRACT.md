@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 公共检索与本人记录
+
+GET /catalog/search/?context=global&scope=catalog 提供Work合并、多版本、同版本过滤、分面与年份分布，公开主版本和当前快照约束。原search其他分支保留，用anyOf描述兼容载荷。GET /reading/search-records/要求owner_id本人，分页最大20，读取不启用保留。
+
+Discovery GET新增sort=relevance|year_desc|year_asc及当前来源bibliography/attribution、真实is_new/added_count；context返回当前书目和同书候选。取消恢复沿expected_generation，cursor绑定排序与代次。共享私人分页带X-Reader-Owner并关闭401重放；具体字段及边界见五份检索单元文档。OpenAPI新增2路径至150，原其他接口保留，生成类型同步。
+
 ## 2026-10-19 公共交互检查点
 
 - POST /catalog/feedback/匿名回执；GET/PATCH /catalog/admin/public-feedback/及详情严格管理权限。GET /reading/source-status/匿名复核公开状态；source-follows列表/详情本人隔离，POST要求X-Reader-Owner、nonce与expected_revision。完整字段见对应单元文档。

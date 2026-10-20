@@ -5,7 +5,7 @@ from collections import defaultdict
 from django.db.models import F, Q
 from rest_framework.exceptions import NotFound, ValidationError
 
-from catalog.models import DocumentRevision, EvidenceSpan, Passage
+from catalog.models import DiscoveryDocument, DocumentRevision, EvidenceSpan, Passage
 from catalog.services.publication_eligibility import active_document_revision_q
 from catalog.services.discovery_sessions import DEEP_RESULTS_KEY, _public_row
 
@@ -172,8 +172,27 @@ def session_context(session, result_id, access_statuses):
                       for item in neighbours]
         else:
             blocks = [{"text": row.get("excerpt", ""), "pdf_page": page_number, "role": "hit"}]
+    # Only identities from this bounded session are candidates. Hydration again
+    # checks the active publication and exact text; withdrawn neighbours vanish.
+    references = {str(ref.get("id")): ref for key in (DEEP_RESULTS_KEY, "passages")
+                  for ref in (session.results or {}).get(key, [])[:400] if _uuid(ref.get("id"))}
+    candidate_ids = set(map(str, DiscoveryDocument.objects.filter(pk__in=references,
+        channel="passages", payload__work__id=str(row.get("work", {}).get("id"))).values_list("pk", flat=True)))
+    candidate_refs = [ref for key, ref in references.items() if key in candidate_ids]
+    candidates = [_public_row(value) for value in validate_discovery_results("passages", candidate_refs, access_statuses)]
+    candidates.sort(key=lambda value: (str(value.get("edition_id", "")), value.get("pdf_page") or 0, value["id"]))
+    current = next((index for index, value in enumerate(candidates) if value["id"] == str(result_id)), None)
+    # Context assembly performs multiple reads. Recheck the requested source
+    # after those reads rather than returning a quotation withdrawn meanwhile.
+    fresh = validate_discovery_results("passages", refs, access_statuses)
+    if not fresh:
+        raise NotFound("原文来源已更新、撤回或不再可访问，请重新检索。")
+    row = _public_row(fresh[0])
     # Quotes are never rewritten; bounding context does not modify stored text.
     return {"result_id": str(result_id), "document_revision_id": str(revision.id),
+            "source": row, "same_work_count": len(candidates), "same_work_results": candidates[:20],
+            "previous_result_id": candidates[current - 1]["id"] if current is not None and current > 0 else None,
+            "next_result_id": candidates[current + 1]["id"] if current is not None and current + 1 < len(candidates) else None,
             "asset_id": str(asset_id), "excerpt": row.get("excerpt", ""), "blocks": blocks,
             "before": "\n\n".join(item["text"] for item in blocks if item["role"] == "before"),
             "after": "\n\n".join(item["text"] for item in blocks if item["role"] == "after"),

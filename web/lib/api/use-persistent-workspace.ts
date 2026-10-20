@@ -10,7 +10,8 @@ import { PrivateOwnerVerificationError, withPrivateOwner } from "./private-owner
 type LoadState<T> = { key: string; data: T | null; error: string; conflict: boolean; pending: boolean; pollPaused?: boolean };
 
 /** Private/admin data stays in memory, scoped to the authenticated owner and exact object. */
-export function usePersistentWorkspace<T>(path: string, ownerId: string | null, pollAfter?: (data: T) => number | null | undefined) {
+export function usePersistentWorkspace<T>(path: string, ownerId: string | null, pollAfter?: (data: T) => number | null | undefined,
+  loadResource?: (path: string, signal: AbortSignal) => Promise<T>) {
   const key = ownerId && path ? `${ownerId}:${path}` : "";
   const [state, setState] = useState<LoadState<T> | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -52,7 +53,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
       loading = true;
       const expected = revision.current;
       try {
-        const data = await withPrivateOwner(ownerId!, () => privateRequest<T>(path, { signal: request.signal }), request.signal);
+        const data = await withPrivateOwner(ownerId!, () => loadResource ? loadResource(path, request.signal) : privateRequest<T>(path, { signal: request.signal }), request.signal);
         if (request.signal.aborted || revision.current !== expected || activeIdentity.current !== identity) return;
         dataRef.current = data;
         setState({ key: identity, data, error: "", conflict: false, pending: false });
@@ -73,7 +74,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
     window.addEventListener("pageshow", revalidate);
     document.addEventListener("visibilitychange", revalidate);
     return () => { request.abort(); if (timer) clearTimeout(timer); window.removeEventListener("focus", revalidate); window.removeEventListener("pageshow", revalidate); document.removeEventListener("visibilitychange", revalidate); };
-  }, [key, path, identity, attempt, ownerId]);
+  }, [key, path, identity, attempt, ownerId, loadResource]);
 
   /** Caller-owned form input is never overwritten. A 409 retains it and fetches the competing revision. */
   const mutate = useCallback(async (fingerprint: string, action: (data: T, requestId: string) => Promise<T>) => {
@@ -101,7 +102,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
       if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) operation.current = null;
       let data = revoked ? null : dataRef.current;
       if (conflict) {
-        try { data = await withPrivateOwner(ownerId!, () => privateRequest<T>(path)); } catch (refreshError) {
+        try { data = await withPrivateOwner(ownerId!, () => loadResource ? loadResource(path, AbortSignal.timeout(30000)) : privateRequest<T>(path)); } catch (refreshError) {
           if (refreshError instanceof PrivateOwnerVerificationError || refreshError instanceof ApiRequestError && [401, 403, 404, 410].includes(refreshError.status)) data = null;
         }
         if (activeIdentity.current !== expectedIdentity) return null;
@@ -110,7 +111,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
       setState({ key: identity, data, pending: false, conflict, error: reason instanceof Error ? reason.message : "保存失败，输入仍保留。" });
       throw reason;
     } finally { if (activeIdentity.current === expectedIdentity) pendingRef.current = false; }
-  }, [key, identity, path, ownerId]);
+  }, [key, identity, path, ownerId, loadResource]);
 
   return { data: current?.data ?? null, loading: Boolean(key) && !current, error: current?.error ?? "", pending: current?.pending ?? false, conflict: current?.conflict ?? false, pollPaused: current?.pollPaused ?? false, reload, mutate };
 }
