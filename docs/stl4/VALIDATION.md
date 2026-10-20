@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-20 PDF33–35静态记录
+
+7文件AST、5条SQL编译（无DB查询）、10目标ESLint（3个img提示）、CSS146节点均退出0。spectacular以内存SQLite配置生成tmp/stl4-work-detail-schema-20261020.json，0错误/10条既有提示，151路径；openapi-typescript同步。TS首轮40209语言可空错误已修，59028及最终45429退出0。21后端参数案例和3适配器案例仅编写，未运行。未执行正式功能/视觉、浏览器、构建、迁移或生产操作；准确范围见WORK_DETAIL_20261020。
+
 ## 2026-10-20 PDF32状态静态记录
 
 Python ast.parse八路径退出0；web下目标ESLint五路径退出0（两个img提示）；PostCSS观点CSS257节点；全量TypeScript session88120退出0。spectacular使用SQLite内存配置生成tmp/stl4-documents-20261020-schema.json，0错误/10条既有提示，151paths，openapi-typescript同步。7后端函数/9参数案例及2浏览器场景未运行。过程中的ESLint时间读取位置错误已修复重跑，不把旧失败记通过。详细文件与命令见单元记录及Git差异。未运行正式验收或部署。

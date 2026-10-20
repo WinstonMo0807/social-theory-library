@@ -1,9 +1,12 @@
 """Catalog-only public search contracts. Values come from activated snapshots."""
+from uuid import UUID
+
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
 from .models import Asset
-from .serializers import AssetCompactSerializer, EditionCompactSerializer, WorkCardSerializer
+from .public_response_serializers import PublicContributionSnapshotSerializer
+from .serializers import AssetCompactSerializer, EditionCompactSerializer, PersonCompactSerializer, WorkCardSerializer
 from .services.publication_eligibility import active_catalog_snapshot
 
 
@@ -35,9 +38,36 @@ class CatalogSearchQuery(serializers.Serializer):
 class CatalogEditionSerializer(EditionCompactSerializer):
     language = serializers.CharField(read_only=True)
     availability = serializers.CharField(read_only=True)
+    access_state = serializers.CharField(read_only=True)
 
     class Meta(EditionCompactSerializer.Meta):
-        fields = EditionCompactSerializer.Meta.fields + ("language", "availability")
+        fields = EditionCompactSerializer.Meta.fields + ("language", "availability", "access_state")
+
+    @extend_schema_field(PublicContributionSnapshotSerializer(many=True))
+    def get_contributors(self, obj):
+        from .services.scoped_search import public_scholar_queryset
+
+        rows = super().get_contributors(obj)
+        identifiers = set()
+        for row in rows:
+            try:
+                identifiers.add(UUID(str(row["person"].get("id"))))
+            except (ValueError, TypeError, AttributeError):
+                continue
+        profiles = {
+            str(profile.person_id): PersonCompactSerializer(profile.person, context=self.context).data
+            for profile in public_scholar_queryset().filter(person_id__in=identifiers)
+        } if identifiers else {}
+        result = []
+        for row in rows:
+            person = dict(row["person"])
+            public_person = profiles.get(str(person.get("id")), {})
+            # Keep frozen bibliographic names; public profile links/media must
+            # still be eligible now, including when a signed-in editor reads.
+            for field in ("scholar_slug", "portrait", "portrait_media", "biography"):
+                person[field] = public_person.get(field, None if field in {"scholar_slug", "portrait_media"} else "")
+            result.append({**row, "person": person})
+        return result
 
     def to_representation(self, instance):
         snapshot = active_catalog_snapshot(instance)
@@ -48,13 +78,20 @@ class CatalogEditionSerializer(EditionCompactSerializer):
             publication_date=values.get("publication_date"), publisher_authority=values.get("publisher_authority_id"),
             public_slug=values.get("public_slug"), language=(snapshot.get("work") or {}).get("language", ""),
             edition_statement=values.get("version_label", ""), publisher_verbatim=values.get("publisher", ""),
-            publication_place_verbatim=values.get("publication_place", ""), journal_contents=[], contributors=[], readable_asset=None)
+            publication_place_verbatim=values.get("publication_place", ""), journal_contents=[], contributors=[], readable_asset=None,
+            access_state="metadata")
         if snapshot:
             data["contributors"] = self.get_contributors(instance)
             data["journal_contents"] = self.get_journal_contents(instance)
             asset = instance.active_catalog_revision.reader_asset
-            if asset and asset.edition_id == instance.pk and asset.kind == Asset.Kind.NORMALIZED and asset.status == Asset.Status.READY and asset.validation_status == Asset.ValidationStatus.VALID and asset.file and asset.access_status in {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT} and str(asset.pk) == str((snapshot.get("document") or {}).get("asset_id")):
-                data["readable_asset"] = AssetCompactSerializer(asset).data
+            if asset and asset.edition_id == instance.pk and asset.kind == Asset.Kind.NORMALIZED and str(asset.pk) == str((snapshot.get("document") or {}).get("asset_id")):
+                # Private processing files do not disclose existence or links.
+                if asset.access_status != Asset.AccessStatus.PRIVATE:
+                    ready = asset.status == Asset.Status.READY and asset.validation_status == Asset.ValidationStatus.VALID and bool(asset.file)
+                    data["access_state"] = asset.access_status if ready else "unavailable"
+                    if ready and asset.access_status in {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT}:
+                        data["readable_asset"] = AssetCompactSerializer(asset).data
+                        data["access_state"] = "readable"
         data["availability"] = "readable" if data["readable_asset"] else "metadata"
         return data
 

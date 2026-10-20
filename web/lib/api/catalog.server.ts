@@ -1,4 +1,5 @@
 // Server-side public API domain. Browser components use pure adapters and type-only imports.
+import { cache } from "react";
 import { type Work, works as demoWorks, scholars as demoScholars, theorySchools as demoTheorySchools } from "../data";
 import { adaptApiWork } from "../public-data-adapters";
 import type { Paginated } from "./pagination";
@@ -44,7 +45,8 @@ export async function loadCatalogOverview(): Promise<{
   }
 }
 
-export async function loadWork(slug: string): Promise<Work | null> {
+// Deduplicate metadata/page reads only within this server render.
+export const loadWork = cache(async (slug: string): Promise<Work | null> => {
   try {
     return adaptWork(await serverRequest<ApiWork>(`/catalog/works/${encodeURIComponent(slug)}/`));
   } catch (error) {
@@ -52,4 +54,4 @@ export async function loadWork(slug: string): Promise<Work | null> {
     if (!allowDemoFallback) throw error;
     return demoWorks.find((item) => item.slug === slug) ?? null;
   }
-}
+});

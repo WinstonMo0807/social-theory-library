@@ -74,6 +74,7 @@ from .serializers import (
     WorkDetailSerializer,
 )
 from .query_filters import filter_slug_or_uuid
+from .public_work_detail import PublicWorkDetailSerializer, public_detail_edition, requested_work_snapshot
 from .services.citations import citation_bundle
 from .services.covers import (
     CoverCandidateUnavailable,
@@ -203,9 +204,15 @@ def _public_media_response(request, media_snapshot):
 class PublicWorkCoverView(APIView):
     permission_classes = [AllowAny]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        if "edition_id" in request.query_params:
+            response["Cache-Control"] = "private, no-store"
+        return response
+
     def get(self, request, work_id):
         work = get_object_or_404(public_works(), pk=work_id)
-        work_snapshot = _active_work_snapshot(work).get("work") or {}
+        work_snapshot = requested_work_snapshot(request, work).get("work") or {}
         media_snapshot = work_snapshot.get("cover_media")
         if media_snapshot:
             return _public_media_response(request, media_snapshot)
@@ -232,12 +239,12 @@ class PublicWorkCoverView(APIView):
         return response
 
 
-class PublicWorkRecommendationImageView(APIView):
+class PublicWorkRecommendationImageView(PublicWorkCoverView):
     permission_classes = [AllowAny]
 
     def get(self, request, work_id):
         work = get_object_or_404(public_works(), pk=work_id)
-        work_snapshot = _active_work_snapshot(work).get("work") or {}
+        work_snapshot = requested_work_snapshot(request, work).get("work") or {}
         recommendation_name = work_snapshot.get("recommendation_image", "")
         media_snapshot = work_snapshot.get("recommendation_media") if recommendation_name else work_snapshot.get("cover_media")
         if media_snapshot:
@@ -1557,18 +1564,24 @@ class WorkListView(generics.ListAPIView):
 
 class WorkDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
-    serializer_class = WorkDetailSerializer
-    lookup_field = "editions__public_slug"
+    serializer_class = PublicWorkDetailSerializer
 
     def get_queryset(self):
         return public_works()
 
     def get_object(self):
-        return get_object_or_404(
-            self.get_queryset(),
-            editions__public_slug=self.kwargs["slug"],
-            editions__state=PublicationState.PUBLISHED,
-        )
+        self.selected_edition = public_detail_edition(self.kwargs["slug"])
+        work = get_object_or_404(self.get_queryset(), pk=self.selected_edition.work_id)
+        self.check_object_permissions(self.request, work)
+        return work
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "selected_edition": getattr(self, "selected_edition", None)}
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 def _legacy_theory_work_counts(theory_ids) -> dict:

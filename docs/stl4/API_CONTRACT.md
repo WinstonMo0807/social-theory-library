@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 作品详情与版本
+
+原works/{slug}改PublicWorkDetail，支持当前发布快照slug/Edition UUID；selected edition贯穿元数据/目录/图片。relations为7类真实公开关联预览（每类最多6），CatalogEdition新增access_state而availability保持原二态；不返回受限文件身份。公开图片新增edition_id并重验。共享目录链接使用发布快照身份。151路径未新增，schema与前端类型同步；细节与边界见WORK_DETAIL_20261020。
+
 ## 2026-10-20 Discovery逐版本状态
 
 Discovery响应增加documents（状态/当前书目/原文数/最多6个公开版本/200上限标记）。新增POST remove-document（edition_id、expected_generation），仅本会话可见来源、原访问权限和幂等移除，运行中换代继续。新API路径共151，OpenAPI/TS同步；具体状态含义和权限见DISCOVERY_DOCUMENTS_20261020。

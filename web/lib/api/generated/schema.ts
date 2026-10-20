@@ -2776,6 +2776,7 @@ export interface components {
             readonly readable_asset: components["schemas"]["AssetCompact"] | null;
             readonly language: string;
             readonly availability: string;
+            readonly access_state: string;
         };
         CatalogFacet: {
             value: string;
@@ -5912,6 +5913,39 @@ export interface components {
             foreign_name: string;
             type: string;
         };
+        PublicWorkDetail: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["CatalogEdition"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly editions: components["schemas"]["CatalogEdition"][];
+            readonly outline: components["schemas"]["PublicOutlineItem"][];
+            readonly theory_associations: components["schemas"]["PublicTheoryAssociation"][];
+            /** @description Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract. */
+            readonly curated_claims: {
+                [key: string]: unknown[];
+            };
+            readonly relations: components["schemas"]["WorkRelations"];
+        };
         PublicationFieldDiff: {
             field: string;
             label: string;
@@ -6790,38 +6824,6 @@ export interface components {
             readonly disciplines: components["schemas"]["PublicClassificationLink"][];
             readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
         };
-        WorkDetail: {
-            /** Format: uuid */
-            readonly id: string;
-            document_type: components["schemas"]["DocumentTypeEnum"];
-            title: string;
-            subtitle?: string;
-            original_title?: string;
-            uniform_title?: string;
-            abstract?: string;
-            language?: string;
-            original_language?: string;
-            /** Format: date */
-            first_publication_date?: string | null;
-            /** Format: uuid */
-            translation_of?: string | null;
-            readonly cover: string;
-            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
-            readonly recommendation_image: string;
-            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
-            readonly edition: components["schemas"]["EditionCompact"] | null;
-            readonly theories: components["schemas"]["PublicEntityLink"][];
-            readonly topics: components["schemas"]["PublicEntityLink"][];
-            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
-            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
-            readonly editions: components["schemas"]["EditionCompact"][];
-            readonly outline: components["schemas"]["PublicOutlineItem"][];
-            readonly theory_associations: components["schemas"]["PublicTheoryAssociation"][];
-            /** @description Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract. */
-            readonly curated_claims: {
-                [key: string]: unknown[];
-            };
-        };
         WorkEditionOutput: {
             /** Format: uuid */
             id: string;
@@ -7004,6 +7006,75 @@ export interface components {
             authors: string[];
             document_type: string;
             original_publication_year: number | null;
+        };
+        WorkIssueContents: {
+            /** Format: uuid */
+            id: string | null;
+            /** Format: uuid */
+            article_work_id: string | null;
+            title: string;
+            author_display: string;
+            page_range: string;
+            position: number;
+            article_href: string;
+        };
+        WorkRelatedConcept: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            summary: string;
+        };
+        WorkRelatedCuration: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            summary: string;
+            cover_url: string;
+        };
+        WorkRelatedJournal: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            cover_url: string;
+            edition: components["schemas"]["CatalogEdition"];
+            contents: components["schemas"]["WorkIssueContents"][];
+        };
+        WorkRelatedPath: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            introduction: string;
+            cover_url: string;
+        };
+        WorkRelatedScholar: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            person: components["schemas"]["PersonCompact"];
+            short_description: string;
+            roles: string[];
+        };
+        WorkRelatedTopic: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            summary: string;
+            description: string;
+            hero_image: string;
+        };
+        WorkRelations: {
+            scholars: components["schemas"]["WorkRelatedScholar"][];
+            concepts: components["schemas"]["WorkRelatedConcept"][];
+            topics: components["schemas"]["WorkRelatedTopic"][];
+            reading_paths: components["schemas"]["WorkRelatedPath"][];
+            curations: components["schemas"]["WorkRelatedCuration"][];
+            works: components["schemas"]["CatalogWork"][];
+            journal_issues: components["schemas"]["WorkRelatedJournal"][];
         };
     };
     responses: never;
@@ -9798,7 +9869,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkDetail"];
+                    "application/json": components["schemas"]["PublicWorkDetail"];
                 };
             };
         };

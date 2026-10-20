@@ -5727,7 +5727,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/WorkDetail"
+                                    "$ref": "#/components/schemas/PublicWorkDetail"
                                 }
                             }
                         },
@@ -11124,9 +11124,14 @@
                     "availability": {
                         "type": "string",
                         "readOnly": true
+                    },
+                    "access_state": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
+                    "access_state",
                     "availability",
                     "contributors",
                     "edition_statement",
@@ -21421,6 +21426,176 @@
                     "type"
                 ]
             },
+            "PublicWorkDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "cover": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_image": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "recommendation_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CatalogEdition"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "editions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CatalogEdition"
+                        },
+                        "readOnly": true
+                    },
+                    "outline": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicOutlineItem"
+                        },
+                        "readOnly": true
+                    },
+                    "theory_associations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTheoryAssociation"
+                        },
+                        "readOnly": true
+                    },
+                    "curated_claims": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "description": "Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract.",
+                        "readOnly": true
+                    },
+                    "relations": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkRelations"
+                            }
+                        ],
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover",
+                    "cover_media",
+                    "curated_claims",
+                    "disciplines",
+                    "document_type",
+                    "edition",
+                    "editions",
+                    "id",
+                    "outline",
+                    "recommendation_image",
+                    "recommendation_media",
+                    "relations",
+                    "subdisciplines",
+                    "theories",
+                    "theory_associations",
+                    "title",
+                    "topics"
+                ]
+            },
             "PublicationFieldDiff": {
                 "type": "object",
                 "properties": {
@@ -24335,167 +24510,6 @@
                     "topics"
                 ]
             },
-            "WorkDetail": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "readOnly": true
-                    },
-                    "document_type": {
-                        "$ref": "#/components/schemas/DocumentTypeEnum"
-                    },
-                    "title": {
-                        "type": "string",
-                        "maxLength": 600
-                    },
-                    "subtitle": {
-                        "type": "string",
-                        "maxLength": 600
-                    },
-                    "original_title": {
-                        "type": "string",
-                        "maxLength": 600
-                    },
-                    "uniform_title": {
-                        "type": "string",
-                        "maxLength": 600
-                    },
-                    "abstract": {
-                        "type": "string"
-                    },
-                    "language": {
-                        "type": "string",
-                        "maxLength": 16
-                    },
-                    "original_language": {
-                        "type": "string",
-                        "maxLength": 32
-                    },
-                    "first_publication_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "translation_of": {
-                        "type": "string",
-                        "format": "uuid",
-                        "nullable": true
-                    },
-                    "cover": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "cover_media": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/PublicCoverMedia"
-                            }
-                        ],
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "recommendation_image": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "recommendation_media": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/PublicCoverMedia"
-                            }
-                        ],
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "edition": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/EditionCompact"
-                            }
-                        ],
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "theories": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicEntityLink"
-                        },
-                        "readOnly": true
-                    },
-                    "topics": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicEntityLink"
-                        },
-                        "readOnly": true
-                    },
-                    "disciplines": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicClassificationLink"
-                        },
-                        "readOnly": true
-                    },
-                    "subdisciplines": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicClassificationLink"
-                        },
-                        "readOnly": true
-                    },
-                    "editions": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/EditionCompact"
-                        },
-                        "readOnly": true
-                    },
-                    "outline": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicOutlineItem"
-                        },
-                        "readOnly": true
-                    },
-                    "theory_associations": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicTheoryAssociation"
-                        },
-                        "readOnly": true
-                    },
-                    "curated_claims": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "array",
-                            "items": {}
-                        },
-                        "description": "Evidence-backed curation groups; detailed EvidenceEnvelope JSON is not yet a verified typed contract.",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "cover",
-                    "cover_media",
-                    "curated_claims",
-                    "disciplines",
-                    "document_type",
-                    "edition",
-                    "editions",
-                    "id",
-                    "outline",
-                    "recommendation_image",
-                    "recommendation_media",
-                    "subdisciplines",
-                    "theories",
-                    "theory_associations",
-                    "title",
-                    "topics"
-                ]
-            },
             "WorkEditionOutput": {
                 "type": "object",
                 "properties": {
@@ -25164,6 +25178,279 @@
                     "original_publication_year",
                     "title",
                     "updated_at"
+                ]
+            },
+            "WorkIssueContents": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "article_work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "author_display": {
+                        "type": "string"
+                    },
+                    "page_range": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "article_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_href",
+                    "article_work_id",
+                    "author_display",
+                    "id",
+                    "page_range",
+                    "position",
+                    "title"
+                ]
+            },
+            "WorkRelatedConcept": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "summary"
+                ]
+            },
+            "WorkRelatedCuration": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "cover_url",
+                    "id",
+                    "slug",
+                    "summary",
+                    "title"
+                ]
+            },
+            "WorkRelatedJournal": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edition": {
+                        "$ref": "#/components/schemas/CatalogEdition"
+                    },
+                    "contents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkIssueContents"
+                        }
+                    }
+                },
+                "required": [
+                    "contents",
+                    "cover_url",
+                    "edition",
+                    "id",
+                    "slug",
+                    "title"
+                ]
+            },
+            "WorkRelatedPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "cover_url",
+                    "id",
+                    "introduction",
+                    "slug",
+                    "title"
+                ]
+            },
+            "WorkRelatedScholar": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "person": {
+                        "$ref": "#/components/schemas/PersonCompact"
+                    },
+                    "short_description": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "person",
+                    "roles",
+                    "short_description",
+                    "slug"
+                ]
+            },
+            "WorkRelatedTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "description",
+                    "hero_image",
+                    "id",
+                    "name",
+                    "slug",
+                    "summary"
+                ]
+            },
+            "WorkRelations": {
+                "type": "object",
+                "properties": {
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedScholar"
+                        }
+                    },
+                    "concepts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedConcept"
+                        }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedTopic"
+                        }
+                    },
+                    "reading_paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedPath"
+                        }
+                    },
+                    "curations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedCuration"
+                        }
+                    },
+                    "works": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CatalogWork"
+                        }
+                    },
+                    "journal_issues": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkRelatedJournal"
+                        }
+                    }
+                },
+                "required": [
+                    "concepts",
+                    "curations",
+                    "journal_issues",
+                    "reading_paths",
+                    "scholars",
+                    "topics",
+                    "works"
                 ]
             }
         },

@@ -1,6 +1,15 @@
 """Canonical issue contents and read-only published link materialization."""
 
+from uuid import UUID
+
 from catalog.models import DocumentType, JournalIssueArticle, Work
+from catalog.services.publication_eligibility import active_catalog_snapshot, public_editions
+
+def _uuid(value):
+    try:
+        return UUID(str(value))
+    except (ValueError, TypeError, AttributeError):
+        return None
 
 
 def journal_contents_snapshot(edition):
@@ -56,11 +65,20 @@ def sync_journal_contents(edition, rows):
 
 
 def public_journal_contents(rows):
-    """A draft or withdrawn article can be listed but never receives a public link."""
-    from catalog.services.publication_eligibility import public_editions
-
-    rows = list(rows or [])
+    """Retain published bibliography; only currently public articles get links."""
+    rows = [row for row in (rows or []) if isinstance(row, dict)]
+    identifiers = {_uuid(row.get("article_work_id")) for row in rows} - {None}
     links = {}
-    for edition in public_editions().filter(work_id__in=[row.get("article_work_id") for row in rows if row.get("article_work_id")]).order_by("work_id", "-is_primary", "-published_at"):
-        links.setdefault(str(edition.work_id), f"/works/{edition.public_slug}" if edition.public_slug else "")
-    return [{**row, "article_href": links.get(str(row.get("article_work_id")), "")} for row in rows]
+    for edition in public_editions().filter(is_primary=True, work_id__in=identifiers):
+        snapshot = active_catalog_snapshot(edition)
+        slug = (snapshot.get("edition") or {}).get("public_slug") or str(edition.pk)
+        links[str(edition.work_id)] = f"/works/{slug}"
+    return [{
+        "id": str(_uuid(row.get("id"))) if _uuid(row.get("id")) else None,
+        "article_work_id": str(_uuid(row.get("article_work_id"))) if _uuid(row.get("article_work_id")) else None,
+        "title": str(row.get("title") or ""),
+        "author_display": str(row.get("author_display") or ""),
+        "page_range": str(row.get("page_range") or ""),
+        "position": row.get("position") if isinstance(row.get("position"), int) else index,
+        "article_href": links.get(str(_uuid(row.get("article_work_id"))), ""),
+    } for index, row in enumerate(rows)]

@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-20 作品详情接续
+
+读WORK_DETAIL_20261020，前置d3acba8；PublicWorkDetail、CatalogEdition、共享journal_issues、两种管理预览与生成契约须共同恢复。保留primary公开资格，所选snapshot负责题名/封面/目录。新增文件不是新书库。当前静态通过但功能未正式验收，后续继续PDF36–40 Reader的实际读图与既有源码回溯；不要运行质量评测或生产清理。
+
 ## 2026-10-20 PDF32接续
 
 读DISCOVERY_DOCUMENTS_20261020。文献状态复用现有session JSON，作用于原任务、基础/深度scope、读回与上下文；新remove-document接口、生成契约和UI须一起恢复。d69ec44是前置检索检查点。没有新表或迁移。当前33–35图片已实际读取，作品详情旧UI与数据调用链正接续，不能当成已完成。

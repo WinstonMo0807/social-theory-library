@@ -1,3 +1,7 @@
+import type { components } from "./api/generated/schema";
+
+export type WorkVersion = Omit<components["schemas"]["CatalogEdition"], "access_state"> & { access_state?: string };
+
 export type EvidenceEnvelope = {
   id: string;
   kind: "collection_text";
@@ -51,10 +55,17 @@ export type Work = {
   readerHref?: string;
   slug: string;
   title: string;
+  subtitle?: string;
   originalTitle?: string;
+  originalLanguage?: string;
+  firstPublicationDate?: string | null;
+  version?: WorkVersion;
+  versions?: WorkVersion[];
+  relations?: Omit<components["schemas"]["WorkRelations"], "works">;
+  relatedWorks?: Work[];
   author: string;
   year: string;
-  kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告";
+  kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告" | "文献";
   school: string;
   summary: string;
   cover: "dark" | "paper" | "cream" | "line";

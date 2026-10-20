@@ -1,210 +1,141 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Eye, ShieldCheck } from "lucide-react";
-import type { ReactNode } from "react";
-import { AssetDownloadButton } from "@/components/asset-download-button";
-import { SaveWorkButton } from "@/components/save-work-button";
-import { WorkCitationPanel } from "@/components/work-citation-panel";
-import { BookCard, BookCover, SectionHeading, TagList } from "@/components/ui";
-import type { Work } from "@/lib/data";
+import { ArrowRight, BookOpen, BookOpenText, ChevronDown, Copy, ExternalLink, Eye, Info, Share2, ShieldCheck, X } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { AssetDownloadButton } from "./asset-download-button";
+import { AddWorkToListButton } from "./add-work-to-list-button";
+import { SaveWorkButton } from "./save-work-button";
+import { SharedCitationButton } from "./shared-citation-overlay";
+import { WorkCitationPanel } from "./work-citation-panel";
+import { WorkDetailEvidence } from "./work-detail-evidence";
+import { BookCard, BookCover } from "./ui";
+import { Dialog } from "./ui/dialog";
+import { Tabs } from "./ui/tabs";
+import type { Work, WorkVersion } from "@/lib/data";
+import styles from "./work-detail-view.module.css";
 
-type WorkDetailViewProps = {
-  work: Work;
-  relatedWorks?: Work[];
-  preview?: {
-    publicationState: string;
-    pdfPreviewUrl: string;
-    returnHref: string;
-    draftRevision?: {
-      revision: number;
-      changedFields: string[];
-      hasConflict: boolean;
-    } | null;
-  };
-  footer: ReactNode;
+type Props = {
+  work: Work; relatedWorks?: Work[]; footer: ReactNode;
+  preview?: { publicationState: string; pdfPreviewUrl: string; returnHref: string; draftRevision?: { revision: number; changedFields: string[]; hasConflict: boolean } | null };
 };
+const mobileQuery = "(max-width: 680px)";
+const subscribeMobile = (listener: () => void) => {
+  const media = window.matchMedia(mobileQuery);
+  media.addEventListener("change", listener);
+  return () => media.removeEventListener("change", listener);
+};
+const mobileSnapshot = () => window.matchMedia(mobileQuery).matches;
+const serverSnapshot = () => false;
+const languageLabel = (value?: string) => ({ "zh-CN": "简体中文", "zh-TW": "繁体中文", zh: "中文", en: "英文", fr: "法文", de: "德文", ja: "日文" }[value ?? ""] || value || "待补充");
+const versionHref = (version: WorkVersion) => `/works/${encodeURIComponent(version.public_slug || version.id)}`;
+const accessLabel = (version: WorkVersion) => version.readable_asset ? "可在线阅读" : ({ registered: "限登录读者", restricted: "访问受限", unavailable: "暂不可用" }[version.access_state || ""] || "仅书目");
+const versionName = (version: WorkVersion) => version.version_label || `${version.publication_year || "年份待补"} · ${languageLabel(version.language)}`;
 
-export function WorkDetailView({ work, relatedWorks = [], preview, footer }: WorkDetailViewProps) {
-  const primaryAuthor = work.authors?.find((author) => author.slug);
-  const tags = [
-    ...(work.theories ?? []).map((item) => item.name),
-    ...(work.topics ?? []).map((item) => item.name),
+export function WorkDetailView(props: Props) {
+  return <WorkDetailContent key={`${props.work.editionId || props.work.slug}:${props.preview?.draftRevision?.revision || ""}`} {...props} />;
+}
+
+function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) {
+  const mobile = useSyncExternalStore(subscribeMobile, mobileSnapshot, serverSnapshot);
+  const article = work.kind === "期刊论文";
+  const [active, setActive] = useState("versions");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ versions: true });
+  const [coverOpen, setCoverOpen] = useState(false);
+  const coverClose = useRef<HTMLButtonElement>(null);
+  const version = work.version;
+  const versions = work.versions?.length ? work.versions : version ? [version] : [];
+  const readable = Boolean(!preview && work.readerHref);
+  const translators = version?.contributors.filter(row => row.role === "translator").map(row => row.person.preferred_name).join("、");
+  const tags = [...(work.theories ?? []).map(row => ({ ...row, href: `/theories/nodes/${row.slug}` })), ...(work.topics ?? []).map(row => ({ ...row, href: `/topics/${row.slug}` }))];
+  const missing = [!work.author || work.author === "作者待补" ? "作者" : "", !version?.publication_year ? "出版年" : "", !version?.publisher ? "出版机构" : ""].filter(Boolean);
+  const relations = work.relations;
+  const primaryScholar = relations?.scholars.find(row => row.roles.includes("author"));
+  const related = work.relatedWorks ?? relatedWorks;
+  useEffect(() => {
+    const followHash = () => { if (window.location.hash === "#citation") { setActive("citation"); setExpanded(current => ({ ...current, citation: true })); } };
+    const timer = window.setTimeout(followHash, 0);
+    window.addEventListener("hashchange", followHash);
+    return () => { window.clearTimeout(timer); window.removeEventListener("hashchange", followHash); };
+  }, []);
+
+  const sections = [
+    { key: "versions", title: article ? "版本与获取" : "版本信息", content: <div className={article && relations?.journal_issues.length ? styles.issueLayout : undefined}><VersionTable versions={versions} selectedId={work.editionId} preview={Boolean(preview)} />{article ? <JournalIssues work={work} preview={Boolean(preview)} /> : null}</div> },
+    { key: "chapters", title: article ? "章节与内容" : "章节预览", content: <WorkContents work={work} preview={Boolean(preview)} /> },
+    { key: "scholars", title: "相关学者", content: <RelatedSidebar work={work} preview={Boolean(preview)} /> },
+    { key: "related", title: "相关著作", content: <div className={styles.relatedBooks}>{related.length ? related.map(item => <BookCard key={item.workId || item.id} work={item} />) : <Empty>尚无已确认的相关公开著作。</Empty>}</div> },
+    { key: "concepts", title: "相关概念", content: <div className={styles.linkRows}>{relations?.concepts.length ? relations.concepts.map(row => <RelationLink key={row.id} href={`/theories/nodes/${row.slug}`} title={row.name} summary={row.summary} preview={Boolean(preview)} />) : <Empty>尚无已确认的公开概念关联。</Empty>}</div> },
+    { key: "topics", title: "相关专题", content: <RelationCards work={work} kind="curations" preview={Boolean(preview)} /> },
+    { key: "paths", title: "学习路径", content: <RelationCards work={work} kind="reading_paths" preview={Boolean(preview)} /> },
+    { key: "citation", title: article ? "摘要与引用" : "研究资料", content: <><WorkDetailEvidence work={work} preview={Boolean(preview)} />{preview ? <Empty>草稿预览不执行公共引用、收藏和下载。</Empty> : work.editionId ? <WorkCitationPanel editionId={work.editionId} /> : <Empty>当前尚无可引用的公开版本。</Empty>}</> },
   ];
-  const languageLabel = ({
-    "zh-CN": "简体中文",
-    "zh-TW": "繁体中文",
-    en: "英文",
-  } as Record<string, string>)[work.language ?? "zh-CN"] ?? work.language;
-  const previewPdf = preview?.pdfPreviewUrl || "";
-  const curatedGroups = [
-    { key: "core_viewpoint", title: "核心观点", claims: work.curatedClaims?.core_viewpoint ?? [] },
-    { key: "major_criticism", title: "主要批评", claims: work.curatedClaims?.major_criticism ?? [] },
-    { key: "major_response", title: "主要回应", claims: work.curatedClaims?.major_response ?? [] },
-  ] as const;
-
-  return (
-    <>
-      <div className="page-shell work-detail">
-        {preview ? (
-          <div className="admin-page-preview-banner" role="status">
-            <ShieldCheck size={16} />
-            <strong>草稿预览</strong>
-            <span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span>
-            <Link href={preview.returnHref}>返回编辑</Link>
-          </div>
-        ) : null}
-        <p className="breadcrumbs">
-          {preview ? <>前台页面效果 / {work.title}</> : <><Link href="/">首页</Link> / <Link href="/explore">馆藏</Link> / {work.title}</>}
-        </p>
-        <section className="work-hero">
-          <BookCover work={work} size="large" />
-          <div>
-            <p className="eyebrow">{work.kind} · {work.school}</p>
-            <h1>{work.title}</h1>
-            {work.originalTitle ? <p className="original-title">{work.originalTitle}</p> : null}
-            {primaryAuthor && !preview ? (
-              <Link className="work-author-link" href={`/scholars/${primaryAuthor.slug}`}>
-                {work.author} <ArrowRight size={15} />
-              </Link>
-            ) : <p className="work-author-link">{work.author}</p>}
-            <p className="work-summary">{work.summary}</p>
-            <TagList items={tags} />
-          </div>
-          <aside>
-            <dl>
-              <div><dt>出版年份</dt><dd>{work.year}</dd></div>
-              <div><dt>文献类型</dt><dd>{work.kind}</dd></div>
-              <div><dt>页数</dt><dd>{work.pages}</dd></div>
-              <div><dt>文件状态</dt><dd>{work.pages ? "可在线阅读" : "准备中"}</dd></div>
-              <div><dt>语言</dt><dd>{languageLabel}</dd></div>
-            </dl>
-            {preview ? (
-              previewPdf
-                ? <a className="button" href={previewPdf} target="_blank" rel="noreferrer"><Eye size={16} /> 后台 PDF</a>
-                : <span className="button disabled" aria-disabled="true"><Eye size={16} /> PDF 尚未就绪</span>
-            ) : (
-              work.pages ? <>
-                <Link className="button" href={`/reader/${work.id}`}><Eye size={16} /> 在线阅读</Link>
-                <AssetDownloadButton assetId={work.id} />
-                <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
-              </> : <>
-                <span className="button disabled" aria-disabled="true"><Eye size={16} /> 当前版本不可在线阅读</span>
-                <div className="button secondary work-save-control"><SaveWorkButton workId={work.workId} /></div>
-              </>
-            )}
-          </aside>
-        </section>
-
-        <div className="work-body">
-          <section className="panel">
-            <SectionHeading title="内容简介" />
-            <p>{work.summary}</p>
-            <h2>{work.kind === "整期期刊" ? "本期目录与论文" : "目录"}</h2>
-            {(work.kind === "整期期刊" ? work.journalContents ?? [] : []).map((item, index) => <div className="toc-row" key={item.id || `issue-${index}`}>
-              <span>{String(index + 1).padStart(2, "0")}</span><div>{item.article_href && !preview ? <Link href={item.article_href}><strong>{item.title}</strong></Link> : <strong>{item.title}</strong>}{item.author_display ? <p>{item.author_display}</p> : null}</div><small>{item.page_range}</small>
-            </div>)}
-            {(work.outline ?? []).map((item, index) => (
-              preview ? (
-                <div className="toc-row" key={`${item.index}-${item.chapter_title}`}>
-                  <span>{String(index + 1).padStart(2, "0")}</span><strong>{item.chapter_title}</strong><small>{item.printed_label || item.index}</small>
-                </div>
-              ) : (
-                <Link className="toc-row" href={`/reader/${work.id}?page=${item.index}`} key={`${item.index}-${item.chapter_title}`}>
-                  <span>{String(index + 1).padStart(2, "0")}</span><strong>{item.chapter_title}</strong><small>{item.printed_label || item.index}</small>
-                </Link>
-              )
-            ))}
-            {!work.outline?.length && !work.journalContents?.length ? <p className="empty-state">{work.kind === "整期期刊" ? "本期目录尚待补充。" : "该 PDF 没有可识别的目录书签。"}</p> : null}
-          </section>
-          {preview ? (
-            <section className="panel admin-preview-note">
-              <SectionHeading title="预览边界" />
-              <p>引用、保存、下载和公共 Reader 动作在管理员页面预览中不执行。发布后，公开页面会使用相同的内容组件并恢复这些动作。</p>
-            </section>
-          ) : work.editionId ? <WorkCitationPanel editionId={work.editionId} /> : null}
+  return <>
+    <div className={`page-shell work-detail ${styles.page} ${article ? styles.article : ""}`}>
+      {preview ? <div className="admin-page-preview-banner" role="status"><ShieldCheck size={16} /><strong>草稿预览</strong><span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span><Link href={preview.returnHref}>返回编辑</Link></div> : null}
+      <nav className={`breadcrumbs ${styles.breadcrumbs}`} aria-label="当前位置">{preview ? <span>前台页面效果 / {work.title}</span> : <><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>›</span><span>{work.kind}</span><span>›</span><span aria-current="page">{work.title}</span></>}</nav>
+      <section className={`work-hero ${styles.hero}`}>
+        <div className={styles.coverColumn}>{work.coverImage ? <BookCover work={work} size="large" /> : <div className={styles.noCover}><BookOpenText size={34} strokeWidth={1} /><span>暂无封面</span></div>}{work.coverImage ? <button className={styles.coverPreview} type="button" onClick={() => setCoverOpen(true)}><Eye size={14} />预览封面</button> : null}</div>
+        <div className={styles.identity}>
+          <span className={styles.kind}>{work.kind}</span><h1>{work.title}</h1>
+          {work.subtitle ? <p className={styles.subtitle}>{work.subtitle}</p> : null}
+          {work.originalTitle && work.originalTitle !== work.title ? <p className={styles.original}>{work.originalTitle}</p> : null}
+          <div className={`work-author-link ${styles.authorLine}`}>{article && primaryScholar?.person.portrait ? <img src={primaryScholar.person.portrait} alt="" width={48} height={48} /> : null}{work.authors?.length ? work.authors.map((author, index) => <span key={`${author.name}-${index}`}>{!preview && author.slug ? <Link href={`/scholars/${author.slug}`}>{author.name}<ArrowRight size={13} /></Link> : author.name}</span>) : <span>{work.author}</span>}{article && primaryScholar ? <small>{[primaryScholar.person.original_name, primaryScholar.person.birth_year ? `${primaryScholar.person.birth_year}—${primaryScholar.person.death_year || ""}` : "", primaryScholar.short_description].filter(Boolean).join(" · ")}</small> : null}</div>
+          {!article ? <div className={styles.metadataColumns}>{work.originalTitle || work.firstPublicationDate || work.originalLanguage ? <section><h2>原作信息</h2><Facts rows={[["原名", work.originalTitle], ["原作语言", work.originalLanguage ? languageLabel(work.originalLanguage) : ""], ["首次出版", work.firstPublicationDate]]} /></section> : null}<section><h2>{version?.version_label || "当前版本"}</h2><Facts rows={[["作者", work.author], ...(translators ? [["译者", translators] as [string, string]] : []), ["出版社", version?.publisher], ["出版年", version?.publication_year], ["页数", work.pages > 0 ? `${work.pages} 页` : version?.extent], ["语言", languageLabel(work.language)]]} /></section></div> : <Summary text={work.summary} />}
         </div>
-        {curatedGroups.map((group) => group.claims.length ? (
-          <section className={`detail-section work-curated-claims work-curated-${group.key}`} key={group.key}>
-            <SectionHeading title={group.title} />
-            <div className="work-curated-claim-list">
-              {group.claims.map((claim) => (
-                <article key={claim.id}>
-                  {claim.title ? <h3>{claim.title}</h3> : null}
-                  <p className="work-curated-proposition">{claim.proposition}</p>
-                  {claim.editorial_note ? <p className="work-curated-note">{claim.editorial_note}</p> : null}
-                  <details className="work-curated-evidence">
-                    <summary>查看依据 <span>{claim.evidence.length} 条馆藏原文</span></summary>
-                    <div>
-                      {claim.evidence.map((evidence) => {
-                        const author = evidence.source.authors?.join("、");
-                        const pageLabel = evidence.locator.printed_page_label
-                          ? `印刷页 ${evidence.locator.printed_page_label} · PDF 第 ${evidence.locator.page} 页`
-                          : `PDF 第 ${evidence.locator.page} 页`;
-                        return (
-                          <blockquote key={evidence.id}>
-                            <p>{evidence.text}</p>
-                            <footer>
-                              <span>{author ? `${author} · ` : ""}《{evidence.source.work_title}》 · {pageLabel}</span>
-                              {preview ? <span>预览中不打开公开 Reader</span> : (
-                                <Link href={evidence.reader_url}>
-                                  查看原文 <ArrowRight size={14} />
-                                </Link>
-                              )}
-                            </footer>
-                          </blockquote>
-                        );
-                      })}
-                    </div>
-                  </details>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null)}
-        {work.theoryAssociations?.length ? (
-          <section className="detail-section work-theory-associations">
-            <SectionHeading title="理论关联" />
-            <div className="work-theory-association-list">
-              {work.theoryAssociations.map((association) => (
-                <article key={association.id}>
-                  <header>
-                    <div>
-                      <span>{association.role_label}</span>
-                      <h2>{preview ? association.node.name : <Link href={`/theories/nodes/${association.node.slug}`}>{association.node.name}</Link>}</h2>
-                      {association.node.foreign_name ? <p>{association.node.foreign_name}</p> : null}
-                    </div>
-                    <small>人工审核通过</small>
-                  </header>
-                  {association.evidence.length ? (
-                    <div className="work-theory-evidence-list">
-                      {association.evidence.slice(0, 3).map((evidence) => (
-                        <div key={evidence.id}>
-                          <p>{evidence.quote}</p>
-                          {preview ? <span>PDF 第 {evidence.page_number} 页</span> : (
-                            <Link href={evidence.reader_href}>
-                              PDF 第 {evidence.page_number}{evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页
-                              <ArrowRight size={14} />
-                            </Link>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="empty-state">该关系已确认，页码证据仍待补充。</p>}
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-        {!preview ? (
-          <section className="detail-section">
-            <SectionHeading title="相关馆藏" href={`/explore?q=${work.school}`} />
-            <div className="four-book-grid">
-              {relatedWorks.slice(0, 4).map((item) => <BookCard work={item} key={item.id} />)}
-              {!relatedWorks.length ? <p className="empty-state">尚无依据已确认流派或主题关联的其他公开馆藏。</p> : null}
-            </div>
-          </section>
-        ) : null}
+        <aside className={styles.sidebar}>
+          <div className={styles.actions}>{preview ? preview.pdfPreviewUrl ? <a className={styles.primaryAction} href={preview.pdfPreviewUrl} target="_blank" rel="noreferrer"><Eye size={17} />后台 PDF<ArrowRight size={16} /></a> : <span className={styles.unavailable}>PDF 尚未就绪</span> : readable ? <Link className={styles.primaryAction} href={work.readerHref!}><BookOpen size={18} />开始阅读{version?.version_label ? <small>（{version.version_label}）</small> : null}<ArrowRight size={17} /></Link> : work.workId ? <div className={styles.primaryList}><AddWorkToListButton workId={work.workId} title={work.title} /></div> : null}
+            {!preview ? <div className={styles.actionGrid}><SaveWorkButton workId={work.workId} />{readable && work.workId ? <AddWorkToListButton workId={work.workId} title={work.title} /> : null}{work.editionId ? <SharedCitationButton editionId={work.editionId}>引用</SharedCitationButton> : null}<ShareWork title={work.title} slug={work.slug} /></div> : null}
+          </div>
+          {article ? <Facts rows={[["刊名", version?.journal_title], ["卷期", [version?.volume, version?.issue].filter(Boolean).join(" · ")], ["页码", version?.page_range], ["出版年", version?.publication_year], ["DOI", version?.doi ? <a href={`https://doi.org/${encodeURIComponent(version.doi)}`} target="_blank" rel="noreferrer">{version.doi}<ExternalLink size={12} /></a> : ""], ["语言", languageLabel(work.language)], ["材料类型", work.kind]]} /> : <RelatedSidebar work={work} preview={Boolean(preview)} />}
+        </aside>
+        {tags.length ? <div className={styles.tags}>{tags.map(tag => preview ? <span key={tag.href}>{tag.name}</span> : <Link key={tag.href} href={tag.href}>{tag.name}</Link>)}</div> : null}
+        {!article ? <div className={`work-summary ${styles.summary}`}><h2>内容简介</h2><Summary text={work.summary} /></div> : null}
+        {!preview && (!readable || missing.length > 0) ? <div className={styles.sourceNotice}><Info size={16} /><p>{!readable ? "当前版本暂无可在线阅读的公开文件，可查看书目信息及其他版本。" : ""}{missing.length > 0 ? ` ${missing.join("、")}信息尚待补充。` : ""}</p></div> : null}
+      </section>
+      <div className={`work-body ${styles.body}`}>
+        {mobile && !article ? <div className={styles.accordions}>{sections.map(row => <details key={row.key} open={Boolean(expanded[row.key])} onToggle={event => { const open = event.currentTarget.open; setExpanded(current => current[row.key] === open ? current : { ...current, [row.key]: open }); }}><summary>{row.title}<ChevronDown size={16} /></summary>{expanded[row.key] ? <div id={`work-section-${row.key}`}>{row.content}</div> : null}</details>)}</div> : <><Tabs className={styles.tabs} aria-label="作品详情" items={sections.map(row => ({ value: row.key, label: row.title, id: `work-tab-${row.key}`, panelId: `work-section-${row.key}` }))} value={active} onChange={setActive} />{sections.map(row => <section className={styles.tabPanel} id={`work-section-${row.key}`} role="tabpanel" aria-labelledby={`work-tab-${row.key}`} tabIndex={0} hidden={active !== row.key} key={row.key}>{active === row.key ? <><h2>{row.title}</h2>{row.content}</> : null}</section>)}</>}
       </div>
-      {footer}
-    </>
-  );
+      {article ? <div className={styles.articleRelated}><RelatedSidebar work={work} preview={Boolean(preview)} /><section><h2>相关专题</h2><RelationCards work={work} kind="curations" preview={Boolean(preview)} /></section><section><h2>学习路径</h2><RelationCards work={work} kind="reading_paths" preview={Boolean(preview)} /></section></div> : null}
+      {preview ? <p className={styles.previewNote}>当前展示编目草稿。公共阅读、收藏、书单和引用须在发布后按实际权限开放。</p> : null}
+    </div>
+    {coverOpen && work.coverImage ? <Dialog open aria-label="封面预览" className={styles.coverDialog} onRequestClose={() => setCoverOpen(false)} initialFocusRef={coverClose}><header><h2>{work.title}</h2><button type="button" ref={coverClose} onClick={() => setCoverOpen(false)} aria-label="关闭封面预览"><X size={20} /></button></header><img src={work.coverImage} alt={work.coverAlt || `${work.title}封面`} /></Dialog> : null}
+    {footer}
+  </>;
+}
+
+function Empty({ children }: { children: ReactNode }) { return <p className={styles.empty}>{children}</p>; }
+function Facts({ rows }: { rows: [string, ReactNode][] }) { return <dl className={styles.facts}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "待补充"}</dd></div>)}</dl>; }
+function Summary({ text }: { text: string }) { return <details className={styles.summaryDisclosure}><summary><span>{text}</span><small>展开 / 收起<ChevronDown size={12} /></small></summary></details>; }
+function ShareWork({ title, slug }: { title: string; slug: string }) {
+  const [open, setOpen] = useState(false); const [url, setUrl] = useState(""); const [message, setMessage] = useState(""); const input = useRef<HTMLInputElement>(null);
+  return <><button type="button" onClick={() => { setUrl(new URL(`/works/${encodeURIComponent(slug)}`, window.location.origin).href); setMessage(""); setOpen(true); }}><Share2 size={15} />分享</button><Dialog open={open} onRequestClose={() => setOpen(false)} className={styles.shareDialog} aria-label="分享公开作品链接" initialFocusRef={input}><header><h2>分享作品</h2><button type="button" onClick={() => setOpen(false)} aria-label="关闭分享"><X size={20} /></button></header><p>{title}</p><label>公开作品链接<input ref={input} readOnly value={url} onFocus={event => event.currentTarget.select()} /></label><button className={styles.primaryAction} type="button" onClick={async () => { try { await navigator.clipboard.writeText(url); setMessage("链接已复制。"); } catch { input.current?.focus(); input.current?.select(); setMessage("浏览器未允许复制，请手动复制选中的链接。"); } }}><Copy size={15} />复制链接</button><p role="status">{message || "链接只包含当前公开版本，不包含你的收藏、笔记或阅读记录。"}</p></Dialog></>;
+}
+function VersionTable({ versions, selectedId, preview }: { versions: WorkVersion[]; selectedId?: string; preview: boolean }) {
+  if (!versions.length) return <Empty>版本信息尚待补充。</Empty>;
+  return <div><p className={styles.sectionIntro}>选择版本查看对应书目与原文。</p><div className={styles.versionTable}><table><thead><tr><th scope="col">版本</th><th scope="col">出版信息</th><th scope="col">语言</th><th scope="col">ISBN / DOI</th><th scope="col">获取状态</th><th scope="col">操作</th></tr></thead><tbody>{versions.map(version => {
+    const selected = version.id === selectedId; const asset = version.readable_asset;
+    return <tr key={version.id} className={selected ? styles.selectedVersion : undefined}><th scope="row">{preview ? <strong>{versionName(version)}</strong> : <Link className={styles.versionIdentity} href={versionHref(version)} aria-current={selected ? "page" : undefined}><span className={`${styles.radioMark} ${selected ? styles.checked : ""}`} aria-hidden="true" />{versionName(version)}<span className="sr-only">{selected ? "，当前版本" : "，查看版本信息"}</span></Link>}{version.contributors.filter(row => row.role === "translator").map(row => <small key={`${row.person.id}-${row.role}`}>{row.person.preferred_name} 译</small>)}</th><td>{version.publisher || "出版机构待补"}<small>{version.publication_date || version.publication_year || "出版年待补"}</small></td><td>{languageLabel(version.language)}</td><td className={styles.identifier}>{version.isbn13 || version.isbn10 || version.isbn || version.doi || "—"}</td><td><span className={asset ? styles.available : styles.metadataOnly}>{asset ? <><i />可在线阅读</> : accessLabel(version)}</span></td><td><div className={styles.versionActions}>{preview ? <span>草稿预览</span> : <>{asset ? <Link className={selected ? styles.primaryAction : styles.secondaryAction} href={`/reader/${asset.id}`}><BookOpen size={14} />开始阅读<ArrowRight size={14} /></Link> : <Link className={styles.secondaryAction} href={versionHref(version)}>查看版本信息<ArrowRight size={14} /></Link>}<details><summary aria-label={`${versionName(version)}的更多操作`}>···</summary><div>{asset ? <AssetDownloadButton assetId={asset.id} /> : null}<SharedCitationButton editionId={version.id}>引用此版本</SharedCitationButton><Link href={versionHref(version)}>版本详情</Link></div></details></>}</div></td></tr>;
+  })}</tbody></table></div></div>;
+}
+function WorkContents({ work, preview }: { work: Work; preview: boolean }) {
+  const outline = work.outline ?? []; const issue = work.journalContents ?? [];
+  return <div><p className={styles.sectionIntro}>{work.version ? versionName(work.version) : "当前版本"}{outline.length ? ` · ${outline.length} 条目录` : ""}</p>{issue.map((item, index) => <div className={styles.contentsRow} key={item.id || index}><span>{String(index + 1).padStart(2, "0")}</span><div>{!preview && item.article_href ? <Link href={item.article_href}>{item.title}</Link> : <strong>{item.title}</strong>}{item.author_display ? <small>{item.author_display}</small> : null}</div><small>{item.page_range}</small></div>)}{outline.map((item, index) => <div className={styles.contentsRow} key={`${item.index}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span>{!preview && work.readerHref ? <Link href={`${work.readerHref}?page=${item.index}`}>{item.chapter_title}<ArrowRight size={14} /></Link> : <strong>{item.chapter_title}</strong>}<small>{item.printed_label ? `p. ${item.printed_label}` : `PDF ${item.index}`}</small></div>)}{!outline.length && !issue.length ? <Empty>{work.readerHref ? "当前版本尚无可用的章节目录。可直接打开原文阅读。" : "当前版本没有可在线阅读的公开文件，暂不提供章节预览。"}</Empty> : null}</div>;
+}
+function RelationLink({ href, title, summary, image, preview }: { href: string; title: string; summary?: string; image?: string; preview: boolean }) {
+  const content = <>{image ? <img src={image} alt="" loading="lazy" /> : null}<span><strong>{title}</strong>{summary ? <small>{summary}</small> : null}</span><ArrowRight size={15} /></>;
+  return preview ? <div className={styles.relationLink}>{content}</div> : <Link className={styles.relationLink} href={href}>{content}</Link>;
+}
+function RelatedSidebar({ work, preview }: { work: Work; preview: boolean }) {
+  const relations = work.relations;
+  const excerpt = work.curatedClaims?.core_viewpoint.flatMap(row => row.evidence).find(row => row.source.edition_id === work.editionId);
+  return <div className={styles.relatedSidebar}>{excerpt && !preview ? <blockquote className={styles.excerpt}><p>{excerpt.text}</p><Link href={excerpt.reader_url}>查看原文 · {excerpt.locator.printed_page_label ? `p. ${excerpt.locator.printed_page_label}` : `PDF ${excerpt.locator.page}`}<ArrowRight size={13} /></Link></blockquote> : null}<section><h2>相关学者</h2>{relations?.scholars.length ? relations.scholars.map(row => <RelationLink key={row.id} href={`/scholars/${row.slug}`} title={row.person.preferred_name} summary={row.person.original_name || row.short_description} image={row.person.portrait || undefined} preview={preview} />) : <Empty>尚无公开学者资料。</Empty>}</section><section><h2>相关主题</h2><div className={styles.tags}>{work.topics?.length ? work.topics.map(topic => preview ? <span key={topic.slug}>{topic.name}</span> : <Link key={topic.slug} href={`/topics/${topic.slug}`}>{topic.name}</Link>) : <Empty>尚无已确认主题。</Empty>}</div></section>{relations?.concepts.length ? <section><h2>相关概念</h2>{relations.concepts.map(row => <RelationLink key={row.id} href={`/theories/nodes/${row.slug}`} title={row.name} preview={preview} />)}</section> : null}</div>;
+}
+function RelationCards({ work, kind, preview }: { work: Work; kind: "curations" | "reading_paths"; preview: boolean }) {
+  const rows = work.relations?.[kind] ?? [];
+  return <div className={styles.linkRows}>{rows.length ? rows.map(row => <RelationLink key={row.id} href={kind === "curations" ? `/recommendations/${row.slug}` : `/theories/reading-paths/${row.slug}`} title={row.title} summary={"summary" in row ? row.summary : row.introduction} image={row.cover_url || undefined} preview={preview} />) : <Empty>{kind === "curations" ? "尚无与该作品关联的公开专题。" : "尚无与该作品关联的公开学习路径。"}</Empty>}</div>;
+}
+function JournalIssues({ work, preview }: { work: Work; preview: boolean }) {
+  const issues = work.relations?.journal_issues ?? [];
+  if (!issues.length) return null;
+  return <aside className={styles.journalIssues}><h2>本期目录</h2>{issues.map(issue => <section key={`${issue.id}-${issue.edition.id}`}><RelationLink href={`/works/${issue.slug}`} title={issue.title} summary={[issue.edition.volume, issue.edition.issue, issue.edition.publication_year].filter(Boolean).join(" · ")} image={issue.cover_url || undefined} preview={preview} />{issue.contents.map((row, index) => <div className={row.article_work_id === work.workId ? styles.currentArticle : undefined} key={row.id || index}>{row.article_href && !preview ? <Link href={row.article_href}>{row.title}</Link> : <strong>{row.title}</strong>}<small>{row.author_display}{row.page_range ? ` · ${row.page_range}` : ""}</small></div>)}</section>)}</aside>;
 }

@@ -3,7 +3,7 @@ import type { components } from "./generated/schema";
 import type { OutlineNode } from "./document-outline";
 
 export type PublicWorkCard = components["schemas"]["WorkCard"];
-export type PublicWorkDetail = components["schemas"]["WorkDetail"];
+export type PublicWorkDetail = components["schemas"]["PublicWorkDetail"];
 export type PublicEdition = components["schemas"]["EditionCompact"];
 export type ReaderAssetAccess = components["schemas"]["ReaderAssetAccess"];
 export type ReaderPageContent = components["schemas"]["ReaderPageContent"];
@@ -16,7 +16,7 @@ export type ReaderOutlineItem = components["schemas"]["PublicOutlineItem"];
 // has its own complete contract; it is not claimed as generated coverage.
 export type ApiWork = PublicWorkCard
   & Partial<Pick<PublicWorkDetail, "outline" | "theory_associations">>
-  & { curated_claims?: Work["curatedClaims"] };
+  & { editions?: components["schemas"]["CatalogEdition"][]; relations?: PublicWorkDetail["relations"]; curated_claims?: Work["curatedClaims"] };
 
 type LinkedReaderScholar = Omit<ReaderManifestPayload["related_scholars"][number], "slug"> & { slug: string };
 
