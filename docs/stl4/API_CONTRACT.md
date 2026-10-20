@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 Reader OCR状态
+
+GET/POST distribution/assets/{asset_id}/ocr-status提供安全状态及pause/resume；GET的request_id只查本人已发命令。普通GET仍按当前文件权限；写/查回要求管理能力、X-Reader-Owner、固定nonce、job_id/job_version、source_sha256及document_revision_id。job_version原样回传，不能重格式化时间。已处理内容分unavailable/awaiting_publication/published/admin_preview；没有公开OCR正文。新增1路径至175，原174保留，无新迁移，详见READER_OCR_STATUS_20261020。
+
 ## 2026-10-20 并读与独立校准
 
 catalog/parallel的versions/segments/candidates共用激活快照/Asset/DocumentRevision和Discovery首推候选；分页最多20段/6候选，focus返回实际窗口offset，失效来源409。reading/parallel-tasks提供本人列表/详情/nonce查回及CAS保存，X-Reader-Owner必需，任务来源身份不可改。

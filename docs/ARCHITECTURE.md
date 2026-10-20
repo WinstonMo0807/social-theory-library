@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-20 Reader任务状态投影
+
+Reader OCR状态新增精确文件的安全投影，复用既有任务、current-page暂停、续跑、锁和AuditEvent回执，不另建Worker。源normalized和文字staging保持同PDF/hash不变量；公开内容以当前发布事件/修订激活为准，后台整包与未公开文字不进入公共响应。前端任务轮询独立于PDF，当前原页缩略直接复用画布，无第二次文件请求；管理读写能力分开。详见stl4/READER_OCR_STATUS_20261020。
+
 ## 2026-10-20 并读任务与公共校准
 
 并读在现有Reader路由/证据/发布边界上增加服务投影，使用实际Work/translation_of快照、Edition/Asset/Revision及原Discovery首推检索，不建第二套正文或索引。私人任务复用加密Research基础设施和保留/导出/删除；最小nonce回执保留删除墓碑，避免迟到请求复活。独立公共校准仅保存显式投稿范围，不依赖私人task外键；按匿名资格读回、审核发布分权。0015未应用，详见stl4/PARALLEL_READER_20261020。

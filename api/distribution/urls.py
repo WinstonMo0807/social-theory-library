@@ -1,4 +1,5 @@
 from django.urls import path
+from .reader_ocr_views import ReaderOCRStatusView
 
 from .views import (
     AdminAssetPreviewView,
@@ -11,6 +12,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("assets/<uuid:asset_id>/ocr-status/", ReaderOCRStatusView.as_view(), name="reader-ocr-status"),
     path("admin/assets/<uuid:asset_id>/preview/", AdminAssetPreviewView.as_view(), name="admin-asset-preview"),
     path("assets/<uuid:asset_id>/access/", AssetAccessView.as_view(), name="asset-access"),
     path("assets/<uuid:asset_id>/file/", AssetFileView.as_view(), name="asset-file"),

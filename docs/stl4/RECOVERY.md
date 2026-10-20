@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-20 Reader OCR状态接续
+
+前置0b6c010，读READER_OCR_STATUS_20261020。恢复reader_ocr新服务/serializer/view/urls、UI/hook/client/样式/当前页缩略、ReaderShell接线、schema及类型和用例。旧OCR执行/备份/入库脏文件不纳入。175路径/TS32523仅静态通过，真实OCR/队列/NAS/逐图未验收。后续PDF45–49已读原图，理论旧serializer/views未提交改动须继承；现有content_placements concept_usage可复用，不建平行用法表。
+
 ## 2026-10-20 并读接续
 
 前置a5898aa，先读PARALLEL_READER_20261020。新catalog/reading parallel服务、0015、privacy、并读UI、管理校准及入口、schema/生成类型和隔离夹具配置共同恢复。174路径与TS49952静态通过；全部功能/逐图待核实。保存只用本单元白名单，保留继承脏文件；PDF40 OCR轻量状态正在下一单元开发。0014/0015均未应用，不执行夹具、质量评测、生产清理或部署。

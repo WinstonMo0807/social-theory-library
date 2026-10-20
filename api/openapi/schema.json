@@ -6281,6 +6281,112 @@
                 }
             }
         },
+        "/api/distribution/assets/{asset_id}/ocr-status/": {
+            "get": {
+                "operationId": "distribution_assets_ocr_status_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "仅管理账户使用：查回本人固定命令回执。"
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderOCRStatusOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "distribution_assets_ocr_status_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderOCRCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderOCRCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderOCRCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderOCRStatusOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/distribution/backups/": {
             "get": {
                 "operationId": "distribution_backups_list",
@@ -26093,6 +26199,259 @@
                     "text_source",
                     "title",
                     "width"
+                ]
+            },
+            "ReaderOCRActionEnum": {
+                "enum": [
+                    "pause",
+                    "resume"
+                ],
+                "type": "string",
+                "description": "* `pause` - pause\n* `resume` - resume"
+            },
+            "ReaderOCRCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/ReaderOCRActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "source_sha256": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "action",
+                    "document_revision_id",
+                    "job_id",
+                    "job_version",
+                    "request_id",
+                    "source_sha256"
+                ]
+            },
+            "ReaderOCRContentOutput": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/ReaderOCRContentStateEnum"
+                    },
+                    "url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "notice",
+                    "state",
+                    "url"
+                ]
+            },
+            "ReaderOCRContentStateEnum": {
+                "enum": [
+                    "unavailable",
+                    "awaiting_publication",
+                    "published",
+                    "admin_preview"
+                ],
+                "type": "string",
+                "description": "* `unavailable` - unavailable\n* `awaiting_publication` - awaiting_publication\n* `published` - published\n* `admin_preview` - admin_preview"
+            },
+            "ReaderOCRJobOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_version": {
+                        "type": "string",
+                        "description": "固定字符串；提交命令时原样传回，不重新格式化时间。"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "phase": {
+                        "type": "string"
+                    },
+                    "phase_label": {
+                        "type": "string"
+                    },
+                    "completed_pages": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "本次任务目标页数，不一定等于整份文件页数。"
+                    },
+                    "percent": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "phase_elapsed_seconds": {
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "pause_requested": {
+                        "type": "boolean"
+                    },
+                    "stale": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "completed_pages",
+                    "id",
+                    "job_version",
+                    "pause_requested",
+                    "percent",
+                    "phase",
+                    "phase_elapsed_seconds",
+                    "phase_label",
+                    "stale",
+                    "status",
+                    "total_pages",
+                    "updated_at"
+                ]
+            },
+            "ReaderOCRReceiptOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ReaderOCRActionEnum"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "action",
+                    "applied",
+                    "job_id",
+                    "request_id"
+                ]
+            },
+            "ReaderOCRStatusOutput": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "owner_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_sha256": {
+                        "type": "string"
+                    },
+                    "file_page_count": {
+                        "type": "integer"
+                    },
+                    "ocr_status": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "job": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReaderOCRJobOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "can_pause": {
+                        "type": "boolean"
+                    },
+                    "can_resume": {
+                        "type": "boolean"
+                    },
+                    "denied_reason": {
+                        "type": "string"
+                    },
+                    "management_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "processed_content": {
+                        "$ref": "#/components/schemas/ReaderOCRContentOutput"
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReaderOCRReceiptOutput"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "can_pause",
+                    "can_resume",
+                    "checked_at",
+                    "denied_reason",
+                    "document_revision_id",
+                    "edition_id",
+                    "file_page_count",
+                    "job",
+                    "management_url",
+                    "ocr_status",
+                    "owner_id",
+                    "processed_content",
+                    "receipt",
+                    "source_sha256"
                 ]
             },
             "ReaderPageContent": {

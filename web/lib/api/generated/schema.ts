@@ -1546,6 +1546,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/assets/{asset_id}/ocr-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_assets_ocr_status_retrieve"];
+        put?: never;
+        post: operations["distribution_assets_ocr_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/distribution/backups/": {
         parameters: {
             query?: never;
@@ -7074,6 +7090,85 @@ export interface components {
             locator_kind?: string;
             locators?: unknown[];
         };
+        /**
+         * @description * `pause` - pause
+         *     * `resume` - resume
+         * @enum {string}
+         */
+        ReaderOCRActionEnum: "pause" | "resume";
+        ReaderOCRCommandInputRequest: {
+            action: components["schemas"]["ReaderOCRActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            job_id: string;
+            job_version: string;
+            source_sha256: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+        };
+        ReaderOCRContentOutput: {
+            state: components["schemas"]["ReaderOCRContentStateEnum"];
+            url: string | null;
+            label: string;
+            notice: string;
+        };
+        /**
+         * @description * `unavailable` - unavailable
+         *     * `awaiting_publication` - awaiting_publication
+         *     * `published` - published
+         *     * `admin_preview` - admin_preview
+         * @enum {string}
+         */
+        ReaderOCRContentStateEnum: "unavailable" | "awaiting_publication" | "published" | "admin_preview";
+        ReaderOCRJobOutput: {
+            /** Format: uuid */
+            id: string;
+            /** @description 固定字符串；提交命令时原样传回，不重新格式化时间。 */
+            job_version: string;
+            status: string;
+            phase: string;
+            phase_label: string;
+            completed_pages: number | null;
+            /** @description 本次任务目标页数，不一定等于整份文件页数。 */
+            total_pages: number | null;
+            /** Format: double */
+            percent: number | null;
+            phase_elapsed_seconds: number;
+            /** Format: date-time */
+            updated_at: string;
+            pause_requested: boolean;
+            stale: boolean;
+        };
+        ReaderOCRReceiptOutput: {
+            /** Format: uuid */
+            request_id: string;
+            action: components["schemas"]["ReaderOCRActionEnum"];
+            /** Format: uuid */
+            job_id: string;
+            applied: boolean;
+        };
+        ReaderOCRStatusOutput: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            owner_id: number | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            source_sha256: string;
+            file_page_count: number;
+            ocr_status: string;
+            /** Format: date-time */
+            checked_at: string;
+            job: components["schemas"]["ReaderOCRJobOutput"] | null;
+            can_pause: boolean;
+            can_resume: boolean;
+            denied_reason: string;
+            management_url: string | null;
+            processed_content: components["schemas"]["ReaderOCRContentOutput"];
+            receipt: components["schemas"]["ReaderOCRReceiptOutput"] | null;
+        };
         ReaderPageContent: {
             /** Format: uuid */
             asset_id: string;
@@ -11141,6 +11236,57 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    distribution_assets_ocr_status_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 仅管理账户使用：查回本人固定命令回执。 */
+                request_id?: string;
+            };
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderOCRStatusOutput"];
+                };
+            };
+        };
+    };
+    distribution_assets_ocr_status_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReaderOCRCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReaderOCRCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["ReaderOCRCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderOCRStatusOutput"];
+                };
             };
         };
     };

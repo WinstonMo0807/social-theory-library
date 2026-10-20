@@ -209,3 +209,5 @@
 .reader-copy-status[hidden] { display: none !important; }
 
 .reader-save-recovery.in-panel { position: static; transform: none; width: auto; margin: 10px; }
+
+.reader-ocr-dialog { width: min(680px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow-y: auto; }

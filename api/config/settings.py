@@ -186,6 +186,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "ReaderOCRActionEnum": ["pause", "resume"],
+        "ReaderOCRContentStateEnum": ["unavailable", "awaiting_publication", "published", "admin_preview"],
         "ParallelCalibrationScopeEnum": ["bibliography", "passages"],
         "ParallelAlignmentStatusEnum": ["confirmed", "no_match", "addition"],
         "PublicCollectionStateEnum": ["ready", "empty", "partial", "unavailable"],

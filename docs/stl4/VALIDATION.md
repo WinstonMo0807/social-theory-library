@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-20 PDF40 OCR补齐静态记录
+
+- ast.parse新OCR服务/view/serializer、distribution urls、新后端用例、config schema_urls/settings共7路径退出0；未执行业务。PostCSS解析原Reader CSS143、新OCR CSS49节点退出0。
+- web下`node node_modules/eslint/bin/eslint.js components/reader-shell.tsx components/reader/reader-page-thumbnail.tsx components/reader/reader-ocr-status.tsx components/reader/use-reader-ocr-status.ts lib/api/reader-ocr.client.ts tests/reader-ocr-v306.spec.ts`退出0，1条既有头像img提示。
+- 全量`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`，39434及最终32523退出0；后者含同owner降权与失效版本入口修改。
+- SQLite内存配置spectacular生成tmp/stl4-reader-ocr-schema-20261020.json退出0，0错误/10既有Home/Scholar/Topic提示；openapi-typescript同步175路径，旧174全部保留。
+- 新后端19函数39场景、新前端15合成OCR契约场景均未运行，后者自动由现*v306.spec.ts配置收录并依赖隔离真实PDF。未运行测试、浏览器、构建、迁移、OCR/模型/NAS、生产操作或检索质量测评。
+
 ## 2026-10-20 PDF41–43静态记录
 
 - 22路径Python ast.parse退出0，31测试函数只解析未执行；PostCSS解析并读CSS120/管理CSS18节点退出0。
