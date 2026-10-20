@@ -7,7 +7,7 @@ from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
 from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
-    DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, LegacyDiscoverySearchView)
+    DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
 from .curation_queue_views import CurationDraftQueueView
 from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
@@ -822,6 +822,7 @@ urlpatterns = [
     path("discovery-search/<uuid:session_id>/expand/", DiscoverySearchExpandView.as_view(), name="discovery-search-expand"),
     path("discovery-search/<uuid:session_id>/cancel/", DiscoverySearchCancelView.as_view(), name="discovery-search-cancel"),
     path("discovery-search/<uuid:session_id>/retry/", DiscoverySearchRetryView.as_view(), name="discovery-search-retry"),
+    path("discovery-search/<uuid:session_id>/remove-document/", DiscoverySearchRemoveDocumentView.as_view(), name="discovery-search-remove-document"),
     path("discovery-search/<uuid:session_id>/context/", DiscoverySearchContextView.as_view(), name="discovery-search-context"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),

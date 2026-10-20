@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-20 PDF32状态静态记录
+
+Python ast.parse八路径退出0；web下目标ESLint五路径退出0（两个img提示）；PostCSS观点CSS257节点；全量TypeScript session88120退出0。spectacular使用SQLite内存配置生成tmp/stl4-documents-20261020-schema.json，0错误/10条既有提示，151paths，openapi-typescript同步。7后端函数/9参数案例及2浏览器场景未运行。过程中的ESLint时间读取位置错误已修复重跑，不把旧失败记通过。详细文件与命令见单元记录及Git差异。未运行正式验收或部署。
+
 ## 2026-10-20 检索单元静态收口
 
 - web下 `node node_modules/typescript/bin/tsc --noEmit --incremental false`，session37376，退出0。

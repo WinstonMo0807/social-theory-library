@@ -45,9 +45,18 @@ export type DiscoveryRetrievalIdentity = {
   index_generation: string; index_uid: string; embedding_artifact: string;
   embedding_dimensions?: number | null; reranker_artifact: string; pipeline_version: string;
 };
+export type DiscoveryDocumentStatus = "queued" | "running" | "completed" | "no_returned" | "partial" | "failed" | "waiting_index" | "unreadable" | "changed" | "canceled";
+export type DiscoveryDocument = {
+  edition_id: string; work_id: string; title: string; authors: string[]; url: string;
+  status: DiscoveryDocumentStatus; bibliography: DiscoveryPassage["bibliography"] | null;
+  material_count: number; available_versions: Array<{ id: string; label: string; url: string }>;
+};
+export type DiscoveryDocuments = { items: DiscoveryDocument[]; counts: Partial<Record<DiscoveryDocumentStatus, number>>;
+  tracked: number; truncated: boolean; excluded_count: number; notice: string };
 export type DiscoverySearch = {
   id: string; access_token?: string; query: string; status: DiscoveryStatus; status_message?: string;
   sort?: DiscoverySort; added_count?: number;
+  documents?: DiscoveryDocuments;
   mode: "standard" | "expanded"; expansion_count: number; passages: DiscoveryPassage[];
   entities: DiscoveryEntity[]; curation: DiscoveryCuration[]; next_cursor: string | null; can_expand: boolean;
   count?: number; warnings: Array<string | { code: string; message: string; channel?: string }>; coverage_summary: DiscoveryCoverage; completed_channels: string[];

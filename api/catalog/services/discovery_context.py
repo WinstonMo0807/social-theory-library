@@ -8,6 +8,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from catalog.models import DiscoveryDocument, DocumentRevision, EvidenceSpan, Passage
 from catalog.services.publication_eligibility import active_document_revision_q
 from catalog.services.discovery_sessions import DEEP_RESULTS_KEY, _public_row
+from catalog.services.discovery_documents import allowed_rows
 
 
 def rerank_contexts(rows, access_statuses):
@@ -117,7 +118,7 @@ def session_context(session, result_id, access_statuses):
             if str(row.get("id")) == str(result_id)]
     if not refs:
         raise NotFound("本次检索中不存在该原文。")
-    rows = validate_discovery_results("passages", refs, access_statuses)
+    rows = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
     if not rows:
         raise NotFound("原文来源已更新、撤回或不再可访问，请重新检索。")
     row = _public_row(rows[0])
@@ -179,12 +180,12 @@ def session_context(session, result_id, access_statuses):
     candidate_ids = set(map(str, DiscoveryDocument.objects.filter(pk__in=references,
         channel="passages", payload__work__id=str(row.get("work", {}).get("id"))).values_list("pk", flat=True)))
     candidate_refs = [ref for key, ref in references.items() if key in candidate_ids]
-    candidates = [_public_row(value) for value in validate_discovery_results("passages", candidate_refs, access_statuses)]
+    candidates = [_public_row(value) for value in allowed_rows(session, validate_discovery_results("passages", candidate_refs, access_statuses))]
     candidates.sort(key=lambda value: (str(value.get("edition_id", "")), value.get("pdf_page") or 0, value["id"]))
     current = next((index for index, value in enumerate(candidates) if value["id"] == str(result_id)), None)
     # Context assembly performs multiple reads. Recheck the requested source
     # after those reads rather than returning a quotation withdrawn meanwhile.
-    fresh = validate_discovery_results("passages", refs, access_statuses)
+    fresh = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
     if not fresh:
         raise NotFound("原文来源已更新、撤回或不再可访问，请重新检索。")
     row = _public_row(fresh[0])

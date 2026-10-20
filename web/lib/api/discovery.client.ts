@@ -45,3 +45,9 @@ export function actOnDiscoverySearch(id: string, accessToken: string, action: "e
 export function readDiscoveryContext(id: string, accessToken: string, resultId: string) {
   return request<DiscoveryContext>(`${endpoint}${encodeURIComponent(id)}/context/?result_id=${encodeURIComponent(resultId)}`, {}, accessToken);
 }
+
+export function removeDiscoveryDocument(id: string, accessToken: string, editionId: string, expectedGeneration: number) {
+  return request<DiscoverySearch>(`${endpoint}${encodeURIComponent(id)}/remove-document/`, {
+    method: "POST", body: JSON.stringify({ edition_id: editionId, expected_generation: expectedGeneration }),
+  }, accessToken);
+}

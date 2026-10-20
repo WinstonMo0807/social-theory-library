@@ -26,6 +26,10 @@ class DiscoveryRetrySerializer(serializers.Serializer):
     expected_generation = serializers.IntegerField(min_value=1, max_value=32766)
 
 
+class DiscoveryRemoveDocumentSerializer(DiscoveryRetrySerializer):
+    edition_id = serializers.UUIDField()
+
+
 class DiscoveryDeepProgressSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=(
         # Canonical public statuses are the six names below. The legacy/raw
@@ -155,10 +159,39 @@ class DiscoveryWarningSerializer(serializers.Serializer):
     channel = serializers.CharField(required=False)
 
 
+class DiscoveryDocumentVersionSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    label = serializers.CharField()
+    url = serializers.CharField()
+
+
+class DiscoveryDocumentSerializer(serializers.Serializer):
+    from catalog.services.discovery_documents import DOCUMENT_STATUSES
+    edition_id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=DOCUMENT_STATUSES)
+    title = serializers.CharField()
+    authors = serializers.ListField(child=serializers.CharField())
+    bibliography = DiscoveryBibliographySerializer(allow_null=True)
+    material_count = serializers.IntegerField(min_value=0)
+    available_versions = DiscoveryDocumentVersionSerializer(many=True)
+    url = serializers.CharField(allow_blank=True)
+
+
+class DiscoveryDocumentsSerializer(serializers.Serializer):
+    items = DiscoveryDocumentSerializer(many=True)
+    counts = serializers.DictField(child=serializers.IntegerField())
+    tracked = serializers.IntegerField(min_value=0)
+    excluded_count = serializers.IntegerField(min_value=0)
+    truncated = serializers.BooleanField()
+    notice = serializers.CharField()
+
+
 class DiscoveryResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     sort = serializers.ChoiceField(choices=DISPLAY_SORTS)
     added_count = serializers.IntegerField(min_value=0, help_text="本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。")
+    documents = DiscoveryDocumentsSerializer()
     query = serializers.CharField()
     status = serializers.CharField(help_text="queued, running, partial, completed, failed or canceled")
     access_token = serializers.CharField(required=False)
@@ -311,6 +344,18 @@ class DiscoverySearchContextView(DiscoveryView):
         from catalog.services.discovery_context import session_context
         session = get_session(request, session_id)
         return Response(session_context(session, request.query_params.get("result_id"), session_access(session, request)))
+
+
+class DiscoverySearchRemoveDocumentView(DiscoveryView):
+    @extend_schema(parameters=[SESSION_TOKEN], request=DiscoveryRemoveDocumentSerializer, responses=DiscoveryResponseSerializer)
+    def post(self, request, session_id):
+        from catalog.services.discovery_documents import remove_document
+        current = get_session(request, session_id)
+        serializer = DiscoveryRemoveDocumentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        updated = remove_document(current, serializer.validated_data["edition_id"], session_access(current, request),
+                                  expected_generation=serializer.validated_data["expected_generation"])
+        return Response(self.payload(request, updated))
 
 
 class LegacyDiscoverySearchView(DiscoveryView):

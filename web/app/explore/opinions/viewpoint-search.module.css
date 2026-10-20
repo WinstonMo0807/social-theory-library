@@ -234,3 +234,26 @@
 @media (max-width: 1000px) { .page .resultLayout, .page .resultLayout.summaryHidden { grid-template-columns: 180px minmax(0, 1fr); } .evidenceInspector { display: none; } .evidenceHead { width: 100%; } .page > .inspector { margin-left: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 800px) { .page { padding: 23px 18px 46px; } .page .resultLayout, .page .resultLayout.summaryHidden { grid-template-columns: 1fr; } .page .mobileFilters { display: flex; justify-content: space-between; align-items: center; border: 0; margin: 0 0 12px; padding: 0; background: transparent; } .mobileFilters button { display: flex; gap: 6px; align-items: center; min-height: 38px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); } .mobileFilters > span { color: var(--muted); font-size: 11px; } .contextColumns { grid-template-columns: 1fr; } .contextColumns > aside { border-left: 0; border-top: 1px solid var(--line); padding: 20px 0 0; } .contextDialog, .summaryDialog, .filterDialog { width: 100%; max-width: 100%; max-height: 90dvh; margin: auto 0 0; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); } }
 @media (max-width: 560px) { .evidenceHead h1 { font-size: 29px; margin-bottom: 16px; } .page .queryRow { flex-wrap: nowrap; padding: 0 0 0 10px; gap: 8px; } .page .queryRow input { padding: 9px 0; font-size: 16px; } .page .queryRow :global(.button) { min-width: 55px; width: auto; font-size: 12px; } .resultCard { grid-template-columns: 17px minmax(0, 1fr); gap: 8px; } .evidenceBook h3 { font-size: 18px; } .page > .inspector { grid-template-columns: 1fr; } .page .resultsHeader { padding: 0 0 8px; } .page .resultsHeader h2 { display: none; } .viewControls > span { font-size: 11px; } .page .resultGrid { grid-template-columns: 1fr; } .page .resultGrid .resultCard { display: grid; grid-template-columns: 17px minmax(0, 1fr); } .page .resultGrid .resultNumber { display: inline; } .page .resultGrid .evidenceBook { grid-template-columns: 76px minmax(0, 1fr); } .page .resultGrid .evidenceBook img, .page .resultGrid .coverMissing { width: 76px; height: 110px; } .evidenceSummary .passageQuote { margin-inline: 0; } }
+
+/* Final PDF32: source-level query states, preserving the warm paper system. */
+.documentProgress { margin: 20px 0; border-top: 1px solid #d9d3c8; border-bottom: 1px solid #d9d3c8; padding: 16px 0; }
+.documentProgress > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.documentProgress h3 { margin: 0; font-family: var(--font-serif); font-size: 19px; }
+.documentProgress h3 small, .documentProgress > header > span { font: 12px var(--font-sans); color: #756f65; }
+.documentTabs { display: flex; gap: 18px; overflow-x: auto; border-bottom: 1px solid #ded8cd; }
+.documentTabs button { flex: none; padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #716b61; font-size: 13px; }
+.documentTabs button[aria-pressed="true"] { color: #292723; border-bottom-color: #a38c5e; font-weight: 600; }
+.documentTabs small { margin-left: 4px; }
+.documentRow { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 16px; padding: 20px 0; border-bottom: 1px solid #e7e1d7; }
+.documentRow:last-of-type { border-bottom: 0; }
+.documentCover { width: 58px; height: 82px; display: grid; place-items: center; background: #ebe5d9; color: #8c7d64; }
+.documentCover img { width: 100%; height: 100%; object-fit: contain; }
+.documentRow h4 { font-family: var(--font-serif); font-size: 18px; line-height: 1.5; margin: 0 0 4px; }
+.documentRow p { font-size: 12px; line-height: 1.8; color: #7b746a; margin: 4px 0 10px; }
+.documentState { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; background: #f1ecdf; font-size: 12px; color: #6f5f42; }
+.documentState[data-state="unreadable"], .documentState[data-state="failed"] { background: #f5ebe4; color: #954e3e; }
+.documentActions { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 12px; }
+.documentActions button { border: 0; padding: 3px 0; color: #39352f; background: transparent; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.documentActions button:disabled { opacity: .45; cursor: wait; }
+.documentTabs button:focus-visible, .documentActions button:focus-visible { outline: 2px solid #a38c5e; outline-offset: 3px; }
+@media (max-width: 640px) { .documentRow { grid-template-columns: 50px minmax(0, 1fr); gap: 12px; } .documentCover { width: 50px; height: 72px; } .documentTabs { gap: 16px; } .documentProgress > header { align-items: flex-start; } }

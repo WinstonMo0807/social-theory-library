@@ -26,6 +26,9 @@ from rest_framework.exceptions import NotFound, Throttled, ValidationError
 from catalog.discovery_models import DiscoverySearchSession
 from catalog.services.semantic_search import viewer_access_statuses
 from common.concurrency import capacity_slot
+from catalog.services.discovery_documents import (
+    effective_filters, allowed_rows, begin_document_query, finish_document_query, document_payload,
+)
 
 logger = logging.getLogger(__name__)
 CHANNELS = ("passages", "entities", "curation")
@@ -527,7 +530,7 @@ def _deep_reference_rows(session, access_statuses) -> list[dict]:
     from catalog.services.discovery_projection import validate_discovery_results
 
     refs = (session.results or {}).get("passages", [])[:MAX_MATERIALIZED]
-    rows = validate_discovery_results("passages", refs, access_statuses)
+    rows = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
     by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in rows}
     return [
         row
@@ -563,7 +566,7 @@ def execute_deep_session(session_id, generation: int, task_id: str) -> None:
             session.query,
             baseline,
             access_statuses,
-            filters=session.filters,
+            filters=effective_filters(session),
             is_current=lambda: _deep_task_current(session_id, generation, task_id),
         )
         if result.get("status") == "canceled":
@@ -579,7 +582,7 @@ def execute_deep_session(session_id, generation: int, task_id: str) -> None:
             }
             for row in rows
         }
-        rows = validate_discovery_results("passages", rows, access_statuses)
+        rows = allowed_rows(session, validate_discovery_results("passages", rows, access_statuses))
         for row in rows:
             row.update(annotations.get(_identity(row), {}))
         refs = [_deep_reference(row) for row in rows[:MAX_MATERIALIZED] if _identity(row)]
@@ -706,7 +709,8 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
     # Ephemeral per-task preparation: one original-query vector is reused by
     # all three channels, pinned to the same index generation. Never shared
     # across users or retained as query history.
-    retrieval_context: dict = {}
+    retrieval_context: dict = {"on_passage_scope": lambda scopes, index: begin_document_query(
+        session_id, generation, task_id, scopes, index)}
     channel_states = {}
     for channel in ("entities", "curation", "passages"):
         if not _task_current(session_id, generation, task_id):
@@ -721,7 +725,7 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
         warnings = []
         result = {}
         try:
-            result = retrieve_discovery_channel(session.query, channel, session.filters, session.access_statuses,
+            result = retrieve_discovery_channel(session.query, channel, effective_filters(session), session.access_statuses,
                 limit=cap, expanded=expanded, aliases=aliases, request_context=retrieval_context,
                 is_current=lambda: _task_current(session_id, generation, task_id))
             if result["canceled"]:
@@ -753,6 +757,8 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
             seen = {_identity(row) for row in existing}
             additions = [_reference(row) for row in rows if _identity(row) not in seen]
             current.results = {**current.results, channel: (existing + additions)[:MAX_MATERIALIZED]}
+            if channel == "passages":
+                finish_document_query(current, warnings, failed=channel_state["status"] == "failed")
             current.channels = {**current.channels, channel: channel_state}
             versions = list((current.versions or {}).get(channel) or [])
             if version and version not in versions:
@@ -877,6 +883,8 @@ def _rehydrate(session, access_statuses) -> dict[str, list[dict]]:
     for channel in CHANNELS:
         refs = (session.results or {}).get(channel, [])[:MAX_MATERIALIZED]
         fresh = validate_discovery_results(channel, refs, access_statuses)
+        if channel == "passages":
+            fresh = allowed_rows(session, fresh)
         by_id = {(_identity(row), str(row.get("source_revision") or "")): row for row in fresh}
         output[channel] = []
         for position, ref in enumerate(refs):
@@ -894,7 +902,7 @@ def _rehydrate_deep(session, access_statuses) -> list[dict]:
     from catalog.services.discovery_projection import validate_discovery_results
 
     refs = (session.results or {}).get(DEEP_RESULTS_KEY, [])[:MAX_MATERIALIZED]
-    fresh = validate_discovery_results("passages", refs, access_statuses)
+    fresh = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
     by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in fresh}
     output = []
     for position, ref in enumerate(refs):
@@ -1117,7 +1125,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3, sort="rel
     counts["passages"] = len(passage_rows)
     # No cached corpus totals are returned after permissions change.
     from catalog.services.discovery_projection import discovery_coverage
-    coverage = discovery_coverage(access_statuses, filters=session.filters)
+    coverage = discovery_coverage(access_statuses, filters=effective_filters(session))
     coverage = {**coverage, "message": (
         f"当前权限与筛选范围内有 {coverage.get('published_editions', 0)} 份已公开书目，"
         f"其中 {coverage.get('eligible_editions', 0)} 份具备全文检索资格，"
@@ -1127,6 +1135,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3, sort="rel
     identity = identity if isinstance(identity, dict) else {}
     return {
         "id": str(session.id), "query": session.query, "original_query": session.query,
+        "documents": document_payload(session, access_statuses, passage_rows),
         "status": session.status, "mode": "expanded" if session.expansion_count else "standard",
         "can_retry": session.status in {"failed", "partial", "canceled"},
         "task_progress": {

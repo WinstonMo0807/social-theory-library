@@ -4812,6 +4812,74 @@
                 }
             }
         },
+        "/api/catalog/discovery-search/{session_id}/remove-document/": {
+            "post": {
+                "operationId": "catalog_discovery_search_remove_document_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Discovery-Token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Anonymous search capability returned once at creation; do not put in URLs."
+                    },
+                    {
+                        "in": "path",
+                        "name": "session_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryRemoveDocumentRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryRemoveDocumentRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscoveryRemoveDocumentRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DiscoveryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/discovery-search/{session_id}/retry/": {
             "post": {
                 "operationId": "catalog_discovery_search_retry_create",
@@ -12607,6 +12675,138 @@
                 "type": "string",
                 "description": "* `baseline_ready` - baseline_ready\n* `deep_queued` - deep_queued\n* `deep_running` - deep_running\n* `completed` - completed\n* `partial` - partial\n* `unavailable` - unavailable\n* `pending` - pending\n* `queued` - queued\n* `running` - running\n* `degraded` - degraded\n* `disabled` - disabled\n* `skipped` - skipped\n* `failed` - failed"
             },
+            "DiscoveryDocument": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/DiscoveryDocumentStatusEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bibliography": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DiscoveryBibliography"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "material_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "available_versions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryDocumentVersion"
+                        }
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "available_versions",
+                    "bibliography",
+                    "edition_id",
+                    "material_count",
+                    "status",
+                    "title",
+                    "url",
+                    "work_id"
+                ]
+            },
+            "DiscoveryDocumentStatusEnum": {
+                "enum": [
+                    "queued",
+                    "running",
+                    "completed",
+                    "no_returned",
+                    "partial",
+                    "failed",
+                    "waiting_index",
+                    "unreadable",
+                    "changed",
+                    "canceled"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `running` - running\n* `completed` - completed\n* `no_returned` - no_returned\n* `partial` - partial\n* `failed` - failed\n* `waiting_index` - waiting_index\n* `unreadable` - unreadable\n* `changed` - changed\n* `canceled` - canceled"
+            },
+            "DiscoveryDocumentVersion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "url"
+                ]
+            },
+            "DiscoveryDocuments": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DiscoveryDocument"
+                        }
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "tracked": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "excluded_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "counts",
+                    "excluded_count",
+                    "items",
+                    "notice",
+                    "tracked",
+                    "truncated"
+                ]
+            },
             "DiscoveryEntity": {
                 "type": "object",
                 "properties": {
@@ -12756,6 +12956,24 @@
                     "work"
                 ]
             },
+            "DiscoveryRemoveDocumentRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_generation": {
+                        "type": "integer",
+                        "maximum": 32766,
+                        "minimum": 1
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "expected_generation"
+                ]
+            },
             "DiscoveryResponse": {
                 "type": "object",
                 "properties": {
@@ -12770,6 +12988,9 @@
                         "type": "integer",
                         "minimum": 0,
                         "description": "本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。"
+                    },
+                    "documents": {
+                        "$ref": "#/components/schemas/DiscoveryDocuments"
                     },
                     "query": {
                         "type": "string"
@@ -12919,6 +13140,7 @@
                     "coverage_summary",
                     "created_at",
                     "curation",
+                    "documents",
                     "entities",
                     "expansion_count",
                     "expires_at",

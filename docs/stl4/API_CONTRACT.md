@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 Discovery逐版本状态
+
+Discovery响应增加documents（状态/当前书目/原文数/最多6个公开版本/200上限标记）。新增POST remove-document（edition_id、expected_generation），仅本会话可见来源、原访问权限和幂等移除，运行中换代继续。新API路径共151，OpenAPI/TS同步；具体状态含义和权限见DISCOVERY_DOCUMENTS_20261020。
+
 ## 2026-10-20 公共检索与本人记录
 
 GET /catalog/search/?context=global&scope=catalog 提供Work合并、多版本、同版本过滤、分面与年份分布，公开主版本和当前快照约束。原search其他分支保留，用anyOf描述兼容载荷。GET /reading/search-records/要求owner_id本人，分页最大20，读取不启用保留。

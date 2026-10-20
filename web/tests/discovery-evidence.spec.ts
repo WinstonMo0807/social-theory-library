@@ -15,6 +15,42 @@ async function setup(page: Page, result = payload) {
   await page.route("**/api/catalog/discovery-search/**", route => route.fulfill({ json: result }));
 }
 
+test("document states distinguish missing returned material and inaccessible text on mobile", async ({ page }) => {
+  const document = { edition_id: ids[5], work_id: ids[6], title: "合成文献状态", authors: ["合成作者"], url: "/works/synthetic-evidence",
+    bibliography: rows[0].bibliography, material_count: 0, available_versions: [{ id: ids[5], label: "合成公开版本", url: "/works/synthetic-evidence" }] };
+  await setup(page);
+  await page.route("**/api/catalog/discovery-search/**", route => route.fulfill({ json: { ...payload, documents: { items: [
+    { ...document, status: "no_returned" }, { ...document, edition_id: ids[4], status: "unreadable", title: "合成不可读文献" }], tracked: 2, counts: {}, excluded_count: 0, truncated: false, notice: "合成状态说明" } } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/explore/evidence?q=合成文献状态");
+  const panel = page.getByRole("region", { name: "本次文献处理状态" });
+  await expect(panel.getByText("本轮未返回直接材料", { exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: /暂不可读/ }).click();
+  await expect(panel.getByRole("heading", { name: "合成文献状态", exact: true })).toHaveCount(0);
+  await expect(panel.getByRole("heading", { name: "合成不可读文献" })).toBeVisible();
+  await panel.getByRole("button", { name: "查看公开版本" }).click();
+  await expect(page.getByRole("dialog", { name: "已公开的出版版本" }).getByRole("link", { name: "合成公开版本" })).toHaveAttribute("href", "/works/synthetic-evidence");
+});
+
+test("document removal carries the observed generation and clears only the removed evidence", async ({ page }) => {
+  await setup(page);
+  let removed = false;
+  const document = { edition_id: ids[5], work_id: ids[6], title: "合成待移除文献", authors: [], url: "", status: "completed", bibliography: null, material_count: 2, available_versions: [] };
+  await page.route("**/api/catalog/discovery-search/**", route => {
+    if (route.request().url().includes("remove-document")) {
+      expect(route.request().postDataJSON()).toEqual({ edition_id: ids[5], expected_generation: 3 });
+      expect(route.request().headers()["x-discovery-token"]).toBe("synthetic-token");
+      removed = true;
+    }
+    return route.fulfill({ json: { ...payload, passages: removed ? [] : rows, count: removed ? 0 : 2, source_changed: removed,
+      documents: { items: removed ? [] : [document], counts: {}, tracked: removed ? 0 : 1, truncated: false, excluded_count: removed ? 1 : 0, notice: "合成移除说明" } } });
+  });
+  await page.goto("/explore/evidence?q=合成移除文献");
+  await page.getByRole("button", { name: "从本次检索移除" }).click();
+  await expect(page.locator(`#material-${ids[0]}`)).toHaveCount(0);
+  await expect(page.getByText("已移除 1 个版本", { exact: true })).toBeVisible();
+});
+
 test("selecting a candidate updates the source inspector and preserves the return location", async ({ page }) => {
   await setup(page);
   await page.goto("/explore/evidence?q=合成问题&topic=synthetic-topic");

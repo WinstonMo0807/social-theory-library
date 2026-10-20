@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-20 PDF32接续
+
+读DISCOVERY_DOCUMENTS_20261020。文献状态复用现有session JSON，作用于原任务、基础/深度scope、读回与上下文；新remove-document接口、生成契约和UI须一起恢复。d69ec44是前置检索检查点。没有新表或迁移。当前33–35图片已实际读取，作品详情旧UI与数据调用链正接续，不能当成已完成。
+
 ## 2026-10-20 检索与本人记录接续
 
 PDF23–31源码接入，恢复时读CATALOG_SEARCH、DISCOVERY_PRESENTATION、DISCOVERY_SESSION_CONTROLS三份20261019记录及OPINION_ENTRY、SAVED_READER_BOUNDARIES两份20261020记录。两新接口、生成契约、私人分页所有调用者和9个源PDF装饰素材必须共同恢复。全量TS/静态已通过，正式验收未开始。

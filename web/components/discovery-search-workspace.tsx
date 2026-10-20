@@ -4,11 +4,12 @@ import Link from "next/link";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch } from "@/lib/api/discovery.client";
+import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
 import { EvidenceContextBody, EvidenceResultCard, EvidenceSummary } from "./discovery-evidence-detail";
+import { DiscoveryDocumentProgress } from "./discovery-document-progress";
 import { SavedWorkStatusProvider } from "./save-work-button";
 import { Dialog } from "./ui/dialog";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
@@ -174,6 +175,31 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     return () => { window.removeEventListener("focus", revalidate); document.removeEventListener("visibilitychange", revalidate); unsubscribe(); };
   }, [refresh, discard]);
 
+  async function documentAction(id: string, remove = false) {
+    const current = resultRef.current;
+    if (!current || actionRef.current) return;
+    actionRef.current = "document";
+    const revision = ++requestRevision.current;
+    setBusy("document"); setError("");
+    try {
+      if (remove) await removeDiscoveryDocument(current.id, tokenRef.current, id, current.generation ?? current.task_progress.generation);
+      const limit = remove ? shownRef.current : 440;
+      const next = await readDiscoverySearch(current.id, tokenRef.current, { limit, sort: sortRef.current });
+      if (revision !== requestRevision.current || resultRef.current?.id !== current.id) return;
+      shownRef.current = limit; accept(next); setPollPaused(false);
+      if (!remove) {
+        const item = next.passages.find(row => row.edition_id === id);
+        if (item) { selectEvidence(item); window.requestAnimationFrame(() => document.getElementById(`material-${item.id}`)?.scrollIntoView({ block: "center" })); }
+        else setError("该版本的原文来源已变化，请查看当前状态。");
+      }
+    } catch (reason) {
+      if (revision === requestRevision.current) {
+        if (invalidSession(reason)) discard();
+        setError(`${errorMessage(reason)}${remove ? " 移除结果可能待确认；重试同一文献不会重复执行。" : ""}`);
+      }
+    } finally { actionRef.current = ""; if (revision === requestRevision.current) setBusy(""); }
+  }
+
   async function sessionAction(action: "more" | "expand" | "cancel" | "refresh" | "retry" | "sort", nextSort?: DiscoverySort) {
     const current = resultRef.current;
     if (!current || actionRef.current) return;
@@ -331,6 +357,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         {pollPaused && isRunning ? <div className={styles.notice}><p>自动更新已暂停，后台任务可能仍在继续。可重新读取进度或取消任务。</p><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>继续读取进度</button></div> : null}
         {result && !isRunning ? <><p className={styles.resultStatus} role="status">{statusLabels[result.status]}{result.mode === "expanded" ? " · 已扩大检索预算" : ""}{result.status_message ? ` · ${result.status_message}` : ""}</p><DiscoveryDeepProgress result={result} /></> : null}
         {(result?.added_count || 0) > 0 ? <p className={styles.resultStatus} role="status">本轮新增 {result?.added_count} 段可阅读原文</p> : null}
+        {result?.documents && (result.documents.tracked > 0 || result.documents.excluded_count > 0) ? <DiscoveryDocumentProgress data={result.documents} busy={Boolean(busy)} onRemove={id => { pollStarted.current = Date.now(); void documentAction(id, true); }} onView={id => void documentAction(id)} onAdjust={() => { setFilterOpen(true); void loadFacets(); }} /> : null}
         <div className={`${styles.cardList} ${view === "grid" ? styles.resultGrid : ""}`}>{result?.passages.map((item, index) => <EvidenceResultCard key={item.id} item={item} index={index} selected={selected?.id === item.id && !summaryHidden} fresh={item.is_new === true} onSelect={() => selectEvidence(item)} onContext={() => void openContext(item)} />)}</div>
         {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? "从你关心的问题开始" : result?.status === "failed" ? "原文通道暂未完成" : result?.status === "canceled" ? "本次检索已取消" : error ? "还没有可显示的结果" : "本次未找到可展示的原文"}</h3><p>{!initialQuery ? "输入概念、开放问题或近似引句。结果直接回到馆内材料，你也可以沿知识与策展线索继续阅读。" : "没有结果不代表馆内不存在相关讨论。可调整问题、扩大研究范围，或继续查看相关知识与策展。"}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">转到原文检索 <ArrowRight size={14} /></Link> : null}</section> : null}
         {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? "正在读取" : "查看更多材料"}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? "正在重试" : result.status === "canceled" ? "基于保留材料继续检索" : "重试当前范围"}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? "正在提交" : "扩大研究范围"}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />刷新本次结果</button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void restart()}>{busy === "restart" ? "正在重新开始" : "重新开始检索"}</button> : null}</div><p>默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。</p></footer> : null}

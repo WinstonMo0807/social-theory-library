@@ -56,6 +56,8 @@ def _matches(header, filters):
         return True
     if filters.get("_asset_id") and str(header.get("asset_id")) != str(filters["_asset_id"]):
         return False
+    if str(header.get("edition_id")) in filters.get("_excluded_edition_ids", []):
+        return False
     from catalog.services.semantic_search import YEAR_FILTERS
     filters = dict(filters)
     if filters.get("document_types"):
@@ -266,10 +268,14 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
              "embedding_dimensions": int(generation.dimensions or generation.config_snapshot.get("dimensions") or 0) if generation else None,
              "reranker_artifact": generation.config_snapshot.get("reranker_artifact", "") if generation else "",
              "warnings": warnings, "coverage": coverage}
+    scopes = current_scopes(channel, access_statuses, filters)
+    # Only the worker installs this in-memory callback. It observes the exact
+    # existing scope; no extra retrieval branch or model request is introduced.
+    if channel == "passages" and (observe := context.pop("on_passage_scope", None)):
+        observe(scopes, generation)
     if not generation:
         warnings.append({"code": "index_pending", "message": "检索索引尚未建立，管理员可在处理中心查看进度。"})
         return empty
-    scopes = current_scopes(channel, access_statuses, filters)
     if not scopes:
         return empty
     if channel != "passages" and filters:

@@ -1185,6 +1185,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/discovery-search/{session_id}/remove-document/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_discovery_search_remove_document_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/discovery-search/{session_id}/retry/": {
         parameters: {
             query?: never;
@@ -3235,6 +3251,49 @@ export interface components {
          * @enum {string}
          */
         DiscoveryDeepProgressStatusEnum: "baseline_ready" | "deep_queued" | "deep_running" | "completed" | "partial" | "unavailable" | "pending" | "queued" | "running" | "degraded" | "disabled" | "skipped" | "failed";
+        DiscoveryDocument: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            status: components["schemas"]["DiscoveryDocumentStatusEnum"];
+            title: string;
+            authors: string[];
+            bibliography: components["schemas"]["DiscoveryBibliography"] | null;
+            material_count: number;
+            available_versions: components["schemas"]["DiscoveryDocumentVersion"][];
+            url: string;
+        };
+        /**
+         * @description * `queued` - queued
+         *     * `running` - running
+         *     * `completed` - completed
+         *     * `no_returned` - no_returned
+         *     * `partial` - partial
+         *     * `failed` - failed
+         *     * `waiting_index` - waiting_index
+         *     * `unreadable` - unreadable
+         *     * `changed` - changed
+         *     * `canceled` - canceled
+         * @enum {string}
+         */
+        DiscoveryDocumentStatusEnum: "queued" | "running" | "completed" | "no_returned" | "partial" | "failed" | "waiting_index" | "unreadable" | "changed" | "canceled";
+        DiscoveryDocumentVersion: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            url: string;
+        };
+        DiscoveryDocuments: {
+            items: components["schemas"]["DiscoveryDocument"][];
+            counts: {
+                [key: string]: number;
+            };
+            tracked: number;
+            excluded_count: number;
+            truncated: boolean;
+            notice: string;
+        };
         DiscoveryEntity: {
             /** Format: uuid */
             id: string;
@@ -3281,12 +3340,18 @@ export interface components {
             section_title?: string;
             attribution?: components["schemas"]["DiscoveryAttribution"];
         };
+        DiscoveryRemoveDocumentRequest: {
+            expected_generation: number;
+            /** Format: uuid */
+            edition_id: string;
+        };
         DiscoveryResponse: {
             /** Format: uuid */
             id: string;
             sort: components["schemas"]["SortEnum"];
             /** @description 本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。 */
             added_count: number;
+            documents: components["schemas"]["DiscoveryDocuments"];
             query: string;
             /** @description queued, running, partial, completed, failed or canceled */
             status: string;
@@ -9317,6 +9382,36 @@ export interface operations {
         requestBody?: never;
         responses: {
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveryResponse"];
+                };
+            };
+        };
+    };
+    catalog_discovery_search_remove_document_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Anonymous search capability returned once at creation; do not put in URLs. */
+                "X-Discovery-Token"?: string;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscoveryRemoveDocumentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DiscoveryRemoveDocumentRequest"];
+                "multipart/form-data": components["schemas"]["DiscoveryRemoveDocumentRequest"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
