@@ -5,6 +5,40 @@ export type ReaderGeometryBox = {
   geometry?: Record<string, unknown>;
 };
 
+/** A temporary viewer rotation relative to the server's displayed-page frame. */
+export type ReaderRotation = 0 | 90 | 180 | 270;
+
+export function rotateReaderPoint(point: [number, number], rotation: ReaderRotation): [number, number] {
+  const [x, y] = point;
+  switch (rotation) {
+    case 90: return [1 - y, x];
+    case 180: return [1 - x, 1 - y];
+    case 270: return [y, 1 - x];
+    default: return [x, y];
+  }
+}
+
+export function rotateReaderBox(box: number[], rotation: ReaderRotation): number[] {
+  const first = rotateReaderPoint([box[0], box[1]], rotation);
+  const last = rotateReaderPoint([box[2], box[3]], rotation);
+  return [Math.min(first[0], last[0]), Math.min(first[1], last[1]),
+    Math.max(first[0], last[0]), Math.max(first[1], last[1])];
+}
+
+/** Browser selection rectangles return to the original annotation frame. */
+export function readerSelectionSourceBox(
+  displayedBox: number[], displayedWidth: number, displayedHeight: number,
+  sourceWidth: number, sourceHeight: number, rotation: ReaderRotation,
+): number[] | null {
+  if (![displayedWidth, displayedHeight, sourceWidth, sourceHeight].every(value => Number.isFinite(value) && value > 0)
+    || displayedBox.length !== 4 || !displayedBox.every(Number.isFinite)) return null;
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const normalized = displayedBox.map((value, index) => clamp(value / (index % 2 ? displayedHeight : displayedWidth)));
+  if (normalized[2] <= normalized[0] || normalized[3] <= normalized[1]) return null;
+  const original = rotateReaderBox(normalized, ((360 - rotation) % 360) as ReaderRotation);
+  return original.map((value, index) => value * (index % 2 ? sourceHeight : sourceWidth));
+}
+
 export function validatedNormalizedBox(value: ReaderGeometryBox): number[] | null {
   const box = value.normalized_bbox;
   if (value.geometry_status !== "validated" || !Array.isArray(box) || box.length !== 4 ||

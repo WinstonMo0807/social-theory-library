@@ -10,7 +10,6 @@ const PublicSessionContext = createContext<PublicSessionValue | null>(null);
 
 function isPublicSessionRoute(pathname: string) {
   return !pathname.startsWith("/admin")
-    && !pathname.startsWith("/reader/")
     && !["/login", "/register", "/reset-password"].includes(pathname);
 }
 

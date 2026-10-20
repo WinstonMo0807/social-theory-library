@@ -263,6 +263,7 @@ services:
       BROWSER_API_BASE_URL: ${BROWSER_API_BASE_URL:-}
       NEXT_PUBLIC_API_URL: ""
       INTERNAL_API_URL: http://api:8000/api
+      JWT_ACCESS_COOKIE_NAME: ${JWT_ACCESS_COOKIE_NAME:-stl_access}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-lan-internal-service-token-change-before-public}
       ALLOW_DEMO_FALLBACK: "false"
     ports:

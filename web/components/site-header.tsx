@@ -58,7 +58,7 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
   );
 }
 
-export function SiteHeader({ config = defaultSiteConfig, preview = false }: { config?: SiteConfig; preview?: boolean }) {
+export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; beforeLogout?: () => boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
@@ -100,6 +100,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
   }
 
   async function logout() {
+    if (beforeLogout && !beforeLogout()) return;
     const actionKey = "logout";
     if (!startAction(actionKey)) return;
     setLogoutError("");
@@ -113,7 +114,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false }: { co
     }
   }
 
-  if (!preview && (pathname.startsWith("/reader/") || pathname.startsWith("/admin") || authRoute)) {
+  if (!preview && ((pathname.startsWith("/reader/") && !reader) || pathname.startsWith("/admin") || authRoute)) {
     return null;
   }
 

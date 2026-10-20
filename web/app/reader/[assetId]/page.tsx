@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReaderShell } from "@/components/reader-shell";
 import { ReaderRouteFailure } from "@/components/reader/reader-route-failure";
 import { loadReaderManifestResult } from "@/lib/api/reader.server";
+import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { readerReturnPath } from "@/lib/api/reader-failure";
 
 export const metadata: Metadata = {
@@ -16,15 +17,16 @@ export default async function ReaderPage({
   searchParams: Promise<{ page?: string; q?: string; focus?: string; passage?: string; evidence?: string; research_project?: string; research_turn?: string; reference?: string; revision?: string; return_to?: string }>;
 }) {
   const [{ assetId }, query] = await Promise.all([params, searchParams]);
-  const result = await loadReaderManifestResult(assetId);
+  const [result, { config }] = await Promise.all([loadReaderManifestResult(assetId), loadSiteChromeConfig()]);
   if (!result.ok) {
-    return <ReaderRouteFailure failure={result.failure} returnPath={readerReturnPath(assetId, query)} />;
+    return <ReaderRouteFailure failure={result.failure} siteConfig={config} returnPath={readerReturnPath(assetId, query)} />;
   }
   const manifest = result.manifest;
   return (
     <ReaderShell
       key={`${manifest.work.id}:${manifest.documentRevisionId || ""}`}
       work={manifest.work}
+      siteConfig={config}
       documentRevisionId={manifest.documentRevisionId || ""}
       requestedRevisionId={query.revision || ""}
       researchProjectId={query.research_project || ""}

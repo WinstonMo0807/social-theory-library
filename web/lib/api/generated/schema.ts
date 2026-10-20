@@ -1530,6 +1530,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/annotations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_annotations_list"];
+        put?: never;
+        post: operations["reading_annotations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/annotations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_annotations_retrieve"];
+        put: operations["reading_annotations_update"];
+        post?: never;
+        delete: operations["reading_annotations_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_annotations_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/bookmarks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_bookmarks_list"];
+        put?: never;
+        post: operations["reading_bookmarks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/bookmarks/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_bookmarks_retrieve"];
+        put: operations["reading_bookmarks_update"];
+        post?: never;
+        delete: operations["reading_bookmarks_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_bookmarks_partial_update"];
+        trace?: never;
+    };
     "/api/reading/citation-audits/": {
         parameters: {
             query?: never;
@@ -1866,6 +1930,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_history_list"];
+        put?: never;
+        post: operations["reading_history_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/privacy/": {
         parameters: {
             query?: never;
@@ -1960,6 +2040,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/reading/progress/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_progress_list"];
+        put?: never;
+        post: operations["reading_progress_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/progress/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_progress_retrieve"];
+        put: operations["reading_progress_update"];
+        post?: never;
+        delete: operations["reading_progress_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_progress_partial_update"];
         trace?: never;
     };
     "/api/reading/reading-plans/": {
@@ -2508,6 +2620,48 @@ export interface components {
             scope_note?: string;
             save_as_note?: boolean;
         };
+        Annotation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            asset: string;
+            readonly work: components["schemas"]["WorkCard"];
+            /** Format: uuid */
+            page: string;
+            kind: components["schemas"]["AnnotationKindEnum"];
+            selector?: unknown;
+            quote?: string;
+            readonly body_text: string | null;
+            tags?: string[];
+            color?: string;
+            readonly asset_sha256: string;
+            readonly orphaned: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `highlight` - 高亮
+         *     * `underline` - 划线
+         *     * `note` - 笔记
+         * @enum {string}
+         */
+        AnnotationKindEnum: "highlight" | "underline" | "note";
+        AnnotationRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: uuid */
+            asset: string;
+            /** Format: uuid */
+            page: string;
+            kind: components["schemas"]["AnnotationKindEnum"];
+            selector?: unknown;
+            quote?: string;
+            body?: string;
+            tags?: string[];
+            color?: string;
+        };
         ApiError: {
             code: string;
             message: string;
@@ -2719,6 +2873,26 @@ export interface components {
          * @enum {string}
          */
         BlockTypeEnum: "intro" | "stat" | "feature" | "process" | "principle" | "notice" | "action" | "footer";
+        Bookmark: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            asset: string;
+            readonly work: components["schemas"]["WorkCard"];
+            /** Format: uuid */
+            page: string;
+            readonly page_index: number;
+            label?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        BookmarkRequest: {
+            /** Format: uuid */
+            asset: string;
+            /** Format: uuid */
+            page: string;
+            label?: string;
+        };
         /**
          * @description * `unverified` - unverified
          *     * `needs_review` - needs_review
@@ -4888,6 +5062,21 @@ export interface components {
          * @enum {string}
          */
         PageTypeEnum: "front" | "body" | "appendix" | "other" | "blank";
+        PaginatedAnnotationList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?p=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?p=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Annotation"][];
+        };
         PaginatedBackupJobList: {
             /** @example 123 */
             count: number;
@@ -4902,6 +5091,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["BackupJob"][];
+        };
+        PaginatedBookmarkList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?p=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?p=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Bookmark"][];
         };
         PaginatedMemoryListOutputList: {
             /** @example 123 */
@@ -4948,6 +5152,36 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["PrivateRecord"][];
         };
+        PaginatedReadingHistoryList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ReadingHistory"][];
+        };
+        PaginatedReadingProgressList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ReadingProgress"][];
+        };
         PaginatedWorkCardList: {
             /** @example 123 */
             count: number;
@@ -4962,6 +5196,27 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["WorkCard"][];
+        };
+        PatchedAnnotationRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: uuid */
+            asset?: string;
+            /** Format: uuid */
+            page?: string;
+            kind?: components["schemas"]["AnnotationKindEnum"];
+            selector?: unknown;
+            quote?: string;
+            body?: string;
+            tags?: string[];
+            color?: string;
+        };
+        PatchedBookmarkRequest: {
+            /** Format: uuid */
+            asset?: string;
+            /** Format: uuid */
+            page?: string;
+            label?: string;
         };
         PatchedFeedbackUpdateInputRequest: {
             /** Format: uuid */
@@ -5041,6 +5296,15 @@ export interface components {
             scope?: components["schemas"]["QueryScopeInputRequest"];
             archived?: boolean;
             layout?: unknown;
+        };
+        PatchedReadingProgressRequest: {
+            /** Format: uuid */
+            asset?: string;
+            /** Format: int64 */
+            current_page?: number;
+            /** Format: double */
+            progress_ratio?: number;
+            last_position?: unknown;
         };
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
@@ -5851,6 +6115,52 @@ export interface components {
             portrait_media?: unknown;
             scholar_slug?: string | null;
         };
+        PublicReaderManifest: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            page_count: number;
+            publication_status: string;
+            ocr_status: string;
+            semantic_index_status: string;
+            page_label_status: string;
+            reader_rendition_policy: string;
+            outline: components["schemas"]["PublicOutlineItem"][];
+            related_scholars: components["schemas"]["ReaderRelatedScholar"][];
+            related_theories: components["schemas"]["ReaderRelatedLink"][];
+            related_topics: components["schemas"]["ReaderRelatedLink"][];
+            work: components["schemas"]["PublicReaderWork"];
+        };
+        /** @description The requested PDF and its bibliography share one activated edition. */
+        PublicReaderWork: {
+            /** Format: uuid */
+            readonly id: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            abstract?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            readonly cover: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly recommendation_image: string;
+            readonly recommendation_media: components["schemas"]["PublicCoverMedia"] | null;
+            readonly edition: components["schemas"]["CatalogEdition"] | null;
+            readonly theories: components["schemas"]["PublicEntityLink"][];
+            readonly topics: components["schemas"]["PublicEntityLink"][];
+            readonly disciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
+            readonly editions: components["schemas"]["CatalogEdition"][];
+        };
         /**
          * @description * `available` - available
          *     * `replaced` - replaced
@@ -6064,25 +6374,6 @@ export interface components {
             locator_kind?: string;
             locators?: unknown[];
         };
-        ReaderManifest: {
-            /** Format: uuid */
-            asset_id: string;
-            /** Format: uuid */
-            edition_id: string;
-            /** Format: uuid */
-            document_revision_id: string | null;
-            page_count: number;
-            publication_status: string;
-            ocr_status: string;
-            semantic_index_status: string;
-            page_label_status: string;
-            reader_rendition_policy: string;
-            outline: components["schemas"]["PublicOutlineItem"][];
-            related_scholars: components["schemas"]["ReaderRelatedScholar"][];
-            related_theories: components["schemas"]["ReaderRelatedLink"][];
-            related_topics: components["schemas"]["ReaderRelatedLink"][];
-            work: components["schemas"]["WorkCard"];
-        };
         ReaderPageContent: {
             /** Format: uuid */
             asset_id: string;
@@ -6125,6 +6416,7 @@ export interface components {
             name: string;
             slug: string | null;
             years: string;
+            portrait: string;
         };
         ReaderRenditionPolicyInputRequest: {
             policy: components["schemas"]["PolicyEnum"];
@@ -6173,10 +6465,55 @@ export interface components {
          * @enum {string}
          */
         ReadingDifficultyEnum: "beginner" | "intermediate" | "advanced";
+        ReadingHistory: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            asset: string;
+            readonly work: components["schemas"]["WorkCard"];
+            readonly title: string;
+            /** Format: int64 */
+            page_index?: number;
+            /** Format: int64 */
+            session_seconds?: number;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        ReadingHistoryRequest: {
+            /** Format: uuid */
+            asset: string;
+            /** Format: int64 */
+            page_index?: number;
+            /** Format: int64 */
+            session_seconds?: number;
+        };
         ReadingPaceInputRequest: {
             cjk_chars_per_minute?: number;
             words_per_minute?: number;
             fallback_minutes_per_page?: number;
+        };
+        ReadingProgress: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            asset: string;
+            readonly work: components["schemas"]["WorkCard"];
+            /** Format: int64 */
+            current_page?: number;
+            /** Format: double */
+            progress_ratio?: number;
+            last_position?: unknown;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        ReadingProgressRequest: {
+            /** Format: uuid */
+            asset: string;
+            /** Format: int64 */
+            current_page?: number;
+            /** Format: double */
+            progress_ratio?: number;
+            last_position?: unknown;
         };
         RecommendationImagePreview: {
             /** Format: uuid */
@@ -9241,7 +9578,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReaderManifest"];
+                    "application/json": components["schemas"]["PublicReaderManifest"];
                 };
             };
         };
@@ -10157,6 +10494,316 @@ export interface operations {
             };
         };
     };
+    reading_annotations_list: {
+        parameters: {
+            query?: {
+                asset?: string;
+                /**
+                 * @description * `highlight` - 高亮
+                 *     * `underline` - 划线
+                 *     * `note` - 笔记
+                 */
+                kind?: "highlight" | "note" | "underline";
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                p?: number;
+                page?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAnnotationList"];
+                };
+            };
+        };
+    };
+    reading_annotations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AnnotationRequest"];
+                "multipart/form-data": components["schemas"]["AnnotationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Annotation"];
+                };
+            };
+        };
+    };
+    reading_annotations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 annotation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Annotation"];
+                };
+            };
+        };
+    };
+    reading_annotations_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 annotation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AnnotationRequest"];
+                "multipart/form-data": components["schemas"]["AnnotationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Annotation"];
+                };
+            };
+        };
+    };
+    reading_annotations_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 annotation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_annotations_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 annotation 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAnnotationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAnnotationRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAnnotationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Annotation"];
+                };
+            };
+        };
+    };
+    reading_bookmarks_list: {
+        parameters: {
+            query?: {
+                asset?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                p?: number;
+                page?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedBookmarkList"];
+                };
+            };
+        };
+    };
+    reading_bookmarks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BookmarkRequest"];
+                "multipart/form-data": components["schemas"]["BookmarkRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+        };
+    };
+    reading_bookmarks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 bookmark 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+        };
+    };
+    reading_bookmarks_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 bookmark 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BookmarkRequest"];
+                "multipart/form-data": components["schemas"]["BookmarkRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+        };
+    };
+    reading_bookmarks_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 bookmark 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_bookmarks_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 bookmark 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedBookmarkRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedBookmarkRequest"];
+                "multipart/form-data": components["schemas"]["PatchedBookmarkRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookmark"];
+                };
+            };
+        };
+    };
     reading_citation_audits_list: {
         parameters: {
             query?: {
@@ -10807,6 +11454,57 @@ export interface operations {
             };
         };
     };
+    reading_history_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReadingHistoryList"];
+                };
+            };
+        };
+    };
+    reading_history_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingHistoryRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingHistoryRequest"];
+                "multipart/form-data": components["schemas"]["ReadingHistoryRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingHistory"];
+                };
+            };
+        };
+    };
     reading_privacy_retrieve: {
         parameters: {
             query?: never;
@@ -10991,6 +11689,156 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    reading_progress_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReadingProgressList"];
+                };
+            };
+        };
+    };
+    reading_progress_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingProgressRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingProgressRequest"];
+                "multipart/form-data": components["schemas"]["ReadingProgressRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingProgress"];
+                };
+            };
+        };
+    };
+    reading_progress_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading progress 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingProgress"];
+                };
+            };
+        };
+    };
+    reading_progress_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading progress 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingProgressRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingProgressRequest"];
+                "multipart/form-data": components["schemas"]["ReadingProgressRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingProgress"];
+                };
+            };
+        };
+    };
+    reading_progress_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading progress 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_progress_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading progress 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedReadingProgressRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedReadingProgressRequest"];
+                "multipart/form-data": components["schemas"]["PatchedReadingProgressRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingProgress"];
                 };
             };
         };

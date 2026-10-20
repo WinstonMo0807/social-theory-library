@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiRequestError, apiRequest, normalizePublicResourceUrl } from "@/lib/api";
+import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { isTaskRunning, pollBudgetExpired } from "@/lib/api/task-polling";
 import type { Work } from "@/lib/data";
 import type { AccessPayload, PagePayload } from "./types";
@@ -48,7 +48,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
       loading = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
       try {
-        const payload = await apiRequest<AccessPayload>(`/distribution/assets/${assetId}/access/`, { signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(30000)]), cache: "no-store" });
+        const payload = await apiRequest<AccessPayload>(`/distribution/assets/${assetId}/access/`, { signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(30000)]), cache: "no-store" }, getServerSessionCredential());
         if (cancelled || sourceChanged.current) return;
         if (payload.requested_asset_id !== assetId) throw new ApiRequestError("阅读文件身份已变化，请重新打开文献。", 409);
         const nextAccess = {
@@ -131,7 +131,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
     ) return;
     pendingPageRequests.current.add(targetPage);
     const generation = pageGeneration.current;
-    void apiRequest<PagePayload>(`/catalog/assets/${assetId}/pages/${targetPage}/`, { signal: AbortSignal.timeout(30000), cache: "no-store" })
+    void apiRequest<PagePayload>(`/catalog/assets/${assetId}/pages/${targetPage}/`, { signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential())
       .then((payload) => {
         if (generation !== pageGeneration.current) return;
         validateReaderPage(payload, assetId, documentRevisionId, targetPage);

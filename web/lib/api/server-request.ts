@@ -26,11 +26,22 @@ export class ServerApiError extends Error {
   }
 }
 
-export async function serverRequest<T>(path: string): Promise<T> {
+export async function serverRequest<T>(path: string, options: { forwardSession?: boolean } = {}): Promise<T> {
+  let sessionCookie = "";
+  if (options.forwardSession) {
+    const { cookies } = await import("next/headers");
+    const name = process.env.JWT_ACCESS_COOKIE_NAME || "stl_access";
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error("Invalid access cookie configuration");
+    const value = (await cookies()).get(name)?.value;
+    if (value && !/[;\r\n]/.test(value)) sessionCookie = `${name}=${value}`;
+  }
   const response = await fetch(`${SERVER_API}${path}`, {
     cache: "no-store",
+    redirect: "error",
     headers: {
       accept: "application/json",
+      // Reader alone opts in. Never forward refresh cookies or browser headers.
+      ...(sessionCookie ? { cookie: sessionCookie } : {}),
       // Public deployments keep Django's HTTPS redirect enabled. Server-side
       // requests still travel over the private Docker network, so mark the
       // original scheme explicitly and avoid redirects to https://api:8000.

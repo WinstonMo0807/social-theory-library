@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-20 PDF36–40静态记录
+
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-reader-schema-20261020.json --validate`，SQLite内存配置，退出0；0错误/10既有提示，158路径，原151全部保留。openapi-typescript同步成功，首次Windows文件写入失败后重试成功。
+- Python ast.parse共10文件退出0，另有serializer构造/三分支SQL编译零查询；PostCSS解析Reader CSS142节点退出0。
+- web下node node_modules/eslint/bin/eslint.js检查Reader/8hooks与类型/Viewer/Header/session/适配器/路由/两spec/两MJS共20路径，退出0、1真实头像提示，精确列表见本轮工具执行及READER_20261020。
+- web下`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`，65482及最终57106退出0（后者在最终schema及标签草稿保护后）。无输出，不等于功能验收。
+- 新后端13函数26参数案例及7函数11参数案例、前端加载/回执4例和旋转4例，更新8浏览器场景，均只编写未运行。没有正式测试、浏览器、构建、迁移、真实服务或生产操作。
+
 ## 2026-10-20 PDF33–35静态记录
 
 7文件AST、5条SQL编译（无DB查询）、10目标ESLint（3个img提示）、CSS146节点均退出0。spectacular以内存SQLite配置生成tmp/stl4-work-detail-schema-20261020.json，0错误/10条既有提示，151路径；openapi-typescript同步。TS首轮40209语言可空错误已修，59028及最终45429退出0。21后端参数案例和3适配器案例仅编写，未运行。未执行正式功能/视觉、浏览器、构建、迁移或生产操作；准确范围见WORK_DETAIL_20261020。

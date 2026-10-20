@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 Reader版本与私人记录
+
+asset manifest返回PublicReaderManifest/轻量PublicReaderWork，选定Edition/Asset/Revision身份一致。明确次版本的详情、图片与原文定位独立核验自身公开资格，不再依赖主版；馆藏集合规则保持。SSR只按需转发访问cookie，禁止redirect。
+
+Annotation增加可选request_id和加密标签tags；同owner同请求同内容幂等，冲突409，未知结果先查原UUID。PATCH不迁移来源。原annotations/bookmarks/progress/history共7路由纳入契约表面至158，不增加重复运行路由。生成TS已同步，0014未应用，详见READER_20261020。
+
 ## 2026-10-20 作品详情与版本
 
 原works/{slug}改PublicWorkDetail，支持当前发布快照slug/Edition UUID；selected edition贯穿元数据/目录/图片。relations为7类真实公开关联预览（每类最多6），CatalogEdition新增access_state而availability保持原二态；不返回受限文件身份。公开图片新增edition_id并重验。共享目录链接使用发布快照身份。151路径未新增，schema与前端类型同步；细节与边界见WORK_DETAIL_20261020。

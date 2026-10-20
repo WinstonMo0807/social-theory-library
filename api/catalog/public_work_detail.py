@@ -10,8 +10,12 @@ from rest_framework import serializers
 
 from .catalog_search_serializers import CatalogEditionSerializer
 from .media_views import PublicCoverMediaSerializer
-from .public_response_serializers import PublicOutlineItemSerializer, PublicTheoryAssociationSerializer
-from .serializers import WorkCardSerializer, WorkDetailSerializer
+from .models import KnowledgeNode, Topic
+from .public_response_serializers import (
+    PublicEntityLinkSerializer, PublicOutlineItemSerializer, PublicTheoryAssociationSerializer,
+    ReaderManifestBaseSerializer,
+)
+from .serializers import AssetCompactSerializer, WorkCardSerializer, WorkDetailSerializer
 from .services.publication_eligibility import active_catalog_snapshot, public_editions
 from .services.work_detail_relations import WorkRelationsSerializer, public_work_relations
 
@@ -37,7 +41,7 @@ def public_detail_edition(identifier, *, work=None):
 def requested_work_snapshot(request, work):
     """Keep existing primary image URLs, with explicit published-version URLs."""
     identifier = request.query_params.get("edition_id")
-    if identifier:
+    if identifier is not None:
         identifier = serializers.UUIDField().run_validation(identifier)
         return active_catalog_snapshot(public_detail_edition(identifier, work=work))
     edition = next((row for row in work.editions.all() if row.is_primary), None)
@@ -143,5 +147,52 @@ class PublicWorkDetailSerializer(WorkDetailSerializer):
             "edition", "editions", "outline", "theories", "topics", "disciplines",
             "subdisciplines", "theory_associations", "curated_claims", "relations",
         ):
-            data[field] = getattr(self, f"get_{field}")(instance)
+            if field in self.fields:
+                data[field] = getattr(self, f"get_{field}")(instance)
+        return {key: value for key, value in data.items() if key in self.fields}
+
+
+class PublicReaderWorkSerializer(PublicWorkDetailSerializer):
+    """The requested PDF and its bibliography share one activated edition."""
+
+    class Meta(PublicWorkDetailSerializer.Meta):
+        fields = WorkCardSerializer.Meta.fields + ("editions",)
+
+    @extend_schema_field(CatalogEditionSerializer(allow_null=True))
+    def get_edition(self, obj):
+        data = dict(super().get_edition(obj))
+        asset = self.context.get("reader_asset")
+        edition, snapshot = self._public_catalog(obj)
+        # The manifest view has already applied the current caller's access
+        # rule. This exception only describes that exact authorized asset;
+        # the version picker still uses the public CatalogEdition contract.
+        if (
+            asset is not None and asset.edition_id == edition.pk
+            and edition.active_catalog_revision.reader_asset_id == asset.pk
+            and str((snapshot.get("document") or {}).get("asset_id")) == str(asset.pk)
+        ):
+            data.update(readable_asset=AssetCompactSerializer(asset).data,
+                        availability="readable", access_state="readable")
         return data
+
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
+    def get_theories(self, obj):
+        rows = super().get_theories(obj)
+        current = {str(row.pk): row for row in KnowledgeNode.objects.filter(
+            pk__in=[row["id"] for row in rows], status="published", node_type="theory_tradition",
+        )}
+        return [{"id": row["id"], "name": current[row["id"]].canonical_name_zh,
+                 "slug": current[row["id"]].slug} for row in rows if row["id"] in current]
+
+    @extend_schema_field(PublicEntityLinkSerializer(many=True))
+    def get_topics(self, obj):
+        rows = super().get_topics(obj)
+        current = {str(row.pk): row for row in Topic.objects.filter(
+            pk__in=[row["id"] for row in rows], editorial_status="published",
+        )}
+        return [{"id": row["id"], "name": current[row["id"]].name,
+                 "slug": current[row["id"]].slug} for row in rows if row["id"] in current]
+
+
+class PublicReaderManifestSerializer(ReaderManifestBaseSerializer):
+    work = PublicReaderWorkSerializer()

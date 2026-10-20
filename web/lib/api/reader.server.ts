@@ -9,12 +9,19 @@ export type ReaderManifestResult = { ok: true; manifest: ReaderManifest } | { ok
 
 export async function loadReaderManifestResult(assetId: string): Promise<ReaderManifestResult> {
   try {
-    const payload = await serverRequest<ReaderManifestPayload>(`/catalog/assets/${encodeURIComponent(assetId)}/manifest/`);
+    const path = `/catalog/assets/${encodeURIComponent(assetId)}/manifest/`;
+    const payload = await serverRequest<ReaderManifestPayload>(path, { forwardSession: true });
+    const selected = payload.work.edition;
+    // Never hide a mismatched source by replacing only the presentation IDs.
+    // The title, cover, citation and PDF must describe the same selected edition.
+    if (payload.asset_id.toLowerCase() !== assetId.toLowerCase()
+      || !selected || selected.id !== payload.edition_id
+      || selected.readable_asset?.id !== payload.asset_id) {
+      throw new ServerApiError(502, path);
+    }
     return { ok: true, manifest: {
       work: {
         ...adaptWork(payload.work),
-        id: payload.asset_id,
-        editionId: payload.edition_id,
         pages: payload.page_count,
       },
       outline: payload.outline,

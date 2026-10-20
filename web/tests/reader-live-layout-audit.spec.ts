@@ -7,6 +7,12 @@ test("read-only current production Reader geometry with a real public PDF",async
   const work=payload.results.find((row:{edition?:{readable_asset?:{id:string}}})=>row.edition?.readable_asset?.id);
   expect(work?.edition?.readable_asset?.id).toBeTruthy();
   const asset=work.edition.readable_asset;
+  const manifestResponse = await request.get(`/api/catalog/assets/${asset.id}/manifest/`);
+  expect(manifestResponse.status()).toBe(200);
+  const manifest = await manifestResponse.json();
+  expect(manifest.asset_id).toBe(asset.id);
+  expect(manifest.work.edition.id).toBe(manifest.edition_id);
+  expect(manifest.work.edition.readable_asset.id).toBe(asset.id);
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(`/reader/${asset.id}?page=1`,{waitUntil:"domcontentloaded"});
   await expect(page.locator(".reader")).toBeVisible();
@@ -25,18 +31,24 @@ test("read-only current production Reader geometry with a real public PDF",async
         return {label:e.getAttribute("aria-label")||e.getAttribute("title")||e.textContent?.trim(),...r,covered:!!top&&!e.contains(top),outside:r.x<0||r.right>innerWidth||r.y<0||r.bottom>innerHeight};
       });
       const overlaps=controls.flatMap((a,i)=>controls.slice(i+1).filter(b=>Math.min(a.right,b.right)-Math.max(a.x,b.x)>2&&Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y)>2).map(b=>[a.label,b.label]));
-      return {width:innerWidth,toolbar:box(toolbar),document:box(document.querySelector(".reader-document")!),pageControl:box(document.querySelector(".page-control")!),controls,overlaps,documentScrollWidth:document.documentElement.scrollWidth};
+      return {width:innerWidth,toolbar:box(toolbar),document:box(document.querySelector(".reader-document")!),pageControl:box(document.querySelector(".reader-page-controls")!),controls,overlaps,documentScrollWidth:document.documentElement.scrollWidth};
     });
     measurements.push(row);
     await page.screenshot({path:testInfo.outputPath(`production-before-${width}.png`)});
-    const open=page.getByRole("button",{name:"打开目录侧栏",exact:true});
-    if(await open.isVisible()){
-      await open.click();await expect(page.getByRole("button",{name:"关闭目录侧栏",exact:true})).toBeVisible();
-      await page.screenshot({path:testInfo.outputPath(`production-before-directory-${width}.png`)});
-      await page.getByRole("button",{name:"关闭目录侧栏",exact:true}).click();
-    }
+    const directory = page.locator(".reader-bottom").getByRole("button", { name: "目录", exact: true });
+    if (await directory.getAttribute("aria-pressed") === "true") await directory.click();
+    await directory.click();
+    const panel = width <= 760
+      ? page.getByRole("dialog", { name: "目录与查找", exact: true })
+      : page.locator(".reader-left");
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("textbox", { name: "搜索目录", exact: true })).toBeVisible();
+    await page.screenshot({path:testInfo.outputPath(`production-before-directory-${width}.png`)});
+    if (width <= 760) await panel.getByRole("button", { name: "关闭目录侧栏", exact: true }).click();
+    else await page.getByRole("button", { name: "收起目录", exact: true }).click();
+    await expect(panel).toBeHidden();
   }
-  await testInfo.attach("source-and-geometry",{body:JSON.stringify({kind:"production-read-only-before",origin:testInfo.project.use.baseURL,pdfRendered,title:work.title,assetId:asset.id,pages:asset.page_count,measurements},null,2),contentType:"application/json"});
+  await testInfo.attach("source-and-geometry",{body:JSON.stringify({kind:"production-read-only-before",origin:testInfo.project.use.baseURL,pdfRendered,title:manifest.work.title,editionId:manifest.edition_id,assetId:asset.id,pages:manifest.page_count,measurements},null,2),contentType:"application/json"});
   expect(pdfRendered,"Real PDF rendering is still a required gate; geometry collection does not make a failed Reader pass").toBe(true);
   // This is baseline collection, intentionally not a repair acceptance claim.
   // The resulting overlap/hit-test measurements are checked in the repair run.

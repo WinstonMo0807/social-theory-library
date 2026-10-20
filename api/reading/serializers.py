@@ -1,8 +1,10 @@
+import json
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from catalog.models import Asset, Page, Topic, Work
 from catalog.serializers import WorkCardSerializer
@@ -65,6 +67,7 @@ class ReadingProgressSerializer(OwnedSerializer):
         )
         read_only_fields = ("id", "updated_at")
 
+    @extend_schema_field(WorkCardSerializer)
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
@@ -88,14 +91,21 @@ class ReadingProgressSerializer(OwnedSerializer):
 
 
 class AnnotationSerializer(OwnedSerializer):
+    request_id = serializers.UUIDField(write_only=True, required=False)
     body = serializers.CharField(write_only=True, required=False, allow_blank=True)
     body_text = serializers.SerializerMethodField(read_only=True)
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=40, allow_blank=True),
+        max_length=12,
+        required=False,
+    )
     work = serializers.SerializerMethodField()
 
     class Meta:
         model = Annotation
         fields = (
             "id",
+            "request_id",
             "asset",
             "work",
             "page",
@@ -104,6 +114,7 @@ class AnnotationSerializer(OwnedSerializer):
             "quote",
             "body",
             "body_text",
+            "tags",
             "color",
             "asset_sha256",
             "orphaned",
@@ -112,36 +123,98 @@ class AnnotationSerializer(OwnedSerializer):
         )
         read_only_fields = ("id", "asset_sha256", "orphaned", "created_at", "updated_at")
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_body_text(self, obj):
         request = self.context.get("request")
         if request and request.user == obj.user:
             return decrypt_private_text(obj.body_ciphertext)
         return None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        data["tags"] = (
+            json.loads(decrypt_private_text(instance.tags_ciphertext))
+            if request and request.user == instance.user and instance.tags_ciphertext
+            else []
+        )
+        return data
+
+    def validate_tags(self, value):
+        if any(not isinstance(tag, str) for tag in self.initial_data.get("tags", [])):
+            raise serializers.ValidationError("标签必须是文字。")
+        return list(dict.fromkeys(tag for tag in value if tag))
+
+    @extend_schema_field(WorkCardSerializer)
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate(self, attrs):
+        if self.instance and "request_id" in attrs:
+            raise serializers.ValidationError({"request_id": "请求标识仅用于新建批注。"})
         asset = attrs.get("asset") or getattr(self.instance, "asset", None)
         page = attrs.get("page") or getattr(self.instance, "page", None)
         if asset is None or page is None or page.asset_id != asset.id:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
+        if self.instance and (asset.id != self.instance.asset_id or page.id != self.instance.page_id):
+            raise serializers.ValidationError("已有批注的来源文件与页码不能更换，请在新位置创建批注。")
+        if "selector" in attrs:
+            selector = attrs["selector"]
+            if not isinstance(selector, dict):
+                raise serializers.ValidationError({"selector": "批注位置必须是对象。"})
+            if "page_index" in selector and (
+                type(selector["page_index"]) is not int or selector["page_index"] != page.index
+            ):
+                raise serializers.ValidationError({"selector": "批注位置与所选页码不一致。"})
         if not _reader_asset_available(asset, self.context["request"].user):
             raise serializers.ValidationError("该文献当前不可批注。")
         return attrs
 
     @transaction.atomic
     def create(self, validated_data):
-        from .privacy import require_retention
-        require_retention(self.context["request"].user, "personal_notes")
+        from .privacy import lock_owner, require_retention
+        from .research import ResearchConflict
+
+        user = self.context["request"].user
+        request_id = validated_data.pop("request_id", None)
         body = validated_data.pop("body", "")
+        tags = validated_data.pop("tags", [])
+        conflict = "此保存请求无法复用，请保留输入并重新确认保存状态。"
+        lock_owner(user)
+        if request_id is not None:
+            previous = Annotation.objects.filter(pk=request_id, user=user).first()
+            if previous is not None:
+                existing = (previous.asset_id, previous.page_id, previous.kind, previous.selector,
+                    previous.quote, previous.color, decrypt_private_text(previous.body_ciphertext),
+                    json.loads(decrypt_private_text(previous.tags_ciphertext) or "[]"))
+                incoming = (validated_data["asset"].pk, validated_data["page"].pk, validated_data["kind"],
+                    validated_data.get("selector", {}), validated_data.get("quote", ""),
+                    validated_data.get("color", Annotation._meta.get_field("color").get_default()), body, tags)
+                if existing != incoming:
+                    raise ResearchConflict(conflict)
+                return previous
+            if Annotation.objects.filter(pk=request_id).exists():
+                raise ResearchConflict(conflict)
+            validated_data["id"] = request_id
+        require_retention(user, "personal_notes")
         validated_data["body_ciphertext"] = encrypt_private_text(body)
+        validated_data["tags_ciphertext"] = encrypt_private_text(json.dumps(tags, ensure_ascii=False)) if tags else b""
         validated_data["asset_sha256"] = validated_data["asset"].sha256
-        return super().create(validated_data)
+        try:
+            with transaction.atomic():
+                return super().create(validated_data)
+        except IntegrityError:
+            # Another owner can race for the same UUID despite our per-owner lock.
+            if request_id is not None and Annotation.objects.filter(pk=request_id).exists():
+                raise ResearchConflict(conflict) from None
+            raise
 
     def update(self, instance, validated_data):
         if "body" in validated_data:
             instance.body_ciphertext = encrypt_private_text(validated_data.pop("body"))
+        if "tags" in validated_data:
+            tags = validated_data.pop("tags")
+            instance.tags_ciphertext = encrypt_private_text(json.dumps(tags, ensure_ascii=False)) if tags else b""
         return super().update(instance, validated_data)
 
 
@@ -154,6 +227,7 @@ class BookmarkSerializer(OwnedSerializer):
         fields = ("id", "asset", "work", "page", "page_index", "label", "created_at")
         read_only_fields = ("id", "created_at")
 
+    @extend_schema_field(WorkCardSerializer)
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
@@ -335,6 +409,7 @@ class ReadingHistorySerializer(OwnedSerializer):
         fields = ("id", "asset", "work", "title", "page_index", "session_seconds", "created_at")
         read_only_fields = ("id", "created_at")
 
+    @extend_schema_field(WorkCardSerializer)
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 

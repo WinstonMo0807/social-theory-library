@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-20 阅读器接续
+
+先读READER_20261020。前置42f068a；manifest/次版本权限、ReaderShell/hooks/Viewer坐标、SSR会话、批注加密标签与0014、schema/生成类型/用例须共同恢复。compose只保存web的JWT_ACCESS_COOKIE_NAME新增行，其余继承修改保留。158接口表面与最终TS57106静态通过；运行与逐图未验收。PDF40 OCR细分状态仍部分缺口，继续41–42并读/私人对齐。不要执行旧夹具、迁移、质量测评或生产清理。
+
 ## 2026-10-20 作品详情接续
 
 读WORK_DETAIL_20261020，前置d3acba8；PublicWorkDetail、CatalogEdition、共享journal_issues、两种管理预览与生成契约须共同恢复。保留primary公开资格，所选snapshot负责题名/封面/目录。新增文件不是新书库。当前静态通过但功能未正式验收，后续继续PDF36–40 Reader的实际读图与既有源码回溯；不要运行质量评测或生产清理。

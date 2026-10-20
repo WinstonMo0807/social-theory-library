@@ -33,6 +33,7 @@ class Annotation(UUIDTimeStampedModel):
     selector = models.JSONField(default=dict)
     quote = models.TextField(blank=True)
     body_ciphertext = models.BinaryField(blank=True, default=bytes)
+    tags_ciphertext = models.BinaryField(blank=True, default=bytes)
     color = models.CharField(max_length=20, default="yellow")
     asset_sha256 = models.CharField(max_length=64)
     orphaned = models.BooleanField(default=False)

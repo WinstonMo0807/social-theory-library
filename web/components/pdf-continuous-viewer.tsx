@@ -9,7 +9,10 @@ import type { TextLayer } from "pdfjs-dist/types/src/display/text_layer";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { CanonicalBlock, PageHighlight } from "./pdf-canvas";
-import { displayedHighlightBox, displayedReaderBox } from "@/lib/reader-coordinates";
+import {
+  displayedHighlightBox, displayedReaderBox, rotateReaderBox, rotateReaderPoint,
+  type ReaderRotation,
+} from "@/lib/reader-coordinates";
 
 const pdfWorkerUrl = "/pdfjs/pdf.worker.min.js";
 
@@ -40,9 +43,10 @@ type PageSize = {
   height: number;
 };
 
-function fittedSize(source: PageSize, availableWidth: number, zoom: number): PageSize {
+function fittedSize(source: PageSize, availableWidth: number, zoom: number, rotation: ReaderRotation): PageSize {
   const safeWidth = Math.max(availableWidth, 280);
-  const baseScale = Math.min(1.25, safeWidth / Math.max(source.width, 1));
+  const rotatedWidth = rotation === 90 || rotation === 270 ? source.height : source.width;
+  const baseScale = Math.min(1.25, safeWidth / Math.max(rotatedWidth, 1));
   const scale = Math.max(baseScale, 0.1) * (zoom / 100);
   return {
     width: source.width * scale,
@@ -63,6 +67,7 @@ function ContinuousPdfPage({
   pdfDocument,
   pageNumber,
   zoom,
+  rotation,
   availableWidth,
   fallbackSize,
   active,
@@ -77,6 +82,7 @@ function ContinuousPdfPage({
   pdfDocument: PDFDocumentProxy;
   pageNumber: number;
   zoom: number;
+  rotation: ReaderRotation;
   availableWidth: number;
   fallbackSize: PageSize;
   active: boolean;
@@ -96,8 +102,8 @@ function ContinuousPdfPage({
   const [useOcrTextLayer, setUseOcrTextLayer] = useState(false);
 
   const targetSize = useMemo(
-    () => fittedSize(naturalSize, availableWidth, zoom),
-    [availableWidth, naturalSize, zoom],
+    () => fittedSize(naturalSize, availableWidth, zoom, rotation),
+    [availableWidth, naturalSize, rotation, zoom],
   );
 
   useEffect(() => {
@@ -119,7 +125,7 @@ function ContinuousPdfPage({
       };
       const baseScale = Math.min(
         1.25,
-        Math.max(availableWidth, 280) / Math.max(naturalViewport.width, 1),
+        Math.max(availableWidth, 280) / Math.max(rotation === 90 || rotation === 270 ? naturalViewport.height : naturalViewport.width, 1),
       );
       const viewport = pdfPage.getViewport({
         scale: Math.max(baseScale, 0.1) * (zoom / 100),
@@ -182,12 +188,21 @@ function ContinuousPdfPage({
       renderTask?.cancel();
       textLayer?.cancel();
     };
-  }, [active, availableWidth, onRequestPage, pageNumber, pdfDocument, preferOcrTextLayer, zoom]);
+  }, [active, availableWidth, onRequestPage, pageNumber, pdfDocument, preferOcrTextLayer, rotation, zoom]);
 
   // Rendering an offscreen page must not restore the dimensions it had on
   // mount. That shrank earlier pages after a sidebar resize and moved jumps
   // back by a page. The layout footprint always follows the current viewport.
-  const displaySize = targetSize;
+  const displaySize = rotation === 90 || rotation === 270
+    ? { width: targetSize.height, height: targetSize.width } : targetSize;
+  // Rotate the complete source plane. PDF.js retains its source crop/rotation;
+  // native text, OCR and annotations share this additional viewer transform.
+  const planeTransform = {
+    0: "none",
+    90: `matrix(0, 1, -1, 0, ${targetSize.height}, 0)`,
+    180: `matrix(-1, 0, 0, -1, ${targetSize.width}, ${targetSize.height})`,
+    270: `matrix(0, -1, 1, 0, 0, ${targetSize.width})`,
+  }[rotation];
 
   return (
     <article
@@ -199,9 +214,14 @@ function ContinuousPdfPage({
       <div
         className={`pdf-canvas-stage continuous ${status ? "is-rendering" : "is-ready"}`}
         data-page-number={pageNumber}
+        data-reader-rotation={rotation}
         style={{ width: displaySize.width, height: displaySize.height }}
         aria-busy={Boolean(status)}
       >
+        <div className="pdf-source-plane" style={{
+          position: "absolute", left: 0, top: 0, width: targetSize.width, height: targetSize.height,
+          transform: planeTransform, transformOrigin: "0 0",
+        }}>
         {active ? <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} aria-label={`PDF 第 ${pageNumber} 页画布`} /> : null}
         {active ? (
           <div
@@ -214,7 +234,7 @@ function ContinuousPdfPage({
         {active && useOcrTextLayer && overlay ? (
           <div className="canonical-text-layer ocr-fallback" aria-label={`第 ${pageNumber} 页 OCR 可选择文字层`}>
             {overlay.canonicalBlocks.flatMap((block) => {
-              const box = displayedReaderBox(block, displaySize.width, displaySize.height);
+              const box = displayedReaderBox(block, targetSize.width, targetSize.height);
               if (!box) return null;
               const [x0, y0, x1, y1] = box;
               const lines = block.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -242,7 +262,7 @@ function ContinuousPdfPage({
         {active ? (
           <div className="pdf-search-highlights" aria-hidden="true">
             {(overlay?.highlights ?? []).map((highlight, index) => {
-              const box = displayedHighlightBox(highlight, displaySize.width, displaySize.height, overlay?.sourceWidth || 0, overlay?.sourceHeight || 0);
+              const box = displayedHighlightBox(highlight, targetSize.width, targetSize.height, overlay?.sourceWidth || 0, overlay?.sourceHeight || 0);
               if (!box) return null;
               const [x0, y0, x1, y1] = box;
               return (
@@ -261,6 +281,7 @@ function ContinuousPdfPage({
             })}
           </div>
         ) : null}
+        </div>
         {status ? <p className="pdf-render-status">{status}</p> : null}
         {failure ? (
           <div className="pdf-render-error" role="alert">
@@ -277,8 +298,10 @@ function ContinuousPdfPage({
           style={{ left: `calc(50% + ${displaySize.width / 2 + 16}px)` }}
         >
         {(overlay?.notes ?? []).map((note, index) => {
-          const top = note.bbox?.length === 4 && overlay?.sourceHeight
-            ? Math.max(0, (Number(note.bbox[1]) / overlay.sourceHeight) * displaySize.height)
+          const sourceBox = note.bbox ? displayedHighlightBox({ bbox: note.bbox, kind: "note" },
+            1, 1, overlay.sourceWidth, overlay.sourceHeight) : null;
+          const top = sourceBox
+            ? Math.max(0, rotateReaderBox(sourceBox, rotation)[1] * displaySize.height)
             : 56 + index * 76;
           return (
             <article
@@ -308,6 +331,7 @@ export function PdfContinuousViewer({
   pageCount,
   currentPage,
   zoom,
+  rotation = 0,
   overlays,
   preferOcrTextLayer = false,
   scrollRequest,
@@ -322,6 +346,7 @@ export function PdfContinuousViewer({
   pageCount: number;
   currentPage: number;
   zoom: number;
+  rotation?: ReaderRotation;
   overlays: Record<number, PdfPageOverlay>;
   preferOcrTextLayer?: boolean;
   scrollRequest: PdfScrollRequest;
@@ -495,13 +520,21 @@ export function PdfContinuousViewer({
         `.pdf-page-shell[data-page-number="${scrollRequest.page}"]`,
       );
       if (!target) return;
+      const stage = target.querySelector<HTMLElement>(".pdf-canvas-stage");
+      if (!stage) return;
+      const position = scrollRequest.position ? rotateReaderPoint(scrollRequest.position, rotation) : undefined;
+      const stageRect = stage.getBoundingClientRect();
+      const rootRect = scrollRoot.getBoundingClientRect();
       scrollRoot.scrollTo({
-        top: Math.max(target.offsetTop + (scrollRequest.position?.[1] ?? 0) * (target.querySelector<HTMLElement>(".pdf-canvas-stage")?.offsetHeight ?? target.offsetHeight) - 22, 0),
+        top: Math.max(scrollRoot.scrollTop + stageRect.top - rootRect.top
+          + (position?.[1] ?? 0) * stageRect.height - 22, 0),
+        ...(position ? { left: Math.max(scrollRoot.scrollLeft + stageRect.left - rootRect.left
+          + position[0] * stageRect.width - 32, 0) } : {}),
         behavior: scrollRequest.behavior,
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [pdfDocument, scrollRequest]);
+  }, [pdfDocument, rotation, scrollRequest]);
 
   if (failure) {
     return (
@@ -522,6 +555,7 @@ export function PdfContinuousViewer({
           pdfDocument={pdfDocument}
           pageNumber={pageNumber}
           zoom={zoom}
+          rotation={rotation}
           availableWidth={availableWidth}
           fallbackSize={fallbackSize}
           active={nearPages.has(pageNumber)}

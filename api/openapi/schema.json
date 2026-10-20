@@ -4349,7 +4349,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ReaderManifest"
+                                    "$ref": "#/components/schemas/PublicReaderManifest"
                                 }
                             }
                         },
@@ -6389,6 +6389,629 @@
                 }
             }
         },
+        "/api/reading/annotations/": {
+            "get": {
+                "operationId": "reading_annotations_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "highlight",
+                                "note",
+                                "underline"
+                            ]
+                        },
+                        "description": "* `highlight` - 高亮\n* `underline` - 划线\n* `note` - 笔记"
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "p",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAnnotationList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_annotations_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Annotation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/annotations/{id}/": {
+            "get": {
+                "operationId": "reading_annotations_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 annotation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Annotation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "reading_annotations_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 annotation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnnotationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Annotation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_annotations_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 annotation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAnnotationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAnnotationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAnnotationRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Annotation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_annotations_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 annotation 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/bookmarks/": {
+            "get": {
+                "operationId": "reading_bookmarks_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "p",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedBookmarkList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_bookmarks_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bookmark"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/bookmarks/{id}/": {
+            "get": {
+                "operationId": "reading_bookmarks_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 bookmark 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bookmark"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "reading_bookmarks_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 bookmark 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookmarkRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bookmark"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_bookmarks_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 bookmark 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedBookmarkRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedBookmarkRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedBookmarkRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bookmark"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_bookmarks_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 bookmark 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/reading/citation-audits/": {
             "get": {
                 "operationId": "reading_citation_audits_list",
@@ -7611,6 +8234,109 @@
                 }
             }
         },
+        "/api/reading/history/": {
+            "get": {
+                "operationId": "reading_history_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedReadingHistoryList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_history_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingHistoryRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingHistoryRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingHistoryRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingHistory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/privacy/": {
             "get": {
                 "operationId": "reading_privacy_retrieve",
@@ -7952,6 +8678,295 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/progress/": {
+            "get": {
+                "operationId": "reading_progress_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedReadingProgressList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_progress_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingProgress"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/progress/{id}/": {
+            "get": {
+                "operationId": "reading_progress_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading progress 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingProgress"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "reading_progress_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading progress 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReadingProgressRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingProgress"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_progress_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading progress 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedReadingProgressRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedReadingProgressRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedReadingProgressRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingProgress"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_progress_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading progress 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
                     }
                 }
             }
@@ -10348,6 +11363,142 @@
                     "id"
                 ]
             },
+            "Annotation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkCard"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/AnnotationKindEnum"
+                    },
+                    "selector": {},
+                    "quote": {
+                        "type": "string"
+                    },
+                    "body_text": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 40
+                        },
+                        "maxItems": 12
+                    },
+                    "color": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "asset_sha256": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "orphaned": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "asset",
+                    "asset_sha256",
+                    "body_text",
+                    "created_at",
+                    "id",
+                    "kind",
+                    "orphaned",
+                    "page",
+                    "updated_at",
+                    "work"
+                ]
+            },
+            "AnnotationKindEnum": {
+                "enum": [
+                    "highlight",
+                    "underline",
+                    "note"
+                ],
+                "type": "string",
+                "description": "* `highlight` - 高亮\n* `underline` - 划线\n* `note` - 笔记"
+            },
+            "AnnotationRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/AnnotationKindEnum"
+                    },
+                    "selector": {},
+                    "quote": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 40
+                        },
+                        "maxItems": 12
+                    },
+                    "color": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    }
+                },
+                "required": [
+                    "asset",
+                    "kind",
+                    "page"
+                ]
+            },
             "ApiError": {
                 "type": "object",
                 "properties": {
@@ -10916,6 +12067,74 @@
                 ],
                 "type": "string",
                 "description": "* `intro` - 简介\n* `stat` - 数据\n* `feature` - 功能\n* `process` - 入库步骤\n* `principle` - 开放原则\n* `notice` - 提示\n* `action` - 操作入口\n* `footer` - 页脚信息"
+            },
+            "Bookmark": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkCard"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_index": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "asset",
+                    "created_at",
+                    "id",
+                    "page",
+                    "page_index",
+                    "work"
+                ]
+            },
+            "BookmarkRequest": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "asset",
+                    "page"
+                ]
             },
             "CalibrationStatusEnum": {
                 "enum": [
@@ -18184,6 +19403,37 @@
                 "type": "string",
                 "description": "* `front` - front\n* `body` - body\n* `appendix` - appendix\n* `other` - other\n* `blank` - blank"
             },
+            "PaginatedAnnotationList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?p=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?p=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Annotation"
+                        }
+                    }
+                }
+            },
             "PaginatedBackupJobList": {
                 "type": "object",
                 "required": [
@@ -18211,6 +19461,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/BackupJob"
+                        }
+                    }
+                }
+            },
+            "PaginatedBookmarkList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?p=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?p=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Bookmark"
                         }
                     }
                 }
@@ -18308,6 +19589,68 @@
                     }
                 }
             },
+            "PaginatedReadingHistoryList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingHistory"
+                        }
+                    }
+                }
+            },
+            "PaginatedReadingProgressList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingProgress"
+                        }
+                    }
+                }
+            },
             "PaginatedWorkCardList": {
                 "type": "object",
                 "required": [
@@ -18336,6 +19679,65 @@
                         "items": {
                             "$ref": "#/components/schemas/WorkCard"
                         }
+                    }
+                }
+            },
+            "PatchedAnnotationRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/AnnotationKindEnum"
+                    },
+                    "selector": {},
+                    "quote": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 40
+                        },
+                        "maxItems": 12
+                    },
+                    "color": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    }
+                }
+            },
+            "PatchedBookmarkRequest": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
                     }
                 }
             },
@@ -18602,6 +20004,26 @@
                         "type": "boolean"
                     },
                     "layout": {}
+                }
+            },
+            "PatchedReadingProgressRequest": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "current_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "progress_ratio": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "last_position": {}
                 }
             },
             "PatchedResearchPreferenceInputRequest": {
@@ -21221,6 +22643,221 @@
                     "preferred_name"
                 ]
             },
+            "PublicReaderManifest": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "publication_status": {
+                        "type": "string"
+                    },
+                    "ocr_status": {
+                        "type": "string"
+                    },
+                    "semantic_index_status": {
+                        "type": "string"
+                    },
+                    "page_label_status": {
+                        "type": "string"
+                    },
+                    "reader_rendition_policy": {
+                        "type": "string"
+                    },
+                    "outline": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicOutlineItem"
+                        }
+                    },
+                    "related_scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedScholar"
+                        }
+                    },
+                    "related_theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedLink"
+                        }
+                    },
+                    "related_topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderRelatedLink"
+                        }
+                    },
+                    "work": {
+                        "$ref": "#/components/schemas/PublicReaderWork"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "edition_id",
+                    "ocr_status",
+                    "outline",
+                    "page_count",
+                    "page_label_status",
+                    "publication_status",
+                    "reader_rendition_policy",
+                    "related_scholars",
+                    "related_theories",
+                    "related_topics",
+                    "semantic_index_status",
+                    "work"
+                ]
+            },
+            "PublicReaderWork": {
+                "type": "object",
+                "description": "The requested PDF and its bibliography share one activated edition.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "abstract": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "cover": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_image": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "recommendation_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CatalogEdition"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEntityLink"
+                        },
+                        "readOnly": true
+                    },
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicClassificationLink"
+                        },
+                        "readOnly": true
+                    },
+                    "editions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CatalogEdition"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover",
+                    "cover_media",
+                    "disciplines",
+                    "document_type",
+                    "edition",
+                    "editions",
+                    "id",
+                    "recommendation_image",
+                    "recommendation_media",
+                    "subdisciplines",
+                    "theories",
+                    "title",
+                    "topics"
+                ]
+            },
             "PublicSourceAvailabilityEnum": {
                 "enum": [
                     "available",
@@ -21996,85 +23633,6 @@
                     "width"
                 ]
             },
-            "ReaderManifest": {
-                "type": "object",
-                "properties": {
-                    "asset_id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "edition_id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "document_revision_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "nullable": true
-                    },
-                    "page_count": {
-                        "type": "integer"
-                    },
-                    "publication_status": {
-                        "type": "string"
-                    },
-                    "ocr_status": {
-                        "type": "string"
-                    },
-                    "semantic_index_status": {
-                        "type": "string"
-                    },
-                    "page_label_status": {
-                        "type": "string"
-                    },
-                    "reader_rendition_policy": {
-                        "type": "string"
-                    },
-                    "outline": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PublicOutlineItem"
-                        }
-                    },
-                    "related_scholars": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ReaderRelatedScholar"
-                        }
-                    },
-                    "related_theories": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ReaderRelatedLink"
-                        }
-                    },
-                    "related_topics": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ReaderRelatedLink"
-                        }
-                    },
-                    "work": {
-                        "$ref": "#/components/schemas/WorkCard"
-                    }
-                },
-                "required": [
-                    "asset_id",
-                    "document_revision_id",
-                    "edition_id",
-                    "ocr_status",
-                    "outline",
-                    "page_count",
-                    "page_label_status",
-                    "publication_status",
-                    "reader_rendition_policy",
-                    "related_scholars",
-                    "related_theories",
-                    "related_topics",
-                    "semantic_index_status",
-                    "work"
-                ]
-            },
             "ReaderPageContent": {
                 "type": "object",
                 "properties": {
@@ -22204,10 +23762,14 @@
                     },
                     "years": {
                         "type": "string"
+                    },
+                    "portrait": {
+                        "type": "string"
                     }
                 },
                 "required": [
                     "name",
+                    "portrait",
                     "slug",
                     "years"
                 ]
@@ -22356,6 +23918,80 @@
                 "type": "string",
                 "description": "* `beginner` - beginner\n* `intermediate` - intermediate\n* `advanced` - advanced"
             },
+            "ReadingHistory": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkCard"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "page_index": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "session_seconds": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "asset",
+                    "created_at",
+                    "id",
+                    "title",
+                    "work"
+                ]
+            },
+            "ReadingHistoryRequest": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_index": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "session_seconds": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    }
+                },
+                "required": [
+                    "asset"
+                ]
+            },
             "ReadingPaceInputRequest": {
                 "type": "object",
                 "properties": {
@@ -22375,6 +24011,73 @@
                         "minimum": 1
                     }
                 }
+            },
+            "ReadingProgress": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkCard"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "current_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "progress_ratio": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "last_position": {},
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "asset",
+                    "id",
+                    "updated_at",
+                    "work"
+                ]
+            },
+            "ReadingProgressRequest": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "current_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "progress_ratio": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "last_position": {}
+                },
+                "required": [
+                    "asset"
+                ]
             },
             "RecommendationImagePreview": {
                 "type": "object",

@@ -1,5 +1,6 @@
 """Actual generated PDF and publication fixtures for isolated Reader E2E only."""
 from hashlib import sha256
+import json
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -11,18 +12,22 @@ def seed_reader_v306():
         raise RuntimeError("Reader fixtures require the disposable E2E database")
     import fitz
     from catalog.models import Asset, CatalogPublicationRevision, Contribution, Edition, Page, Person, Work
+    from catalog.services.document_intelligence import synchronize_native_extraction
     from catalog.services.knowledge_publication import catalog_snapshot
+    from ingestion.services.extract import extract_native_pages, persist_pages
 
     document = fitz.open()
     for index in range(1001):
         page = document.new_page(width=595, height=842)
         page.insert_text((52,80), f"V306 Reader layout page {index+1}", fontsize=18)
-        page.insert_text((52,125), "Evidence stays on the same physical page. Reader data remains private.", fontsize=11)
+        # Keep the repeated body inside the body region: the real extractor
+        # correctly classifies identical text near the top edge as a header.
+        page.insert_text((52,160), "Evidence stays on the same physical page. Reader data remains private.", fontsize=11)
     content = document.tobytes(garbage=4, deflate=True)
     document.close()
     digest = sha256(content).hexdigest()
     work = Work.objects.create(id="30600000-0000-4000-8000-000000000310", title="V306阅读器布局与私人记录："+"长中文标题及多位责任者"*8, document_type="report", language="en")
-    edition = Edition.objects.create(id="30600000-0000-4000-8000-000000000311", work=work, state="published", public_slug="v306-reader-layout", publication_year=2026, version_label="真实1001页隔离PDF", ocr_status="not_required")
+    edition = Edition.objects.create(id="30600000-0000-4000-8000-000000000311", work=work, is_primary=True, state="published", public_slug="v306-reader-layout", publication_year=2026, version_label="真实1001页隔离PDF", ocr_status="not_required")
     for index in range(3):
         person=Person.objects.create(preferred_name=f"隔离测试第{index+1}位责任者", authority_status="verified")
         Contribution.objects.create(edition=edition, person=person, role="author", approved=True, source="isolated-reader-fixture", order=index)
@@ -35,10 +40,31 @@ def seed_reader_v306():
     batch=UploadBatch.objects.create(created_by=User.objects.get(email="owner-v305@example.test"),source="isolated-existing-pdf",label="V306已有PDF复核",expected_count=1)
     UploadItem.objects.create(id="30600000-0000-4000-8000-000000000314",batch=batch,edition=edition,asset=original,source_filename="V306真实隔离PDF复核.pdf",status="ready",workflow_state="ready",sha256=digest,byte_size=len(content))
     Page.objects.bulk_create([Page(asset=normalized, index=index+1, printed_label="序言中的较长印刷页码标识" if index==0 else str(index), is_label_manual=index==0, label_source="manual" if index==0 else "file_index", width=595, height=842, text_source="embedded", text=f"V306 Reader layout page {index+1}") for index in range(1001)])
+    # Derive canonical text, geometry, passages and revision checksums from the
+    # real fixture PDF. No OCR, external index, model or background task runs.
+    pages, needs_ocr = extract_native_pages(normalized.file.path)
+    if needs_ocr or len(pages) != 1001:
+        raise RuntimeError("Reader fixture must contain 1001 native-text pages")
+    persist_pages(normalized, pages, preserve_existing_labels=True)
+    interpreted = synchronize_native_extraction(normalized, schedule_claims=False, schedule_outline=False)
+    document_revision = normalized.document_revisions.get(pk=interpreted["revision_id"])
     snapshot, related=catalog_snapshot(edition,content_asset_id=normalized.pk)
-    revision=CatalogPublicationRevision.objects.create(edition=edition,revision=1,status="active",metadata_ready=True,reader_asset=normalized,snapshot=snapshot,related_entities=related,content_fingerprint=digest,activated_at=timezone.now())
+    document_source = snapshot["document"]
+    if (document_source["asset_id"] != str(normalized.pk)
+            or document_source["document_revision_id"] != str(document_revision.pk)
+            or not document_source["quality_ready"]):
+        raise RuntimeError("Reader fixture source did not qualify for full-text publication")
+    fingerprint = sha256(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    now = timezone.now()
+    revision=CatalogPublicationRevision.objects.create(edition=edition,revision=1,status="active",metadata_ready=True,
+        fulltext_ready=True,reader_asset=normalized,document_revision=document_revision,snapshot=snapshot,
+        related_entities=related,changed_fields=["catalog_publish"],provenance={"source":"isolated-reader-fixture"},
+        content_fingerprint=fingerprint,activated_at=now)
     edition.active_catalog_revision=revision
-    edition.save(update_fields=["active_catalog_revision","updated_at"])
+    edition.metadata_ready_at = edition.fulltext_ready_at = now
+    edition.published_at = edition.first_published_at = edition.last_published_at = now
+    edition.save(update_fields=["active_catalog_revision","metadata_ready_at","fulltext_ready_at",
+        "published_at","first_published_at","last_published_at","updated_at"])
     # Source selector must browse all editions without choosing one implicitly.
     # These private bibliographic variants do not change the public reader.
     Edition.objects.bulk_create([

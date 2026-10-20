@@ -104,6 +104,7 @@ class ReaderRelatedLinkSerializer(serializers.Serializer):
 class ReaderRelatedScholarSerializer(ReaderRelatedLinkSerializer):
     slug = serializers.CharField(allow_null=True, allow_blank=True)
     years = serializers.CharField(allow_blank=True)
+    portrait = serializers.CharField(allow_blank=True)
 
 
 class ReaderManifestBaseSerializer(serializers.Serializer):

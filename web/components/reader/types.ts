@@ -18,15 +18,19 @@ export type PagePayload = {
 
 export type ReaderAnnotation = {
   id: string;
+  asset?: string;
   page: string;
   kind: "highlight" | "underline" | "note";
   selector: {
+    type?: string;
     page_index?: number;
     exact?: string;
     bboxes?: number[][];
   };
   quote: string;
   body_text: string;
+  tags?: string[];
+  color?: string;
   created_at: string;
   updated_at: string;
 };
@@ -46,14 +50,15 @@ export type AnnotationDraft = {
   quote: string;
   bboxes: number[][];
   body: string;
+  tags?: string[];
 };
 
-export type SelectionSnapshot = Omit<AnnotationDraft, "kind" | "body"> & {
+export type SelectionSnapshot = Omit<AnnotationDraft, "kind" | "body" | "tags"> & {
   x: number;
   y: number;
 };
 
-export type SidebarTab = "outline" | "thumbnails" | "highlights" | "bookmarks" | "notes";
+export type SidebarTab = "outline" | "search" | "thumbnails" | "highlights" | "bookmarks" | "notes";
 
 export type AccessPayload = {
   url: string;

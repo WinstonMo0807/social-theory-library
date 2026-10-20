@@ -80,19 +80,45 @@ def test_public_detail_never_upgrades_reading_permissions_for_admin(api_client, 
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("change", ["edition_withdrawn", "revision_withdrawn", "metadata_unready", "no_primary"])
+@pytest.mark.parametrize("change", ["edition_withdrawn", "revision_withdrawn", "metadata_unready"])
 def test_unpublished_or_withdrawn_state_is_not_a_detail_entry(api_client, change):
-    work, first, _ = publish()
+    work, _, _ = publish()
     _, selected, _ = publish(work, primary=False)
     if change == "edition_withdrawn":
         Edition.objects.filter(pk=selected.pk).update(state="withdrawn")
     elif change == "revision_withdrawn":
         CatalogPublicationRevision.objects.filter(pk=selected.active_catalog_revision_id).update(status="withdrawn")
-    elif change == "metadata_unready":
-        CatalogPublicationRevision.objects.filter(pk=selected.active_catalog_revision_id).update(metadata_ready=False)
     else:
-        Edition.objects.filter(pk=first.pk).update(state="withdrawn")
+        CatalogPublicationRevision.objects.filter(pk=selected.active_catalog_revision_id).update(metadata_ready=False)
     assert detail(api_client, selected).status_code == 404
+
+
+@pytest.mark.django_db
+def test_explicit_public_secondary_survives_primary_withdrawal_without_expanding_catalog(api_client, monkeypatch):
+    from catalog.services.scoped_search import public_work_queryset
+
+    work, primary, _ = publish(title="Primary", cover="synthetic/primary.jpg")
+    _, selected, _ = publish(work, title="Secondary", primary=False, cover="synthetic/secondary.jpg")
+    Edition.objects.filter(pk=primary.pk).update(state="withdrawn")
+    storage = Work._meta.get_field("cover").storage
+    monkeypatch.setattr(storage, "exists", lambda name: True)
+    monkeypatch.setattr(storage, "open", lambda name, *args: BytesIO(name.encode()))
+    data = detail(api_client, selected).data
+    assert data["title"] == "Secondary" and data["edition"]["id"] == str(selected.pk)
+    assert not public_work_queryset().filter(pk=work.pk).exists()
+    for route in ("cover", "recommendation-image"):
+        url = f"/api/catalog/works/{work.pk}/{route}/"
+        assert api_client.get(url).status_code == 404
+        assert api_client.get(f"{url}?edition_id=").status_code == 400
+        assert api_client.get(f"{url}?edition_id=not-a-uuid").status_code == 400
+        response = api_client.get(f"{url}?edition_id={selected.pk}")
+        assert response.status_code == 200
+        assert response["Cache-Control"] == "private, no-store"
+        assert b"".join(response.streaming_content) == b"synthetic/secondary.jpg"
+        response.close()
+    Edition.objects.filter(pk=selected.pk).update(state="withdrawn")
+    assert detail(api_client, selected).status_code == 404
+    assert api_client.get(f"/api/catalog/works/{work.pk}/cover/?edition_id={selected.pk}").status_code == 404
 
 
 @pytest.mark.django_db

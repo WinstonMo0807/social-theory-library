@@ -23,7 +23,6 @@ from .search_schema import global_search_schema
 from distribution.serializers import ReaderRenditionPolicyInputSerializer, ReaderRenditionPolicyResultSerializer
 from .public_response_serializers import ReaderPageContentSerializer, ReaderFocusSerializer, ReaderDocumentSearchSerializer
 from .services.page_geometry import locator_geometry, validated_geometry
-from .serializers import ReaderManifestSerializer
 from urllib.parse import urlparse
 
 from .editorial_read import AdminEditorialDraftReadMixin, AdminPrivateResponseMixin
@@ -74,7 +73,10 @@ from .serializers import (
     WorkDetailSerializer,
 )
 from .query_filters import filter_slug_or_uuid
-from .public_work_detail import PublicWorkDetailSerializer, public_detail_edition, requested_work_snapshot
+from .public_work_detail import (
+    PublicReaderManifestSerializer, PublicReaderWorkSerializer, PublicWorkDetailSerializer,
+    public_detail_edition, requested_work_snapshot,
+)
 from .services.citations import citation_bundle
 from .services.covers import (
     CoverCandidateUnavailable,
@@ -204,6 +206,13 @@ def _public_media_response(request, media_snapshot):
 class PublicWorkCoverView(APIView):
     permission_classes = [AllowAny]
 
+    def get_work(self, request, work_id):
+        # Explicit version URLs are subsequently checked by
+        # requested_work_snapshot against this Work and its active revision.
+        # Legacy URLs retain the public-primary catalog boundary.
+        queryset = Work.objects.all() if "edition_id" in request.query_params else public_works()
+        return get_object_or_404(queryset, pk=work_id)
+
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         if "edition_id" in request.query_params:
@@ -211,7 +220,7 @@ class PublicWorkCoverView(APIView):
         return response
 
     def get(self, request, work_id):
-        work = get_object_or_404(public_works(), pk=work_id)
+        work = self.get_work(request, work_id)
         work_snapshot = requested_work_snapshot(request, work).get("work") or {}
         media_snapshot = work_snapshot.get("cover_media")
         if media_snapshot:
@@ -243,7 +252,7 @@ class PublicWorkRecommendationImageView(PublicWorkCoverView):
     permission_classes = [AllowAny]
 
     def get(self, request, work_id):
-        work = get_object_or_404(public_works(), pk=work_id)
+        work = self.get_work(request, work_id)
         work_snapshot = requested_work_snapshot(request, work).get("work") or {}
         recommendation_name = work_snapshot.get("recommendation_image", "")
         media_snapshot = work_snapshot.get("recommendation_media") if recommendation_name else work_snapshot.get("cover_media")
@@ -1571,7 +1580,7 @@ class WorkDetailView(generics.RetrieveAPIView):
 
     def get_object(self):
         self.selected_edition = public_detail_edition(self.kwargs["slug"])
-        work = get_object_or_404(self.get_queryset(), pk=self.selected_edition.work_id)
+        work = self.selected_edition.work
         self.check_object_permissions(self.request, work)
         return work
 
@@ -3177,7 +3186,6 @@ class PassageFocusView(APIView):
         passage = Passage.objects.select_related("page__asset__edition__work").filter(
             pk=pk,
             page__asset__edition__active_catalog_revision__document_revision__asset_id=F("page__asset_id"),
-            page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
             page__asset__access_status__in=allowed_access_statuses,
@@ -3211,12 +3219,12 @@ class PassageFocusView(APIView):
             is_stale=False,
             page__asset_id=F("document_revision__asset_id"),
             page_number=F("page__index"),
-            page__asset__edition__is_primary=True,
             page__asset__kind=Asset.Kind.NORMALIZED,
             page__asset__status=Asset.Status.READY,
             page__asset__access_status__in=allowed_access_statuses,
         ).filter(
-            active_document_revision_q(revision_prefix="document_revision")
+            active_document_revision_q(revision_prefix="document_revision"),
+            active_document_q(asset_prefix="page__asset"),
         ).first()
         if span is not None:
             raw_bbox = span.bbox or []
@@ -3256,7 +3264,6 @@ class PassageFocusView(APIView):
             ),
             pk=pk,
             asset__edition__active_catalog_revision__document_revision__asset_id=F("asset_id"),
-            asset__edition__is_primary=True,
             asset__kind=Asset.Kind.NORMALIZED,
             asset__status=Asset.Status.READY,
             asset__access_status__in=allowed_access_statuses,
@@ -3290,10 +3297,13 @@ class PassageFocusView(APIView):
 class PublicAssetManifestView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=ReaderManifestSerializer)
+    @extend_schema(responses=PublicReaderManifestSerializer)
     def get(self, request, asset_id):
         asset = get_object_or_404(
-            Asset.objects.select_related("edition__work").filter(
+            Asset.objects.select_related(
+                "edition__work", "edition__active_catalog_revision",
+                "edition__active_catalog_revision__reader_asset",
+            ).filter(
                 active_asset_q(asset_prefix="")
             ),
             pk=asset_id,
@@ -3302,9 +3312,27 @@ class PublicAssetManifestView(APIView):
             access_status__in=_viewer_asset_access_statuses(request),
         )
         from catalog.services.document_outline import public_outline
-        snapshot = active_catalog_snapshot(asset.edition)
-        contributors = snapshot.get("contributions") or []
-        knowledge = snapshot.get("knowledge") or {}
+        work_data = PublicReaderWorkSerializer(
+            asset.edition.work,
+            context={"request": request, "selected_edition": asset.edition, "reader_asset": asset},
+        ).data
+        # Contributors keep their published bibliographic names, while the
+        # serializer has rechecked every profile link against current public
+        # eligibility. A formerly published author's withdrawn profile is not
+        # a reader recommendation, including for a signed-in administrator.
+        scholars = {}
+        for row in work_data["edition"]["contributors"]:
+            person = row["person"]
+            if row["role"] == Contribution.Role.AUTHOR and person.get("scholar_slug"):
+                scholars.setdefault(person["id"], {
+                    "name": person.get("preferred_name", ""),
+                    "slug": person["scholar_slug"],
+                    "portrait": person.get("portrait", ""),
+                    "years": (
+                        f"{person.get('birth_year') or ''}—{person.get('death_year') or ''}"
+                        if person.get("birth_year") or person.get("death_year") else ""
+                    ),
+                })
         document_revision_id = Asset.objects.filter(active_document_q(asset_prefix=""), pk=asset.pk,
             edition__active_catalog_revision__document_revision__asset_id=asset.pk).values_list(
             "edition__active_catalog_revision__document_revision_id", flat=True).first()
@@ -3319,45 +3347,13 @@ class PublicAssetManifestView(APIView):
                 "semantic_index_status": asset.edition.semantic_index_status,
                 "page_label_status": asset.edition.page_label_status,
                 "reader_rendition_policy": asset.edition.reader_rendition_policy,
-                "work": WorkCardSerializer(
-                    asset.edition.work,
-                    context={"request": request},
-                ).data,
+                "work": work_data,
                 "outline": public_outline(asset, access_statuses=_viewer_asset_access_statuses(request)),
-                "related_scholars": [
-                    {
-                        "name": (row.get("person") or {}).get("preferred_name")
-                        or row.get("name", ""),
-                        "slug": (row.get("person") or {}).get("scholar_slug"),
-                        "years": (
-                            f"{(row.get('person') or {}).get('birth_year') or ''}—"
-                            f"{(row.get('person') or {}).get('death_year') or ''}"
-                            if (row.get("person") or {}).get("birth_year")
-                            or (row.get("person") or {}).get("death_year")
-                            else ""
-                        ),
-                    }
-                    for row in contributors
-                    if isinstance(row, dict)
-                    and row.get("role") == Contribution.Role.AUTHOR
-                ],
-                "related_theories": [
-                    {
-                        "name": row.get("name", ""),
-                        "slug": row.get("slug", ""),
-                    }
-                    for row in knowledge.get("nodes") or []
-                    if isinstance(row, dict) and row.get("type") == "theory_tradition"
-                ],
-                "related_topics": [
-                    {
-                        "name": row.get("name", ""),
-                        "slug": row.get("slug", ""),
-                    }
-                    for row in knowledge.get("topics") or []
-                    if isinstance(row, dict)
-                ],
-            }
+                "related_scholars": list(scholars.values()),
+                "related_theories": [{"name": row["name"], "slug": row["slug"]} for row in work_data["theories"]],
+                "related_topics": [{"name": row["name"], "slug": row["slug"]} for row in work_data["topics"]],
+            },
+            headers={"Cache-Control": "private, no-store"},
         )
 
 
