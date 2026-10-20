@@ -3,7 +3,7 @@ import { privateRequest } from "./research.client";
 export type RetentionKey = "reading_history" | "search_history" | "personal_notes" | "followed_topics" | "source_follows";
 export type ExportCategory = "research" | "notes" | "plans" | "audits" | "source_follows";
 export type EraseCategory = "reading_history" | "search_history" | "personal_notes" | "reading_plans" | "followed_topics" | "source_follows";
-export type PrivacyLeaf = "reading_history" | "search_history" | "annotations" | "memories" | "plans" | "followed_topics" | "source_follows";
+export type PrivacyLeaf = "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows";
 export type PrivacyTarget = { category: PrivacyLeaf; id: string; revision: string };
 export type PrivacyItem = PrivacyTarget & { title: string; updated_at: string; impact: string; source: { title?: string; authors?: string[]; edition?: string; cover_url?: string | null; pdf_page?: number; printed_label?: string } };
 export type PrivacyItems = { owner_id: string; count: number; page: number; page_size: number; results: PrivacyItem[] };

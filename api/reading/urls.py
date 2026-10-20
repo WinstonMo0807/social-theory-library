@@ -34,8 +34,15 @@ from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView
 from .search_record_views import ReaderSearchRecordsView
+from .parallel_views import (AdminParallelCalibrationViewSet, ParallelCalibrationViewSet,
+                             ParallelReadingTaskViewSet, PublicParallelCalibrationViewSet)
 
 router = DefaultRouter()
+router.register("parallel-tasks", ParallelReadingTaskViewSet, basename="parallel-tasks")
+# Specific prefixes precede the owner detail route, so public/admin are not treated as UUIDs.
+router.register("parallel-calibrations/public", PublicParallelCalibrationViewSet, basename="public-parallel-calibrations")
+router.register("parallel-calibrations/admin", AdminParallelCalibrationViewSet, basename="admin-parallel-calibrations")
+router.register("parallel-calibrations", ParallelCalibrationViewSet, basename="parallel-calibrations")
 router.register("privacy/operations", ReaderDataOperationViewSet, basename="reader-data-operations")
 router.register("research-projects", ResearchProjectViewSet, basename="research-projects")
 router.register("research-turns", ResearchTurnViewSet, basename="research-turns")

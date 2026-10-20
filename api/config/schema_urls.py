@@ -11,6 +11,7 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 
 VERIFIED_NAMES = {
+    "parallel-versions", "parallel-segments", "parallel-candidates",
     "catalog-feedback", "catalog-admin-public-feedback", "catalog-admin-public-feedback-detail",
     "catalog-home", "global-search",
     "admin-discovery-index",
@@ -52,7 +53,7 @@ urlpatterns = [
     path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name == "ocr-workspace"])),
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
-        if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views"}
+        if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views"}
         or pattern.name in {"annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",

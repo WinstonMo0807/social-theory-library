@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "ParallelCalibrationScopeEnum": ["bibliography", "passages"],
+        "ParallelAlignmentStatusEnum": ["confirmed", "no_match", "addition"],
+        "PublicCollectionStateEnum": ["ready", "empty", "partial", "unavailable"],
         "GlobalSearchContextEnum": ["global"],
         "SearchContextEnum": ["works", "scholars", "disciplines", "subdisciplines", "theories", "topics", "reading_paths", "global"],
         "ScopedSearchContextEnum": ["works", "scholars", "disciplines", "subdisciplines", "theories", "topics", "reading_paths"],

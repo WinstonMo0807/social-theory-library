@@ -1265,6 +1265,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/parallel/candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_parallel_candidates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/parallel/segments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_parallel_segments_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/parallel/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_parallel_versions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/passages/{id}/focus/": {
         parameters: {
             query?: never;
@@ -1946,6 +1994,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/parallel-calibrations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_list"];
+        put?: never;
+        post: operations["reading_parallel_calibrations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/admin/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_admin_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/admin/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_admin_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/admin/{id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_parallel_calibrations_admin_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/admin/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_parallel_calibrations_admin_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/admin/{id}/review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_parallel_calibrations_admin_review_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/by-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_by_request_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/public/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_public_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-calibrations/public/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_calibrations_public_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-tasks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_tasks_list"];
+        put?: never;
+        post: operations["reading_parallel_tasks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/parallel-tasks/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_tasks_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_parallel_tasks_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_parallel_tasks_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/parallel-tasks/by-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_parallel_tasks_by_request_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/privacy/": {
         parameters: {
             query?: never;
@@ -2604,6 +2860,16 @@ export interface components {
          * @enum {string}
          */
         AnalysisDecisionInputActionEnum: "confirm" | "clear";
+        /**
+         * @description * `support` - support
+         *     * `different_conclusion` - different_conclusion
+         *     * `qualification` - qualification
+         *     * `reframe` - reframe
+         *     * `insufficient_evidence` - insufficient_evidence
+         *     * `unrelated` - unrelated
+         * @enum {string}
+         */
+        AnalysisDecisionInputRelationEnum: "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence" | "unrelated";
         AnalysisDecisionInputRequest: {
             expected_revision: number;
             /** @description 分析候选 id，来自轮次返回值。 */
@@ -2614,7 +2880,7 @@ export interface components {
              * @description 幂等请求；同时保存本人笔记时必需。
              */
             request_id?: string;
-            relation?: components["schemas"]["RelationEnum"];
+            relation?: components["schemas"]["AnalysisDecisionInputRelationEnum"];
             note?: string;
             attribution?: components["schemas"]["AttributionEnum"];
             scope_note?: string;
@@ -4024,7 +4290,7 @@ export interface components {
         HomeResponse: {
             schema_version: string;
             visibility: components["schemas"]["HomeResponseVisibilityEnum"];
-            status: components["schemas"]["HomeResponseStatusEnum"];
+            status: components["schemas"]["PublicCollectionStateEnum"];
             config: components["schemas"]["SiteConfig"] | null;
             works: components["schemas"]["WorkCard"][];
             random_works: components["schemas"]["WorkCard"][];
@@ -4036,14 +4302,6 @@ export interface components {
             hot_searches: string[];
             sections: components["schemas"]["HomeSections"];
         };
-        /**
-         * @description * `ready` - ready
-         *     * `empty` - empty
-         *     * `partial` - partial
-         *     * `unavailable` - unavailable
-         * @enum {string}
-         */
-        HomeResponseStatusEnum: "ready" | "empty" | "partial" | "unavailable";
         /**
          * @description * `public` - public
          * @enum {string}
@@ -5122,6 +5380,36 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["MemoryListOutput"][];
         };
+        PaginatedParallelCalibrationPageOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ParallelCalibrationPageOutput"][];
+        };
+        PaginatedParallelTaskPageOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ParallelTaskPageOutput"][];
+        };
         PaginatedPrivacyOperationsPageList: {
             /** @example 123 */
             count: number;
@@ -5151,6 +5439,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["PrivateRecord"][];
+        };
+        PaginatedPublicParallelCalibrationPageOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["PublicParallelCalibrationPageOutput"][];
         };
         PaginatedReadingHistoryList: {
             /** @example 123 */
@@ -5196,6 +5499,380 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["WorkCard"][];
+        };
+        ParallelAlignmentInputRequest: {
+            /** Format: uuid */
+            id: string;
+            left?: components["schemas"]["ParallelReferenceInputRequest"] | null;
+            right?: components["schemas"]["ParallelReferenceInputRequest"] | null;
+            status: components["schemas"]["ParallelAlignmentStatusEnum"];
+            /** @default  */
+            note: string;
+        };
+        ParallelAlignmentOutput: {
+            /** Format: uuid */
+            id: string;
+            left: components["schemas"]["ParallelStoredReferenceOutput"] | null;
+            right: components["schemas"]["ParallelStoredReferenceOutput"] | null;
+            status: components["schemas"]["ParallelAlignmentStatusEnum"];
+            note?: string;
+        };
+        /**
+         * @description * `confirmed` - confirmed
+         *     * `no_match` - no_match
+         *     * `addition` - addition
+         * @enum {string}
+         */
+        ParallelAlignmentStatusEnum: "confirmed" | "no_match" | "addition";
+        ParallelCalibrationCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            task_id: string;
+            expected_revision: number;
+            /** Format: uuid */
+            alignment_id?: string;
+            scope: components["schemas"]["ParallelCalibrationScopeEnum"];
+            basis: string;
+        };
+        ParallelCalibrationDataOutput: {
+            /** Format: uuid */
+            left_asset_id: string;
+            /** Format: uuid */
+            right_asset_id: string;
+            /** Format: uuid */
+            left_document_revision_id: string;
+            /** Format: uuid */
+            right_document_revision_id: string;
+            basis: string;
+            alignments: components["schemas"]["ParallelAlignmentOutput"][];
+        };
+        ParallelCalibrationOutput: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly revision: number;
+            /** Format: uuid */
+            readonly request_id: string;
+            readonly applied_revision: number;
+            readonly data: components["schemas"]["ParallelCalibrationDataOutput"];
+            readonly source_available: boolean;
+            readonly pair_sources: components["schemas"]["ParallelPairSourcesOutput"] | null;
+            readonly notice: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly status: components["schemas"]["ParallelCalibrationOutputStatusEnum"];
+            readonly scope: components["schemas"]["ParallelCalibrationScopeEnum"];
+            readonly review_note: string;
+            readonly reviewer_id: number | null;
+        };
+        /**
+         * @description * `submitted` - submitted
+         *     * `reviewed` - reviewed
+         *     * `published` - published
+         *     * `rejected` - rejected
+         * @enum {string}
+         */
+        ParallelCalibrationOutputStatusEnum: "submitted" | "reviewed" | "published" | "rejected";
+        ParallelCalibrationPageOutput: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["ParallelCalibrationOutput"][];
+        };
+        /**
+         * @description * `bibliography` - bibliography
+         *     * `passages` - passages
+         * @enum {string}
+         */
+        ParallelCalibrationScopeEnum: "bibliography" | "passages";
+        ParallelCandidateOutput: {
+            reference: components["schemas"]["ParallelReferenceOutput"];
+            label: string;
+            text: string;
+            status: components["schemas"]["ParallelCandidateOutputStatusEnum"];
+            text_truncated: boolean;
+        };
+        /**
+         * @description * `pending` - pending
+         * @enum {string}
+         */
+        ParallelCandidateOutputStatusEnum: "pending";
+        ParallelCandidatesInputRequest: {
+            left_reference: components["schemas"]["ParallelReferenceInputRequest"];
+            /** Format: uuid */
+            target_asset_id: string;
+            /** Format: uuid */
+            target_document_revision_id: string;
+        };
+        ParallelCandidatesOutput: {
+            state: components["schemas"]["PublicCollectionStateEnum"];
+            notice: string;
+            candidates: components["schemas"]["ParallelCandidateOutput"][];
+            warnings: components["schemas"]["ParallelWarning"][];
+            allows_no_correspondence: boolean;
+        };
+        ParallelPairSourcesOutput: {
+            left: components["schemas"]["ParallelSourceSummaryOutput"];
+            right: components["schemas"]["ParallelSourceSummaryOutput"];
+        };
+        ParallelPositionInput: {
+            /** @default 1 */
+            left_page: number;
+            /** @default 1 */
+            right_page: number;
+            left_segment_id?: string | null;
+            right_segment_id?: string | null;
+        };
+        ParallelPositionInputRequest: {
+            /** @default 1 */
+            left_page: number;
+            /** @default 1 */
+            right_page: number;
+            left_segment_id?: string | null;
+            right_segment_id?: string | null;
+        };
+        ParallelReferenceInputRequest: {
+            /** Format: uuid */
+            evidence_span_id?: string | null;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            pdf_page: number;
+            content_hash: string;
+            selection_start?: number;
+            selection_end?: number;
+            /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
+            anchors?: components["schemas"]["EvidenceAnchorInputRequest"][];
+            /** Format: uuid */
+            work_id?: string;
+            /** Format: uuid */
+            edition_id?: string;
+        };
+        ParallelReferenceOutput: {
+            reference_id: string;
+            source_status: components["schemas"]["SourceStatusEnum"];
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            /** Format: uuid */
+            evidence_span_id?: string | null;
+            pdf_page: number;
+            content_hash: string;
+            printed_label: string;
+            title: string;
+            authors: string[];
+            quote: string;
+            reader_url: string | null;
+            locator_precision: string;
+            selection_start?: number;
+            selection_end?: number;
+            page_text_range?: unknown;
+            anchors?: unknown[];
+        };
+        ParallelReviewInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_revision: number;
+            /** @default  */
+            note: string;
+        };
+        ParallelSegmentOutput: {
+            id: string;
+            label: string;
+            order: number;
+            reference: components["schemas"]["ParallelReferenceOutput"];
+            printed_label: string;
+            text: string;
+            text_truncated: boolean;
+        };
+        ParallelSegmentsOutput: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            page: number;
+            total_pages: number;
+            previous_page: number | null;
+            next_page: number | null;
+            state: components["schemas"]["ParallelSegmentsOutputStateEnum"];
+            notice: string;
+            segments: components["schemas"]["ParallelSegmentOutput"][];
+            offset: number;
+            has_more: boolean;
+            next_offset: number | null;
+        };
+        /**
+         * @description * `ready` - ready
+         *     * `unstructured` - unstructured
+         *     * `empty` - empty
+         *     * `text_unavailable` - text_unavailable
+         * @enum {string}
+         */
+        ParallelSegmentsOutputStateEnum: "ready" | "unstructured" | "empty" | "text_unavailable";
+        ParallelSourceSummaryOutput: {
+            title: string;
+            version_label: string;
+            authors: string[];
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            reader_url: string;
+        };
+        ParallelStoredReferenceOutput: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            pdf_page: number;
+            content_hash: string;
+            /** Format: uuid */
+            evidence_span_id?: string | null;
+            /** Format: uuid */
+            work_id?: string;
+            /** Format: uuid */
+            edition_id?: string;
+            reference_id: string;
+            source_status: components["schemas"]["SourceStatusEnum"];
+            quote: string;
+            reader_url: string | null;
+            title?: string;
+            authors?: string[];
+            printed_label?: string;
+            selection_start?: number;
+            selection_end?: number;
+            anchors?: unknown[];
+        };
+        ParallelTaskCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            data: components["schemas"]["ParallelTaskDataInputRequest"];
+        };
+        ParallelTaskDataInputRequest: {
+            /** Format: uuid */
+            left_asset_id: string;
+            /** Format: uuid */
+            right_asset_id: string;
+            /** Format: uuid */
+            left_document_revision_id: string;
+            /** Format: uuid */
+            right_document_revision_id: string;
+            positions?: components["schemas"]["ParallelPositionInputRequest"];
+            /** @default true */
+            sync_scroll: boolean;
+            alignments?: components["schemas"]["ParallelAlignmentInputRequest"][];
+            terms?: components["schemas"]["ParallelTermInputRequest"][];
+        };
+        ParallelTaskDataOutput: {
+            /** Format: uuid */
+            left_asset_id: string;
+            /** Format: uuid */
+            right_asset_id: string;
+            /** Format: uuid */
+            left_document_revision_id: string;
+            /** Format: uuid */
+            right_document_revision_id: string;
+            positions: components["schemas"]["ParallelPositionInput"];
+            sync_scroll: boolean;
+            alignments: components["schemas"]["ParallelAlignmentOutput"][];
+            terms: components["schemas"]["ParallelTermOutput"][];
+        };
+        ParallelTaskOutput: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly revision: number;
+            /** Format: uuid */
+            readonly request_id: string;
+            readonly applied_revision: number;
+            readonly data: components["schemas"]["ParallelTaskDataOutput"];
+            readonly source_available: boolean;
+            readonly pair_sources: components["schemas"]["ParallelPairSourcesOutput"] | null;
+            readonly notice: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        ParallelTaskPageOutput: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["ParallelTaskOutput"][];
+        };
+        ParallelTermInputRequest: {
+            /** Format: uuid */
+            id: string;
+            original: string;
+            /** @default  */
+            translation: string;
+            /** @default  */
+            note: string;
+            left?: components["schemas"]["ParallelReferenceInputRequest"] | null;
+            right?: components["schemas"]["ParallelReferenceInputRequest"] | null;
+        };
+        ParallelTermOutput: {
+            /** Format: uuid */
+            id: string;
+            original: string;
+            translation: string;
+            note: string;
+            left: components["schemas"]["ParallelStoredReferenceOutput"] | null;
+            right: components["schemas"]["ParallelStoredReferenceOutput"] | null;
+        };
+        ParallelVersionOutput: {
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            title: string;
+            original_title: string;
+            authors: string[];
+            language: string;
+            publication_year: number | null;
+            version_label: string;
+            publisher: string;
+            cover_url: string | null;
+            total_pages: number;
+            relation: components["schemas"]["ParallelVersionOutputRelationEnum"];
+            current: boolean;
+            state: components["schemas"]["ParallelVersionOutputStateEnum"];
+            notice: string;
+        };
+        /**
+         * @description * `same_work` - same_work
+         *     * `translation` - translation
+         * @enum {string}
+         */
+        ParallelVersionOutputRelationEnum: "same_work" | "translation";
+        /**
+         * @description * `available` - available
+         *     * `metadata_only` - metadata_only
+         * @enum {string}
+         */
+        ParallelVersionOutputStateEnum: "available" | "metadata_only";
+        ParallelVersionsOutput: {
+            /** Format: uuid */
+            source_asset_id: string;
+            versions: components["schemas"]["ParallelVersionOutput"][];
+            truncated: boolean;
+        };
+        ParallelWarning: {
+            code: string;
+            message: string;
         };
         PatchedAnnotationRequest: {
             /** Format: uuid */
@@ -5249,6 +5926,12 @@ export interface components {
             state?: components["schemas"]["MemoryUpdateInputStateEnum"];
             /** @description 本人已对照当前原笔记后明确更新来源身份；不修改原笔记。 */
             refresh_origin?: boolean;
+        };
+        PatchedParallelTaskUpdateInputRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            data?: components["schemas"]["ParallelTaskDataInputRequest"];
+            expected_revision?: number;
         };
         PatchedPlanUpdateInputRequest: {
             expected_revision?: number;
@@ -5875,12 +6558,13 @@ export interface components {
          *     * `search_history` - search_history
          *     * `annotations` - annotations
          *     * `memories` - memories
+         *     * `parallel_alignments` - parallel_alignments
          *     * `plans` - plans
          *     * `followed_topics` - followed_topics
          *     * `source_follows` - source_follows
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "plans" | "followed_topics" | "source_follows";
+        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
@@ -5994,6 +6678,14 @@ export interface components {
             slug: string;
             is_primary: boolean;
         };
+        /**
+         * @description * `ready` - ready
+         *     * `empty` - empty
+         *     * `partial` - partial
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        PublicCollectionStateEnum: "ready" | "empty" | "partial" | "unavailable";
         PublicContributionSnapshot: {
             role: string;
             order: number;
@@ -6099,6 +6791,14 @@ export interface components {
             file_page_index?: number;
             printed_label: string;
             chapter_title: string;
+        };
+        PublicParallelCalibrationPageOutput: {
+            /** @description 始终为 null；公开读取逐页复核来源，不以未复核候选数冒充可见校准总数。 */
+            count: number | null;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["ParallelCalibrationOutput"][];
+            notice: string;
         };
         PublicPersonSnapshot: {
             /** Format: uuid */
@@ -6580,16 +7280,6 @@ export interface components {
             edit_version?: string;
         };
         /**
-         * @description * `support` - support
-         *     * `different_conclusion` - different_conclusion
-         *     * `qualification` - qualification
-         *     * `reframe` - reframe
-         *     * `insufficient_evidence` - insufficient_evidence
-         *     * `unrelated` - unrelated
-         * @enum {string}
-         */
-        RelationEnum: "support" | "different_conclusion" | "qualification" | "reframe" | "insufficient_evidence" | "unrelated";
-        /**
          * @description * `teaching` - teaching
          *     * `cooperation` - cooperation
          *     * `influence` - influence
@@ -7033,6 +7723,12 @@ export interface components {
             page_size: number;
             results: components["schemas"]["SourceEventOutput"][];
         };
+        /**
+         * @description * `available` - available
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        SourceStatusEnum: "available" | "unavailable";
         StatementInputRequest: {
             proposition: string;
             subject?: string;
@@ -9949,6 +10645,77 @@ export interface operations {
             };
         };
     };
+    catalog_parallel_candidates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelCandidatesInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelCandidatesInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelCandidatesInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCandidatesOutput"];
+                };
+            };
+        };
+    };
+    catalog_parallel_segments_retrieve: {
+        parameters: {
+            query: {
+                asset_id: string;
+                document_revision_id?: string;
+                focus?: string;
+                offset?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelSegmentsOutput"];
+                };
+            };
+        };
+    };
+    catalog_parallel_versions_retrieve: {
+        parameters: {
+            query: {
+                asset_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelVersionsOutput"];
+                };
+            };
+        };
+    };
     catalog_passages_focus_retrieve: {
         parameters: {
             query?: never;
@@ -11501,6 +12268,426 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadingHistory"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedParallelCalibrationPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelCalibrationCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelCalibrationCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelCalibrationCreateInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_admin_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedParallelCalibrationPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_admin_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_admin_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelReviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelReviewInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelReviewInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_admin_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelReviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelReviewInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelReviewInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_admin_review_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelReviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelReviewInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelReviewInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_by_request_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_public_list: {
+        parameters: {
+            query: {
+                left_asset: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                right_asset?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPublicParallelCalibrationPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_parallel_calibrations_public_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel calibration 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelCalibrationOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_tasks_list: {
+        parameters: {
+            query?: {
+                left_asset?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedParallelTaskPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_parallel_tasks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParallelTaskCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParallelTaskCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["ParallelTaskCreateInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelTaskOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_tasks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel reading task 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelTaskOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_tasks_destroy: {
+        parameters: {
+            query: {
+                expected_revision: number;
+            };
+            header?: never;
+            path: {
+                /** @description 标识此 parallel reading task 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_parallel_tasks_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 parallel reading task 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedParallelTaskUpdateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedParallelTaskUpdateInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedParallelTaskUpdateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelTaskOutput"];
+                };
+            };
+        };
+    };
+    reading_parallel_tasks_by_request_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParallelTaskOutput"];
                 };
             };
         };

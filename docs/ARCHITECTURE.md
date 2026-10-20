@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-20 并读任务与公共校准
+
+并读在现有Reader路由/证据/发布边界上增加服务投影，使用实际Work/translation_of快照、Edition/Asset/Revision及原Discovery首推检索，不建第二套正文或索引。私人任务复用加密Research基础设施和保留/导出/删除；最小nonce回执保留删除墓碑，避免迟到请求复活。独立公共校准仅保存显式投稿范围，不依赖私人task外键；按匿名资格读回、审核发布分权。0015未应用，详见stl4/PARALLEL_READER_20261020。
+
 ## 2026-10-20 Reader与独立出版版本
 
 Reader复用连续PDF/真实坐标/分发/目录/检索/引用，新增显示旋转和原坐标反算，不改原件。manifest用轻量的所选快照模型，公开次版本详情/图片/定位不依赖主版本仍公开；集合策略不变。SSR按需传唯一访问cookie，禁重定向；私人状态按owner重挂载、写入不重放401。Annotation标签与正文共用加密，UUID幂等和未知结果查回复用原表。0014未执行，详见stl4/READER_20261020。

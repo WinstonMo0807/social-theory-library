@@ -8,6 +8,7 @@ import math
 import re
 from types import SimpleNamespace
 from uuid import UUID, uuid4
+from urllib.parse import urlencode
 
 from django.db import transaction
 from django.urls import reverse
@@ -188,8 +189,11 @@ def resolve_reference(raw, user, *, strict=False):
     authors = [str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
                for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"]
     cover = (snapshot.get("work") or {}).get("cover_media") or {}
+    cover_params = {"edition_id": str(edition.pk)}
+    if cover.get("primary_rendition_id"):
+        cover_params["rendition"] = cover["primary_rendition_id"]
     cover_url = (reverse("public-work-cover", kwargs={"work_id": str(edition.work_id)})
-        + (f"?rendition={cover['primary_rendition_id']}" if cover.get("primary_rendition_id") else "")) if cover or (snapshot.get("work") or {}).get("cover") else None
+        + "?" + urlencode(cover_params)) if cover or (snapshot.get("work") or {}).get("cover") else None
     return {"schema_version": 1, "source_kind": "catalog", "source_status": "available",
             "reference_id": reference_identity({"evidence_span_id": str(span.id) if span else None,
                 "asset_id": asset_id, "pdf_page": page_number, **selected_range}), **selected_range,

@@ -15,15 +15,16 @@ from .models import (Annotation, CitationAudit, PersonalReadingPlan, ReaderDataO
                      ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic)
 from .services import decrypt_private_text
 from .source_models import SourceFollow
+from .parallel_models import ParallelReadingTask
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True}
 RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题", "source_follows": "来源订阅"}
-EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories"),
+EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",)}
 ERASE_GROUPS = {"reading_history": ("reading_history",), "search_history": ("search_history",),
-                "personal_notes": ("annotations", "memories"), "reading_plans": ("plans",),
+                "personal_notes": ("annotations", "memories", "parallel_alignments"), "reading_plans": ("plans",),
                 "followed_topics": ("followed_topics",), "source_follows": ("source_follows",)}
-MODELS = {"research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory,
+MODELS = {"research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic, "source_follows": SourceFollow}
 MAX_ITEMS = 500
@@ -154,6 +155,9 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category == "parallel_alignments":
+        from .parallel_reading import task_output
+        return task_output(row, user)
     if category == "source_follows":
         from .source_follow import output
         return output(row, export=True)
@@ -181,6 +185,7 @@ def erase_impact(user, category, row, *, contexts=None):
         affected.append({"id": str(memory.id), "revision": memory.revision, "scopes": scopes})
     message = {"annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
                "memories": "删除此条认识、修改历史与派生向量，撤销使用范围；原阅读笔记保留。",
+               "parallel_alignments": "删除此组私人对齐、术语笔记与阅读位置，并保留防止旧请求重新创建资料所需的最少记录；已提交的公共校准记录独立保留，馆藏原文与账户保留。",
                "plans": "删除此阅读计划与计划内建议；原文、独立研究和笔记保留，未完成计划任务将失效。",
                "reading_history": "删除此条阅读历史；阅读进度、笔记和馆藏原件保留。",
                "search_history": "删除这条主动保存的检索记录；当前检索与研究所需临时会话不受影响。",
@@ -192,7 +197,17 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category in {"annotations", "memories"}:
+    if category == "parallel_alignments":
+        from .parallel_reading import SOURCE_ERRORS, pair, source_summary
+        try:
+            sources = [source_summary(edition) for edition in pair(payload, user)]
+        except SOURCE_ERRORS:
+            sources = []
+        title = (" ↔ ".join(value.get("title") or "未题名版本" for value in sources)
+                 if sources else "来源当前不可用的私人并读记录")
+        source = {"title": title, "edition": "私人并读对齐与术语笔记",
+                  "pdf_page": payload.get("positions", {}).get("left_page")}
+    elif category in {"annotations", "memories"}:
         if category == "annotations":
             ref = research.annotation_source(user, row)
             details = research.memory_source_details(user, {"sources": [ref] if ref else []})

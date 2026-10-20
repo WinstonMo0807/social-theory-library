@@ -7,6 +7,7 @@ from hashlib import sha256
 import json
 from itertools import islice
 from uuid import UUID
+from urllib.parse import urlencode
 
 from django.db.models import F, Q
 from django.urls import reverse
@@ -133,8 +134,11 @@ def edition_metadata_header(row, *, taxonomy=None):
     public_slug = str(edition.get("public_slug") or row.pk)
     cover = work.get("cover_media") or {}
     cover_url = reverse("public-work-cover", kwargs={"work_id": row.work_id}) if work.get("cover") or cover else ""
-    if cover_url and cover.get("primary_rendition_id"):
-        cover_url += f"?rendition={cover['primary_rendition_id']}"
+    if cover_url:
+        cover_params = {"edition_id": str(row.pk)}
+        if cover.get("primary_rendition_id"):
+            cover_params["rendition"] = cover["primary_rendition_id"]
+        cover_url += "?" + urlencode(cover_params)
     return dict(channel="passages", title=work.get("title", ""), source_kind="passage",
         edition_id=str(row.pk), work_id=str(row.work_id), asset_id=str(asset.pk) if asset else None,
         access_status=asset.access_status if asset else "public", url=f"/works/{public_slug}",

@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 并读与独立校准
+
+catalog/parallel的versions/segments/candidates共用激活快照/Asset/DocumentRevision和Discovery首推候选；分页最多20段/6候选，focus返回实际窗口offset，失效来源409。reading/parallel-tasks提供本人列表/详情/nonce查回及CAS保存，X-Reader-Owner必需，任务来源身份不可改。
+
+parallel-calibrations分本人投稿、public和admin表面；书目或单条对齐范围显式确认，私人note/terms不投稿；review/publish/reject独立命令，公开按匿名权限重验且每页最多20记录。新增16路径至174，原158保留；0015只编写，OpenAPI/TS同步，详细payload与边界见PARALLEL_READER_20261020。
+
 ## 2026-10-20 Reader版本与私人记录
 
 asset manifest返回PublicReaderManifest/轻量PublicReaderWork，选定Edition/Asset/Revision身份一致。明确次版本的详情、图片与原文定位独立核验自身公开资格，不再依赖主版；馆藏集合规则保持。SSR只按需转发访问cookie，禁止redirect。

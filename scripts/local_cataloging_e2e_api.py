@@ -87,6 +87,8 @@ def main():
     seed_v306(User.objects.get(email="owner-v305@example.test"))
     from reader_v306_e2e_fixtures import seed_reader_v306
     seed_reader_v306()
+    from parallel_reader_e2e_fixtures import seed_parallel_reader
+    seed_parallel_reader()
     from v306_assistance_e2e_fixtures import seed_assistance
     seed_assistance(User.objects.get(email="owner-v305@example.test"))
     if os.environ.get("STL_E2E_V307") == "1":

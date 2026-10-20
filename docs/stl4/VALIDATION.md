@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-20 PDF41–43静态记录
+
+- 22路径Python ast.parse退出0，31测试函数只解析未执行；PostCSS解析并读CSS120/管理CSS18节点退出0。
+- web下node node_modules/eslint/bin/eslint.js检查并读4组件hooks、两client、管理组件/路由/入口、隐私组件/client、reader-failure/reader路由/ReaderShell、两spec和playwright.v306共17路径，退出0，3条img提示。最终6个并读路径复查退出0、1img提示。
+- 全量`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`初次空值错误修复后78664退出0，最终49952在schema与恢复修复后退出0。
+- SQLite内存配置运行spectacular生成tmp/stl4-parallel-schema-20261020.json，退出0、0错误/10条既有Home/Scholar/Topic提示。首次16提示中的6个新项已修，最终仅旧10项。openapi-typescript同步174路径，原158无删除。
+- 来源10、私人15、隐私6个后端函数；8真实API并读及9管理契约浏览器场景，均未运行。真实PDF隔离夹具与启动器、配置已接线但未执行。没有正式测试、浏览器、构建、迁移、OCR/模型/NAS或生产操作。
+
 ## 2026-10-20 PDF36–40静态记录
 
 - `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-reader-schema-20261020.json --validate`，SQLite内存配置，退出0；0错误/10既有提示，158路径，原151全部保留。openapi-typescript同步成功，首次Windows文件写入失败后重试成功。

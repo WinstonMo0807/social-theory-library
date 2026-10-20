@@ -5098,6 +5098,171 @@
                 }
             }
         },
+        "/api/catalog/parallel/candidates/": {
+            "post": {
+                "operationId": "catalog_parallel_candidates_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCandidatesInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCandidatesInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCandidatesInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCandidatesOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/parallel/segments/": {
+            "get": {
+                "operationId": "catalog_parallel_segments_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "document_revision_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "focus",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 0,
+                            "default": 0
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelSegmentsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/parallel/versions/": {
+            "get": {
+                "operationId": "catalog_parallel_versions_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelVersionsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/passages/{id}/focus/": {
             "get": {
                 "operationId": "catalog_passages_focus_retrieve",
@@ -8337,6 +8502,863 @@
                 }
             }
         },
+        "/api/reading/parallel-calibrations/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedParallelCalibrationPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_parallel_calibrations_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCalibrationCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCalibrationCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelCalibrationCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/{id}/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/admin/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_admin_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedParallelCalibrationPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/admin/{id}/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_admin_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/admin/{id}/publish/": {
+            "post": {
+                "operationId": "reading_parallel_calibrations_admin_publish_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/admin/{id}/reject/": {
+            "post": {
+                "operationId": "reading_parallel_calibrations_admin_reject_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/admin/{id}/review/": {
+            "post": {
+                "operationId": "reading_parallel_calibrations_admin_review_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelReviewInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/by-request/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_by_request_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/public/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_public_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "left_asset",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "right_asset",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedPublicParallelCalibrationPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-calibrations/public/{id}/": {
+            "get": {
+                "operationId": "reading_parallel_calibrations_public_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel calibration 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-tasks/": {
+            "get": {
+                "operationId": "reading_parallel_tasks_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "left_asset",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedParallelTaskPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_parallel_tasks_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelTaskCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelTaskCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParallelTaskCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelTaskOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-tasks/{id}/": {
+            "get": {
+                "operationId": "reading_parallel_tasks_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel reading task 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelTaskOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_parallel_tasks_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel reading task 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedParallelTaskUpdateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedParallelTaskUpdateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedParallelTaskUpdateInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelTaskOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_parallel_tasks_destroy",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "expected_revision",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 parallel reading task 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/parallel-tasks/by-request/": {
+            "get": {
+                "operationId": "reading_parallel_tasks_by_request_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParallelTaskOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/privacy/": {
             "get": {
                 "operationId": "reading_privacy_retrieve",
@@ -11320,6 +12342,18 @@
                 "type": "string",
                 "description": "* `confirm` - confirm\n* `clear` - clear"
             },
+            "AnalysisDecisionInputRelationEnum": {
+                "enum": [
+                    "support",
+                    "different_conclusion",
+                    "qualification",
+                    "reframe",
+                    "insufficient_evidence",
+                    "unrelated"
+                ],
+                "type": "string",
+                "description": "* `support` - support\n* `different_conclusion` - different_conclusion\n* `qualification` - qualification\n* `reframe` - reframe\n* `insufficient_evidence` - insufficient_evidence\n* `unrelated` - unrelated"
+            },
             "AnalysisDecisionInputRequest": {
                 "type": "object",
                 "properties": {
@@ -11341,7 +12375,7 @@
                         "description": "幂等请求；同时保存本人笔记时必需。"
                     },
                     "relation": {
-                        "$ref": "#/components/schemas/RelationEnum"
+                        "$ref": "#/components/schemas/AnalysisDecisionInputRelationEnum"
                     },
                     "note": {
                         "type": "string",
@@ -15844,7 +16878,7 @@
                         "$ref": "#/components/schemas/HomeResponseVisibilityEnum"
                     },
                     "status": {
-                        "$ref": "#/components/schemas/HomeResponseStatusEnum"
+                        "$ref": "#/components/schemas/PublicCollectionStateEnum"
                     },
                     "config": {
                         "allOf": [
@@ -15921,16 +16955,6 @@
                     "visibility",
                     "works"
                 ]
-            },
-            "HomeResponseStatusEnum": {
-                "enum": [
-                    "ready",
-                    "empty",
-                    "partial",
-                    "unavailable"
-                ],
-                "type": "string",
-                "description": "* `ready` - ready\n* `empty` - empty\n* `partial` - partial\n* `unavailable` - unavailable"
             },
             "HomeResponseVisibilityEnum": {
                 "enum": [
@@ -19527,6 +20551,68 @@
                     }
                 }
             },
+            "PaginatedParallelCalibrationPageOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelCalibrationPageOutput"
+                        }
+                    }
+                }
+            },
+            "PaginatedParallelTaskPageOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelTaskPageOutput"
+                        }
+                    }
+                }
+            },
             "PaginatedPrivacyOperationsPageList": {
                 "type": "object",
                 "required": [
@@ -19585,6 +20671,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/PrivateRecord"
+                        }
+                    }
+                }
+            },
+            "PaginatedPublicParallelCalibrationPageOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicParallelCalibrationPageOutput"
                         }
                     }
                 }
@@ -19681,6 +20798,1290 @@
                         }
                     }
                 }
+            },
+            "ParallelAlignmentInputRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "left": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelReferenceInputRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "right": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelReferenceInputRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ParallelAlignmentStatusEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 8000
+                    }
+                },
+                "required": [
+                    "id",
+                    "status"
+                ]
+            },
+            "ParallelAlignmentOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "left": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelStoredReferenceOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "right": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelStoredReferenceOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ParallelAlignmentStatusEnum"
+                    },
+                    "note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "left",
+                    "right",
+                    "status"
+                ]
+            },
+            "ParallelAlignmentStatusEnum": {
+                "enum": [
+                    "confirmed",
+                    "no_match",
+                    "addition"
+                ],
+                "type": "string",
+                "description": "* `confirmed` - confirmed\n* `no_match` - no_match\n* `addition` - addition"
+            },
+            "ParallelCalibrationCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "task_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "alignment_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/ParallelCalibrationScopeEnum"
+                    },
+                    "basis": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                    }
+                },
+                "required": [
+                    "basis",
+                    "expected_revision",
+                    "request_id",
+                    "scope",
+                    "task_id"
+                ]
+            },
+            "ParallelCalibrationDataOutput": {
+                "type": "object",
+                "properties": {
+                    "left_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "left_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "basis": {
+                        "type": "string"
+                    },
+                    "alignments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelAlignmentOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "alignments",
+                    "basis",
+                    "left_asset_id",
+                    "left_document_revision_id",
+                    "right_asset_id",
+                    "right_document_revision_id"
+                ]
+            },
+            "ParallelCalibrationOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "applied_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelCalibrationDataOutput"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "source_available": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "pair_sources": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelPairSourcesOutput"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelCalibrationOutputStatusEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "scope": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelCalibrationScopeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "review_note": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "reviewer_id": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "applied_revision",
+                    "created_at",
+                    "data",
+                    "id",
+                    "notice",
+                    "pair_sources",
+                    "request_id",
+                    "review_note",
+                    "reviewer_id",
+                    "revision",
+                    "scope",
+                    "source_available",
+                    "status",
+                    "updated_at"
+                ]
+            },
+            "ParallelCalibrationOutputStatusEnum": {
+                "enum": [
+                    "submitted",
+                    "reviewed",
+                    "published",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `submitted` - submitted\n* `reviewed` - reviewed\n* `published` - published\n* `rejected` - rejected"
+            },
+            "ParallelCalibrationPageOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
+            "ParallelCalibrationScopeEnum": {
+                "enum": [
+                    "bibliography",
+                    "passages"
+                ],
+                "type": "string",
+                "description": "* `bibliography` - bibliography\n* `passages` - passages"
+            },
+            "ParallelCandidateOutput": {
+                "type": "object",
+                "properties": {
+                    "reference": {
+                        "$ref": "#/components/schemas/ParallelReferenceOutput"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ParallelCandidateOutputStatusEnum"
+                    },
+                    "text_truncated": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "label",
+                    "reference",
+                    "status",
+                    "text",
+                    "text_truncated"
+                ]
+            },
+            "ParallelCandidateOutputStatusEnum": {
+                "enum": [
+                    "pending"
+                ],
+                "type": "string",
+                "description": "* `pending` - pending"
+            },
+            "ParallelCandidatesInputRequest": {
+                "type": "object",
+                "properties": {
+                    "left_reference": {
+                        "$ref": "#/components/schemas/ParallelReferenceInputRequest"
+                    },
+                    "target_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "left_reference",
+                    "target_asset_id",
+                    "target_document_revision_id"
+                ]
+            },
+            "ParallelCandidatesOutput": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/PublicCollectionStateEnum"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelCandidateOutput"
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelWarning"
+                        }
+                    },
+                    "allows_no_correspondence": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "allows_no_correspondence",
+                    "candidates",
+                    "notice",
+                    "state",
+                    "warnings"
+                ]
+            },
+            "ParallelPairSourcesOutput": {
+                "type": "object",
+                "properties": {
+                    "left": {
+                        "$ref": "#/components/schemas/ParallelSourceSummaryOutput"
+                    },
+                    "right": {
+                        "$ref": "#/components/schemas/ParallelSourceSummaryOutput"
+                    }
+                },
+                "required": [
+                    "left",
+                    "right"
+                ]
+            },
+            "ParallelPositionInput": {
+                "type": "object",
+                "properties": {
+                    "left_page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "right_page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "left_segment_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 160
+                    },
+                    "right_segment_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 160
+                    }
+                }
+            },
+            "ParallelPositionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "left_page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "right_page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "left_segment_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 160
+                    },
+                    "right_segment_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 160
+                    }
+                }
+            },
+            "ParallelReferenceInputRequest": {
+                "type": "object",
+                "properties": {
+                    "evidence_span_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "content_hash": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "selection_start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "selection_end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "anchors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceAnchorInputRequest"
+                        },
+                        "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "content_hash",
+                    "document_revision_id",
+                    "pdf_page"
+                ]
+            },
+            "ParallelReferenceOutput": {
+                "type": "object",
+                "properties": {
+                    "reference_id": {
+                        "type": "string"
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/SourceStatusEnum"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "evidence_span_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "content_hash": {
+                        "type": "string"
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "locator_precision": {
+                        "type": "string"
+                    },
+                    "selection_start": {
+                        "type": "integer"
+                    },
+                    "selection_end": {
+                        "type": "integer"
+                    },
+                    "page_text_range": {
+                        "nullable": true
+                    },
+                    "anchors": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "content_hash",
+                    "document_revision_id",
+                    "edition_id",
+                    "locator_precision",
+                    "pdf_page",
+                    "printed_label",
+                    "quote",
+                    "reader_url",
+                    "reference_id",
+                    "source_status",
+                    "title",
+                    "work_id"
+                ]
+            },
+            "ParallelReviewInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "request_id"
+                ]
+            },
+            "ParallelSegmentOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "order": {
+                        "type": "integer"
+                    },
+                    "reference": {
+                        "$ref": "#/components/schemas/ParallelReferenceOutput"
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "text_truncated": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "order",
+                    "printed_label",
+                    "reference",
+                    "text",
+                    "text_truncated"
+                ]
+            },
+            "ParallelSegmentsOutput": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "previous_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "next_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/ParallelSegmentsOutputStateEnum"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "segments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelSegmentOutput"
+                        }
+                    },
+                    "offset": {
+                        "type": "integer"
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    },
+                    "next_offset": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "edition_id",
+                    "has_more",
+                    "next_offset",
+                    "next_page",
+                    "notice",
+                    "offset",
+                    "page",
+                    "previous_page",
+                    "segments",
+                    "state",
+                    "total_pages"
+                ]
+            },
+            "ParallelSegmentsOutputStateEnum": {
+                "enum": [
+                    "ready",
+                    "unstructured",
+                    "empty",
+                    "text_unavailable"
+                ],
+                "type": "string",
+                "description": "* `ready` - ready\n* `unstructured` - unstructured\n* `empty` - empty\n* `text_unavailable` - text_unavailable"
+            },
+            "ParallelSourceSummaryOutput": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "document_revision_id",
+                    "reader_url",
+                    "title",
+                    "version_label"
+                ]
+            },
+            "ParallelStoredReferenceOutput": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "content_hash": {
+                        "type": "string"
+                    },
+                    "evidence_span_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reference_id": {
+                        "type": "string"
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/SourceStatusEnum"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "printed_label": {
+                        "type": "string"
+                    },
+                    "selection_start": {
+                        "type": "integer"
+                    },
+                    "selection_end": {
+                        "type": "integer"
+                    },
+                    "anchors": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "content_hash",
+                    "document_revision_id",
+                    "pdf_page",
+                    "quote",
+                    "reader_url",
+                    "reference_id",
+                    "source_status"
+                ]
+            },
+            "ParallelTaskCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/ParallelTaskDataInputRequest"
+                    }
+                },
+                "required": [
+                    "data",
+                    "request_id"
+                ]
+            },
+            "ParallelTaskDataInputRequest": {
+                "type": "object",
+                "properties": {
+                    "left_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "left_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "positions": {
+                        "$ref": "#/components/schemas/ParallelPositionInputRequest"
+                    },
+                    "sync_scroll": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "alignments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelAlignmentInputRequest"
+                        }
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelTermInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "left_asset_id",
+                    "left_document_revision_id",
+                    "right_asset_id",
+                    "right_document_revision_id"
+                ]
+            },
+            "ParallelTaskDataOutput": {
+                "type": "object",
+                "properties": {
+                    "left_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "left_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "right_document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "positions": {
+                        "$ref": "#/components/schemas/ParallelPositionInput"
+                    },
+                    "sync_scroll": {
+                        "type": "boolean"
+                    },
+                    "alignments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelAlignmentOutput"
+                        }
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelTermOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "alignments",
+                    "left_asset_id",
+                    "left_document_revision_id",
+                    "positions",
+                    "right_asset_id",
+                    "right_document_revision_id",
+                    "sync_scroll",
+                    "terms"
+                ]
+            },
+            "ParallelTaskOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "applied_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelTaskDataOutput"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "source_available": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "pair_sources": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelPairSourcesOutput"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "applied_revision",
+                    "created_at",
+                    "data",
+                    "id",
+                    "notice",
+                    "pair_sources",
+                    "request_id",
+                    "revision",
+                    "source_available",
+                    "updated_at"
+                ]
+            },
+            "ParallelTaskPageOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelTaskOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
+            "ParallelTermInputRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "original": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "translation": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 8000
+                    },
+                    "left": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelReferenceInputRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "right": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelReferenceInputRequest"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "original"
+                ]
+            },
+            "ParallelTermOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "original": {
+                        "type": "string"
+                    },
+                    "translation": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "left": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelStoredReferenceOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "right": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParallelStoredReferenceOutput"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "left",
+                    "note",
+                    "original",
+                    "right",
+                    "translation"
+                ]
+            },
+            "ParallelVersionOutput": {
+                "type": "object",
+                "properties": {
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "original_title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "relation": {
+                        "$ref": "#/components/schemas/ParallelVersionOutputRelationEnum"
+                    },
+                    "current": {
+                        "type": "boolean"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/ParallelVersionOutputStateEnum"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "cover_url",
+                    "current",
+                    "document_revision_id",
+                    "edition_id",
+                    "language",
+                    "notice",
+                    "original_title",
+                    "publication_year",
+                    "publisher",
+                    "relation",
+                    "state",
+                    "title",
+                    "total_pages",
+                    "version_label",
+                    "work_id"
+                ]
+            },
+            "ParallelVersionOutputRelationEnum": {
+                "enum": [
+                    "same_work",
+                    "translation"
+                ],
+                "type": "string",
+                "description": "* `same_work` - same_work\n* `translation` - translation"
+            },
+            "ParallelVersionOutputStateEnum": {
+                "enum": [
+                    "available",
+                    "metadata_only"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `metadata_only` - metadata_only"
+            },
+            "ParallelVersionsOutput": {
+                "type": "object",
+                "properties": {
+                    "source_asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "versions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelVersionOutput"
+                        }
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "source_asset_id",
+                    "truncated",
+                    "versions"
+                ]
+            },
+            "ParallelWarning": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
             },
             "PatchedAnnotationRequest": {
                 "type": "object",
@@ -19848,6 +22249,22 @@
                     "refresh_origin": {
                         "type": "boolean",
                         "description": "本人已对照当前原笔记后明确更新来源身份；不修改原笔记。"
+                    }
+                }
+            },
+            "PatchedParallelTaskUpdateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/ParallelTaskDataInputRequest"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
                     }
                 }
             },
@@ -21840,12 +24257,13 @@
                     "search_history",
                     "annotations",
                     "memories",
+                    "parallel_alignments",
                     "plans",
                     "followed_topics",
                     "source_follows"
                 ],
                 "type": "string",
-                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows"
+                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
@@ -22264,6 +24682,16 @@
                     "slug"
                 ]
             },
+            "PublicCollectionStateEnum": {
+                "enum": [
+                    "ready",
+                    "empty",
+                    "partial",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `ready` - ready\n* `empty` - empty\n* `partial` - partial\n* `unavailable` - unavailable"
+            },
             "PublicContributionSnapshot": {
                 "type": "object",
                 "properties": {
@@ -22590,6 +25018,40 @@
                     "chapter_title",
                     "index",
                     "printed_label"
+                ]
+            },
+            "PublicParallelCalibrationPageOutput": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "始终为 null；公开读取逐页复核来源，不以未复核候选数冒充可见校准总数。"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ParallelCalibrationOutput"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "notice",
+                    "previous",
+                    "results"
                 ]
             },
             "PublicPersonSnapshot": {
@@ -24314,18 +26776,6 @@
                     "title"
                 ]
             },
-            "RelationEnum": {
-                "enum": [
-                    "support",
-                    "different_conclusion",
-                    "qualification",
-                    "reframe",
-                    "insufficient_evidence",
-                    "unrelated"
-                ],
-                "type": "string",
-                "description": "* `support` - support\n* `different_conclusion` - different_conclusion\n* `qualification` - qualification\n* `reframe` - reframe\n* `insufficient_evidence` - insufficient_evidence\n* `unrelated` - unrelated"
-            },
             "RelationTypeEnum": {
                 "enum": [
                     "teaching",
@@ -25783,6 +28233,14 @@
                     "page_size",
                     "results"
                 ]
+            },
+            "SourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `unavailable` - unavailable"
             },
             "StatementInputRequest": {
                 "type": "object",

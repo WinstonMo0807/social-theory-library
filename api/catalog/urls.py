@@ -1,5 +1,6 @@
 from django.urls import path
 from .home_views import HomeView
+from .parallel_views import ParallelVersionsView, ParallelSegmentsView, ParallelCandidatesView
 from .page_mapping_views import AdminPageMappingWorkspaceView
 from .feedback_views import AdminFeedbackDetailView, AdminFeedbackListView, PublicFeedbackView
 from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
@@ -826,6 +827,9 @@ urlpatterns = [
     path("discovery-search/<uuid:session_id>/context/", DiscoverySearchContextView.as_view(), name="discovery-search-context"),
     path("semantic-search/feedback/", SemanticSearchFeedbackView.as_view(), name="semantic-search-feedback"),
     path("passages/<uuid:pk>/focus/", PassageFocusView.as_view(), name="passage-focus"),
+    path("parallel/versions/", ParallelVersionsView.as_view(), name="parallel-versions"),
+    path("parallel/segments/", ParallelSegmentsView.as_view(), name="parallel-segments"),
+    path("parallel/candidates/", ParallelCandidatesView.as_view(), name="parallel-candidates"),
     path("assets/<uuid:asset_id>/manifest/", PublicAssetManifestView.as_view(), name="asset-manifest"),
     path("assets/<uuid:asset_id>/outline/", PublicDocumentOutlineView.as_view(), name="asset-outline"),
     path("admin/assets/<uuid:asset_id>/outline/", AdminDocumentOutlineView.as_view(), name="admin-asset-outline"),
