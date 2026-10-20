@@ -1,5 +1,14 @@
 # 验收记录
 
+## 2026-10-20 PDF45–49理论条目静态记录
+
+- 从本单元精确白名单取27个Python文件，`ast.parse`全部退出0；包括0016、两隔离启动/夹具脚本和三份新后端用例。未执行Python业务或测试。
+- web下 `node node_modules/eslint/bin/eslint.js` 检查20个理论/历史兼容/隐私客户端、组件、路由与spec，退出0，9条img优化建议，无其他错误/警告。PostCSS解析四份CSS，节点14/12/265/48，退出0。
+- web下 `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false` 最终52436退出0。此前66525因旧隐私夹具三处缺saved_knowledge失败，修复后66166、2164及最终52436退出0；最终包含旧入口strict、隐私固定owner和新增spec。
+- SQLite内存配置下 `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-theory-schema-20261020.json --validate` 最终bb3ada退出0，0错误/10既有Home/Scholar/Topic提示；185路径，原175全部保留，openapi-typescript同步。初版新增字段/枚举提示已修，未将失败写通过。
+- 后端新34函数/60参数场景、理论18真实隔离API浏览器场景、隐私新增8合成状态机场景只编写未运行。隔离夹具从并读测试PDF实际提取原文、正式发布，合成人物/释义不作学术事实；初始化真实写请求带CSRF。没有运行服务、浏览器、构建、迁移、检索质量评测或生产操作。
+- PDF45–49已实际读原图并实现源码，仍未正式截图对照。旧子栏目完整视觉与独立旧图谱/时间轴、下一组50–57及全站209视图/B01–B06继续实施，检查点不是验收。
+
 ## 2026-10-20 PDF40 OCR补齐静态记录
 
 - ast.parse新OCR服务/view/serializer、distribution urls、新后端用例、config schema_urls/settings共7路径退出0；未执行业务。PostCSS解析原Reader CSS143、新OCR CSS49节点退出0。

@@ -1,0 +1,14 @@
+.root { color: #34332f; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button, .actions a, .dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 13px; border: 1px solid #d9d3c9; border-radius: 5px; background: #fff; color: #34332f; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.actions button:hover, .actions a:hover, .dialog button:hover { background: #efebe2; }
+.actions button[aria-pressed="true"] { background: #e9e1cf; border-color: #bbac87; }
+.actions button:disabled, .dialog button:disabled { opacity: .58; cursor: wait; }
+.root :is(button, a, input, textarea):focus-visible, .dialog :is(button, input, textarea):focus-visible { outline: 2px solid #887550; outline-offset: 3px; }
+.message { max-width: 48ch; margin: 8px 0 0; color: #686057; font-size: 12px; }
+.dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; border: 1px solid #d9d3c9; border-radius: 8px; background: #f7f4ee; color: #34332f; box-shadow: 0 16px 65px #34332f30; }
+.dialog::backdrop { background: #29272265; }
+.dialog header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.dialog h2 { margin: 0; font: 500 24px/1.5 var(--font-serif, serif); }
+.dialog p { color: #686057; font-size: 14px; line-height: 1.7; }
+.dialog textarea, .dialog input { display: block; width: 100%; box-sizing: border-box; margin: 16px 0; padding: 13px; background: #fff; border: 1px solid #d9d3c9; border-radius: 4px; color: #34332f; font: inherit; line-height: 1.7; resize: vertical; }

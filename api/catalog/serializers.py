@@ -64,6 +64,7 @@ from .services.evidence_envelope import (
 from .services.semantic_search import viewer_access_statuses
 from .services.scoped_search import public_scholar_queryset, public_work_queryset
 from .services.scholar_publication import scholar_public_eligibility
+from .services.legacy_theory_evidence import legacy_evidence_fields
 from .services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_q,
@@ -1345,16 +1346,20 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
         }
 
     def get_relations(self, obj):
+        preview = self.context.get("include_unpublished_items")
+        if not preview and obj.editorial_status != "published":
+            return []
         rows = []
         outgoing = obj.outgoing_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
-            target_theory__editorial_status="published",
+            **({} if preview else {"target_theory__editorial_status": "published"}),
         ).select_related("target_theory")
         incoming = obj.incoming_relations.filter(
             review_status=RelationReviewStatus.APPROVED,
-            source_theory__editorial_status="published",
+            **({} if preview else {"source_theory__editorial_status": "published"}),
         ).select_related("source_theory")
         for relation in outgoing:
+            evidence = legacy_evidence_fields(relation, self.context)
             rows.append({
                 "id": str(relation.id),
                 "direction": "outgoing",
@@ -1365,10 +1370,11 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
                     "name": relation.target_theory.name,
                     "slug": relation.target_theory.slug,
                 },
-                "evidence_page": relation.evidence_page,
-                "evidence_text": relation.evidence_text,
+                "evidence_page": evidence["evidence_page"],
+                "evidence_text": evidence["evidence_text"],
             })
         for relation in incoming:
+            evidence = legacy_evidence_fields(relation, self.context)
             rows.append({
                 "id": str(relation.id),
                 "direction": "incoming",
@@ -1379,14 +1385,18 @@ class TheorySchoolSerializer(serializers.ModelSerializer):
                     "name": relation.source_theory.name,
                     "slug": relation.source_theory.slug,
                 },
-                "evidence_page": relation.evidence_page,
-                "evidence_text": relation.evidence_text,
+                "evidence_page": evidence["evidence_page"],
+                "evidence_text": evidence["evidence_text"],
             })
         return rows
 
     def get_timeline(self, obj):
+        if not self.context.get("include_unpublished_items") and obj.editorial_status != "published":
+            return []
         return TheoryTimelineEventSerializer(
-            obj.timeline_events.filter(review_status=RelationReviewStatus.APPROVED),
+            obj.timeline_events.filter(review_status=RelationReviewStatus.APPROVED).select_related(
+                "theory_school", "discipline", "subdiscipline", "scholar__person", "work",
+            ),
             many=True,
             context=self.context,
         ).data
@@ -1976,7 +1986,10 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
         )
 
     def _named(self, value):
-        if value is None:
+        if value is None or (
+            not self.context.get("include_unpublished_items")
+            and value.editorial_status != "published"
+        ):
             return None
         return {"id": str(value.id), "name": value.name, "slug": value.slug}
 
@@ -1990,7 +2003,10 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
         return self._named(obj.subdiscipline)
 
     def get_scholar(self, obj):
-        if obj.scholar is None or not scholar_public_eligibility(obj.scholar)["eligible"]:
+        if obj.scholar is None or (
+            not self.context.get("include_unpublished_items")
+            and not scholar_public_eligibility(obj.scholar)["eligible"]
+        ):
             return None
         return {
             "id": str(obj.scholar_id),
@@ -2001,15 +2017,23 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
     def get_work(self, obj):
         if obj.work is None:
             return None
-        work = public_work_queryset().filter(pk=obj.work_id).first()
-        if work is None:
+        if self.context.get("include_unpublished_items"):
+            return {"id": str(obj.work_id), "title": obj.work.title}
+        edition = public_editions().filter(work_id=obj.work_id).order_by(
+            "-is_primary", "-published_at", "id",
+        ).first()
+        if edition is None:
             return None
-        edition = next(iter(work.editions.all()), None)
         title = str(
             (active_catalog_snapshot(edition).get("work") or {}).get("title")
             or "未题名"
         )
-        return {"id": str(work.id), "title": title}
+        return {"id": str(obj.work_id), "title": title}
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data.update(legacy_evidence_fields(instance, self.context))
+        return data
 
 
 class RecommendationSnapshotSerializer(serializers.ModelSerializer):

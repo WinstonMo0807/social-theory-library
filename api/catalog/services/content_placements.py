@@ -166,7 +166,8 @@ def _landing(value, reference, *, public=False):
 
 
 def _concept_usage(value, reference, page_type):
-    fields = {"term", "language", "usage_type", "interpretation", "source_person_id", "attribution_note", "review_status"}
+    fields = {"term", "language", "usage_type", "interpretation", "source_person_id", "attribution_note", "review_status",
+              "title", "explanatory_object", "period", "context"}
     if page_type != "node" or reference["type"] != "span" or not isinstance(value, dict) or set(value) - fields:
         raise ValidationError({"concept_usage": "概念用法须保存在理论或概念页，并关联准确原文。"})
     usage_type, review = value.get("usage_type", "application"), value.get("review_status", "candidate")
@@ -185,7 +186,9 @@ def _concept_usage(value, reference, page_type):
         raise ValidationError({"concept_usage": "确认用法前须明确作者与归属依据，不能仅由书目作者推定。"})
     return {"term": term, "language": ledger._text(value.get("language", ""), 32),
             "usage_type": usage_type, "interpretation": ledger._text(value.get("interpretation", ""), 6000),
-            "source_person_id": person_id or None, "attribution_note": note, "review_status": review}
+            "source_person_id": person_id or None, "attribution_note": note, "review_status": review,
+            **{key: ledger._text(value.get(key, ""), limit) for key, limit in
+               (("title", 240), ("explanatory_object", 1200), ("period", 120), ("context", 240))}}
 
 
 def _normalize(items, *, existing=None, page_type=None):
@@ -281,6 +284,8 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
     result = {"schema_version": 1, "page_type": page_type, "page_id": str(parent.pk),
               "revision_id": str(selected.pk) if selected else None,
               "configured": bool(selected), "items": items, "withdrawn": data.get("withdrawn", False)}
+    if public and page_type == "node":
+        result["public_detail"] = public_concept_detail(result, data.get("items", []))
     if not public:
         blockers = list(problems)
         try:
@@ -301,6 +306,39 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
                       state="saved_unpublished" if latest and latest.status == "draft" else "withdrawn" if data.get("withdrawn") else "published" if published else "empty",
                       impact="本页文案和位置只影响此页面；修改题名、作者或原文须进入来源编辑。")
     return result
+
+
+def public_concept_detail(result, original_items):
+    """Project confirmed uses from the existing ledger, without copying failed sources."""
+    confirmed = [row for row in original_items if (row.get("concept_usage") or {}).get("review_status") == "confirmed"]
+    profiles = {str(profile.person_id): profile for profile in public_scholar_queryset().filter(
+        person_id__in=[row["concept_usage"].get("source_person_id") for row in confirmed
+                       if row["concept_usage"].get("source_person_id")])}
+    usages = []
+    for row in result["items"]:
+        usage, source = row.get("concept_usage"), row.get("source")
+        if not usage or usage.get("review_status") != "confirmed" or not source or source.get("type") != "span":
+            continue
+        author = source.get("usage_author")
+        if not author:
+            continue
+        profile = profiles.get(author["id"])
+        person = profile.person if profile else None
+        usages.append({
+            "id": row["id"],
+            **{key: usage.get(key, "") for key in ("term", "language", "usage_type", "interpretation",
+                                                  "attribution_note", "title", "explanatory_object", "period", "context")},
+            "author": {**author, "original_name": person.original_name if person else "",
+                       "birth_year": person.birth_year if person else None, "death_year": person.death_year if person else None,
+                       "portrait_url": person.portrait.url if person and person.portrait else "",
+                       "scholar_slug": profile.slug if profile else ""},
+            "source": {key: source.get(key) for key in ("id", "type", "title", "public_eligible", "work_id", "work_title", "edition_id", "edition_label",
+                       "asset_id", "document_revision_id", "page_start", "page_end", "printed_label", "text", "reader_url")},
+        })
+        usages[-1]["source"]["reader_url"] = (
+            f"/reader/{source['asset_id']}?page={source['page_start']}&revision={source['document_revision_id']}")
+    return {"configured": result["configured"], "revision_id": result["revision_id"],
+            "usages": usages, "unavailable_usage_count": max(0, len(confirmed) - len(usages))}
 
 
 def _move(items, item_id, data):

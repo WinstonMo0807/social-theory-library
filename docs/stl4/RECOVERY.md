@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-20 PDF45–49理论条目收口
+
+前置5f692ed，读THEORY_DETAILS_20261020。恢复公共理论投影/旧接口来源保护、content_placements用法、knowledge收藏与0016/privacy、概念/流派/旧主详情/总览、12张PDF装饰图、schema/生成类型及隔离用例。原两份理论dirty diff已备份并继承，legacy两源文件原件在tmp/theory-legacy-publication-before-20261020-171904；只按白名单保存本单元，其余历史成果保留。
+
+185路径是当前契约，不代表功能验收。0016与此前迁移均未应用，夹具与正式用例未执行。旧子栏目只是严格读取真实数据，尚需视觉统一；知识收藏只接受规范节点身份。后续50–57已实际读图，50/51/54优先；保持Subdiscipline独立身份，不创建同名节点，不把层级/精选/潜在关系从名称或数组顺序猜出来。
+
 ## 2026-10-20 Reader OCR状态接续
 
 前置0b6c010，读READER_OCR_STATUS_20261020。恢复reader_ocr新服务/serializer/view/urls、UI/hook/client/样式/当前页缩略、ReaderShell接线、schema及类型和用例。旧OCR执行/备份/入库脏文件不纳入。175路径/TS32523仅静态通过，真实OCR/队列/NAS/逐图未验收。后续PDF45–49已读原图，理论旧serializer/views未提交改动须继承；现有content_placements concept_usage可复用，不建平行用法表。

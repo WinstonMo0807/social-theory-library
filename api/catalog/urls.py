@@ -1,5 +1,6 @@
 from django.urls import path
 from .home_views import HomeView
+from .knowledge_citation_views import KnowledgeEntryCitationView
 from .parallel_views import ParallelVersionsView, ParallelSegmentsView, ParallelCandidatesView
 from .page_mapping_views import AdminPageMappingWorkspaceView
 from .feedback_views import AdminFeedbackDetailView, AdminFeedbackListView, PublicFeedbackView
@@ -568,6 +569,7 @@ urlpatterns = [
     path("about-blocks/", AboutPageBlockListView.as_view(), name="about-page-block-list"),
     path("knowledge-matrix/", KnowledgeMatrixView.as_view(), name="knowledge-matrix"),
     path("theory-system/overview/", TheorySystemOverviewView.as_view(), name="theory-system-overview"),
+    path("theory-system/nodes/<slug:slug>/citation/", KnowledgeEntryCitationView.as_view(), name="knowledge-entry-citation"),
     path("theory-system/nodes/", KnowledgeNodeListView.as_view(), name="knowledge-node-list"),
     path("theory-system/nodes/<slug:slug>/", KnowledgeNodeDetailView.as_view(), name="knowledge-node-detail"),
     path(

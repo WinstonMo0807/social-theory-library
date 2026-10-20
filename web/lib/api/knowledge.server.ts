@@ -31,7 +31,7 @@ export async function loadTheorySystemNodes(filters: {
   }
 }
 
-export async function loadTheorySystemNodesPage(filters: {type?: string; discipline?: string; q?: string; sort?: string}, page = 1): Promise<DirectoryPage<KnowledgeNodeListItem>> {
+export async function loadTheorySystemNodesPage(filters: {type?: string; discipline?: string; q?: string; sort?: string; has_works?: string}, page = 1): Promise<DirectoryPage<KnowledgeNodeListItem>> {
   const parameters = new URLSearchParams({page: String(page)});
   Object.entries(filters).forEach(([key, value]) => value && parameters.set(key, value));
   const payload = await serverRequest<Paginated<KnowledgeNodeListItem>>(`/catalog/theory-system/nodes/?${parameters}`);
@@ -43,8 +43,11 @@ export async function loadKnowledgeNode(slug: string): Promise<KnowledgeNodeDeta
     const payload = await serverRequest<KnowledgeNodeDetail>(
       `/catalog/theory-system/nodes/${encodeURIComponent(slug)}/`,
     );
-    const evidenceCuration = await serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/node/${payload.id}/`);
-    return { ...payload, evidenceCuration };
+    const [evidenceCuration, placements] = await Promise.all([
+      serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/node/${payload.id}/`),
+      serverRequest<{public_detail: NonNullable<KnowledgeNodeDetail["public_detail"]>}>(`/catalog/content-placements/node/${payload.id}/`),
+    ]);
+    return { ...payload, evidenceCuration, public_detail: placements.public_detail };
   } catch (error) {
     if (error instanceof ServerApiError && error.status === 404 && error.path === `/catalog/theory-system/nodes/${encodeURIComponent(slug)}/`) return null;
     throw error;

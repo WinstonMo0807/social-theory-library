@@ -34,6 +34,7 @@ from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView
 from .search_record_views import ReaderSearchRecordsView
+from .knowledge_save_views import KnowledgeSaveView
 from .parallel_views import (AdminParallelCalibrationViewSet, ParallelCalibrationViewSet,
                              ParallelReadingTaskViewSet, PublicParallelCalibrationViewSet)
 
@@ -64,6 +65,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("saved-knowledge/<uuid:node_id>/", KnowledgeSaveView.as_view(), name="saved-knowledge-node"),
     path("search-records/", ReaderSearchRecordsView.as_view(), name="reader-search-records"),
     path("citation-preview/", PublicCitationPreviewView.as_view(), name="public-citation-preview"),
     path("source-status/", PublicSourceStatusView.as_view(), name="public-source-status"),

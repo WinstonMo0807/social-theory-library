@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-20 PDF45–49理论条目收口
+
+概念用法继续使用现有content_placements账本与EvidenceSpan，不建平行用法或原文表。规范理论及兼容旧接口统一服从当前发布快照/文件/人物权限；UI只消费经复核的投影。Subdiscipline等独立分类身份继续保留。
+
+SavedKnowledgeNode只保存本人规范知识节点入口，KnowledgeSaveReceipt保存最小请求指纹与操作结果，删除收藏后保留防重放回执；隐私导出重验公开标题。0016未应用。理论网页条目引用与书籍原文引用分开，前端响应未知沿固定请求恢复，隐私写入核对固定owner且不自动刷新后重放。详见stl4/THEORY_DETAILS_20261020。
+
 ## 2026-10-20 Reader任务状态投影
 
 Reader OCR状态新增精确文件的安全投影，复用既有任务、current-page暂停、续跑、锁和AuditEvent回执，不另建Worker。源normalized和文字staging保持同PDF/hash不变量；公开内容以当前发布事件/修订激活为准，后台整包与未公开文字不进入公共响应。前端任务轮询独立于PDF，当前原页缩略直接复用画布，无第二次文件请求；管理读写能力分开。详见stl4/READER_OCR_STATUS_20261020。

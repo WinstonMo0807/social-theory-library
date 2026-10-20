@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
@@ -47,9 +48,11 @@ from catalog.services.relation_registry import (
 )
 from catalog.services.evidence_envelope import public_curated_claim_groups
 from catalog.services.semantic_search import viewer_access_statuses
+from catalog.services.publication_eligibility import active_catalog_snapshot, active_document_q, public_editions
 from catalog.services.scholar_publication import scholar_public_eligibility
-from catalog.services.timeline_evidence import TimelineEvidenceListSerializer, timeline_reader_href
+from catalog.services.timeline_evidence import TimelineEvidenceListSerializer, timeline_file, timeline_reader_href
 from catalog.serializers import TaxonomyImageSerializerMixin
+from catalog.media_views import PublicCoverMediaSerializer
 
 
 def _media_url(request, field):
@@ -78,26 +81,91 @@ def _viewer_asset_statuses(context) -> list[str]:
 
 def _public_evidence_queryset(context):
     return EvidenceSnippet.objects.filter(
+        active_document_q(asset_prefix="file"),
+        Q(node__isnull=True) | Q(node__status="published"),
+        Q(work_node_relation__isnull=True) | Q(
+            work_node_relation__status="published", work_node_relation__node__status="published",
+            work_node_relation__work_id=F("work_id"),
+        ),
+        Q(knowledge_relation__isnull=True) | Q(knowledge_relation__status="published", knowledge_relation__source_node__status="published", knowledge_relation__target_node__status="published"),
         review_status=RelationReviewStatus.APPROVED,
+        work_id=F("file__edition__work_id"),
+        file__edition_id__in=public_editions(require_fulltext=True).values("id"),
+        file__edition__active_catalog_revision__document_revision__asset_id=F("file_id"),
         file__kind=Asset.Kind.NORMALIZED,
         file__status=Asset.Status.READY,
-        file__is_current=True,
+        file__validation_status=Asset.ValidationStatus.VALID,
         file__access_status__in=_viewer_asset_statuses(context),
-        file__edition__state=PublicationState.PUBLISHED,
-    ).select_related("work", "file", "work_node_relation", "knowledge_relation")
+        page_number__gte=1,
+        page_number__lte=F("file__page_count"),
+        file__pages__index=F("page_number"),
+    ).exclude(file__file="").select_related(
+        "work", "file__edition__active_catalog_revision__document_revision",
+        "work_node_relation", "knowledge_relation",
+    )
 
 
 def _published_edition(work):
     return (
-        work.editions.filter(state=PublicationState.PUBLISHED)
-        .prefetch_related("contributions__person", "assets")
-        .order_by("-is_primary", "-publication_year")
+        public_editions().filter(work=work)
+        .order_by("-is_primary", "-published_at", "id")
         .first()
     )
 
 
 def compact_work(work, request=None, *, include_unpublished=False):
     edition = _published_edition(work)
+    snapshot = active_catalog_snapshot(edition)
+    if snapshot:
+        revision = edition.active_catalog_revision
+        work_data = snapshot.get("work") or {}
+        edition_data = snapshot.get("edition") or {}
+        asset = revision.reader_asset
+        if asset and not (
+            asset.edition_id == edition.pk
+            and asset.kind == Asset.Kind.NORMALIZED
+            and asset.status == Asset.Status.READY
+            and asset.validation_status == Asset.ValidationStatus.VALID
+            and asset.access_status in _viewer_asset_statuses({"request": request})
+            and asset.file
+        ):
+            asset = None
+        document_id = (
+            str(revision.document_revision_id)
+            if asset and revision.fulltext_ready and revision.document_revision_id
+            and revision.document_revision.asset_id == asset.pk else None
+        )
+        slug = str(edition_data.get("public_slug") or "")
+        reader_href = f"/reader/{asset.pk}" if asset else None
+        if reader_href and document_id:
+            reader_href += f"?revision={document_id}"
+        return {
+            "id": str(work.pk), "slug": slug,
+            "title": str(work_data.get("title") or ""),
+            "subtitle": str(work_data.get("subtitle") or ""),
+            "document_type": str(work_data.get("document_type") or ""),
+            "language": str(work_data.get("language") or ""),
+            "author": "、".join(
+                str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "")
+                for row in snapshot.get("contributions") or []
+                if isinstance(row, dict) and row.get("role") == "author"
+            ),
+            "year": edition_data.get("publication_year"),
+            "publisher": str(edition_data.get("publisher") or ""),
+            "cover_url": (
+                f"{reverse('public-work-cover', kwargs={'work_id': work.pk})}?edition_id={edition.pk}"
+                if work_data.get("cover") or work_data.get("cover_media") else ""
+            ),
+            "edition_id": str(edition.pk),
+            "catalog_revision_id": str(revision.pk),
+            "document_revision_id": document_id,
+            "source_status": "available" if asset else "unavailable",
+            "asset_id": str(asset.pk) if asset else None,
+            "reader_href": reader_href,
+            "detail_href": f"/works/{slug or edition.pk}",
+        }
+    if not include_unpublished:
+        return None
     if edition is None and include_unpublished:
         edition = work.editions.prefetch_related("contributions__person", "assets").order_by("-is_primary", "-created_at").first()
     if edition is None:
@@ -138,6 +206,43 @@ def compact_work(work, request=None, *, include_unpublished=False):
         "reader_href": f"/reader/{asset.id}" if asset and edition.state == PublicationState.PUBLISHED else None,
         "detail_href": f"/works/{edition.public_slug}" if edition.state == PublicationState.PUBLISHED and edition.public_slug else None,
     }
+
+
+class CompactTheoryWorkSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    slug = serializers.CharField(allow_blank=True)
+    title = serializers.CharField(allow_blank=True)
+    subtitle = serializers.CharField(allow_blank=True)
+    document_type = serializers.CharField(allow_blank=True)
+    language = serializers.CharField(allow_blank=True)
+    author = serializers.CharField(allow_blank=True)
+    year = serializers.IntegerField(allow_null=True)
+    publisher = serializers.CharField(allow_blank=True)
+    cover_url = serializers.CharField(allow_blank=True)
+    edition_id = serializers.UUIDField(required=False)
+    catalog_revision_id = serializers.UUIDField(required=False)
+    document_revision_id = serializers.UUIDField(allow_null=True, required=False)
+    source_status = serializers.CharField(required=False)
+    asset_id = serializers.UUIDField(allow_null=True)
+    reader_href = serializers.CharField(allow_null=True)
+    detail_href = serializers.CharField(allow_null=True)
+
+
+class TheoryTaxonomyLinkSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    foreign_name = serializers.CharField(required=False, allow_blank=True)
+    discipline_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class TheoryTimelineTargetSerializer(serializers.Serializer):
+    type = serializers.CharField()
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    relation_type = serializers.CharField()
+    slug = serializers.CharField(required=False, allow_blank=True)
+    detail_href = serializers.CharField(required=False, allow_null=True)
 
 
 class DisciplineCompactSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
@@ -207,6 +312,7 @@ class KnowledgeNodeSubdisciplineSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id",)
 
+    @extend_schema_field(TheoryTaxonomyLinkSerializer)
     def get_subdiscipline(self, obj):
         return {
             "id": str(obj.subdiscipline_id),
@@ -248,6 +354,7 @@ class KnowledgeNodeTopicSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id",)
 
+    @extend_schema_field(TheoryTaxonomyLinkSerializer)
     def get_topic(self, obj):
         return {
             "id": str(obj.topic_id),
@@ -289,10 +396,10 @@ class PersonNodeSerializer(serializers.ModelSerializer):
             "sort_order",
         )
 
-    def get_portrait_url(self, obj):
+    def get_portrait_url(self, obj) -> str:
         return _media_url(self.context.get("request"), obj.person.portrait)
 
-    def get_scholar_slug(self, obj):
+    def get_scholar_slug(self, obj) -> str:
         profile = getattr(obj.person, "scholar_profile", None)
         return (
             profile.slug
@@ -304,10 +411,11 @@ class PersonNodeSerializer(serializers.ModelSerializer):
 
 
 class EvidenceSnippetSerializer(serializers.ModelSerializer):
-    work_title = serializers.CharField(source="work.title", read_only=True)
+    work_title = serializers.SerializerMethodField()
     node_name = serializers.CharField(source="node.canonical_name_zh", read_only=True)
     relation_role = serializers.SerializerMethodField()
     reader_href = serializers.SerializerMethodField()
+    document_revision_id = serializers.SerializerMethodField()
 
     class Meta:
         model = EvidenceSnippet
@@ -331,17 +439,37 @@ class EvidenceSnippetSerializer(serializers.ModelSerializer):
             "semantic_confidence",
             "review_status",
             "reader_href",
+            "document_revision_id",
         )
 
-    def get_relation_role(self, obj):
+    def get_work_title(self, obj) -> str:
+        if self.context.get("include_unpublished_items"):
+            return obj.work.title
+        snapshot = active_catalog_snapshot(obj.file.edition)
+        return str((snapshot.get("work") or {}).get("title") or "")
+
+    def get_document_revision_id(self, obj) -> str | None:
+        revision = obj.file.edition.active_catalog_revision
+        if (
+            active_catalog_snapshot(obj.file.edition, require_fulltext=True)
+            and revision.reader_asset_id == obj.file_id
+            and revision.document_revision.asset_id == obj.file_id
+        ):
+            return str(revision.document_revision_id)
+        return None
+
+    def get_relation_role(self, obj) -> str:
         if obj.work_node_relation_id:
             return obj.work_node_relation.role
         if obj.knowledge_relation_id:
             return obj.knowledge_relation.relation_type
         return ""
 
-    def get_reader_href(self, obj):
+    def get_reader_href(self, obj) -> str:
         query = f"page={obj.page_number}&evidence={obj.id}"
+        document_id = self.get_document_revision_id(obj)
+        if document_id:
+            query += f"&revision={document_id}"
         return f"/reader/{obj.file_id}?{query}"
 
 
@@ -375,14 +503,26 @@ class WorkNodeRelationSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("reviewed_at", "created_at", "updated_at")
 
+    @extend_schema_field(CompactTheoryWorkSerializer(allow_null=True))
     def get_work_data(self, obj):
         return compact_work(obj.work, self.context.get("request"))
 
+    @extend_schema_field(EvidenceSnippetSerializer(many=True))
     def get_evidence(self, obj):
         queryset = _public_evidence_queryset(self.context).filter(
             work_node_relation=obj,
         )
         return EvidenceSnippetSerializer(queryset, many=True, context=self.context).data
+
+
+class TheoryWorkGroupsSerializer(serializers.Serializer):
+    foundational_work = WorkNodeRelationSerializer(many=True, required=False)
+    systematic_exposition = WorkNodeRelationSerializer(many=True, required=False)
+    theoretical_development = WorkNodeRelationSerializer(many=True, required=False)
+    empirical_application = WorkNodeRelationSerializer(many=True, required=False)
+    comparative_study = WorkNodeRelationSerializer(many=True, required=False)
+    critique = WorkNodeRelationSerializer(many=True, required=False)
+    general_mention = WorkNodeRelationSerializer(many=True, required=False)
 
 
 class KnowledgeRelationSerializer(serializers.ModelSerializer):
@@ -391,6 +531,7 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
     target_name = serializers.CharField(source="target_node.canonical_name_zh", read_only=True)
     target_slug = serializers.CharField(source="target_node.slug", read_only=True)
     relation_label = serializers.CharField(source="get_relation_type_display", read_only=True)
+    evidence = serializers.SerializerMethodField()
 
     class Meta:
         model = KnowledgeRelation
@@ -407,6 +548,7 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
             "direction",
             "description",
             "evidence_source",
+            "evidence",
             "confidence",
             "status",
             "published_at",
@@ -414,6 +556,11 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("published_at", "created_at", "updated_at")
+
+    @extend_schema_field(EvidenceSnippetSerializer(many=True))
+    def get_evidence(self, obj):
+        rows = _public_evidence_queryset(self.context).filter(knowledge_relation=obj)[:40]
+        return EvidenceSnippetSerializer(rows, many=True, context=self.context).data
 
     def validate(self, attrs):
         source = attrs.get("source_node", getattr(self.instance, "source_node", None))
@@ -473,7 +620,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
     primary_discipline = serializers.SerializerMethodField()
     parent = serializers.SerializerMethodField()
     related_disciplines = serializers.SerializerMethodField()
-    aliases_count = serializers.IntegerField(source="aliases.count", read_only=True)
+    aliases_count = serializers.SerializerMethodField()
     work_count = serializers.SerializerMethodField()
     relation_count = serializers.SerializerMethodField()
     representative_scholars = serializers.SerializerMethodField()
@@ -507,6 +654,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
+    @extend_schema_field(DisciplineCompactSerializer(allow_null=True))
     def get_primary_discipline(self, obj):
         discipline = obj.primary_discipline
         if discipline is None or (
@@ -516,13 +664,14 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
             return None
         return DisciplineCompactSerializer(discipline, context=self.context).data
 
-    def get_parent(self, obj):
+    def get_parent(self, obj) -> str | None:
         if obj.parent_id and (
             self.context.get("include_unpublished_items") or obj.parent.status == "published"
         ):
             return str(obj.parent_id)
         return None
 
+    @extend_schema_field(DisciplineCompactSerializer(many=True))
     def get_related_disciplines(self, obj):
         return DisciplineCompactSerializer(
             [
@@ -535,32 +684,39 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
             context=self.context,
         ).data
 
-    def get_work_count(self, obj):
+    def get_work_count(self, obj) -> int:
         return obj.work_relations.filter(
             status="published",
-            work__editions__state=PublicationState.PUBLISHED,
+            work_id__in=public_editions().values("work_id"),
         ).values("work_id").distinct().count()
 
-    def get_relation_count(self, obj):
+    def get_aliases_count(self, obj) -> int:
+        return sum(1 for row in obj.aliases.all()
+                   if row.is_verified or self.context.get("include_unpublished_items"))
+
+    def get_relation_count(self, obj) -> int:
         return (
-            obj.outgoing_relations.filter(status="published").count()
-            + obj.incoming_relations.filter(status="published").count()
+            obj.outgoing_relations.filter(status="published", target_node__status="published").count()
+            + obj.incoming_relations.filter(status="published", source_node__status="published").count()
         )
 
+    @extend_schema_field(PersonNodeSerializer(many=True))
     def get_representative_scholars(self, obj):
         queryset = obj.person_relations.filter(
             status="published",
             is_representative=True,
             person__authority_status=Person.AuthorityStatus.VERIFIED,
+            person__scholar_profile__editorial_status="published",
         ).select_related("person", "person__scholar_profile")[:5]
         return PersonNodeSerializer(queryset, many=True, context=self.context).data
 
-    def get_cover_url(self, obj):
+    def get_cover_url(self, obj) -> str:
         media = self.get_cover_media(obj)
         if media:
             return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
         from catalog.services.knowledge_media import image_media
         private = bool(self.context.get("include_unpublished_items"))
@@ -568,7 +724,7 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
 
 
 class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
-    aliases = KnowledgeNodeAliasSerializer(many=True, read_only=True)
+    aliases = serializers.SerializerMethodField()
     discipline_links = serializers.SerializerMethodField()
     subdiscipline_links = serializers.SerializerMethodField()
     topic_links = serializers.SerializerMethodField()
@@ -596,11 +752,19 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
             "published_at",
         )
 
+    @extend_schema_field(KnowledgeNodeAliasSerializer(many=True))
+    def get_aliases(self, obj):
+        rows = [row for row in obj.aliases.all()
+                if row.is_verified or self.context.get("include_unpublished_items")]
+        return KnowledgeNodeAliasSerializer(rows, many=True, context=self.context).data
+
+    @extend_schema_field(KnowledgeNodeDisciplineSerializer(many=True))
     def get_discipline_links(self, obj):
         rows = [row for row in obj.discipline_links.all() if row.status == "published"
                 and (self.context.get("include_unpublished_items") or row.discipline.editorial_status == "published")]
         return KnowledgeNodeDisciplineSerializer(rows, many=True, context=self.context).data
 
+    @extend_schema_field(KnowledgeNodeSubdisciplineSerializer(many=True))
     def get_subdiscipline_links(self, obj):
         rows = [
             row
@@ -614,6 +778,7 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
             context=self.context,
         ).data
 
+    @extend_schema_field(KnowledgeNodeTopicSerializer(many=True))
     def get_topic_links(self, obj):
         rows = [row for row in obj.topic_links.all() if row.status == "published"
                 and (self.context.get("include_unpublished_items") or row.topic.editorial_status == "published")]
@@ -623,6 +788,7 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
             context=self.context,
         ).data
 
+    @extend_schema_field(KnowledgeRelationSerializer(many=True))
     def get_direct_relations(self, obj):
         queryset = KnowledgeRelation.objects.filter(
             Q(source_node=obj) | Q(target_node=obj),
@@ -632,13 +798,14 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
         ).select_related("source_node", "target_node")[:24]
         return KnowledgeRelationSerializer(queryset, many=True, context=self.context).data
 
+    @extend_schema_field(TheoryWorkGroupsSerializer)
     def get_work_groups(self, obj):
         groups = {}
         for role, _label in WorkNodeRelation.Role.choices:
             queryset = obj.work_relations.filter(
                 role=role,
                 status="published",
-                work__editions__state=PublicationState.PUBLISHED,
+                work_id__in=public_editions().values("work_id"),
             ).select_related("work").distinct()[:12]
             if queryset:
                 groups[role] = WorkNodeRelationSerializer(
@@ -648,11 +815,12 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
                 ).data
         return groups
 
+    @extend_schema_field(EvidenceSnippetSerializer(many=True))
     def get_evidence(self, obj):
         queryset = _public_evidence_queryset(self.context).filter(node=obj)[:40]
         return EvidenceSnippetSerializer(queryset, many=True, context=self.context).data
 
-    def get_curated_claims(self, obj):
+    def get_curated_claims(self, obj) -> dict[str, list[dict]]:
         return public_curated_claim_groups(
             target_field="node",
             target_id=obj.id,
@@ -1085,6 +1253,7 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             "editorial_note",
         )
 
+    @extend_schema_field(CompactTheoryWorkSerializer(allow_null=True))
     def get_work_data(self, obj):
         return compact_work(
             obj.work, self.context.get("request"),
@@ -1135,12 +1304,13 @@ class ReadingPathSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("published_at", "created_at", "updated_at")
 
-    def get_cover_url(self, obj):
+    def get_cover_url(self, obj) -> str:
         media = self.get_cover_media(obj)
         if media:
             return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
         from catalog.services.knowledge_media import image_media
         private = bool(self.context.get("include_unpublished_items"))
@@ -1197,6 +1367,9 @@ class ReadingPathSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if self.context.get("include_unpublished_items"):
             return data
+        if instance.primary_discipline_id and instance.primary_discipline.editorial_status != "published":
+            data["primary_discipline"] = None
+            data["primary_discipline_data"] = None
         public_items = []
         public_stage_ids = set()
         for row in data.get("items", []):
@@ -1207,6 +1380,12 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             )
             if not (work_is_public or node_is_public):
                 continue
+            if not node_is_public:
+                row["node"] = None
+                row["node_data"] = None
+            if not work_is_public:
+                row["work"] = None
+                row["work_data"] = None
             public_items.append(row)
             if row.get("stage"):
                 public_stage_ids.add(str(row["stage"]))
@@ -1382,11 +1561,14 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
             "reader_href",
         )
 
+    @extend_schema_field(TheoryTimelineTargetSerializer(many=True))
     def get_relations(self, obj):
         rows = []
         for relation in obj.normalized_relations.all():
             target = None
             if relation.node_id:
+                if relation.node.status != "published":
+                    continue
                 target = {
                     "type": "node",
                     "id": str(relation.node_id),
@@ -1394,6 +1576,8 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
                     "slug": relation.node.slug,
                 }
             elif relation.discipline_id:
+                if relation.discipline.editorial_status != "published":
+                    continue
                 target = {
                     "type": "discipline",
                     "id": str(relation.discipline_id),
@@ -1410,14 +1594,32 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
                     "slug": relation.scholar.slug,
                 }
             elif relation.work_id:
+                work = compact_work(relation.work, self.context.get("request"))
+                if work is None:
+                    continue
                 target = {
                     "type": "work",
                     "id": str(relation.work_id),
-                    "name": relation.work.title,
+                    "name": work["title"],
+                    "slug": work["slug"],
+                    "detail_href": work["detail_href"],
                 }
             if target:
                 rows.append({"relation_type": relation.relation_type, **target})
         return rows
 
-    def get_reader_href(self, obj):
+    def get_reader_href(self, obj) -> str | None:
+        asset = timeline_file(obj, self.context)
+        if asset and asset.access_status not in _viewer_asset_statuses(self.context):
+            return None
         return timeline_reader_href(obj, self.context)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # A printed citation can stand alone. Text copied from an attached
+        # library file follows that exact file's current access boundary.
+        if instance.evidence_asset_id and not data.get("reader_href"):
+            data["evidence_text"] = ""
+            data["evidence_page"] = None
+            data["evidence_printed_label"] = ""
+        return data

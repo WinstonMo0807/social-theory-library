@@ -11,8 +11,10 @@ from catalog.models import (
     Discipline,
     Edition,
     KnowledgeNode,
+    KnowledgeNodeAlias,
     LegacyKnowledgeMapping,
     Person,
+    PersonNodeRelation,
     QueryLexiconEntry,
     QueryLexiconState,
     ReadingPath,
@@ -320,6 +322,11 @@ class SearchService:
         if not query:
             return queryset.order_by(*_order_for_context(context))
         canonical, descriptive = _fields_for_context(context)
+        public_theories = context == SearchContext.THEORIES and visibility == SearchVisibility.PUBLIC
+        if public_theories:
+            # Candidate aliases and private scholar profiles are editorial
+            # inputs, not public ways of discovering a published theory.
+            descriptive = ("summary", "definition")
         if context == SearchContext.WORKS and visibility == SearchVisibility.PUBLIC:
             # Current Work rows may already contain the next editorial revision.
             # Public search must continue to match the activated snapshot until
@@ -337,6 +344,18 @@ class SearchService:
         prefix_q = _lookup_q(canonical, "istartswith", query)
         contains_q = _lookup_q((*canonical, *descriptive), "icontains", query)
         alias_q = Q(pk__in=[])
+        if public_theories:
+            verified_aliases = KnowledgeNodeAlias.objects.filter(
+                Q(alias__icontains=query) | Q(normalized_alias__icontains=normalize_term(query)),
+                is_verified=True,
+            ).values("node_id")
+            representatives = PersonNodeRelation.objects.filter(
+                Q(person__preferred_name__icontains=query) | Q(person__original_name__icontains=query),
+                status="published", is_representative=True,
+                person__authority_status=Person.AuthorityStatus.VERIFIED,
+                person__scholar_profile__editorial_status="published",
+            ).values("node_id")
+            contains_q |= Q(pk__in=verified_aliases) | Q(pk__in=representatives)
         entity_type = _entity_type_for_context(context)
         if entity_type:
             ids = _lexicon_entity_ids(

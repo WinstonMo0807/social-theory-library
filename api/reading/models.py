@@ -272,3 +272,4 @@ from .source_models import SourceFollow, SourceFollowEvent  # noqa: E402,F401
 from .research_models import (CitationAudit, PersonalReadingPlan, ReaderDataOperation, ReaderSearchRecord,
                               ResearchMemory, ResearchProject, ResearchTurn)  # noqa: E402,F401
 from .parallel_models import ParallelCalibration, ParallelReadingReceipt, ParallelReadingTask  # noqa: E402,F401
+from .knowledge_models import KnowledgeSaveReceipt, SavedKnowledgeNode  # noqa: E402,F401

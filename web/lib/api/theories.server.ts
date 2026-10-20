@@ -64,19 +64,25 @@ export async function loadTheorySchoolPage(
   }
 }
 
-export async function loadTheoryEntity(slug: string): Promise<ApiTheorySchool | null> {
+export async function loadTheoryEntity(
+  slug: string,
+  { strict = false }: { strict?: boolean } = {},
+): Promise<ApiTheorySchool | null> {
   try {
     return await serverRequest<ApiTheorySchool>(
       `/catalog/theory-schools/${encodeURIComponent(slug)}/`,
     );
   } catch (error) {
     if (error instanceof ServerApiError && error.status === 404) return null;
-    if (!allowDemoFallback) throw error;
+    if (strict || !allowDemoFallback) throw error;
     return null;
   }
 }
 
-export async function loadTheorySchool(slug: string): Promise<{
+export async function loadTheorySchool(
+  slug: string,
+  { strict = false }: { strict?: boolean } = {},
+): Promise<{
   school: TheorySchool;
   works: Work[];
   scholars: Scholar[];
@@ -135,7 +141,8 @@ export async function loadTheorySchool(slug: string): Promise<{
       },
     };
   } catch (error) {
-    if (!allowDemoFallback) throw error;
+    if (strict && error instanceof ServerApiError && error.status === 404) return null;
+    if (strict || !allowDemoFallback) throw error;
     const school = demoTheorySchools.find((item) => item.slug === slug);
     return school
       ? {

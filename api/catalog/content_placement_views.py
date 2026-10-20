@@ -117,6 +117,36 @@ class PlacementHistoryPageSerializer(PlacementSourcesPageSerializer):
     results = PlacementHistoryItemSerializer(many=True)
 
 
+class PublicConceptAuthorSerializer(PlacementUsageAuthorSerializer):
+    original_name = serializers.CharField(allow_blank=True)
+    birth_year = serializers.IntegerField(allow_null=True)
+    death_year = serializers.IntegerField(allow_null=True)
+    portrait_url = serializers.CharField(allow_blank=True)
+    scholar_slug = serializers.CharField(allow_blank=True)
+
+
+class PublicConceptUsageSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    term = serializers.CharField()
+    language = serializers.CharField(allow_blank=True)
+    usage_type = serializers.CharField()
+    interpretation = serializers.CharField(allow_blank=True)
+    attribution_note = serializers.CharField()
+    title = serializers.CharField(allow_blank=True)
+    explanatory_object = serializers.CharField(allow_blank=True)
+    period = serializers.CharField(allow_blank=True)
+    context = serializers.CharField(allow_blank=True)
+    author = PublicConceptAuthorSerializer(allow_null=True)
+    source = PlacementSourceSerializer()
+
+
+class PublicConceptDetailSerializer(serializers.Serializer):
+    configured = serializers.BooleanField()
+    revision_id = serializers.UUIDField(allow_null=True)
+    usages = PublicConceptUsageSerializer(many=True)
+    unavailable_usage_count = serializers.IntegerField(min_value=0)
+
+
 class PlacementReadSerializer(serializers.Serializer):
     schema_version = serializers.IntegerField()
     page_type = serializers.CharField()
@@ -137,6 +167,7 @@ class PlacementReadSerializer(serializers.Serializer):
     title = serializers.CharField(required=False)
     replayed = serializers.BooleanField(required=False)
     applied_revision_id = serializers.UUIDField(required=False)
+    public_detail = PublicConceptDetailSerializer(required=False)
 
 
 def _page(request, rows, serialize):

@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-20 PDF45–49理论条目收口
+
+既有content-placements/node/{id}公开响应新增public_detail：确认用法、真实归属、title/explanatory_object/period/context以及准确span/asset/document_revision/page/reader_url；来源失效只计unavailable_usage_count，不回旧正文。规范理论公开书目增加edition_id/document_revision_id/source_status，关系增加逐项复核evidence；has_works在分页前过滤。
+
+新增catalog/theory-system/nodes/{slug}/citation提供当前公开网页条目引用；reading/saved-knowledge/{node_id} GET/POST要求本人X-Reader-Owner。POST为saved/expected_version/request_id，GET可按原request_id查本人回执；同nonce不同内容409，旧已应用回执不重建删除记录。privacy新增saved_knowledge全链；前端隐私写入固定owner且不自动重放401。0016未应用。
+
+旧TheorySchool关系/旧图谱/旧时间轴也在读回时核对当前版本、文件/作品归属、页和访问范围。无可核定位的旧层级原文不公开；明确后台预览保持权限内信息。185路径保留此前175路径，OpenAPI/TypeScript同步；详细语义见THEORY_DETAILS_20261020。
+
 ## 2026-10-20 Reader OCR状态
 
 GET/POST distribution/assets/{asset_id}/ocr-status提供安全状态及pause/resume；GET的request_id只查本人已发命令。普通GET仍按当前文件权限；写/查回要求管理能力、X-Reader-Owner、固定nonce、job_id/job_version、source_sha256及document_revision_id。job_version原样回传，不能重格式化时间。已处理内容分unavailable/awaiting_publication/published/admin_preview；没有公开OCR正文。新增1路径至175，原174保留，无新迁移，详见READER_OCR_STATUS_20261020。

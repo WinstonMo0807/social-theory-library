@@ -5782,6 +5782,423 @@
                 }
             }
         },
+        "/api/catalog/theory-system/graph/": {
+            "get": {
+                "operationId": "catalog_theory_system_graph_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalTheoryGraph"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/nodes/": {
+            "get": {
+                "operationId": "catalog_theory_system_nodes_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedKnowledgeNodeListList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/nodes/{slug}/": {
+            "get": {
+                "operationId": "catalog_theory_system_nodes_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeNodeDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/nodes/{slug}/citation/": {
+            "get": {
+                "operationId": "catalog_theory_system_nodes_citation_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeEntryCitation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/overview/": {
+            "get": {
+                "operationId": "catalog_theory_system_overview_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheorySystemOverview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/reading-paths/": {
+            "get": {
+                "operationId": "catalog_theory_system_reading_paths_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedReadingPathList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/reading-paths/{slug}/": {
+            "get": {
+                "operationId": "catalog_theory_system_reading_paths_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/timeline/": {
+            "get": {
+                "operationId": "catalog_theory_system_timeline_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedNormalizedTimelineEventList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-system/timeline/{id}/": {
+            "get": {
+                "operationId": "theory_system_timeline_detail",
+                "description": "Stable event links reuse the public timeline's visibility and serializer.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedNormalizedTimelineEventList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/works/": {
             "get": {
                 "operationId": "catalog_works_list",
@@ -6286,6 +6703,14 @@
                 "operationId": "distribution_assets_ocr_status_retrieve",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "当前账户 ID；普通读取可省略，传入时必须匹配当前登录账户。"
+                    },
+                    {
                         "in": "path",
                         "name": "asset_id",
                         "schema": {
@@ -6300,7 +6725,7 @@
                         "schema": {
                             "type": "string"
                         },
-                        "description": "仅管理账户使用：查回本人固定命令回执。"
+                        "description": "仅管理账户使用：查回本人固定命令回执，必须同时传 X-Reader-Owner。"
                     }
                 ],
                 "tags": [
@@ -6331,6 +6756,15 @@
             "post": {
                 "operationId": "distribution_assets_ocr_status_create",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "固定为发起本次命令的当前账户 ID。",
+                        "required": true
+                    },
                     {
                         "in": "path",
                         "name": "asset_id",
@@ -12009,6 +12443,125 @@
                 }
             }
         },
+        "/api/reading/saved-knowledge/{node_id}/": {
+            "get": {
+                "operationId": "reading_saved_knowledge_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeSaveOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_saved_knowledge_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeSaveCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeSaveCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeSaveCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeSaveOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/search-records/": {
             "get": {
                 "operationId": "reading_search_records_retrieve",
@@ -12439,6 +12992,17 @@
                     "summary",
                     "upcoming"
                 ]
+            },
+            "AliasTypeEnum": {
+                "enum": [
+                    "alias",
+                    "translation",
+                    "abbreviation",
+                    "historical",
+                    "transliteration"
+                ],
+                "type": "string",
+                "description": "* `alias` - 别名\n* `translation` - 译名\n* `abbreviation` - 简称\n* `historical` - 历史名称\n* `transliteration` - 音译"
             },
             "AnalysisDecisionInputActionEnum": {
                 "enum": [
@@ -14078,10 +14642,11 @@
                     "notes",
                     "plans",
                     "audits",
-                    "source_follows"
+                    "source_follows",
+                    "saved_knowledge"
                 ],
                 "type": "string",
-                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows"
+                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
             },
             "ChangeEnum": {
                 "enum": [
@@ -14238,6 +14803,87 @@
                     "source_id",
                     "status",
                     "units"
+                ]
+            },
+            "CompactTheoryWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "type": "string"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail_href": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "author",
+                    "cover_url",
+                    "detail_href",
+                    "document_type",
+                    "id",
+                    "language",
+                    "publisher",
+                    "reader_href",
+                    "slug",
+                    "subtitle",
+                    "title",
+                    "year"
                 ]
             },
             "ComparisonCellInputRequest": {
@@ -14729,14 +15375,47 @@
                 "type": "string",
                 "description": "* `accepted` - accepted\n* `ignored` - ignored\n* `corrected` - corrected\n* `needs_review` - needs_review"
             },
-            "DirectionEnum": {
-                "enum": [
-                    "directed",
-                    "bidirectional",
-                    "undirected"
-                ],
-                "type": "string",
-                "description": "* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
+            "DisciplineCompact": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "maxLength": 80,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "foreign_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
+                    "name",
+                    "slug"
+                ]
             },
             "DiscoveryAttribution": {
                 "type": "object",
@@ -16181,6 +16860,24 @@
                 "type": "string",
                 "description": "* `tradition` - 理论传统\n* `school` - 流派\n* `branch` - 分支"
             },
+            "EventTypeEnum": {
+                "enum": [
+                    "scholar",
+                    "publication",
+                    "concept_proposed",
+                    "school_formation",
+                    "debate",
+                    "institution",
+                    "theoretical_turn",
+                    "translation",
+                    "china_reception",
+                    "institutionalization",
+                    "formation",
+                    "development"
+                ],
+                "type": "string",
+                "description": "* `scholar` - 学者\n* `publication` - 重要发表\n* `concept_proposed` - 理论概念提出\n* `school_formation` - 学派形成\n* `debate` - 争论\n* `institution` - 机构\n* `theoretical_turn` - 理论转向\n* `translation` - 重要译介\n* `china_reception` - 进入中国学界\n* `institutionalization` - 学科制度化\n* `formation` - 形成\n* `development` - 发展"
+            },
             "EvidenceAnchorInputRequest": {
                 "type": "object",
                 "properties": {
@@ -16324,6 +17021,109 @@
                     }
                 }
             },
+            "EvidenceSnippet": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "node_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "work_node_relation": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "knowledge_relation": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "relation_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "page_number": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "bounding_box": {},
+                    "extraction_method": {
+                        "$ref": "#/components/schemas/ExtractionMethodEnum"
+                    },
+                    "ocr_confidence": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "semantic_confidence": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "review_status": {
+                        "$ref": "#/components/schemas/ReviewStatusEnum"
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "document_revision_id",
+                    "file",
+                    "id",
+                    "node_name",
+                    "page_number",
+                    "quote",
+                    "reader_href",
+                    "relation_role",
+                    "work",
+                    "work_title"
+                ]
+            },
             "ExtensionEnum": {
                 "enum": [
                     "pdf",
@@ -16332,6 +17132,16 @@
                 ],
                 "type": "string",
                 "description": "* `pdf` - pdf\n* `docx` - docx\n* `tiff` - tiff"
+            },
+            "ExtractionMethodEnum": {
+                "enum": [
+                    "text_layer",
+                    "ocr",
+                    "manual",
+                    "external"
+                ],
+                "type": "string",
+                "description": "* `text_layer` - PDF 文本层\n* `ocr` - OCR\n* `manual` - 人工录入\n* `external` - 外部来源"
             },
             "FeedbackCounts": {
                 "type": "object",
@@ -17607,6 +18417,50 @@
                     "work_id"
                 ]
             },
+            "KnowledgeEntryCitation": {
+                "type": "object",
+                "properties": {
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "accessed_on": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accessed_on",
+                    "node_id",
+                    "notice",
+                    "published_at",
+                    "text",
+                    "title",
+                    "updated_at",
+                    "url"
+                ]
+            },
             "KnowledgeImageRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -17675,6 +18529,760 @@
                     "object_id",
                     "object_type",
                     "preview_url"
+                ]
+            },
+            "KnowledgeNodeAlias": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "alias": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "alias_type": {
+                        "$ref": "#/components/schemas/AliasTypeEnum"
+                    },
+                    "normalized_alias": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "alias",
+                    "id",
+                    "normalized_alias"
+                ]
+            },
+            "KnowledgeNodeDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/NodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "parent": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "primary_discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "related_disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DisciplineCompact"
+                        },
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "aliases_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "work_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "relation_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "representative_scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonNode"
+                        },
+                        "readOnly": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeAlias"
+                        },
+                        "readOnly": true
+                    },
+                    "discipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeDiscipline"
+                        },
+                        "readOnly": true
+                    },
+                    "subdiscipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeSubdiscipline"
+                        },
+                        "readOnly": true
+                    },
+                    "topic_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeTopic"
+                        },
+                        "readOnly": true
+                    },
+                    "definition": {
+                        "type": "string"
+                    },
+                    "basic_propositions": {},
+                    "theoretical_boundary": {
+                        "type": "string"
+                    },
+                    "direct_relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeRelation"
+                        },
+                        "readOnly": true
+                    },
+                    "work_groups": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TheoryWorkGroups"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceSnippet"
+                        },
+                        "readOnly": true
+                    },
+                    "curated_claims": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "readOnly": true
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "aliases",
+                    "aliases_count",
+                    "basic_propositions",
+                    "canonical_name_zh",
+                    "cover_media",
+                    "cover_url",
+                    "curated_claims",
+                    "definition",
+                    "direct_relations",
+                    "discipline_links",
+                    "evidence",
+                    "id",
+                    "node_type",
+                    "parent",
+                    "primary_discipline",
+                    "related_disciplines",
+                    "relation_count",
+                    "representative_scholars",
+                    "slug",
+                    "subdiscipline_links",
+                    "theoretical_boundary",
+                    "topic_links",
+                    "updated_at",
+                    "work_count",
+                    "work_groups"
+                ]
+            },
+            "KnowledgeNodeDiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeNodeDisciplineRelationTypeEnum"
+                    },
+                    "discipline_specific_summary": {
+                        "type": "string"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "discipline",
+                    "id"
+                ]
+            },
+            "KnowledgeNodeDisciplineRelationTypeEnum": {
+                "enum": [
+                    "primary",
+                    "related",
+                    "transferred"
+                ],
+                "type": "string",
+                "description": "* `primary` - 主要学科\n* `related` - 关联学科\n* `transferred` - 跨学科传播"
+            },
+            "KnowledgeNodeList": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/NodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "parent": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "primary_discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "related_disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DisciplineCompact"
+                        },
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "aliases_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "work_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "relation_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "representative_scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonNode"
+                        },
+                        "readOnly": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "aliases_count",
+                    "canonical_name_zh",
+                    "cover_media",
+                    "cover_url",
+                    "id",
+                    "node_type",
+                    "parent",
+                    "primary_discipline",
+                    "related_disciplines",
+                    "relation_count",
+                    "representative_scholars",
+                    "slug",
+                    "updated_at",
+                    "work_count"
+                ]
+            },
+            "KnowledgeNodeSubdiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "subdiscipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TheoryTaxonomyLink"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "relation_role": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "subdiscipline"
+                ]
+            },
+            "KnowledgeNodeTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "topic": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TheoryTaxonomyLink"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "relation_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "topic"
+                ]
+            },
+            "KnowledgePublicationStatusEnum": {
+                "enum": [
+                    "draft",
+                    "pending",
+                    "published",
+                    "rejected",
+                    "archived"
+                ],
+                "type": "string",
+                "description": "* `draft` - 草稿\n* `pending` - 待审核\n* `published` - 已发布\n* `rejected` - 已拒绝\n* `archived` - 已归档"
+            },
+            "KnowledgeRelation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeRelationRelationTypeEnum"
+                    },
+                    "relation_label": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceSnippet"
+                        },
+                        "readOnly": true
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "evidence",
+                    "id",
+                    "published_at",
+                    "relation_label",
+                    "relation_type",
+                    "source_name",
+                    "source_node",
+                    "source_slug",
+                    "target_name",
+                    "target_node",
+                    "target_slug",
+                    "updated_at"
+                ]
+            },
+            "KnowledgeRelationDirectionEnum": {
+                "enum": [
+                    "directed",
+                    "undirected"
+                ],
+                "type": "string",
+                "description": "* `directed` - 有方向\n* `undirected` - 无方向"
+            },
+            "KnowledgeRelationRelationTypeEnum": {
+                "enum": [
+                    "inherited_from",
+                    "revises",
+                    "extends",
+                    "criticizes",
+                    "responds_to",
+                    "competes_with",
+                    "synthesizes",
+                    "branches_from",
+                    "borrows_concept_from",
+                    "transferred_to",
+                    "influenced_by",
+                    "overlaps_with"
+                ],
+                "type": "string",
+                "description": "* `inherited_from` - 继承\n* `revises` - 修正\n* `extends` - 扩展\n* `criticizes` - 批判\n* `responds_to` - 回应\n* `competes_with` - 竞争\n* `synthesizes` - 综合\n* `branches_from` - 分化\n* `borrows_concept_from` - 概念借用\n* `transferred_to` - 跨学科传播\n* `influenced_by` - 受到影响\n* `overlaps_with` - 部分重叠"
+            },
+            "KnowledgeSaveCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "request_id",
+                    "saved"
+                ]
+            },
+            "KnowledgeSaveNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "node_type",
+                    "slug",
+                    "title"
+                ]
+            },
+            "KnowledgeSaveOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "record_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "node": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KnowledgeSaveNode"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KnowledgeSaveReceiptOutput"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "node",
+                    "node_id",
+                    "owner_id",
+                    "receipt",
+                    "record_id",
+                    "saved",
+                    "version"
+                ]
+            },
+            "KnowledgeSaveReceiptOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied_saved": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "applied_saved",
+                    "request_id"
                 ]
             },
             "LanguagesEnum": {
@@ -18144,6 +19752,135 @@
                     "slug",
                     "subdisciplines",
                     "work_count"
+                ]
+            },
+            "LocalTheoryGraph": {
+                "type": "object",
+                "properties": {
+                    "center": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalTheoryGraphNode"
+                        }
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalTheoryGraphEdge"
+                        }
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "maximum": 2,
+                        "minimum": 1
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "maximum": 30,
+                        "minimum": 1
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "center",
+                    "edges",
+                    "nodes",
+                    "truncated"
+                ]
+            },
+            "LocalTheoryGraphEdge": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "type": "string"
+                    },
+                    "relation_type": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceSnippet"
+                        }
+                    }
+                },
+                "required": [
+                    "direction",
+                    "id",
+                    "relation_label",
+                    "relation_type",
+                    "source",
+                    "target"
+                ]
+            },
+            "LocalTheoryGraphNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "foreign_name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "period_label": {
+                        "type": "string"
+                    },
+                    "is_center": {
+                        "type": "boolean"
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CompactTheoryWork"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "name"
                 ]
             },
             "MappingAsset": {
@@ -19858,6 +21595,94 @@
                     "workbench_url"
                 ]
             },
+            "NodeTypeEnum": {
+                "enum": [
+                    "discipline",
+                    "theory_tradition",
+                    "subdiscipline",
+                    "concept",
+                    "debate",
+                    "research_problem",
+                    "topic"
+                ],
+                "type": "string",
+                "description": "* `discipline` - 学科\n* `theory_tradition` - 理论传统\n* `subdiscipline` - 子学科\n* `concept` - 核心概念\n* `debate` - 理论争论\n* `research_problem` - 研究问题\n* `topic` - 主题"
+            },
+            "NormalizedTimelineEvent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TheoryTimelineTarget"
+                        },
+                        "readOnly": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "id",
+                    "reader_href",
+                    "relations",
+                    "title"
+                ]
+            },
             "OCRCommandActionEnum": {
                 "enum": [
                     "save",
@@ -20626,6 +22451,37 @@
                     }
                 }
             },
+            "PaginatedKnowledgeNodeListList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeList"
+                        }
+                    }
+                }
+            },
             "PaginatedMemoryListOutputList": {
                 "type": "object",
                 "required": [
@@ -20653,6 +22509,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/MemoryListOutput"
+                        }
+                    }
+                }
+            },
+            "PaginatedNormalizedTimelineEventList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NormalizedTimelineEvent"
                         }
                     }
                 }
@@ -20839,6 +22726,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/ReadingHistory"
+                        }
+                    }
+                }
+            },
+            "PaginatedReadingPathList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPath"
                         }
                     }
                 }
@@ -23081,6 +24999,62 @@
                     "fingerprint"
                 ]
             },
+            "PersonNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "original_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "portrait_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "scholar_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "relation_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "is_representative": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    }
+                },
+                "required": [
+                    "birth_year",
+                    "death_year",
+                    "id",
+                    "name",
+                    "original_name",
+                    "portrait_url",
+                    "scholar_slug"
+                ]
+            },
             "PersonResolutionSummary": {
                 "type": "object",
                 "properties": {
@@ -23361,6 +25335,9 @@
                     "applied_revision_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "public_detail": {
+                        "$ref": "#/components/schemas/PublicConceptDetail"
                     }
                 },
                 "required": [
@@ -24127,7 +26104,7 @@
                         "items": {
                             "$ref": "#/components/schemas/CategoriesEnum"
                         },
-                        "maxItems": 5
+                        "maxItems": 6
                     },
                     "targets": {
                         "type": "array",
@@ -24366,10 +26343,11 @@
                     "parallel_alignments",
                     "plans",
                     "followed_topics",
-                    "source_follows"
+                    "source_follows",
+                    "saved_knowledge"
                 ],
                 "type": "string",
-                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows"
+                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
@@ -24797,6 +26775,134 @@
                 ],
                 "type": "string",
                 "description": "* `ready` - ready\n* `empty` - empty\n* `partial` - partial\n* `unavailable` - unavailable"
+            },
+            "PublicConceptAuthor": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    },
+                    "scholar_slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "birth_year",
+                    "death_year",
+                    "id",
+                    "name",
+                    "original_name",
+                    "portrait_url",
+                    "scholar_slug"
+                ]
+            },
+            "PublicConceptDetail": {
+                "type": "object",
+                "properties": {
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "usages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicConceptUsage"
+                        }
+                    },
+                    "unavailable_usage_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "configured",
+                    "revision_id",
+                    "unavailable_usage_count",
+                    "usages"
+                ]
+            },
+            "PublicConceptUsage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "term": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "usage_type": {
+                        "type": "string"
+                    },
+                    "interpretation": {
+                        "type": "string"
+                    },
+                    "attribution_note": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "explanatory_object": {
+                        "type": "string"
+                    },
+                    "period": {
+                        "type": "string"
+                    },
+                    "context": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicConceptAuthor"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/PlacementSource"
+                    }
+                },
+                "required": [
+                    "attribution_note",
+                    "author",
+                    "context",
+                    "explanatory_object",
+                    "id",
+                    "interpretation",
+                    "language",
+                    "period",
+                    "source",
+                    "term",
+                    "title",
+                    "usage_type"
+                ]
             },
             "PublicContributionSnapshot": {
                 "type": "object",
@@ -26833,6 +28939,259 @@
                     }
                 }
             },
+            "ReadingPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "audience": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "difficulty": {
+                        "$ref": "#/components/schemas/ReadingPathDifficultyEnum"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "stages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathStage"
+                        },
+                        "readOnly": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathItem"
+                        }
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover_media",
+                    "cover_url",
+                    "created_at",
+                    "id",
+                    "primary_discipline_data",
+                    "published_at",
+                    "slug",
+                    "stages",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "ReadingPathDifficultyEnum": {
+                "enum": [
+                    "beginner",
+                    "intermediate",
+                    "advanced"
+                ],
+                "type": "string",
+                "description": "* `beginner` - 入门\n* `intermediate` - 进阶\n* `advanced` - 深入"
+            },
+            "ReadingPathItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "stage": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "stage_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReadingPathStage"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "stage_name": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "stage_description": {
+                        "type": "string"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "node_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KnowledgeNodeList"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CompactTheoryWork"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "recommendation_reason": {
+                        "type": "string"
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "reading_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "is_required": {
+                        "type": "boolean"
+                    },
+                    "editorial_note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "node_data",
+                    "stage_data",
+                    "stage_name",
+                    "work_data"
+                ]
+            },
+            "ReadingPathStage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "name",
+                    "updated_at"
+                ]
+            },
             "ReadingProgress": {
                 "type": "object",
                 "properties": {
@@ -27135,18 +29494,6 @@
                     "title"
                 ]
             },
-            "RelationTypeEnum": {
-                "enum": [
-                    "teaching",
-                    "cooperation",
-                    "influence",
-                    "criticism",
-                    "comparative_reading",
-                    "other"
-                ],
-                "type": "string",
-                "description": "* `teaching` - teaching\n* `cooperation` - cooperation\n* `influence` - influence\n* `criticism` - criticism\n* `comparative_reading` - comparative_reading\n* `other` - other"
-            },
             "ResearchAccountCountsOutput": {
                 "type": "object",
                 "properties": {
@@ -27253,6 +29600,28 @@
                 ],
                 "type": "string",
                 "description": "* `library` - library\n* `works` - works\n* `passages` - passages\n* `filtered` - filtered"
+            },
+            "ReviewStatusEnum": {
+                "enum": [
+                    "suggested",
+                    "approved",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `suggested` - 系统建议\n* `approved` - 人工确认\n* `rejected` - 人工拒绝"
+            },
+            "RoleEnum": {
+                "enum": [
+                    "foundational_work",
+                    "systematic_exposition",
+                    "theoretical_development",
+                    "empirical_application",
+                    "comparative_study",
+                    "critique",
+                    "general_mention"
+                ],
+                "type": "string",
+                "description": "* `foundational_work` - 奠基性原著\n* `systematic_exposition` - 系统阐释\n* `theoretical_development` - 理论发展\n* `empirical_application` - 经验应用\n* `comparative_study` - 比较研究\n* `critique` - 批评反思\n* `general_mention` - 一般提及"
             },
             "SavedIssueList": {
                 "type": "object",
@@ -27444,10 +29813,10 @@
                         "readOnly": true
                     },
                     "relation_type": {
-                        "$ref": "#/components/schemas/RelationTypeEnum"
+                        "$ref": "#/components/schemas/ScholarRelationRelationTypeEnum"
                     },
                     "direction": {
-                        "$ref": "#/components/schemas/DirectionEnum"
+                        "$ref": "#/components/schemas/ScholarRelationDirectionEnum"
                     },
                     "summary": {
                         "type": "string"
@@ -27483,6 +29852,15 @@
                     "target_slug"
                 ]
             },
+            "ScholarRelationDirectionEnum": {
+                "enum": [
+                    "directed",
+                    "bidirectional",
+                    "undirected"
+                ],
+                "type": "string",
+                "description": "* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
+            },
             "ScholarRelationPage": {
                 "type": "object",
                 "properties": {
@@ -27511,6 +29889,18 @@
                     "results"
                 ]
             },
+            "ScholarRelationRelationTypeEnum": {
+                "enum": [
+                    "teaching",
+                    "cooperation",
+                    "influence",
+                    "criticism",
+                    "comparative_reading",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `teaching` - teaching\n* `cooperation` - cooperation\n* `influence` - influence\n* `criticism` - criticism\n* `comparative_reading` - comparative_reading\n* `other` - other"
+            },
             "ScholarRelationRequest": {
                 "type": "object",
                 "properties": {
@@ -27523,10 +29913,10 @@
                         "format": "uuid"
                     },
                     "relation_type": {
-                        "$ref": "#/components/schemas/RelationTypeEnum"
+                        "$ref": "#/components/schemas/ScholarRelationRelationTypeEnum"
                     },
                     "direction": {
-                        "$ref": "#/components/schemas/DirectionEnum"
+                        "$ref": "#/components/schemas/ScholarRelationDirectionEnum"
                     },
                     "summary": {
                         "type": "string"
@@ -28639,6 +31029,15 @@
                     "proposition"
                 ]
             },
+            "StrengthEnum": {
+                "enum": [
+                    "high",
+                    "medium",
+                    "low"
+                ],
+                "type": "string",
+                "description": "* `high` - 高\n* `medium` - 中\n* `low` - 低"
+            },
             "SubclaimInputRequest": {
                 "type": "object",
                 "properties": {
@@ -28711,6 +31110,248 @@
                 ],
                 "type": "string",
                 "description": "* `none` - 尚无文字\n* `embedded` - PDF 原生文本\n* `ocr` - OCR\n* `hybrid` - 混合"
+            },
+            "TheoryBrowseCounts": {
+                "type": "object",
+                "properties": {
+                    "theory_traditions": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "subdisciplines": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "debates": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "debates",
+                    "subdisciplines",
+                    "theory_traditions"
+                ]
+            },
+            "TheoryOverviewDiscipline": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "maxLength": 80,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "foreign_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                },
+                "required": [
+                    "code",
+                    "counts",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "TheoryRecent": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeList"
+                        }
+                    },
+                    "timeline_events": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NormalizedTimelineEvent"
+                        }
+                    },
+                    "work_relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    }
+                },
+                "required": [
+                    "nodes",
+                    "timeline_events",
+                    "work_relations"
+                ]
+            },
+            "TheorySystemOverview": {
+                "type": "object",
+                "properties": {
+                    "disciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TheoryOverviewDiscipline"
+                        }
+                    },
+                    "featured_nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeList"
+                        }
+                    },
+                    "browse": {
+                        "$ref": "#/components/schemas/TheoryBrowseCounts"
+                    },
+                    "reading_paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPath"
+                        }
+                    },
+                    "recent": {
+                        "$ref": "#/components/schemas/TheoryRecent"
+                    }
+                },
+                "required": [
+                    "browse",
+                    "disciplines",
+                    "featured_nodes",
+                    "reading_paths",
+                    "recent"
+                ]
+            },
+            "TheoryTaxonomyLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "foreign_name": {
+                        "type": "string"
+                    },
+                    "discipline_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "TheoryTimelineTarget": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "relation_type": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "detail_href": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "relation_type",
+                    "type"
+                ]
+            },
+            "TheoryWorkGroups": {
+                "type": "object",
+                "properties": {
+                    "foundational_work": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "systematic_exposition": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "theoretical_development": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "empirical_application": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "comparative_study": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "critique": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    },
+                    "general_mention": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkNodeRelation"
+                        }
+                    }
+                }
             },
             "Topic": {
                 "type": "object",
@@ -29737,6 +32378,106 @@
                     "page_range",
                     "position",
                     "title"
+                ]
+            },
+            "WorkNodeRelation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CompactTheoryWork"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "node_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RoleEnum"
+                            }
+                        ],
+                        "default": "general_mention"
+                    },
+                    "role_label": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "strength": {
+                        "$ref": "#/components/schemas/StrengthEnum"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceSnippet"
+                        },
+                        "readOnly": true
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "evidence",
+                    "id",
+                    "node",
+                    "node_name",
+                    "node_slug",
+                    "reviewed_at",
+                    "role_label",
+                    "updated_at",
+                    "work",
+                    "work_data"
                 ]
             },
             "WorkRelatedConcept": {

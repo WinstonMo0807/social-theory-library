@@ -1,0 +1,20 @@
+.page { overflow-wrap: anywhere; }
+.editorialNotice { color: var(--muted); font-size: 12px; margin: -8px 0 20px !important; }
+.relationGroup { border-top: 1px solid var(--line); padding: 10px 0; }
+.relationGroup > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8d6a36; font-size: 13px; cursor: pointer; list-style: none; }
+.relationGroup[open] > summary { margin-bottom: 8px; }
+.relations > article { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.relations a { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.relations a > strong { font-family: var(--font-serif), serif; }
+.relations a > span { background: var(--wash); padding: 1px 5px; font-size: 10px; white-space: nowrap; }
+.relations a > svg { flex-shrink: 0; margin-left: auto; }
+.relations p { font-size: 11px; color: var(--muted); margin-top: 5px; }
+@media (max-width: 700px) {
+  .page { display: flex; flex-direction: column; }
+  .page > .hero { display: contents; }
+  .heroCopy { order: 2; margin-bottom: 18px; }
+  .page > .navigation { order: 3; }
+  .hero .heroGuide { order: 4; margin-bottom: 24px; }
+  .body { order: 5; }
+  .secondarySection { order: 6; }
+}

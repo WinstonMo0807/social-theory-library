@@ -21,7 +21,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string; section: string }>;
 }): Promise<Metadata> {
   const { slug, section } = await params;
-  const data = await loadTheorySchool(slug);
+  const data = await loadTheorySchool(slug, { strict: true });
   return { title: data ? `${titles[section] ?? "流派资料"} · ${data.school.name}` : "流派资料" };
 }
 
@@ -34,14 +34,15 @@ export default async function TheorySectionPage({
 }) {
   const { slug, section } = await params;
   if (!titles[section]) notFound();
-  const entity = await loadTheoryEntity(slug);
+  const entity = await loadTheoryEntity(slug, { strict: true });
+  if (!entity) notFound();
   if (entity?.canonical_node_url?.startsWith("/theories/nodes/")) {
     const suffix: Record<string, string> = {works:"/works", "reading-list":"/works", concepts:"/concepts", neighbors:"/relations", "concept-map":"/relations", scholars:""};
     const query = new URLSearchParams();
     Object.entries(await searchParams).forEach(([key, value]) => { for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, item); });
     redirect(`${entity.canonical_node_url}${suffix[section]}${query.size ? `?${query}` : ""}${section === "scholars" ? "#scholars" : ""}`);
   }
-  const data = await loadTheorySchool(slug);
+  const data = await loadTheorySchool(slug, { strict: true });
   if (!data) notFound();
   const works = section === "reading-list" && data.curated.curatedReadingWorks.length
     ? data.curated.curatedReadingWorks

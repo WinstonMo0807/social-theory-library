@@ -4,22 +4,21 @@ import Link from "next/link";
 import { BookOpen, ChevronRight, Clock3, Database, Download, FileText, Globe2, Info, LockKeyhole, RefreshCw, Settings, ShieldCheck, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
-import { privateRequest } from "@/lib/api/research.client";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
-import { commandPrivacyOperation, operationPath, preparePrivacyOperation, privacyActive, privacyPath, savePrivacyPreferences,
+import { commandPrivacyOperation, downloadPrivacyOperation, operationPath, preparePrivacyOperation, privacyActive, privacyPath, savePrivacyPreferences,
   type EraseCategory, type ExportCategory, type PrivacyItem, type PrivacyItems, type PrivacyOperation, type PrivacyOperations, type PrivacySummary, type RetentionKey } from "@/lib/api/privacy.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import styles from "./privacy.module.css";
 
-const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", followed_topics: "关注的主题", source_follows: "来源订阅" };
-const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记、个人认识与私人并读对齐（含术语笔记），已有内容仍可编辑。", followed_topics: "允许新增关注，已有关注不会自动删除。", source_follows: "允许订阅与保存后续来源变化。关闭后停止记录更新，已有记录仍保留。" };
-const exportLabels: Record<ExportCategory, string> = { research: "研究资料", notes: "笔记内容", plans: "阅读计划", audits: "引文报告", source_follows: "来源订阅" };
-const exportCopy: Record<ExportCategory, string> = { research: "研究问题、选材与轮次（含来源与版本）", notes: "阅读笔记、已保存认识与私人并读对齐及术语笔记", plans: "我创建的阅读计划与阅读清单", audits: "引文报告与本人来源信息（不含原件）", source_follows: "本人订阅与站内状态历史（不含原文）" };
-const eraseLabels: Record<EraseCategory, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅" };
-const leafLabels: Record<string, string> = { reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", parallel_alignments: "私人并读对齐与术语笔记", plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息" };
+const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", followed_topics: "关注的主题", source_follows: "来源订阅", saved_knowledge: "收藏的知识条目" };
+const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记、个人认识与私人并读对齐（含术语笔记），已有内容仍可编辑。", followed_topics: "允许新增关注，已有关注不会自动删除。", source_follows: "允许订阅与保存后续来源变化。关闭后停止记录更新，已有记录仍保留。", saved_knowledge: "允许收藏理论、概念与争论。关闭后不新增，已有收藏仍可取消或删除。" };
+const exportLabels: Record<ExportCategory, string> = { research: "研究资料", notes: "笔记内容", plans: "阅读计划", audits: "引文报告", source_follows: "来源订阅", saved_knowledge: "知识条目收藏" };
+const exportCopy: Record<ExportCategory, string> = { research: "研究问题、选材与轮次（含来源与版本）", notes: "阅读笔记、已保存认识与私人并读对齐及术语笔记", plans: "我创建的阅读计划与阅读清单", audits: "引文报告与本人来源信息（不含原件）", source_follows: "本人订阅与站内状态历史（不含原文）", saved_knowledge: "本人收藏的理论与概念入口，仅含当前公开标题和链接。" };
+const eraseLabels: Record<EraseCategory, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅", saved_knowledge: "收藏的知识条目" };
+const leafLabels: Record<string, string> = { reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", parallel_alignments: "私人并读对齐与术语笔记", plans: "阅读计划", followed_topics: "关注的主题", source_follows: "来源订阅", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息", saved_knowledge: "知识条目收藏" };
 const statusLabels: Record<PrivacyOperation["status"], string> = { preview: "等待确认影响", queued: "等待处理", running: "处理中", completed: "已完成", partial: "部分完成", failed: "未能完成", canceled: "已取消" };
 const failureLabels: Record<string, string> = { revision_changed: "内容已修改，请重新预览", record_unavailable: "资料已删除或不可用", content_limit: "内容超过单次限制", preparation_failed: "处理失败，可重试", queue_unavailable: "任务暂未进入队列，可重试", task_interrupted: "处理已中断，可恢复剩余项目" };
 const dateLabel = (value: string) => Number.isNaN(Date.parse(value)) ? "时间未记录" : new Date(value).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" });
@@ -48,7 +47,8 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
   const [notice, setNotice] = useState("");
   const [invalid, setInvalid] = useState(false);
   const alive = useRef(true);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const requestAbort = useRef<AbortController | null>(null);
+  useEffect(() => { alive.current = true; requestAbort.current = new AbortController(); return () => { alive.current = false; requestAbort.current?.abort(); }; }, []);
   useUnsavedForm(Boolean(draft), false);
   const data = summary.data;
   const rows = items.data?.results || [];
@@ -61,7 +61,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
   async function savePreferences() {
     if (!draft) return;
     try {
-      const saved = await summary.mutate(JSON.stringify(draft), () => savePrivacyPreferences(draft.revision, draft.retention));
+      const saved = await summary.mutate(JSON.stringify(draft), () => savePrivacyPreferences(ownerId, draft.revision, draft.retention, requestAbort.current?.signal));
       if (saved && alive.current) { setDraft(null); setNotice("隐私设置已保存，现有资料仍然保留。"); }
     } catch (reason) { failed(reason); }
   }
@@ -71,7 +71,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
     setNotice("");
     try {
       const result = await summary.mutate(JSON.stringify(input), async (current, requestId) => {
-        const operation = await preparePrivacyOperation(requestId, input);
+        const operation = await preparePrivacyOperation(ownerId, requestId, input, requestAbort.current?.signal);
         return { ...current, operations: [operation, ...current.operations.filter(row => row.id !== operation.id)] };
       });
       if (result && alive.current) { setFocused(result.operations[0].id); setNotice(kind === "erase" ? "已准备删除影响，请核对后明确确认。" : "导出任务已保存，可离开后在历史记录中继续查看。"); }
@@ -103,7 +103,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
           <div className={styles.eraseSection}>
             <Section number={exportOnly ? "02" : "04"} title="删除资料" subtitle="先预览影响，再明确确认。这里的操作不会删除公开馆藏或你的账户。"><div className={styles.categoryTabs} aria-label="删除资料分类">{(Object.keys(eraseLabels) as EraseCategory[]).map(key => <button key={key} aria-pressed={category === key} onClick={() => { setCategory(key); setPage(1); setSelected([]); }}>{eraseLabels[key]}<span>{data.erase_counts[key]}</span></button>)}</div>
               {items.error ? <div className={styles.error} role="alert">{items.error}<button onClick={items.reload}>重新读取</button></div> : null}
-              {items.loading ? <p role="status">正在读取资料…</p> : items.data ? rows.length ? <div className={styles.tableWrap}><table><thead><tr><th><input type="checkbox" aria-label="选择本页资料" checked={Boolean(rows.length) && rows.every(row => selected.some(value => value.id === row.id))} onChange={event => setSelected(event.target.checked ? rows : [])} /></th><th>内容</th><th>来源 / 版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td><input type="checkbox" aria-label={`选择：${row.title}`} checked={selected.some(value => value.id === row.id)} onChange={event => setSelected(current => event.target.checked ? [...current, row] : current.filter(value => value.id !== row.id))} /></td><td><div className={styles.itemTitle}>{row.source.cover_url ? <img src={row.source.cover_url} alt="" /> : <FileText size={24} />}<span><strong>{row.title}</strong><small>{leafLabels[row.category]}</small></span></div></td><td>{row.source.title || "本人资料"}{row.source.edition ? <small>{row.source.edition}</small> : null}</td><td><time dateTime={row.updated_at}>{dateLabel(row.updated_at)}</time></td><td><button disabled={summary.pending} onClick={() => void prepare("erase", [row])}>预览影响</button></td></tr>)}</tbody></table></div> : <div className={styles.emptyList}><FileText size={22} /><p>暂无{eraseLabels[category]}。</p>{category === "search_history" && !data.retention.search_history ? <small>搜索记录默认不保存，开启后才会记录新的检索。</small> : null}</div> : null}
+              {items.loading ? <p role="status">正在读取资料…</p> : items.data ? rows.length ? <div className={styles.tableWrap}><table><thead><tr><th><input type="checkbox" aria-label="选择本页资料" checked={Boolean(rows.length) && rows.every(row => selected.some(value => value.id === row.id))} onChange={event => setSelected(event.target.checked ? rows : [])} /></th><th>内容</th><th>来源 / 版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td><input type="checkbox" aria-label={`选择：${row.title}`} checked={selected.some(value => value.id === row.id)} onChange={event => setSelected(current => event.target.checked ? [...current, row] : current.filter(value => value.id !== row.id))} /></td><td><div className={styles.itemTitle}>{row.source.cover_url ? <img src={row.source.cover_url} alt="" /> : <FileText size={24} />}<span><strong>{row.title}</strong><small>{leafLabels[row.category]}</small></span></div></td><td>{row.source.title || "本人资料"}{row.source.edition ? <small>{row.source.edition}</small> : null}</td><td><time dateTime={row.updated_at}>{dateLabel(row.updated_at)}</time></td><td>{row.category === "saved_knowledge" && row.source.path?.startsWith("/theories/nodes/") ? <Link href={row.source.path}>打开条目</Link> : null}<button disabled={summary.pending} onClick={() => void prepare("erase", [row])}>预览影响</button></td></tr>)}</tbody></table></div> : <div className={styles.emptyList}><FileText size={22} /><p>暂无{eraseLabels[category]}。</p>{category === "search_history" && !data.retention.search_history ? <small>搜索记录默认不保存，开启后才会记录新的检索。</small> : null}</div> : null}
               <div className={styles.pagination}><span>共 {items.data?.count ?? "—"} 项</span><button disabled={page === 1} onClick={() => { setPage(value => value - 1); setSelected([]); }}>上一页</button><span>第 {page} 页</span><button disabled={!items.data || page * items.data.page_size >= items.data.count} onClick={() => { setPage(value => value + 1); setSelected([]); }}>下一页</button></div><div className={styles.selection}><span>已选择 {selected.length} 项资料</span><button disabled={!selected.length} onClick={() => setSelected([])}>取消选择</button><button className={styles.danger} disabled={!selected.length || summary.pending || !items.data} onClick={() => void prepare("erase")}><Trash2 size={14} />提交删除预览</button></div>
               {data.operations.filter(row => row.kind === "erase" && privacyActive(row.status)).map(row => <OperationStrip key={row.id} operation={row} onOpen={() => setFocused(row.id)} />)}
             </Section>
@@ -137,12 +137,13 @@ function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }:
   const [downloading, setDownloading] = useState(false);
   const [notice, setNotice] = useState("");
   const alive = useRef(true);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const requestAbort = useRef<AbortController | null>(null);
+  useEffect(() => { alive.current = true; requestAbort.current = new AbortController(); return () => { alive.current = false; requestAbort.current?.abort(); }; }, []);
   const row = workspace.data;
   async function command(action: "confirm" | "cancel" | "retry") {
     if (!row) return;
     try {
-      const result = await workspace.mutate(`${action}:${row.revision}`, () => commandPrivacyOperation(id, row.revision, action));
+      const result = await workspace.mutate(`${action}:${row.revision}`, () => commandPrivacyOperation(ownerId, id, row.revision, action, requestAbort.current?.signal));
       if (result && alive.current) { setAcknowledgedRevision(null); setNotice(action === "confirm" ? "删除任务已提交，已完成的项目不能撤销。" : action === "retry" && result.kind === "erase" ? "已重新读取待处理资料，请再次核对影响。" : "任务状态已更新。"); onChanged(); }
     } catch (reason) { onInvalid(reason); }
   }
@@ -150,7 +151,7 @@ function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }:
     if (downloading) return;
     setDownloading(true); setNotice("");
     try {
-      const output = await withPrivateOwner(ownerId, () => privateRequest<{ records: unknown[]; unavailable_since_preparation: unknown[] }>(`${operationPath(id)}download/`));
+      const output = await withPrivateOwner(ownerId, () => downloadPrivacyOperation(ownerId, id, requestAbort.current?.signal), requestAbort.current?.signal);
       if (!alive.current) return;
       const url = URL.createObjectURL(new Blob([JSON.stringify(output, null, 2)], { type: "application/json;charset=utf-8" }));
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = `书库资料-${id}.json`; anchor.click();

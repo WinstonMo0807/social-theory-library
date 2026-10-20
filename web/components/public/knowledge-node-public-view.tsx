@@ -12,6 +12,8 @@ import {
   workRoleLabels,
 } from "@/components/theory-system-ui";
 import type { loadKnowledgeNode, loadNormalizedReadingPaths, loadNormalizedTheoryTimeline } from "@/lib/api/knowledge.server";
+import { TheoryDetailPublicView } from "./theory-detail-public-view";
+import { KnowledgeNodeActions } from "./knowledge-node-actions";
 
 type KnowledgeNodePayload = NonNullable<Awaited<ReturnType<typeof loadKnowledgeNode>>>;
 type ReadingPathPayload = Awaited<ReturnType<typeof loadNormalizedReadingPaths>>;
@@ -26,6 +28,8 @@ export function KnowledgeNodePublicView({
   publicationStatusLabel = "已审核并公开",
   section = "overview",
   pagination,
+  publicDesign = false,
+  initialCompare = "",
 }: {
   node: KnowledgeNodePayload;
   timeline: TimelinePayload;
@@ -35,12 +39,17 @@ export function KnowledgeNodePublicView({
   publicationStatusLabel?: string;
   section?: string;
   pagination?: ReactNode;
+  publicDesign?: boolean;
+  initialCompare?: string;
 }) {
   const readingPaths = allPaths.filter((path) => path.items.some((item) => item.node_data?.id === node.id));
   const groupedWorks = Object.entries(node.work_groups).filter(([, rows]) => rows.length);
   const disciplineLinks = [node.primary_discipline, ...node.related_disciplines].filter(Boolean);
   const subdisciplines = (node.subdiscipline_links ?? []).map((row) => row.subdiscipline);
   const topics = (node.topic_links ?? []).map((row) => row.topic);
+
+  if (publicDesign) return <><TheoryDetailPublicView node={node} timeline={timeline} paths={allPaths} section={section}
+    initialCompare={initialCompare} pagination={pagination} actions={<KnowledgeNodeActions node={node} />} />{footer}</>;
 
   return (
     <>

@@ -78,6 +78,7 @@ from .services.recommendations import (
     generate_snapshot,
 )
 from .services.scoped_search import SearchContext, SearchService
+from .services.legacy_theory_evidence import legacy_evidence_fields
 
 
 class DisciplineListView(generics.ListAPIView):
@@ -226,6 +227,7 @@ class TheoryGraphView(APIView):
             theories = theories.filter(
                 discipline_relations__review_status=RelationReviewStatus.APPROVED,
                 discipline_relations__discipline__slug=discipline,
+                discipline_relations__discipline__editorial_status="published",
             )
         theories = list(theories.distinct().order_by("name"))
         theory_ids = [item.id for item in theories]
@@ -241,22 +243,23 @@ class TheoryGraphView(APIView):
             }
             for theory in theories
         ]
-        edges = [
-            {
+        evidence_context = {"request": request}
+        edges = []
+        for relation in TheoryRelation.objects.filter(
+            review_status=RelationReviewStatus.APPROVED,
+            source_theory_id__in=theory_ids,
+            target_theory_id__in=theory_ids,
+        ):
+            evidence = legacy_evidence_fields(relation, evidence_context)
+            edges.append({
                 "id": str(relation.id),
                 "source": str(relation.source_theory_id),
                 "target": str(relation.target_theory_id),
                 "relation_type": relation.relation_type,
                 "strength": relation.strength,
-                "evidence_page": relation.evidence_page,
-                "evidence_text": relation.evidence_text,
-            }
-            for relation in TheoryRelation.objects.filter(
-                review_status=RelationReviewStatus.APPROVED,
-                source_theory_id__in=theory_ids,
-                target_theory_id__in=theory_ids,
-            )
-        ]
+                "evidence_page": evidence["evidence_page"],
+                "evidence_text": evidence["evidence_text"],
+            })
         edges.extend(
             {
                 "id": str(relation.id),
@@ -264,7 +267,7 @@ class TheoryGraphView(APIView):
                 "target": str(relation.child_id),
                 "relation_type": "hierarchy",
                 "strength": "high",
-                "evidence_text": relation.evidence_text,
+                "evidence_text": legacy_evidence_fields(relation, evidence_context)["evidence_text"],
             }
             for relation in TheoryHierarchyRelation.objects.filter(
                 review_status=RelationReviewStatus.APPROVED,

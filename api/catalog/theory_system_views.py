@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, F, Prefetch, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,6 +16,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
+from .public_response_serializers import ReaderFocusSerializer
 
 from common.capabilities import Capability, has_capability
 from common.permissions import (
@@ -62,6 +64,7 @@ from .services.knowledge_nodes import (
     rollback_merge,
 )
 from .services.scoped_search import SearchContext, SearchService
+from .services.publication_eligibility import active_catalog_snapshot, public_editions
 from .services.semantic_search import viewer_access_statuses
 from .theory_serializers import (
     AdminKnowledgeNodeSerializer,
@@ -81,7 +84,9 @@ from .theory_serializers import (
     TheoryReviewTaskSerializer,
     WorkNodeRelationSerializer,
     compact_work,
+    _public_evidence_queryset,
 )
+from .theory_public_schema import LocalTheoryGraphSerializer, TheorySystemOverviewSerializer
 
 
 class TheorySystemFeatureMixin:
@@ -96,33 +101,14 @@ class PublicEvidenceFocusView(TheorySystemFeatureMixin, APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=ReaderFocusSerializer)
     def get(self, request, pk):
-        authenticated = bool(request.user.is_authenticated)
-        staff = bool(
-            authenticated
-            and (
-                request.user.is_staff
-                or getattr(request.user, "role", "") in {"admin", "editor", "reviewer"}
-            )
-        )
         evidence = get_object_or_404(
-            EvidenceSnippet.objects.select_related(
-                "file",
-                "work_node_relation",
-                "node",
-            ).filter(
+            _public_evidence_queryset({"request": request}).select_related("node").filter(
+                Q(node__isnull=False) | Q(work_node_relation__isnull=False)
+                | Q(knowledge_relation__isnull=False),
                 pk=pk,
-                review_status=RelationReviewStatus.APPROVED,
-                work_node_relation__status="published",
-                node__status="published",
-                file__kind=Asset.Kind.NORMALIZED,
-                file__status=Asset.Status.READY,
-                file__is_current=True,
-                file__access_status__in=viewer_access_statuses(
-                    authenticated=authenticated,
-                    staff=staff,
-                ),
-                work__editions__state=PublicationState.PUBLISHED,
+                file__edition__active_catalog_revision__document_revision__asset_id=F("file_id"),
             ).distinct(),
         )
         page = get_object_or_404(Page, asset=evidence.file, index=evidence.page_number)
@@ -132,12 +118,16 @@ class PublicEvidenceFocusView(TheorySystemFeatureMixin, APIView):
             {
                 "id": str(evidence.id),
                 "asset_id": str(evidence.file_id),
-                "title": evidence.work.title,
+                "document_revision_id": str(evidence.file.edition.active_catalog_revision.document_revision_id),
+                "text_source": page.text_source,
+                "title": str((active_catalog_snapshot(evidence.file.edition).get("work") or {}).get("title") or ""),
                 "page_index": evidence.page_number,
                 "printed_label": evidence.printed_page_label or page.printed_label,
                 "width": page.width,
                 "height": page.height,
                 "bbox": bbox if isinstance(bbox, list) else [],
+                # Historical hand-selected evidence does not record units.
+                "geometry": {}, "normalized_bbox": [], "geometry_status": "unknown",
                 "text": evidence.quote,
             }
         )
@@ -174,12 +164,16 @@ def _node_filter(queryset, params):
     if status_value:
         queryset = queryset.filter(status=status_value)
     if discipline:
-        discipline_query = Q(primary_discipline__slug=discipline) | Q(
-            discipline_links__discipline__slug=discipline
+        discipline_query = Q(primary_discipline__slug=discipline, primary_discipline__editorial_status="published") | Q(
+            discipline_links__discipline__slug=discipline,
+            discipline_links__discipline__editorial_status="published",
+            discipline_links__status="published",
         )
         if _is_uuid(discipline):
-            discipline_query |= Q(primary_discipline_id=discipline) | Q(
-                discipline_links__discipline_id=discipline
+            discipline_query |= Q(primary_discipline_id=discipline, primary_discipline__editorial_status="published") | Q(
+                discipline_links__discipline_id=discipline,
+                discipline_links__discipline__editorial_status="published",
+                discipline_links__status="published",
             )
         queryset = queryset.filter(discipline_query)
     if query:
@@ -200,7 +194,7 @@ def _is_uuid(value):
 
 
 def _published_work_queryset():
-    return Work.objects.filter(editions__state=PublicationState.PUBLISHED).distinct()
+    return Work.objects.filter(pk__in=public_editions().values("work_id"))
 
 
 def _published_work_node_relation_requires_revision(work=None):
@@ -302,6 +296,7 @@ def _work_relation_revision_from_review_task(task, node, relation_type, actor):
 class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=TheorySystemOverviewSerializer)
     def get(self, request):
         disciplines = Discipline.objects.filter(editorial_status="published").order_by(
             "sort_order", "name"
@@ -316,7 +311,7 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
                 node__in=nodes,
                 node__status="published",
                 status="published",
-                work__editions__state=PublicationState.PUBLISHED,
+                work_id__in=public_editions().values("work_id"),
             ).values("work_id").distinct()
             counts = {
                 "theory_traditions": nodes.filter(node_type="theory_tradition").count(),
@@ -351,7 +346,7 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
             WorkNodeRelation.objects.filter(
                 status="published",
                 node__status="published",
-                work__editions__state=PublicationState.PUBLISHED,
+                work_id__in=public_editions().values("work_id"),
             )
             .select_related("work", "node")
             .order_by("-reviewed_at", "-updated_at")[:6]
@@ -418,6 +413,10 @@ class KnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListAPIView):
 
     def get_queryset(self):
         queryset = _node_filter(_published_node_queryset(), self.request.query_params)
+        if self.request.query_params.get("has_works", "").strip().lower() in {"1", "true", "yes"}:
+            queryset = queryset.filter(pk__in=WorkNodeRelation.objects.filter(
+                status="published", work_id__in=public_editions().values("work_id"),
+            ).values("node_id"))
         sort = self.request.query_params.get("sort", "")
         if sort and sort not in {"name", "updated"}:
             raise APIValidationError({"sort": "未知理论目录排序方式。"})
@@ -464,7 +463,7 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
         work_ids = WorkNodeRelation.objects.filter(
             node__in=nodes,
             status="published",
-            work__editions__state=PublicationState.PUBLISHED,
+            work_id__in=public_editions().values("work_id"),
         ).values("work_id").distinct()
         scholar_ids = PersonNodeRelation.objects.filter(
             node__in=nodes,
@@ -564,31 +563,39 @@ class NormalizedTimelineListView(TheorySystemFeatureMixin, generics.ListAPIView)
                 queryset = queryset.filter(range_start__lte=years["year_to"])
         if discipline:
             queryset = queryset.filter(
-                Q(discipline__slug=discipline)
-                | Q(normalized_relations__discipline__slug=discipline)
-                | Q(normalized_relations__node__discipline_links__discipline__slug=discipline)
+                Q(discipline__slug=discipline, discipline__editorial_status="published")
+                | Q(normalized_relations__discipline__slug=discipline,
+                    normalized_relations__discipline__editorial_status="published")
+                | Q(normalized_relations__node__discipline_links__discipline__slug=discipline,
+                    normalized_relations__node__discipline_links__discipline__editorial_status="published",
+                    normalized_relations__node__discipline_links__status="published",
+                    normalized_relations__node__status="published")
             )
         if node:
-            queryset = queryset.filter(normalized_relations__node__slug=node)
+            queryset = queryset.filter(
+                normalized_relations__node__slug=node, normalized_relations__node__status="published",
+            )
         if event_type:
             queryset = queryset.filter(event_type=event_type)
         if has_collection in {"1", "true", "yes"}:
             queryset = queryset.filter(
-                Q(work__editions__state=PublicationState.PUBLISHED)
-                | Q(normalized_relations__work__editions__state=PublicationState.PUBLISHED)
+                Q(work_id__in=public_editions().values("work_id"))
+                | Q(normalized_relations__work_id__in=public_editions().values("work_id"))
             )
         if query:
             queryset = queryset.filter(
                 Q(title__icontains=query)
                 | Q(description__icontains=query)
                 | Q(source__icontains=query)
-                | Q(normalized_relations__node__canonical_name_zh__icontains=query)
+                | Q(normalized_relations__node__canonical_name_zh__icontains=query,
+                    normalized_relations__node__status="published")
             )
         return queryset.distinct().order_by("start_year", "display_order", "title", "pk")
 
 
 class NormalizedTimelineDetailView(NormalizedTimelineListView):
     """Stable event links reuse the public timeline's visibility and serializer."""
+    @extend_schema(operation_id="theory_system_timeline_detail", responses=NormalizedTimelineEventSerializer)
     def get(self, request, pk):
         from django.shortcuts import get_object_or_404
         return Response(self.get_serializer(get_object_or_404(self.get_queryset(), pk=pk)).data)
@@ -597,9 +604,13 @@ class NormalizedTimelineDetailView(NormalizedTimelineListView):
 class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=LocalTheoryGraphSerializer)
     def get(self, request):
-        depth = min(max(int(request.query_params.get("depth", 1)), 1), 2)
-        limit = min(max(int(request.query_params.get("limit", 20)), 1), 30)
+        try:
+            depth = min(max(int(request.query_params.get("depth", 1)), 1), 2)
+            limit = min(max(int(request.query_params.get("limit", 20)), 1), 30)
+        except (TypeError, ValueError) as exc:
+            raise APIValidationError({"detail": "图谱深度和节点上限须为整数。"}) from exc
         center_value = request.query_params.get("center", "").strip()
         discipline = request.query_params.get("discipline", "").strip()
         node_type = request.query_params.get("node_type", "").strip()
@@ -607,12 +618,7 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
         start_year = request.query_params.get("start_year", "").strip()
         end_year = request.query_params.get("end_year", "").strip()
         has_collection = request.query_params.get("has_collection", "").strip().lower()
-        nodes_base = _published_node_queryset()
-        if discipline:
-            nodes_base = nodes_base.filter(
-                Q(primary_discipline__slug=discipline)
-                | Q(discipline_links__discipline__slug=discipline)
-            ).distinct()
+        nodes_base = _node_filter(_published_node_queryset(), {"discipline": discipline})
         if node_type:
             nodes_base = nodes_base.filter(node_type=node_type)
         if start_year.lstrip("-").isdigit():
@@ -627,7 +633,7 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
         if has_collection in {"1", "true", "yes"}:
             nodes_base = nodes_base.filter(
                 work_relations__status="published",
-                work_relations__work__editions__state=PublicationState.PUBLISHED,
+                work_relations__work_id__in=public_editions().values("work_id"),
             ).distinct()
         allowed_node_ids = set(nodes_base.values_list("id", flat=True))
         center = None
@@ -635,6 +641,8 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
             center = nodes_base.filter(
                 Q(slug=center_value) | Q(pk=center_value if _is_uuid(center_value) else None)
             ).first()
+            if center is None:
+                raise NotFound("所选理论节点尚未公开，或不在当前筛选范围内。")
         if center is None:
             center = nodes_base.filter(node_type="theory_tradition").order_by(
                 "sort_order", "canonical_name_zh"
@@ -693,6 +701,8 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
                 "relation_label": row.get_relation_type_display(),
                 "direction": row.direction,
                 "description": row.description,
+                "evidence_source": row.evidence_source,
+                "evidence": KnowledgeRelationSerializer(context={"request": request}).get_evidence(row),
             }
             for row in {row.id: row for row in edge_rows}.values()
         ]
@@ -727,15 +737,20 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
         if len(graph_nodes) < limit:
             works = center.work_relations.filter(
                 status="published",
-                work__editions__state=PublicationState.PUBLISHED,
+                work_id__in=public_editions().values("work_id"),
             ).select_related("work").distinct()[: max(0, limit - len(graph_nodes))]
+            seen_works = set()
             for relation in works:
+                work = compact_work(relation.work, request)
+                if work is None or relation.work_id in seen_works:
+                    continue
+                seen_works.add(relation.work_id)
                 graph_nodes.append(
                     {
                         "id": f"work:{relation.work_id}",
                         "kind": "work",
-                        "name": relation.work.title,
-                        "work": compact_work(relation.work, request),
+                        "name": work["title"],
+                        "work": work,
                     }
                 )
                 graph_edges.append(
@@ -770,7 +785,9 @@ class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
         ).prefetch_related("stages", "items__stage", "items__node", "items__work")
         discipline = self.request.query_params.get("discipline", "").strip()
         if discipline:
-            queryset = queryset.filter(primary_discipline__slug=discipline)
+            queryset = queryset.filter(
+                primary_discipline__slug=discipline, primary_discipline__editorial_status="published",
+            )
         node = self.request.query_params.get("node", "").strip()
         if node:
             queryset = queryset.filter(items__node__slug=node, items__node__status="published").distinct()
@@ -1169,6 +1186,9 @@ class AdminEvidenceListView(TheorySystemFeatureMixin, generics.ListCreateAPIView
     permission_classes = [IsKnowledgeEditor]
     serializer_class = EvidenceSnippetSerializer
 
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "include_unpublished_items": True}
+
     def get_queryset(self):
         queryset = EvidenceSnippet.objects.select_related(
             "work", "file", "node", "work_node_relation", "knowledge_relation"
@@ -1188,6 +1208,9 @@ class AdminEvidenceDetailView(
     permission_classes = [IsKnowledgeEditor]
     serializer_class = EvidenceSnippetSerializer
     queryset = EvidenceSnippet.objects.all()
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "include_unpublished_items": True}
 
 
 class AdminTheoryReviewTaskListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):

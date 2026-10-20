@@ -366,9 +366,10 @@ def test_only_published_reading_paths_are_public(api_client):
 
 @pytest.mark.django_db
 def test_reading_path_work_cover_uses_same_origin_public_endpoint(api_client):
-    work, _edition, _asset = make_work("带封面的阅读路径馆藏")
+    work, edition, asset = make_work("带封面的阅读路径馆藏")
     work.cover = "public/covers/reading-path-cover.jpg"
     work.save(update_fields=["cover"])
+    activate_catalog_revision(edition, reader_asset=asset)
     reading_path = ReadingPath.objects.create(
         title="带封面的公开路径",
         slug="public-path-with-work-cover",
@@ -389,7 +390,7 @@ def test_reading_path_work_cover_uses_same_origin_public_endpoint(api_client):
 
     assert response.status_code == 200
     assert response.data["items"][0]["work_data"]["cover_url"] == (
-        f"/api/catalog/works/{work.id}/cover/"
+        f"/api/catalog/works/{work.id}/cover/?edition_id={edition.id}"
     )
 
 

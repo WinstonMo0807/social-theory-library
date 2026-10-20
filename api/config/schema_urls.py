@@ -11,6 +11,9 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 
 VERIFIED_NAMES = {
+    "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
+    "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
+    "local-theory-graph",
     "parallel-versions", "parallel-segments", "parallel-candidates",
     "catalog-feedback", "catalog-admin-public-feedback", "catalog-admin-public-feedback-detail",
     "catalog-home", "global-search",
@@ -58,6 +61,6 @@ urlpatterns = [
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
-        "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail",
+        "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail", "saved-knowledge-node",
     }])),
 ]

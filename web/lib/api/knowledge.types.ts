@@ -25,6 +25,10 @@ export type TheoryPersonLink = {
 };
 
 export type TheoryWorkCompact = {
+  edition_id?: string;
+  catalog_revision_id?: string | null;
+  document_revision_id?: string | null;
+  source_status?: "available" | "unavailable";
   id: string;
   slug: string;
   title: string;
@@ -65,6 +69,7 @@ export type KnowledgeNodeListItem = {
 };
 
 export type TheoryEvidence = {
+  document_revision_id?: string | null;
   id: string;
   work: string;
   work_title: string;
@@ -102,6 +107,7 @@ export type TheoryWorkRelation = {
 };
 
 export type NormalizedKnowledgeRelation = {
+  evidence?: TheoryEvidence[];
   id: string;
   source_node: string;
   source_name: string;
@@ -118,7 +124,19 @@ export type NormalizedKnowledgeRelation = {
   status: string;
 };
 
+export type TheoryConceptUsage = {
+  id: string;
+  term: string; language: string; usage_type: string; interpretation: string; attribution_note: string;
+  title: string; explanatory_object: string; period: string; context: string;
+  author: { id: string; name: string; original_name: string; birth_year: number | null; death_year: number | null;
+    portrait_url: string; scholar_slug: string } | null;
+  source: { id: string; work_id: string; work_title: string; edition_id: string; edition_label: string;
+    asset_id: string; document_revision_id: string; page_start: number; page_end: number;
+    printed_label: string; text: string; reader_url: string };
+};
+
 export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
+  public_detail?: {configured: boolean; revision_id: string | null; usages: TheoryConceptUsage[]; unavailable_usage_count: number};
   evidenceCuration?: import("./evidence-curation.types").PublishedEvidenceCuration;
   aliases: { id: string; alias: string; language: string; alias_type: string; normalized_alias: string }[];
   discipline_links: {

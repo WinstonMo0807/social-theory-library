@@ -186,6 +186,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "KnowledgePublicationStatusEnum": "catalog.models.KnowledgePublicationStatus.choices",
         "ReaderOCRActionEnum": ["pause", "resume"],
         "ReaderOCRContentStateEnum": ["unavailable", "awaiting_publication", "published", "admin_preview"],
         "ParallelCalibrationScopeEnum": ["bibliography", "passages"],
