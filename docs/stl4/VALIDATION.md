@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-21 PDF52/53/55图谱静态收口
+
+- 唯一PDF52/53/55及53纯照片裁片实际读取；原图58–60也已逐张读取，仅作为下一组审计，不计本单元完成。49路径白名单见tmp/stl4-graph-checkpoint.py，19 Python文件逐个ast.parse退出0（12f772）；只解析未执行业务代码。
+- web下使用白名单过滤15个非generated TS/TSX路径，执行node node_modules/eslint/bin/eslint.js，909d96退出0，0错误/8条img优化建议。PostCSS解析theory-graph.module.css共256顶层节点，5个直接引用该样式的组件类名核对通过。
+- web下node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false，43817和最终51834均退出0（bbda3e、498e56）。最终检查包括私人保存、saved_view恢复和两份新浏览器spec。
+- 后端图谱SQLite/PostgreSQL共74条ORM SQL仅编译，执行器明确阻止连接/查询；包括四种快照实体、八类边、准确原文StrIndex和当前修订哈希。私人模型/0017声明和owner/回执SQL静态核对通过，未运行迁移。
+- 本进程DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8，执行.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-graph-schema-20261021.json --validate，7e4983退出0，0错误/10既有Home/Scholar/Topic提示。新增enum命名碰撞已修，未隐藏旧提示。
+- openapi-typescript openapiTS/astToString同步api/openapi/schema.json与web/lib/api/generated/schema.ts，2c2472退出0；194路径保留原191。
+- 后端18函数48参数案例、7公共图谱和7私人保存浏览器场景，以及真实隔离图谱fixture均只编写未运行。覆盖准确来源、三层/同名身份、真实分页、候选双权限、回执丢失/重试、owner变化、已删除回执防复活。没有正式测试、服务、浏览器、构建、实际迁移、检索质量评测或生产操作。实际PDF/OCR环境仍待核实。
+
 ## 2026-10-21 PDF56/57时间线静态收口
 
 - 唯一PDF56/57及纯照片hero已实际读取。按tmp/stl4-timeline-checkpoint.py精确55路径取25个Python文件，ast.parse退出0（278567）；13个测试函数34参数案例只计AST、未运行。

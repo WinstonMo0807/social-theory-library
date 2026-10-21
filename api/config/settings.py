@@ -186,6 +186,10 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PublicGraphEntityKindEnum": ["knowledge_node", "scholar", "topic", "subdiscipline"],
+        "PublicGraphDirectionEnum": ["directed", "bidirectional", "undirected"],
+        "PublicGraphSourceStatusEnum": ["available", "citation_only", "missing", "unverified"],
+        "PublicTimelineSourceStatusEnum": ["available", "unavailable"],
         "KnowledgePublicationStatusEnum": "catalog.models.KnowledgePublicationStatus.choices",
         "ReaderOCRActionEnum": ["pause", "resume"],
         "ReaderOCRContentStateEnum": ["unavailable", "awaiting_publication", "published", "admin_preview"],

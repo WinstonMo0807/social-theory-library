@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 图谱与私人视图契约
+
+GET catalog/theory-system/graph沿原入口，center_kind四类、center slug/UUID、depth1–3、limit≤120、edge_limit≤300、多值node_type/relation_type、discipline、start_year/end_year、三态has_collection、selected_node、works_page及include_candidates。节点键kind:UUID，学者为ScholarProfile；边键实际模型名:UUID。正式边含方向、说明、来源状态和至多6条精确当前原文；candidate_edges独立最多60条，普通账户请求候选403且不泄露数量。返回真实截断、当前子图计数、筛选说明、12个准确公开版本分页；no-store并Vary Cookie/Authorization。
+
+reading/graph-views列表/创建、UUID详情/更新/删除及by-request要求当前X-Reader-Owner。POST固定request_id/data；PATCH增加expected_revision；DELETE以查询携带nonce/版本。响应owner_id、record、receipt，分页20。数据白名单只允许名称、公开中心/筛选/选择/布局；候选不保存。保留最少回执，删除后旧请求返回deleted不复活。隐私沿saved_knowledge组新增graph_views叶对象。0017未应用。194路径保留191旧路径，生成TypeScript同步，正式接口验收待全量完成。
+
 ## 2026-10-21 时间线契约
 
 GET /catalog/theory-system/timeline/继续原事件身份，支持topic/author/event_type多值、discipline/node、q、year_from/year_to、has_collection、sort、year、page、focus及related_to。结果包含当前24项分页和完整scope_count/year_groups（按year与event_types计数）/bounds；focus计算真实页。详情增加subject_edition、subject_status、evidence_source、related_events/related_count及knowledge_relations/knowledge_relation_count。事件与来源作品/版本/文件/修订独立，来源须当前授权Page逐字核对。

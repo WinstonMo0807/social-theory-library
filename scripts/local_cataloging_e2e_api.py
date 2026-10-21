@@ -95,6 +95,8 @@ def main():
     seed_subdisciplines(User.objects.get(email="owner-v305@example.test"))
     from timeline_e2e_fixtures import seed_timeline
     seed_timeline(User.objects.get(email="owner-v305@example.test"))
+    from graph_e2e_fixtures import seed_graph
+    seed_graph(User.objects.get(email="owner-v305@example.test"))
     from v306_assistance_e2e_fixtures import seed_assistance
     seed_assistance(User.objects.get(email="owner-v305@example.test"))
     if os.environ.get("STL_E2E_V307") == "1":

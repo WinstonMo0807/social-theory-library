@@ -1,7 +1,9 @@
 // Server-side public API domain. Browser components use pure adapters and type-only imports.
-import type { TheorySystemOverview, KnowledgeNodeListItem, KnowledgeNodeDetail, TheoryDisciplinePage, NormalizedTimelineEvent, LocalTheoryGraph, NormalizedReadingPath } from "./knowledge.types";
+import type { TheorySystemOverview, KnowledgeNodeListItem, KnowledgeNodeDetail, TheoryDisciplinePage, NormalizedTimelineEvent, NormalizedReadingPath } from "./knowledge.types";
 import { directoryPage, type DirectoryPage, type Paginated } from "./pagination";
 import { serverRequest, ServerApiError } from "./server-request";
+import { loadPublicGraph } from "./graph.server";
+import type { PublicTheoryGraph } from "./graph.types";
 import type { PublishedEvidenceCuration } from "./evidence-curation.types";
 
 export async function loadTheorySystemOverview(): Promise<TheorySystemOverview | null> {
@@ -120,17 +122,10 @@ export async function loadLocalTheoryGraph(filters: {
   has_collection?: string;
   depth?: number;
   limit?: number;
-} = {}): Promise<LocalTheoryGraph> {
-  const parameters = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== "") parameters.set(key, String(value));
-  });
-  try {
-    const suffix = parameters.size ? `?${parameters.toString()}` : "";
-    return await serverRequest<LocalTheoryGraph>(`/catalog/theory-system/graph/${suffix}`);
-  } catch (error) {
-    throw error;
-  }
+} = {}): Promise<PublicTheoryGraph> {
+  return loadPublicGraph(Object.fromEntries(Object.entries(filters)
+    .filter(([, value]) => value !== undefined && value !== "")
+    .map(([key, value]) => [key, String(value)])));
 }
 
 export async function loadNormalizedReadingPaths(discipline = ""): Promise<NormalizedReadingPath[]> {

@@ -1,5 +1,11 @@
 # STL 4.0 架构事实与决定
 
+## 2026-10-21 有界图谱与私人布局
+
+theory_graph基于八个已有公开关系模型按邻域展开，typed身份不混同Person/ScholarProfile或同名对象；ScholarRelation使用发布修订。正式书目从当前发布快照定位准确版本。EvidenceSnippet仅允许该关系自己的当前授权文件、活动修订和逐字真实页，候选只供双权限人员核对，不参与公开统计。
+
+SavedGraphView继承PrivateResearchRecord加密字段，GraphViewReceipt记录固定请求和结果版本；owner事务锁/版本检查/删除SET_NULL回执共同防重复与复活。privacy复用现有saved_knowledge组。前端公开URL只反映公开范围，私人saved_view由本人GET核验后加载；保存不创建第二份知识库。0017只准备迁移源码。详见GRAPH_20261021及VALIDATION。
+
 ## 2026-10-21 时间线投影与可选原生依赖
 
 复用TheoryTimelineEvent、TimelineEventRelation、正式馆藏快照、Page与DocumentRevision；0071增加可空subject_edition及date_precision，不建立第二套事件或馆藏。公共按页批量投影，主体版本不借用其他版；来源独立核对当前阅读文件/活动修订/原文和访问权限。相关事件只表达已有共同关联，影响关系仍须正式KnowledgeRelation。后台继续沿原editorial revision流程。

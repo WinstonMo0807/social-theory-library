@@ -6278,6 +6278,128 @@
         "/api/catalog/theory-system/graph/": {
             "get": {
                 "operationId": "catalog_theory_system_graph_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "center",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "中心实体 UUID 或已公开 slug；学者使用档案身份。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "center_kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "knowledge_node",
+                                "scholar",
+                                "subdiscipline",
+                                "topic"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "depth",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                1,
+                                2,
+                                3
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "discipline",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "edge_limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "最多300条已确认关系。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "end_year",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "has_collection",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "include_candidates",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "仅同时具备证据查看和知识编辑权限；候选与正式关系分开。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "最多120个节点。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "node_type",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "relation_type",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "selected_node",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "kind:UUID；必须在当前子图中。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "start_year",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "works_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -6295,7 +6417,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/LocalTheoryGraph"
+                                    "$ref": "#/components/schemas/PublicTheoryGraph"
                                 }
                             }
                         },
@@ -9585,6 +9707,339 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CitationTextUnitsOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/graph-views/": {
+            "get": {
+                "operationId": "reading_graph_views_list",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedGraphViewPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_graph_views_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GraphViewCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GraphViewCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GraphViewCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphViewCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/graph-views/{id}/": {
+            "get": {
+                "operationId": "reading_graph_views_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 saved graph view 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphViewCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_graph_views_partial_update",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 saved graph view 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedGraphViewUpdateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedGraphViewUpdateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedGraphViewUpdateInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphViewCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_graph_views_destroy",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_revision",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 saved graph view 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/graph-views/by-request/": {
+            "get": {
+                "operationId": "reading_graph_views_by_request_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphViewCommandOutput"
                                 }
                             }
                         },
@@ -19095,6 +19550,841 @@
                     }
                 ]
             },
+            "GraphCandidateAccess": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string"
+                    },
+                    "can_review": {
+                        "type": "boolean"
+                    },
+                    "review_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_review",
+                    "detail",
+                    "mode",
+                    "review_href"
+                ]
+            },
+            "GraphCounts": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "integer"
+                    },
+                    "edges": {
+                        "type": "integer"
+                    },
+                    "scholars": {
+                        "type": "integer"
+                    },
+                    "topics": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "edges",
+                    "nodes",
+                    "scholars",
+                    "topics"
+                ]
+            },
+            "GraphEdge": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "model": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "type": "string"
+                    },
+                    "relation_type": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/PublicGraphDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphEvidence"
+                        }
+                    },
+                    "evidence_truncated": {
+                        "type": "boolean"
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/PublicGraphSourceStatusEnum"
+                    }
+                },
+                "required": [
+                    "description",
+                    "direction",
+                    "entity_id",
+                    "evidence",
+                    "evidence_source",
+                    "evidence_truncated",
+                    "id",
+                    "model",
+                    "relation_label",
+                    "relation_type",
+                    "source",
+                    "source_status",
+                    "status",
+                    "target"
+                ]
+            },
+            "GraphEvidence": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "edition_id",
+                    "edition_label",
+                    "id",
+                    "pdf_page",
+                    "printed_page_label",
+                    "quote",
+                    "reader_href",
+                    "title",
+                    "work_id"
+                ]
+            },
+            "GraphFilters": {
+                "type": "object",
+                "properties": {
+                    "center_kind": {
+                        "type": "string"
+                    },
+                    "center": {
+                        "type": "string"
+                    },
+                    "depth": {
+                        "type": "integer"
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "edge_limit": {
+                        "type": "integer"
+                    },
+                    "relation_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "node_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "discipline": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "has_collection": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "include_candidates": {
+                        "type": "boolean"
+                    },
+                    "scope_note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "center",
+                    "center_kind",
+                    "depth",
+                    "discipline",
+                    "edge_limit",
+                    "end_year",
+                    "has_collection",
+                    "include_candidates",
+                    "limit",
+                    "node_type",
+                    "relation_type",
+                    "scope_note",
+                    "start_year"
+                ]
+            },
+            "GraphNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PublicGraphEntityKindEnum"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "foreign_name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "image_url": {
+                        "type": "string"
+                    },
+                    "period_label": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "is_center": {
+                        "type": "boolean"
+                    },
+                    "depth": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "depth",
+                    "end_year",
+                    "entity_id",
+                    "foreign_name",
+                    "href",
+                    "id",
+                    "image_url",
+                    "is_center",
+                    "kind",
+                    "name",
+                    "node_type",
+                    "period_label",
+                    "slug",
+                    "start_year",
+                    "summary"
+                ]
+            },
+            "GraphOffsetInput": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1000000,
+                        "minimum": -1000000
+                    },
+                    "y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1000000,
+                        "minimum": -1000000
+                    }
+                },
+                "required": [
+                    "x",
+                    "y"
+                ]
+            },
+            "GraphOffsetInputRequest": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1000000,
+                        "minimum": -1000000
+                    },
+                    "y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1000000,
+                        "minimum": -1000000
+                    }
+                },
+                "required": [
+                    "x",
+                    "y"
+                ]
+            },
+            "GraphRelationType": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
+                ]
+            },
+            "GraphViewCommandOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "record": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/GraphViewRecordOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/GraphViewReceiptOutput"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "receipt",
+                    "record"
+                ]
+            },
+            "GraphViewCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/GraphViewDataInputRequest"
+                    }
+                },
+                "required": [
+                    "data",
+                    "request_id"
+                ]
+            },
+            "GraphViewDataInput": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "view": {
+                        "$ref": "#/components/schemas/GraphViewStateInput"
+                    }
+                },
+                "required": [
+                    "title",
+                    "view"
+                ]
+            },
+            "GraphViewDataInputRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "view": {
+                        "$ref": "#/components/schemas/GraphViewStateInputRequest"
+                    }
+                },
+                "required": [
+                    "title",
+                    "view"
+                ]
+            },
+            "GraphViewPageOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphViewRecordOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "owner_id",
+                    "previous",
+                    "results"
+                ]
+            },
+            "GraphViewReceiptOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "applied_revision",
+                    "deleted",
+                    "request_id"
+                ]
+            },
+            "GraphViewRecordOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/GraphViewDataInput"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "data",
+                    "id",
+                    "revision",
+                    "updated_at"
+                ]
+            },
+            "GraphViewStateInput": {
+                "type": "object",
+                "properties": {
+                    "center_kind": {
+                        "$ref": "#/components/schemas/PublicGraphEntityKindEnum"
+                    },
+                    "center": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "maximum": 3,
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "maximum": 120,
+                        "minimum": 1,
+                        "default": 60
+                    },
+                    "edge_limit": {
+                        "type": "integer",
+                        "maximum": 300,
+                        "minimum": 1,
+                        "default": 150
+                    },
+                    "node_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "pattern": "^[-a-zA-Z0-9_]+$"
+                        },
+                        "maxItems": 30
+                    },
+                    "relation_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "pattern": "^[-a-zA-Z0-9_]+$"
+                        },
+                        "maxItems": 30
+                    },
+                    "discipline": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "default": "",
+                                "maxLength": 180,
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "nullable": true
+                    },
+                    "has_collection": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "selected_node": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 100
+                    },
+                    "selected_edge": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 100
+                    },
+                    "view_mode": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ViewModeEnum"
+                            }
+                        ],
+                        "default": "graph"
+                    },
+                    "zoom": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 4,
+                        "minimum": 0.15,
+                        "default": 1.0
+                    },
+                    "offset": {
+                        "$ref": "#/components/schemas/GraphOffsetInput"
+                    }
+                },
+                "required": [
+                    "center",
+                    "center_kind"
+                ]
+            },
+            "GraphViewStateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "center_kind": {
+                        "$ref": "#/components/schemas/PublicGraphEntityKindEnum"
+                    },
+                    "center": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "maximum": 3,
+                        "minimum": 1,
+                        "default": 1
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "maximum": 120,
+                        "minimum": 1,
+                        "default": 60
+                    },
+                    "edge_limit": {
+                        "type": "integer",
+                        "maximum": 300,
+                        "minimum": 1,
+                        "default": 150
+                    },
+                    "node_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[-a-zA-Z0-9_]+$"
+                        },
+                        "maxItems": 30
+                    },
+                    "relation_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[-a-zA-Z0-9_]+$"
+                        },
+                        "maxItems": 30
+                    },
+                    "discipline": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "default": "",
+                                "maxLength": 180,
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "nullable": true
+                    },
+                    "has_collection": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "selected_node": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 100
+                    },
+                    "selected_edge": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 100
+                    },
+                    "view_mode": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ViewModeEnum"
+                            }
+                        ],
+                        "default": "graph"
+                    },
+                    "zoom": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 4,
+                        "minimum": 0.15,
+                        "default": 1.0
+                    },
+                    "offset": {
+                        "$ref": "#/components/schemas/GraphOffsetInputRequest"
+                    }
+                },
+                "required": [
+                    "center",
+                    "center_kind"
+                ]
+            },
+            "GraphWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "type": "string"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "author",
+                    "cover_url",
+                    "detail_href",
+                    "document_type",
+                    "id",
+                    "language",
+                    "publisher",
+                    "reader_href",
+                    "slug",
+                    "subtitle",
+                    "title",
+                    "version_label",
+                    "year"
+                ]
+            },
             "HomeResponse": {
                 "type": "object",
                 "properties": {
@@ -21073,135 +22363,6 @@
                     "slug",
                     "subdisciplines",
                     "work_count"
-                ]
-            },
-            "LocalTheoryGraph": {
-                "type": "object",
-                "properties": {
-                    "center": {
-                        "type": "string",
-                        "format": "uuid",
-                        "nullable": true
-                    },
-                    "nodes": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/LocalTheoryGraphNode"
-                        }
-                    },
-                    "edges": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/LocalTheoryGraphEdge"
-                        }
-                    },
-                    "depth": {
-                        "type": "integer",
-                        "maximum": 2,
-                        "minimum": 1
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "maximum": 30,
-                        "minimum": 1
-                    },
-                    "truncated": {
-                        "type": "boolean"
-                    }
-                },
-                "required": [
-                    "center",
-                    "edges",
-                    "nodes",
-                    "truncated"
-                ]
-            },
-            "LocalTheoryGraphEdge": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "source": {
-                        "type": "string"
-                    },
-                    "target": {
-                        "type": "string"
-                    },
-                    "relation_type": {
-                        "type": "string"
-                    },
-                    "relation_label": {
-                        "type": "string"
-                    },
-                    "direction": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "evidence_source": {
-                        "type": "string"
-                    },
-                    "evidence": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/EvidenceSnippet"
-                        }
-                    }
-                },
-                "required": [
-                    "direction",
-                    "id",
-                    "relation_label",
-                    "relation_type",
-                    "source",
-                    "target"
-                ]
-            },
-            "LocalTheoryGraphNode": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "kind": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "node_type": {
-                        "type": "string"
-                    },
-                    "foreign_name": {
-                        "type": "string"
-                    },
-                    "slug": {
-                        "type": "string"
-                    },
-                    "summary": {
-                        "type": "string"
-                    },
-                    "period_label": {
-                        "type": "string"
-                    },
-                    "is_center": {
-                        "type": "boolean"
-                    },
-                    "work": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/CompactTheoryWork"
-                            }
-                        ],
-                        "nullable": true
-                    }
-                },
-                "required": [
-                    "id",
-                    "kind",
-                    "name"
                 ]
             },
             "MappingAsset": {
@@ -24122,6 +25283,37 @@
                     }
                 }
             },
+            "PaginatedGraphViewPageOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphViewPageOutput"
+                        }
+                    }
+                }
+            },
             "PaginatedKnowledgeNodeListList": {
                 "type": "object",
                 "required": [
@@ -25043,7 +26235,7 @@
                         "type": "string"
                     },
                     "source_status": {
-                        "$ref": "#/components/schemas/SourceStatusEnum"
+                        "$ref": "#/components/schemas/PublicTimelineSourceStatusEnum"
                     },
                     "work_id": {
                         "type": "string",
@@ -25331,7 +26523,7 @@
                         "type": "string"
                     },
                     "source_status": {
-                        "$ref": "#/components/schemas/SourceStatusEnum"
+                        "$ref": "#/components/schemas/PublicTimelineSourceStatusEnum"
                     },
                     "quote": {
                         "type": "string"
@@ -26018,6 +27210,22 @@
                     },
                     "follow_up": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "PatchedGraphViewUpdateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/GraphViewDataInputRequest"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
                     }
                 }
             },
@@ -28176,10 +29384,11 @@
                     "plans",
                     "followed_topics",
                     "source_follows",
-                    "saved_knowledge"
+                    "saved_knowledge",
+                    "graph_views"
                 ],
                 "type": "string",
-                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
+                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
@@ -28925,6 +30134,35 @@
                 "type": "string",
                 "description": "* `submitted` - 已提交\n* `reviewing` - 处理中\n* `resolved` - 已处理"
             },
+            "PublicGraphDirectionEnum": {
+                "enum": [
+                    "directed",
+                    "bidirectional",
+                    "undirected"
+                ],
+                "type": "string",
+                "description": "* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
+            },
+            "PublicGraphEntityKindEnum": {
+                "enum": [
+                    "knowledge_node",
+                    "scholar",
+                    "topic",
+                    "subdiscipline"
+                ],
+                "type": "string",
+                "description": "* `knowledge_node` - knowledge_node\n* `scholar` - scholar\n* `topic` - topic\n* `subdiscipline` - subdiscipline"
+            },
+            "PublicGraphSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "citation_only",
+                    "missing",
+                    "unverified"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `citation_only` - citation_only\n* `missing` - missing\n* `unverified` - unverified"
+            },
             "PublicJournalContent": {
                 "type": "object",
                 "properties": {
@@ -29568,6 +30806,141 @@
                     "slug",
                     "type"
                 ]
+            },
+            "PublicTheoryGraph": {
+                "type": "object",
+                "properties": {
+                    "center": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "center_kind": {
+                        "type": "string"
+                    },
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphNode"
+                        }
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphEdge"
+                        }
+                    },
+                    "depth": {
+                        "type": "integer"
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "edge_limit": {
+                        "type": "integer"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/PublicTheoryGraphStateEnum"
+                    },
+                    "counts": {
+                        "$ref": "#/components/schemas/GraphCounts"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/GraphFilters"
+                    },
+                    "relation_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphRelationType"
+                        }
+                    },
+                    "candidate_access": {
+                        "$ref": "#/components/schemas/GraphCandidateAccess"
+                    },
+                    "candidate_edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphEdge"
+                        }
+                    },
+                    "candidate_count": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "candidates_truncated": {
+                        "type": "boolean"
+                    },
+                    "selected_node": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "related_works": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphWork"
+                        }
+                    },
+                    "related_works_count": {
+                        "type": "integer"
+                    },
+                    "related_works_truncated": {
+                        "type": "boolean"
+                    },
+                    "related_works_page": {
+                        "type": "integer"
+                    },
+                    "related_works_page_size": {
+                        "type": "integer"
+                    },
+                    "related_works_total_pages": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "candidate_access",
+                    "candidate_count",
+                    "candidate_edges",
+                    "candidates_truncated",
+                    "center",
+                    "center_kind",
+                    "counts",
+                    "depth",
+                    "edge_limit",
+                    "edges",
+                    "filters",
+                    "limit",
+                    "nodes",
+                    "related_works",
+                    "related_works_count",
+                    "related_works_page",
+                    "related_works_page_size",
+                    "related_works_total_pages",
+                    "related_works_truncated",
+                    "relation_types",
+                    "selected_node",
+                    "state",
+                    "truncated"
+                ]
+            },
+            "PublicTheoryGraphStateEnum": {
+                "enum": [
+                    "empty",
+                    "isolated",
+                    "filtered",
+                    "ready"
+                ],
+                "type": "string",
+                "description": "* `empty` - empty\n* `isolated` - isolated\n* `filtered` - filtered\n* `ready` - ready"
+            },
+            "PublicTimelineSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `unavailable` - unavailable"
             },
             "PublicWorkDetail": {
                 "type": "object",
@@ -31648,7 +33021,7 @@
                         "$ref": "#/components/schemas/ScholarRelationRelationTypeEnum"
                     },
                     "direction": {
-                        "$ref": "#/components/schemas/ScholarRelationDirectionEnum"
+                        "$ref": "#/components/schemas/PublicGraphDirectionEnum"
                     },
                     "summary": {
                         "type": "string"
@@ -31683,15 +33056,6 @@
                     "target_scholar",
                     "target_slug"
                 ]
-            },
-            "ScholarRelationDirectionEnum": {
-                "enum": [
-                    "directed",
-                    "bidirectional",
-                    "undirected"
-                ],
-                "type": "string",
-                "description": "* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
             },
             "ScholarRelationPage": {
                 "type": "object",
@@ -31748,7 +33112,7 @@
                         "$ref": "#/components/schemas/ScholarRelationRelationTypeEnum"
                     },
                     "direction": {
-                        "$ref": "#/components/schemas/ScholarRelationDirectionEnum"
+                        "$ref": "#/components/schemas/PublicGraphDirectionEnum"
                     },
                     "summary": {
                         "type": "string"
@@ -32814,14 +34178,6 @@
                     "page_size",
                     "results"
                 ]
-            },
-            "SourceStatusEnum": {
-                "enum": [
-                    "available",
-                    "unavailable"
-                ],
-                "type": "string",
-                "description": "* `available` - available\n* `unavailable` - unavailable"
             },
             "StatementInputRequest": {
                 "type": "object",
@@ -34953,6 +36309,17 @@
                     "expected_revision",
                     "request_id"
                 ]
+            },
+            "ViewModeEnum": {
+                "enum": [
+                    "graph",
+                    "list",
+                    "topics",
+                    "scholars",
+                    "works"
+                ],
+                "type": "string",
+                "description": "* `graph` - graph\n* `list` - list\n* `topics` - topics\n* `scholars` - scholars\n* `works` - works"
             },
             "WidthEnum": {
                 "enum": [

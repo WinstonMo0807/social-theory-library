@@ -17,19 +17,20 @@ from .services import decrypt_private_text
 from .source_models import SourceFollow
 from .parallel_models import ParallelReadingTask
 from .knowledge_models import SavedKnowledgeNode
+from .graph_models import SavedGraphView
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True, "saved_knowledge": True}
-RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题", "source_follows": "来源订阅", "saved_knowledge": "收藏的知识条目"}
+RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题", "source_follows": "来源订阅", "saved_knowledge": "知识条目与图谱视图"}
 EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
-                 "saved_knowledge": ("saved_knowledge",)}
+                 "saved_knowledge": ("saved_knowledge", "graph_views")}
 ERASE_GROUPS = {"reading_history": ("reading_history",), "search_history": ("search_history",),
                 "personal_notes": ("annotations", "memories", "parallel_alignments"), "reading_plans": ("plans",),
-                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge",)}
+                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views")}
 MODELS = {"research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic,
-          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode}
+          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView}
 MAX_ITEMS = 500
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -158,6 +159,9 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category == "graph_views":
+        from .graph_saves import record_output
+        return record_output(row, user)
     if category == "saved_knowledge":
         from .knowledge_saves import output
         return {**output(user, row.node_id), "created_at": row.created_at.isoformat()}
@@ -197,6 +201,7 @@ def erase_impact(user, category, row, *, contexts=None):
                "search_history": "删除这条主动保存的检索记录；当前检索与研究所需临时会话不受影响。",
                "followed_topics": "取消关注此主题；主题和公开馆藏保留。",
                "saved_knowledge": "删除本人知识条目收藏；公开条目保留，只保留防止旧请求重新保存所需的最少回执。",
+               "graph_views": "删除本人保存的图谱名称、范围与布局；公开关系保留，仅保留防止旧请求重新创建的最少回执。",
                "source_follows": "删除此来源订阅、站内更新与状态历史，停止后续检查；公开馆藏保留。"}[category]
     return {"message": message, "memories": affected, "scope_count": sum(len(value["scopes"]) for value in affected)}
 
@@ -204,7 +209,10 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category == "saved_knowledge":
+    if category == "graph_views":
+        title = payload.get("title") or "未命名图谱视图"
+        source = {"title": "本人保存的图谱视图", "path": f"/theories/graph?saved_view={row.pk}"}
+    elif category == "saved_knowledge":
         from .knowledge_saves import output
         current = output(user, row.node_id)
         title = (current["node"] or {}).get("title", "当前不可用的知识条目")

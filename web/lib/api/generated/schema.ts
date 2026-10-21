@@ -2241,6 +2241,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/graph-views/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_graph_views_list"];
+        put?: never;
+        post: operations["reading_graph_views_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/graph-views/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_graph_views_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_graph_views_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_graph_views_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/graph-views/by-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_graph_views_by_request_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/history/": {
         parameters: {
             query?: never;
@@ -4862,6 +4910,226 @@ export interface components {
          */
         GlobalSearchContextEnum: "global";
         GlobalSearchOutput: components["schemas"]["CatalogSearchOutput"] | components["schemas"]["LegacyGlobalSearchOutput"] | components["schemas"]["ScopedSearchOutput"];
+        GraphCandidateAccess: {
+            mode: string;
+            can_review: boolean;
+            review_href: string | null;
+            detail: string;
+        };
+        GraphCounts: {
+            nodes: number;
+            edges: number;
+            scholars: number;
+            topics: number;
+        };
+        GraphEdge: {
+            id: string;
+            /** Format: uuid */
+            entity_id: string;
+            model: string;
+            source: string;
+            target: string;
+            relation_type: string;
+            relation_label: string;
+            direction: components["schemas"]["PublicGraphDirectionEnum"];
+            description: string;
+            evidence_source: string;
+            status: string;
+            evidence: components["schemas"]["GraphEvidence"][];
+            evidence_truncated: boolean;
+            source_status: components["schemas"]["PublicGraphSourceStatusEnum"];
+        };
+        GraphEvidence: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            title: string;
+            edition_label: string;
+            quote: string;
+            pdf_page: number;
+            printed_page_label: string;
+            reader_href: string;
+        };
+        GraphFilters: {
+            center_kind: string;
+            center: string;
+            depth: number;
+            limit: number;
+            edge_limit: number;
+            relation_type: string[];
+            node_type: string[];
+            discipline: string;
+            start_year: number | null;
+            end_year: number | null;
+            has_collection: boolean | null;
+            include_candidates: boolean;
+            scope_note: string;
+        };
+        GraphNode: {
+            id: string;
+            /** Format: uuid */
+            entity_id: string;
+            kind: components["schemas"]["PublicGraphEntityKindEnum"];
+            node_type: string;
+            name: string;
+            foreign_name: string;
+            slug: string;
+            href: string;
+            summary: string;
+            image_url: string;
+            period_label: string;
+            start_year: number | null;
+            end_year: number | null;
+            is_center: boolean;
+            depth: number;
+        };
+        GraphOffsetInput: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+        };
+        GraphOffsetInputRequest: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+        };
+        GraphRelationType: {
+            value: string;
+            label: string;
+        };
+        GraphViewCommandOutput: {
+            owner_id: string;
+            record: components["schemas"]["GraphViewRecordOutput"] | null;
+            receipt: components["schemas"]["GraphViewReceiptOutput"] | null;
+        };
+        GraphViewCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            data: components["schemas"]["GraphViewDataInputRequest"];
+        };
+        GraphViewDataInput: {
+            title: string;
+            view: components["schemas"]["GraphViewStateInput"];
+        };
+        GraphViewDataInputRequest: {
+            title: string;
+            view: components["schemas"]["GraphViewStateInputRequest"];
+        };
+        GraphViewPageOutput: {
+            owner_id: string;
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["GraphViewRecordOutput"][];
+        };
+        GraphViewReceiptOutput: {
+            /** Format: uuid */
+            request_id: string;
+            applied_revision: number;
+            deleted: boolean;
+        };
+        GraphViewRecordOutput: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            data: components["schemas"]["GraphViewDataInput"];
+        };
+        GraphViewStateInput: {
+            center_kind: components["schemas"]["PublicGraphEntityKindEnum"];
+            /** Format: uuid */
+            center: string;
+            /** @default 1 */
+            depth: number;
+            /** @default 60 */
+            limit: number;
+            /** @default 150 */
+            edge_limit: number;
+            node_type?: string[];
+            relation_type?: string[];
+            discipline?: string;
+            start_year?: number | null;
+            end_year?: number | null;
+            has_collection?: boolean | null;
+            /** @default  */
+            selected_node: string;
+            /** @default  */
+            selected_edge: string;
+            /** @default graph */
+            view_mode: components["schemas"]["ViewModeEnum"];
+            /**
+             * Format: double
+             * @default 1
+             */
+            zoom: number;
+            offset?: components["schemas"]["GraphOffsetInput"];
+        };
+        GraphViewStateInputRequest: {
+            center_kind: components["schemas"]["PublicGraphEntityKindEnum"];
+            /** Format: uuid */
+            center: string;
+            /** @default 1 */
+            depth: number;
+            /** @default 60 */
+            limit: number;
+            /** @default 150 */
+            edge_limit: number;
+            node_type?: string[];
+            relation_type?: string[];
+            discipline?: string;
+            start_year?: number | null;
+            end_year?: number | null;
+            has_collection?: boolean | null;
+            /** @default  */
+            selected_node: string;
+            /** @default  */
+            selected_edge: string;
+            /** @default graph */
+            view_mode: components["schemas"]["ViewModeEnum"];
+            /**
+             * Format: double
+             * @default 1
+             */
+            zoom: number;
+            offset?: components["schemas"]["GraphOffsetInputRequest"];
+        };
+        GraphWork: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            subtitle: string;
+            document_type: string;
+            language: string;
+            author: string;
+            year: number | null;
+            publisher: string;
+            cover_url: string;
+            /** Format: uuid */
+            edition_id?: string;
+            /** Format: uuid */
+            catalog_revision_id?: string;
+            /** Format: uuid */
+            document_revision_id?: string | null;
+            source_status?: string;
+            /** Format: uuid */
+            asset_id: string | null;
+            reader_href: string | null;
+            detail_href: string | null;
+            version_label: string;
+        };
         HomeResponse: {
             schema_version: string;
             visibility: components["schemas"]["HomeResponseVisibilityEnum"];
@@ -5443,38 +5711,6 @@ export interface components {
                     [key: string]: unknown;
                 }[];
             };
-        };
-        LocalTheoryGraph: {
-            /** Format: uuid */
-            center: string | null;
-            nodes: components["schemas"]["LocalTheoryGraphNode"][];
-            edges: components["schemas"]["LocalTheoryGraphEdge"][];
-            depth?: number;
-            limit?: number;
-            truncated: boolean;
-        };
-        LocalTheoryGraphEdge: {
-            id: string;
-            source: string;
-            target: string;
-            relation_type: string;
-            relation_label: string;
-            direction: string;
-            description?: string;
-            evidence_source?: string;
-            evidence?: components["schemas"]["EvidenceSnippet"][];
-        };
-        LocalTheoryGraphNode: {
-            id: string;
-            kind: string;
-            name: string;
-            node_type?: string;
-            foreign_name?: string;
-            slug?: string;
-            summary?: string;
-            period_label?: string;
-            is_center?: boolean;
-            work?: components["schemas"]["CompactTheoryWork"] | null;
         };
         MappingAsset: {
             /** Format: uuid */
@@ -6304,6 +6540,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Bookmark"][];
         };
+        PaginatedGraphViewPageOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["GraphViewPageOutput"][];
+        };
         PaginatedKnowledgeNodeListList: {
             /** @example 123 */
             count: number;
@@ -6652,7 +6903,7 @@ export interface components {
         };
         ParallelReferenceOutput: {
             reference_id: string;
-            source_status: components["schemas"]["SourceStatusEnum"];
+            source_status: components["schemas"]["PublicTimelineSourceStatusEnum"];
             /** Format: uuid */
             work_id: string;
             /** Format: uuid */
@@ -6742,7 +6993,7 @@ export interface components {
             /** Format: uuid */
             edition_id?: string;
             reference_id: string;
-            source_status: components["schemas"]["SourceStatusEnum"];
+            source_status: components["schemas"]["PublicTimelineSourceStatusEnum"];
             quote: string;
             reader_url: string | null;
             title?: string;
@@ -6944,6 +7195,12 @@ export interface components {
             status?: components["schemas"]["PublicFeedbackStatusEnum"];
             note?: string;
             follow_up?: boolean;
+        };
+        PatchedGraphViewUpdateInputRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            data?: components["schemas"]["GraphViewDataInputRequest"];
+            expected_revision?: number;
         };
         PatchedMediaMetadataRequest: {
             /** Format: date-time */
@@ -7620,9 +7877,10 @@ export interface components {
          *     * `followed_topics` - followed_topics
          *     * `source_follows` - source_follows
          *     * `saved_knowledge` - saved_knowledge
+         *     * `graph_views` - graph_views
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge";
+        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
@@ -7839,6 +8097,29 @@ export interface components {
          * @enum {string}
          */
         PublicFeedbackStatusEnum: "submitted" | "reviewing" | "resolved";
+        /**
+         * @description * `directed` - directed
+         *     * `bidirectional` - bidirectional
+         *     * `undirected` - undirected
+         * @enum {string}
+         */
+        PublicGraphDirectionEnum: "directed" | "bidirectional" | "undirected";
+        /**
+         * @description * `knowledge_node` - knowledge_node
+         *     * `scholar` - scholar
+         *     * `topic` - topic
+         *     * `subdiscipline` - subdiscipline
+         * @enum {string}
+         */
+        PublicGraphEntityKindEnum: "knowledge_node" | "scholar" | "topic" | "subdiscipline";
+        /**
+         * @description * `available` - available
+         *     * `citation_only` - citation_only
+         *     * `missing` - missing
+         *     * `unverified` - unverified
+         * @enum {string}
+         */
+        PublicGraphSourceStatusEnum: "available" | "citation_only" | "missing" | "unverified";
         PublicJournalContent: {
             /** Format: uuid */
             id?: string | null;
@@ -8013,6 +8294,45 @@ export interface components {
             foreign_name: string;
             type: string;
         };
+        PublicTheoryGraph: {
+            center: string | null;
+            center_kind: string;
+            nodes: components["schemas"]["GraphNode"][];
+            edges: components["schemas"]["GraphEdge"][];
+            depth: number;
+            limit: number;
+            edge_limit: number;
+            truncated: boolean;
+            state: components["schemas"]["PublicTheoryGraphStateEnum"];
+            counts: components["schemas"]["GraphCounts"];
+            filters: components["schemas"]["GraphFilters"];
+            relation_types: components["schemas"]["GraphRelationType"][];
+            candidate_access: components["schemas"]["GraphCandidateAccess"];
+            candidate_edges: components["schemas"]["GraphEdge"][];
+            candidate_count: number | null;
+            candidates_truncated: boolean;
+            selected_node: string | null;
+            related_works: components["schemas"]["GraphWork"][];
+            related_works_count: number;
+            related_works_truncated: boolean;
+            related_works_page: number;
+            related_works_page_size: number;
+            related_works_total_pages: number;
+        };
+        /**
+         * @description * `empty` - empty
+         *     * `isolated` - isolated
+         *     * `filtered` - filtered
+         *     * `ready` - ready
+         * @enum {string}
+         */
+        PublicTheoryGraphStateEnum: "empty" | "isolated" | "filtered" | "ready";
+        /**
+         * @description * `available` - available
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        PublicTimelineSourceStatusEnum: "available" | "unavailable";
         PublicWorkDetail: {
             /** Format: uuid */
             readonly id: string;
@@ -8638,20 +8958,13 @@ export interface components {
             readonly source_slug: string;
             readonly target_slug: string;
             relation_type: components["schemas"]["ScholarRelationRelationTypeEnum"];
-            direction: components["schemas"]["ScholarRelationDirectionEnum"];
+            direction: components["schemas"]["PublicGraphDirectionEnum"];
             summary: string;
             source: string;
             readonly status: string;
             edit_version?: string;
             readonly has_unpublished_changes: boolean;
         };
-        /**
-         * @description * `directed` - directed
-         *     * `bidirectional` - bidirectional
-         *     * `undirected` - undirected
-         * @enum {string}
-         */
-        ScholarRelationDirectionEnum: "directed" | "bidirectional" | "undirected";
         ScholarRelationPage: {
             count: number;
             next: string | null;
@@ -8674,7 +8987,7 @@ export interface components {
             /** Format: uuid */
             target_scholar: string;
             relation_type: components["schemas"]["ScholarRelationRelationTypeEnum"];
-            direction: components["schemas"]["ScholarRelationDirectionEnum"];
+            direction: components["schemas"]["PublicGraphDirectionEnum"];
             summary: string;
             source: string;
             edit_version?: string;
@@ -8988,12 +9301,6 @@ export interface components {
             page_size: number;
             results: components["schemas"]["SourceEventOutput"][];
         };
-        /**
-         * @description * `available` - available
-         *     * `unavailable` - unavailable
-         * @enum {string}
-         */
-        SourceStatusEnum: "available" | "unavailable";
         StatementInputRequest: {
             proposition: string;
             subject?: string;
@@ -9560,6 +9867,15 @@ export interface components {
             /** Format: uuid */
             request_id: string;
         };
+        /**
+         * @description * `graph` - graph
+         *     * `list` - list
+         *     * `topics` - topics
+         *     * `scholars` - scholars
+         *     * `works` - works
+         * @enum {string}
+         */
+        ViewModeEnum: "graph" | "list" | "topics" | "scholars" | "works";
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -12914,7 +13230,27 @@ export interface operations {
     };
     catalog_theory_system_graph_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 中心实体 UUID 或已公开 slug；学者使用档案身份。 */
+                center?: string;
+                center_kind?: "knowledge_node" | "scholar" | "subdiscipline" | "topic";
+                depth?: 1 | 2 | 3;
+                discipline?: string;
+                /** @description 最多300条已确认关系。 */
+                edge_limit?: number;
+                end_year?: number;
+                has_collection?: boolean;
+                /** @description 仅同时具备证据查看和知识编辑权限；候选与正式关系分开。 */
+                include_candidates?: boolean;
+                /** @description 最多120个节点。 */
+                limit?: number;
+                node_type?: string[];
+                relation_type?: string[];
+                /** @description kind:UUID；必须在当前子图中。 */
+                selected_node?: string;
+                start_year?: number;
+                works_page?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12926,7 +13262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LocalTheoryGraph"];
+                    "application/json": components["schemas"]["PublicTheoryGraph"];
                 };
             };
         };
@@ -14511,6 +14847,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CitationTextUnitsOutput"];
+                };
+            };
+        };
+    };
+    reading_graph_views_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedGraphViewPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_graph_views_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GraphViewCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GraphViewCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["GraphViewCreateInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphViewCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_graph_views_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 saved graph view 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphViewCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_graph_views_destroy: {
+        parameters: {
+            query: {
+                expected_revision: number;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 saved graph view 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_graph_views_partial_update: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 saved graph view 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedGraphViewUpdateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedGraphViewUpdateInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedGraphViewUpdateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphViewCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_graph_views_by_request_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphViewCommandOutput"];
                 };
             };
         };

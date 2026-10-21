@@ -89,7 +89,8 @@ from .theory_serializers import (
     compact_work,
     _public_evidence_queryset,
 )
-from .theory_public_schema import LocalTheoryGraphSerializer, TheorySystemOverviewSerializer
+from .theory_public_schema import TheorySystemOverviewSerializer
+from .graph_serializers import PublicTheoryGraphSerializer
 
 
 class TheorySystemFeatureMixin:
@@ -606,175 +607,27 @@ class NormalizedTimelineDetailView(NormalizedTimelineListView):
 class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=LocalTheoryGraphSerializer)
+    @extend_schema(responses=PublicTheoryGraphSerializer, parameters=[
+        OpenApiParameter("center_kind", str, enum=["knowledge_node", "scholar", "topic", "subdiscipline"]),
+        OpenApiParameter("center", str, description="中心实体 UUID 或已公开 slug；学者使用档案身份。"),
+        OpenApiParameter("depth", int, enum=[1, 2, 3]),
+        OpenApiParameter("limit", int, description="最多120个节点。"),
+        OpenApiParameter("edge_limit", int, description="最多300条已确认关系。"),
+        OpenApiParameter("node_type", str, many=True),
+        OpenApiParameter("relation_type", str, many=True),
+        OpenApiParameter("discipline", str),
+        OpenApiParameter("start_year", int), OpenApiParameter("end_year", int),
+        OpenApiParameter("has_collection", bool),
+        OpenApiParameter("include_candidates", bool, description="仅同时具备证据查看和知识编辑权限；候选与正式关系分开。"),
+        OpenApiParameter("selected_node", str, description="kind:UUID；必须在当前子图中。"),
+        OpenApiParameter("works_page", int),
+    ])
     def get(self, request):
-        try:
-            depth = min(max(int(request.query_params.get("depth", 1)), 1), 2)
-            limit = min(max(int(request.query_params.get("limit", 20)), 1), 30)
-        except (TypeError, ValueError) as exc:
-            raise APIValidationError({"detail": "图谱深度和节点上限须为整数。"}) from exc
-        center_value = request.query_params.get("center", "").strip()
-        discipline = request.query_params.get("discipline", "").strip()
-        node_type = request.query_params.get("node_type", "").strip()
-        relation_type = request.query_params.get("relation_type", "").strip()
-        start_year = request.query_params.get("start_year", "").strip()
-        end_year = request.query_params.get("end_year", "").strip()
-        has_collection = request.query_params.get("has_collection", "").strip().lower()
-        nodes_base = _node_filter(_published_node_queryset(), {"discipline": discipline})
-        if node_type:
-            nodes_base = nodes_base.filter(node_type=node_type)
-        if start_year.lstrip("-").isdigit():
-            nodes_base = nodes_base.filter(
-                Q(end_year__gte=int(start_year))
-                | Q(end_year__isnull=True, start_year__gte=int(start_year))
-            )
-        if end_year.lstrip("-").isdigit():
-            nodes_base = nodes_base.filter(
-                Q(start_year__lte=int(end_year)) | Q(start_year__isnull=True)
-            )
-        if has_collection in {"1", "true", "yes"}:
-            nodes_base = nodes_base.filter(
-                work_relations__status="published",
-                work_relations__work_id__in=public_editions().values("work_id"),
-            ).distinct()
-        allowed_node_ids = set(nodes_base.values_list("id", flat=True))
-        center = None
-        if center_value:
-            center = nodes_base.filter(
-                Q(slug=center_value) | Q(pk=center_value if _is_uuid(center_value) else None)
-            ).first()
-            if center is None:
-                raise NotFound("所选理论节点尚未公开，或不在当前筛选范围内。")
-        if center is None:
-            center = nodes_base.filter(node_type="theory_tradition").order_by(
-                "sort_order", "canonical_name_zh"
-            ).first()
-        if center is None:
-            return Response({"nodes": [], "edges": [], "center": None, "truncated": False})
-
-        selected = {center.id: center}
-        edge_rows = []
-        frontier = {center.id}
-        for _level in range(depth):
-            if not frontier or len(selected) >= limit:
-                break
-            relations = KnowledgeRelation.objects.filter(
-                Q(source_node_id__in=frontier) | Q(target_node_id__in=frontier),
-                status="published",
-                source_node__status="published",
-                target_node__status="published",
-            ).select_related("source_node", "target_node")
-            if relation_type:
-                relations = relations.filter(relation_type=relation_type)
-            next_frontier = set()
-            for relation in relations.order_by("-confidence", "created_at"):
-                for node in (relation.source_node, relation.target_node):
-                    if (
-                        node.id in allowed_node_ids
-                        and node.id not in selected
-                        and len(selected) < limit
-                    ):
-                        selected[node.id] = node
-                        next_frontier.add(node.id)
-                if relation.source_node_id in selected and relation.target_node_id in selected:
-                    edge_rows.append(relation)
-            frontier = next_frontier
-
-        graph_nodes = [
-            {
-                "id": str(node.id),
-                "kind": "knowledge_node",
-                "node_type": node.node_type,
-                "name": node.canonical_name_zh,
-                "foreign_name": node.canonical_name_en,
-                "slug": node.slug,
-                "summary": node.summary,
-                "period_label": node.period_label,
-                "is_center": node.id == center.id,
-            }
-            for node in selected.values()
-        ]
-        graph_edges = [
-            {
-                "id": str(row.id),
-                "source": str(row.source_node_id),
-                "target": str(row.target_node_id),
-                "relation_type": row.relation_type,
-                "relation_label": row.get_relation_type_display(),
-                "direction": row.direction,
-                "description": row.description,
-                "evidence_source": row.evidence_source,
-                "evidence": KnowledgeRelationSerializer(context={"request": request}).get_evidence(row),
-            }
-            for row in {row.id: row for row in edge_rows}.values()
-        ]
-
-        if len(graph_nodes) < limit:
-            people = center.person_relations.filter(
-                status="published",
-                is_representative=True,
-                person__scholar_profile__editorial_status="published",
-                person__authority_status="verified",
-            ).select_related("person", "person__scholar_profile")[: max(0, limit - len(graph_nodes))]
-            for relation in people:
-                graph_nodes.append(
-                    {
-                        "id": f"person:{relation.person_id}",
-                        "kind": "scholar",
-                        "name": relation.person.preferred_name,
-                        "slug": relation.person.scholar_profile.slug,
-                    }
-                )
-                graph_edges.append(
-                    {
-                        "id": f"person-edge:{relation.id}",
-                        "source": str(center.id),
-                        "target": f"person:{relation.person_id}",
-                        "relation_type": "representative_scholar",
-                        "relation_label": relation.relation_label or "代表学者",
-                        "direction": "undirected",
-                    }
-                )
-
-        if len(graph_nodes) < limit:
-            works = center.work_relations.filter(
-                status="published",
-                work_id__in=public_editions().values("work_id"),
-            ).select_related("work").distinct()[: max(0, limit - len(graph_nodes))]
-            seen_works = set()
-            for relation in works:
-                work = compact_work(relation.work, request)
-                if work is None or relation.work_id in seen_works:
-                    continue
-                seen_works.add(relation.work_id)
-                graph_nodes.append(
-                    {
-                        "id": f"work:{relation.work_id}",
-                        "kind": "work",
-                        "name": work["title"],
-                        "work": work,
-                    }
-                )
-                graph_edges.append(
-                    {
-                        "id": f"work-edge:{relation.id}",
-                        "source": str(center.id),
-                        "target": f"work:{relation.work_id}",
-                        "relation_type": relation.role,
-                        "relation_label": relation.get_role_display(),
-                        "direction": "undirected",
-                    }
-                )
-        return Response(
-            {
-                "center": str(center.id),
-                "nodes": graph_nodes[:limit],
-                "edges": graph_edges,
-                "depth": depth,
-                "limit": limit,
-                "truncated": len(graph_nodes) >= limit,
-            }
-        )
+        from .services.theory_graph import build_public_graph
+        response = Response(build_public_graph(request.query_params, request=request))
+        response["Cache-Control"] = "private, no-store"
+        response["Vary"] = "Cookie, Authorization"
+        return response
 
 
 class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
